@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { getPageMetadata } from '../firebase/database';
+import { getPageMetadata } from "../../firebase/database";
 import Script from 'next/script';
 
 export async function generateMetadata({ params }) {

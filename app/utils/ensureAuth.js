@@ -4,7 +4,7 @@
  */
 
 import Cookies from 'js-cookie';
-import { auth } from '../firebase/auth';
+import { auth } from "../../firebase/auth';
 
 /**
  * Ensures that the current user's authentication is properly set up
@@ -89,7 +89,7 @@ export const ensureAuth = () => {
     return true;
   }
   
-  console.log('No authentication found');
+  console.log('No authentication found");
   return false;
 };
 

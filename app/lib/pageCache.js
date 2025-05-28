@@ -1,6 +1,6 @@
 "use client";
 
-import { db } from "../firebase/database";
+import { db } from "../../firebase/database";
 import { collection, query, where, orderBy, limit, getDocs, startAfter } from "firebase/firestore";
 
 // Cache configuration

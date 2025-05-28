@@ -13,10 +13,10 @@ import GAProvider from "./providers/GAProvider"
 import { AnalyticsProvider } from "./providers/AnalyticsProvider"
 import dynamic from "next/dynamic"
 import { ToastProvider } from "./providers/ToastProvider"
-import ErrorBoundary from "./components/ErrorBoundary"
+import ErrorBoundary from "./components/utils/ErrorBoundary"
 import { PillStyleProvider } from "./contexts/PillStyleContext"
 import { PWAProvider } from "./providers/PWAProvider"
-import FeatureFlagListener from "./components/FeatureFlagListener"
+import FeatureFlagListener from "./components/utils/FeatureFlagListener"
 
 // Import polyfills for browser compatibility
 import "intl-segmenter-polyfill"

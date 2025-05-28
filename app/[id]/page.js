@@ -4,15 +4,15 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
-import { getDatabase, ref, get } from 'firebase/database';
-import { app } from '../firebase/config';
+import { db } from "../../firebase/config';
+import { getDatabase, ref, get } from "firebase/database';
+import { app } from "../../firebase/config';
 import ClientPage from '../pages/[id]/client-page.tsx';
-import { Loader } from '../components/Loader';
+import { Loader } from '../components/utils/Loader';
 import { ErrorDisplay } from '../components/ui/error-display';
 import { Button } from '../components/ui/button';
 import { SmartLoader } from '../components/ui/smart-loader';
-import { use } from 'react';
+import { use } from "react';
 
 export default function GlobalIDPage({ params }) {
   // Extract the ID from params and handle potential slashes

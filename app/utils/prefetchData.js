@@ -1,8 +1,8 @@
 "use client";
 
-import { db } from "../firebase/config";
+import { db } from "../../firebase/config";
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
-import { getFollowedPages } from "../firebase/follows";
+import { getFollowedPages } from "../../firebase/follows";
 import { generateCacheKey, setCacheItem } from "./cacheUtils";
 
 /**

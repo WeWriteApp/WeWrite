@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { Button } from '../components/ui/button';
 
 // Import the unified editor dynamically to avoid SSR issues
-const Editor = dynamic(() => import("../components/Editor"), { ssr: false });
+const Editor = dynamic(() => import("../components/editor/Editor"), { ssr: false });
 
 export default function EditorTestPage() {
   const [content, setContent] = useState('');

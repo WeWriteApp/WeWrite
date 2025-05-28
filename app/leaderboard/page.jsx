@@ -2,9 +2,9 @@
 import { useState, useEffect, useContext } from "react";
 import { collection, query, limit, getDocs } from "firebase/firestore";
 import { ref, onValue } from "firebase/database";
-import { AuthContext } from "../providers/AuthProvider";
-import { db } from "../firebase/config";
-import { rtdb } from "../firebase/rtdb";
+import { AuthContext } from "../../providers/AuthProvider";
+import { db } from "../../firebase/config";
+import { rtdb } from "../../firebase/rtdb";
 import {
   Trophy,
   ArrowLeft,
@@ -30,7 +30,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "../components/ui/tooltip";
-import { PillLink } from "../components/PillLink";
+import { PillLink } from "../components/utils/PillLink";
 
 export default function LeaderboardPage() {
   const { user } = useContext(AuthContext);

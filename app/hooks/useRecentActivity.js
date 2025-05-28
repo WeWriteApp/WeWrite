@@ -1,10 +1,10 @@
 import { useState, useEffect, useContext, useCallback } from "react";
 import { collection, query, orderBy, limit, getDocs, where, getDoc, doc, startAfter } from "firebase/firestore";
-import { db } from "../firebase/config";
-import { AuthContext } from "../providers/AuthProvider";
-import { getPageVersions } from "../firebase/database";
+import { db } from "../../firebase/config";
+import { AuthContext } from "../../providers/AuthProvider";
+import { getPageVersions } from "../../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
-import { getRecentActivity } from "../firebase/activity";
+import { getRecentActivity } from "../../firebase/activity";
 
 const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false) => {
   const [loading, setLoading] = useState(true);

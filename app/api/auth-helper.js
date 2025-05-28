@@ -1,5 +1,5 @@
 import { getAuth } from 'firebase-admin/auth';
-import { initAdmin, admin } from '../firebase/admin';
+import { initAdmin, admin } from "../../firebase/admin';
 
 // Initialize Firebase Admin
 initAdmin();
@@ -130,7 +130,7 @@ export async function getUserIdFromRequest(request) {
   // This was a critical security vulnerability that could allow unauthorized access
   // if (isDevelopment) {
   //   console.log('Development mode: Using default test user ID');
-  //   return 'test-user-id-for-development';
+  //   return "test-user-id-for-development';
   // }
 
   // No user ID found

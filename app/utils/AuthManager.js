@@ -6,7 +6,7 @@
  * trigger security measures in browser extensions.
  */
 
-import { auth } from '../firebase/auth';
+import { auth } from "../../firebase/auth';
 import { signOut, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import Cookies from 'js-cookie';
 
@@ -129,7 +129,7 @@ export const setCurrentAccount = (account) => {
     }), {
       expires: 7,
       secure: window.location.protocol === 'https:',
-      sameSite: 'strict'
+      sameSite: "strict"
     });
   } catch (error) {
     console.error('Error setting current account:', error);

@@ -4,7 +4,7 @@ import React, { useContext } from 'react';
 import { Info } from 'lucide-react';
 import { AuthContext } from '../../providers/AuthProvider';
 import ContentCarousel from './ContentCarousel';
-import ActivityCard from '../ActivityCard';
+import ActivityCard from '../activity/ActivityCard';
 import useStaticRecentActivity from '../../hooks/useStaticRecentActivity';
 
 /**

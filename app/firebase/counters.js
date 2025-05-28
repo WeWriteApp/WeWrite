@@ -3,7 +3,7 @@
 import { db, rtdb } from './config';
 import { doc, getDoc, setDoc, updateDoc, increment, collection, query, where, getDocs, sum } from 'firebase/firestore';
 import { ref, get, set, onValue } from 'firebase/database';
-import { getCacheItem, setCacheItem, generateCacheKey } from '../utils/cacheUtils';
+import { getCacheItem, setCacheItem, generateCacheKey } from "../utils/cacheUtils";
 
 // Cache TTL in milliseconds (5 minutes)
 const CACHE_TTL = 5 * 60 * 1000;

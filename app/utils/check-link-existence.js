@@ -1,5 +1,5 @@
 import { getDoc, doc } from "firebase/firestore";
-import { db } from "../firebase/database";
+import { db } from "../../firebase/database";
 
 async function checkLinkExistence(links) {
   const promises = [];

@@ -16,7 +16,7 @@ import {
 } from '@stripe/react-stripe-js';
 import { useTheme } from '../../../providers/ThemeProvider';
 import { useFeatureFlag } from '../../../utils/feature-flags.ts';
-import OpenCollectiveSupport from '../../../components/OpenCollectiveSupport';
+import OpenCollectiveSupport from '../../../components/payments/OpenCollectiveSupport';
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);

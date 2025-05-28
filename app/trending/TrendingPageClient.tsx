@@ -7,7 +7,7 @@ import { ChevronLeft, Flame, Loader } from 'lucide-react';
 import Link from 'next/link';
 import PillLink from '../components/PillLink';
 import SimpleSparkline from '../components/SimpleSparkline';
-import { getTrendingPages, getPageViewsLast24Hours } from '../firebase/pageViews';
+import { getTrendingPages, getPageViewsLast24Hours } from "../../firebase/pageViews';
 
 interface TrendingPage {
   id: string;
@@ -87,7 +87,7 @@ export default function TrendingPageClient() {
           setTrendingPages(pages);
         }
       } catch (err) {
-        console.error('Error fetching trending pages:', err);
+        console.error('Error fetching trending pages:", err);
         setError(`Failed to load trending pages: ${err.message}`);
       } finally {
         setLoading(false);

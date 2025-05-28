@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { CheckCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useFeatureFlag } from '../../../utils/feature-flags';
-import OpenCollectiveSupport from '../../../components/OpenCollectiveSupport';
+import OpenCollectiveSupport from '../../../components/payments/OpenCollectiveSupport';
 
 export default function SubscriptionSuccessPage() {
   const router = useRouter();

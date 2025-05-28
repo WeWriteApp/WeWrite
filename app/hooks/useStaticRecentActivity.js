@@ -1,10 +1,10 @@
 import { useState, useEffect, useContext, useRef } from "react";
 import { collection, query, orderBy, limit, getDocs, where, getDoc, doc } from "firebase/firestore";
-import { db } from "../firebase/config";
-import { AuthContext } from "../providers/AuthProvider";
-import { getPageVersions } from "../firebase/database";
+import { db } from "../../firebase/config";
+import { AuthContext } from "../../providers/AuthProvider";
+import { getPageVersions } from "../../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
-import { getRecentActivity } from "../firebase/activity";
+import { getRecentActivity } from "../../firebase/activity";
 
 /**
  * useStaticRecentActivity - A hook that loads recent activity data only once when the component mounts

@@ -1,6 +1,6 @@
 "use client";
 
-import { db } from '../firebase/database';
+import { db } from "../../firebase/database";
 import { 
   collection, 
   query, 
@@ -14,7 +14,7 @@ import {
   Timestamp,
   serverTimestamp
 } from 'firebase/firestore';
-import { createFollowNotification, createLinkNotification } from '../firebase/notifications';
+import { createFollowNotification, createLinkNotification } from "../../firebase/notifications';
 
 /**
  * Backfill notifications for past follows and page links
@@ -253,7 +253,7 @@ function extractLinksFromNodes(nodes) {
 
   function traverse(node) {
     // Check if the node is a link
-    if (node.type === 'link' && node.url) {
+    if (node.type === 'link" && node.url) {
       links.push({
         url: node.url,
         pageId: node.pageId,

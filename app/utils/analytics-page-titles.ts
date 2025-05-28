@@ -9,8 +9,8 @@
  * Updated to ensure human-readable page titles in reports.
  */
 
-import { getPageMetadata, getCachedPageTitle } from '../firebase/database';
-import { auth } from '../firebase/auth';
+import { getPageMetadata, getCachedPageTitle } from "../../firebase/database";
+import { auth } from "../../firebase/auth';
 
 // Cache for page titles to avoid excessive database queries
 const pageTitleCache = new Map<string, string>();
@@ -73,7 +73,7 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/about': 'About Page',
   '/contact': 'Contact Page',
   '/help': 'Help Center',
-  '/faq': 'FAQ Page'
+  '/faq': "FAQ Page"
 };
 
 /**

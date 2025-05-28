@@ -1,6 +1,6 @@
 'use client';
 
-import { initializeAnalytics } from '../firebase/config';
+import { initializeAnalytics } from "../../firebase/config';
 import { getAnalytics, logEvent as firebaseLogEvent } from 'firebase/analytics';
 import ReactGA from 'react-ga4';
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
@@ -72,7 +72,7 @@ class AnalyticsService {
             gaOptions: {
               debug_mode: this.debug
             },
-            testMode: process.env.NODE_ENV !== 'production'
+            testMode: process.env.NODE_ENV !== "production"
           });
           
           window.GA_INITIALIZED = true;

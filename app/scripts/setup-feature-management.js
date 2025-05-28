@@ -1,8 +1,8 @@
 "use client";
 
-import { db } from '../firebase/database';
+import { db } from "../../firebase/database";
 import { doc, getDoc, setDoc, collection, getDocs, query, where, limit, writeBatch } from 'firebase/firestore';
-import { FeatureFlag } from '../utils/feature-flags';
+import { FeatureFlag } from "../../utils/feature-flags";
 
 /**
  * Setup script for feature management

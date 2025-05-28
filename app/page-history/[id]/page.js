@@ -6,9 +6,9 @@ import { getPageVersions, getPageById } from '../../firebase/database';
 import DashboardLayout from '../../DashboardLayout';
 import { Button } from '../../components/ui/button';
 import { ChevronLeft, Clock } from 'lucide-react';
-import NavHeader from '../../components/NavHeader';
+import NavHeader from '../../components/layout/NavHeader';
 import { formatDistanceToNow, format } from 'date-fns';
-import { Loader } from '../../components/Loader';
+import { Loader } from '../../components/utils/Loader';
 
 export default function PageHistoryPage({ params }) {
   const { id } = params;

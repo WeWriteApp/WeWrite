@@ -1,10 +1,10 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
-import { auth } from "../firebase/config";
+import { auth } from "../../firebase/config";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase/config";
+import { db } from "../../firebase/config";
 
 // Maximum number of accounts that can be stored
 const MAX_ACCOUNTS = 5;

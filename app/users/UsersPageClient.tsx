@@ -10,9 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
 import { SupporterIcon } from "../components/SupporterIcon";
 import { collection, getDocs, query, orderBy, limit as firestoreLimit, getDoc, doc } from "firebase/firestore";
-import { db } from "../firebase/config";
+import { db } from "../../firebase/config";
 import SimpleSparkline from "../components/SimpleSparkline";
-import { getBatchUserActivityLast24Hours } from "../firebase/userActivity";
+import { getBatchUserActivityLast24Hours } from "../../firebase/userActivity";
 
 interface User {
   id: string;

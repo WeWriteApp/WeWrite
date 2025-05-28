@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { useFeatureFlag } from '../utils/feature-flags';
+import { useFeatureFlag } from "../../utils/feature-flags";
 
 /**
  * Hook to check if the subscription feature is enabled

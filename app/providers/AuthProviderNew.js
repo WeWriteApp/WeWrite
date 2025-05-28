@@ -1,15 +1,15 @@
 "use client";
 
 import { useContext, createContext, useState, useEffect } from "react";
-import { auth } from "../firebase/config";
+import { auth } from "../../firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { getDatabase, ref, onValue, update } from "firebase/database";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "../firebase/config";
-import { rtdb } from "../firebase/rtdb";
+import { db } from "../../firebase/config";
+import { rtdb } from "../../firebase/rtdb";
 import Cookies from 'js-cookie';
-import AuthManager from "../utils/AuthManager";
+import AuthManager from "../../utils/AuthManager";
 
 export const AuthContext = createContext();
 

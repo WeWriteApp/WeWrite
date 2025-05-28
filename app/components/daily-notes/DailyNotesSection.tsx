@@ -4,7 +4,7 @@ import React, { useContext } from 'react';
 import { Calendar } from 'lucide-react';
 import { Button } from '../ui/button';
 import { SectionTitle } from '../ui/section-title';
-import StickySection from '../StickySection';
+import StickySection from "../utils/StickySection";
 import DailyNotesCarousel from './DailyNotesCarousel';
 import { AuthContext } from '../../providers/AuthProvider';
 

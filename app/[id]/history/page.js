@@ -7,10 +7,10 @@ import DashboardLayout from '../../DashboardLayout';
 import { Button } from '../../components/ui/button';
 import { ChevronLeft, Clock } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
-import { Loader } from '../../components/Loader';
-import ActivityCard from '../../components/ActivityCard';
+import { Loader } from '../../components/utils/Loader';
+import ActivityCard from '../../components/activity/ActivityCard';
 import { generateSimpleDiff, generateTextDiff } from '../../utils/generateTextDiff';
-import PageHeader from '../../components/PageHeader.tsx';
+import PageHeader from '../../components/pages/PageHeader';
 
 export default function PageHistoryPage({ params }) {
   const { id } = params;

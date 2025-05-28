@@ -1,8 +1,8 @@
 "use client";
 
 import { useSearchParams } from 'next/navigation';
-import { ModernRegisterForm } from "../../components/modern-register-form"
-import { ModernAuthLayout } from "../../components/modern-auth-layout"
+import { ModernRegisterForm } from "../../components/forms/modern-register-form"
+import { ModernAuthLayout } from "../../components/layout/modern-auth-layout"
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { AlertCircle } from "lucide-react";
 

@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useState, useEffect, useContext } from "react";
-import EnhancedMyGroups from "../components/EnhancedMyGroups";
+import EnhancedMyGroups from "../components/groups/EnhancedMyGroups";
 import { Button } from "../components/ui/button";
 import { Plus, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "../components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { useRouter } from "next/navigation";
-import { useFeatureFlag } from "../utils/feature-flags";
-import { AuthContext } from "../providers/AuthProvider";
+import { useFeatureFlag } from "../../utils/feature-flags";
+import { AuthContext } from "../../providers/AuthProvider";
 import Cookies from 'js-cookie';
 
 export default function GroupsPage() {

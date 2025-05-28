@@ -1,10 +1,10 @@
 'use client';
 
 import { ReactNode, useEffect, useState } from 'react';
-import { initializeAnalytics } from '../firebase/config';
+import { initializeAnalytics } from "../../firebase/config';
 import { logEvent } from 'firebase/analytics';
-import { usePathname, useSearchParams } from 'next/navigation';
-import { getAnalyticsPageTitle, getAnalyticsPageTitleForId } from '../utils/analytics-page-titles';
+import { usePathname, useSearchParams } from "next/navigation';
+import { getAnalyticsPageTitle, getAnalyticsPageTitleForId } from "../../utils/analytics-page-titles';
 
 interface AnalyticsProviderProps {
   children: ReactNode;
@@ -117,7 +117,7 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
           borderRadius: '4px',
           fontSize: '10px',
           zIndex: 9999,
-          pointerEvents: 'none'
+          pointerEvents: "none"
         }}>
           Firebase Analytics Error: {analyticsError}
         </div>

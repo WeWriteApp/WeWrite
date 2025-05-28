@@ -1,5 +1,5 @@
 import React, { createContext } from "react";
-import usePages from "../hooks/usePages";
+import usePages from "../../hooks/usePages";
 
 export const ProfilePagesContext = createContext();
 

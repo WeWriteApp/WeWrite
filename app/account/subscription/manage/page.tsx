@@ -8,11 +8,11 @@ import Link from 'next/link';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
-import { SupporterIcon } from '../../../components/SupporterIcon';
+import { SupporterIcon } from '../../../components/payments/SupporterIcon';
 import { getUserSubscription, cancelSubscription, listenToUserSubscription } from '../../../firebase/subscription';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 import { useFeatureFlag } from '../../../utils/feature-flags';
-import OpenCollectiveSupport from '../../../components/OpenCollectiveSupport';
+import OpenCollectiveSupport from '../../../components/payments/OpenCollectiveSupport';
 
 interface SubscriptionHistoryItem {
   id: string;

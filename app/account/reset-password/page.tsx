@@ -8,7 +8,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { LoadingButton } from "../../components/ui/loading-button";
-import NavHeader from "../../components/NavHeader";
+import NavHeader from "../../components/layout/NavHeader";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { AlertCircle, CheckCircle } from "lucide-react";
 
@@ -36,9 +36,9 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="container max-w-md mx-auto px-4 py-8">
-      <NavHeader 
-        title="Reset Password" 
-        backUrl="/account" 
+      <NavHeader
+        title="Reset Password"
+        backUrl="/account"
         backLabel="Back to Account"
       />
 
@@ -88,7 +88,7 @@ export default function ResetPasswordPage() {
               >
                 Send Reset Link
               </LoadingButton>
-              
+
               <Button
                 type="button"
                 variant="outline"
