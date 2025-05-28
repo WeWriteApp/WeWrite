@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
-import { Globe, Lock, Link, X, Check } from "lucide-react";
+import { Globe, Lock, Link, X, Check, Trash2 } from "lucide-react";
 import MapEditor from "./MapEditor";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { useAuth } from "../../providers/AuthProvider";
@@ -16,6 +16,7 @@ export interface EditModeBottomToolbarProps {
   onInsertLink: () => void;
   onCancel: () => void;
   onSave: () => void;
+  onDelete?: () => void;
   isSaving?: boolean;
   linkFunctionalityEnabled?: boolean;
 }
@@ -28,6 +29,7 @@ export default function EditModeBottomToolbar({
   onInsertLink,
   onCancel,
   onSave,
+  onDelete,
   isSaving = false,
   linkFunctionalityEnabled = true
 }: EditModeBottomToolbarProps) {
@@ -112,6 +114,20 @@ export default function EditModeBottomToolbar({
               </>
             )}
           </Button>
+
+          {/* Delete button (only show if onDelete is provided) */}
+          {onDelete && (
+            <Button
+              onClick={onDelete}
+              disabled={isSaving}
+              variant="destructive"
+              size="lg"
+              className="w-full rounded-2xl font-medium"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          )}
         </div>
       </div>
     </div>

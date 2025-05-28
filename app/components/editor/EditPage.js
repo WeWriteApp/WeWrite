@@ -13,6 +13,10 @@ import UnsavedChangesDialog from "../utils/UnsavedChangesDialog";
 import EditModeBottomToolbar from "./EditModeBottomToolbar";
 import { toast } from "../ui/use-toast";
 import { validateLink } from "../../utils/linkValidator";
+import { useConfirmation } from "../../hooks/useConfirmation";
+import ConfirmationModal from "../utils/ConfirmationModal";
+import { deletePage } from "../../firebase/database";
+import { useRouter } from "next/navigation";
 
 /**
  * Check if a title exactly matches the YYYY-MM-DD format for daily notes
@@ -44,6 +48,10 @@ const EditPage = ({
   const [error, setError] = useState(editorError);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const { logError } = useLogging();
+  const router = useRouter();
+
+  // Use confirmation modal hook for delete functionality
+  const { confirmationState, confirmDelete, closeConfirmation } = useConfirmation();
 
   // Set edit mode in PageContext when component mounts
   useEffect(() => {
@@ -490,6 +498,25 @@ const EditPage = ({
     window.dispatchEvent(insertLinkEvent);
   };
 
+  // Handle page deletion with confirmation
+  const handleDelete = async () => {
+    const confirmed = await confirmDelete("this page");
+    if (confirmed) {
+      try {
+        // Immediately redirect to prevent any 404 flash
+        router.push("/");
+
+        // Delete the page in the background
+        await deletePage(page.id);
+        toast.success("Page deleted successfully");
+      } catch (error) {
+        console.error("Error deleting page:", error);
+        toast.error("Failed to delete page");
+        // If deletion failed, we're already on home page which is safe
+      }
+    }
+  };
+
   // Display error message if provided
   if (editorError) {
     return (
@@ -638,6 +665,7 @@ const EditPage = ({
         onInsertLink={handleInsertLink}
         onCancel={handleCancelWithCheck}
         onSave={() => handleSave(editorContent || current)}
+        onDelete={handleDelete}
         isSaving={isSaving}
       />
 
@@ -648,6 +676,20 @@ const EditPage = ({
         onStayAndSave={handleStayAndSave}
         onLeaveWithoutSaving={handleLeaveWithoutSaving}
         isSaving={isSaving || isHandlingNavigation}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationState.isOpen}
+        onClose={closeConfirmation}
+        onConfirm={confirmationState.onConfirm}
+        title={confirmationState.title}
+        message={confirmationState.message}
+        confirmText={confirmationState.confirmText}
+        cancelText={confirmationState.cancelText}
+        variant={confirmationState.variant}
+        isLoading={confirmationState.isLoading}
+        icon={confirmationState.icon}
       />
     </>
   );

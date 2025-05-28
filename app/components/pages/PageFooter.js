@@ -110,17 +110,20 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
         </div>
       )}
 
-      <div className="mb-6 flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
-        <PageActions
-          page={page}
-          content={content}
-          isOwner={isOwner}
-          isEditing={isEditing}
-          setIsEditing={setIsEditing}
-          className="action-buttons-container"
-          showFollowButton={!isEditing && user && !isOwner}
-        />
-      </div>
+      {/* Hide PageActions entirely when in edit mode */}
+      {!isEditing && (
+        <div className="mb-6 flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
+          <PageActions
+            page={page}
+            content={content}
+            isOwner={isOwner}
+            isEditing={isEditing}
+            setIsEditing={setIsEditing}
+            className="action-buttons-container"
+            showFollowButton={user && !isOwner}
+          />
+        </div>
+      )}
 
       {/* Similar pages section removed to conserve resources */}
 

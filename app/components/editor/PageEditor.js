@@ -469,7 +469,13 @@ const PageEditor = ({
         </div>
       )}
 
-      <div className="w-full max-w-none">
+      <div
+        className={`w-full max-w-none transition-all duration-200 ${
+          !isNewPage
+            ? "border border-primary/30 rounded-lg p-4 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 hover:border-primary/40"
+            : ""
+        }`}
+      >
         {isHydrated ? (
           <Editor
             ref={editorRef}
