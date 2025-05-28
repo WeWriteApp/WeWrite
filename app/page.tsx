@@ -317,7 +317,7 @@ const Home = React.memo(function Home() {
             <LazySection
               name="random_pages"
               priority="low"
-              minHeight={300}
+              minHeight={250}
               fallback={<RandomPagesSkeleton limit={10} />}
             >
               <RandomPagesOptimized limit={10} priority="low" />

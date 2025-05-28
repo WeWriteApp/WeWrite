@@ -42,12 +42,25 @@ const STOP_WORDS = new Set([
   'and', 'or', 'but', 'so', 'yet', 'nor',
   // Pronouns
   'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'its', 'our', 'their',
-  // Auxiliary verbs
+  // Auxiliary verbs - ENHANCED to include more question words and common verbs
   'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could',
   // Common verbs that are often not meaningful for content matching
   'get', 'got', 'go', 'went', 'come', 'came', 'see', 'saw', 'know', 'knew', 'think', 'thought', 'take', 'took', 'make', 'made', 'give', 'gave',
-  // Other common words
-  'very', 'just', 'now', 'here', 'there', 'where', 'when', 'why', 'how', 'what', 'who', 'which', 'all', 'any', 'some', 'each', 'every', 'no', 'not', 'only', 'also', 'too', 'much', 'many', 'more', 'most', 'other', 'such', 'same', 'different', 'new', 'old', 'first', 'last', 'next', 'previous', 'good', 'bad', 'big', 'small', 'long', 'short', 'high', 'low', 'right', 'left', 'yes', 'no'
+  // Question words and interrogatives - ENHANCED for better filtering
+  'what', 'when', 'where', 'why', 'how', 'who', 'whom', 'whose', 'which', 'whether',
+  // Common adjectives and adverbs that don't add semantic value
+  'very', 'just', 'now', 'here', 'there', 'all', 'any', 'some', 'each', 'every', 'no', 'not', 'only', 'also', 'too', 'much', 'many', 'more', 'most', 'other', 'such', 'same', 'different', 'new', 'old', 'first', 'last', 'next', 'previous', 'good', 'bad', 'big', 'small', 'long', 'short', 'high', 'low', 'right', 'left', 'yes', 'no',
+  // Additional common words that reduce semantic matching quality
+  'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+  'said', 'say', 'says', 'saying', 'tell', 'told', 'telling', 'ask', 'asked', 'asking',
+  'like', 'liked', 'likes', 'liking', 'want', 'wanted', 'wanting', 'need', 'needed', 'needing',
+  'use', 'used', 'using', 'work', 'worked', 'working', 'find', 'found', 'finding',
+  'look', 'looked', 'looking', 'seem', 'seemed', 'seeming', 'feel', 'felt', 'feeling',
+  'try', 'tried', 'trying', 'keep', 'kept', 'keeping', 'let', 'lets', 'letting',
+  'put', 'puts', 'putting', 'set', 'sets', 'setting', 'turn', 'turned', 'turning',
+  'call', 'called', 'calling', 'move', 'moved', 'moving', 'live', 'lived', 'living',
+  'show', 'showed', 'showing', 'play', 'played', 'playing', 'run', 'ran', 'running',
+  'bring', 'brought', 'bringing', 'help', 'helped', 'helping', 'leave', 'left', 'leaving'
 ]);
 
 /**
@@ -254,8 +267,29 @@ function calculateRelevanceScore(sourceWords, targetWords, targetTitle = '', isC
     }
   });
 
-  // Calculate base score
-  let score = (exactMatches * 10) + (partialMatches * 5);
+  // Calculate base score with enhanced weighting for uncommon words
+  let score = 0;
+
+  // Weight exact matches more heavily, with bonus for longer/uncommon words
+  matchDetails.forEach(match => {
+    if (match.type === 'exact') {
+      let wordScore = 10;
+      // Bonus for longer words (they're usually more specific/uncommon)
+      if (match.word.length >= 6) {
+        wordScore *= 1.5; // 50% bonus for words 6+ characters
+      } else if (match.word.length >= 4) {
+        wordScore *= 1.2; // 20% bonus for words 4-5 characters
+      }
+      score += wordScore;
+    } else if (match.type === 'partial') {
+      let wordScore = 5;
+      // Bonus for longer partial matches
+      if (match.word.length >= 6) {
+        wordScore *= 1.3;
+      }
+      score += wordScore;
+    }
+  });
 
   // Apply bonuses and penalties
   if (isContentMatch) {
@@ -267,6 +301,13 @@ function calculateRelevanceScore(sourceWords, targetWords, targetTitle = '', isC
   const matchRatio = (exactMatches + partialMatches) / sourceWords.length;
   if (matchRatio > 0.5) {
     score *= 1.5; // 50% bonus for high match ratio
+  }
+
+  // Enhanced bonus for uncommon word matches
+  // If we have matches with longer words, give additional bonus
+  const hasLongWordMatches = matchDetails.some(match => match.word.length >= 6);
+  if (hasLongWordMatches) {
+    score *= 1.3; // 30% bonus for having uncommon/specific word matches
   }
 
   // Bonus for title length similarity (prevents very short titles from dominating)

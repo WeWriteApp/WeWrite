@@ -25,6 +25,7 @@ interface RandomPage {
 interface RandomPagesTableProps {
   pages: RandomPage[];
   loading?: boolean;
+  denseMode?: boolean;
 }
 
 /**
@@ -32,7 +33,7 @@ interface RandomPagesTableProps {
  * Desktop: Table layout with columns for Title, Author, Last Edited
  * Mobile: Stacked cards with same information
  */
-export default function RandomPagesTable({ pages, loading = false }: RandomPagesTableProps) {
+export default function RandomPagesTable({ pages, loading = false, denseMode = false }: RandomPagesTableProps) {
   // Calculate minimum height based on expected content to prevent layout shifts
   const minHeight = pages.length > 0 ? `${Math.max(400, pages.length * 60 + 100)}px` : '400px';
 
@@ -40,6 +41,37 @@ export default function RandomPagesTable({ pages, loading = false }: RandomPages
     return (
       <div className="border border-theme-medium rounded-2xl p-8 text-center">
         <p className="text-muted-foreground">No pages to display</p>
+      </div>
+    );
+  }
+
+  // Dense mode: Show only pill-style links with page titles
+  if (denseMode) {
+    // Calculate dynamic height based on content to reduce whitespace
+    const estimatedRows = Math.ceil(pages.length / 6); // Estimate ~6 pills per row
+    const dynamicHeight = Math.max(120, estimatedRows * 50 + 80); // Base height + row height + padding
+
+    return (
+      <div
+        className="border border-theme-medium rounded-2xl p-6"
+        style={{ minHeight: `${dynamicHeight}px` }}
+      >
+        <div className="flex flex-wrap gap-2">
+          {pages.map((page) => (
+            <PillLink
+              key={page.id}
+              href={`/${page.id}`}
+              className="hover:scale-105 transition-transform"
+            >
+              {page.title}
+            </PillLink>
+          ))}
+        </div>
+        {loading && (
+          <div className="flex justify-center mt-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          </div>
+        )}
       </div>
     );
   }

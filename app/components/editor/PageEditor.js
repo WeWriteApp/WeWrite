@@ -21,6 +21,7 @@ import { toast } from "../ui/use-toast";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import DisabledLinkModal from "../utils/DisabledLinkModal";
 import { useClickToEdit } from "../../hooks/useClickToEdit";
+import EditModeBottomToolbar from "./EditModeBottomToolbar";
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {
@@ -66,6 +67,12 @@ const PageEditor = ({
   setTitle,
   initialContent,
   onContentChange,
+  isPublic,
+  setIsPublic,
+  location,
+  setLocation,
+  onSave,
+  onCancel,
   isSaving,
   error,
   isNewPage = false,
@@ -470,6 +477,21 @@ const PageEditor = ({
         isOpen={showDisabledLinkModal}
         onClose={() => setShowDisabledLinkModal(false)}
       />
+
+      {/* Bottom Toolbar for new pages */}
+      {isNewPage && onSave && onCancel && (
+        <EditModeBottomToolbar
+          isPublic={isPublic || false}
+          setIsPublic={setIsPublic || (() => {})}
+          location={location}
+          setLocation={setLocation || (() => {})}
+          onInsertLink={handleInsertLink}
+          onCancel={onCancel}
+          onSave={onSave}
+          isSaving={isSaving}
+          linkFunctionalityEnabled={linkFunctionalityEnabled}
+        />
+      )}
     </div>
   );
 };

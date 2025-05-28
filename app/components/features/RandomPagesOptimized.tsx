@@ -40,15 +40,21 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
   const [shuffling, setShuffling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [includePrivatePages, setIncludePrivatePages] = useState(false);
+  const [denseMode, setDenseMode] = useState(false);
 
   console.log('RandomPagesOptimized: Rendering with props:', { limit, priority });
 
-  // Load privacy preference from localStorage on mount
+  // Load preferences from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedPreference = localStorage.getItem('randomPages_includePrivate');
-      if (savedPreference === 'true') {
+      const savedPrivacyPreference = localStorage.getItem('randomPages_includePrivate');
+      if (savedPrivacyPreference === 'true') {
         setIncludePrivatePages(true);
+      }
+
+      const savedDenseModePreference = localStorage.getItem('randomPages_denseMode');
+      if (savedDenseModePreference === 'true') {
+        setDenseMode(true);
       }
     }
   }, []);
@@ -63,8 +69,11 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
       }
       setError(null);
 
+      // Use higher limit for dense mode to show more results
+      const effectiveLimit = denseMode ? Math.max(limit * 2, 20) : limit;
+
       const params = new URLSearchParams({
-        limit: limit.toString(),
+        limit: effectiveLimit.toString(),
       });
 
       // Add user ID for access control if user is authenticated
@@ -100,7 +109,7 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
       setLoading(false);
       setShuffling(false);
     }
-  }, [limit, user?.uid]);
+  }, [limit, user?.uid, denseMode]);
 
   // Handle shuffle button click
   const handleShuffle = useCallback((includePrivate = includePrivatePages) => {
@@ -132,6 +141,27 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
       window.removeEventListener('shuffleRandomPages', handleShuffleEvent as EventListener);
     };
   }, [handleShuffle, includePrivatePages]);
+
+  // Listen for dense mode changes from header
+  useEffect(() => {
+    const handleDenseModeEvent = (event: CustomEvent) => {
+      const newDenseMode = event.detail?.denseMode ?? false;
+      console.log('RandomPages: Dense mode event received', { denseMode: newDenseMode });
+      setDenseMode(newDenseMode);
+    };
+
+    window.addEventListener('randomPagesDenseModeChange', handleDenseModeEvent as EventListener);
+    return () => {
+      window.removeEventListener('randomPagesDenseModeChange', handleDenseModeEvent as EventListener);
+    };
+  }, []);
+
+  // Re-fetch when dense mode changes to get appropriate number of results
+  useEffect(() => {
+    if (randomPages.length > 0) {
+      fetchRandomPages(false, includePrivatePages);
+    }
+  }, [denseMode, fetchRandomPages, includePrivatePages, randomPages.length]);
 
   // Show loading skeleton on initial load
   if (loading && !shuffling) {
@@ -174,6 +204,7 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
         <RandomPagesTable
           pages={randomPages}
           loading={shuffling}
+          denseMode={denseMode}
         />
       </Suspense>
     </div>

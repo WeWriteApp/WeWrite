@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Shuffle, MoreHorizontal, Lock } from 'lucide-react';
+import { Shuffle, MoreHorizontal, Lock, Grid3X3 } from 'lucide-react';
 import { SectionTitle } from '../ui/section-title';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
@@ -10,6 +10,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '../ui/dropdown-menu';
 
 /**
@@ -23,13 +24,19 @@ import {
  */
 const RandomPagesHeader = () => {
   const [includePrivatePages, setIncludePrivatePages] = useState(false);
+  const [denseMode, setDenseMode] = useState(false);
 
-  // Load privacy toggle state from localStorage on mount
+  // Load preferences from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedPreference = localStorage.getItem('randomPages_includePrivate');
-      if (savedPreference === 'true') {
+      const savedPrivacyPreference = localStorage.getItem('randomPages_includePrivate');
+      if (savedPrivacyPreference === 'true') {
         setIncludePrivatePages(true);
+      }
+
+      const savedDenseModePreference = localStorage.getItem('randomPages_denseMode');
+      if (savedDenseModePreference === 'true') {
+        setDenseMode(true);
       }
     }
   }, []);
@@ -49,6 +56,23 @@ const RandomPagesHeader = () => {
       detail: { includePrivate: newValue }
     });
     window.dispatchEvent(shuffleEvent);
+  };
+
+  // Handle dense mode toggle change
+  const handleDenseModeToggle = () => {
+    const newValue = !denseMode;
+    setDenseMode(newValue);
+
+    // Persist to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('randomPages_denseMode', String(newValue));
+    }
+
+    // Trigger display mode change event
+    const denseModeEvent = new CustomEvent('randomPagesDenseModeChange', {
+      detail: { denseMode: newValue }
+    });
+    window.dispatchEvent(denseModeEvent);
   };
 
   // Handle shuffle button click
@@ -98,6 +122,35 @@ const RandomPagesHeader = () => {
                 }
               }}
               aria-label="Toggle private pages inclusion"
+            />
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDenseModeToggle();
+            }}
+            className="flex items-center justify-between cursor-pointer py-3"
+          >
+            <div className="flex items-center gap-3">
+              <Grid3X3 className="h-4 w-4 text-muted-foreground" />
+              <div className="flex flex-col">
+                <span className="font-medium">Dense Mode</span>
+                <span className="text-xs text-muted-foreground">
+                  Show only page titles as pill links
+                </span>
+              </div>
+            </div>
+            <Switch
+              checked={denseMode}
+              onCheckedChange={(checked) => {
+                if (checked !== denseMode) {
+                  handleDenseModeToggle();
+                }
+              }}
+              aria-label="Toggle dense mode"
             />
           </DropdownMenuItem>
         </DropdownMenuContent>

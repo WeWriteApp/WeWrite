@@ -378,7 +378,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
   }, [router]);
 
-  // Check if we have a valid user session cookie even if Firebase auth is not logged in
+  // Enhanced session-based authentication with proper account switching support
   useEffect(() => {
     // Only run this check if we don't have a user and auth loading is complete
     if (user || loading) return;
@@ -423,20 +423,64 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
 
         if (sessionData) {
-          // Set the user state with the session data
-          setUser({
+          // Create a complete user object with proper authentication context
+          const sessionUser = {
             uid: sessionData.uid,
             email: sessionData.email,
             username: sessionData.username,
-            // Add any other necessary properties
-            isSessionUser: true // Flag to indicate this is from a session cookie
-          });
+            isSessionUser: true,
+            // Add timestamp to track session freshness for account switching
+            sessionTimestamp: Date.now()
+          };
+
+          setUser(sessionUser);
+
+          // Ensure cookies are consistent for proper authentication
+          Cookies.set('wewrite_user_id', sessionData.uid, { expires: 7 });
+          Cookies.set('wewrite_authenticated', 'true', { expires: 7 });
         }
       } catch (error) {
         console.error('Error parsing user session data:', error);
+        // Clear invalid session data to prevent authentication issues
+        Cookies.remove('userSession');
+        Cookies.remove('wewrite_user_id');
+        Cookies.remove('wewrite_authenticated');
       }
     }
   }, [user, loading]);
+
+  // Listen for account switching events to immediately update authentication context
+  useEffect(() => {
+    const handleAccountSwitch = (event: CustomEvent) => {
+      const { newUser } = event.detail;
+      console.log('AuthProvider: Account switch detected, updating user context:', newUser.email);
+
+      // Immediately update the user context with the new account
+      const switchedUser = {
+        uid: newUser.uid,
+        email: newUser.email,
+        username: newUser.username,
+        isSessionUser: true,
+        sessionTimestamp: Date.now()
+      };
+
+      setUser(switchedUser);
+
+      // Update cookies to reflect the new user for consistent authentication
+      Cookies.set('userSession', JSON.stringify(newUser), { expires: 7 });
+      Cookies.set('wewrite_user_id', newUser.uid, { expires: 7 });
+      Cookies.set('wewrite_authenticated', 'true', { expires: 7 });
+
+      console.log('AuthProvider: User context updated for account switch');
+    };
+
+    // Listen for custom account switch events
+    window.addEventListener('accountSwitch', handleAccountSwitch as EventListener);
+
+    return () => {
+      window.removeEventListener('accountSwitch', handleAccountSwitch as EventListener);
+    };
+  }, []);
 
   const value = {
     user,

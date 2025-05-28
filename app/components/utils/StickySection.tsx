@@ -516,8 +516,9 @@ export default function StickySection({
           // Note: z-index is managed via JavaScript for proper progressive layering
           'relative',
           'bg-background backdrop-blur-sm',
-          'border-b border-border/50',
           'w-full cursor-pointer',
+          // Border only when sticky
+          isSticky && 'border-b border-border/50',
           // Hover effects for better UX
           'hover:bg-background/80',
           headerClassName

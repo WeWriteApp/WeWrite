@@ -69,6 +69,8 @@ export function AccountSwitcher() {
       router.push('/account');
     } else {
       // If it's a different account, switch to it
+      console.log('AccountSwitcher: Switching to account:', account.email);
+
       // Save current accounts list to localStorage first
       saveAccountsToLocalStorage();
 
@@ -79,25 +81,30 @@ export function AccountSwitcher() {
       }));
       localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
 
-      // Mark that we're in the process of switching accounts
-      localStorage.setItem('accountSwitchInProgress', 'true');
-
-      // Prepare the account data without trying to access the auth token directly
-      // This avoids the "blocked by client" error from browser extensions
+      // Prepare the account data for switching
       const accountData = {
-        ...account,
+        uid: account.uid,
+        email: account.email,
+        username: account.username,
         isCurrent: true
       };
+
+      // Immediately emit account switch event to update authentication context
+      const accountSwitchEvent = new CustomEvent('accountSwitch', {
+        detail: { newUser: accountData }
+      });
+      window.dispatchEvent(accountSwitchEvent);
+
+      // Update session storage for the switch
+      sessionStorage.setItem('wewrite_switch_to', JSON.stringify(accountData));
 
       // Store the account data for the switch
       localStorage.setItem('switchToAccount', JSON.stringify(accountData));
 
-      // Log out current user (but keep session data for account switcher)
-      logoutUser(true).then(() => {
-        // After logout, redirect to a special route that will handle the switch
-        // which will then redirect to home page
-        router.push('/auth/switch-account');
-      });
+      // Navigate directly to home page instead of going through logout flow
+      // This prevents the authentication context from being lost
+      console.log('AccountSwitcher: Account switch complete, navigating to home');
+      router.push('/');
     }
   };
 
@@ -106,6 +113,49 @@ export function AccountSwitcher() {
     if (accounts.length > 0) {
       localStorage.setItem('savedAccounts', JSON.stringify(accounts));
     }
+  };
+
+  const handleLogout = () => {
+    setIsOpen(false);
+
+    if (accounts.length > 1) {
+      // If there are multiple accounts, remove only the current account
+      const remainingAccounts = accounts.filter(acc => !acc.isCurrent);
+
+      if (remainingAccounts.length > 0) {
+        // Set the first remaining account as current
+        const nextAccount = { ...remainingAccounts[0], isCurrent: true };
+        const updatedAccounts = [nextAccount, ...remainingAccounts.slice(1)];
+
+        // Update localStorage
+        localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
+        sessionStorage.setItem('wewrite_accounts', JSON.stringify(updatedAccounts));
+
+        // Emit account switch event to update authentication context
+        const accountSwitchEvent = new CustomEvent('accountSwitch', {
+          detail: { newUser: nextAccount }
+        });
+        window.dispatchEvent(accountSwitchEvent);
+
+        console.log('AccountSwitcher: Logged out current account, switched to:', nextAccount.email);
+
+        // Stay on current page - user is still logged in as another account
+        return;
+      }
+    }
+
+    // If this is the only account or no remaining accounts, perform full logout
+    console.log('AccountSwitcher: Performing full logout - no remaining accounts');
+
+    // Clear all account data
+    localStorage.removeItem('savedAccounts');
+    sessionStorage.removeItem('wewrite_accounts');
+    sessionStorage.removeItem('wewrite_switch_to');
+
+    // Log out the user completely
+    logoutUser().then(() => {
+      router.push('/');
+    });
   };
 
   const handleAddAccount = () => {
@@ -171,35 +221,74 @@ export function AccountSwitcher() {
         <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
       </button>
 
-      {/* TODO: Re-enable AccountSwitcherModal when component is available
-      <AccountSwitcherModal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        accounts={accounts.map(account => ({
-          id: account.uid,
-          email: account.email,
-          username: account.username
-        }))}
-        currentUser={user ? {
-          id: user.uid,
-          email: user.email || '',
-          username: user.username
-        } : null}
-        onSwitchAccount={(userId) => {
-          const account = accounts.find(acc => acc.uid === userId);
-          if (account) {
-            // Make sure we're not treating this as the current account
-            // even if the UI thinks it is (to prevent going to account settings)
-            const accountToSwitch = {
-              ...account,
-              isCurrent: false // Force this to false to ensure we go to home page
-            };
-            handleAccountClick(accountToSwitch);
-          }
-        }}
-        onAddAccount={handleAddAccount}
-      />
-      */}
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Switch Account</DialogTitle>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </button>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            {accounts.map((account) => (
+              <button
+                key={account.uid}
+                onClick={() => handleAccountClick(account)}
+                className={`w-full flex items-center justify-between p-3 rounded-lg hover:bg-accent transition-colors ${
+                  account.isCurrent ? 'bg-accent' : ''
+                }`}
+              >
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">{account.username || 'No username'}</span>
+                  <span className="text-sm text-muted-foreground">{account.email}</span>
+                </div>
+                {account.isCurrent && (
+                  <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
+                    Current
+                  </span>
+                )}
+              </button>
+            ))}
+
+            <div className="border-t pt-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={handleAddAccount}
+                className="w-full justify-start"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Account
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsOpen(false);
+                  router.push('/account');
+                }}
+                className="w-full justify-start mt-2"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Account Settings
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleLogout}
+                className="w-full justify-start mt-2 text-destructive hover:text-destructive"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                {accounts.length > 1 ? 'Log out of this account' : 'Log out'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

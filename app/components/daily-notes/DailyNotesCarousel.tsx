@@ -224,11 +224,19 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
         const cardWidth = 88; // 80px width + 8px gap
         const loadMoreButtonWidth = 88; // Same as card width
 
-        // Calculate the exact center position accounting for the "Load More Past" button
+        // Calculate the exact center position accounting for the "Load More Past" button and container padding
         // The target position should center today's card in the visible area
-        const targetScrollPosition = Math.max(0,
-          loadMoreButtonWidth + (todayIndex * cardWidth) - (carousel.clientWidth / 2) + (cardWidth / 2)
-        );
+        const containerPadding = 24; // px-6 = 24px on each side
+        const visibleWidth = carousel.clientWidth - (containerPadding * 2);
+        const visibleCenter = visibleWidth / 2;
+        const cardCenter = cardWidth / 2;
+
+        // Position of today's card relative to the start of content (after load button)
+        const todayCardStart = loadMoreButtonWidth + (todayIndex * cardWidth);
+        const todayCardCenter = todayCardStart + cardCenter;
+
+        // Calculate scroll position to center today's card in the visible area
+        const targetScrollPosition = Math.max(0, todayCardCenter - visibleCenter);
 
         // Start from the leftmost position (showing past days)
         carousel.scrollTo({ left: 0, behavior: 'instant' });
@@ -259,10 +267,18 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
         const cardWidth = 88; // 80px width + 8px gap
         const loadMoreButtonWidth = 88; // Same as card width
 
-        // Calculate the exact center position accounting for the "Load More Past" button
-        const scrollPosition = Math.max(0,
-          loadMoreButtonWidth + (todayIndex * cardWidth) - (carousel.clientWidth / 2) + (cardWidth / 2)
-        );
+        // Calculate the exact center position accounting for the "Load More Past" button and container padding
+        const containerPadding = 24; // px-6 = 24px on each side
+        const visibleWidth = carousel.clientWidth - (containerPadding * 2);
+        const visibleCenter = visibleWidth / 2;
+        const cardCenter = cardWidth / 2;
+
+        // Position of today's card relative to the start of content (after load button)
+        const todayCardStart = loadMoreButtonWidth + (todayIndex * cardWidth);
+        const todayCardCenter = todayCardStart + cardCenter;
+
+        // Calculate scroll position to center today's card in the visible area
+        const scrollPosition = Math.max(0, todayCardCenter - visibleCenter);
         carousel.scrollTo({ left: scrollPosition, behavior: 'smooth' });
       }
     }

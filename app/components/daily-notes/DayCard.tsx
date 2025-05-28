@@ -76,7 +76,7 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
         // Base styling without wewrite-card to avoid unwanted shadows and padding
         "flex-shrink-0 cursor-pointer transition-all duration-200 hover:scale-105",
         "flex flex-col items-center justify-center p-3 min-w-[80px] h-[90px]",
-        "active:scale-95 select-none rounded-2xl",
+        "active:scale-95 select-none rounded-2xl relative", // Added relative positioning for checkmark
         // Only add shadow for cards with notes
         hasNote && "shadow-md",
         isToday && "ring-2 ring-offset-2 ring-primary"
@@ -93,10 +93,10 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
       }}
       aria-label={`${hasNote ? 'View note for' : 'Create note for'} ${date.toLocaleDateString()}`}
     >
-      {/* Checkmark icon for filled notes */}
+      {/* Checkmark icon for filled notes - positioned in top-right corner */}
       {hasNote && (
-        <div className="absolute top-2 right-2">
-          <Check className="h-3 w-3 text-white opacity-80" />
+        <div className="absolute top-1.5 right-1.5 z-10">
+          <Check className="h-3 w-3 text-white drop-shadow-sm" />
         </div>
       )}
 
