@@ -14,6 +14,7 @@ import PageViewCounter from "./PageViewCounter";
 import { initializeNavigationTracking } from "../utils/navigationTracking";
 import { AuthContext } from "../providers/AuthProvider";
 import { DataContext } from "../providers/DataProvider";
+import { setupSaveSuccessFlash } from "../utils/flashAnimation";
 import { createEditor } from "slate";
 import { withHistory } from "slate-history";
 import { Slate, Editable, withReact } from "slate-react";
@@ -542,6 +543,12 @@ function SinglePageView({ params }) {
     }
   }, [searchParams, isLoading, page, user, hasGroupAccess]);
 
+  // Set up flash animation for save success
+  useEffect(() => {
+    const cleanup = setupSaveSuccessFlash();
+    return cleanup;
+  }, []);
+
   // Listen for page-updated events to refresh the page data
   useEffect(() => {
     const handlePageUpdated = (event) => {
@@ -716,6 +723,12 @@ function SinglePageView({ params }) {
       }
     }
   }, [page, user]);
+
+  // Set up flash animation for save success
+  useEffect(() => {
+    const cleanup = setupSaveSuccessFlash();
+    return cleanup;
+  }, []);
 
   // Function to extract linked page IDs from content
   // Memoize this function to prevent recalculation on every render
@@ -1047,7 +1060,7 @@ function SinglePageView({ params }) {
           </>
         ) : (
           <>
-            <div className="space-y-2 w-full transition-all duration-200 ease-in-out">
+            <div className="space-y-2 w-full transition-all duration-200 ease-in-out" data-page-content>
               <div className="page-content w-full max-w-none break-words px-1">
                 <PageProvider>
                   <LineSettingsProvider>

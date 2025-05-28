@@ -380,8 +380,12 @@ const EditPage = ({
           setHasVisibilityChanged(false);
           setHasLocationChanged(false);
 
-          // Show a success toast
-          toast.success("Page saved successfully");
+          // Trigger green flash animation instead of toast
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('page-save-success', {
+              detail: { pageId: page.id }
+            }));
+          }
 
           // Force a refresh of the page data to ensure the latest content is displayed
           if (typeof window !== 'undefined') {
