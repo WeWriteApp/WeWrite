@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { Loader, ChevronLeft, Share2, Lock, MoreHorizontal, Pencil, Plus, MessageSquare } from "lucide-react";
+import { Loader, ChevronLeft, Share2, Lock, MoreHorizontal, Edit2, Plus, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/database";
@@ -44,6 +44,8 @@ export interface PageHeaderProps {
   subscriptionStatus?: string;
   isEditing?: boolean;
   setIsEditing?: (value: boolean) => void;
+  onTitleChange?: (newTitle: string) => void;
+  canEdit?: boolean;
 }
 
 export default function PageHeader({
@@ -59,6 +61,8 @@ export default function PageHeader({
   subscriptionStatus: initialStatus,
   isEditing = false,
   setIsEditing,
+  onTitleChange,
+  canEdit: propCanEdit = false,
 }: PageHeaderProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -77,9 +81,15 @@ export default function PageHeader({
   const [pageId, setPageId] = React.useState<string | null>(null);
   const [hasGroupAccess, setHasGroupAccess] = React.useState<boolean>(false);
   const [isAddToPageOpen, setIsAddToPageOpen] = React.useState<boolean>(false);
+  const [isEditingTitle, setIsEditingTitle] = React.useState<boolean>(false);
+  const [editingTitle, setEditingTitle] = React.useState<string>(title || "");
+  const titleInputRef = React.useRef<HTMLInputElement>(null);
 
   // Function to determine if the current user can edit the page
   const canEdit = React.useMemo(() => {
+    // Use prop value if provided, otherwise calculate
+    if (propCanEdit !== undefined) return propCanEdit;
+
     if (!user) return false;
 
     // User is the page owner
@@ -89,9 +99,45 @@ export default function PageHeader({
     if (groupId && hasGroupAccess) return true;
 
     return false;
-  }, [user, userId, groupId, hasGroupAccess]);
+  }, [propCanEdit, user, userId, groupId, hasGroupAccess]);
 
+  // Update editing title when title prop changes
+  React.useEffect(() => {
+    setEditingTitle(title || "");
+  }, [title]);
 
+  // Handle title editing
+  const handleTitleClick = () => {
+    if (canEdit && isEditing) {
+      setIsEditingTitle(true);
+      // Focus the input after state update
+      setTimeout(() => {
+        titleInputRef.current?.focus();
+        titleInputRef.current?.select();
+      }, 0);
+    }
+  };
+
+  const handleTitleSubmit = () => {
+    if (editingTitle.trim() !== title && onTitleChange) {
+      onTitleChange(editingTitle.trim());
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTitleSubmit();
+    } else if (e.key === 'Escape') {
+      setEditingTitle(title || "");
+      setIsEditingTitle(false);
+    }
+  };
+
+  const handleTitleBlur = () => {
+    handleTitleSubmit();
+  };
 
   // Fetch username if not provided but userId is available
   React.useEffect(() => {
@@ -430,18 +476,48 @@ export default function PageHeader({
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5">
-                      <span
-                        className={isScrolled ? "text-ellipsis overflow-hidden" : ""}
-                        style={isScrolled ? {
-                          maxWidth: '60vw',
-                          display: 'inline-block',
-                          verticalAlign: 'middle',
-                          whiteSpace: 'nowrap',
-                          paddingRight: '4px'
-                        } : {}}
-                      >
-                        {title || "Untitled"}
-                      </span>
+                      {isEditing && canEdit && isEditingTitle ? (
+                        <input
+                          ref={titleInputRef}
+                          type="text"
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onKeyDown={handleTitleKeyDown}
+                          onBlur={handleTitleBlur}
+                          className={`bg-background/80 border border-primary/30 rounded-lg px-2 py-1 outline-none font-semibold text-center transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary/50 ${
+                            isScrolled
+                              ? "text-xs opacity-90"
+                              : "text-2xl"
+                          }`}
+                          style={{
+                            maxWidth: isScrolled ? "60vw" : "100%",
+                            minWidth: "100px"
+                          }}
+                          placeholder="Enter title..."
+                        />
+                      ) : (
+                        <span
+                          className={`${isScrolled ? "text-ellipsis overflow-hidden" : ""} ${
+                            isEditing && canEdit
+                              ? "cursor-pointer hover:bg-muted/30 hover:border-muted-foreground/30 rounded-lg px-2 py-1 border border-muted-foreground/20 transition-all duration-200 group flex items-center gap-2"
+                              : ""
+                          }`}
+                          style={isScrolled ? {
+                            maxWidth: '60vw',
+                            display: 'inline-block',
+                            verticalAlign: 'middle',
+                            whiteSpace: 'nowrap',
+                            paddingRight: '4px'
+                          } : {}}
+                          onClick={handleTitleClick}
+                          title={isEditing && canEdit ? "Click to edit title" : undefined}
+                        >
+                          {isEditing && canEdit && !isScrolled && (
+                            <Edit2 className="h-3 w-3 opacity-60 group-hover:opacity-100 transition-opacity duration-200 text-muted-foreground flex-shrink-0" />
+                          )}
+                          {title || "Untitled"}
+                        </span>
+                      )}
                       {isPrivate && <Lock className={`${isScrolled ? 'h-3 w-3' : 'h-4 w-4'} text-muted-foreground flex-shrink-0`} />}
                     </div>
                   )}
@@ -563,7 +639,7 @@ export default function PageHeader({
                         setIsEditing(!isEditing);
                       }}
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Edit2 className="h-4 w-4" />
                       <span>{isEditing ? "Cancel" : "Edit"}</span>
                     </DropdownMenuItem>
                   )}
@@ -577,23 +653,27 @@ export default function PageHeader({
                     <span>Share</span>
                   </DropdownMenuItem>
 
-                  {/* Add to Page option - always visible */}
-                  <DropdownMenuItem
-                    className="gap-2"
-                    onClick={handleAddToPageClick}
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Add to Page</span>
-                  </DropdownMenuItem>
+                  {/* Add to Page option - hidden in edit mode */}
+                  {!isEditing && (
+                    <DropdownMenuItem
+                      className="gap-2"
+                      onClick={handleAddToPageClick}
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Add to Page</span>
+                    </DropdownMenuItem>
+                  )}
 
-                  {/* Reply option - always visible */}
-                  <DropdownMenuItem
-                    className="gap-2"
-                    onClick={handleReplyClick}
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Reply</span>
-                  </DropdownMenuItem>
+                  {/* Reply option - hidden in edit mode */}
+                  {!isEditing && (
+                    <DropdownMenuItem
+                      className="gap-2"
+                      onClick={handleReplyClick}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      <span>Reply</span>
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

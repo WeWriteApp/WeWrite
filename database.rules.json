@@ -1,30 +1,44 @@
 {
   "rules": {
+    // User profiles - Restricted access with authentication required
     "users": {
       "$uid": {
-        // Allow users to read any user profile
-        ".read": true,
+        // Only allow authenticated users to read user profiles
+        ".read": "auth !== null",
         // Allow users to write only to their own profile
         ".write": "auth !== null && auth.uid === $uid",
-        // Bio-specific rules
+
+        // Bio-specific rules - require authentication for privacy
         "bio": {
-          ".read": true,
+          ".read": "auth !== null",
           ".write": "auth !== null && auth.uid === $uid"
         },
         "bioLastEditor": {
-          ".read": true,
+          ".read": "auth !== null",
           ".write": "auth !== null && auth.uid === $uid"
         },
         "bioLastEditTime": {
-          ".read": true,
+          ".read": "auth !== null",
+          ".write": "auth !== null && auth.uid === $uid"
+        },
+
+        // User pages - only the user can manage their page list
+        "pages": {
+          ".read": "auth !== null && auth.uid === $uid",
+          ".write": "auth !== null && auth.uid === $uid"
+        },
+
+        // User groups - only the user can see their group memberships
+        "groups": {
+          ".read": "auth !== null && auth.uid === $uid",
           ".write": "auth !== null && auth.uid === $uid"
         }
       }
     },
     "groups": {
       "$groupId": {
-        // Allow anyone to read public groups
-        ".read": "data.child('isPublic').val() === true || (auth !== null && data.child('members').child(auth.uid).exists())",
+        // Only allow authenticated users to read groups (public or member access)
+        ".read": "auth !== null && (data.child('isPublic').val() === true || data.child('members').child(auth.uid).exists())",
         // Allow only group owners and admins to update group settings
         ".write": "auth !== null && (data.child('owner').val() === auth.uid || (data.child('members').child(auth.uid).exists() && data.child('members').child(auth.uid).child('role').val() === 'admin'))",
         // About section can be edited by any group member
@@ -33,33 +47,70 @@
           ".write": "auth !== null && data.parent().child('members').child(auth.uid).exists()"
         },
         "aboutLastEditor": {
-          ".read": true,
+          ".read": "auth !== null && (data.parent().child('isPublic').val() === true || data.parent().child('members').child(auth.uid).exists())",
           ".write": "auth !== null && data.parent().child('members').child(auth.uid).exists()"
         },
         "aboutLastEditTime": {
-          ".read": true,
+          ".read": "auth !== null && (data.parent().child('isPublic').val() === true || data.parent().child('members').child(auth.uid).exists())",
           ".write": "auth !== null && data.parent().child('members').child(auth.uid).exists()"
         },
         "aboutHistory": {
           ".read": "auth !== null && data.parent().child('members').child(auth.uid).exists()",
           ".write": "auth !== null && data.parent().child('members').child(auth.uid).exists()"
         },
-        // Members management
+        // Members management - require authentication for all access
         "members": {
-          ".read": "data.parent().child('isPublic').val() === true || (auth !== null && data.parent().child('members').child(auth.uid).exists())",
+          ".read": "auth !== null && (data.parent().child('isPublic').val() === true || data.parent().child('members').child(auth.uid).exists())",
           ".write": "auth !== null && (data.parent().child('owner').val() === auth.uid || (data.parent().child('members').child(auth.uid).exists() && data.parent().child('members').child(auth.uid).child('role').val() === 'admin'))"
         },
-        // Pages in groups
+        // Pages in groups - require authentication
         "pages": {
-          ".read": "data.parent().child('isPublic').val() === true || (auth !== null && data.parent().child('members').child(auth.uid).exists())",
+          ".read": "auth !== null && (data.parent().child('isPublic').val() === true || data.parent().child('members').child(auth.uid).exists())",
           ".write": "auth !== null && data.parent().child('members').child(auth.uid).exists()"
         }
       }
     },
-    // Default rule for other paths - maintain backward compatibility for now
-    "$other": {
-      ".read": true,
-      ".write": true
-    }
+
+    // Admin-only configuration data
+    "config": {
+      ".read": "auth !== null && (auth.token.email === 'jamiegray2234@gmail.com' || root.child('adminUsers').child(auth.uid).exists())",
+      ".write": "auth !== null && (auth.token.email === 'jamiegray2234@gmail.com' || root.child('adminUsers').child(auth.uid).exists())"
+    },
+
+    // Admin users list - super restricted
+    "adminUsers": {
+      ".read": "auth !== null && (auth.token.email === 'jamiegray2234@gmail.com' || root.child('adminUsers').child(auth.uid).exists())",
+      ".write": "auth !== null && (auth.token.email === 'jamiegray2234@gmail.com' || root.child('adminUsers').child(auth.uid).exists())"
+    },
+
+    // User activity and analytics - privacy protected
+    "userActivity": {
+      "$uid": {
+        ".read": "auth !== null && auth.uid === $uid",
+        ".write": "auth !== null && auth.uid === $uid"
+      }
+    },
+
+    // Page analytics - restricted access
+    "pageAnalytics": {
+      "$pageId": {
+        ".read": "auth !== null",
+        ".write": "auth !== null"
+      }
+    },
+
+    // Notifications - user-specific
+    "notifications": {
+      "$uid": {
+        ".read": "auth !== null && auth.uid === $uid",
+        ".write": "auth !== null && auth.uid === $uid"
+      }
+    },
+
+    // REMOVED: Dangerous default rule that allowed unrestricted access
+    // All paths must now have explicit rules defined above
+    // This enforces the principle of least privilege
+
+    // Any undefined paths will be denied by default (Firebase's default behavior)
   }
 }

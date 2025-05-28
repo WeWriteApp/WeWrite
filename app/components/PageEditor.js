@@ -20,6 +20,7 @@ import MapEditor from "./MapEditor";
 import { toast } from "./ui/use-toast";
 import { useFeatureFlag } from "../utils/feature-flags.ts";
 import DisabledLinkModal from "./DisabledLinkModal";
+import { useClickToEdit } from "../hooks/useClickToEdit";
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {
@@ -58,23 +59,19 @@ const safeReactEditor = {
  * @param {boolean} props.isNewPage - Whether this is a new page or editing an existing one
  * @param {boolean} props.isReply - Whether this is a reply to an existing page
  * @param {string} props.replyToId - ID of the page being replied to
+ * @param {Object} props.clickPosition - Position where user clicked to enter edit mode
  */
 const PageEditor = ({
   title,
   setTitle,
   initialContent,
   onContentChange,
-  isPublic,
-  setIsPublic,
-  location,
-  setLocation,
-  onSave,
-  onCancel,
   isSaving,
   error,
   isNewPage = false,
   isReply = false,
-  replyToId = null
+  replyToId = null,
+  clickPosition = null
 }) => {
   // Add hydration safety check
   const [isHydrated, setIsHydrated] = useState(false);
@@ -89,10 +86,8 @@ const PageEditor = ({
     initialContent || [{ type: 'paragraph', children: [{ text: '' }] }]
   );
 
-  const [titleError, setTitleError] = useState(false);
   const { user } = useContext(AuthContext);
   const editorRef = useRef(null);
-  const titleInputRef = useRef(null);
   const cursorPositioned = useRef(false);
   const searchParams = useSearchParams();
 
@@ -110,24 +105,25 @@ const PageEditor = ({
     isEditing: true,
     setIsEditing: () => {},
     canEdit: false, // Disable "Enter to edit" in edit mode
-    handleSave: !isSaving ? handleSave : null, // Only allow save when not already saving
+    handleSave: null, // Save is handled by the bottom toolbar
     isSaving
   });
 
-  // Listen for custom save event from the editor
+  // Use click-to-edit hook for cursor positioning
+  useClickToEdit(editorRef.current, clickPosition, true, currentEditorValue);
+
+  // Listen for insert link event from bottom toolbar
   useEffect(() => {
-    const handleSaveEvent = () => {
-      if (!isSaving) {
-        handleSave();
-      }
+    const handleInsertLinkEvent = () => {
+      handleInsertLink();
     };
 
-    document.addEventListener('editor-save-requested', handleSaveEvent);
+    window.addEventListener('triggerInsertLink', handleInsertLinkEvent);
 
     return () => {
-      document.removeEventListener('editor-save-requested', handleSaveEvent);
+      window.removeEventListener('triggerInsertLink', handleInsertLinkEvent);
     };
-  }, [isSaving, handleSave]);
+  }, []);
 
   // Fetch original page data for reply functionality
   useEffect(() => {
@@ -261,14 +257,13 @@ const PageEditor = ({
     }
   }, [isReply, replyToId, onContentChange]);
 
-  // Focus the editor when entering edit mode, but only if not a new page
+  // Focus the editor when entering edit mode
   useEffect(() => {
-    // Only auto-focus the editor if this is not a new page
-    // For new pages, we want to focus the title field first
-    if (editorRef.current && !isNewPage && !isReply) {
+    // Auto-focus the editor for better user experience
+    if (editorRef.current && !isReply) {
       editorRef.current.focus();
     }
-  }, [isNewPage, isReply]);
+  }, [isReply]);
 
   // Update currentEditorValue when the initialContent prop changes
   useEffect(() => {
@@ -316,17 +311,14 @@ const PageEditor = ({
 
             // Now position cursor at the second paragraph (after attribution)
             try {
-              // Only focus the editor if the title field is not currently focused
-              if (document.activeElement !== titleInputRef.current) {
-                // Use our safe wrapper for ReactEditor.focus
-                safeReactEditor.focus(editor);
+              // Use our safe wrapper for ReactEditor.focus
+              safeReactEditor.focus(editor);
 
-                // Create a point at the start of the second paragraph (index 1)
-                const point = { path: [1, 0], offset: 0 };
+              // Create a point at the start of the second paragraph (index 1)
+              const point = { path: [1, 0], offset: 0 };
 
-                // Try to select the point
-                Transforms.select(editor, point);
-              }
+              // Try to select the point
+              Transforms.select(editor, point);
             } catch (selectError) {
               console.error('Error selecting text:', selectError);
             }
@@ -352,54 +344,7 @@ const PageEditor = ({
     }
   };
 
-  // Handle save with validation
-  function handleSave() {
-    console.log("handleSave called");
 
-    if (!user) {
-      console.log("User not authenticated");
-      return;
-    }
-
-    if (!title || title.trim().length === 0) {
-      console.log("Title is required");
-      setTitleError(true);
-
-      // Focus the title input
-      if (titleInputRef.current) {
-        titleInputRef.current.focus();
-      }
-
-      return;
-    }
-
-    // Get the latest editor content directly from the editor ref if possible
-    let contentToSave = currentEditorValue;
-
-    // Validate editor content
-    if (!contentToSave || !Array.isArray(contentToSave) || contentToSave.length === 0) {
-      console.log("Editor content is invalid", contentToSave);
-      return;
-    }
-
-    // Clear any title error
-    setTitleError(false);
-
-    console.log("Calling onSave with editor content:", contentToSave);
-
-    // Call the provided onSave function with the current editor value
-    if (onSave) {
-      try {
-        // Make a deep copy of the content to prevent any reference issues
-        const contentCopy = JSON.parse(JSON.stringify(contentToSave));
-        onSave(contentCopy);
-      } catch (error) {
-        console.error("Error during save:", error);
-      }
-    } else {
-      console.error("onSave function is not defined");
-    }
-  }
 
   // Handle link insertion
   const handleInsertLink = () => {
@@ -479,107 +424,10 @@ const PageEditor = ({
     }
   };
 
-  // Auto-resize textarea function with improved stability
-  const autoResizeTextarea = (element) => {
-    if (!element) return;
 
-    // Store the current scroll position
-    const scrollPos = window.scrollY;
-
-    // Get the current computed style to account for padding and borders
-    const computedStyle = window.getComputedStyle(element);
-    const paddingTop = parseFloat(computedStyle.paddingTop);
-    const paddingBottom = parseFloat(computedStyle.paddingBottom);
-
-    // Calculate minimum height based on line height for stability
-    const lineHeight = parseFloat(computedStyle.lineHeight);
-    const minHeight = Math.max(50, lineHeight + paddingTop + paddingBottom);
-
-    // Set a fixed height temporarily to get accurate scrollHeight
-    const previousHeight = element.style.height;
-    element.style.height = minHeight + 'px';
-
-    // Get the scroll height (this is the height needed for the content)
-    const scrollHeight = element.scrollHeight;
-
-    // Only update if the height actually needs to change by more than 2px
-    // This prevents tiny fluctuations that cause layout shifts
-    if (Math.abs(parseFloat(previousHeight) - scrollHeight) > 2) {
-      element.style.height = scrollHeight + 'px';
-    } else if (!previousHeight || previousHeight === 'auto') {
-      element.style.height = scrollHeight + 'px';
-    } else {
-      // Restore previous height if the difference is minimal
-      element.style.height = previousHeight;
-    }
-
-    // Restore the scroll position to prevent page jumping
-    window.scrollTo(window.scrollX, scrollPos);
-  };
-
-  // Handle textarea input and resize
-  const handleTitleChange = (e) => {
-    setTitle(e.target.value);
-    if (e.target.value.trim().length > 0) {
-      setTitleError(false);
-    }
-    // Auto-resize the textarea
-    autoResizeTextarea(e.target);
-  };
-
-  // Track if the title field has been focused by user
-  const [titleHasBeenFocused, setTitleHasBeenFocused] = useState(false);
-
-  // Handle focus on title field
-  const handleTitleFocus = () => {
-    setTitleHasBeenFocused(true);
-  };
-
-  // Auto-resize on initial render and when title changes
-  useEffect(() => {
-    if (titleInputRef.current) {
-      autoResizeTextarea(titleInputRef.current);
-
-      // If this is a new page and title hasn't been focused yet, focus the title input
-      if (isNewPage && !titleHasBeenFocused) {
-        titleInputRef.current.focus();
-        setTitleHasBeenFocused(true);
-      }
-    }
-  }, [title, isNewPage, titleHasBeenFocused]);
 
   return (
-    <div className="editor-container w-full max-w-none" style={{ paddingBottom: '60px' }}>
-      <div className="mb-4 w-full max-w-none">
-        <div className="relative w-full">
-          <textarea
-            ref={titleInputRef}
-            value={title}
-            onChange={handleTitleChange}
-            onFocus={handleTitleFocus}
-            rows={1}
-            className={`w-full max-w-none mt-1 text-3xl font-semibold bg-background text-foreground border ${
-              titleError ? 'border-destructive ring-2 ring-destructive/20' : 'border-input/30 focus:ring-2 focus:ring-primary/20'
-            } rounded-lg px-3 py-2 transition-colors break-words overflow-hidden whitespace-normal resize-none`}
-            placeholder={isReply ? "Title your reply..." : "Enter a title..."}
-            autoComplete="off"
-            style={{
-              minHeight: '50px', // Ensure minimum height
-              position: 'relative',
-              zIndex: 10, // Ensure it's above other elements
-              transition: 'height 0.1s ease', // Smooth height transition
-              height: '50px' // Initial fixed height to prevent layout shift
-            }}
-          />
-        </div>
-        {titleError && (
-          <p className="text-destructive text-sm mt-1">Title is required</p>
-        )}
-      </div>
-
-      {/* Add separator line between title and content */}
-      <div className="w-full h-px bg-border dark:bg-border my-4"></div>
-
+    <div className="editor-container w-full max-w-none">
       <div className="w-full max-w-none">
         {isHydrated ? (
           <Editor
@@ -594,80 +442,6 @@ const PageEditor = ({
             <div className="loader loader-md"></div>
           </div>
         )}
-      </div>
-
-      {/* Bottom controls section with Public/Private switcher and Save/Cancel buttons */}
-      <div className="mt-8 mb-16">
-        {/* Responsive layout for controls - stacked on mobile, side-by-side on desktop */}
-        <div className="flex flex-col gap-4 w-full">
-          {/* Action buttons row - Public/Private switcher, Insert Link button, and Location */}
-          <div className="flex flex-row items-center gap-2 flex-wrap justify-start">
-            {/* Public/Private switcher */}
-            <div className="flex items-center gap-2 bg-background/90 p-2 rounded-lg border border-input">
-              {isPublic ? (
-                <Globe className="h-4 w-4 text-green-500" />
-              ) : (
-                <Lock className="h-4 w-4 text-muted-foreground" />
-              )}
-              <span className="text-sm font-medium">
-                {isPublic ? "Public" : "Private"}
-              </span>
-              <Switch
-                checked={isPublic}
-                onCheckedChange={setIsPublic}
-                aria-label="Toggle page visibility"
-              />
-            </div>
-
-            {/* Insert Link button */}
-            <Button
-              onClick={handleInsertLink}
-              variant="outline"
-              className={`flex items-center gap-1.5 bg-background/90 border-input ${
-                !linkFunctionalityEnabled ? 'opacity-60 cursor-pointer' : ''
-              }`}
-              title={!linkFunctionalityEnabled ? 'Link functionality is temporarily disabled' : 'Insert Link'}
-            >
-              <Link className="h-4 w-4" />
-              <span className="text-sm font-medium">Insert Link</span>
-            </Button>
-
-            {/* Location button - only show if map feature is enabled */}
-            {mapFeatureEnabled && (
-              <MapEditor
-                location={location}
-                onChange={setLocation}
-              />
-            )}
-          </div>
-
-          {/* Save/Cancel buttons row - full width on mobile */}
-          <div className="flex items-center gap-2 justify-end w-full">
-            <Button
-              onClick={onCancel}
-              variant="outline"
-              className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                console.log("Save button clicked");
-                handleSave();
-              }}
-              disabled={isSaving || !title.trim() || !currentEditorValue || currentEditorValue.length === 0}
-              variant="default"
-              className="min-w-[80px]"
-            >
-              {isSaving ? (
-                <div className="flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></span>
-                  <span>Saving...</span>
-                </div>
-              ) : "Save"}
-            </Button>
-          </div>
-        </div>
       </div>
 
       {/* Error message */}

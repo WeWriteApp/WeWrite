@@ -49,6 +49,12 @@ const UsernameEnforcementBanner = dynamic(() => import('./components/UsernameEnf
   ssr: false
 });
 
+// Dynamic import for polyfill testing (client-side only)
+const PolyfillTester = dynamic(() => import('./components/PolyfillTester'), {
+  ssr: false,
+  loading: () => null
+});
+
 
 
 export default function ClientLayout({ children }) {
@@ -101,6 +107,9 @@ export default function ClientLayout({ children }) {
                                 <div className="flex flex-col min-h-screen bg-background pb-8">
                                   {/* Handle pending replies after authentication */}
                                   <PendingReplyHandler />
+
+                                  {/* Initialize polyfill testing */}
+                                  <PolyfillTester />
 
                                   {!isAuthPage && <UsernameWarningBanner />}
                                   {!isAuthPage && <UsernameEnforcementBanner />}

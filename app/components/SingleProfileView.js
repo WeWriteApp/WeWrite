@@ -90,7 +90,7 @@ const SingleProfileView = ({ profile }) => {
           // Get follower count, page count, view count, and activity data in parallel
           const [followerCountResult, pageCountResult, viewCountResult, activityResult] = await Promise.all([
             getUserFollowerCount(profile.uid),
-            getUserPageCount(profile.uid),
+            getUserPageCount(profile.uid, user?.uid), // Pass current user ID to get correct count
             getUserTotalViewCount(profile.uid),
             getUserActivityLast24Hours(profile.uid)
           ]);

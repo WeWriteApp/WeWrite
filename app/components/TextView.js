@@ -11,7 +11,7 @@ import { AuthContext } from "../providers/AuthProvider";
 import { isExternalLink } from "../utils/linkFormatters";
 import { validateLink, getLinkDisplayText, extractPageIdFromUrl } from '../utils/linkValidator';
 import { Button } from "./ui/button";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Edit } from "lucide-react";
 import Modal from "./ui/modal";
 import { useControlledAnimation } from "../hooks/useControlledAnimation";
 import "./paragraph-styles.css";
@@ -86,7 +86,7 @@ const getPageTitle = async (pageId) => {
   return null;
 };
 
-const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComplete, setIsEditing, showDiff = false }) => {
+const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComplete, setIsEditing, showDiff = false, canEdit: propCanEdit }) => {
   const [parsedContents, setParsedContents] = useState(null);
   const [language, setLanguage] = useState(null);
   const { lineMode } = useLineSettings();
@@ -94,15 +94,23 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeLineIndex, setActiveLineIndex] = useState(null);
+  const [isHovering, setIsHovering] = useState(false);
+  const [clickPosition, setClickPosition] = useState(null);
   const { user } = useContext(AuthContext);
   const { page } = usePage();
 
-  // Check if current user can edit this page
-  const canEdit = Boolean(
+  // Check if current user can edit this page (enhanced for group support)
+  // Use prop value if provided, otherwise calculate
+  const canEdit = propCanEdit !== undefined ? propCanEdit : Boolean(
     setIsEditing &&
     user?.uid &&
-    page?.userId &&
-    user.uid === page.userId
+    page &&
+    (
+      // User is the page owner
+      (page.userId && user.uid === page.userId) ||
+      // OR page belongs to a group and user is a member of that group
+      (page.groupId && page.hasGroupAccess)
+    )
   );
 
   // Check if current user can view this page (public or owner)
@@ -188,11 +196,21 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
           }
         } catch (parseError) {
           console.error("TextView: Error parsing string content:", parseError);
-          // Create a fallback content structure with the error message
-          contents = [{
-            type: "paragraph",
-            children: [{ text: "Error loading content. Please try refreshing the page." }]
-          }];
+          console.error("TextView: Content that failed to parse:", content?.substring(0, 200) + "...");
+
+          // Try to determine if this is a completely empty or invalid page
+          if (!content || content.trim() === '' || content === 'null' || content === 'undefined') {
+            contents = [{
+              type: "paragraph",
+              children: [{ text: "This page is empty. Click to start writing!" }]
+            }];
+          } else {
+            // Create a fallback content structure with more helpful error message
+            contents = [{
+              type: "paragraph",
+              children: [{ text: "Error loading content. The page data may be corrupted. Try refreshing the page or contact support if the issue persists." }]
+            }];
+          }
         }
       } else if (Array.isArray(content)) {
         // Content is already an array, use it directly
@@ -280,10 +298,13 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
       }
     } catch (e) {
       console.error("TextView: Unexpected error processing content:", e);
-      // Create a fallback content structure with the error message
+      console.error("TextView: Content type:", typeof content);
+      console.error("TextView: Content preview:", content?.toString().substring(0, 100) + "...");
+
+      // Create a more helpful fallback content structure
       contents = [{
         type: "paragraph",
-        children: [{ text: "Error loading content. Please try refreshing the page." }]
+        children: [{ text: "Unable to load page content. This may be due to a temporary issue. Please try refreshing the page, and if the problem persists, contact support." }]
       }];
     }
 
@@ -436,28 +457,64 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
   // Enable animateOnNavigation to ensure smooth transitions between pages
   const shouldAnimate = useControlledAnimation(componentId, false, true);
 
-  // Wrap the component in an error boundary
+  // Enhanced click handler for better edit mode transition
+  const handleContentClick = (event) => {
+    if (!canEdit || !setIsEditing) return;
+
+    // Don't trigger edit mode if clicking on interactive elements
+    const target = event.target;
+    const isInteractiveElement = target.closest('a, button, [role="button"], .no-edit-trigger');
+
+    if (isInteractiveElement) {
+      return;
+    }
+
+    // Store click position for cursor positioning in edit mode
+    const rect = event.currentTarget.getBoundingClientRect();
+    const newClickPosition = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+      clientX: event.clientX,
+      clientY: event.clientY
+    };
+
+    // Update click position state
+    setClickPosition(newClickPosition);
+
+    // Set editing state with click position for cursor positioning
+    setIsEditing(true, newClickPosition);
+  };
+
+  // Wrap the component in an error boundary with enhanced error handling
   try {
+    // Additional safety check for polyfills
+    if (typeof window !== 'undefined') {
+      // Check if Intl.Segmenter is available (polyfill should provide this)
+      if (!window.Intl || !window.Intl.Segmenter) {
+        console.warn('TextView: Intl.Segmenter not available, some text features may be limited');
+      }
+    }
+
     return (
       <div className="relative">
         <div
           className={`flex flex-col ${getViewModeStyles()} w-full text-left ${
             isScrolled ? 'pb-16' : ''
           } ${
-            canEdit ? 'relative' : ''
-          } min-h-screen`}
-          onClick={() => {
-            if (canEdit && setIsEditing) {
-              // Set editing state immediately without animations or overlays
-              // for a smoother WYSIWYG transition
-              setIsEditing(true);
-            }
-          }}
-          title={canEdit ? "Click anywhere to edit" : ""}
+            canEdit ? 'relative cursor-text' : ''
+          } min-h-screen ${
+            canEdit && isHovering ? 'bg-muted/20' : ''
+          } transition-colors duration-150`}
+          onClick={handleContentClick}
+          onMouseEnter={() => canEdit && setIsHovering(true)}
+          onMouseLeave={() => canEdit && setIsHovering(false)}
+          title={canEdit ? "Click to edit" : ""}
         >
           {canEdit && (
-            <div className="absolute top-0 right-0 p-2 text-xs text-muted-foreground bg-background/80 rounded-bl-md">
-              Click to edit
+            <div className={`absolute top-3 right-3 transition-opacity duration-200 ${
+              isHovering ? 'opacity-70' : 'opacity-0'
+            }`}>
+              <Edit className="h-4 w-4 text-muted-foreground" />
             </div>
           )}
 
@@ -476,6 +533,7 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
               activeLineIndex={activeLineIndex}
               onActiveLine={handleActiveLine}
               showDiff={showDiff}
+              clickPosition={clickPosition}
             />
           )}
         </div>
@@ -483,17 +541,54 @@ const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComp
     );
   } catch (error) {
     console.error('Error rendering TextView:', error);
+    console.error('TextView render error details:', {
+      pageId: page?.id,
+      contentType: typeof content,
+      hasContent: !!content,
+      errorMessage: error.message,
+      errorStack: error.stack,
+      userAgent: typeof window !== 'undefined' ? window.navigator?.userAgent : 'server',
+      hasIntlSegmenter: typeof window !== 'undefined' ? !!(window.Intl && window.Intl.Segmenter) : 'unknown'
+    });
+
     return (
-      <div className="p-6 text-muted-foreground">
-        Error loading content. Please try refreshing the page.
+      <div className="p-6 text-center space-y-4">
+        <div className="text-muted-foreground">
+          <p className="font-medium">Unable to display page content</p>
+          <p className="text-sm mt-2">
+            There was an error rendering this page. This could be due to corrupted data or a temporary issue.
+          </p>
+        </div>
+        <div className="flex gap-2 justify-center">
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90"
+          >
+            Refresh Page
+          </button>
+          <button
+            onClick={() => window.history.back()}
+            className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm hover:bg-secondary/90"
+          >
+            Go Back
+          </button>
+        </div>
       </div>
     );
   }
 };
 
-export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false }) => {
+export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false, clickPosition = null }) => {
   // Wrap in try-catch to handle any rendering errors
   try {
+    // Additional safety checks for browser compatibility
+    if (typeof window !== 'undefined') {
+      // Ensure required browser APIs are available
+      if (!window.requestAnimationFrame) {
+        console.warn('RenderContent: requestAnimationFrame not available, animations may not work');
+      }
+    }
+
     // Use the line mode settings
     const { lineMode } = useLineSettings();
 
@@ -660,9 +755,28 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
 
   } catch (error) {
     console.error('Error rendering content:', error);
+    console.error('RenderContent error details:', {
+      contentType: typeof contents,
+      isArray: Array.isArray(contents),
+      contentLength: Array.isArray(contents) ? contents.length : 0,
+      errorMessage: error.message,
+      errorStack: error.stack
+    });
+
     return (
-      <div className="p-6 text-muted-foreground">
-        Error rendering content. Please try refreshing the page.
+      <div className="p-6 text-center space-y-4">
+        <div className="text-muted-foreground">
+          <p className="font-medium">Content rendering error</p>
+          <p className="text-sm mt-2">
+            There was an error displaying the page content. This could be due to corrupted data.
+          </p>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90"
+        >
+          Refresh Page
+        </button>
       </div>
     );
   }

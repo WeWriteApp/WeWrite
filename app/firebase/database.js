@@ -283,6 +283,16 @@ export const createPage = async (data) => {
         await recordUserActivity(data.userId);
         console.log("Recorded user activity for streak tracking");
 
+        // Update user page count
+        try {
+          const { incrementUserPageCount } = await import('./counters');
+          await incrementUserPageCount(data.userId, pageData.isPublic);
+          console.log("Updated user page count");
+        } catch (counterError) {
+          console.error("Error updating user page count:", counterError);
+          // Don't fail page creation if counter update fails
+        }
+
         return pageRef.id;
       } catch (versionError) {
         console.error("Error creating version:", versionError);
@@ -439,7 +449,26 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
         });
       } catch (error) {
         console.error("Error checking page access:", error);
-        onPageUpdate({ error: "Error checking page access" });
+        console.error("Page access error details:", {
+          pageId,
+          userId,
+          errorMessage: error.message,
+          errorCode: error.code
+        });
+
+        // Provide more specific error messages based on error type
+        let errorMessage = "Error checking page access";
+        if (error.code === 'permission-denied') {
+          errorMessage = "You don't have permission to view this page";
+        } else if (error.code === 'not-found') {
+          errorMessage = "Page not found";
+        } else if (error.code === 'unavailable') {
+          errorMessage = "Service temporarily unavailable. Please try again later.";
+        } else if (error.message?.includes('network')) {
+          errorMessage = "Network error. Please check your connection and try again.";
+        }
+
+        onPageUpdate({ error: errorMessage });
       }
     } else {
       // If page document doesn't exist
@@ -568,7 +597,26 @@ export const getPageById = async (pageId, userId = null) => {
       }
     } catch (error) {
       console.error("Error fetching page:", error);
-      return { pageData: null, error: "Error fetching page" };
+      console.error("Fetch page error details:", {
+        pageId,
+        userId,
+        errorMessage: error.message,
+        errorCode: error.code
+      });
+
+      // Provide more specific error messages based on error type
+      let errorMessage = "Error fetching page";
+      if (error.code === 'permission-denied') {
+        errorMessage = "You don't have permission to view this page";
+      } else if (error.code === 'not-found') {
+        errorMessage = "Page not found";
+      } else if (error.code === 'unavailable') {
+        errorMessage = "Service temporarily unavailable. Please try again later.";
+      } else if (error.message?.includes('network')) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      }
+
+      return { pageData: null, error: errorMessage };
     }
   }, { pageId, userId });
 };
@@ -1089,6 +1137,20 @@ export const getCollection = async (collectionName) => {
 export const updateDoc = async (collectionName, docName, data) => {
   try {
     const docRef = doc(db, collectionName, docName);
+
+    // If this is a page update and isPublic is being changed, track the change
+    let oldPageData = null;
+    if (collectionName === "pages" && data.hasOwnProperty('isPublic')) {
+      try {
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          oldPageData = docSnap.data();
+        }
+      } catch (error) {
+        console.error("Error getting old page data for counter update:", error);
+      }
+    }
+
     await setDoc(docRef, data, { merge: true });
 
     // If this is a page update, invalidate the cache
@@ -1104,6 +1166,22 @@ export const updateDoc = async (collectionName, docName, data) => {
           }
         } catch (error) {
           console.error("Error getting userId for cache invalidation:", error);
+        }
+      }
+
+      // Update page count if visibility changed
+      if (oldPageData && data.hasOwnProperty('isPublic') && oldPageData.userId) {
+        try {
+          const { updateUserPageCountForVisibilityChange } = await import('./counters');
+          await updateUserPageCountForVisibilityChange(
+            oldPageData.userId,
+            oldPageData.isPublic,
+            data.isPublic
+          );
+          console.log("Updated user page count for visibility change");
+        } catch (counterError) {
+          console.error("Error updating user page count for visibility change:", counterError);
+          // Don't fail update if counter update fails
         }
       }
 
@@ -1135,6 +1213,18 @@ export const deletePage = async (pageId) => {
     console.log(`Starting deletion process for page: ${pageId}`);
 
     const pageRef = doc(db, "pages", pageId);
+
+    // Get page data before deletion to update counters
+    let pageData = null;
+    try {
+      const pageSnap = await getDoc(pageRef);
+      if (pageSnap.exists()) {
+        pageData = pageSnap.data();
+      }
+    } catch (error) {
+      console.error("Error getting page data before deletion:", error);
+    }
+
     const versionsRef = collection(pageRef, "versions");
     const versionsSnap = await getDocs(versionsRef);
 
@@ -1146,6 +1236,18 @@ export const deletePage = async (pageId) => {
     // delete the page
     await deleteDoc(pageRef);
     console.log(`Page ${pageId} deleted from Firestore`);
+
+    // Update user page count if we have the page data
+    if (pageData && pageData.userId) {
+      try {
+        const { decrementUserPageCount } = await import('./counters');
+        await decrementUserPageCount(pageData.userId, pageData.isPublic);
+        console.log("Updated user page count after deletion");
+      } catch (counterError) {
+        console.error("Error updating user page count after deletion:", counterError);
+        // Don't fail deletion if counter update fails
+      }
+    }
 
     // Clean up related notifications
     try {

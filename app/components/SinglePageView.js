@@ -31,6 +31,7 @@ import Head from "next/head";
 import { Button } from "./ui/button";
 import { EditorContent } from "./ReplyEditor";
 import TextView from "./TextView";
+import TextViewErrorBoundary from "./TextViewErrorBoundary";
 import { PageLoader } from "./ui/page-loader";
 import { SmartLoader } from "./ui/smart-loader";
 import {
@@ -67,6 +68,7 @@ import {
   CommandList
 } from './ui/command';
 import EditPage from "./EditPage";
+
 // Username handling is now done directly in this component
 
 /**
@@ -105,12 +107,51 @@ function SinglePageView({ params }) {
   const [error, setError] = useState(null);
   const [pageFullyRendered, setPageFullyRendered] = useState(false);
   const [title, setTitle] = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [clickPosition, setClickPosition] = useState(null);
   const { user } = useContext(AuthContext);
   const { recentPages = [], addRecentPage } = useContext(RecentPagesContext) || {};
   const { lineMode } = useLineSettings();
   const searchParams = useSearchParams();
   const router = useRouter();
   const contentRef = useRef(null);
+
+  // Handle title changes from inline editing
+  const handleTitleChange = (newTitle) => {
+    setTitle(newTitle);
+    setHasUnsavedChanges(true);
+  };
+
+  // Handle save action from action bar
+  const handleSave = () => {
+    // Trigger save in EditPage component
+    const saveEvent = new CustomEvent('triggerSave');
+    window.dispatchEvent(saveEvent);
+  };
+
+  // Handle cancel action from action bar
+  const handleCancel = () => {
+    setIsEditing(false);
+    setHasUnsavedChanges(false);
+    setClickPosition(null); // Clear click position when canceling
+  };
+
+  // Enhanced setIsEditing function that captures click position
+  const handleSetIsEditing = (editing, position = null) => {
+    setIsEditing(editing);
+    if (editing && position) {
+      setClickPosition(position);
+    } else if (!editing) {
+      setClickPosition(null); // Clear position when exiting edit mode
+    }
+  };
+
+  // Handle delete action from action bar
+  const handleDelete = () => {
+    // Trigger delete in EditPage component
+    const deleteEvent = new CustomEvent('triggerDelete');
+    window.dispatchEvent(deleteEvent);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -140,7 +181,7 @@ function SinglePageView({ params }) {
   // Use keyboard shortcuts - moved back to top level
   useKeyboardShortcuts({
     isEditing,
-    setIsEditing,
+    setIsEditing: handleSetIsEditing,
     // Only allow editing if:
     // 1. Page is loaded (!isLoading)
     // 2. Page exists (page !== null)
@@ -396,10 +437,12 @@ function SinglePageView({ params }) {
                 }
               } catch (parseError) {
                 console.error("SinglePageView: Error parsing string content:", parseError);
-                // Create a fallback content structure with the error message
+                console.error("SinglePageView: Content that failed to parse:", contentString?.substring(0, 200) + "...");
+
+                // Create a more helpful fallback content structure
                 parsedContent = [{
                   type: "paragraph",
-                  children: [{ text: "Error loading content. Please try refreshing the page." }]
+                  children: [{ text: "Unable to load page content. The page data may be corrupted. Try refreshing the page, and if the problem persists, contact support." }]
                 }];
               }
             } else if (Array.isArray(contentString)) {
@@ -449,7 +492,14 @@ function SinglePageView({ params }) {
             setEditorError(null); // Clear any previous errors
           } catch (error) {
             console.error("SinglePageView: Error processing content:", error);
-            setEditorError("There was an error loading the editor. Please try refreshing the page.");
+            console.error("SinglePageView: Content processing error details:", {
+              pageId: params.id,
+              contentType: typeof data.versionData?.content,
+              hasVersionData: !!data.versionData,
+              errorMessage: error.message,
+              errorStack: error.stack
+            });
+            setEditorError("Unable to load page content. This may be due to corrupted data or a temporary issue. Please try refreshing the page.");
           }
         }
 
@@ -954,7 +1004,7 @@ function SinglePageView({ params }) {
         <title>{title} - WeWrite</title>
       </Head>
       <PageHeader
-        title={isEditing ? "Editing page" : title}
+        title={title}
         username={page?.username || "Anonymous"}
         userId={page?.userId}
         isLoading={isLoading}
@@ -963,23 +1013,38 @@ function SinglePageView({ params }) {
         scrollDirection={scrollDirection}
         isPrivate={!isPublic}
         isEditing={isEditing}
-        setIsEditing={setIsEditing}
+        setIsEditing={handleSetIsEditing}
+        onTitleChange={handleTitleChange}
+        canEdit={
+          user?.uid && (
+            // User is the page owner
+            user.uid === page?.userId ||
+            // OR page belongs to a group and user is a member of that group
+            (page?.groupId && hasGroupAccess)
+          )
+        }
       />
       <div className="pb-24 px-0 sm:px-2 w-full max-w-none min-h-screen">
         {isEditing ? (
-          <PageProvider>
-            <LineSettingsProvider>
-              <EditPage
-                isEditing={isEditing}
-                setIsEditing={setIsEditing}
-                page={page}
-                title={title}
-                setTitle={setTitle}
-                current={editorState}
-                editorError={editorError}
-              />
-            </LineSettingsProvider>
-          </PageProvider>
+          <>
+            <PageProvider>
+              <LineSettingsProvider>
+                <EditPage
+                  isEditing={isEditing}
+                  setIsEditing={setIsEditing}
+                  page={page}
+                  title={title}
+                  setTitle={setTitle}
+                  current={editorState}
+                  editorError={editorError}
+                  onUnsavedChanges={setHasUnsavedChanges}
+                  clickPosition={clickPosition}
+                />
+              </LineSettingsProvider>
+            </PageProvider>
+
+
+          </>
         ) : (
           <>
             <div className="space-y-2 w-full transition-all duration-200 ease-in-out">
@@ -987,21 +1052,28 @@ function SinglePageView({ params }) {
                 <PageProvider>
                   <LineSettingsProvider>
                     <div ref={contentRef}>
-                      <TextView
-                        key={`content-${page.id}`} /* Use stable key based on page ID */
-                        content={editorState}
-                        viewMode={lineMode}
-                        onRenderComplete={handlePageFullyRendered}
-                        setIsEditing={setIsEditing}
-                        canEdit={
-                          user?.uid && (
-                            // User is the page owner
-                            user.uid === page.userId ||
-                            // OR page belongs to a group and user is a member of that group
-                            (page.groupId && hasGroupAccess)
-                          )
-                        }
-                      />
+                      <TextViewErrorBoundary fallbackContent={
+                        <div className="p-4 text-muted-foreground">
+                          <p>Unable to display page content. The page may have formatting issues.</p>
+                          <p className="text-sm mt-2">Page ID: {page.id}</p>
+                        </div>
+                      }>
+                        <TextView
+                          key={`content-${page.id}`} /* Use stable key based on page ID */
+                          content={editorState}
+                          viewMode={lineMode}
+                          onRenderComplete={handlePageFullyRendered}
+                          setIsEditing={handleSetIsEditing}
+                          canEdit={
+                            user?.uid && (
+                              // User is the page owner
+                              user.uid === page.userId ||
+                              // OR page belongs to a group and user is a member of that group
+                              (page.groupId && hasGroupAccess)
+                            )
+                          }
+                        />
+                      </TextViewErrorBoundary>
                       {/* Add text selection menu */}
                       <TextSelectionMenu contentRef={contentRef} />
                       {/* Add text highlighter */}
@@ -1043,7 +1115,7 @@ function SinglePageView({ params }) {
               )
             }
             isEditing={isEditing}
-            setIsEditing={setIsEditing}
+            setIsEditing={handleSetIsEditing}
           />
         </LineSettingsProvider>
       </PageProvider>

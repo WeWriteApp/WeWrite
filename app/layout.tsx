@@ -18,6 +18,9 @@ import { PillStyleProvider } from "./contexts/PillStyleContext"
 import { PWAProvider } from "./providers/PWAProvider"
 import FeatureFlagListener from "./components/FeatureFlagListener"
 
+// Import polyfills for browser compatibility
+import "intl-segmenter-polyfill"
+
 const ClientLayout = dynamic(() => import("./ClientLayout"), { ssr: true })
 
 const inter = Inter({ subsets: ["latin"] })

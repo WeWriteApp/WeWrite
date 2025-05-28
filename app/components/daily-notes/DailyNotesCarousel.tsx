@@ -55,6 +55,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
   const [loading, setLoading] = useState(true);
   const [loadingPast, setLoadingPast] = useState(false);
   const [loadingFuture, setLoadingFuture] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Generate symmetric array of dates (memoized to prevent unnecessary re-renders)
   const dates = useMemo(() => {
@@ -82,6 +83,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     if (loadingPast) return;
 
     setLoadingPast(true);
+    setIsInitialLoad(false); // Ensure no animation triggers after loading more
 
     // Store current scroll position relative to the current first date card
     const carousel = carouselRef.current;
@@ -106,6 +108,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     if (loadingFuture) return;
 
     setLoadingFuture(true);
+    setIsInitialLoad(false); // Ensure no animation triggers after loading more
 
     // Expand the range by 15 days in the future
     setDaysAfter(prev => prev + 15);
@@ -179,27 +182,71 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     loadNotes();
   }, [user?.uid, daysBefore, daysAfter, checkExistingNotes]);
 
-  // Handle day card click
+  // Handle day card click with enhanced error handling
   const handleDayClick = (date: Date) => {
-    const dateString = format(date, 'yyyy-MM-dd');
-    const hasNote = existingNotes.has(dateString);
+    try {
+      const dateString = format(date, 'yyyy-MM-dd');
+      const hasNote = existingNotes.has(dateString);
 
-    if (hasNote) {
-      // Navigate to existing note using the page ID
-      const pageId = notePageIds.get(dateString);
-      if (pageId) {
-        router.push(`/pages/${pageId}`);
+      if (hasNote) {
+        // Navigate to existing note using the page ID
+        const pageId = notePageIds.get(dateString);
+        if (pageId) {
+          console.log(`DailyNotes: Navigating to existing page ${pageId} for date ${dateString}`);
+          router.push(`/pages/${pageId}`);
+        } else {
+          console.warn(`DailyNotes: Page ID not found for date ${dateString}, falling back to search`);
+          // Fallback to search if page ID not found
+          router.push(`/search?q=${encodeURIComponent(dateString)}`);
+        }
       } else {
-        // Fallback to search if page ID not found
-        router.push(`/search?q=${encodeURIComponent(dateString)}`);
+        console.log(`DailyNotes: Creating new page for date ${dateString}`);
+        // Navigate to page creation with pre-filled title
+        router.push(`/new?title=${encodeURIComponent(dateString)}`);
       }
-    } else {
-      // Navigate to page creation with pre-filled title
-      router.push(`/new?title=${encodeURIComponent(dateString)}`);
+    } catch (error) {
+      console.error('DailyNotes: Error handling day click:', error);
+      // Fallback to home page if navigation fails
+      router.push('/');
     }
   };
 
-  // Scroll to today's card (used both on mount and by external "Today" button)
+  // Animated scroll to today's card for initial load
+  const animatedScrollToToday = useCallback(() => {
+    const today = new Date();
+    const todayIndex = dates.findIndex(date =>
+      date.toDateString() === today.toDateString()
+    );
+
+    if (todayIndex !== -1) {
+      const carousel = carouselRef.current;
+      if (carousel) {
+        const cardWidth = 88; // 80px width + 8px gap
+        const loadMoreButtonWidth = 88; // Same as card width
+
+        // Calculate the exact center position accounting for the "Load More Past" button
+        // The target position should center today's card in the visible area
+        const targetScrollPosition = Math.max(0,
+          loadMoreButtonWidth + (todayIndex * cardWidth) - (carousel.clientWidth / 2) + (cardWidth / 2)
+        );
+
+        // Start from the leftmost position (showing past days)
+        carousel.scrollTo({ left: 0, behavior: 'instant' });
+
+        // After a brief moment, animate to today's position
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            carousel.scrollTo({
+              left: targetScrollPosition,
+              behavior: 'smooth'
+            });
+          }, 150); // Small delay to ensure the instant scroll completes
+        });
+      }
+    }
+  }, [dates]);
+
+  // Regular scroll to today's card (used by "Today" button)
   const scrollToToday = useCallback(() => {
     const today = new Date();
     const todayIndex = dates.findIndex(date =>
@@ -210,20 +257,29 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
       const carousel = carouselRef.current;
       if (carousel) {
         const cardWidth = 88; // 80px width + 8px gap
-        const scrollPosition = Math.max(0, (todayIndex * cardWidth) - (carousel.clientWidth / 2) + (cardWidth / 2));
+        const loadMoreButtonWidth = 88; // Same as card width
+
+        // Calculate the exact center position accounting for the "Load More Past" button
+        const scrollPosition = Math.max(0,
+          loadMoreButtonWidth + (todayIndex * cardWidth) - (carousel.clientWidth / 2) + (cardWidth / 2)
+        );
         carousel.scrollTo({ left: scrollPosition, behavior: 'smooth' });
       }
     }
-  }, [daysBefore, daysAfter]); // Use daysBefore/daysAfter instead of dates array
+  }, [dates]);
 
-  // Scroll to today's card on initial mount
+  // Scroll to today's card on initial mount with animation
   useEffect(() => {
-    if (!loading) {
-      // Delay scroll to ensure DOM is ready
-      const timer = setTimeout(scrollToToday, 100);
+    if (!loading && isInitialLoad) {
+      // Delay to ensure DOM is fully rendered and carousel is ready
+      const timer = setTimeout(() => {
+        animatedScrollToToday();
+        setIsInitialLoad(false); // Mark initial load as complete
+      }, 200); // Slightly longer delay to ensure smooth animation
+
       return () => clearTimeout(timer);
     }
-  }, [loading, scrollToToday]);
+  }, [loading, isInitialLoad, animatedScrollToToday]);
 
   // Expose scrollToToday function globally for the "Today" button
   useEffect(() => {

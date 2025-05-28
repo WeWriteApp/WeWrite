@@ -14,6 +14,7 @@ import { Switch } from '../../../components/ui/switch';
 import { Label } from '../../../components/ui/label';
 import { Alert, AlertDescription } from '../../../components/ui/alert';
 import TextView from '../../../components/TextView';
+import TextViewErrorBoundary from '../../../components/TextViewErrorBoundary';
 import { toast } from '../../../components/ui/use-toast';
 import { generateTextDiff } from '../../../utils/generateTextDiff';
 import { generateDiffContent } from '../../../utils/diffUtils';
@@ -276,11 +277,18 @@ export default function PageVersionView({ params }: { params: { id: string, vers
         {/* Content */}
         <div className="border rounded-lg p-4 mb-6">
           {version?.content ? (
-            <TextView
-              content={showDiff && diffContent ? diffContent : JSON.parse(version.content)}
-              viewMode="normal"
-              showDiff={showDiff}
-            />
+            <TextViewErrorBoundary fallbackContent={
+              <div className="p-4 text-muted-foreground">
+                <p>Unable to display version content. The version may have formatting issues.</p>
+                <p className="text-sm mt-2">Version ID: {params.versionId}</p>
+              </div>
+            }>
+              <TextView
+                content={showDiff && diffContent ? diffContent : JSON.parse(version.content)}
+                viewMode="normal"
+                showDiff={showDiff}
+              />
+            </TextViewErrorBoundary>
           ) : (
             <p className="text-muted-foreground text-center py-8">No content available for this version</p>
           )}

@@ -10,6 +10,7 @@ import { usePage } from "../contexts/PageContext";
 import PageEditor from "./PageEditor";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
+import EditModeBottomToolbar from "./EditModeBottomToolbar";
 import { toast } from "./ui/use-toast";
 import { validateLink } from "../utils/linkValidator";
 
@@ -20,7 +21,8 @@ const EditPage = ({
   current,
   title,
   setTitle,
-  editorError
+  editorError,
+  clickPosition = null
 }) => {
   const { setIsEditMode } = usePage();
   const [groupId, setGroupId] = useState(null);
@@ -468,6 +470,13 @@ const EditPage = ({
     setIsEditing(false);
   };
 
+  // Handle insert link action from bottom toolbar
+  const handleInsertLink = () => {
+    // Trigger insert link in PageEditor component
+    const insertLinkEvent = new CustomEvent('triggerInsertLink');
+    window.dispatchEvent(insertLinkEvent);
+  };
+
   // Display error message if provided
   if (editorError) {
     return (
@@ -595,15 +604,22 @@ const EditPage = ({
         setTitle={handleTitleChange}
         initialContent={current}
         onContentChange={handleContentChange}
+        isSaving={isSaving}
+        error={error}
+        isNewPage={false}
+        clickPosition={clickPosition}
+      />
+
+      {/* Edit Mode Bottom Toolbar */}
+      <EditModeBottomToolbar
         isPublic={isPublic}
         setIsPublic={handleVisibilityChange}
         location={location}
         setLocation={handleLocationChange}
-        onSave={(content) => handleSave(content || editorContent || current)}
+        onInsertLink={handleInsertLink}
         onCancel={handleCancelWithCheck}
+        onSave={() => handleSave(editorContent || current)}
         isSaving={isSaving}
-        error={error}
-        isNewPage={false}
       />
 
       {/* Unsaved Changes Dialog */}

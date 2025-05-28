@@ -20,6 +20,7 @@ import { generateCacheKey, getCacheItem, setCacheItem } from "../utils/cacheUtil
 import { trackQueryPerformance } from "../utils/queryMonitor";
 import { ShimmerEffect } from "./ui/skeleton";
 import { debugRecentActivity, debugUserActivity } from "../utils/debugActivity";
+import { getUserPageCount } from "../firebase/counters";
 
 // UserListSkeleton component removed as it's no longer needed
 
@@ -158,34 +159,8 @@ const TopUsers = () => {
           return;
         }
 
-        // Create a lookup object to store page counts per user
-        const pageCountsByUser = {};
-
-        // Fetch PUBLIC page counts more efficiently using aggregation
-        // This ensures consistency with user profile pages which show public pages by default
-        console.log("TopUsers: Fetching public page counts from Firestore");
-
-        // Use a more efficient query to get PUBLIC page counts only
-        // This matches what visitors see on user profile pages
-        const pagesCountQuery = query(
-          collection(db, 'pages'),
-          where('isPublic', '==', true), // Only count public pages for consistency
-          limit(1000) // Limit to a reasonable number for performance
-        );
-
-        const pagesSnapshot = await getDocs(pagesCountQuery);
-        console.log(`TopUsers: Retrieved ${pagesSnapshot.size} public pages from Firestore`);
-
-        // Count public pages by user
-        pagesSnapshot.forEach((doc) => {
-          const pageData = doc.data();
-          const userId = pageData.userId;
-
-          if (userId) {
-            // Increment public page count for this user
-            pageCountsByUser[userId] = (pageCountsByUser[userId] || 0) + 1;
-          }
-        });
+        // We'll fetch page counts using the same function as user profiles for consistency
+        console.log("TopUsers: Will fetch page counts using getUserPageCount for consistency");
 
         // Process users with pagination
         console.log("TopUsers: Processing user data");
@@ -196,6 +171,15 @@ const TopUsers = () => {
               let username = userData.username || userData.displayName || "Unknown User";
               if (username.startsWith('@')) {
                 username = username.substring(1);
+              }
+
+              // Fetch page count using the same function as user profiles for consistency
+              // Pass null as viewerUserId to get public page count (what visitors see)
+              let pageCount = 0;
+              try {
+                pageCount = await getUserPageCount(id, null); // null = visitor view (public pages only)
+              } catch (err) {
+                console.error(`Error fetching page count for user ${id}:`, err);
               }
 
               // Fetch subscription information - only if needed
@@ -219,7 +203,7 @@ const TopUsers = () => {
                 id,
                 username,
                 photoURL: userData.photoURL,
-                pageCount: pageCountsByUser[id] || 0,
+                pageCount,
                 tier,
                 subscriptionStatus,
                 lastActive: userData.lastActive || null

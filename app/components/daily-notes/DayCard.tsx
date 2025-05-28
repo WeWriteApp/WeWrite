@@ -28,8 +28,12 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
   const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
   const isToday = new Date().toDateString() === date.toDateString();
 
-  // Determine card styling based on state
+  // Determine card styling based on state and date
   const getCardStyles = () => {
+    const today = new Date();
+    const isPast = date < today && !isToday;
+    const isFuture = date > today && !isToday;
+
     if (hasNote) {
       // Filled state - solid card with accent color
       return {
@@ -40,15 +44,26 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
         borderWidth: '2px'
       };
     } else {
-      // Empty state - greyed out with theme-aware dashed border
-      return {
-        backgroundColor: 'transparent',
-        // Use CSS custom property for proper theme support
-        borderColor: 'hsl(var(--border))',
-        color: 'hsl(var(--muted-foreground))',
-        borderStyle: 'dashed',
-        borderWidth: '2px'
-      };
+      // Empty state styling based on date relationship to today
+      if (isPast || isToday) {
+        // Past dates and today: solid border with same stroke color as filled cards
+        return {
+          backgroundColor: 'transparent',
+          borderColor: 'hsl(var(--border))',
+          color: 'hsl(var(--muted-foreground))',
+          borderStyle: 'solid',
+          borderWidth: '2px'
+        };
+      } else {
+        // Future dates: dashed border to indicate they haven't been created yet
+        return {
+          backgroundColor: 'transparent',
+          borderColor: 'hsl(var(--border))',
+          color: 'hsl(var(--muted-foreground))',
+          borderStyle: 'dashed',
+          borderWidth: '2px'
+        };
+      }
     }
   };
 
