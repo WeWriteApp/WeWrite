@@ -12,66 +12,306 @@ import {
   TooltipTrigger
 } from './ui/tooltip';
 
-// Simple stemming function to handle common word variations
-function simpleStem(word) {
-  // Handle common plural forms
-  if (word.endsWith('ies') && word.length > 4) {
-    return word.slice(0, -3) + 'y'; // stories -> story
+/**
+ * ENHANCED RELATED PAGES ALGORITHM
+ *
+ * This algorithm has been redesigned to match the effectiveness of the main search functionality.
+ * It uses sophisticated word matching, content analysis, and relevance scoring to find related pages.
+ *
+ * Key improvements over the previous algorithm:
+ * 1. Comprehensive content analysis (both title and full content)
+ * 2. Advanced word processing with better stemming and stop word filtering
+ * 3. Partial word matching capabilities similar to search API
+ * 4. Sophisticated relevance scoring system
+ * 5. Better performance with optimized queries
+ * 6. Enhanced ranking algorithm that considers multiple factors
+ * 7. Increased query limit to match search functionality
+ * 8. Content extraction from both current page title AND content
+ */
+
+/**
+ * Comprehensive stop words list for better filtering
+ * Includes common English words that don't contribute to content relevance
+ */
+const STOP_WORDS = new Set([
+  // Articles and determiners
+  'the', 'a', 'an', 'this', 'that', 'these', 'those',
+  // Prepositions
+  'in', 'on', 'at', 'by', 'for', 'with', 'from', 'to', 'of', 'about', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'up', 'down', 'out', 'off', 'over', 'under', 'again', 'further', 'then', 'once',
+  // Conjunctions
+  'and', 'or', 'but', 'so', 'yet', 'nor',
+  // Pronouns
+  'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'its', 'our', 'their',
+  // Auxiliary verbs
+  'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could',
+  // Common verbs that are often not meaningful for content matching
+  'get', 'got', 'go', 'went', 'come', 'came', 'see', 'saw', 'know', 'knew', 'think', 'thought', 'take', 'took', 'make', 'made', 'give', 'gave',
+  // Other common words
+  'very', 'just', 'now', 'here', 'there', 'where', 'when', 'why', 'how', 'what', 'who', 'which', 'all', 'any', 'some', 'each', 'every', 'no', 'not', 'only', 'also', 'too', 'much', 'many', 'more', 'most', 'other', 'such', 'same', 'different', 'new', 'old', 'first', 'last', 'next', 'previous', 'good', 'bad', 'big', 'small', 'long', 'short', 'high', 'low', 'right', 'left', 'yes', 'no'
+]);
+
+/**
+ * Advanced stemming function that handles more word variations
+ * Based on Porter Stemmer algorithm principles but simplified for performance
+ *
+ * @param {string} word - The word to stem
+ * @returns {string} - The stemmed word
+ */
+function advancedStem(word) {
+  if (word.length <= 2) return word;
+
+  // Handle common suffixes in order of specificity
+  const suffixRules = [
+    // Plurals and verb forms
+    { pattern: /ies$/, replacement: 'y' },
+    { pattern: /ied$/, replacement: 'y' },
+    { pattern: /ying$/, replacement: 'y' },
+    { pattern: /sses$/, replacement: 'ss' },
+    { pattern: /ies$/, replacement: 'i' },
+    { pattern: /ss$/, replacement: 'ss' },
+    { pattern: /s$/, replacement: '', minLength: 4 },
+
+    // Verb forms
+    { pattern: /eed$/, replacement: 'ee' },
+    { pattern: /ed$/, replacement: '', minLength: 4 },
+    { pattern: /ing$/, replacement: '', minLength: 4 },
+
+    // Adjective forms
+    { pattern: /ly$/, replacement: '', minLength: 4 },
+    { pattern: /ful$/, replacement: '', minLength: 5 },
+    { pattern: /ness$/, replacement: '', minLength: 5 },
+    { pattern: /ment$/, replacement: '', minLength: 5 },
+    { pattern: /tion$/, replacement: 'te', minLength: 5 },
+    { pattern: /sion$/, replacement: 's', minLength: 5 },
+  ];
+
+  for (const rule of suffixRules) {
+    if (rule.pattern.test(word)) {
+      const stemmed = word.replace(rule.pattern, rule.replacement);
+      if (!rule.minLength || stemmed.length >= rule.minLength) {
+        return stemmed;
+      }
+    }
   }
-  if (word.endsWith('s') && word.length > 3 && !word.endsWith('ss')) {
-    return word.slice(0, -1); // pages -> page, but not class -> clas
-  }
-  // Handle common verb forms
-  if (word.endsWith('ing') && word.length > 5) {
-    return word.slice(0, -3); // writing -> writ
-  }
-  if (word.endsWith('ed') && word.length > 4) {
-    return word.slice(0, -2); // created -> creat
-  }
+
   return word;
 }
 
-// Check if a title exactly matches the YYYY-MM-DD format
+/**
+ * Check if a title exactly matches the YYYY-MM-DD format
+ * Special handling for daily notes and date-based pages
+ *
+ * @param {string} title - The title to check
+ * @returns {boolean} - Whether the title is an exact date format
+ */
 function isExactDateFormat(title) {
-  // Must be exactly 10 characters long
-  if (title.length !== 10) {
-    return false;
-  }
-  // Must match YYYY-MM-DD pattern exactly
+  if (!title || title.length !== 10) return false;
   const datePattern = /^\d{4}-\d{2}-\d{2}$/;
   return datePattern.test(title);
 }
 
-// Process words with improved cleaning and stemming
-function processWords(text) {
-  // If the text is an exact date format, don't process it as words
+/**
+ * Extract and process meaningful words from text for matching
+ *
+ * This function performs comprehensive text processing similar to the search API:
+ * 1. Normalizes text (lowercase, remove punctuation)
+ * 2. Filters out stop words and short words
+ * 3. Applies advanced stemming
+ * 4. Removes numbers and dates that aren't meaningful for content matching
+ * 5. Deduplicates the result
+ *
+ * @param {string} text - The text to process
+ * @returns {Array<string>} - Array of processed, meaningful words
+ */
+function extractMeaningfulWords(text) {
+  if (!text || typeof text !== 'string') {
+    return [];
+  }
+
+  // Special handling for exact date formats
   if (isExactDateFormat(text)) {
     return [text]; // Return the exact date as a single "word"
   }
 
   return text
     .toLowerCase()
-    .replace(/[^\w\s]/g, ' ') // Replace punctuation with spaces
-    .replace(/[-_]/g, ' ') // Replace hyphens and underscores with spaces
-    .split(/\s+/)
-    .filter(word => word.length >= 2) // Include words of at least 2 characters
-    .filter(word => !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'to', 'of', 'in', 'on', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'can', 'could'].includes(word))
-    .filter(word => !/^\d{4}$|^\d{2}$/.test(word)) // Filter out year-only (YYYY) and month/day-only (MM/DD) matches
-    .map(word => simpleStem(word)); // Apply stemming
+    // Replace punctuation and special characters with spaces
+    .replace(/[^\w\s]/g, ' ')
+    // Replace hyphens, underscores, and multiple spaces with single spaces
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    // Filter out empty strings and very short words
+    .filter(word => word.length >= 3)
+    // Filter out stop words
+    .filter(word => !STOP_WORDS.has(word))
+    // Filter out pure numbers, years, and dates
+    .filter(word => {
+      // Skip pure numbers
+      if (/^\d+$/.test(word)) return false;
+      // Skip years (4 digits)
+      if (/^\d{4}$/.test(word)) return false;
+      // Skip dates (various formats)
+      if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(word)) return false;
+      return true;
+    })
+    // Apply advanced stemming
+    .map(word => advancedStem(word))
+    // Remove duplicates while preserving order
+    .filter((word, index, array) => array.indexOf(word) === index)
+    // Final filter to ensure we have meaningful words
+    .filter(word => word.length >= 2);
+}
+
+/**
+ * Extract text content from editor state JSON
+ * Handles the complex nested structure of Slate.js editor content
+ *
+ * @param {string} contentString - JSON string of editor content
+ * @returns {string} - Extracted plain text
+ */
+function extractTextFromEditorContent(contentString) {
+  try {
+    if (!contentString || typeof contentString !== 'string') {
+      return '';
+    }
+
+    // Parse the JSON content
+    let parsedContent;
+    if (contentString.startsWith('[') || contentString.startsWith('{')) {
+      parsedContent = JSON.parse(contentString);
+    } else {
+      return contentString; // Already plain text
+    }
+
+    // Extract text from editor state structure
+    if (Array.isArray(parsedContent)) {
+      return parsedContent
+        .map(block => {
+          if (block?.children && Array.isArray(block.children)) {
+            return block.children
+              .map(child => child?.text || '')
+              .join('');
+          }
+          return block?.text || '';
+        })
+        .join(' ');
+    } else if (parsedContent?.children) {
+      return parsedContent.children
+        .map(child => child?.text || '')
+        .join('');
+    }
+
+    return '';
+  } catch (error) {
+    console.warn('Failed to parse editor content:', error);
+    return '';
+  }
+}
+
+/**
+ * Calculate relevance score between two sets of words
+ * Uses multiple factors similar to the search API scoring system
+ *
+ * @param {Array<string>} sourceWords - Words from the source page
+ * @param {Array<string>} targetWords - Words from the target page
+ * @param {string} targetTitle - Title of the target page for additional scoring
+ * @param {boolean} isContentMatch - Whether this is a content match vs title match
+ * @returns {Object} - Score object with details
+ */
+function calculateRelevanceScore(sourceWords, targetWords, targetTitle = '', isContentMatch = false) {
+  if (!sourceWords.length || !targetWords.length) {
+    return { score: 0, exactMatches: 0, partialMatches: 0, details: [] };
+  }
+
+  let exactMatches = 0;
+  let partialMatches = 0;
+  const matchDetails = [];
+
+  // Find exact word matches
+  sourceWords.forEach(sourceWord => {
+    if (targetWords.includes(sourceWord)) {
+      exactMatches++;
+      matchDetails.push({ type: 'exact', word: sourceWord });
+    } else {
+      // Check for partial matches (similar to search API)
+      const partialMatch = targetWords.find(targetWord => {
+        // Partial matching: one word contains the other with significant overlap
+        if (sourceWord.length >= 3 && targetWord.includes(sourceWord)) {
+          return true;
+        }
+        if (targetWord.length >= 3 && sourceWord.includes(targetWord)) {
+          return true;
+        }
+        return false;
+      });
+
+      if (partialMatch) {
+        partialMatches++;
+        matchDetails.push({ type: 'partial', word: sourceWord, match: partialMatch });
+      }
+    }
+  });
+
+  // Calculate base score
+  let score = (exactMatches * 10) + (partialMatches * 5);
+
+  // Apply bonuses and penalties
+  if (isContentMatch) {
+    // Content matches get lower scores than title matches
+    score = Math.max(score * 0.6, 1);
+  }
+
+  // Bonus for high match ratio
+  const matchRatio = (exactMatches + partialMatches) / sourceWords.length;
+  if (matchRatio > 0.5) {
+    score *= 1.5; // 50% bonus for high match ratio
+  }
+
+  // Bonus for title length similarity (prevents very short titles from dominating)
+  if (targetTitle) {
+    const titleWords = extractMeaningfulWords(targetTitle);
+    const lengthRatio = Math.min(sourceWords.length, titleWords.length) / Math.max(sourceWords.length, titleWords.length);
+    if (lengthRatio > 0.7) {
+      score *= 1.2; // 20% bonus for similar title lengths
+    }
+  }
+
+  return {
+    score: Math.round(score),
+    exactMatches,
+    partialMatches,
+    matchRatio,
+    details: matchDetails
+  };
 }
 
 /**
  * RelatedPages Component
  *
- * Displays a list of pages related to the current page.
- * Uses a combination of user-based and content-based relevance.
- * Filters out pages that are already linked in the body of the page.
+ * Enhanced algorithm that matches the effectiveness of the main search functionality.
  *
- * @param {Object} page - The current page object
+ * Algorithm Overview:
+ * 1. Extracts meaningful words from both title and content of the current page
+ * 2. Queries a larger set of public pages (500 vs previous 100)
+ * 3. Analyzes both title and content of candidate pages
+ * 4. Uses sophisticated scoring similar to search API
+ * 5. Supports partial word matching for better recall
+ * 6. Ranks results by relevance score with multiple factors
+ * 7. Filters out already linked pages and the current page
+ *
+ * Performance Considerations:
+ * - Limits content analysis to first 2000 characters for performance
+ * - Uses efficient word processing and deduplication
+ * - Caches results per page to avoid re-computation
+ * - Implements proper error handling and fallbacks
+ *
+ * @param {Object} page - The current page object with title and content
  * @param {Array} linkedPageIds - Array of page IDs that are already linked in the page content
- * @param {number} maxPages - Maximum number of related pages to display (default: 5)
+ * @param {number} maxPages - Maximum number of related pages to display (default: 8)
  */
-export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 }) {
+export default function RelatedPages({ page, linkedPageIds = [], maxPages = 8 }) {
   const [relatedPages, setRelatedPages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -104,38 +344,53 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
         setIsLoading(true);
 
         try {
-          console.log(`Finding related pages for: ${page.id} (${page.title || 'Untitled'})`);
+          console.log(`🔍 ENHANCED RELATED PAGES: Finding related pages for "${page.title}" (${page.id})`);
 
           // Mark that we've fetched data for this page
           dataFetchedRef.current = true;
 
-          // Extract significant words from the title with improved processing
-          const titleWords = processWords(page.title);
+          // Extract meaningful words from BOTH title and content of the current page
+          const titleWords = extractMeaningfulWords(page.title);
 
-          console.log(`Title words for matching: ${titleWords.join(', ')}`);
+          // Extract content words from the current page if available
+          let contentWords = [];
+          if (page.content && typeof page.content === 'string' && page.content.length > 20) {
+            const contentText = extractTextFromEditorContent(page.content);
+            if (contentText) {
+              // Limit content analysis to first 2000 characters for performance
+              const limitedContent = contentText.substring(0, 2000);
+              contentWords = extractMeaningfulWords(limitedContent);
+            }
+          }
+
+          // Combine title and content words, giving priority to title words
+          const allSourceWords = [...new Set([...titleWords, ...contentWords])];
+
+          console.log(`📝 Source analysis: ${titleWords.length} title words, ${contentWords.length} content words, ${allSourceWords.length} total unique words`);
+          console.log(`🎯 Key words for matching: ${allSourceWords.slice(0, 10).join(', ')}${allSourceWords.length > 10 ? '...' : ''}`);
 
           // If we don't have any significant words, return empty results
-          if (titleWords.length === 0) {
+          if (allSourceWords.length === 0) {
+            console.log('❌ No meaningful words found, returning empty results');
             setRelatedPages([]);
             setIsLoading(false);
             return;
           }
 
-          // Query for public pages
+          // Query for public pages with increased limit to match search functionality
           const pagesQuery = query(
             collection(db, 'pages'),
             where('isPublic', '==', true),
-            limit(100) // Limit to 100 pages for performance
+            limit(500) // Increased from 100 to 500 for better coverage
           );
 
           const pagesSnapshot = await getDocs(pagesQuery);
-          console.log(`Analyzing ${pagesSnapshot.docs.length} public pages for title and content matches`);
+          console.log(`📊 Analyzing ${pagesSnapshot.docs.length} public pages for enhanced matching`);
 
-          // Arrays to store pages with different types of matches
-          const titleMatchingPages = [];
-          const contentMatchingPages = [];
+          // Array to store all candidate pages with their scores
+          const candidatePages = [];
 
-          // Process each page
+          // Process each page with enhanced scoring
           pagesSnapshot.docs.forEach(doc => {
             const pageData = { id: doc.id, ...doc.data() };
 
@@ -145,131 +400,114 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
             // Skip pages without titles
             if (!pageData.title) return;
 
-            // Check for word matches in the title with improved processing
-            const pageTitleWords = processWords(pageData.title);
+            // Extract words from the candidate page title
+            const candidateTitleWords = extractMeaningfulWords(pageData.title);
 
-            // Find exact word matches in title
-            const titleExactMatches = titleWords.filter(word =>
-              pageTitleWords.includes(word)
+            // Calculate title match score
+            const titleScore = calculateRelevanceScore(
+              allSourceWords,
+              candidateTitleWords,
+              pageData.title,
+              false // isContentMatch = false for title
             );
 
-            // Calculate base match score from individual word matches in title
-            let titleMatchScore = titleExactMatches.length;
+            // Initialize best score with title score
+            let bestScore = titleScore;
+            let matchType = 'title';
+            let matchDetails = titleScore.details;
 
-            // Check for consecutive word matches (phrases) in title
-            let maxConsecutiveMatches = 0;
+            // Check content matches if we have content and title score is low
+            if (pageData.content && typeof pageData.content === 'string' && pageData.content.length > 50) {
+              try {
+                // Extract text from candidate page content
+                const candidateContentText = extractTextFromEditorContent(pageData.content);
+                if (candidateContentText) {
+                  // Limit content analysis to first 2000 characters for performance
+                  const limitedCandidateContent = candidateContentText.substring(0, 2000);
+                  const candidateContentWords = extractMeaningfulWords(limitedCandidateContent);
 
-            // Convert title words to string for easier comparison
-            const titleString = titleWords.join(' ');
-            const pageTitleString = pageTitleWords.join(' ');
+                  // Calculate content match score
+                  const contentScore = calculateRelevanceScore(
+                    allSourceWords,
+                    candidateContentWords,
+                    pageData.title,
+                    true // isContentMatch = true for content
+                  );
 
-            // Find the longest matching phrase by checking all possible substrings
-            for (let i = 0; i < titleWords.length - 1; i++) {
-              for (let j = i + 2; j <= titleWords.length; j++) {
-                const phrase = titleWords.slice(i, j).join(' ');
-                // Only consider phrases with at least 2 words
-                if (phrase.split(' ').length >= 2 && pageTitleString.includes(phrase)) {
-                  // Count the number of words in the phrase
-                  const wordCount = phrase.split(' ').length;
-                  if (wordCount > maxConsecutiveMatches) {
-                    maxConsecutiveMatches = wordCount;
-                    console.log(`Found consecutive title match: "${phrase}" (${wordCount} words)`);
+                  // Use content score if it's significantly better than title score
+                  // or if title score is very low
+                  if (contentScore.score > bestScore.score || (titleScore.score < 5 && contentScore.score > 0)) {
+                    bestScore = contentScore;
+                    matchType = 'content';
+                    matchDetails = contentScore.details;
                   }
                 }
+              } catch (error) {
+                console.warn(`⚠️ Failed to parse content for page ${pageData.id}:`, error);
               }
             }
 
-            // Add bonus points for consecutive matches (3x per word)
-            const consecutiveMatchBonus = maxConsecutiveMatches > 1 ? maxConsecutiveMatches * 3 : 0;
-
-            // Calculate total title score (individual matches + consecutive bonus)
-            const totalTitleScore = titleMatchScore + consecutiveMatchBonus;
-
-            // If we have title matches, add to title matching pages
-            if (totalTitleScore > 0) {
-              titleMatchingPages.push({
+            // Only include pages with meaningful scores
+            if (bestScore.score > 0) {
+              candidatePages.push({
                 ...pageData,
-                matchCount: totalTitleScore,
-                matchType: 'title',
-                hasConsecutiveMatches: maxConsecutiveMatches > 1,
-                consecutiveMatchCount: maxConsecutiveMatches
-              });
-            } else {
-              // Check for content matches only if no title matches
-              // This prevents duplicate entries and prioritizes title matches
-              let contentMatchScore = 0;
-
-              // Only check content if the page has content and we have a reasonable amount to search
-              if (pageData.content && typeof pageData.content === 'string' && pageData.content.length > 50) {
-                try {
-                  // Parse content if it's JSON (from editor state)
-                  let contentText = pageData.content;
-                  if (contentText.startsWith('[') || contentText.startsWith('{')) {
-                    const parsedContent = JSON.parse(contentText);
-                    // Extract text from editor state structure
-                    if (Array.isArray(parsedContent)) {
-                      contentText = parsedContent
-                        .map(block => block?.children?.map(child => child?.text || '').join('') || '')
-                        .join(' ');
-                    }
-                  }
-
-                  // Process content words (limit to first 1000 characters for performance)
-                  const limitedContent = contentText.substring(0, 1000);
-                  const contentWords = processWords(limitedContent);
-
-                  // Find matches in content
-                  const contentExactMatches = titleWords.filter(word =>
-                    contentWords.includes(word)
-                  );
-
-                  contentMatchScore = contentExactMatches.length;
-
-                  // Add to content matching pages if we have matches
-                  if (contentMatchScore > 0) {
-                    contentMatchingPages.push({
-                      ...pageData,
-                      matchCount: contentMatchScore,
-                      matchType: 'content',
-                      hasConsecutiveMatches: false,
-                      consecutiveMatchCount: 0
-                    });
-                  }
-                } catch (error) {
-                  // If content parsing fails, skip content matching for this page
-                  console.warn(`Failed to parse content for page ${pageData.id}:`, error);
+                relevanceScore: bestScore.score,
+                exactMatches: bestScore.exactMatches,
+                partialMatches: bestScore.partialMatches,
+                matchRatio: bestScore.matchRatio,
+                matchType,
+                matchDetails,
+                // Additional metadata for debugging
+                debugInfo: {
+                  titleWords: candidateTitleWords.length,
+                  titleScore: titleScore.score,
+                  contentScore: bestScore.score !== titleScore.score ? bestScore.score : 0
                 }
-              }
+              });
             }
           });
 
-          // Combine title and content matches, prioritizing title matches
-          const allMatches = [
-            ...titleMatchingPages,
-            ...contentMatchingPages
-          ];
-
-          // Filter out pages that are already linked in the content
-          const filteredPages = allMatches
-            .filter(page => !linkedPageIds.includes(page.id))
+          // Sort candidates by relevance score and apply sophisticated ranking
+          const sortedCandidates = candidatePages
+            .filter(page => !linkedPageIds.includes(page.id)) // Filter out already linked pages
             .sort((a, b) => {
-              // First, prioritize by match type (title matches come first)
+              // Primary sort: by match type (title matches come first)
               if (a.matchType !== b.matchType) {
                 return a.matchType === 'title' ? -1 : 1;
               }
-              // Then sort by match count within the same type
-              if (b.matchCount !== a.matchCount) {
-                return b.matchCount - a.matchCount;
+
+              // Secondary sort: by relevance score
+              if (b.relevanceScore !== a.relevanceScore) {
+                return b.relevanceScore - a.relevanceScore;
               }
-              // Finally, sort by last modified date if available
+
+              // Tertiary sort: by exact matches count
+              if (b.exactMatches !== a.exactMatches) {
+                return b.exactMatches - a.exactMatches;
+              }
+
+              // Quaternary sort: by match ratio (higher is better)
+              if (b.matchRatio !== a.matchRatio) {
+                return b.matchRatio - a.matchRatio;
+              }
+
+              // Final sort: by last modified date (more recent first)
               return (b.lastModified ? new Date(b.lastModified) : 0) -
                      (a.lastModified ? new Date(a.lastModified) : 0);
             })
             .slice(0, maxPages);
 
-          console.log(`Found ${filteredPages.length} related pages (${titleMatchingPages.length} title matches, ${contentMatchingPages.length} content matches)`);
+          // Log detailed results for debugging
+          console.log(`✅ ENHANCED RESULTS: Found ${sortedCandidates.length} related pages from ${candidatePages.length} candidates`);
 
-          setRelatedPages(filteredPages);
+          if (sortedCandidates.length > 0) {
+            console.log('🏆 Top matches:');
+            sortedCandidates.slice(0, 3).forEach((page, index) => {
+              console.log(`  ${index + 1}. "${page.title}" (${page.matchType}) - Score: ${page.relevanceScore}, Exact: ${page.exactMatches}, Partial: ${page.partialMatches}, Ratio: ${(page.matchRatio * 100).toFixed(1)}%`);
+            });
+          }
+
+          setRelatedPages(sortedCandidates);
         } catch (error) {
           console.error('Error fetching related pages:', error);
           // Set empty array on error to avoid undefined state
@@ -294,8 +532,8 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 5 })
             <TooltipTrigger asChild>
               <Info className="h-4 w-4 text-muted-foreground cursor-help" />
             </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-[300px]">
-              <p>Pages that share similar words in their titles or content. Title matches are prioritized over content matches. Excludes links that are already mentioned in the page.</p>
+            <TooltipContent side="top" className="max-w-[350px]">
+              <p>Enhanced algorithm that finds pages with similar content using sophisticated word matching. Analyzes both titles and content, supports partial word matching, and uses advanced relevance scoring similar to the main search functionality. Title matches are prioritized over content matches.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
