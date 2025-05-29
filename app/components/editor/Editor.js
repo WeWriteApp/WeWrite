@@ -256,34 +256,9 @@ const EditorComponent = forwardRef((props, ref) => {
     // Create the base editor
     const baseEditor = withHistory(withReact(createEditor()));
 
-    // CRITICAL FIX: Override ReactEditor methods to prevent DOM node resolution errors
-    const originalToDOMNode = ReactEditor.toDOMNode;
-    const originalToDOMPoint = ReactEditor.toDOMPoint;
-
-    ReactEditor.toDOMNode = function(editor, node) {
-      try {
-        return originalToDOMNode.call(this, editor, node);
-      } catch (error) {
-        console.warn('toDOMNode error prevented:', error);
-        // Return a safe fallback
-        const firstTextNode = document.querySelector('[data-slate-leaf]');
-        return firstTextNode || document.querySelector('[data-slate-editor]') || null;
-      }
-    };
-
-    ReactEditor.toDOMPoint = function(editor, point) {
-      try {
-        return originalToDOMPoint.call(this, editor, point);
-      } catch (error) {
-        console.warn('toDOMPoint error prevented:', error);
-        // Return a safe fallback
-        const firstTextNode = document.querySelector('[data-slate-leaf]');
-        if (firstTextNode) {
-          return [firstTextNode, 0];
-        }
-        return null;
-      }
-    };
+    // CRITICAL FIX: Removed problematic ReactEditor method wrappers that were causing save errors
+    // These error handlers were interfering with normal editor operations during save
+    // The original ReactEditor methods should work correctly without wrapping
 
     // CRITICAL FIX: Configure links as inline elements
     const { isInline } = baseEditor;
