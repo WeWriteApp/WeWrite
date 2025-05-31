@@ -157,6 +157,47 @@ export const markNotificationAsRead = async (userId, notificationId) => {
 };
 
 /**
+ * Mark a notification as unread
+ *
+ * @param {string} userId - The ID of the user
+ * @param {string} notificationId - The ID of the notification
+ * @returns {Promise<boolean>} - True if successful
+ */
+export const markNotificationAsUnread = async (userId, notificationId) => {
+  try {
+    // Create a reference to the notification
+    const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
+
+    // Get the notification to check if it's already unread
+    const notificationDoc = await getDoc(notificationRef);
+    if (!notificationDoc.exists()) {
+      throw new Error('Notification not found');
+    }
+
+    const notificationData = notificationDoc.data();
+
+    // If the notification is already unread, don't increment the counter
+    if (notificationData.read) {
+      // Update the notification
+      await updateDoc(notificationRef, {
+        read: false
+      });
+
+      // Increment the unread count for the user
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        unreadNotificationsCount: increment(1)
+      });
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error marking notification as unread:', error);
+    throw error;
+  }
+};
+
+/**
  * Mark all notifications as read for a user
  *
  * @param {string} userId - The ID of the user
@@ -164,6 +205,8 @@ export const markNotificationAsRead = async (userId, notificationId) => {
  */
 export const markAllNotificationsAsRead = async (userId) => {
   try {
+    console.log('markAllNotificationsAsRead called for userId:', userId);
+
     // Create a reference to the notifications collection for the user
     const notificationsRef = collection(db, 'users', userId, 'notifications');
 
@@ -175,9 +218,11 @@ export const markAllNotificationsAsRead = async (userId) => {
 
     // Execute the query
     const snapshot = await getDocs(unreadQuery);
+    console.log('Found unread notifications:', snapshot.size);
 
     // If there are no unread notifications, return
     if (snapshot.empty) {
+      console.log('No unread notifications found');
       return true;
     }
 
@@ -188,16 +233,19 @@ export const markAllNotificationsAsRead = async (userId) => {
     snapshot.forEach(doc => {
       const notificationRef = doc.ref;
       batch.update(notificationRef, { read: true });
+      console.log('Marking notification as read:', doc.id);
     });
 
     // Commit the batch
     await batch.commit();
+    console.log('Batch committed successfully');
 
     // Reset the unread count for the user
     const userRef = doc(db, 'users', userId);
     await updateDoc(userRef, {
       unreadNotificationsCount: 0
     });
+    console.log('User unread count reset to 0');
 
     return true;
   } catch (error) {
@@ -223,10 +271,52 @@ export const getUnreadNotificationsCount = async (userId) => {
     }
 
     // Return the unread count
-    return userDoc.data().unreadNotificationsCount || 0;
+    const count = userDoc.data().unreadNotificationsCount || 0;
+    return count;
   } catch (error) {
     console.error('Error getting unread notifications count:', error);
     return 0;
+  }
+};
+
+/**
+ * Recalculate and fix the unread notifications count for a user
+ * This function counts actual unread notifications and updates the user document
+ *
+ * @param {string} userId - The ID of the user
+ * @returns {Promise<number>} - The corrected unread count
+ */
+export const fixUnreadNotificationsCount = async (userId) => {
+  try {
+    console.log('fixUnreadNotificationsCount called for userId:', userId);
+
+    // Create a reference to the notifications collection for the user
+    const notificationsRef = collection(db, 'users', userId, 'notifications');
+
+    // Create a query to get all unread notifications
+    const unreadQuery = query(
+      notificationsRef,
+      where('read', '==', false)
+    );
+
+    // Execute the query
+    const snapshot = await getDocs(unreadQuery);
+    const actualUnreadCount = snapshot.size;
+
+    console.log('fixUnreadNotificationsCount - actual unread count:', actualUnreadCount);
+
+    // Update the user document with the correct count
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, {
+      unreadNotificationsCount: actualUnreadCount
+    });
+
+    console.log('fixUnreadNotificationsCount - user document updated');
+
+    return actualUnreadCount;
+  } catch (error) {
+    console.error('Error fixing unread notifications count:', error);
+    throw error;
   }
 };
 

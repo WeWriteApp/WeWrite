@@ -68,7 +68,14 @@ import {
   CommandItem,
   CommandList
 } from "../ui/command";
-import EditPage from "../editor/EditPage";
+import PageEditor from "../editor/PageEditor";
+import { saveNewVersion, updateDoc, deletePage } from "../../firebase/database";
+import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
+import UnsavedChangesDialog from "../utils/UnsavedChangesDialog";
+import { useConfirmation } from "../../hooks/useConfirmation";
+import ConfirmationModal from "../utils/ConfirmationModal";
+import { useLogging } from "../../providers/LoggingProvider";
+import { GroupsContext } from "../../providers/GroupsProvider";
 
 // Username handling is now done directly in this component
 
@@ -110,31 +117,201 @@ function SinglePageView({ params }) {
   const [title, setTitle] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [clickPosition, setClickPosition] = useState(null);
+
+  // Additional state for editing functionality (moved from EditPage)
+  const [isSaving, setIsSaving] = useState(false);
+  const [location, setLocation] = useState(null);
+  const [editorContent, setEditorContent] = useState(null);
+  const [hasContentChanged, setHasContentChanged] = useState(false);
+  const [hasTitleChanged, setHasTitleChanged] = useState(false);
+  const [hasVisibilityChanged, setHasVisibilityChanged] = useState(false);
+  const [hasLocationChanged, setHasLocationChanged] = useState(false);
+  const [titleError, setTitleError] = useState(false);
+
   const { user } = useContext(AuthContext);
+  const groups = useContext(GroupsContext);
   const { recentPages = [], addRecentPage } = useContext(RecentPagesContext) || {};
   const { lineMode } = useLineSettings();
   const searchParams = useSearchParams();
   const router = useRouter();
   const contentRef = useRef(null);
+  const { logError } = useLogging();
+
+  // Use confirmation modal hook for delete functionality
+  const { confirmationState, confirmDelete, closeConfirmation } = useConfirmation();
 
   // Handle title changes from inline editing
   const handleTitleChange = (newTitle) => {
     setTitle(newTitle);
-    setHasUnsavedChanges(true);
+    setHasTitleChanged(true);
+
+    // Clear title error when user starts typing
+    if (titleError && newTitle && newTitle.trim() !== '') {
+      setTitleError(false);
+      setError(null);
+    }
   };
 
-  // Handle save action from action bar
-  const handleSave = () => {
-    // Trigger save in EditPage component
-    const saveEvent = new CustomEvent('triggerSave');
-    window.dispatchEvent(saveEvent);
+  // Handle content changes from editor
+  const handleContentChange = (content) => {
+    setEditorContent(content);
+    setHasContentChanged(true);
   };
 
-  // Handle cancel action from action bar
+  // Handle visibility changes
+  const handleVisibilityChange = (newIsPublic) => {
+    setIsPublic(newIsPublic);
+    setHasVisibilityChanged(true);
+  };
+
+  // Handle location changes
+  const handleLocationChange = (newLocation) => {
+    setLocation(newLocation);
+    setHasLocationChanged(true);
+  };
+
+  // Handle save action - comprehensive save logic moved from EditPage
+  const handleSave = useCallback(async (inputContent) => {
+    console.log("SinglePageView handleSave called with content:", {
+      contentType: typeof inputContent,
+      isArray: Array.isArray(inputContent),
+      length: Array.isArray(inputContent) ? inputContent.length : 0
+    });
+
+    if (!user) {
+      setError("User not authenticated");
+      return false;
+    }
+
+    if (!page) {
+      setError("Page data not available");
+      return false;
+    }
+
+    // CRITICAL FIX: Add title validation
+    if (!title || title.trim() === '') {
+      setError("Please add a title before saving");
+      setTitleError(true);
+      setIsSaving(false);
+      return false;
+    }
+
+    // Clear title error if title is valid
+    setTitleError(false);
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      // Use the provided content or fall back to current editor content
+      const finalContent = inputContent || editorContent || editorState;
+
+      if (!finalContent || !Array.isArray(finalContent)) {
+        throw new Error("Invalid content format");
+      }
+
+      // Convert content to JSON string for storage
+      const editorStateJSON = JSON.stringify(finalContent);
+      console.log("Saving content:", editorStateJSON.substring(0, 100) + "...");
+
+      // Check if content has actually changed by comparing with the original content
+      let contentChanged = true;
+      if (page.content) {
+        try {
+          const originalContent = typeof page.content === 'string'
+            ? page.content
+            : JSON.stringify(page.content);
+          contentChanged = originalContent !== editorStateJSON;
+          console.log('Content comparison:', {
+            originalLength: originalContent.length,
+            newLength: editorStateJSON.length,
+            changed: contentChanged
+          });
+        } catch (e) {
+          console.error('Error comparing content:', e);
+          contentChanged = true;
+        }
+      }
+
+      // Update the page document first
+      const updateTime = new Date().toISOString();
+      console.log(`Updating page ${page.id} with new metadata and content`);
+
+      await updateDoc("pages", page.id, {
+        title: title,
+        isPublic: isPublic,
+        groupId: groupId,
+        location: location,
+        lastModified: updateTime,
+        content: editorStateJSON
+      });
+
+      console.log('Page metadata and content updated successfully');
+
+      // Only create a new version if content actually changed
+      if (contentChanged) {
+        try {
+          const result = await saveNewVersion(page.id, {
+            content: editorStateJSON,
+            userId: user.uid,
+            username: user.displayName || user.username,
+            skipIfUnchanged: true
+          });
+
+          if (result && result.success) {
+            console.log('New version created successfully:', result.versionId);
+          } else {
+            console.log('Version creation skipped (no changes) or failed');
+          }
+        } catch (versionError) {
+          console.error('Error creating new version:', versionError);
+          // Don't fail the entire save if version creation fails
+        }
+      } else {
+        console.log('Content unchanged, skipping version creation');
+      }
+
+      // Reset all change tracking states
+      setHasContentChanged(false);
+      setHasTitleChanged(false);
+      setHasVisibilityChanged(false);
+      setHasLocationChanged(false);
+      setIsSaving(false);
+      setError(null);
+
+      // Trigger success animations and events
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('page-save-success', {
+          detail: { pageId: page.id }
+        }));
+        window.dispatchEvent(new CustomEvent('page-updated', {
+          detail: { pageId: page.id }
+        }));
+      }
+
+      // Exit edit mode after successful save
+      setTimeout(() => {
+        setIsEditing(false);
+      }, 300);
+
+      return true;
+
+    } catch (error) {
+      console.error("Error saving page:", error);
+      setError(`Failed to save: ${error.message}`);
+      setIsSaving(false);
+      logError(error, { context: 'SinglePageView.handleSave', pageId: page?.id });
+      return false;
+    }
+  }, [user, page, editorContent, editorState, title, isPublic, groupId, location, logError]);
+
+  // Handle cancel action
   const handleCancel = () => {
     setIsEditing(false);
-    setHasUnsavedChanges(false);
-    setClickPosition(null); // Clear click position when canceling
+    setHasContentChanged(false);
+    setHasTitleChanged(false);
+    setHasVisibilityChanged(false);
+    setHasLocationChanged(false);
+    setClickPosition(null);
   };
 
   // Enhanced setIsEditing function that captures click position
@@ -147,11 +324,82 @@ function SinglePageView({ params }) {
     }
   };
 
-  // Handle delete action from action bar
-  const handleDelete = () => {
-    // Trigger delete in EditPage component
-    const deleteEvent = new CustomEvent('triggerDelete');
-    window.dispatchEvent(deleteEvent);
+  // Handle delete action
+  const handleDelete = async () => {
+    if (!page) return;
+
+    // Use the correct confirmDelete API - it expects just the item name
+    const confirmed = await confirmDelete(`"${page.title || 'this page'}"`);
+
+    if (confirmed) {
+      try {
+        await deletePage(page.id);
+
+        // Trigger success event
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('page-deleted', {
+            detail: { pageId: page.id }
+          }));
+        }
+
+        // Navigate to home page
+        router.push('/');
+      } catch (error) {
+        console.error("Error deleting page:", error);
+        setError(`Failed to delete page: ${error.message}`);
+        logError(error, { context: 'SinglePageView.handleDelete', pageId: page.id });
+      }
+    }
+  };
+
+  // Handle insert link action from bottom toolbar
+  const handleInsertLink = () => {
+    // Trigger insert link in PageEditor component
+    const insertLinkEvent = new CustomEvent('triggerInsertLink');
+    window.dispatchEvent(insertLinkEvent);
+  };
+
+  // Track if there are any unsaved changes
+  const hasUnsavedChangesComputed = hasContentChanged || hasTitleChanged || hasVisibilityChanged || hasLocationChanged;
+
+  // Update the main hasUnsavedChanges state when computed value changes
+  useEffect(() => {
+    setHasUnsavedChanges(hasUnsavedChangesComputed);
+  }, [hasUnsavedChangesComputed]);
+
+  // Initialize page-specific state when page loads
+  useEffect(() => {
+    if (page) {
+      setLocation(page.location || null);
+      setGroupId(page.groupId || null);
+    }
+  }, [page]);
+
+  // Memoized save function for the useUnsavedChanges hook
+  const saveChanges = useCallback(() => {
+    return handleSave(editorContent || editorState);
+  }, [editorContent, editorState, handleSave]);
+
+  // Use the unsaved changes hook
+  const {
+    showUnsavedChangesDialog,
+    handleNavigation,
+    handleStayAndSave,
+    handleLeaveWithoutSaving,
+    handleCloseDialog,
+    isHandlingNavigation
+  } = useUnsavedChanges(hasUnsavedChangesComputed, saveChanges);
+
+  // Override the cancel handler to check for unsaved changes
+  const handleCancelWithCheck = () => {
+    const returnUrl = page && page.id ? `/${page.id}` : '/';
+    console.log('[DEBUG] SinglePageView - handleCancelWithCheck called, returnUrl:', returnUrl);
+
+    if (hasUnsavedChangesComputed) {
+      handleNavigation(returnUrl);
+    } else {
+      handleCancel();
+    }
   };
 
   useEffect(() => {
@@ -1028,6 +1276,7 @@ function SinglePageView({ params }) {
         isEditing={isEditing}
         setIsEditing={handleSetIsEditing}
         onTitleChange={handleTitleChange}
+        titleError={titleError}
         canEdit={
           user?.uid && (
             // User is the page owner
@@ -1042,21 +1291,49 @@ function SinglePageView({ params }) {
           <>
             <PageProvider>
               <LineSettingsProvider>
-                <EditPage
-                  isEditing={isEditing}
-                  setIsEditing={setIsEditing}
-                  page={page}
+                <PageEditor
                   title={title}
-                  setTitle={setTitle}
-                  current={editorState}
-                  editorError={editorError}
-                  onUnsavedChanges={setHasUnsavedChanges}
+                  setTitle={handleTitleChange}
+                  initialContent={editorState}
+                  onContentChange={handleContentChange}
+                  isPublic={isPublic}
+                  setIsPublic={handleVisibilityChange}
+                  location={location}
+                  setLocation={handleLocationChange}
+                  onSave={() => handleSave(editorContent || editorState)}
+                  onCancel={handleCancelWithCheck}
+                  onDelete={handleDelete}
+                  isSaving={isSaving}
+                  error={error}
+                  isNewPage={false}
                   clickPosition={clickPosition}
+                  page={page}
+                />
+
+                {/* Unsaved Changes Dialog */}
+                <UnsavedChangesDialog
+                  isOpen={showUnsavedChangesDialog}
+                  onClose={handleCloseDialog}
+                  onStayAndSave={handleStayAndSave}
+                  onLeaveWithoutSaving={handleLeaveWithoutSaving}
+                  isSaving={isSaving || isHandlingNavigation}
+                />
+
+                {/* Delete Confirmation Modal */}
+                <ConfirmationModal
+                  isOpen={confirmationState.isOpen}
+                  onClose={closeConfirmation}
+                  onConfirm={confirmationState.onConfirm}
+                  title={confirmationState.title}
+                  message={confirmationState.message}
+                  confirmText={confirmationState.confirmText}
+                  cancelText={confirmationState.cancelText}
+                  variant={confirmationState.variant}
+                  isLoading={confirmationState.isLoading}
+                  icon={confirmationState.icon}
                 />
               </LineSettingsProvider>
             </PageProvider>
-
-
           </>
         ) : (
           <>

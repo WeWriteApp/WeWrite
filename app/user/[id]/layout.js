@@ -4,7 +4,7 @@ import Script from 'next/script';
 
 export async function generateMetadata({ params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const rtdb = getDatabase(app);
 
     // First, try to get user by ID directly
@@ -74,7 +74,7 @@ export default async function UserLayout({ children, params }) {
   let schemaMarkup = null;
 
   try {
-    const { id } = params;
+    const { id } = await params;
     const rtdb = getDatabase(app);
 
     // First, try to get user by ID directly

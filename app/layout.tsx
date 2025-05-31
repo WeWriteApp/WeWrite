@@ -17,6 +17,7 @@ import ErrorBoundary from "./components/utils/ErrorBoundary"
 import { PillStyleProvider } from "./contexts/PillStyleContext"
 import { PWAProvider } from "./providers/PWAProvider"
 import FeatureFlagListener from "./components/utils/FeatureFlagListener"
+import SlateEarlyPatch from "./components/editor/SlateEarlyPatch"
 
 // Import polyfills for browser compatibility
 import "intl-segmenter-polyfill"
@@ -47,6 +48,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <SlateEarlyPatch />
         <script dangerouslySetInnerHTML={{
           __html: `
             // Enhanced script to detect and recover from blank pages and script failures

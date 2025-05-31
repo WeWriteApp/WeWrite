@@ -55,6 +55,7 @@ export interface PageHeaderProps {
   setIsEditing?: (value: boolean) => void;
   onTitleChange?: (newTitle: string) => void;
   canEdit?: boolean;
+  titleError?: boolean;
 }
 
 export default function PageHeader({
@@ -72,6 +73,7 @@ export default function PageHeader({
   setIsEditing,
   onTitleChange,
   canEdit: propCanEdit = false,
+  titleError = false,
 }: PageHeaderProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -464,6 +466,18 @@ export default function PageHeader({
               className={`flex-1 flex justify-center items-center ${isScrolled ? "cursor-pointer" : ""}`}
               onClick={isScrolled ? () => window.scrollTo({ top: 0, behavior: 'smooth' }) : undefined}
             >
+              {/* Edit icon positioned outside and to the left of title container */}
+              {isEditing && canEdit && !isScrolled && !isExactDateFormat(title || "") && (
+                <Edit2
+                  className="h-4 w-4 opacity-60 hover:opacity-100 transition-opacity duration-200 text-muted-foreground flex-shrink-0 mr-3 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleTitleClick();
+                  }}
+                  title="Click to edit title"
+                />
+              )}
+
               <div
                 className={`text-center space-y-0 transition-all duration-200 ease-out will-change-transform ${
                   isScrolled ? "flex flex-row items-center gap-2 pl-0" : "max-w-full"
@@ -499,7 +513,11 @@ export default function PageHeader({
                           onChange={(e) => setEditingTitle(e.target.value)}
                           onKeyDown={handleTitleKeyDown}
                           onBlur={handleTitleBlur}
-                          className={`bg-background/80 border border-primary/30 rounded-lg px-2 py-1 outline-none font-semibold text-center transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary/50 ${
+                          className={`bg-background/80 border rounded-lg px-2 py-1 outline-none font-semibold text-center transition-all duration-200 ${
+                            titleError
+                              ? "border-destructive focus:ring-2 focus:ring-destructive/20 focus:border-destructive"
+                              : "border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
+                          } ${
                             isScrolled
                               ? "text-xs opacity-90"
                               : "text-2xl"
@@ -508,13 +526,17 @@ export default function PageHeader({
                             maxWidth: isScrolled ? "60vw" : "100%",
                             minWidth: "100px"
                           }}
-                          placeholder="Enter title..."
+                          placeholder="Add a title..."
                         />
                       ) : (
                         <span
                           className={`${isScrolled ? "text-ellipsis overflow-hidden" : ""} ${
                             isEditing && canEdit && !isExactDateFormat(title || "")
-                              ? "cursor-pointer hover:bg-muted/30 hover:border-muted-foreground/30 rounded-lg px-2 py-1 border border-muted-foreground/20 transition-all duration-200 group flex items-center gap-2"
+                              ? `cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 border transition-all duration-200 ${
+                                  titleError
+                                    ? "border-destructive hover:border-destructive/70"
+                                    : "border-muted-foreground/20 hover:border-muted-foreground/30"
+                                }`
                               : isExactDateFormat(title || "") && !isScrolled
                               ? "flex flex-col items-center gap-1"
                               : ""
@@ -533,9 +555,6 @@ export default function PageHeader({
                               : (isEditing && canEdit ? "Click to edit title" : undefined)
                           }
                         >
-                          {isEditing && canEdit && !isScrolled && !isExactDateFormat(title || "") && (
-                            <Edit2 className="h-3 w-3 opacity-60 group-hover:opacity-100 transition-opacity duration-200 text-muted-foreground flex-shrink-0" />
-                          )}
                           <span>{title || "Untitled"}</span>
                           {isExactDateFormat(title || "") && !isScrolled && (
                             <span className="text-xs text-muted-foreground font-normal">Daily Note</span>

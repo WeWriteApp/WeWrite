@@ -6,22 +6,17 @@ import dynamic from "next/dynamic";
 // Import the main editor dynamically to avoid SSR issues
 const Editor = dynamic(() => import("./Editor"), { ssr: false });
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
-import { Globe, Lock, Link, MapPin } from "lucide-react";
-import { Switch } from "../ui/switch";
-import { Button } from "../ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
-import { useSearchParams } from "next/navigation";
 import { ReactEditor } from "slate-react";
 import { Transforms } from "slate";
 import { getUsernameById } from "../../utils/userUtils";
 import { createReplyAttribution } from "../../utils/linkUtils";
-import MapEditor from "./MapEditor";
 
 import { toast } from "../ui/use-toast";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import DisabledLinkModal from "../utils/DisabledLinkModal";
 import { useClickToEdit } from "../../hooks/useClickToEdit";
 import EditModeBottomToolbar from "./EditModeBottomToolbar";
+import ErrorBoundary from "../utils/ErrorBoundary";
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {
@@ -47,11 +42,18 @@ const isExactDateFormat = (title) => {
   return datePattern.test(title);
 };
 
+// Removed SafeSlateWrapper - it was causing more issues than it solved
+
 /**
  * PageEditor Component
  *
- * A unified editor component that can be used for editing existing pages, creating new ones,
- * and replying to existing pages.
+ * A unified editor component that handles all page editing scenarios:
+ * - Creating new pages
+ * - Editing existing pages
+ * - Creating replies to existing pages
+ *
+ * This component consolidates all editing logic to eliminate duplication
+ * and provide a consistent editing experience across the application.
  *
  * @param {Object} props
  * @param {string} props.title - Current title of the page
@@ -64,12 +66,14 @@ const isExactDateFormat = (title) => {
  * @param {Function} props.setLocation - Function to update the location
  * @param {Function} props.onSave - Function to handle saving
  * @param {Function} props.onCancel - Function to handle cancellation
+ * @param {Function} [props.onDelete] - Function to handle deletion (existing pages only)
  * @param {boolean} props.isSaving - Whether the page is currently being saved
  * @param {string} props.error - Error message to display
  * @param {boolean} props.isNewPage - Whether this is a new page or editing an existing one
  * @param {boolean} props.isReply - Whether this is a reply to an existing page
  * @param {string} props.replyToId - ID of the page being replied to
  * @param {Object} props.clickPosition - Position where user clicked to enter edit mode
+ * @param {Object} props.page - The page object (for existing pages)
  */
 const PageEditor = ({
   title,
@@ -82,19 +86,27 @@ const PageEditor = ({
   setLocation,
   onSave,
   onCancel,
+  onDelete = null,
   isSaving,
   error,
   isNewPage = false,
   isReply = false,
   replyToId = null,
-  clickPosition = null
+  clickPosition = null,
+  page = null
 }) => {
-  // Add hydration safety check
+  // Simplified hydration check
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    // Ensure we're fully hydrated before rendering the editor
-    setIsHydrated(true);
+    // Simple hydration check - just wait for the browser environment
+    if (typeof window !== 'undefined') {
+      const timer = setTimeout(() => {
+        setIsHydrated(true);
+      }, 100); // Much shorter delay
+
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   // Initialize editor with initialContent
@@ -105,10 +117,6 @@ const PageEditor = ({
   const { user } = useContext(AuthContext);
   const editorRef = useRef(null);
   const cursorPositioned = useRef(false);
-  const searchParams = useSearchParams();
-
-  // Check if map feature is enabled
-  const mapFeatureEnabled = useFeatureFlag('map_view', user?.email);
 
   // Check if link functionality is enabled
   const linkFunctionalityEnabled = useFeatureFlag('link_functionality', user?.email);
@@ -121,7 +129,7 @@ const PageEditor = ({
     isEditing: true,
     setIsEditing: () => {},
     canEdit: false, // Disable "Enter to edit" in edit mode
-    handleSave: null, // Save is handled by the bottom toolbar
+    handleSave: onSave, // Enable Cmd+Enter / Ctrl+Enter to save
     isSaving
   });
 
@@ -444,30 +452,6 @@ const PageEditor = ({
 
   return (
     <div className="editor-container w-full max-w-none">
-      {/* Title input for new pages and replies */}
-      {(isNewPage || isReply) && (
-        <div className="mb-6">
-          {isExactDateFormat(title) ? (
-            // Read-only title for daily notes with centered styling
-            <div className="w-full text-2xl font-semibold text-center py-2 text-foreground">
-              {title}
-              <div className="text-sm text-muted-foreground mt-1 font-normal">
-                Daily Note
-              </div>
-            </div>
-          ) : (
-            // Editable title for regular pages
-            <input
-              type="text"
-              value={title || ""}
-              onChange={(e) => setTitle && setTitle(e.target.value)}
-              placeholder={isReply ? "Type title here..." : "Type title here..."}
-              className="w-full text-2xl font-semibold bg-transparent border-none outline-none focus:ring-0 placeholder:text-muted-foreground"
-              autoFocus={!isReply}
-            />
-          )}
-        </div>
-      )}
 
       <div
         className={`w-full max-w-none transition-all duration-200 ${
@@ -477,16 +461,54 @@ const PageEditor = ({
         }`}
       >
         {isHydrated ? (
-          <Editor
-            ref={editorRef}
-            initialContent={currentEditorValue}
-            onChange={handleContentChange}
-            placeholder="Start typing..."
-            contentType="wiki"
-          />
+          <ErrorBoundary
+            name="slate-editor"
+            fallback={
+              <div className="w-full min-h-[200px] flex flex-col items-center justify-center space-y-4 border border-red-200 rounded-lg bg-red-50 dark:bg-red-900/10 dark:border-red-800 p-6">
+                <div className="text-red-600 dark:text-red-400 text-center">
+                  <h3 className="font-medium text-lg mb-2">Editor Error</h3>
+                  <p className="text-sm mb-4">
+                    The editor encountered an error. This might be due to a browser compatibility issue or hydration problem.
+                  </p>
+
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setIsHydrated(false);
+                      setTimeout(() => setIsHydrated(true), 1000);
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition-colors"
+                  >
+                    Retry Editor
+                  </button>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-md text-sm hover:bg-gray-700 transition-colors"
+                  >
+                    Refresh Page
+                  </button>
+                </div>
+              </div>
+            }
+          >
+            {/* Simplified editor wrapper */}
+            <div className="slate-editor-wrapper">
+              <Editor
+                ref={editorRef}
+                initialContent={currentEditorValue}
+                onChange={handleContentChange}
+                placeholder="Start typing..."
+                contentType="wiki"
+              />
+            </div>
+          </ErrorBoundary>
         ) : (
           <div className="w-full min-h-[200px] flex items-center justify-center">
             <div className="loader loader-md"></div>
+            <div className="ml-3 text-muted-foreground">
+              {isNewPage ? "Initializing new page editor..." : "Loading editor..."}
+            </div>
           </div>
         )}
       </div>
@@ -504,8 +526,8 @@ const PageEditor = ({
         onClose={() => setShowDisabledLinkModal(false)}
       />
 
-      {/* Bottom Toolbar for new pages */}
-      {isNewPage && onSave && onCancel && (
+      {/* Bottom Toolbar - unified for all editing scenarios */}
+      {typeof onSave === 'function' && typeof onCancel === 'function' && (
         <EditModeBottomToolbar
           isPublic={isPublic || false}
           setIsPublic={setIsPublic || (() => {})}
@@ -514,6 +536,7 @@ const PageEditor = ({
           onInsertLink={handleInsertLink}
           onCancel={onCancel}
           onSave={onSave}
+          onDelete={onDelete} // Only passed for existing pages
           isSaving={isSaving}
           linkFunctionalityEnabled={linkFunctionalityEnabled}
         />

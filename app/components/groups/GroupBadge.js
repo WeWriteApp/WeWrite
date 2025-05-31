@@ -37,7 +37,7 @@ export default function GroupBadge({ groupId,index }) {
   if (!group || !groupId) return <div className="flex justify-center py-4"><div className="loader loader-lg"></div></div>;
 
   return (
-    <Link className="p-4 border bg-background border-gray-500 rounded-lg fade-in
+    <Link className="p-4 border-theme-strong bg-card text-card-foreground rounded-xl shadow-sm fade-in hover:bg-muted/30 transition-all duration-200
     " href={`/group/${group.id}`} style={{ animationDelay: `${index * 50}ms` }}>
       <h1
         className="text-lg font-semibold text-text"

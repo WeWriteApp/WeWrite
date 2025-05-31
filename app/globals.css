@@ -331,8 +331,8 @@
 /* Glass card styling - using theme variables for better light/dark mode support */
 .glass-card {
   border: 1px solid;
-  border-radius: 16px;
-  border-color: hsl(var(--border) / 0.2);
+  border-radius: 0.75rem; /* rounded-xl */
+  border-color: hsl(var(--border) / 0.4);
 }
 
 .glass-panel {
@@ -347,9 +347,9 @@
 .wewrite-card {
   background-color: hsl(var(--card));
   color: hsl(var(--card-foreground));
-  border-radius: 1rem; /* rounded-2xl */
-  border: 1px solid hsl(var(--border-theme-medium));
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+  border-radius: 0.75rem; /* rounded-xl */
+  border: 1px solid hsl(var(--border-theme-strong));
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
   overflow: hidden;
   /* Mobile-first padding with better spacing */
   padding: 1.25rem; /* p-5 on mobile */
@@ -368,7 +368,7 @@
 /* Dark mode adjustments for cards */
 .dark .wewrite-card {
   background-color: hsl(var(--card) / 0.9); /* dark:bg-card/90 */
-  border-color: hsl(var(--border-theme-medium));
+  border-color: hsl(var(--border-theme-strong));
 }
 
 /* Hover state for cards */
@@ -396,9 +396,11 @@ html[data-high-contrast="true"] .glass-panel {
 /* High contrast mode for specific card-like elements */
 html[data-high-contrast="true"] [class*="border-theme-"],
 html[data-high-contrast="true"] [class*="rounded-2xl"][class*="border"],
+html[data-high-contrast="true"] [class*="rounded-xl"][class*="border"],
 html[data-high-contrast="true"] [class*="rounded-lg"][class*="border"],
 html[data-high-contrast="true"] .card,
-html[data-high-contrast="true"] [class*="shadow-md"][class*="border"] {
+html[data-high-contrast="true"] [class*="shadow-md"][class*="border"],
+html[data-high-contrast="true"] [class*="shadow-sm"][class*="border"] {
   border-color: hsl(var(--border)) !important;
 }
 

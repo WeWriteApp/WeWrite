@@ -280,8 +280,13 @@ export const createPage = async (data) => {
         console.log("Updated page with current version ID");
 
         // Record user activity for streak tracking
-        await recordUserActivity(data.userId);
-        console.log("Recorded user activity for streak tracking");
+        try {
+          await recordUserActivity(data.userId);
+          console.log("Recorded user activity for streak tracking");
+        } catch (activityError) {
+          console.error("Error recording user activity (non-fatal):", activityError);
+          // Don't fail page creation if activity recording fails
+        }
 
         // Update user page count
         try {

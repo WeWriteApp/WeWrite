@@ -6,7 +6,9 @@ import {
   getNotifications,
   getUnreadNotificationsCount,
   markNotificationAsRead,
-  markAllNotificationsAsRead
+  markNotificationAsUnread,
+  markAllNotificationsAsRead,
+  fixUnreadNotificationsCount
 } from "../firebase/notifications";
 
 /**
@@ -37,6 +39,7 @@ interface NotificationContextType {
   hasMore: boolean;
   loadMoreNotifications: () => Promise<void>;
   markAsRead: (notificationId: string) => Promise<void>;
+  markAsUnread: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
 }
 
@@ -77,12 +80,27 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       try {
         setLoading(true);
 
-        // Get unread count
-        const count = await getUnreadNotificationsCount(user.uid);
-        setUnreadCount(count);
-
-        // Get notifications
+        // Get notifications first
         const { notifications: notificationData, lastDoc: lastVisible } = await getNotifications(user.uid);
+
+        console.log('NotificationProvider - fetched notifications:', notificationData.map(n => ({ id: n.id, read: n.read, type: n.type })));
+
+        // Count actual unread notifications from the fetched data
+        const actualUnreadCount = notificationData.filter(n => !n.read).length;
+        console.log('NotificationProvider - actual unread count from data:', actualUnreadCount);
+
+        // Get stored unread count
+        const storedCount = await getUnreadNotificationsCount(user.uid);
+        console.log('NotificationProvider - stored unread count:', storedCount);
+
+        // If there's a mismatch, fix it
+        if (actualUnreadCount !== storedCount) {
+          console.log('NotificationProvider - count mismatch detected, fixing...');
+          const fixedCount = await fixUnreadNotificationsCount(user.uid);
+          setUnreadCount(fixedCount);
+        } else {
+          setUnreadCount(storedCount);
+        }
 
         setNotifications(notificationData);
         setLastDoc(lastVisible);
@@ -131,6 +149,11 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     if (!user) return;
 
     try {
+      // Find the notification BEFORE updating local state to check if it was unread
+      const notification = notifications.find(n => n.id === notificationId);
+      const wasUnread = notification && !notification.read;
+
+      // Call the backend to mark as read
       await markNotificationAsRead(user.uid, notificationId);
 
       // Update local state
@@ -142,13 +165,50 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         )
       );
 
-      // Decrement unread count if the notification was unread
-      const notification = notifications.find(n => n.id === notificationId);
-      if (notification && !notification.read) {
+      // Decrement unread count only if the notification was actually unread
+      if (wasUnread) {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
     } catch (error) {
       console.error("Error marking notification as read:", error);
+      // Re-throw the error so the UI can handle it if needed
+      throw error;
+    }
+  };
+
+  /**
+   * Function to mark a notification as unread
+   *
+   * @param notificationId - The ID of the notification to mark as unread
+   */
+  const markAsUnread = async (notificationId: string): Promise<void> => {
+    if (!user) return;
+
+    try {
+      // Find the notification BEFORE updating local state to check if it was read
+      const notification = notifications.find(n => n.id === notificationId);
+      const wasRead = notification && notification.read;
+
+      // Call the backend to mark as unread
+      await markNotificationAsUnread(user.uid, notificationId);
+
+      // Update local state
+      setNotifications(prev =>
+        prev.map(notification =>
+          notification.id === notificationId
+            ? { ...notification, read: false }
+            : notification
+        )
+      );
+
+      // Increment unread count only if the notification was actually read
+      if (wasRead) {
+        setUnreadCount(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error("Error marking notification as unread:", error);
+      // Re-throw the error so the UI can handle it if needed
+      throw error;
     }
   };
 
@@ -159,6 +219,9 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     if (!user) return;
 
     try {
+      console.log('markAllAsRead called - current unreadCount:', unreadCount);
+      console.log('markAllAsRead called - current notifications:', notifications.map(n => ({ id: n.id, read: n.read })));
+
       await markAllNotificationsAsRead(user.uid);
 
       // Update local state
@@ -167,8 +230,11 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       );
 
       setUnreadCount(0);
+      console.log('markAllAsRead completed - unreadCount set to 0');
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
+      // Re-throw the error so the UI can handle it if needed
+      throw error;
     }
   };
 
@@ -179,6 +245,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     hasMore,
     loadMoreNotifications,
     markAsRead,
+    markAsUnread,
     markAllAsRead
   };
 

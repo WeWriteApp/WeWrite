@@ -171,7 +171,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   return (
     <div
       className={cn(
-        "w-full border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 cursor-pointer no-underline bg-card overflow-hidden",
+        "w-full border border-theme-strong rounded-xl shadow-sm dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 cursor-pointer no-underline bg-card overflow-hidden",
         // Mobile: variable height with minimum, Desktop: fixed height
         "min-h-[160px] md:h-[200px]",
         "flex flex-col",

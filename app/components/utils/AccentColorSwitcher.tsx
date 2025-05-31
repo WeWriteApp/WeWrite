@@ -5,6 +5,7 @@ import { Palette, Check } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useAccentColor, ACCENT_COLORS, ACCENT_COLOR_VALUES } from "../../contexts/AccentColorContext";
 import { Button } from "../ui/button";
+import { useTheme } from "next-themes";
 
 interface AccentColorSwitcherProps {
   compact?: boolean;
@@ -12,6 +13,7 @@ interface AccentColorSwitcherProps {
 
 export function AccentColorSwitcher({ compact = false }: AccentColorSwitcherProps) {
   const { accentColor, changeAccentColor } = useAccentColor();
+  const { resolvedTheme } = useTheme();
 
   // Define a limited set of colors for the sidebar switcher
   const colorOptions = [
@@ -21,8 +23,8 @@ export function AccentColorSwitcher({ compact = false }: AccentColorSwitcherProp
     { value: ACCENT_COLORS.GREEN, color: ACCENT_COLOR_VALUES[ACCENT_COLORS.GREEN], label: "Green" },
     {
       value: ACCENT_COLORS.HIGH_CONTRAST,
-      // For the high contrast color, we'll use a gradient to show it changes between black and white
-      color: 'linear-gradient(to right, #000000 50%, #FFFFFF 50%)',
+      // Show the current high contrast color (black in light mode, white in dark mode)
+      color: resolvedTheme === 'dark' ? '#FFFFFF' : '#000000',
       label: "High Contrast"
     }
   ];

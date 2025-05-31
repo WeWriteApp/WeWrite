@@ -7,9 +7,10 @@ import { SectionTitle } from '../ui/section-title';
 import StickySection from "../utils/StickySection";
 import DailyNotesCarousel from './DailyNotesCarousel';
 import { AuthContext } from '../../providers/AuthProvider';
+import { useAccentColor } from '../../contexts/AccentColorContext';
 
 interface DailyNotesSectionProps {
-  accentColor?: string;
+  // No longer need accentColor prop since we'll get it from context
 }
 
 /**
@@ -19,9 +20,25 @@ interface DailyNotesSectionProps {
  * Displays a horizontal carousel of calendar day cards.
  * Uses YYYY-MM-DD format for all daily note titles.
  * Now uses the standardized sticky header pattern.
+ * Uses accent color from context and respects pill style settings.
  */
-export default function DailyNotesSection({ accentColor = '#1768FF' }: DailyNotesSectionProps) {
+export default function DailyNotesSection({}: DailyNotesSectionProps) {
   const { user } = useContext(AuthContext);
+  const { accentColor, customColors } = useAccentColor();
+
+  // Get the actual color value from the accent color system
+  const getAccentColorValue = () => {
+    if (accentColor.startsWith('custom')) {
+      return customColors[accentColor] || '#1768FF';
+    }
+    // For preset colors, we need to get the CSS variable value
+    const computedStyle = getComputedStyle(document.documentElement);
+    const primaryHsl = computedStyle.getPropertyValue('--primary').trim();
+    if (primaryHsl) {
+      return `hsl(${primaryHsl})`;
+    }
+    return '#1768FF'; // fallback
+  };
 
   if (!user) {
     return null; // Don't show for non-authenticated users
@@ -64,19 +81,14 @@ export default function DailyNotesSection({ accentColor = '#1768FF' }: DailyNote
     >
       {/* Carousel container */}
       <div className="relative">
-        <DailyNotesCarousel accentColor={accentColor} />
+        <DailyNotesCarousel accentColor={getAccentColorValue()} />
 
         {/* Gradient fade on edges for better visual indication of scrollability */}
         <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none" />
       </div>
 
-      {/* Helpful text */}
-      <div className="px-6 mt-3">
-        <p className="text-xs text-muted-foreground text-center">
-          Tap empty cards to create notes • Tap filled cards to view/edit
-        </p>
-      </div>
+
     </StickySection>
   );
 }

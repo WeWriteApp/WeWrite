@@ -255,10 +255,10 @@ export default function HomeGroupsSection({ hideHeader = false }: HomeGroupsSect
     <div className="w-full space-y-4">
 
       {/* Desktop view (md and up): Table layout */}
-      <div className="hidden md:block border border-theme-medium rounded-2xl overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
+      <div className="hidden md:block border border-theme-strong rounded-xl overflow-hidden shadow-sm dark:bg-card/90 dark:hover:bg-card/100 w-full">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-theme-medium">
+            <tr className="border-b border-theme-strong">
               <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Group</th>
               <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Members</th>
               <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Pages</th>
@@ -269,7 +269,7 @@ export default function HomeGroupsSection({ hideHeader = false }: HomeGroupsSect
             {displayGroups.map((group) => (
               <tr
                 key={group.id}
-                className="border-b border-theme-medium hover:bg-muted/30 transition-colors cursor-pointer"
+                className="border-b border-theme-strong hover:bg-muted/30 transition-colors cursor-pointer"
                 onClick={(e) => {
                   e.preventDefault();
                   // Use direct navigation to avoid scroll issues with sticky headers
@@ -338,7 +338,7 @@ export default function HomeGroupsSection({ hideHeader = false }: HomeGroupsSect
         {displayGroups.map((group) => (
           <div
             key={group.id}
-            className="group block bg-card border border-theme-medium rounded-2xl overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-all"
+            className="group block bg-card border border-theme-strong rounded-xl overflow-hidden shadow-sm dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-all"
             onClick={(e) => {
               e.preventDefault();
               // Use direct navigation to avoid scroll issues with sticky headers

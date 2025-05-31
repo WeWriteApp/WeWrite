@@ -533,7 +533,7 @@ const TopUsers = () => {
                     {sortedUsers.map((user) => (
                       <TableRow
                         key={user.id}
-                        className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
+                        className="border-b border-theme-strong hover:bg-muted/30 transition-colors cursor-pointer"
                         onClick={() => window.location.href = `/user/${user.id}`}
                       >
                         <TableCell className="py-3 px-4 text-left w-1/2">
@@ -582,7 +582,7 @@ const TopUsers = () => {
 
                 {/* Pagination controls for desktop */}
                 {hasMore && (
-                  <div className="flex justify-center p-4 border-t border-border/30">
+                  <div className="flex justify-center p-4 border-t border-theme-strong">
                     <Button
                       variant="outline"
                       size="sm"
@@ -622,7 +622,7 @@ const TopUsers = () => {
       {loading && [...Array(8)].map((_, i) => (
         <div
           key={i}
-          className="md:hidden flex items-center justify-between p-5 border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-colors mb-6"
+          className="md:hidden flex items-center justify-between p-5 border border-theme-strong rounded-xl shadow-sm dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-colors mb-6"
           style={{ animationDelay: `${i * 50}ms` }}
         >
           <div className="flex flex-col gap-2 min-w-0 flex-1">
@@ -635,14 +635,14 @@ const TopUsers = () => {
 
       {/* Mobile error states */}
       {!loading && error && !user && (
-        <div className="md:hidden flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-2xl mb-4">
+        <div className="md:hidden flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-xl mb-4">
           <Info className="h-4 w-4 flex-shrink-0" />
           <p>Sign in to see the leaderboard</p>
         </div>
       )}
 
       {!loading && error && user && (
-        <div className="md:hidden p-4 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-2xl mb-4">
+        <div className="md:hidden p-4 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-xl mb-4">
           <div className="flex gap-2 items-start">
             <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
             <div>
@@ -662,7 +662,7 @@ const TopUsers = () => {
       )}
 
       {!loading && !error && allTimeUsers.length === 0 && (
-        <div className="md:hidden p-4 text-sm text-muted-foreground text-center rounded-2xl border border-theme-medium mb-4">
+        <div className="md:hidden p-4 text-sm text-muted-foreground text-center rounded-xl border border-theme-strong mb-4">
           <p>No supporters yet. Be the first to support a writer!</p>
         </div>
       )}
@@ -672,7 +672,7 @@ const TopUsers = () => {
         <div
           key={user.id}
           onClick={() => window.location.href = `/user/${user.id}`}
-          className="md:hidden flex items-center justify-between p-5 border border-theme-medium rounded-2xl shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-colors mb-6"
+          className="md:hidden flex items-center justify-between p-5 border border-theme-strong rounded-xl shadow-sm dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-colors mb-6"
         >
           <div className="flex flex-col gap-2 min-w-0 flex-1">
             <PillLink
@@ -716,7 +716,7 @@ const TopUsers = () => {
           size="sm"
           onClick={loadMoreUsers}
           disabled={loading || !hasMore}
-          className="md:hidden w-full mb-4 rounded-2xl border border-theme-medium shadow-md hover:shadow-lg transition-shadow"
+          className="md:hidden w-full mb-4 rounded-xl border border-theme-strong shadow-sm hover:shadow-md transition-shadow"
         >
           {loading ? (
             <span className="flex items-center justify-center">
@@ -733,7 +733,7 @@ const TopUsers = () => {
       {!loading && !error && allTimeUsers.length > 0 && (
         <div className="md:hidden flex justify-center mb-4">
           <Link href="/users">
-            <Button variant="outline" className="rounded-2xl border border-theme-medium shadow-md hover:shadow-lg transition-shadow">
+            <Button variant="outline" className="rounded-xl border border-theme-strong shadow-sm hover:shadow-md transition-shadow">
               View all users
             </Button>
           </Link>

@@ -1,30 +1,25 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useContext } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Head from "next/head";
 import DashboardLayout from "../DashboardLayout";
+import PublicLayout from "../components/layout/PublicLayout";
 import { createPage } from "../firebase/database";
 import ReactGA from 'react-ga4';
 import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
 import { CONTENT_EVENTS } from "../constants/analytics-events";
-import Cookies from 'js-cookie';
-import PageEditor from "../components/editor/PageEditor";
-import { Button } from "../components/ui/button";
-import { ChevronLeft } from "lucide-react";
 import { createReplyAttribution } from "../utils/linkUtils";
+import { AuthContext } from "../providers/AuthProvider";
+import PageHeader from "../components/pages/PageHeader";
+import PageEditor from "../components/editor/PageEditor";
+
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../components/utils/UnsavedChangesDialog";
-
-/**
- * User data interface
- */
-interface UserData {
-  uid: string;
-  email: string;
-  username: string;
-  displayName: string;
-  isCurrent?: boolean;
-}
+import { PageProvider } from "../contexts/PageContext";
+import { LineSettingsProvider } from "../contexts/LineSettingsContext";
+import SiteFooter from "../components/layout/SiteFooter";
+import PledgeBar from "../components/payments/PledgeBar";
 
 /**
  * Editor content node interface
@@ -61,158 +56,191 @@ interface PageData {
 }
 
 /**
- * NewPage component for creating new pages and replies
+ * NewPage component that mimics SinglePageView structure for creating new pages
+ * This component emulates the exact same architecture as editing an existing page
  */
 export default function NewPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [user, setUser] = useState<UserData>({
-    uid: 'anonymous',
-    email: 'anonymous@example.com',
-    username: 'Anonymous',
-    displayName: 'Anonymous'
-  });
+  const authContext = useContext(AuthContext);
+  const user = authContext?.user;
+  const analytics = useWeWriteAnalytics();
+
+  // State that mimics SinglePageView
+  const [isEditing] = useState(true); // Always in editing mode for new pages
+  const [editorState, setEditorState] = useState<EditorNode[]>([{ type: "paragraph", children: [{ text: "" }] }]);
   const [title, setTitle] = useState<string>("");
   const [isPublic, setIsPublic] = useState<boolean>(true);
   const [location, setLocation] = useState<any>(null);
-  const [editorContent, setEditorContent] = useState<EditorNode[]>([{ type: "paragraph", children: [{ text: "" }] }]);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [initialContent, setInitialContent] = useState<EditorNode[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const analytics = useWeWriteAnalytics();
-  const isReply = searchParams.has('replyTo');
-
-  // Track changes for unsaved changes warning
-  const [hasContentChanged, setHasContentChanged] = useState<boolean>(false);
-  const [hasTitleChanged, setHasTitleChanged] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
-  // Account switcher logic
-  useEffect(() => {
-    let userData: UserData | null = null;
-    try {
-      const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
-      if (wewriteAccounts) {
-        const accounts: UserData[] = JSON.parse(wewriteAccounts);
-        const currentAccount = accounts.find(acc => acc.isCurrent);
-        if (currentAccount) userData = currentAccount;
-      }
-    } catch {}
-    if (!userData) {
-      try {
-        const wewriteUserId = Cookies.get('wewrite_user_id');
-        if (wewriteUserId) {
-          const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
-          if (wewriteAccounts) {
-            const accounts: UserData[] = JSON.parse(wewriteAccounts);
-            const account = accounts.find(acc => acc.uid === wewriteUserId);
-            if (account) userData = account;
-          }
-        }
-      } catch {}
-    }
-    if (!userData) {
-      try {
-        const userSessionCookie = Cookies.get('userSession');
-        if (userSessionCookie) {
-          const userSession: UserData = JSON.parse(userSessionCookie);
-          if (userSession && userSession.uid) userData = userSession;
-        }
-      } catch {}
-    }
-    if (userData) setUser(userData);
-  }, []);
+  // Page-like state for consistency with SinglePageView
+  const [page, setPage] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Handle reply mode
+  // State for tracking changes and saving (mimics EditPage)
+  const [editorContent, setEditorContent] = useState<EditorNode[]>([]);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasContentChanged, setHasContentChanged] = useState<boolean>(false);
+  const [hasTitleChanged, setHasTitleChanged] = useState<boolean>(false);
+  const [titleError, setTitleError] = useState<boolean>(false);
+
+  // Determine page type
+  const isReply = searchParams?.has('replyTo') || false;
+  const isDailyNote = searchParams?.get('type') === 'daily-note' || isExactDateFormat(title);
+
+  // Initialize page-like object for new page creation
   useEffect(() => {
-    if (isReply) {
-      const page = searchParams.get('page') || '';
+    const mockPage = {
+      id: null,
+      title: title,
+      isPublic: isPublic,
+      location: location,
+      userId: user?.uid || 'anonymous',
+      username: user?.username || user?.displayName || 'Anonymous',
+      content: JSON.stringify(editorState),
+      lastModified: new Date().toISOString(),
+      isReply: isReply
+    };
+    setPage(mockPage);
+  }, [title, isPublic, location, user, editorState, isReply]);
+
+  // Initialize content based on page type
+  useEffect(() => {
+    if (isReply && searchParams) {
+      const pageTitle = searchParams.get('page') || '';
       const username = searchParams.get('username') || '';
       const replyToId = searchParams.get('replyTo') || '';
       const contentParam = searchParams.get('initialContent');
 
       setTitle("");
 
-      // First try to use the initialContent from URL if available
       if (contentParam) {
         try {
           const parsedContent = JSON.parse(decodeURIComponent(contentParam));
-
-          // Ensure we have at least 2 paragraphs (attribution and cursor position)
           let completeContent = [...parsedContent];
           if (completeContent.length < 2) {
             completeContent.push({ type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." });
           }
-
-          setInitialContent(completeContent);
-          setEditorContent(completeContent);
+          setEditorState(completeContent);
           return;
         } catch (error) {
           console.error("Error parsing content from URL:", error);
-          // Fall through to create new attribution
         }
       }
 
-      // If no valid content from URL, create new attribution
       const attribution = createReplyAttribution({
         pageId: replyToId,
-        pageTitle: page,
-        userId: null,
+        pageTitle: pageTitle,
+        userId: user?.uid || '',
         username: username
       });
 
-      // Create a properly structured reply content with attribution and one empty paragraph
       const replyContent = [
-        attribution, // This already has the isAttribution flag from createReplyAttribution
-        { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." } // Where cursor will be positioned
+        attribution,
+        { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." }
       ];
 
-      // Set both initial content and editor content to ensure consistency
-      setInitialContent(replyContent);
-      setEditorContent(replyContent);
-
-      // Force a re-render of the editor with the new content
-      setTimeout(() => {
-        setInitialContent([...replyContent]);
-      }, 100);
-    } else {
-      // Not a reply - handle normal page creation
+      setEditorState(replyContent);
+    } else if (searchParams) {
       const titleParam = searchParams.get('title');
       const contentParam = searchParams.get('initialContent');
+
       if (titleParam) {
-        try { setTitle(decodeURIComponent(titleParam)); } catch {}
+        try {
+          setTitle(decodeURIComponent(titleParam));
+        } catch {}
       }
+
       if (contentParam) {
         try {
           const parsedContent = JSON.parse(decodeURIComponent(contentParam));
-          setInitialContent(parsedContent);
-          setEditorContent(parsedContent);
+          setEditorState(parsedContent);
         } catch {}
       }
     }
   }, [isReply, searchParams]);
 
-  /**
-   * Handle saving the page
-   *
-   * @param content - The editor content to save
-   * @returns Promise<boolean> - True if save was successful, false otherwise
-   */
+  // Handle back navigation
+  const handleBack = () => {
+    let backUrl = '/';
+
+    if (isReply && searchParams) {
+      const replyToId = searchParams.get('replyTo');
+      if (replyToId) {
+        backUrl = `/${replyToId}`;
+      }
+    }
+
+    router.push(backUrl);
+  };
+
+  // Handle title changes
+  const handleTitleChange = (newTitle: string) => {
+    setTitle(newTitle);
+    setHasTitleChanged(newTitle !== "");
+
+    // Clear title error when user starts typing
+    if (titleError && newTitle && newTitle.trim() !== '') {
+      setTitleError(false);
+      setError(null);
+    }
+  };
+
+  // Handle setting editing state
+  const handleSetIsEditing = (editing: boolean) => {
+    if (!editing) {
+      handleBack();
+    }
+  };
+
+  // Handle content changes
+  const handleContentChange = (content: EditorNode[]) => {
+    setEditorContent(content);
+    setEditorState(content);
+
+    try {
+      const initialContent = JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]);
+      const newContent = JSON.stringify(content);
+      setHasContentChanged(initialContent !== newContent);
+    } catch (e) {
+      console.error('Error comparing content:', e);
+      setHasContentChanged(true);
+    }
+  };
+
+  // Update hasUnsavedChanges when content or title changes
+  useEffect(() => {
+    setHasUnsavedChanges(hasContentChanged || hasTitleChanged);
+  }, [hasContentChanged, hasTitleChanged]);
+
+  // Handle save
   const handleSave = async (content: EditorNode[]): Promise<boolean> => {
-    setIsSaving(true);
-    setError(null);
-    if (!title && !isReply) {
-      setError("Please add a title");
-      setIsSaving(false);
+    // CRITICAL FIX: Enhanced title validation with visual feedback
+    if (!title || title.trim() === '') {
+      if (!isReply) {
+        setError("Please add a title before saving");
+        setTitleError(true);
+        return false;
+      }
+    }
+
+    // Clear title error if title is valid
+    setTitleError(false);
+
+    // Validate user authentication
+    if (!user || !user.uid) {
+      setError("You must be logged in to create a page");
       return false;
     }
-    try {
-      const urlUsername = searchParams.get('username');
-      const username = urlUsername || user?.username || user?.displayName || 'Anonymous';
-      const userId = user?.uid || 'anonymous';
 
-      // Validate content - be more lenient for daily notes
-      const isDailyNote = isExactDateFormat(title);
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const username = user?.username || user?.displayName || 'Anonymous';
+      const userId = user.uid;
 
       if (!content || !Array.isArray(content)) {
         setError("Error: Invalid content format");
@@ -220,22 +248,15 @@ export default function NewPage() {
         return false;
       }
 
-      // For daily notes, allow empty content or content with just empty paragraphs
-      if (!isDailyNote && content.length === 0) {
-        setError("Error: Invalid content format");
-        setIsSaving(false);
-        return false;
-      }
-
-      // If content is empty or has only empty paragraphs, create default content
       const hasActualContent = content.some(node =>
         node.children && node.children.some(child => child.text && child.text.trim() !== '')
       );
 
       let finalContent = content;
-      if (!hasActualContent) {
+      if (!hasActualContent && !isReply) {
         finalContent = [{ type: "paragraph", children: [{ text: "" }] }];
       }
+
       const data: PageData = {
         title: isReply ? "" : title,
         isPublic,
@@ -246,73 +267,51 @@ export default function NewPage() {
         lastModified: new Date().toISOString(),
         isReply: !!isReply,
       };
-      const res = await createPage(data);
-      if (res) {
-        ReactGA.event({ category: "Page", action: "Add new page", label: title });
-        analytics.trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, { label: title, page_id: res, is_reply: !!isReply });
 
-        // Reset all change tracking states after a successful save
+      console.log('Creating page with data:', { ...data, content: '(content omitted)' });
+      const res = await createPage(data);
+
+      if (res) {
+        console.log('Page created successfully with ID:', res);
+
+        // Track analytics (non-blocking)
+        try {
+          ReactGA.event({ category: "Page", action: "Add new page", label: title });
+          analytics.trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, {
+            label: title,
+            page_id: res,
+            is_reply: !!isReply
+          });
+        } catch (analyticsError) {
+          console.error('Analytics tracking failed (non-fatal):', analyticsError);
+        }
+
         setHasContentChanged(false);
         setHasTitleChanged(false);
         setHasUnsavedChanges(false);
 
         setIsSaving(false);
-        router.push(`/pages/${res}`);
-        return true; // Return true to indicate success for the useUnsavedChanges hook
+        router.push(`/${res}`);
+        return true;
       } else {
+        console.error('Page creation failed: createPage returned null/false');
         setIsSaving(false);
-        return false; // Return false to indicate failure for the useUnsavedChanges hook
+        setError("Failed to create page. Please try again.");
+        return false;
       }
     } catch (error: any) {
       setIsSaving(false);
       setError("Failed to create page: " + (error.message || 'Unknown error'));
-      return false; // Return false to indicate failure for the useUnsavedChanges hook
+      return false;
     }
   };
 
-  // Update hasUnsavedChanges whenever content or title changes
-  useEffect(() => {
-    setHasUnsavedChanges(hasContentChanged || hasTitleChanged);
-  }, [hasContentChanged, hasTitleChanged]);
-
-  /**
-   * Handle content changes in the editor
-   *
-   * @param content - The new editor content
-   */
-  const handleContentChange = (content: EditorNode[]): void => {
-    setEditorContent(content);
-
-    // Check if content has changed from the initial content
-    try {
-      const originalContent = initialContent ? JSON.stringify(initialContent) : JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]);
-      const newContent = JSON.stringify(content);
-
-      setHasContentChanged(originalContent !== newContent);
-    } catch (e) {
-      console.error('Error comparing content:', e);
-      setHasContentChanged(true);
-    }
-  };
-
-  /**
-   * Handle title changes
-   *
-   * @param newTitle - The new title
-   */
-  const handleTitleChange = (newTitle: string): void => {
-    setTitle(newTitle);
-    setHasTitleChanged(newTitle !== "");
-  };
-
-  /**
-   * Memoized save function for the useUnsavedChanges hook
-   */
+  // Memoized save function for unsaved changes hook
   const saveChanges = useCallback((): Promise<boolean> => {
-    return handleSave(editorContent);
-  }, [editorContent]);
+    return handleSave(editorContent || editorState);
+  }, [editorContent, editorState, title, isPublic, location, user, isReply]);
 
-  // Use the unsaved changes hook
+  // Use unsaved changes hook
   const {
     showUnsavedChangesDialog,
     handleNavigation,
@@ -322,99 +321,94 @@ export default function NewPage() {
     isHandlingNavigation
   } = useUnsavedChanges(hasUnsavedChanges, saveChanges);
 
-  /**
-   * Handle back button with unsaved changes check
-   */
-  const handleBack = (): void => {
-    // Get the URL to navigate to
+  // Handle back navigation with unsaved changes check
+  const handleBackWithCheck = () => {
     let backUrl = '/';
 
-    // If replying, go back to the original page if possible
-    if (isReply) {
+    if (isReply && searchParams) {
       const replyToId = searchParams.get('replyTo');
       if (replyToId) {
-        backUrl = `/pages/${replyToId}`;
+        backUrl = `/${replyToId}`;
       }
-    } else if (window.history.length > 1) {
-      // We can't directly use router.back() with the unsaved changes dialog
-      // So we'll just go to the home page if there are unsaved changes
-      backUrl = '/';
     }
 
-    // Check for unsaved changes
     if (hasUnsavedChanges) {
-      // If there are unsaved changes, show the confirmation dialog
       handleNavigation(backUrl);
     } else {
-      // If no unsaved changes, just navigate
-      if (isReply) {
-        const replyToId = searchParams.get('replyTo');
-        if (replyToId) {
-          router.push(`/pages/${replyToId}`);
-          return;
-        }
-      }
-
-      // Otherwise, go back in history or to home
-      if (window.history.length > 1) {
-        router.back();
-      } else {
-        router.push('/');
-      }
+      router.push(backUrl);
     }
   };
 
-  // Username for display
-  const urlUsername = searchParams.get('username');
-  const [displayUsername, setDisplayUsername] = useState<string>('Loading...');
-  useEffect(() => {
-    let foundUsername = urlUsername || user?.displayName || user?.username || '';
-    if (!foundUsername) foundUsername = 'Anonymous';
-    setDisplayUsername(foundUsername);
-  }, [urlUsername, user]);
+  // Determine the layout to use (same as SinglePageView)
+  const Layout = user ? DashboardLayout : PublicLayout;
 
+  // Get username for display
+  const username = user?.username || user?.displayName || 'Anonymous';
+
+  // Render using the exact same structure as SinglePageView
   return (
-    <DashboardLayout>
-      {/* Use full-width layout on desktop, container on mobile */}
-      <div className="w-full py-6 px-4 sm:px-6 lg:px-8 max-w-none">
-        <div className="flex flex-col items-center w-full">
-          <div className="flex flex-row items-center justify-center w-full mb-4 gap-2 max-w-4xl">
-            <Button variant="outline" size="sm" onClick={handleBack} className="flex items-center gap-1">
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <h1 className="text-2xl font-semibold text-center flex-1">{isReply ? "Replying to page" : "New page"}</h1>
-          </div>
-          {/* Full-width editor container on desktop */}
-          <div className="w-full max-w-none">
-            <PageEditor
-              title={isReply ? "" : title}
-              setTitle={handleTitleChange}
-              initialContent={initialContent || editorContent}
-              onContentChange={handleContentChange}
-              isPublic={isPublic}
-              setIsPublic={setIsPublic}
-              location={location}
-              setLocation={setLocation}
-              onSave={handleSave}
-              onCancel={handleBack}
-              isSaving={isSaving}
-              error={error}
-              isNewPage={true}
-              isReply={isReply}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Unsaved Changes Dialog */}
-      <UnsavedChangesDialog
-        isOpen={showUnsavedChangesDialog}
-        onClose={handleCloseDialog}
-        onStayAndSave={handleStayAndSave}
-        onLeaveWithoutSaving={handleLeaveWithoutSaving}
-        isSaving={isSaving || isHandlingNavigation}
+    <Layout>
+      <Head>
+        <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
+      </Head>
+      <PageHeader
+        title={title || (isReply ? "" : "Untitled")}
+        username={username}
+        userId={user?.uid}
+        isLoading={isLoading}
+        groupId={undefined} // New pages don't have groups initially
+        groupName={undefined}
+        scrollDirection="none"
+        isPrivate={!isPublic}
+        isEditing={isEditing}
+        setIsEditing={handleSetIsEditing}
+        onTitleChange={handleTitleChange}
+        titleError={titleError}
+        canEdit={true} // User can always edit their new page
       />
-    </DashboardLayout>
+      <div className="pb-24 px-0 sm:px-2 w-full max-w-none min-h-screen">
+        {isEditing ? (
+          <>
+            <PageProvider>
+              <LineSettingsProvider isEditMode={true}>
+                <PageEditor
+                  title={isReply ? "" : title}
+                  setTitle={isDailyNote ? () => {} : handleTitleChange} // Lock title for daily notes
+                  initialContent={editorState}
+                  onContentChange={handleContentChange}
+                  isPublic={isPublic}
+                  setIsPublic={setIsPublic}
+                  location={location}
+                  setLocation={setLocation}
+                  isSaving={isSaving}
+                  error={error || ""}
+                  isNewPage={true}
+                  isReply={isReply}
+                  replyToId={searchParams?.get('replyTo') || ""}
+                  clickPosition={null}
+                  onSave={() => handleSave(editorContent || editorState)}
+                  onCancel={handleBackWithCheck}
+
+                  page={null} // No existing page for new pages
+                />
+
+                {/* Unsaved Changes Dialog */}
+                <UnsavedChangesDialog
+                  isOpen={showUnsavedChangesDialog}
+                  onClose={handleCloseDialog}
+                  onStayAndSave={handleStayAndSave}
+                  onLeaveWithoutSaving={handleLeaveWithoutSaving}
+                  isSaving={isSaving || isHandlingNavigation}
+                  title="Unsaved Changes"
+                  description="You have unsaved changes. Do you want to save them before leaving?"
+                />
+              </LineSettingsProvider>
+            </PageProvider>
+          </>
+        ) : null}
+      </div>
+      <SiteFooter className="" />
+      {!isEditing && <PledgeBar />}
+    </Layout>
   );
 }
-

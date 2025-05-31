@@ -201,8 +201,8 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
         }
       } else {
         console.log(`DailyNotes: Creating new page for date ${dateString}`);
-        // Navigate to page creation with pre-filled title
-        router.push(`/new?title=${encodeURIComponent(dateString)}`);
+        // Navigate to page creation with pre-filled title and daily note flag
+        router.push(`/new?title=${encodeURIComponent(dateString)}&type=daily-note`);
       }
     } catch (error) {
       console.error('DailyNotes: Error handling day click:', error);
@@ -355,15 +355,23 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
       {dates.map((date, index) => {
         const dateString = format(date, 'yyyy-MM-dd');
         const hasNote = existingNotes.has(dateString);
+        const isToday = new Date().toDateString() === date.toDateString();
 
         return (
-          <DayCard
-            key={dateString}
-            date={date}
-            hasNote={hasNote}
-            onClick={() => handleDayClick(date)}
-            accentColor={accentColor}
-          />
+          <div key={dateString} className="flex-shrink-0 flex flex-col items-center">
+            <DayCard
+              date={date}
+              hasNote={hasNote}
+              onClick={() => handleDayClick(date)}
+              accentColor={accentColor}
+            />
+            {/* Today chip positioned below today's card */}
+            {isToday && (
+              <div className="mt-2 px-2 py-1 bg-primary text-primary-foreground text-xs font-medium rounded-full">
+                Today
+              </div>
+            )}
+          </div>
         );
       })}
 

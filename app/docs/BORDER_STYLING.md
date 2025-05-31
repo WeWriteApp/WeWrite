@@ -50,7 +50,7 @@ When scrolled, remove the `border-visible` class to hide the border smoothly:
 ### Basic Card with Border
 
 ```jsx
-<div className="border-theme-medium rounded-lg p-4">
+<div className="border-theme-strong rounded-xl shadow-sm p-4">
   Card content
 </div>
 ```
@@ -58,7 +58,7 @@ When scrolled, remove the `border-visible` class to hide the border smoothly:
 ### Interactive Card with Hover Effect
 
 ```jsx
-<div className="border-theme-light hover-border-medium rounded-lg p-4 transition-all duration-200">
+<div className="border-theme-strong hover-border-strong rounded-xl shadow-sm p-4 transition-all duration-200">
   Interactive card content
 </div>
 ```
@@ -66,7 +66,7 @@ When scrolled, remove the `border-visible` class to hide the border smoothly:
 ### Using with Tailwind Classes
 
 ```jsx
-<div className="border-theme-medium rounded-lg bg-card text-card-foreground p-4">
+<div className="border-theme-strong rounded-xl bg-card text-card-foreground shadow-sm p-4">
   Card with background and text colors
 </div>
 ```

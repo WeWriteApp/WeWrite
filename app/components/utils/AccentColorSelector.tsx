@@ -8,9 +8,11 @@ import { Palette } from "lucide-react";
 import { Button } from "../ui/button";
 import { getBestTextColor } from "../../utils/accessibility";
 import HSLColorPicker from './HSLColorPicker';
+import { useTheme } from "next-themes";
 
 export default function AccentColorSelector() {
   const { accentColor, customColors, colorNames, changeAccentColor, setCustomColor, getColorName } = useAccentColor();
+  const { theme, resolvedTheme } = useTheme();
   const [customColor, setCustomColor] = useState('#0052CC'); // Default blue
 
   const handleColorSelect = (color: string) => {
@@ -54,11 +56,12 @@ export default function AccentColorSelector() {
           const isSelected = accentColor === color;
           const colorValue = ACCENT_COLOR_VALUES[color];
 
-          // Special handling for high contrast color to show gradient
+          // Special handling for high contrast color to show theme-aware indicator
           const style = color === ACCENT_COLORS.HIGH_CONTRAST
             ? {
-                background: 'linear-gradient(to right, #000000 50%, #FFFFFF 50%)',
-                color: '#888888', // Neutral color for text
+                // Show the current high contrast color (black in light mode, white in dark mode)
+                backgroundColor: resolvedTheme === 'dark' ? '#FFFFFF' : '#000000',
+                color: resolvedTheme === 'dark' ? '#000000' : '#FFFFFF',
               }
             : {
                 backgroundColor: colorValue,

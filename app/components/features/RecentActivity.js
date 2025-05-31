@@ -1,6 +1,7 @@
 "use client";
 import React, { useRef, useContext, useEffect, useState, forwardRef, useImperativeHandle } from "react";
 import { useActivityFilter } from "../../contexts/ActivityFilterContext";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Clock, AlertTriangle, ChevronRight, ChevronLeft, Plus, Info, Filter, Check } from "lucide-react";
 import useRecentActivity from "../../hooks/useRecentActivity";
@@ -52,6 +53,8 @@ const ActivitySkeleton = () => {
  * @param {boolean} renderFilterInHeader - Whether to render the filter button in the component or externally (default: false)
  */
 const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPage = false, userId = null, renderFilterInHeader = false }, ref) => {
+  const router = useRouter();
+
   // Determine if we're on the activity page by checking props or using pathname
   const isInActivityPage = isActivityPage || typeof window !== "undefined" && window.location.pathname === "/activity";
   // Also check if we're in a user profile (determined by having userId passed and not being in activity page)
@@ -369,8 +372,8 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
             onClick={(e) => {
               e.preventDefault();
               console.log("View all activity button clicked, navigating to /activity");
-              // Use direct navigation instead of Link component
-              window.location.href = "/activity";
+              // Use Next.js router for client-side navigation to prevent scroll issues
+              router.push("/activity");
             }}
           >
             View all activity

@@ -11,7 +11,7 @@ import { AuthContext } from "../../providers/AuthProvider";
 import { isExternalLink } from "../../utils/linkFormatters";
 import { validateLink, getLinkDisplayText, extractPageIdFromUrl } from '../../utils/linkValidator';
 import { Button } from "../ui/button";
-import { ExternalLink, Edit } from "lucide-react";
+import { ExternalLink, Edit, Edit2 } from "lucide-react";
 import Modal from "../ui/modal";
 import { useControlledAnimation } from "../../hooks/useControlledAnimation";
 import "../paragraph-styles.css";
@@ -933,16 +933,46 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
       title={canEdit ? "Click to edit" : ""}
     >
       {/* Paragraph with inline number at beginning */}
-      <div className="paragraph-with-number py-2.5 flex">
+      <div className="paragraph-with-number py-1.5 flex">
+        {/* Edit icon - positioned outside and to the left of title container */}
+        {canEdit && (
+          <Edit2
+            className={`h-4 w-4 text-muted-foreground flex-shrink-0 mr-2 cursor-pointer transition-opacity duration-200 ${
+              // Desktop: only show on hover, Mobile: show permanently on first line only
+              index === 0
+                ? 'opacity-60 hover:opacity-100 md:opacity-0 md:group-hover:opacity-60 md:hover:opacity-100'
+                : 'opacity-0 group-hover:opacity-60 hover:opacity-100 hidden md:block'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClick();
+            }}
+            title="Click to edit"
+          />
+        )}
+
         {/* Paragraph number - fixed width for consistent alignment */}
         <span
           className="paragraph-number-inline select-none flex-shrink-0"
           data-paragraph-index={index + 1}
           aria-hidden="true"
+          style={{
+            minWidth: '0.75rem',
+            textAlign: 'right',
+            marginRight: '0.25rem',
+            fontSize: '0.75rem',
+            lineHeight: '1.5',
+            verticalAlign: 'baseline',
+            position: 'relative',
+            top: '0'
+          }}
         >{index + 1}</span>
 
-        {/* Paragraph content with proper text wrapping */}
-        <p className={`flex-grow text-left text-base leading-normal break-words ${lineHovered && !isActive ? 'bg-muted/30' : ''} ${canEdit ? 'relative' : ''}`}>
+        {/* Paragraph content with proper text wrapping - adjusted for edit icon on mobile */}
+        <p className={`flex-grow text-left text-base leading-6 break-words ${canEdit ? 'relative' : ''} ${
+          // On mobile, add left margin for first line to prevent overlap with edit icon
+          canEdit && index === 0 ? 'md:ml-0 ml-0' : ''
+        }`}>
           {node.children && node.children.map((child, i) => renderChild(child, i))}
           {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
         </p>

@@ -127,8 +127,8 @@ export default function RecentPageChanges({ pageId }) {
 
   const handleViewAllHistory = () => {
     console.log("RecentPageChanges: Navigating to page history:", `/${pageId}/history`);
-    // Use window.location for more reliable navigation
-    window.location.href = `/${pageId}/history`;
+    // Use Next.js router for client-side navigation to prevent scroll issues
+    router.push(`/${pageId}/history`);
   };
 
   if (loading) {
@@ -173,7 +173,8 @@ export default function RecentPageChanges({ pageId }) {
             const url = mostRecentVersion.id
               ? `/${pageId}/version/${mostRecentVersion.id}`
               : `/${pageId}`;
-            window.location.href = url;
+            // Use Next.js router for client-side navigation to prevent scroll issues
+            router.push(url);
           }}
         >
           <div className="flex justify-between items-start">

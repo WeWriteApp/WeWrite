@@ -20,15 +20,32 @@ export function applySlatePatches() {
     return;
   }
 
-  // Apply all patches
-  applyToSlatePointPatch();
-  applyToDOMNodePatch();
-  applyToDOMPointPatch();
-  applyReactEditorPatches();
+  try {
+    // Apply all patches with error handling
+    applyToSlatePointPatch();
+    applyToDOMNodePatch();
+    applyToDOMPointPatch();
+    applyReactEditorPatches();
 
-  // Mark patches as applied
-  patchesApplied = true;
-  console.log('Slate patches applied successfully');
+    // Additional patch for better error suppression
+    suppressSlateErrors();
+
+    // Mark patches as applied
+    patchesApplied = true;
+    console.log('Slate patches applied successfully');
+  } catch (error) {
+    console.warn('Error applying Slate patches:', error);
+    // Still mark as applied to prevent infinite retry
+    patchesApplied = true;
+  }
+}
+
+// Make the function available globally for components to use
+if (typeof window !== 'undefined') {
+  window.applySlatePatches = applySlatePatches;
+
+  // Auto-apply patches when this module loads
+  applySlatePatches();
 }
 
 /**
@@ -133,8 +150,9 @@ function applyToSlatePointPatch() {
 }
 
 /**
- * Patch for the ReactEditor.toDOMNode function
+ * Enhanced patch for the ReactEditor.toDOMNode function
  * This fixes the "Cannot resolve a DOM node from Slate node" error
+ * with better fallback handling for daily notes and hydration issues
  */
 function applyToDOMNodePatch() {
   const checkAndPatch = () => {
@@ -143,9 +161,15 @@ function applyToDOMNodePatch() {
 
       window.ReactEditor.toDOMNode = (editor, node) => {
         try {
-          // Validate inputs
+          // Validate inputs more thoroughly
           if (!editor || !node) {
             console.warn('Invalid inputs to toDOMNode:', { editor: !!editor, node: !!node });
+            return null;
+          }
+
+          // Check if editor is properly initialized
+          if (!editor.children || !Array.isArray(editor.children)) {
+            console.warn('Editor not properly initialized for toDOMNode');
             return null;
           }
 
@@ -154,8 +178,21 @@ function applyToDOMNodePatch() {
         } catch (error) {
           console.warn('Error in patched toDOMNode:', error);
 
-          // Try to find the DOM node by other means
+          // Enhanced fallback logic for daily notes and hydration issues
           try {
+            // More aggressive DOM readiness check
+            if (typeof window === 'undefined' || !document || document.readyState === 'loading') {
+              console.warn('DOM not ready during toDOMNode, returning null');
+              return null;
+            }
+
+            // Check if we have any Slate elements in the DOM yet
+            const slateElements = document.querySelectorAll('[data-slate-editor], [data-slate-node], [data-slate-leaf]');
+            if (slateElements.length === 0) {
+              console.warn('No Slate elements found in DOM, returning null');
+              return null;
+            }
+
             // If it's a text node, try to find its parent element
             if (node && typeof node === 'object' && 'text' in node) {
               const textNodes = document.querySelectorAll('[data-slate-leaf]');
@@ -163,6 +200,11 @@ function applyToDOMNodePatch() {
                 if (textNode.textContent === node.text) {
                   return textNode;
                 }
+              }
+
+              // If no exact match, return the first text node as fallback
+              if (textNodes.length > 0) {
+                return textNodes[0];
               }
             }
 
@@ -172,6 +214,12 @@ function applyToDOMNodePatch() {
               if (elements.length > 0) {
                 return elements[0];
               }
+            }
+
+            // Last resort: return the editor element itself
+            const editorElement = document.querySelector('[data-slate-editor]');
+            if (editorElement) {
+              return editorElement;
             }
           } catch (fallbackError) {
             console.warn('Error in toDOMNode fallback:', fallbackError);
@@ -225,6 +273,12 @@ function applyToDOMPointPatch() {
 
       window.ReactEditor.toDOMPoint = (editor, point) => {
         try {
+          // More aggressive validation for hydration safety
+          if (typeof window === 'undefined' || !document || document.readyState === 'loading') {
+            console.warn('DOM not ready during toDOMPoint, returning null');
+            return null;
+          }
+
           // Validate inputs
           if (!editor || !point) {
             console.warn('Invalid inputs to toDOMPoint:', { editor: !!editor, point: !!point });
@@ -234,6 +288,13 @@ function applyToDOMPointPatch() {
           // Validate point structure
           if (!point.path || !Array.isArray(point.path) || typeof point.offset !== 'number') {
             console.warn('Invalid point structure in toDOMPoint:', point);
+            return null;
+          }
+
+          // Check if we have Slate elements in DOM
+          const slateElements = document.querySelectorAll('[data-slate-editor], [data-slate-node], [data-slate-leaf]');
+          if (slateElements.length === 0) {
+            console.warn('No Slate elements found in DOM during toDOMPoint, returning null');
             return null;
           }
 
@@ -471,6 +532,62 @@ function patchReactEditorMethods(ReactEditor) {
       }
     };
   }
+}
+
+/**
+ * Suppress specific Slate error messages to prevent console spam
+ * This helps reduce noise while still allowing important errors through
+ */
+function suppressSlateErrors() {
+  if (typeof window === 'undefined' || typeof console === 'undefined') {
+    return;
+  }
+
+  // Store original console methods
+  const originalError = console.error;
+  const originalWarn = console.warn;
+
+  // List of error messages to suppress
+  const suppressedErrors = [
+    'Cannot resolve a DOM node from Slate node',
+    'Cannot resolve a DOM point from Slate point',
+    'Cannot resolve a Slate point from DOM point',
+    'Cannot resolve a Slate node from DOM node',
+    'Cannot resolve DOM range from Slate range',
+    'Cannot resolve Slate range from DOM range'
+  ];
+
+  // Override console.error
+  console.error = function(...args) {
+    const message = args[0];
+    if (typeof message === 'string') {
+      const shouldSuppress = suppressedErrors.some(suppressedError =>
+        message.includes(suppressedError)
+      );
+      if (shouldSuppress) {
+        // Optionally log a simplified message instead
+        // console.debug('Slate DOM resolution error suppressed:', message);
+        return;
+      }
+    }
+    originalError.apply(console, args);
+  };
+
+  // Override console.warn for similar messages
+  console.warn = function(...args) {
+    const message = args[0];
+    if (typeof message === 'string') {
+      const shouldSuppress = suppressedErrors.some(suppressedError =>
+        message.includes(suppressedError)
+      );
+      if (shouldSuppress) {
+        return;
+      }
+    }
+    originalWarn.apply(console, args);
+  };
+
+  console.log('Slate error suppression enabled');
 }
 
 /**
