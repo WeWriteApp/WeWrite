@@ -8,6 +8,10 @@ import { getCacheItem, setCacheItem, generateCacheKey } from "../utils/cacheUtil
 // Cache TTL in milliseconds (5 minutes)
 const CACHE_TTL = 5 * 60 * 1000;
 
+// OPTIMIZATION: Add in-memory cache for frequently accessed page counts
+const pageCountMemoryCache = new Map();
+const MEMORY_CACHE_TTL = 2 * 60 * 1000; // 2 minutes in memory cache
+
 /**
  * Invalidate TopUsers cache to ensure fresh data after page count changes
  */
@@ -41,9 +45,18 @@ export const getUserPageCount = async (userId, viewerUserId = null) => {
 
     // Create different cache keys for owner vs visitor views
     const cacheKey = `user_page_count_${userId}_${isOwner ? 'owner' : 'public'}`;
-    const cachedCount = getCacheItem(cacheKey);
 
+    // OPTIMIZATION: Check in-memory cache first (fastest)
+    const memoryCacheEntry = pageCountMemoryCache.get(cacheKey);
+    if (memoryCacheEntry && (Date.now() - memoryCacheEntry.timestamp) < MEMORY_CACHE_TTL) {
+      return memoryCacheEntry.count;
+    }
+
+    // Check localStorage cache second
+    const cachedCount = getCacheItem(cacheKey);
     if (cachedCount !== null) {
+      // Store in memory cache for faster future access
+      pageCountMemoryCache.set(cacheKey, { count: cachedCount, timestamp: Date.now() });
       return cachedCount;
     }
 
@@ -103,8 +116,9 @@ export const getUserPageCount = async (userId, viewerUserId = null) => {
       }
     }
 
-    // Cache the result
+    // Cache the result in both localStorage and memory
     setCacheItem(cacheKey, count, CACHE_TTL);
+    pageCountMemoryCache.set(cacheKey, { count, timestamp: Date.now() });
 
     return count;
   } catch (error) {
@@ -217,9 +231,11 @@ export const incrementUserPageCount = async (userId, isPublic = true) => {
       });
     }
 
-    // Invalidate both caches
+    // Invalidate both localStorage and memory caches
     localStorage.removeItem(`user_page_count_${userId}_owner`);
     localStorage.removeItem(`user_page_count_${userId}_public`);
+    pageCountMemoryCache.delete(`user_page_count_${userId}_owner`);
+    pageCountMemoryCache.delete(`user_page_count_${userId}_public`);
 
     // Invalidate TopUsers cache since page counts changed
     invalidateTopUsersCache();
@@ -275,9 +291,11 @@ export const decrementUserPageCount = async (userId, wasPublic = true) => {
       });
     }
 
-    // Invalidate both caches
+    // Invalidate both localStorage and memory caches
     localStorage.removeItem(`user_page_count_${userId}_owner`);
     localStorage.removeItem(`user_page_count_${userId}_public`);
+    pageCountMemoryCache.delete(`user_page_count_${userId}_owner`);
+    pageCountMemoryCache.delete(`user_page_count_${userId}_public`);
 
     // Invalidate TopUsers cache since page counts changed
     invalidateTopUsersCache();
@@ -314,9 +332,11 @@ export const updateUserPageCountForVisibilityChange = async (userId, wasPublic, 
       });
     }
 
-    // Invalidate both caches
+    // Invalidate both localStorage and memory caches
     localStorage.removeItem(`user_page_count_${userId}_owner`);
     localStorage.removeItem(`user_page_count_${userId}_public`);
+    pageCountMemoryCache.delete(`user_page_count_${userId}_owner`);
+    pageCountMemoryCache.delete(`user_page_count_${userId}_public`);
 
     // Invalidate TopUsers cache since page counts changed
     invalidateTopUsersCache();

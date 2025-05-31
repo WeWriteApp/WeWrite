@@ -159,14 +159,20 @@ const TopUsers = () => {
           return;
         }
 
-        // We'll fetch page counts using the same function as user profiles for consistency
-        console.log("TopUsers: Will fetch page counts using getUserPageCount for consistency");
+        // OPTIMIZATION: Batch process users to reduce database load
+        console.log("TopUsers: Processing user data with optimized batching");
 
-        // Process users with pagination
-        console.log("TopUsers: Processing user data");
-        let allTimeUsersArray = await Promise.all(
-          Object.entries(userData)
-            .map(async ([id, userData]) => {
+        const userEntries = Object.entries(userData);
+        const BATCH_SIZE = 10; // Process users in batches to avoid overwhelming the database
+        let allTimeUsersArray = [];
+
+        // Process users in batches
+        for (let i = 0; i < userEntries.length; i += BATCH_SIZE) {
+          const batch = userEntries.slice(i, i + BATCH_SIZE);
+          console.log(`TopUsers: Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(userEntries.length / BATCH_SIZE)}`);
+
+          const batchResults = await Promise.all(
+            batch.map(async ([id, userData]) => {
               // Get the username and remove @ symbol if present
               let username = userData.username || userData.displayName || "Unknown User";
               if (username.startsWith('@')) {
@@ -174,10 +180,15 @@ const TopUsers = () => {
               }
 
               // Fetch page count using the same function as user profiles for consistency
-              // Pass null as viewerUserId to get public page count (what visitors see)
+              // Use the current user's ID to get the same view as they would see on profile pages
+              // This ensures consistency between TopUsers and individual profile pages
               let pageCount = 0;
               try {
-                pageCount = await getUserPageCount(id, null); // null = visitor view (public pages only)
+                // CRITICAL FIX: Use the same viewer context as profile pages
+                // If user is viewing their own profile, they see total count (public + private)
+                // If user is viewing someone else's profile, they see only public count
+                // This matches the logic in SingleProfileView.js line 93
+                pageCount = await getUserPageCount(id, user?.uid); // Use current user's ID for consistent view
               } catch (err) {
                 console.error(`Error fetching page count for user ${id}:`, err);
               }
@@ -209,7 +220,15 @@ const TopUsers = () => {
                 lastActive: userData.lastActive || null
               };
             })
-        );
+          );
+
+          allTimeUsersArray.push(...batchResults);
+
+          // Add small delay between batches to prevent overwhelming the database
+          if (i + BATCH_SIZE < userEntries.length) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+        }
 
         // Sort users by page count
         allTimeUsersArray = allTimeUsersArray

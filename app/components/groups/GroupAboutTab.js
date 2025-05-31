@@ -15,6 +15,7 @@ import EmptyContentState from '../utils/EmptyContentState';
 import { GroupAboutSkeleton } from "../ui/page-skeleton";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import DisabledLinkModal from "../utils/DisabledLinkModal";
+import TextView from "../editor/TextView";
 
 // Import the unified editor dynamically to avoid SSR issues
 const Editor = dynamic(() => import("../editor/Editor"), { ssr: false });
@@ -386,45 +387,17 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
         ) : (
           <div className="prose dark:prose-invert max-w-none">
             {aboutContent ? (
-              <div>
-                {typeof aboutContent === 'string' ? (
-                  // If it's a string, render it as HTML (legacy format)
-                  <div dangerouslySetInnerHTML={{ __html: aboutContent }} />
-                ) : Array.isArray(aboutContent) ? (
-                  // If it's an array (Slate format), render it properly
-                  <div className="unified-editor-content">
-                    {aboutContent.map((node, i) => {
-                      if (node.type === 'paragraph') {
-                        return (
-                          <p key={i} className="mb-4">
-                            {node.children.map((child, j) => {
-                              if (child.type === 'link') {
-                                return (
-                                  <a
-                                    key={j}
-                                    href={child.url}
-                                    className="slate-pill-link"
-                                    target={child.isExternal ? "_blank" : undefined}
-                                    rel={child.isExternal ? "noopener noreferrer" : undefined}
-                                  >
-                                    {child.children[0]?.text || child.url}
-                                  </a>
-                                );
-                              }
-                              return <span key={j}>{child.text}</span>;
-                            })}
-                          </p>
-                        );
-                      }
-                      return null;
-                    })}
-                  </div>
-                ) : (
-                  // If it's an object but not in the expected format, display a message
-                  <div className="text-muted-foreground">
-                    Content format not recognized. Please edit to update.
-                  </div>
-                )}
+              <div className="group">
+                {/* Use TextView for the same interactive experience as normal pages */}
+                <TextView
+                  content={aboutContent}
+                  canEdit={canEdit}
+                  onActiveLine={() => {
+                    // Enable editing when user clicks on a line
+                    setIsEditing(true);
+                  }}
+                  showLineNumbers={false} // Group about doesn't need line numbers
+                />
               </div>
             ) : (
               <EmptyContentState
