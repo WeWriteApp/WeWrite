@@ -73,6 +73,17 @@ const DropdownMenuContent = React.forwardRef<
       sideOffset={sideOffset}
       className={cn(
         "z-[100] min-w-[8rem] overflow-hidden rounded-2xl border-theme-medium bg-popover p-1 text-popover-foreground shadow-md",
+        // Enhanced directional animations
+        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+        // Improved directional slide animations
+        "data-[side=bottom]:slide-in-from-top-4 data-[side=bottom]:duration-200",
+        "data-[side=left]:slide-in-from-right-4 data-[side=left]:duration-200",
+        "data-[side=right]:slide-in-from-left-4 data-[side=right]:duration-200",
+        "data-[side=top]:slide-in-from-bottom-4 data-[side=top]:duration-200",
+        // Add transform origin for better animation
+        "origin-[var(--radix-dropdown-menu-content-transform-origin)]",
         className
       )}
       {...props}

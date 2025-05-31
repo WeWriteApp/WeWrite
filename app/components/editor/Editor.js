@@ -19,6 +19,7 @@ import { useLineSettings } from '../../contexts/LineSettingsContext';
 import { usePillStyle } from '../../contexts/PillStyleContext';
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { AuthContext } from '../../providers/AuthProvider';
+import { useAccentColor } from '../../contexts/AccentColorContext';
 import DisabledLinkModal from "../utils/DisabledLinkModal";
 import { updateParagraphIndices, getParagraphIndex } from "../../utils/slate-path-fix";
 import { validateLink } from '../../utils/linkValidator';
@@ -2047,6 +2048,9 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
  * @param {string} props.initialTab - Initial tab to show ("page" or "external")
  */
 const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "", initialTab = "page" }) => {
+  // Get accent color for button styling
+  const { accentColor, customColors } = useAccentColor();
+
   const [displayText, setDisplayText] = useState(initialText);
   const [pageTitle, setPageTitle] = useState(initialPageTitle);
   // Use the initialTab parameter if provided, otherwise determine based on initialPageId
@@ -2058,6 +2062,30 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
   const [isValid, setIsValid] = useState(true); // Start as valid to avoid initial error state
   const [validationMessage, setValidationMessage] = useState("");
   const [formTouched, setFormTouched] = useState(false); // Track if form has been interacted with - only show validation errors after user interaction
+
+  // New state for toggles
+  const [showCustomDisplayText, setShowCustomDisplayText] = useState(false);
+  const [showCustomLinkText, setShowCustomLinkText] = useState(false);
+
+  // Helper function to get accent color value
+  const getAccentColorValue = () => {
+    if (accentColor && accentColor.startsWith('custom')) {
+      return customColors[accentColor] || '#1768FF';
+    }
+    // Default accent color values
+    const accentColors = {
+      blue: '#1768FF',
+      red: '#DC2626',
+      green: '#16A34A',
+      amber: '#D97706',
+      purple: '#9333EA',
+      sky: '#0EA5E9',
+      indigo: '#4F46E5',
+      tomato: '#E11D48',
+      grass: '#22C55E'
+    };
+    return accentColors[accentColor] || '#1768FF';
+  };
 
   // Determine if we're editing an existing link or creating a new one
   const isEditing = !!initialPageId || !!initialText;
@@ -2355,9 +2383,8 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
           {activeTab === 'page' ? (
             <div className="p-4">
               <div>
-                {/* Page search */}
+                {/* Page search - removed label */}
                 <div className="space-y-2">
-                  <h2 className="text-sm font-medium">Search for a page</h2>
                   <TypeaheadSearch
                     ref={pageSearchRef}
                     onSelect={(page) => {
@@ -2390,17 +2417,45 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                   />
                 </div>
 
-                {/* Show Author Switch */}
-                <div className="flex items-center gap-2 mt-4 mb-4">
-                  <input
-                    type="checkbox"
-                    checked={showAuthor}
-                    onChange={(e) => setShowAuthor(e.target.checked)}
-                    id="show-author-switch"
-                    className="rounded border-gray-300 text-primary focus:ring-primary"
-                  />
-                  <label htmlFor="show-author-switch" className="text-sm font-medium select-none">Show author</label>
+                {/* Custom display text toggle */}
+                <div className="mt-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={showCustomDisplayText}
+                      onChange={(e) => setShowCustomDisplayText(e.target.checked)}
+                      id="custom-display-text-toggle"
+                      className="rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <label htmlFor="custom-display-text-toggle" className="text-sm font-medium select-none">Custom display text</label>
+                  </div>
+
+                  {showCustomDisplayText && (
+                    <input
+                      ref={displayTextRef}
+                      type="text"
+                      value={displayText}
+                      onChange={handleDisplayTextChange}
+                      placeholder="Enter custom display text"
+                      className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
+                      onFocus={() => setFormTouched(true)}
+                    />
+                  )}
                 </div>
+
+                {/* Show Author Switch - only show after page is selected */}
+                {selectedPageId && (
+                  <div className="flex items-center gap-2 mt-4 mb-4">
+                    <input
+                      type="checkbox"
+                      checked={showAuthor}
+                      onChange={(e) => setShowAuthor(e.target.checked)}
+                      id="show-author-switch"
+                      className="rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <label htmlFor="show-author-switch" className="text-sm font-medium select-none">Show author</label>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -2413,29 +2468,40 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                   value={externalUrl}
                   onChange={handleExternalUrlChange}
                   placeholder="https://example.com"
-                  className={`w-full p-2 bg-muted/50 rounded-lg border ${formTouched && !externalUrl ? 'border-red-500' : 'border-border'} focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
+                  className={`w-full p-2 bg-muted/50 rounded-lg border ${formTouched && !isValid && !externalUrl ? 'border-red-500' : 'border-border'} focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
                   autoFocus={!!initialText && !externalUrl}
                   onFocus={() => setFormTouched(true)}
                 />
-                <p className="text-xs text-muted-foreground">
-                  {!externalUrl.startsWith('http://') && !externalUrl.startsWith('https://') && externalUrl &&
-                    'https:// will be added automatically'}
-                </p>
+                {!externalUrl.startsWith('http://') && !externalUrl.startsWith('https://') && externalUrl && (
+                  <p className="text-xs text-muted-foreground">
+                    https:// will be added automatically
+                  </p>
+                )}
               </div>
 
-              <div className="space-y-2">
-                <h2 className="text-sm font-medium">Link Text</h2>
-                <input
-                  type="text"
-                  value={displayText}
-                  onChange={handleDisplayTextChange}
-                  placeholder="Enter custom link text (optional)"
-                  className={`w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
-                  onFocus={() => setFormTouched(true)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  If left empty, the URL will be used as the link text
-                </p>
+              {/* Custom link text toggle */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={showCustomLinkText}
+                    onChange={(e) => setShowCustomLinkText(e.target.checked)}
+                    id="custom-link-text-toggle"
+                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <label htmlFor="custom-link-text-toggle" className="text-sm font-medium select-none">Custom link text</label>
+                </div>
+
+                {showCustomLinkText && (
+                  <input
+                    type="text"
+                    value={displayText}
+                    onChange={handleDisplayTextChange}
+                    placeholder="Enter custom link text"
+                    className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
+                    onFocus={() => setFormTouched(true)}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -2454,7 +2520,8 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
             <button
               onClick={() => handleSave({ id: selectedPageId, title: pageTitle })}
               disabled={!canSave}
-              className="flex-1 py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-2 px-4 bg-primary text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90"
+              style={{ backgroundColor: !canSave ? undefined : getAccentColorValue() }}
             >
               {isEditing ? 'Save changes' : 'Insert link'}
             </button>
@@ -2462,7 +2529,8 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
             <button
               onClick={handleExternalSubmit}
               disabled={!canSave}
-              className="flex-1 py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-2 px-4 bg-primary text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90"
+              style={{ backgroundColor: !canSave ? undefined : getAccentColorValue() }}
             >
               {isEditing ? 'Save changes' : 'Insert link'}
             </button>

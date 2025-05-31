@@ -1287,28 +1287,29 @@ function SinglePageView({ params }) {
         }
       />
       <div className="pb-24 px-0 sm:px-2 w-full max-w-none min-h-screen">
-        {isEditing ? (
-          <>
-            <PageProvider>
-              <LineSettingsProvider>
-                <PageEditor
-                  title={title}
-                  setTitle={handleTitleChange}
-                  initialContent={editorState}
-                  onContentChange={handleContentChange}
-                  isPublic={isPublic}
-                  setIsPublic={handleVisibilityChange}
-                  location={location}
-                  setLocation={handleLocationChange}
-                  onSave={() => handleSave(editorContent || editorState)}
-                  onCancel={handleCancelWithCheck}
-                  onDelete={handleDelete}
-                  isSaving={isSaving}
-                  error={error}
-                  isNewPage={false}
-                  clickPosition={clickPosition}
-                  page={page}
-                />
+        <div className={`transition-all duration-300 ease-in-out ${isEditing ? 'opacity-100' : 'opacity-100'}`}>
+          {isEditing ? (
+            <div className="animate-in fade-in-0 duration-300">
+              <PageProvider>
+                <LineSettingsProvider>
+                  <PageEditor
+                    title={title}
+                    setTitle={handleTitleChange}
+                    initialContent={editorState}
+                    onContentChange={handleContentChange}
+                    isPublic={isPublic}
+                    setIsPublic={handleVisibilityChange}
+                    location={location}
+                    setLocation={handleLocationChange}
+                    onSave={() => handleSave(editorContent || editorState)}
+                    onCancel={handleCancelWithCheck}
+                    onDelete={handleDelete}
+                    isSaving={isSaving}
+                    error={error}
+                    isNewPage={false}
+                    clickPosition={clickPosition}
+                    page={page}
+                  />
 
                 {/* Unsaved Changes Dialog */}
                 <UnsavedChangesDialog
@@ -1332,12 +1333,12 @@ function SinglePageView({ params }) {
                   isLoading={confirmationState.isLoading}
                   icon={confirmationState.icon}
                 />
-              </LineSettingsProvider>
-            </PageProvider>
-          </>
-        ) : (
-          <>
-            <div className="space-y-2 w-full transition-all duration-200 ease-in-out" data-page-content>
+                </LineSettingsProvider>
+              </PageProvider>
+            </div>
+          ) : (
+            <div className="animate-in fade-in-0 duration-300">
+              <div className="space-y-2 w-full transition-all duration-200 ease-in-out" data-page-content>
               <div className="page-content w-full max-w-none break-words px-1">
                 <PageProvider>
                   <LineSettingsProvider>
@@ -1388,8 +1389,9 @@ function SinglePageView({ params }) {
                 linkedPageIds={memoizedLinkedPageIds}
               />
             </div>
-          </>
-        )}
+            </div>
+          )}
+        </div>
       </div>
       <PageProvider>
         <LineSettingsProvider>
