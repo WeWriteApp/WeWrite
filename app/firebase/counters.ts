@@ -4,18 +4,19 @@ import { db, rtdb } from './config';
 import { doc, getDoc, setDoc, updateDoc, increment, collection, query, where, getDocs, sum } from 'firebase/firestore';
 import { ref, get, set, onValue } from 'firebase/database';
 import { getCacheItem, setCacheItem, generateCacheKey } from "../utils/cacheUtils";
+import type { Counter, MemoryCacheEntry } from '../types/database';
 
 // Cache TTL in milliseconds (5 minutes)
 const CACHE_TTL = 5 * 60 * 1000;
 
 // OPTIMIZATION: Add in-memory cache for frequently accessed page counts
-const pageCountMemoryCache = new Map();
+const pageCountMemoryCache = new Map<string, MemoryCacheEntry<number>>();
 const MEMORY_CACHE_TTL = 2 * 60 * 1000; // 2 minutes in memory cache
 
 /**
  * Invalidate TopUsers cache to ensure fresh data after page count changes
  */
-const invalidateTopUsersCache = () => {
+const invalidateTopUsersCache = (): void => {
   try {
     // Clear TopUsers cache for all users (anonymous and authenticated)
     const anonymousCacheKey = generateCacheKey('topUsers', 'anonymous');
@@ -32,11 +33,11 @@ const invalidateTopUsersCache = () => {
 /**
  * Get the page count for a user with caching
  *
- * @param {string} userId - The user ID
- * @param {string} viewerUserId - The ID of the user viewing the profile (optional)
- * @returns {Promise<number>} - The page count
+ * @param userId - The user ID
+ * @param viewerUserId - The ID of the user viewing the profile (optional)
+ * @returns The page count
  */
-export const getUserPageCount = async (userId, viewerUserId = null) => {
+export const getUserPageCount = async (userId: string, viewerUserId: string | null = null): Promise<number> => {
   if (!userId) return 0;
 
   try {
@@ -130,10 +131,10 @@ export const getUserPageCount = async (userId, viewerUserId = null) => {
 /**
  * Get the follower count for a user with caching
  *
- * @param {string} userId - The user ID
- * @returns {Promise<number>} - The follower count
+ * @param userId - The user ID
+ * @returns The follower count
  */
-export const getUserFollowerCount = async (userId) => {
+export const getUserFollowerCount = async (userId: string): Promise<number> => {
   if (!userId) return 0;
 
   try {
@@ -207,11 +208,10 @@ export const getUserFollowerCount = async (userId) => {
 /**
  * Increment the page count for a user
  *
- * @param {string} userId - The user ID
- * @param {boolean} isPublic - Whether the page is public
- * @returns {Promise<void>}
+ * @param userId - The user ID
+ * @param isPublic - Whether the page is public
  */
-export const incrementUserPageCount = async (userId, isPublic = true) => {
+export const incrementUserPageCount = async (userId: string, isPublic: boolean = true): Promise<void> => {
   if (!userId) return;
 
   try {
@@ -267,11 +267,10 @@ export const incrementUserPageCount = async (userId, isPublic = true) => {
 /**
  * Decrement the page count for a user
  *
- * @param {string} userId - The user ID
- * @param {boolean} wasPublic - Whether the deleted page was public
- * @returns {Promise<void>}
+ * @param userId - The user ID
+ * @param wasPublic - Whether the deleted page was public
  */
-export const decrementUserPageCount = async (userId, wasPublic = true) => {
+export const decrementUserPageCount = async (userId: string, wasPublic: boolean = true): Promise<void> => {
   if (!userId) return;
 
   try {
@@ -307,12 +306,15 @@ export const decrementUserPageCount = async (userId, wasPublic = true) => {
 /**
  * Update page count when a page's visibility changes
  *
- * @param {string} userId - The user ID
- * @param {boolean} wasPublic - Whether the page was previously public
- * @param {boolean} isNowPublic - Whether the page is now public
- * @returns {Promise<void>}
+ * @param userId - The user ID
+ * @param wasPublic - Whether the page was previously public
+ * @param isNowPublic - Whether the page is now public
  */
-export const updateUserPageCountForVisibilityChange = async (userId, wasPublic, isNowPublic) => {
+export const updateUserPageCountForVisibilityChange = async (
+  userId: string,
+  wasPublic: boolean,
+  isNowPublic: boolean
+): Promise<void> => {
   if (!userId || wasPublic === isNowPublic) return; // No change needed
 
   try {
@@ -366,10 +368,10 @@ export const updateUserPageCountForVisibilityChange = async (userId, wasPublic, 
 /**
  * Get the total view count for a user with caching
  *
- * @param {string} userId - The user ID
- * @returns {Promise<number>} - The total view count
+ * @param userId - The user ID
+ * @returns The total view count
  */
-export const getUserTotalViewCount = async (userId) => {
+export const getUserTotalViewCount = async (userId: string): Promise<number> => {
   if (!userId) return 0;
 
   try {

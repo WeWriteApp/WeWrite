@@ -10,20 +10,60 @@ import {
   Node,
   Path,
   Point,
+  BaseEditor,
+  Descendant
 } from "slate";
-import { Editable, withReact, useSlate, Slate } from "slate-react";
-import { ReactEditor } from "slate-react";
-import { withHistory } from "slate-history";
+import { Editable, withReact, useSlate, Slate, ReactEditor } from "slate-react";
+import { withHistory, HistoryEditor } from "slate-history";
 import { ExternalLink, Link as LinkIcon } from "lucide-react";
 import { useLineSettings } from '../../contexts/LineSettingsContext';
 import { usePillStyle } from '../../contexts/PillStyleContext';
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { AuthContext } from '../../providers/AuthProvider';
 import { useAccentColor } from '../../contexts/AccentColorContext';
+import type { EditorProps, EditorRef, LinkData } from "../../types/components";
+import type { SlateContent, SlateNode, SlateChild } from "../../types/database";
 import DisabledLinkModal from "../utils/DisabledLinkModal";
 import { updateParagraphIndices, getParagraphIndex } from "../../utils/slate-path-fix";
 import { validateLink } from '../../utils/linkValidator';
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../../utils/linkFormatters";
+
+// Extend Slate types for TypeScript
+type CustomEditor = BaseEditor & ReactEditor & HistoryEditor;
+
+type ParagraphElement = {
+  type: 'paragraph';
+  children: CustomText[];
+};
+
+type LinkElement = {
+  type: 'link';
+  url: string;
+  isExternal?: boolean;
+  pageId?: string;
+  showAuthor?: boolean;
+  children: CustomText[];
+};
+
+type CustomElement = ParagraphElement | LinkElement;
+
+type FormattedText = {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  code?: boolean;
+};
+
+type CustomText = FormattedText;
+
+declare module 'slate' {
+  interface CustomTypes {
+    Editor: CustomEditor;
+    Element: CustomElement;
+    Text: CustomText;
+  }
+}
 import TypeaheadSearch from "../search/TypeaheadSearch";
 // Import slate patches to handle DOM node resolution errors
 import "../../utils/slate-patch";
@@ -227,15 +267,8 @@ Editor.getSelectedLink = (editor) => {
  *
  * The main rich text editor component that provides a consistent editing experience
  * across different content types (wiki pages, group about pages, user bios).
- *
- * @param {Object} props - Component props
- * @param {Array} props.initialContent - Initial content for the editor
- * @param {Function} props.onChange - Callback when content changes
- * @param {string} props.placeholder - Placeholder text when editor is empty
- * @param {string} props.contentType - Type of content being edited (wiki, about, bio)
- * @param {Function} props.onKeyDown - Callback for keyboard events
  */
-const EditorComponent = forwardRef((props, ref) => {
+const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
   const {
     initialContent = [createDefaultParagraph()],
     onChange,

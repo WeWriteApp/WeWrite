@@ -16,20 +16,22 @@ import { UserBioSkeleton } from "../ui/page-skeleton";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import DisabledLinkModal from "./DisabledLinkModal";
 import TextView from "../editor/TextView";
+import type { UserBioTabProps } from "../../types/components";
+import type { SlateContent, User } from "../../types/database";
 
 // Import the unified editor dynamically to avoid SSR issues
 const Editor = dynamic(() => import("../editor/Editor"), { ssr: false });
 
-export default function UserBioTab({ profile }) {
+const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   const { user } = useContext(AuthContext);
-  const [isEditing, setIsEditing] = useState(false);
-  const [bioContent, setBioContent] = useState(profile.bio || "");
-  const [originalContent, setOriginalContent] = useState(profile.bio || "");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [lastEditor, setLastEditor] = useState(null);
-  const [lastEditTime, setLastEditTime] = useState(null);
-  const editorRef = useRef(null);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [bioContent, setBioContent] = useState<SlateContent | string>(profile.bio || "");
+  const [originalContent, setOriginalContent] = useState<SlateContent | string>(profile.bio || "");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastEditor, setLastEditor] = useState<string | null>(null);
+  const [lastEditTime, setLastEditTime] = useState<string | null>(null);
+  const editorRef = useRef<any>(null);
 
   // Check if link functionality is enabled
   const linkFunctionalityEnabled = useFeatureFlag('link_functionality', user?.email);
@@ -412,4 +414,6 @@ export default function UserBioTab({ profile }) {
       />
     </div>
   );
-}
+};
+
+export default UserBioTab;

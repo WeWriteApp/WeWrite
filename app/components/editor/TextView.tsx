@@ -14,6 +14,8 @@ import { Button } from "../ui/button";
 import { ExternalLink, Edit2 } from "lucide-react";
 import Modal from "../ui/modal";
 import { useControlledAnimation } from "../../hooks/useControlledAnimation";
+import type { TextViewProps } from "../../types/components";
+import type { SlateContent, SlateNode, SlateChild, ViewMode } from "../../types/database";
 import "../paragraph-styles.css";
 import "../diff-styles.css";
 
@@ -46,7 +48,7 @@ import "../diff-styles.css";
  */
 
 // Cache for page titles to avoid redundant API calls
-const pageTitleCache = new Map();
+const pageTitleCache = new Map<string, string>();
 
 // Animation constants for consistent behavior across modes
 const ANIMATION_CONSTANTS = {
@@ -55,16 +57,16 @@ const ANIMATION_CONSTANTS = {
   SPRING_STIFFNESS: 500,
   SPRING_DAMPING: 30,
   SPRING_MASS: 1
-};
+} as const;
 
 // Function to extract page ID from URL
 // CRITICAL FIX: Use the standardized utility function from linkValidator.js
-const extractPageId = (url) => {
+const extractPageId = (url: string): string | null => {
   return extractPageIdFromUrl(url);
 };
 
 // Function to get page title from ID
-const getPageTitle = async (pageId) => {
+const getPageTitle = async (pageId: string): Promise<string | null> => {
   if (!pageId) return null;
 
   // Check cache first
@@ -86,16 +88,26 @@ const getPageTitle = async (pageId) => {
   return null;
 };
 
-const TextView = ({ content, isSearch = false, viewMode = 'normal', onRenderComplete, setIsEditing, showDiff = false, canEdit: propCanEdit }) => {
-  const [parsedContents, setParsedContents] = useState(null);
-  const [language, setLanguage] = useState(null);
+const TextView: React.FC<TextViewProps> = ({
+  content,
+  isSearch = false,
+  viewMode = 'normal',
+  onRenderComplete,
+  setIsEditing,
+  showDiff = false,
+  canEdit: propCanEdit,
+  onActiveLine,
+  showLineNumbers = true
+}) => {
+  const [parsedContents, setParsedContents] = useState<SlateContent | null>(null);
+  const [language, setLanguage] = useState<string | null>(null);
   const { lineMode } = useLineSettings();
-  const [loadedParagraphs, setLoadedParagraphs] = useState([]);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [activeLineIndex, setActiveLineIndex] = useState(null);
-  const [isHovering, setIsHovering] = useState(false);
-  const [clickPosition, setClickPosition] = useState(null);
+  const [loadedParagraphs, setLoadedParagraphs] = useState<number[]>([]);
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
+  const [isScrolled, setIsScrolled] = useState<boolean>(false);
+  const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
+  const [isHovering, setIsHovering] = useState<boolean>(false);
+  const [clickPosition, setClickPosition] = useState<{ x: number; y: number; clientX: number; clientY: number } | null>(null);
   const { user } = useContext(AuthContext);
   const { page } = usePage();
 

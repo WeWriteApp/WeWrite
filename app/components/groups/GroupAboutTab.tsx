@@ -16,20 +16,22 @@ import { GroupAboutSkeleton } from "../ui/page-skeleton";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import DisabledLinkModal from "../utils/DisabledLinkModal";
 import TextView from "../editor/TextView";
+import type { GroupAboutTabProps } from "../../types/components";
+import type { SlateContent, Group } from "../../types/database";
 
 // Import the unified editor dynamically to avoid SSR issues
 const Editor = dynamic(() => import("../editor/Editor"), { ssr: false });
 
-export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
+const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEdit }) => {
   // Check if the user is a member of the group
   const { user } = useContext(AuthContext);
-  const [canEdit, setCanEdit] = useState(propCanEdit);
+  const [canEdit, setCanEdit] = useState<boolean>(propCanEdit);
 
   // Check if link functionality is enabled
   const linkFunctionalityEnabled = useFeatureFlag('link_functionality', user?.email);
 
   // State for disabled link modal
-  const [showDisabledLinkModal, setShowDisabledLinkModal] = useState(false);
+  const [showDisabledLinkModal, setShowDisabledLinkModal] = useState<boolean>(false);
 
   // Check if the user is a member of the group
   useEffect(() => {
@@ -41,14 +43,15 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
       setCanEdit(propCanEdit);
     }
   }, [user, group, propCanEdit]);
-  const [isEditing, setIsEditing] = useState(false);
-  const [aboutContent, setAboutContent] = useState(group.about || "");
-  const [originalContent, setOriginalContent] = useState(group.about || "");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [lastEditor, setLastEditor] = useState(group.aboutLastEditor || null);
-  const [lastEditTime, setLastEditTime] = useState(group.aboutLastEditTime || null);
-  const editorRef = useRef(null);
+
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [aboutContent, setAboutContent] = useState<SlateContent | string>(group.about || "");
+  const [originalContent, setOriginalContent] = useState<SlateContent | string>(group.about || "");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastEditor, setLastEditor] = useState<string | null>(group.aboutLastEditor || null);
+  const [lastEditTime, setLastEditTime] = useState<string | null>(group.aboutLastEditTime || null);
+  const editorRef = useRef<any>(null);
 
   // Track if content has changed
   const hasUnsavedChanges = isEditing && aboutContent !== originalContent;
@@ -437,4 +440,6 @@ export default function GroupAboutTab({ group, canEdit: propCanEdit }) {
       />
     </div>
   );
-}
+};
+
+export default GroupAboutTab;
