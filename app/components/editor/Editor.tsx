@@ -27,6 +27,7 @@ import DisabledLinkModal from "../utils/DisabledLinkModal";
 import { updateParagraphIndices, getParagraphIndex } from "../../utils/slate-path-fix";
 import { validateLink } from '../../utils/linkValidator';
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink } from "../../utils/linkFormatters";
+import { Switch } from "../ui/switch";
 
 // Extend Slate types for TypeScript
 type CustomEditor = BaseEditor & ReactEditor & HistoryEditor;
@@ -591,7 +592,10 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
           pageId: pageId || (options as any).pageId,
           pageTitle: (options as any).pageTitle,
           originalPageTitle: (options as any).originalPageTitle || (options as any).pageTitle, // Store original page title
-          isCustomText: (options as any).isCustomText || false // Flag to indicate if text is custom
+          isCustomText: (options as any).isCustomText || false, // Flag to indicate if text is custom
+          // Add compound link properties
+          showAuthor: (options as any).showAuthor || false,
+          authorUsername: (options as any).authorUsername || null
         }),
         ...(isExternalLinkType && {
           isExternal: true
@@ -1242,6 +1246,34 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
         return;
       }
 
+      // Case 1.5: Check if cursor is inside a link and prevent text editing
+      const [linkMatch] = Editor.nodes(editor, {
+        at: selection,
+        match: n => n.type === 'link'
+      });
+
+      if (linkMatch) {
+        const [linkNode, linkPath] = linkMatch;
+        const linkStart = Editor.start(editor, linkPath);
+        const linkEnd = Editor.end(editor, linkPath);
+
+        // If we're at the start or end of the link and trying to delete inward
+        if ((event.key === 'Delete' && Point.equals(selection.anchor, linkStart)) ||
+            (event.key === 'Backspace' && Point.equals(selection.anchor, linkEnd))) {
+          // Delete the entire link
+          event.preventDefault();
+          Transforms.removeNodes(editor, { at: linkPath });
+          return;
+        }
+
+        // If we're inside the link, prevent deletion to maintain link integrity
+        // Users should edit link text through the modal only
+        if (!Point.equals(selection.anchor, linkStart) && !Point.equals(selection.anchor, linkEnd)) {
+          event.preventDefault();
+          return;
+        }
+      }
+
       // Case 2: Check if cursor is positioned right before a link (for Delete key)
       if (event.key === 'Delete') {
         try {
@@ -1491,7 +1523,10 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
                   isExternal: item.isExternal,
                   isUser: item.isUser,
                   userId: item.userId,
-                  isPublic: item.isPublic !== false
+                  isPublic: item.isPublic !== false,
+                  // Add compound link properties
+                  showAuthor: item.showAuthor,
+                  authorUsername: item.authorUsername
                 }
               );
               // Hide the link editor
@@ -2038,6 +2073,46 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
     setShowLinkEditor(false);
   }, [editor, selectedLinkElement, selectedLinkPath, setSelectedLinkElement, setSelectedLinkPath, setInitialLinkValues, setShowLinkEditor]);
 
+  // Check if this is a compound link with author
+  const isCompoundLink = element.showAuthor && element.pageTitle && element.authorUsername;
+
+  if (isCompoundLink) {
+    // Render compound link: "[Page Title] by [Author Username]"
+    return (
+      <>
+        <span
+          {...attributes}
+          contentEditable={false}
+          className={`${baseStyles} ${isSelected ? 'ring-2 ring-primary ring-offset-1' : ''} compound-link`}
+          data-pill-style={pillStyle}
+          data-page-id={element.pageId || ''}
+          data-link-type="compound"
+          data-selected={isSelected ? 'true' : 'false'}
+          title={`${element.pageTitle} by ${element.authorUsername}`}
+          onClick={handleClick}
+        >
+          {element.isPublic === false && <Lock size={14} className="mr-1 flex-shrink-0" />}
+
+          {/* Page title portion - clickable */}
+          <span className="pill-text page-portion">
+            {element.pageTitle}
+          </span>
+
+          <span className="mx-1 text-muted-foreground">by</span>
+
+          {/* Author username portion - clickable */}
+          <span className="pill-text author-portion">
+            {element.authorUsername}
+          </span>
+        </span>
+
+        {/* Hidden children for Slate.js structure */}
+        <span style={{ display: 'none' }}>{children}</span>
+      </>
+    );
+  }
+
+  // Regular single link rendering
   return (
     <>
       <a
@@ -2221,12 +2296,21 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
     }
   }, [activeTab, selectedPageId, externalUrl, displayText, validateForm, formTouched]);
 
+  // Helper function to validate URL format
+  const isValidUrl = (url) => {
+    if (!url) return false;
+    // Allow URLs with or without protocol
+    const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+    return urlPattern.test(url) || url.includes('.') || url.startsWith('http');
+  };
+
   // Validation helpers for UI
-  const isPageValid = !formTouched || (activeTab === 'page' && !!selectedPageId && !!displayText);
-  const isExternalValid = !formTouched || (activeTab === 'external' && !!externalUrl && !!displayText);
-  const canSave = hasChanged && (formTouched ? isValid : true) &&
-    ((activeTab === 'page' && (formTouched ? isPageValid : true)) ||
-     (activeTab === 'external' && (formTouched ? isExternalValid : true)));
+  const isPageValid = activeTab === 'page' && !!selectedPageId;
+  const isExternalValid = activeTab === 'external' && isValidUrl(externalUrl);
+
+  // For external links, enable button immediately when URL is valid, regardless of display text
+  const canSave = (activeTab === 'page' && isPageValid) ||
+                  (activeTab === 'external' && isExternalValid);
 
   // Handle close
   const handleClose = () => {
@@ -2311,7 +2395,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
   };
 
   // Handle save for page links
-  const handleSave = (item) => {
+  const handleSave = async (item) => {
     // Mark form as touched when submitting
     setFormTouched(true);
 
@@ -2319,12 +2403,30 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
       return;
     }
 
+    let authorUsername = null;
+
+    // If showAuthor is enabled, fetch the author information
+    if (showAuthor && item.id) {
+      try {
+        // Fetch page details to get author information
+        const response = await fetch(`/api/pages/${item.id}`);
+        if (response.ok) {
+          const pageData = await response.json();
+          authorUsername = pageData.authorUsername || pageData.author?.username;
+        }
+      } catch (error) {
+        console.error('Error fetching author information:', error);
+        // Continue without author info if fetch fails
+      }
+    }
+
     onSelect({
       type: "page",
       pageId: item.id,
       pageTitle: item.title || displayText,
       displayText: displayText || item.title,
-      showAuthor
+      showAuthor,
+      authorUsername
     });
 
     // CRITICAL FIX: Use the parent component's state setter if available
@@ -2456,17 +2558,15 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                   />
                 </div>
 
-                {/* Custom display text toggle */}
+                {/* Custom link text toggle */}
                 <div className="mt-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <input
-                      type="checkbox"
+                  <div className="flex items-center gap-3 mb-3">
+                    <Switch
                       checked={showCustomDisplayText}
-                      onChange={(e) => setShowCustomDisplayText(e.target.checked)}
-                      id="custom-display-text-toggle"
-                      className="rounded border-gray-300 text-primary focus:ring-primary"
+                      onCheckedChange={setShowCustomDisplayText}
+                      id="custom-link-text-toggle"
                     />
-                    <label htmlFor="custom-display-text-toggle" className="text-sm font-medium select-none">Custom display text</label>
+                    <label htmlFor="custom-link-text-toggle" className="text-sm font-medium select-none">Custom link text</label>
                   </div>
 
                   {showCustomDisplayText && (
@@ -2475,7 +2575,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                       type="text"
                       value={displayText}
                       onChange={handleDisplayTextChange}
-                      placeholder="Enter custom display text"
+                      placeholder="Enter custom link text"
                       className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
                       onFocus={() => setFormTouched(true)}
                     />
@@ -2484,13 +2584,11 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 
                 {/* Show Author Switch - only show after page is selected */}
                 {selectedPageId && (
-                  <div className="flex items-center gap-2 mt-4 mb-4">
-                    <input
-                      type="checkbox"
+                  <div className="flex items-center gap-3 mt-4 mb-4">
+                    <Switch
                       checked={showAuthor}
-                      onChange={(e) => setShowAuthor(e.target.checked)}
+                      onCheckedChange={setShowAuthor}
                       id="show-author-switch"
-                      className="rounded border-gray-300 text-primary focus:ring-primary"
                     />
                     <label htmlFor="show-author-switch" className="text-sm font-medium select-none">Show author</label>
                   </div>
@@ -2520,15 +2618,13 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 
               {/* Custom link text toggle */}
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <input
-                    type="checkbox"
+                <div className="flex items-center gap-3 mb-3">
+                  <Switch
                     checked={showCustomLinkText}
-                    onChange={(e) => setShowCustomLinkText(e.target.checked)}
-                    id="custom-link-text-toggle"
-                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                    onCheckedChange={setShowCustomLinkText}
+                    id="custom-link-text-toggle-external"
                   />
-                  <label htmlFor="custom-link-text-toggle" className="text-sm font-medium select-none">Custom link text</label>
+                  <label htmlFor="custom-link-text-toggle-external" className="text-sm font-medium select-none">Custom link text</label>
                 </div>
 
                 {showCustomLinkText && (
