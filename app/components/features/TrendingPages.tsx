@@ -13,9 +13,15 @@ interface TrendingPage {
   id: string;
   title: string;
   views: number;
+  views24h?: number;
   hourlyViews: number[];
   userId?: string;
   username?: string;
+}
+
+interface TrendingPagesResponse {
+  trendingPages?: TrendingPage[];
+  error?: string;
 }
 
 export default function TrendingPages({ limit = 5 }) {
@@ -30,7 +36,7 @@ export default function TrendingPages({ limit = 5 }) {
         console.log('TrendingPages: Fetching trending pages with limit:', limit);
 
         // Get trending pages for the last 24 hours
-        const response = await getTrendingPages(limit);
+        const response = await getTrendingPages(limit) as TrendingPagesResponse | TrendingPage[];
 
         // Check if we got the expected response format
         if (!response || typeof response !== 'object') {
@@ -41,7 +47,7 @@ export default function TrendingPages({ limit = 5 }) {
         }
 
         // Check for error in response
-        if (response.error) {
+        if (!Array.isArray(response) && response.error) {
           console.error('TrendingPages: API returned error:', response.error);
           setError(response.error);
           setLoading(false);
@@ -172,7 +178,7 @@ export default function TrendingPages({ limit = 5 }) {
                 onClick={() => window.location.href = `/${page.id}`}
               >
                 <td className="py-3 px-4">
-                  <PillLink href={`/${page.id}`}>
+                  <PillLink href={`/${page.id}`} className="">
                     {page.title || 'Untitled'}
                   </PillLink>
                 </td>
@@ -200,6 +206,8 @@ export default function TrendingPages({ limit = 5 }) {
                       data={page.hourlyViews}
                       height={32}
                       strokeWidth={1.5}
+                      color="currentColor"
+                      title="24h Activity"
                     />
                   </div>
                 </td>
@@ -221,7 +229,7 @@ export default function TrendingPages({ limit = 5 }) {
             <div>
               <div className="mb-3">
                 <h3 className="text-base font-medium mb-1">
-                  <PillLink href={`/${page.id}`}>
+                  <PillLink href={`/${page.id}`} className="">
                     {page.title || 'Untitled'}
                   </PillLink>
                 </h3>
@@ -258,6 +266,8 @@ export default function TrendingPages({ limit = 5 }) {
                     data={page.hourlyViews}
                     height={48}
                     strokeWidth={2}
+                    color="currentColor"
+                    title="24h Activity"
                   />
                 </div>
               </div>

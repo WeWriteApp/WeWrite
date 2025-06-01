@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useContext } from 'react';
+import React from 'react';
 import { Calendar } from 'lucide-react';
 import { Button } from '../ui/button';
 import { SectionTitle } from '../ui/section-title';
 import StickySection from "../utils/StickySection";
 import DailyNotesCarousel from './DailyNotesCarousel';
-import { AuthContext } from '../../providers/AuthProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 
 interface DailyNotesSectionProps {
@@ -23,7 +23,7 @@ interface DailyNotesSectionProps {
  * Uses accent color from context and respects pill style settings.
  */
 export default function DailyNotesSection({}: DailyNotesSectionProps) {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const { accentColor, customColors } = useAccentColor();
 
   // Get the actual color value from the accent color system

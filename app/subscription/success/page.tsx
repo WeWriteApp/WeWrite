@@ -33,7 +33,7 @@ export default function SubscriptionSuccessPage() {
       return;
     }
 
-    const sessionId = searchParams.get('session_id');
+    const sessionId = searchParams?.get('session_id');
 
     if (!sessionId) {
       setError('No session ID provided');

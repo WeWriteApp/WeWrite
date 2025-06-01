@@ -9,8 +9,8 @@ import {
   TabsList,
   TabsTrigger,
 } from "../ui/tabs";
-import { LoginForm } from "./login-form"; // Assuming path is correct
-import { RegisterForm } from "./register-form"; // Assuming path is correct
+import { LoginForm } from "../forms/login-form";
+import { RegisterForm } from "../forms/register-form";
 
 interface AuthModalProps {
   children: React.ReactNode; // Trigger element
@@ -23,9 +23,9 @@ export function AuthModal({ children, initialTab = "login" }: AuthModalProps) {
   return (
     <>
       {/* Trigger element */}
-      {React.cloneElement(children as React.ReactElement, {
-        onClick: () => setIsOpen(true)
-      })}
+      <div onClick={() => setIsOpen(true)}>
+        {children}
+      </div>
 
       {/* Modal */}
       <Modal

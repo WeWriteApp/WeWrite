@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense } from 'react';
-import { ActivitySkeleton } from "../ui/skeleton-loaders';
+import { ActivitySkeleton } from "../ui/skeleton-loaders";
 import dynamic from 'next/dynamic';
 
 // Dynamically import the original ActivitySection component

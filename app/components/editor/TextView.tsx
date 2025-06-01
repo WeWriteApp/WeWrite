@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useContext, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { usePage } from "../../contexts/PageContext";
 import { useLineSettings } from "../../contexts/LineSettingsContext";
 import { nodeTypes } from "../../utils/constants";
@@ -7,11 +7,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/
 import { getPageById } from "../../firebase/database";
 import { LineSettingsProvider, LINE_MODES } from '../../contexts/LineSettingsContext';
 import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform } from "framer-motion";
-import { AuthContext } from "../../providers/AuthProvider";
+import { useAuth } from "../../providers/AuthProvider";
 import { isExternalLink } from "../../utils/linkFormatters";
 import { validateLink, getLinkDisplayText, extractPageIdFromUrl } from '../../utils/linkValidator';
 import { Button } from "../ui/button";
-import { ExternalLink, Edit2 } from "lucide-react";
+import { ExternalLink, Edit2, Edit } from "lucide-react";
 import Modal from "../ui/modal";
 import { useControlledAnimation } from "../../hooks/useControlledAnimation";
 import type { TextViewProps } from "../../types/components";
@@ -108,7 +108,7 @@ const TextView: React.FC<TextViewProps> = ({
   const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
   const [isHovering, setIsHovering] = useState<boolean>(false);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number; clientX: number; clientY: number } | null>(null);
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const { page } = usePage();
 
   // Check if current user can edit this page (enhanced for group support)

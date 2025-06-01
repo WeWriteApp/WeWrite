@@ -1,38 +1,61 @@
+"use client";
+
 import { db } from './database';
-import { 
-  doc, 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
-  arrayUnion, 
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  arrayUnion,
   serverTimestamp,
   Timestamp,
-  increment
+  increment,
+  type DocumentSnapshot,
+  type DocumentData
 } from 'firebase/firestore';
+
+// Type definitions for streak operations
+interface StreakData {
+  userId: string;
+  currentStreak: number;
+  longestStreak: number;
+  lastActiveDate: Timestamp;
+  activityDates: Timestamp[];
+  totalDaysActive: number;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+interface UserStreakResult {
+  currentStreak: number;
+  longestStreak: number;
+  lastActiveDate: string | null;
+  totalDaysActive: number;
+}
 
 /**
  * Get a user's streak data
- * 
- * @param {string} userId - The user ID
- * @returns {Promise<Object>} - The user's streak data
+ *
+ * @param userId - The user ID
+ * @returns The user's streak data
  */
-export const getUserStreaks = async (userId) => {
+export const getUserStreaks = async (userId: string): Promise<UserStreakResult | null> => {
   if (!userId) return null;
 
   try {
     // Get the user's streak document
     const streakDocRef = doc(db, 'userStreaks', userId);
-    const streakDoc = await getDoc(streakDocRef);
+    const streakDoc: DocumentSnapshot<DocumentData> = await getDoc(streakDocRef);
 
     if (!streakDoc.exists()) {
       return null;
     }
 
-    const streakData = streakDoc.data();
-    
+    const streakData = streakDoc.data() as StreakData;
+
     // Calculate current streak based on activity dates
     const currentStreak = calculateCurrentStreak(streakData.activityDates || []);
-    
+
     return {
       currentStreak,
       longestStreak: streakData.longestStreak || 0,
@@ -47,11 +70,11 @@ export const getUserStreaks = async (userId) => {
 
 /**
  * Record user activity for streak tracking
- * 
- * @param {string} userId - The user ID
- * @returns {Promise<boolean>} - Whether the operation was successful
+ *
+ * @param userId - The user ID
+ * @returns Whether the operation was successful
  */
-export const recordUserActivity = async (userId) => {
+export const recordUserActivity = async (userId: string): Promise<boolean> => {
   if (!userId) return false;
 
   try {
@@ -61,11 +84,11 @@ export const recordUserActivity = async (userId) => {
     
     // Get the user's streak document
     const streakDocRef = doc(db, 'userStreaks', userId);
-    const streakDoc = await getDoc(streakDocRef);
+    const streakDoc: DocumentSnapshot<DocumentData> = await getDoc(streakDocRef);
 
     if (!streakDoc.exists()) {
       // Create a new streak document if it doesn't exist
-      await setDoc(streakDocRef, {
+      const newStreakData: StreakData = {
         userId,
         currentStreak: 1,
         longestStreak: 1,
@@ -74,13 +97,15 @@ export const recordUserActivity = async (userId) => {
         totalDaysActive: 1,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
-      });
-      
+      };
+
+      await setDoc(streakDocRef, newStreakData);
+
       return true;
     }
 
     // Get the streak data
-    const streakData = streakDoc.data();
+    const streakData = streakDoc.data() as StreakData;
     
     // Check if the user has already been active today
     const lastActiveDate = streakData.lastActiveDate?.toDate();
@@ -125,19 +150,19 @@ export const recordUserActivity = async (userId) => {
 
 /**
  * Calculate the current streak based on activity dates
- * 
- * @param {Array<Timestamp>} activityDates - Array of activity date timestamps
- * @returns {number} - The current streak
+ *
+ * @param activityDates - Array of activity date timestamps
+ * @returns The current streak
  */
-const calculateCurrentStreak = (activityDates) => {
+const calculateCurrentStreak = (activityDates: Timestamp[]): number => {
   if (!activityDates || activityDates.length === 0) {
     return 0;
   }
 
   // Convert Firestore Timestamps to JavaScript Dates and sort in descending order
-  const dates = activityDates
+  const dates: Date[] = activityDates
     .map(timestamp => timestamp.toDate())
-    .sort((a, b) => b - a);
+    .sort((a, b) => b.getTime() - a.getTime());
 
   // Get today's date at midnight (UTC)
   const today = new Date();
@@ -187,12 +212,12 @@ const calculateCurrentStreak = (activityDates) => {
 
 /**
  * Check if two dates are the same day
- * 
- * @param {Date} date1 - First date
- * @param {Date} date2 - Second date
- * @returns {boolean} - Whether the dates are the same day
+ *
+ * @param date1 - First date
+ * @param date2 - Second date
+ * @returns Whether the dates are the same day
  */
-const isSameDay = (date1, date2) => {
+const isSameDay = (date1: Date, date2: Date): boolean => {
   return (
     date1.getUTCFullYear() === date2.getUTCFullYear() &&
     date1.getUTCMonth() === date2.getUTCMonth() &&

@@ -19,22 +19,47 @@ export interface User {
   isAdmin?: boolean;
   tier?: SubscriptionTier;
   subscriptionStatus?: SubscriptionStatus;
+  followerCount?: number;
 }
 
 // Page types
 export interface Page {
   id: string;
   title: string;
-  content: SlateContent;
+  content: SlateContent | string;
   userId: string;
+  username?: string;
   isPublic: boolean;
   createdAt: string | Timestamp;
   lastModified: string | Timestamp;
   viewCount?: number;
+  views?: number;
+  views24h?: number;
   location?: string;
   tags?: string[];
   linkedPageIds?: string[];
   version?: number;
+  currentVersion?: string;
+  groupId?: string;
+  groupName?: string;
+  description?: string;
+  fundraisingGoal?: number;
+  isReply?: boolean;
+  replyTo?: string;
+  replyToTitle?: string;
+  replyToUsername?: string;
+  followerCount?: number;
+}
+
+// Page version types
+export interface PageVersion {
+  id: string;
+  content: string;
+  createdAt: string | Timestamp;
+  userId: string;
+  username?: string;
+  groupId?: string | null;
+  previousVersionId?: string;
 }
 
 // Slate editor content types
@@ -72,6 +97,7 @@ export interface Group {
   isPublic: boolean;
   memberCount?: number;
   pageCount?: number;
+  members?: Record<string, any>;
 }
 
 // Activity types
@@ -179,8 +205,8 @@ export interface EditorRef {
   focus: () => boolean;
   getContent: () => SlateContent;
   insertText: (text: string) => boolean;
-  insertLink: (linkData: LinkData) => boolean;
-  openLinkEditor: (linkData?: LinkData) => boolean;
+  insertLink: (url: any, text: any, options?: any) => boolean;
+  openLinkEditor: (initialTab?: string) => boolean;
   setShowLinkEditor: (value: boolean) => boolean;
 }
 

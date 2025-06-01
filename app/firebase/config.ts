@@ -1,8 +1,9 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getAnalytics, isSupported, logEvent } from "firebase/analytics";
+import { initializeApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
+import { getAnalytics, isSupported, logEvent, type Analytics } from "firebase/analytics";
+import { getDatabase, type Database } from "firebase/database";
 
 /**
  * Firebase Configuration & Initialization
@@ -12,15 +13,28 @@ import { getAnalytics, isSupported, logEvent } from "firebase/analytics";
  * - Authentication
  * - Firestore Database
  * - Firebase Analytics
+ * - Realtime Database
  *
  * For analytics specifically, we initialize conditionally based on browser
  * support and add instrumentation to track page titles properly.
  */
 
+// Firebase configuration interface
+interface FirebaseConfig {
+  apiKey: string | undefined;
+  authDomain: string | undefined;
+  databaseURL: string | undefined;
+  projectId: string | undefined;
+  storageBucket: string | undefined;
+  messagingSenderId: string | undefined;
+  appId: string | undefined;
+  measurementId: string | undefined;
+}
+
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 // Your web app's Firebase configuration
-const newConfig =  {
+const newConfig: FirebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_DOMAIN,
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DB_URL,
@@ -43,13 +57,16 @@ console.log('[DEBUG] Firebase config:', {
 });
 
 // Initialize Firebase
-export const app = initializeApp(newConfig);
+export const app: FirebaseApp = initializeApp(newConfig);
 
 // Initialize Firebase Auth
-export const auth = getAuth(app);
+export const auth: Auth = getAuth(app);
 
 // Initialize Firestore
-export const db = getFirestore(app);
+export const db: Firestore = getFirestore(app);
+
+// Initialize Realtime Database
+export const rtdb: Database = getDatabase(app);
 
 /**
  * Initialize Firebase Analytics
@@ -60,12 +77,12 @@ export const db = getFirestore(app);
  *
  * @returns Firebase Analytics instance or null if not supported/initialization failed
  */
-export const initializeAnalytics = async () => {
+export const initializeAnalytics = async (): Promise<Analytics | null> => {
   if (typeof window !== 'undefined') {
     try {
       // Firebase 11 changes: isSupported is now a property, not a function
       if (isSupported) {
-        const analytics = getAnalytics(app);
+        const analytics: Analytics = getAnalytics(app);
 
         if (process.env.NODE_ENV === 'development') {
           console.log('Firebase Analytics initialized successfully');
@@ -89,9 +106,9 @@ export const initializeAnalytics = async () => {
  * Manually test Firebase Analytics by sending a test event
  * This is useful for debugging Firebase Analytics integration
  *
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>} - True if test was successful, false otherwise
  */
-export const testFirebaseAnalytics = async () => {
+export const testFirebaseAnalytics = async (): Promise<boolean> => {
   try {
     // Check if analytics is supported
     console.log('🔍 Checking if Firebase Analytics is supported...');
@@ -100,12 +117,12 @@ export const testFirebaseAnalytics = async () => {
 
     if (!supported) {
       console.warn('❌ Firebase Analytics is not supported in this environment');
-      return;
+      return false;
     }
 
     // Get analytics instance
     console.log('🔄 Initializing Firebase Analytics...');
-    const analytics = getAnalytics(app);
+    const analytics: Analytics = getAnalytics(app);
     console.log('✅ Firebase Analytics initialized successfully');
 
     // Log a test event

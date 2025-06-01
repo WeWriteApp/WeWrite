@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPageById, getPageVersionById, setCurrentVersion } from '../../../firebase/database';
 import DashboardLayout from '../../../DashboardLayout';
@@ -9,7 +9,7 @@ import { ChevronLeft, ChevronRight, Clock, RotateCcw, Eye } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Loader } from '../../../components/utils/Loader';
 import PageHeader from '../../../components/pages/PageHeader';
-import { AuthContext } from '../../../providers/AuthProvider';
+import { useAuth } from '../../../providers/AuthProvider';
 import { Switch } from '../../../components/ui/switch';
 import { Label } from '../../../components/ui/label';
 import { Alert, AlertDescription } from '../../../components/ui/alert';
@@ -18,6 +18,8 @@ import TextViewErrorBoundary from '../../../components/editor/TextViewErrorBound
 import { toast } from '../../../components/ui/use-toast';
 import { generateTextDiff } from '../../../utils/generateTextDiff';
 import { generateDiffContent } from '../../../utils/diffUtils';
+import { PageProvider } from '../../../contexts/PageContext';
+import { LineSettingsProvider } from '../../../contexts/LineSettingsContext';
 
 export default function PageVersionView({ params }: { params: { id: string, versionId: string } }) {
   const { id, versionId } = params;
@@ -31,7 +33,7 @@ export default function PageVersionView({ params }: { params: { id: string, vers
   const [diffContent, setDiffContent] = useState<any>(null);
   const [versionIndex, setVersionIndex] = useState(-1);
   const router = useRouter();
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const isOwner = user && page && user.uid === page.userId;
 
   useEffect(() => {
@@ -70,7 +72,7 @@ export default function PageVersionView({ params }: { params: { id: string, vers
         }
 
         // Fetch all versions to enable navigation between versions
-        const { versions } = await getPageById(id, true);
+        const { versions } = await getPageById(id, null);
         if (versions && versions.length > 0) {
           setVersions(versions);
           // Find the index of the current version
@@ -194,7 +196,9 @@ export default function PageVersionView({ params }: { params: { id: string, vers
     return (
       <DashboardLayout>
         <div className="flex justify-center items-center min-h-screen">
-          <Loader />
+          <Loader show={true} message="Loading..." id="version-loader">
+            <div />
+          </Loader>
         </div>
       </DashboardLayout>
     );
@@ -206,8 +210,6 @@ export default function PageVersionView({ params }: { params: { id: string, vers
         <div className="p-4">
           <PageHeader
             title="Error"
-            backUrl={`/${id}`}
-            backLabel="Back to page"
           />
           <div className="text-destructive text-center p-8">
             <p>{error}</p>
@@ -277,18 +279,22 @@ export default function PageVersionView({ params }: { params: { id: string, vers
         {/* Content */}
         <div className="border rounded-lg p-4 mb-6">
           {version?.content ? (
-            <TextViewErrorBoundary fallbackContent={
-              <div className="p-4 text-muted-foreground">
-                <p>Unable to display version content. The version may have formatting issues.</p>
-                <p className="text-sm mt-2">Version ID: {params.versionId}</p>
-              </div>
-            }>
-              <TextView
-                content={showDiff && diffContent ? diffContent : JSON.parse(version.content)}
-                viewMode="normal"
-                showDiff={showDiff}
-              />
-            </TextViewErrorBoundary>
+            <PageProvider>
+              <LineSettingsProvider>
+                <TextViewErrorBoundary fallbackContent={
+                  <div className="p-4 text-muted-foreground">
+                    <p>Unable to display version content. The version may have formatting issues.</p>
+                    <p className="text-sm mt-2">Version ID: {params.versionId}</p>
+                  </div>
+                }>
+                  <TextView
+                    content={showDiff && diffContent ? diffContent : JSON.parse(version.content)}
+                    viewMode="normal"
+                    showDiff={showDiff}
+                  />
+                </TextViewErrorBoundary>
+              </LineSettingsProvider>
+            </PageProvider>
           ) : (
             <p className="text-muted-foreground text-center py-8">No content available for this version</p>
           )}

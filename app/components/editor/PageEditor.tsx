@@ -1,6 +1,6 @@
 "use client";
-import React, { useEffect, useState, useContext, useRef } from "react";
-import { AuthContext } from "../../providers/AuthProvider";
+import React, { useEffect, useState, useRef } from "react";
+import { useAuth } from "../../providers/AuthProvider";
 import dynamic from "next/dynamic";
 
 // Import the main editor dynamically to avoid SSR issues
@@ -17,10 +17,11 @@ import DisabledLinkModal from "../utils/DisabledLinkModal";
 import { useClickToEdit } from "../../hooks/useClickToEdit";
 import EditModeBottomToolbar from "./EditModeBottomToolbar";
 import ErrorBoundary from "../utils/ErrorBoundary";
+import type { SlateContent } from "../../types/database";
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {
-  focus: (editor) => {
+  focus: (editor: any) => {
     try {
       if (ReactEditor && typeof ReactEditor.focus === 'function') {
         ReactEditor.focus(editor);
@@ -36,13 +37,34 @@ const safeReactEditor = {
 /**
  * Check if a title exactly matches the YYYY-MM-DD format for daily notes
  */
-const isExactDateFormat = (title) => {
+const isExactDateFormat = (title: string): boolean => {
   if (!title || title.length !== 10) return false;
   const datePattern = /^\d{4}-\d{2}-\d{2}$/;
   return datePattern.test(title);
 };
 
 // Removed SafeSlateWrapper - it was causing more issues than it solved
+
+interface PageEditorProps {
+  title: string;
+  setTitle: (title: string) => void;
+  initialContent?: SlateContent;
+  onContentChange: (content: SlateContent) => void;
+  isPublic: boolean;
+  setIsPublic: (isPublic: boolean) => void;
+  location?: { lat: number; lng: number } | null;
+  setLocation?: (location: { lat: number; lng: number } | null) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onDelete?: (() => void) | null;
+  isSaving: boolean;
+  error?: string;
+  isNewPage?: boolean;
+  isReply?: boolean;
+  replyToId?: string | null;
+  clickPosition?: { x: number; y: number; clientX: number; clientY: number } | null;
+  page?: any;
+}
 
 /**
  * PageEditor Component
@@ -54,28 +76,8 @@ const isExactDateFormat = (title) => {
  *
  * This component consolidates all editing logic to eliminate duplication
  * and provide a consistent editing experience across the application.
- *
- * @param {Object} props
- * @param {string} props.title - Current title of the page
- * @param {Function} props.setTitle - Function to update the title
- * @param {Array} props.initialContent - Initial content for the editor
- * @param {Function} props.onContentChange - Function to handle content changes
- * @param {boolean} props.isPublic - Whether the page is public
- * @param {Function} props.setIsPublic - Function to toggle page visibility
- * @param {Object} props.location - Location object with lat and lng properties
- * @param {Function} props.setLocation - Function to update the location
- * @param {Function} props.onSave - Function to handle saving
- * @param {Function} props.onCancel - Function to handle cancellation
- * @param {Function} [props.onDelete] - Function to handle deletion (existing pages only)
- * @param {boolean} props.isSaving - Whether the page is currently being saved
- * @param {string} props.error - Error message to display
- * @param {boolean} props.isNewPage - Whether this is a new page or editing an existing one
- * @param {boolean} props.isReply - Whether this is a reply to an existing page
- * @param {string} props.replyToId - ID of the page being replied to
- * @param {Object} props.clickPosition - Position where user clicked to enter edit mode
- * @param {Object} props.page - The page object (for existing pages)
  */
-const PageEditor = ({
+const PageEditor: React.FC<PageEditorProps> = ({
   title,
   setTitle,
   initialContent,
@@ -110,13 +112,13 @@ const PageEditor = ({
   }, []);
 
   // Initialize editor with initialContent
-  const [currentEditorValue, setCurrentEditorValue] = useState(
+  const [currentEditorValue, setCurrentEditorValue] = useState<SlateContent>(
     initialContent || [{ type: 'paragraph', children: [{ text: '' }] }]
   );
 
-  const { user } = useContext(AuthContext);
-  const editorRef = useRef(null);
-  const cursorPositioned = useRef(false);
+  const { user } = useAuth();
+  const editorRef = useRef<any>(null);
+  const cursorPositioned = useRef<boolean>(false);
 
   // Check if link functionality is enabled
   const linkFunctionalityEnabled = useFeatureFlag('link_functionality', user?.email);

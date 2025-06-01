@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Drawer } from 'vaul';
 import { UserCircle, CreditCard, Settings, Plus, Minus, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import CompositionBar from './CompositionBar.js';
-import { updateUsername } from "../../firebase/usernameHistory';
+import CompositionBar from '../editor/CompositionBar';
+import { updateUsername } from "../../firebase/usernameHistory";
 
 interface Pledge {
   id: string;

@@ -69,7 +69,7 @@ export default function ManageSubscriptionPage() {
           setLoading(false);
 
           // If we have a subscription, fetch payment history
-          if (subscriptionData.status === 'active') {
+          if ((subscriptionData as any).status === 'active') {
             fetchPaymentHistory(user.uid);
           }
         }
@@ -143,7 +143,7 @@ export default function ManageSubscriptionPage() {
               setSubscription(subscriptionData);
 
               // If we still have subscription data, force a page refresh
-              if (subscriptionData && subscriptionData.status !== 'canceled') {
+              if (subscriptionData && (subscriptionData as any).status !== 'canceled') {
                 console.log('Subscription data still exists, forcing page refresh');
                 window.location.reload();
               }

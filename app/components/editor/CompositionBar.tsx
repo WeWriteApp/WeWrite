@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import ActionModal from './ActionModal';
+import ActionModal from '../utils/ActionModal';
 import { createPortal } from 'react-dom';
 import { cn } from '../../lib/utils';
 import './ui/tooltip.css';

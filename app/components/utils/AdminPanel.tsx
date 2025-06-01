@@ -365,7 +365,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       if (error.code === 'permission-denied') {
         errorMessage = 'Permission denied. You may not have admin access.';
       } else if (error.code === 'unavailable') {
-        errorMessage = 'Database is temporarily unavailable. Please try again.";
+        errorMessage = 'Database is temporarily unavailable. Please try again.';
       } else if (error.message) {
         errorMessage = `Error: ${error.message}`;
       }
@@ -402,7 +402,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
     toast({
       title: 'Success',
       description: 'PWA installation banner has been reset',
-      variant: 'default"
+      variant: 'default'
     });
   };
 

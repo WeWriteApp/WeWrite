@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, useCallback, useContext } from "react";
+import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, useCallback } from "react";
 import {
   createEditor,
   Transforms,
@@ -19,7 +19,7 @@ import { ExternalLink, Link as LinkIcon } from "lucide-react";
 import { useLineSettings } from '../../contexts/LineSettingsContext';
 import { usePillStyle } from '../../contexts/PillStyleContext';
 import { useFeatureFlag } from '../../utils/feature-flags';
-import { AuthContext } from '../../providers/AuthProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 import type { EditorProps, EditorRef, LinkData } from "../../types/components";
 import type { SlateContent, SlateNode, SlateChild } from "../../types/database";
@@ -163,7 +163,7 @@ const safeReactEditor = {
             const pathIndex = point.path[0] || 0;
             if (pathIndex < textNodes.length) {
               const targetNode = textNodes[pathIndex];
-              const safeOffset = Math.min(point.offset || 0, targetNode.textContent.length);
+              const safeOffset = Math.min(point.offset || 0, targetNode.textContent?.length || 0);
               return [targetNode, safeOffset];
             }
           }
@@ -180,7 +180,7 @@ const safeReactEditor = {
   toSlatePoint: (editor, domPoint) => {
     try {
       if (ReactEditor && typeof ReactEditor.toSlatePoint === 'function') {
-        return ReactEditor.toSlatePoint(editor, domPoint);
+        return ReactEditor.toSlatePoint(editor, domPoint, { exactMatch: false, suppressThrow: true });
       }
     } catch (error) {
       console.error('Error in safeReactEditor.toSlatePoint:', error);
@@ -204,7 +204,7 @@ const ensureValidContent = (content) => {
 };
 
 // Helper function to check if selection is at or contains a link
-Editor.isSelectionAtLink = (editor, linkPath) => {
+(Editor as any).isSelectionAtLink = (editor, linkPath) => {
   try {
     if (!editor.selection) return false;
 
@@ -225,7 +225,7 @@ Editor.isSelectionAtLink = (editor, linkPath) => {
 };
 
 // Helper function to check if a link is fully selected (entire link is selected)
-Editor.isLinkFullySelected = (editor, linkPath) => {
+(Editor as any).isLinkFullySelected = (editor, linkPath) => {
   try {
     if (!editor.selection) return false;
 
@@ -245,14 +245,14 @@ Editor.isLinkFullySelected = (editor, linkPath) => {
 };
 
 // Helper function to find the currently selected link (if any)
-Editor.getSelectedLink = (editor) => {
+(Editor as any).getSelectedLink = (editor) => {
   try {
     if (!editor.selection) return null;
 
     // Try to find a link node that contains or is contained by the current selection
     const linkEntry = Editor.above(editor, {
       at: editor.selection,
-      match: n => n.type === 'link',
+      match: n => (n as any).type === 'link',
     });
 
     return linkEntry;
@@ -278,7 +278,7 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
   } = props;
 
   // Get user context for feature flags
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
 
   // Check if link functionality is enabled
   const linkFunctionalityEnabled = useFeatureFlag('link_functionality', user?.email);
@@ -302,17 +302,18 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
         // Check if DOM is ready and editor is properly initialized
         if (typeof window === 'undefined' || !document || document.readyState === 'loading') {
           console.warn('DOM not ready for toDOMNode operation');
-          return null;
+          return document.createElement('div');
         }
 
         // Check if we have Slate elements in the DOM
         const slateElements = document.querySelectorAll('[data-slate-editor], [data-slate-node], [data-slate-leaf]');
         if (slateElements.length === 0) {
           console.warn('No Slate elements found in DOM');
-          return null;
+          return document.createElement('div');
         }
 
-        return originalToDOMNode(editor, node);
+        const result = originalToDOMNode(editor, node);
+        return result || document.createElement('div');
       } catch (error) {
         console.warn('toDOMNode error handled:', error);
 
@@ -320,17 +321,17 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
         if (node && typeof node === 'object' && 'text' in node) {
           const textNodes = document.querySelectorAll('[data-slate-leaf]');
           for (const textNode of textNodes) {
-            if (textNode.textContent === node.text) {
-              return textNode;
+            if (textNode.textContent === (node as any).text) {
+              return textNode as HTMLElement;
             }
           }
           // Return first available text node as fallback
           if (textNodes.length > 0) {
-            return textNodes[0];
+            return textNodes[0] as HTMLElement;
           }
         }
 
-        return null;
+        return document.createElement('div');
       }
     };
 
@@ -357,15 +358,15 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
           });
 
           // Ensure link has required properties but don't modify structure
-          if (!node.url) {
+          if (!(node as any).url) {
             console.log('LINK_PRESERVATION: Link missing URL, attempting to fix or remove');
             // If no URL, convert to normal text
-            if (node.href) {
+            if ((node as any).href) {
               // Handle legacy href attribute
               console.log('LINK_PRESERVATION: Converting href to url');
               Transforms.setNodes(
                 baseEditor,
-                { url: node.href },
+                { url: (node as any).href },
                 { at: path }
               );
             } else {
@@ -416,9 +417,9 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
   });
 
   const [editorValue, setEditorValue] = useState(ensureValidContent(initialContent));
-  const [selection, setSelection] = useState(null);
-  const editableRef = useRef(null);
-  const lastSelectionRef = useRef(null);
+  const [selection, setSelection] = useState<Range | null>(null);
+  const editableRef = useRef<HTMLDivElement | null>(null);
+  const lastSelectionRef = useRef<Range | null>(null);
 
   // CRITICAL FIX: Add missing state variables for link editor
   const [showLinkEditor, setShowLinkEditor] = useState(false);
@@ -545,13 +546,13 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
       linkEditorRef.current.setInitialLinkValues = setInitialLinkValues;
 
       // Share the ref globally
-      window.currentLinkEditorRef = linkEditorRef.current;
+      (window as any).currentLinkEditorRef = linkEditorRef.current;
     }
 
     return () => {
       // Clean up when component unmounts
       if (typeof window !== 'undefined') {
-        window.currentLinkEditorRef = null;
+        (window as any).currentLinkEditorRef = null;
       }
     };
   }, [setShowLinkEditor, setLinkEditorPosition, setInitialLinkValues]);
@@ -562,12 +563,12 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
     try {
       // Determine if this is a page link, user link, or external link
-      const isUserLinkType = url.startsWith('/user/') || options.isUser;
-      const isPageLinkType = !isUserLinkType && (url.startsWith('/') || options.pageId);
+      const isUserLinkType = url.startsWith('/user/') || (options as any).isUser;
+      const isPageLinkType = !isUserLinkType && (url.startsWith('/') || (options as any).pageId);
       const isExternalLinkType = !isUserLinkType && !isPageLinkType;
 
       // Ensure pageId is properly extracted for page links
-      let pageId = options.pageId;
+      let pageId = (options as any).pageId;
       if (isPageLinkType && !pageId && url.startsWith('/pages/')) {
         const match = url.match(/\/pages\/([a-zA-Z0-9-_]+)/);
         if (match) pageId = match[1];
@@ -584,18 +585,18 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
         // Add type-specific properties
         ...(isUserLinkType && {
           isUser: true,
-          userId: options.userId
+          userId: (options as any).userId
         }),
         ...(isPageLinkType && {
-          pageId: pageId || options.pageId,
-          pageTitle: options.pageTitle,
-          originalPageTitle: options.originalPageTitle || options.pageTitle, // Store original page title
-          isCustomText: options.isCustomText || false // Flag to indicate if text is custom
+          pageId: pageId || (options as any).pageId,
+          pageTitle: (options as any).pageTitle,
+          originalPageTitle: (options as any).originalPageTitle || (options as any).pageTitle, // Store original page title
+          isCustomText: (options as any).isCustomText || false // Flag to indicate if text is custom
         }),
         ...(isExternalLinkType && {
           isExternal: true
         }),
-        ...(options.isPublic === false && { isPublic: false })
+        ...((options as any).isPublic === false && { isPublic: false })
       };
 
       // CRITICAL FIX: Use the validator to ensure all required properties are present
@@ -728,7 +729,7 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
           // Get the path to the inserted link
           const linkEntry = Editor.above(editor, {
-            match: n => n.type === 'link'
+            match: n => (n as any).type === 'link'
           });
 
           if (linkEntry) {
@@ -839,7 +840,10 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
           const fragment = Editor.fragment(editor, selection);
           const text = fragment.map(n => Node.string(n)).join('\n');
           if (text) {
-            linkEditorRef.current.initialLinkValues.text = text;
+            linkEditorRef.current.initialLinkValues = {
+              ...linkEditorRef.current.initialLinkValues,
+              text: text
+            };
           }
         } catch (error) {
           console.error('[DEBUG] Error getting selected text:', error);
@@ -849,7 +853,7 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
       // Create a local state setter function if it doesn't exist
       if (!linkEditorRef.current.setShowLinkEditor) {
         linkEditorRef.current.setShowLinkEditor = (value) => {
-          linkEditorRef.current.showLinkEditor = value;
+          linkEditorRef.current.showLinkEditor = typeof value === 'function' ? value(linkEditorRef.current.showLinkEditor) : value;
           // Force a re-render by dispatching a custom event
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('linkEditorStateChange', { detail: { showLinkEditor: value } }));
@@ -990,7 +994,9 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
           if (editor.selection && lastSelectionRef.current) {
             setTimeout(() => {
               try {
-                Transforms.select(editor, lastSelectionRef.current);
+                if (lastSelectionRef.current) {
+                  Transforms.select(editor, lastSelectionRef.current);
+                }
               } catch (selectionError) {
                 console.error("Error restoring selection:", selectionError);
               }
@@ -1585,8 +1591,8 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
   }, [editor, element]);
 
   // Local state for this component
-  const [selectedLinkElement, setSelectedLinkElement] = useState(null);
-  const [selectedLinkPath, setSelectedLinkPath] = useState(null);
+  const [selectedLinkElement, setSelectedLinkElement] = useState<any>(null);
+  const [selectedLinkPath, setSelectedLinkPath] = useState<any>(null);
 
   // Update the linkEditorRef when local state changes
   useEffect(() => {

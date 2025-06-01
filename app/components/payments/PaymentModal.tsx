@@ -103,7 +103,7 @@ const PaymentForm = ({ clientSecret, amount, onSuccess, onCancel }: PaymentFormP
     style: {
       base: {
         color: '#FFFFFF',
-        fontFamily: "-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
         fontSize: '16px',
         fontWeight: '500',
         '::placeholder': {

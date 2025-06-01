@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useContext, useCallback, useRef } from "react";
+import { useState, useEffect, useContext, useCallback, useRef, useMemo } from "react";
 import { AuthContext } from "../../providers/AuthProvider";
 import { collection, getDocs, query, limit, getDoc, doc, where } from "firebase/firestore";
 import { ref, get } from "firebase/database";
@@ -18,6 +18,7 @@ import { useFeatureFlag } from "../../utils/feature-flags";
 import { getBatchUserActivityLast24Hours } from "../../firebase/userActivity";
 import { generateCacheKey, getCacheItem, setCacheItem } from "../../utils/cacheUtils";
 import { trackQueryPerformance } from "../../utils/queryMonitor";
+import { getBatchUserData } from "../../firebase/batchUserData";
 import { ShimmerEffect } from "../ui/skeleton";
 import { debugRecentActivity, debugUserActivity } from "../../utils/debugActivity";
 import { getUserPageCount } from "../../firebase/counters";
@@ -78,14 +79,16 @@ const TopUsers = () => {
     setSortDirection(sortDirection === "desc" ? "asc" : "desc");
   };
 
-  // Get sorted users with memoization to avoid unnecessary re-sorting
-  const sortedUsers = [...allTimeUsers].sort((a, b) => {
-    if (sortDirection === "desc") {
-      return b.pageCount - a.pageCount;
-    } else {
-      return a.pageCount - b.pageCount;
-    }
-  });
+  // Get sorted users with proper memoization to avoid unnecessary re-sorting
+  const sortedUsers = useMemo(() => {
+    return [...allTimeUsers].sort((a, b) => {
+      if (sortDirection === "desc") {
+        return b.pageCount - a.pageCount;
+      } else {
+        return a.pageCount - b.pageCount;
+      }
+    });
+  }, [allTimeUsers, sortDirection]);
 
   // Optimized function to fetch users and pages with pagination
   const fetchUsersAndPages = useCallback(async (options = {}) => {
@@ -159,65 +162,51 @@ const TopUsers = () => {
           return;
         }
 
-        // OPTIMIZATION: Batch process users to reduce database load
-        console.log("TopUsers: Processing user data with optimized batching");
+        // OPTIMIZATION: Use batch user data fetching for better performance
+        console.log("TopUsers: Processing user data with optimized batch fetching");
 
         const userEntries = Object.entries(userData);
-        const BATCH_SIZE = 10; // Process users in batches to avoid overwhelming the database
-        let allTimeUsersArray = [];
+        const userIds = userEntries.map(([id]) => id);
 
-        // Process users in batches
+        // Batch fetch all user data including subscriptions
+        console.log(`TopUsers: Batch fetching data for ${userIds.length} users`);
+        const batchUserData = await getBatchUserData(userIds);
+
+        // Process users with batch data and page counts
+        let allTimeUsersArray = [];
+        const BATCH_SIZE = 10; // Process page counts in batches to avoid overwhelming the database
+
         for (let i = 0; i < userEntries.length; i += BATCH_SIZE) {
           const batch = userEntries.slice(i, i + BATCH_SIZE);
-          console.log(`TopUsers: Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(userEntries.length / BATCH_SIZE)}`);
+          console.log(`TopUsers: Processing page counts for batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(userEntries.length / BATCH_SIZE)}`);
 
           const batchResults = await Promise.all(
-            batch.map(async ([id, userData]) => {
+            batch.map(async ([id, rtdbUserData]) => {
+              // Get user data from batch fetch (includes subscription info)
+              const batchedUser = batchUserData[id];
+
               // Get the username and remove @ symbol if present
-              let username = userData.username || userData.displayName || "Unknown User";
+              let username = batchedUser?.username || rtdbUserData.username || rtdbUserData.displayName || "Unknown User";
               if (username.startsWith('@')) {
                 username = username.substring(1);
               }
 
               // Fetch page count using the same function as user profiles for consistency
-              // Use the current user's ID to get the same view as they would see on profile pages
-              // This ensures consistency between TopUsers and individual profile pages
               let pageCount = 0;
               try {
-                // CRITICAL FIX: Use the same viewer context as profile pages
-                // If user is viewing their own profile, they see total count (public + private)
-                // If user is viewing someone else's profile, they see only public count
-                // This matches the logic in SingleProfileView.js line 93
-                pageCount = await getUserPageCount(id, user?.uid); // Use current user's ID for consistent view
+                pageCount = await getUserPageCount(id, user?.uid);
               } catch (err) {
                 console.error(`Error fetching page count for user ${id}:`, err);
-              }
-
-              // Fetch subscription information - only if needed
-              let tier = null;
-              let subscriptionStatus = null;
-
-              if (subscriptionEnabled) {
-                try {
-                  const subscriptionDoc = await getDoc(doc(db, 'subscriptions', id));
-                  if (subscriptionDoc.exists()) {
-                    const subscriptionData = subscriptionDoc.data();
-                    tier = subscriptionData.tier;
-                    subscriptionStatus = subscriptionData.status;
-                  }
-                } catch (err) {
-                  console.error(`Error fetching subscription for user ${id}:`, err);
-                }
               }
 
               return {
                 id,
                 username,
-                photoURL: userData.photoURL,
+                photoURL: rtdbUserData.photoURL || batchedUser?.photoURL,
                 pageCount,
-                tier,
-                subscriptionStatus,
-                lastActive: userData.lastActive || null
+                tier: batchedUser?.tier || null,
+                subscriptionStatus: batchedUser?.subscriptionStatus || null,
+                lastActive: rtdbUserData.lastActive || null
               };
             })
           );
@@ -249,12 +238,12 @@ const TopUsers = () => {
         });
 
         // Fetch activity data only for the paginated users
-        const userIds = paginatedUsers.map(user => user.id);
+        const paginatedUserIds = paginatedUsers.map(user => user.id);
         let activityData = {};
 
         try {
-          console.log('TopUsers: Fetching activity data for users:', userIds);
-          activityData = await getBatchUserActivityLast24Hours(userIds);
+          console.log('TopUsers: Fetching activity data for users:', paginatedUserIds);
+          activityData = await getBatchUserActivityLast24Hours(paginatedUserIds);
 
           // CRITICAL FIX: Add detailed logging for debugging activity data
           console.log('TopUsers: Raw activity data received:', activityData);

@@ -36,7 +36,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { AuthContext } from "../../providers/AuthProvider";
 import { getDatabase, ref, onValue, set, get, update } from "firebase/database";
 import { app } from "../../firebase/config";
-import TypeaheadSearch from './TypeaheadSearch';
+import TypeaheadSearch from '../search/TypeaheadSearch';
 import FollowButton from '../utils/FollowButton';
 import { useConfirmation } from "../../hooks/useConfirmation";
 import ConfirmationModal from '../utils/ConfirmationModal';
@@ -102,7 +102,7 @@ export function PageActions({
 }: PageActionsProps) {
   const router = useRouter();
   const { lineMode, setLineMode } = useLineSettings();
-  const { user } = useContext(AuthContext);
+  const { user } = useContext(AuthContext) || {};
   const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false);
   const [currentLineMode, setCurrentLineMode] = useState(lineMode);
 
@@ -171,12 +171,12 @@ export function PageActions({
       // User is not authenticated, store draft reply and redirect to login
       try {
         // Create standardized reply content
-        const replyTitle = generateReplyTitle(page.title);
+        const replyTitle = generateReplyTitle(page.title || "Untitled");
         const initialContent = createReplyContent({
           pageId: page.id,
-          pageTitle: page.title,
-          userId: page.userId,
-          username: page.username,
+          pageTitle: page.title || "Untitled",
+          userId: page.userId || "",
+          username: page.username || "Anonymous",
           replyType: "standard"
         });
 
@@ -252,12 +252,12 @@ export function PageActions({
       }
 
       // Use utility functions to create standardized reply content
-      const replyTitle = generateReplyTitle(page.title);
+      const replyTitle = generateReplyTitle(page.title || "Untitled");
       const initialContent = createReplyContent({
         pageId: page.id,
-        pageTitle: page.title,
-        userId: page.userId,
-        username: page.username,
+        pageTitle: page.title || "Untitled",
+        userId: page.userId || "",
+        username: page.username || "Anonymous",
         replyType: "standard"
       });
 

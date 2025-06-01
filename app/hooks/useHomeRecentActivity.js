@@ -4,6 +4,7 @@ import { db } from "../firebase/config";
 import { AuthContext } from "../providers/AuthProvider";
 import { getPageVersions } from "../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
+import { getBatchUserData } from "../firebase/batchUserData";
 
 /**
  * useHomeRecentActivity - A hook that loads recent activity data for the homepage
@@ -272,23 +273,43 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
           console.log(`Sorted followed pages by lastModified, using ${pageDocs.length} pages`);
         }
 
-        // Process each page to get its recent activity
-        const activitiesPromises = pageDocs.map(async (doc) => {
+        // Extract all unique user IDs from page versions for batch fetching
+        const allUserIds = new Set();
+        const pageVersionsMap = new Map();
+
+        // First pass: collect all user IDs and page versions
+        for (const doc of pageDocs) {
           const pageData = { id: doc.id, ...doc.data() };
 
           // Check if the page belongs to a private group and if the user has access
           const hasAccess = await checkPageGroupAccess(pageData);
-          if (!hasAccess) return null;
+          if (!hasAccess) continue;
 
           try {
             // Get the two most recent versions of this page
             const versions = await getPageVersions(pageData.id, 2);
 
-            if (!versions || versions.length === 0) {
-              // No versions found
-              return null;
-            }
+            if (!versions || versions.length === 0) continue;
 
+            pageVersionsMap.set(pageData.id, { pageData, versions });
+
+            // Collect user IDs for batch fetching
+            versions.forEach(version => {
+              if (version.userId) {
+                allUserIds.add(version.userId);
+              }
+            });
+          } catch (err) {
+            console.error("Error processing page versions:", err);
+          }
+        }
+
+        // Batch fetch all user data at once
+        const batchUserData = await getBatchUserData([...allUserIds]);
+
+        // Process each page to get its recent activity
+        const activitiesPromises = Array.from(pageVersionsMap.entries()).map(async ([pageId, { pageData, versions }]) => {
+          try {
             const currentVersion = versions[0];
 
             // Handle newly created pages (only one version)
@@ -298,7 +319,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
                 return null;
               }
 
-              // Get the user who made the edit
+              // Get the user who made the edit from batch data
               let username = null;
               let userId = null;
               let tier = null;
@@ -307,11 +328,11 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
               // Try to get username from the version data first
               if (currentVersion.userId) {
                 userId = currentVersion.userId;
-                // If we have userId, try to fetch username and subscription info from the database
-                const userData = await getUsernameById(currentVersion.userId);
-                username = userData.username;
-                tier = userData.tier;
-                subscriptionStatus = userData.subscriptionStatus;
+                // Get user data from batch fetch
+                const userData = batchUserData[currentVersion.userId];
+                username = userData?.username;
+                tier = userData?.tier;
+                subscriptionStatus = userData?.subscriptionStatus;
               }
 
               // Use page content directly if available, otherwise use version content
@@ -350,7 +371,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
               return null;
             }
 
-            // Get the user who made the edit
+            // Get the user who made the edit from batch data
             let username = null;
             let userId = null;
             let tier = null;
@@ -359,11 +380,11 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
             // Try to get username from the version data first
             if (currentVersion.userId) {
               userId = currentVersion.userId;
-              // If we have userId, try to fetch username and subscription info from the database
-              const userData = await getUsernameById(currentVersion.userId);
-              username = userData.username;
-              tier = userData.tier;
-              subscriptionStatus = userData.subscriptionStatus;
+              // Get user data from batch fetch
+              const userData = batchUserData[currentVersion.userId];
+              username = userData?.username;
+              tier = userData?.tier;
+              subscriptionStatus = userData?.subscriptionStatus;
             }
 
             // Use page content directly if available, otherwise use version content

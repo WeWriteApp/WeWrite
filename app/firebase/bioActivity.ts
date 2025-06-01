@@ -1,19 +1,63 @@
+"use client";
+
 import { db } from "./config";
-import { collection, addDoc, serverTimestamp, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs,
+  type DocumentData,
+  type QuerySnapshot
+} from "firebase/firestore";
 import { rtdb } from "./rtdb";
 import { ref, get } from "firebase/database";
 
+// Type definitions for bio activity operations
+interface BioActivityData {
+  type: string;
+  userId: string;
+  username: string;
+  editorId: string;
+  editorUsername: string;
+  timestamp: any;
+  content: string;
+  previousContent: string;
+  isPublic: boolean;
+}
+
+interface GroupActivityData {
+  type: string;
+  groupId: string;
+  groupName: string;
+  editorId: string;
+  editorUsername: string;
+  timestamp: any;
+  content: string;
+  previousContent: string;
+  isPublic: boolean;
+}
+
 /**
  * Records a bio edit activity in Firestore
- * 
- * @param {string} userId - The ID of the user whose bio was edited
- * @param {string} editorId - The ID of the user who made the edit
- * @param {string} editorUsername - The username of the user who made the edit
- * @param {Object} content - The new content of the bio
- * @param {Object} previousContent - The previous content of the bio
- * @returns {Promise<string>} - The ID of the created activity document
+ *
+ * @param userId - The ID of the user whose bio was edited
+ * @param editorId - The ID of the user who made the edit
+ * @param editorUsername - The username of the user who made the edit
+ * @param content - The new content of the bio
+ * @param previousContent - The previous content of the bio
+ * @returns The ID of the created activity document
  */
-export const recordBioEditActivity = async (userId, editorId, editorUsername, content, previousContent) => {
+export const recordBioEditActivity = async (
+  userId: string,
+  editorId: string,
+  editorUsername: string,
+  content: any,
+  previousContent: any
+): Promise<string | null> => {
   try {
     // Get user data to include username
     const userRef = ref(rtdb, `users/${userId}`);
@@ -28,7 +72,7 @@ export const recordBioEditActivity = async (userId, editorId, editorUsername, co
     const username = userData.username || "Unknown";
     
     // Create activity document
-    const activityData = {
+    const activityData: BioActivityData = {
       type: "bio_edit",
       userId: userId,
       username: username,
@@ -51,16 +95,23 @@ export const recordBioEditActivity = async (userId, editorId, editorUsername, co
 
 /**
  * Records a group about page edit activity in Firestore
- * 
- * @param {string} groupId - The ID of the group whose about page was edited
- * @param {string} editorId - The ID of the user who made the edit
- * @param {string} editorUsername - The username of the user who made the edit
- * @param {Object} content - The new content of the about page
- * @param {Object} previousContent - The previous content of the about page
- * @param {boolean} isPublic - Whether the group is public
- * @returns {Promise<string>} - The ID of the created activity document
+ *
+ * @param groupId - The ID of the group whose about page was edited
+ * @param editorId - The ID of the user who made the edit
+ * @param editorUsername - The username of the user who made the edit
+ * @param content - The new content of the about page
+ * @param previousContent - The previous content of the about page
+ * @param isPublic - Whether the group is public
+ * @returns The ID of the created activity document
  */
-export const recordGroupAboutEditActivity = async (groupId, editorId, editorUsername, content, previousContent, isPublic) => {
+export const recordGroupAboutEditActivity = async (
+  groupId: string,
+  editorId: string,
+  editorUsername: string,
+  content: any,
+  previousContent: any,
+  isPublic: boolean
+): Promise<string | null> => {
   try {
     // Get group data to include name
     const groupRef = ref(rtdb, `groups/${groupId}`);
@@ -75,7 +126,7 @@ export const recordGroupAboutEditActivity = async (groupId, editorId, editorUser
     const groupName = groupData.name || "Unknown Group";
     
     // Create activity document
-    const activityData = {
+    const activityData: GroupActivityData = {
       type: "group_about_edit",
       groupId: groupId,
       groupName: groupName,
@@ -96,14 +147,33 @@ export const recordGroupAboutEditActivity = async (groupId, editorId, editorUser
   }
 };
 
+// Return type for getBioAndAboutActivities
+interface ProcessedActivityData {
+  id: string;
+  type: string;
+  userId?: string;
+  username?: string;
+  groupId?: string;
+  groupName?: string;
+  editorId: string;
+  editorUsername: string;
+  timestamp: Date;
+  content: any;
+  previousContent: any;
+  isPublic: boolean;
+}
+
 /**
  * Gets recent bio and about page edit activities
- * 
- * @param {number} limitCount - Maximum number of activities to return
- * @param {string} currentUserId - The ID of the current user (for privacy filtering)
- * @returns {Promise<Array>} - Array of activity objects
+ *
+ * @param limitCount - Maximum number of activities to return
+ * @param currentUserId - The ID of the current user (for privacy filtering)
+ * @returns Array of activity objects
  */
-export const getBioAndAboutActivities = async (limitCount = 10, currentUserId = null) => {
+export const getBioAndAboutActivities = async (
+  limitCount: number = 10,
+  currentUserId: string | null = null
+): Promise<ProcessedActivityData[]> => {
   try {
     // Query for public bio and about page edits
     const activitiesQuery = query(
@@ -114,14 +184,14 @@ export const getBioAndAboutActivities = async (limitCount = 10, currentUserId = 
       limit(limitCount)
     );
     
-    const activitiesSnapshot = await getDocs(activitiesQuery);
-    
+    const activitiesSnapshot: QuerySnapshot<DocumentData> = await getDocs(activitiesQuery);
+
     if (activitiesSnapshot.empty) {
       return [];
     }
-    
+
     // Process activities
-    const activities = activitiesSnapshot.docs.map(doc => {
+    const activities: ProcessedActivityData[] = activitiesSnapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,

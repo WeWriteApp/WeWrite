@@ -12,7 +12,7 @@ import {
 
 interface PageMenuProps {
   onModeChange: (mode: 'dense' | 'normal') => void;
-  currentMode: 'dense' | "normal';
+  currentMode: 'dense' | 'normal';
 }
 
 export function PageMenu({ onModeChange, currentMode }: PageMenuProps) {

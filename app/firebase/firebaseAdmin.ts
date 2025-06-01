@@ -1,9 +1,32 @@
 import * as admin from 'firebase-admin';
+import type { App } from 'firebase-admin/app';
+import type { ServiceAccount } from 'firebase-admin';
+
+// Type definitions for Firebase Admin operations
+interface CustomServiceAccount {
+  type: string;
+  project_id: string;
+  private_key_id: string;
+  private_key: string;
+  client_email: string;
+  client_id: string;
+  auth_uri: string;
+  token_uri: string;
+  auth_provider_x509_cert_url: string;
+  client_x509_cert_url: string;
+}
+
+interface EnvironmentCheck {
+  hasProjectId: boolean;
+  hasPrivateKey: boolean;
+  hasClientEmail: boolean;
+  hasDbUrl: boolean;
+}
 
 // Singleton pattern to ensure we only initialize the app once
-let firebaseAdmin;
+let firebaseAdmin: typeof admin | null = null;
 
-export function getFirebaseAdmin() {
+export function getFirebaseAdmin(): typeof admin | null {
   if (firebaseAdmin) {
     return firebaseAdmin;
   }
@@ -20,7 +43,7 @@ export function getFirebaseAdmin() {
       // For development environment, use a service account or default credentials
       if (process.env.NODE_ENV === 'development') {
         try {
-          const serviceAccount = {
+          const serviceAccount: CustomServiceAccount = {
             type: 'service_account',
             project_id: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-ccd82',
             private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID || 'dev-key-id',
@@ -36,10 +59,10 @@ export function getFirebaseAdmin() {
           };
 
           admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
+            credential: admin.credential.cert(serviceAccount as ServiceAccount),
             databaseURL: process.env.FIREBASE_DATABASE_URL || process.env.NEXT_PUBLIC_FIREBASE_DB_URL || "https://wewrite-ccd82-default-rtdb.firebaseio.com"
           });
-        } catch (e) {
+        } catch (e: any) {
           console.warn('Using fallback Firebase Admin initialization for development:', e.message);
           admin.initializeApp({
             projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-ccd82'
@@ -49,15 +72,16 @@ export function getFirebaseAdmin() {
         // Production initialization with proper credentials
         try {
           // Log environment variables (without sensitive data)
-          console.log('Firebase Admin initialization - Environment check:', {
+          const envCheck: EnvironmentCheck = {
             hasProjectId: !!process.env.FIREBASE_PROJECT_ID || !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
             hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
             hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
             hasDbUrl: !!process.env.FIREBASE_DATABASE_URL || !!process.env.NEXT_PUBLIC_FIREBASE_DB_URL
-          });
+          };
+          console.log('Firebase Admin initialization - Environment check:', envCheck);
 
           // Create service account with fallbacks for different environment variable names
-          const serviceAccount = {
+          const serviceAccount: CustomServiceAccount = {
             type: 'service_account',
             project_id: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-ccd82',
             private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID || 'key-id',
@@ -87,12 +111,12 @@ export function getFirebaseAdmin() {
                              `https://${serviceAccount.project_id}-default-rtdb.firebaseio.com`;
 
           admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
+            credential: admin.credential.cert(serviceAccount as ServiceAccount),
             databaseURL: databaseURL
           });
 
           console.log(`Firebase Admin initialized successfully with project: ${serviceAccount.project_id}`);
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error initializing Firebase Admin with service account:', error);
 
           // Fallback initialization for Vercel preview environments
@@ -106,7 +130,7 @@ export function getFirebaseAdmin() {
 
     firebaseAdmin = admin;
     return firebaseAdmin;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error initializing Firebase Admin:", error);
     throw new Error("Failed to initialize Firebase Admin");
   }

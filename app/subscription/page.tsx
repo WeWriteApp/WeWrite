@@ -99,7 +99,7 @@ export default function SubscriptionPage() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [cancelLoading, setCancelLoading] = useState<boolean>(false);
   // Removed unused state
-  const [subscriptionHistory, setSubscriptionHistory] = useState<any[]>([]);
+  const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistoryEntry[]>([]);
   const [customAmountModalOpen, setCustomAmountModalOpen] = useState<boolean>(false);
   const carouselRef = useRef<HTMLDivElement>(null);
 
@@ -116,10 +116,20 @@ export default function SubscriptionPage() {
     status: string;
     amount: number;
     stripeSubscriptionId?: string;
+    stripeCustomerId?: string;
     createdAt?: string;
     billingCycleStart?: string;
     canceledAt?: string;
     [key: string]: any;
+  }
+
+  // Define subscription history entry type
+  interface SubscriptionHistoryEntry {
+    id: string;
+    date: string;
+    amount: number;
+    status: string;
+    description: string;
   }
 
   // Fetch subscription history function
@@ -127,7 +137,7 @@ export default function SubscriptionPage() {
     try {
       // If we have a subscription, create history entries based on it
       if (currentSubscription) {
-        const history = [];
+        const history: SubscriptionHistoryEntry[] = [];
 
         // Add the initial subscription creation
         if (currentSubscription.createdAt) {
@@ -401,7 +411,7 @@ export default function SubscriptionPage() {
 
         // If we have a client secret, we need to confirm the payment
         if (data.clientSecret) {
-          const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+          const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
           if (!stripe) {
             throw new Error('Failed to load Stripe');
           }
@@ -541,7 +551,7 @@ export default function SubscriptionPage() {
 
       // If we have a client secret, redirect to Stripe for payment
       if (data.clientSecret) {
-        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
         if (!stripe) {
           throw new Error('Failed to load Stripe');
         }
@@ -729,20 +739,6 @@ export default function SubscriptionPage() {
           <div
             ref={carouselRef}
             className="flex gap-4 md:gap-4 md:flex-wrap overflow-x-auto md:overflow-visible pb-4 snap-x snap-mandatory md:snap-none px-6 md:px-6"
-            {...useSwipeable({
-              onSwipedLeft: () => {
-                if (carouselRef.current) {
-                  carouselRef.current.scrollBy({ left: 300, behavior: 'smooth' });
-                }
-              },
-              onSwipedRight: () => {
-                if (carouselRef.current) {
-                  carouselRef.current.scrollBy({ left: -300, behavior: 'smooth' });
-                }
-              },
-              trackMouse: true,
-              trackTouch: true
-            })}
         >
           {supporterTiers.map((tier) => (
             <Card

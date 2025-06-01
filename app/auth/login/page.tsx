@@ -9,7 +9,7 @@ import { AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
-  const action = searchParams.get('action');
+  const action = searchParams?.get('action');
   const isPostingReply = action === 'posting_reply';
 
   return (

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useContext, useRef, useCallback, useMemo } from 'react';
-import { AuthContext } from "../providers/AuthProvider";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useAuth } from "../providers/AuthProvider";
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Share2, Search, X, Pin } from 'lucide-react';
@@ -14,12 +14,22 @@ import { useSearchState } from "../hooks/useSearchState";
 import SearchResultsDisplay from '../components/search/SearchResultsDisplay';
 import PerformanceMonitor from '../components/utils/PerformanceMonitor';
 
+// TypeScript interfaces
+interface IsolatedSearchInputProps {
+  onSearch?: (value: string) => void;
+  onClear?: () => void;
+  onSave?: (value: string) => void;
+  onSubmit?: (value: string) => void;
+  initialValue?: string;
+  autoFocus?: boolean;
+  placeholder?: string;
+}
 
 // Debounce utility function
-function debounce(func, wait, immediate = false) {
-  let timeout;
+function debounce(func: (...args: any[]) => void, wait: number, immediate = false) {
+  let timeout: NodeJS.Timeout | null;
 
-  const debounced = function(...args) {
+  const debounced = function(...args: any[]) {
     const context = this;
 
     const later = function() {
@@ -28,14 +38,14 @@ function debounce(func, wait, immediate = false) {
     };
 
     const callNow = immediate && !timeout;
-    clearTimeout(timeout);
+    if (timeout) clearTimeout(timeout);
     timeout = setTimeout(later, wait);
 
     if (callNow) func.apply(context, args);
   };
 
   debounced.cancel = function() {
-    clearTimeout(timeout);
+    if (timeout) clearTimeout(timeout);
     timeout = null;
   };
 
@@ -45,7 +55,7 @@ function debounce(func, wait, immediate = false) {
 
 
 // Completely isolated search input that doesn't cause parent re-renders
-const IsolatedSearchInput = React.memo(({ onSearch, onClear, onSave, onSubmit, initialValue, autoFocus, placeholder }) => {
+const IsolatedSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, onClear, onSave, onSubmit, initialValue, autoFocus, placeholder }) => {
   const [inputValue, setInputValue] = useState(initialValue || '');
   const searchInputRef = useRef(null);
   const debounceTimeoutRef = useRef(null);
@@ -174,7 +184,7 @@ IsolatedSearchInput.displayName = 'IsolatedSearchInput';
 
 // Memoize the entire SearchPage component to prevent unnecessary re-renders
 const SearchPage = React.memo(() => {
-  const { user, loading: authLoading } = useContext(AuthContext);
+  const { user, loading: authLoading } = useAuth();
 
   // Memoize user data to prevent unnecessary re-renders
   const userId = useMemo(() => user?.uid || null, [user?.uid]);

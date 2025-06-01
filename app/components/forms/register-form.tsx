@@ -4,17 +4,17 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { cn } from "../../lib/utils"
-import { LoadingButton } from "../components/ui/loading-button"
-import { Input } from "../components/ui/input"
-import { Label } from "../components/ui/label"
+import { LoadingButton } from "../ui/loading-button"
+import { Input } from "../ui/input"
+import { Label } from "../ui/label"
 import { useState, useEffect } from "react"
 import { createUser, addUsername, checkUsernameAvailability } from "../../firebase/auth"
 import { Check, X, AlertCircle } from "lucide-react"
 import { debounce } from "lodash"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip"
-import { AuthRedirectOverlay } from "./AuthRedirectOverlay"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
+import { AuthRedirectOverlay } from "../auth/AuthRedirectOverlay"
 // reCAPTCHA functionality removed
-import { Alert, AlertDescription } from "../components/ui/alert"
+import { Alert, AlertDescription } from "../ui/alert"
 
 export function RegisterForm({
   className,

@@ -9,7 +9,7 @@ import { useState } from "react";
 import NotificationDot from "../utils/NotificationDot";
 
 export default function AuthNav() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (

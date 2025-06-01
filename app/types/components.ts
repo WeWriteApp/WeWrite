@@ -3,19 +3,22 @@
  */
 
 import { ReactNode, MouseEvent, KeyboardEvent, ChangeEvent } from 'react';
-import { 
-  User, 
-  Page, 
-  Group, 
-  SlateContent, 
-  ViewMode, 
-  LineMode, 
-  LinkData, 
+import {
+  User,
+  Page,
+  Group,
+  SlateContent,
+  ViewMode,
+  LineMode,
+  LinkData,
   EditorRef,
   Activity,
   Notification,
   SearchResult
 } from './database';
+
+// Re-export types that are used by components
+export type { LinkData, EditorRef } from './database';
 
 // Base component props
 export interface BaseProps {
@@ -219,10 +222,7 @@ export interface ToastProps extends BaseProps {
 export interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, username: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  updateProfile: (data: Partial<User>) => Promise<void>;
+  isAuthenticated: boolean;
 }
 
 export interface ThemeContextType {

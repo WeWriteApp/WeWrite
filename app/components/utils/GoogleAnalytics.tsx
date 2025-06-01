@@ -3,7 +3,7 @@
 import Script from 'next/script';
 import { useEffect, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { getAnalyticsPageTitle } from "../../utils/analytics-page-titles';
+import { getAnalyticsPageTitle } from "../../utils/analytics-page-titles";
 
 // Declare global gtag function
 declare global {
@@ -75,7 +75,7 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
     // setError('Script load failed');
 
     // Instead, just log and continue gracefully
-    console.log('Continuing without Google Analytics due to script loading failure");
+    console.log('Continuing without Google Analytics due to script loading failure');
   };
 
   return (

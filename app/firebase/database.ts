@@ -1,5 +1,6 @@
 import {
   getFirestore,
+  type Firestore,
   addDoc,
   collection,
   doc,
@@ -14,7 +15,12 @@ import {
   limit,
   startAfter,
   writeBatch,
-  Timestamp
+  Timestamp,
+  type DocumentReference,
+  type DocumentSnapshot,
+  type QuerySnapshot,
+  type Unsubscribe,
+  type QueryDocumentSnapshot
 } from "firebase/firestore";
 
 import { app } from "./config";
@@ -27,10 +33,74 @@ import { trackQueryPerformance } from "../utils/queryMonitor";
 import { recordUserActivity } from "./streaks";
 import { createLinkNotification, createAppendNotification } from "./notifications";
 
-export const db = getFirestore(app);
+// Import types
+import type {
+  Page,
+  User,
+  Group,
+  SlateContent,
+  PageVersion,
+  LinkData
+} from "../types/database";
+
+export const db: Firestore = getFirestore(app);
+
+// Type definitions for database operations
+interface PageAccessResult {
+  hasAccess: boolean;
+  error?: string;
+  reason?: string;
+}
+
+type PageData = Page;
+
+interface VersionData {
+  content: string;
+  createdAt: string;
+  userId: string;
+  username?: string;
+  groupId?: string | null;
+}
+
+interface CreatePageData {
+  title?: string;
+  content?: string;
+  isPublic?: boolean;
+  userId: string;
+  username?: string;
+  groupId?: string | null;
+  groupName?: string | null;
+  location?: string | null;
+  fundraisingGoal?: number;
+  isReply?: boolean;
+  replyTo?: string | null;
+  replyToTitle?: string | null;
+  replyToUsername?: string | null;
+}
+
+interface PageUpdateData {
+  content: string;
+  userId: string;
+  username?: string;
+  groupId?: string | null;
+}
+
+interface PageStats {
+  totalPledged: number;
+  pledgeCount: number;
+  views: number;
+  lastModified: string;
+}
+
+interface PageWithLinks {
+  pageData?: PageData | null;
+  versionData?: VersionData | null;
+  links?: LinkData[];
+  error?: string;
+}
 
 // Utility function to check if a user has access to a page
-export const checkPageAccess = async (pageData, userId) => {
+export const checkPageAccess = async (pageData: PageData | null, userId: string | null): Promise<PageAccessResult> => {
   // If page doesn't exist, no one has access
   if (!pageData) {
     return {
@@ -54,7 +124,7 @@ export const checkPageAccess = async (pageData, userId) => {
       const groupSnapshot = await get(groupRef);
 
       if (groupSnapshot.exists()) {
-        const groupData = groupSnapshot.val();
+        const groupData = groupSnapshot.val() as Group;
 
         // If the group is public, public pages are accessible to everyone
         if (groupData.isPublic && pageData.isPublic) {
@@ -123,7 +193,7 @@ export const checkPageAccess = async (pageData, userId) => {
 };
 
 // Utility function to get user's group memberships efficiently
-export const getUserGroupMemberships = async (userId) => {
+export const getUserGroupMemberships = async (userId: string | null): Promise<string[]> => {
   if (!userId) {
     return [];
   }
@@ -145,13 +215,13 @@ export const getUserGroupMemberships = async (userId) => {
 };
 
 // Utility function to get group data for multiple groups efficiently
-export const getGroupsData = async (groupIds) => {
+export const getGroupsData = async (groupIds: string[]): Promise<Record<string, Group>> => {
   if (!groupIds || groupIds.length === 0) {
     return {};
   }
 
   try {
-    const groupsData = {};
+    const groupsData: Record<string, Group> = {};
 
     // Fetch all groups in parallel
     const groupPromises = groupIds.map(async (groupId) => {
@@ -159,7 +229,7 @@ export const getGroupsData = async (groupIds) => {
       const groupSnapshot = await get(groupRef);
 
       if (groupSnapshot.exists()) {
-        groupsData[groupId] = groupSnapshot.val();
+        groupsData[groupId] = groupSnapshot.val() as Group;
       }
     });
 
@@ -171,18 +241,18 @@ export const getGroupsData = async (groupIds) => {
   }
 };
 
-export const createDoc = async (collectionName, data) => {
+export const createDoc = async (collectionName: string, data: any): Promise<string | Error> => {
   try {
     const docRef = await addDoc(collection(db, collectionName), data);
     // return the id of the newly created doc
     return docRef.id;
 
   } catch (e) {
-    return e;
+    return e as Error;
   }
 }
 
-export const createPage = async (data) => {
+export const createPage = async (data: CreatePageData): Promise<string | null> => {
   try {
     console.log('Creating page with data:', { ...data, content: '(content omitted)' });
 
@@ -215,7 +285,8 @@ export const createPage = async (data) => {
           try {
             const userDoc = await getDoc(doc(db, "users", data.userId));
             if (userDoc.exists()) {
-              username = userDoc.data().username;
+              const userData = userDoc.data() as User;
+              username = userData.username;
               console.log('Using username from Firestore:', username);
             }
           } catch (firestoreError) {
@@ -315,30 +386,34 @@ export const createPage = async (data) => {
   }
 }
 
-export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
+export const listenToPageById = (
+  pageId: string,
+  onPageUpdate: (data: PageWithLinks) => void,
+  userId: string | null = null
+): Unsubscribe => {
   // Validate pageId
   if (!pageId) {
     console.error("listenToPageById called with empty pageId");
-    onPageUpdate({ error: "Invalid page ID" });
+    onPageUpdate({ pageData: null, error: "Invalid page ID" });
     return () => {};
   }
 
   console.log(`Setting up listener for page ${pageId} with userId ${userId || 'anonymous'}`);
 
   // Cache for version data to avoid unnecessary reads
-  let cachedVersionData = null;
-  let cachedLinks = null;
+  let cachedVersionData: VersionData | null = null;
+  let cachedLinks: LinkData[] | null = null;
 
   // Get reference to the page document - only select fields we need
   const pageRef = doc(db, "pages", pageId);
 
   // Variables to store unsubscribe functions
-  let unsubscribeVersion = null;
+  let unsubscribeVersion: Unsubscribe | null = null;
 
   // Listen for changes to the page document
   const unsubscribe = onSnapshot(pageRef, async (docSnap) => {
     if (docSnap.exists()) {
-      const pageData = { id: docSnap.id, ...docSnap.data() };
+      const pageData = { id: docSnap.id, ...docSnap.data() } as PageData;
       console.log(`Page data received for ${pageId}:`, {
         isPublic: pageData.isPublic,
         userId: pageData.userId,
@@ -490,7 +565,7 @@ export const listenToPageById = (pageId, onPageUpdate, userId = null) => {
   };
 };
 
-export const getPageById = async (pageId, userId = null) => {
+export const getPageById = async (pageId: string, userId: string | null = null): Promise<PageWithLinks> => {
   return await trackQueryPerformance('getPageById', async () => {
     try {
       // Validate pageId
@@ -515,7 +590,7 @@ export const getPageById = async (pageId, userId = null) => {
       const docSnap = await getDoc(pageRef);
 
       if (docSnap.exists()) {
-        const pageData = { id: docSnap.id, ...docSnap.data() };
+        const pageData = { id: docSnap.id, ...docSnap.data() } as PageData;
 
         // Always allow access to private pages if the user is the owner
         if (!pageData.isPublic && userId && pageData.userId === userId) {
@@ -626,7 +701,7 @@ export const getPageById = async (pageId, userId = null) => {
   }, { pageId, userId });
 };
 
-export const getVersionsByPageId = async (pageId) => {
+export const getVersionsByPageId = async (pageId: string): Promise<PageVersion[] | Error> => {
   try {
     const pageRef = doc(db, "pages", pageId);
     const versionsRef = collection(pageRef, "versions");
@@ -637,16 +712,16 @@ export const getVersionsByPageId = async (pageId) => {
       return {
         id: doc.id,
         ...doc.data()
-      }
+      } as PageVersion;
     });
 
     return versions;
   } catch (e) {
-    return e;
+    return e as Error;
   }
 }
 
-export const getPageVersionById = async (pageId, versionId) => {
+export const getPageVersionById = async (pageId: string, versionId: string): Promise<PageVersion | null> => {
   try {
     if (!pageId || !versionId) {
       console.error("getPageVersionById called with invalid parameters:", { pageId, versionId });
@@ -1108,16 +1183,15 @@ export const setCurrentVersion = async (pageId, versionId) => {
   }
 }
 
-export const setDocData = async (collectionName, docName, data) => {
+export const setDocData = async (collectionName: string, docName: string, data: any): Promise<void | Error> => {
   try {
-    const docRef = await setDoc(doc(db, collectionName, docName), data);
-    return docRef;
+    await setDoc(doc(db, collectionName, docName), data);
   } catch (e) {
-    return e;
+    return e as Error;
   }
 }
 
-export const getDocById = async (collectionName, docId) => {
+export const getDocById = async (collectionName: string, docId: string): Promise<DocumentSnapshot | null> => {
   try {
     const docRef = doc(db, collectionName, docId);
     const docSnap = await getDoc(docRef);
@@ -1129,13 +1203,13 @@ export const getDocById = async (collectionName, docId) => {
   }
 };
 
-export const getCollection = async (collectionName) => {
+export const getCollection = async (collectionName: string): Promise<QuerySnapshot | Error> => {
   try {
     const collectionRef = collection(db, collectionName);
     const collectionSnap = await getDocs(collectionRef);
     return collectionSnap;
   } catch (e) {
-    return e;
+    return e as Error;
   }
 }
 
@@ -1203,16 +1277,16 @@ export const updateDoc = async (collectionName, docName, data) => {
   }
 }
 
-export const removeDoc = async (collectionName, docName) => {
+export const removeDoc = async (collectionName: string, docName: string): Promise<boolean | Error> => {
   try {
     await deleteDoc(doc(db, collectionName, docName));
     return true;
   } catch (e) {
-    return e;
+    return e as Error;
   }
 }
 
-export const deletePage = async (pageId) => {
+export const deletePage = async (pageId: string): Promise<{ success: boolean; error?: string } | Error> => {
   // remove page and the versions subcollection
   try {
     console.log(`Starting deletion process for page: ${pageId}`);

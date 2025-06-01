@@ -1,3 +1,5 @@
+"use client";
+
 import {
   getFirestore,
   collection,
@@ -8,23 +10,66 @@ import {
   getDocs,
   doc,
   getDoc,
-  Timestamp
+  Timestamp,
+  type Firestore,
+  type QueryDocumentSnapshot,
+  type DocumentData,
+  type QuerySnapshot
 } from "firebase/firestore";
 import { app } from "./config";
 import { getBioAndAboutActivities } from "./bioActivity";
+import type { Page, User } from "../types/database";
 // Database imports are used in the commented-out code section
 // Keeping them for when the group membership filtering is re-enabled
 // import { getDatabase, ref, get } from "firebase/database";
 
-const db = getFirestore(app);
+const db: Firestore = getFirestore(app);
+
+// Type definitions for activity operations
+interface ActivityData {
+  pageId: string;
+  pageName: string;
+  userId: string;
+  username: string;
+  timestamp: Date;
+  currentContent: string;
+  previousContent: string;
+  isPublic: boolean;
+  activityType?: string;
+  groupId?: string;
+  groupName?: string;
+}
+
+interface BioActivityData {
+  id: string;
+  type: string;
+  userId?: string;
+  username?: string;
+  groupId?: string;
+  groupName?: string;
+  editorId: string;
+  editorUsername: string;
+  timestamp: Date;
+  content: string;
+  previousContent: string;
+  isPublic: boolean;
+}
+
+interface ActivityResult {
+  activities: ActivityData[];
+  note?: string;
+  error?: string;
+}
+
+type TimestampInput = Timestamp | Date | string | number | { seconds: number; nanoseconds: number } | null | undefined;
 
 /**
  * Helper function to safely convert various timestamp formats to a JavaScript Date
  *
- * @param {any} timestamp - The timestamp to convert (could be Firestore Timestamp, seconds, milliseconds, or Date)
- * @returns {Date} - JavaScript Date object
+ * @param timestamp - The timestamp to convert (could be Firestore Timestamp, seconds, milliseconds, or Date)
+ * @returns JavaScript Date object
  */
-function convertToDate(timestamp) {
+function convertToDate(timestamp: TimestampInput): Date {
   if (!timestamp) {
     return new Date(); // Default to current time if no timestamp provided
   }
@@ -36,12 +81,12 @@ function convertToDate(timestamp) {
     }
 
     // If it's a Firestore Timestamp object with toDate method
-    if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+    if (typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp && typeof timestamp.toDate === 'function') {
       return timestamp.toDate();
     }
 
     // If it's a Firestore Timestamp-like object with seconds and nanoseconds
-    if (timestamp.seconds !== undefined && timestamp.nanoseconds !== undefined) {
+    if (typeof timestamp === 'object' && timestamp !== null && 'seconds' in timestamp && 'nanoseconds' in timestamp) {
       return new Timestamp(timestamp.seconds, timestamp.nanoseconds).toDate();
     }
 
@@ -71,11 +116,14 @@ function convertToDate(timestamp) {
 /**
  * Gets recent activity data from Firestore
  *
- * @param {number} limitCount - Maximum number of activities to return
- * @param {string} currentUserId - The ID of the current user (for privacy filtering)
- * @returns {Promise<Object>} - Object containing activities array and error if any
+ * @param limitCount - Maximum number of activities to return
+ * @param currentUserId - The ID of the current user (for privacy filtering)
+ * @returns Object containing activities array and error if any
  */
-export const getRecentActivity = async (limitCount = 30, currentUserId = null) => {
+export const getRecentActivity = async (
+  limitCount: number = 30,
+  currentUserId: string | null = null
+): Promise<ActivityResult> => {
   try {
     console.log('getRecentActivity: Starting with limit', limitCount);
 
@@ -88,7 +136,7 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
       firestoreLimit(limitCount * 2)
     );
 
-    let pagesSnapshot;
+    let pagesSnapshot: QuerySnapshot<DocumentData>;
     try {
       pagesSnapshot = await getDocs(pagesQuery);
     } catch (queryError) {
@@ -112,8 +160,8 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
     console.log(`getRecentActivity: Found ${pagesSnapshot.size} pages`);
 
     // Process each page to get its activity data
-    const activitiesPromises = pagesSnapshot.docs.map(async (pageDoc) => {
-      const pageData = pageDoc.data();
+    const activitiesPromises = pagesSnapshot.docs.map(async (pageDoc: QueryDocumentSnapshot<DocumentData>): Promise<ActivityData | null> => {
+      const pageData = pageDoc.data() as Page;
       const pageId = pageDoc.id;
 
       console.log(`Processing page ${pageId} with title "${pageData.title || 'Untitled'}"`);
@@ -148,9 +196,9 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
               pageId,
               pageName: pageData.title || "Untitled",
               userId: pageData.userId,
-              username: username,
+              username: username || "Unknown",
               timestamp: convertToDate(pageData.lastModified),
-              currentContent: pageData.content,
+              currentContent: typeof pageData.content === 'string' ? pageData.content : JSON.stringify(pageData.content),
               previousContent: "",
               isPublic: pageData.isPublic
             };
@@ -167,9 +215,9 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
             pageId,
             pageName: pageData.title || "Untitled",
             userId: pageData.userId,
-            username: username,
+            username: username || "Unknown",
             timestamp: convertToDate(historyData.timestamp),
-            currentContent: pageData.content,
+            currentContent: typeof pageData.content === 'string' ? pageData.content : JSON.stringify(pageData.content),
             previousContent: historyData.content || "",
             isPublic: pageData.isPublic
           };
@@ -187,9 +235,9 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
             pageId,
             pageName: pageData.title || "Untitled",
             userId: pageData.userId,
-            username: username,
+            username: username || "Unknown",
             timestamp: convertToDate(pageData.lastModified),
-            currentContent: pageData.content,
+            currentContent: typeof pageData.content === 'string' ? pageData.content : JSON.stringify(pageData.content),
             previousContent: "",
             isPublic: pageData.isPublic
           };
@@ -240,12 +288,12 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
     */
 
     // Get bio and about page edit activities
-    let bioAndAboutActivities = [];
+    let bioAndAboutActivities: ActivityData[] = [];
     try {
-      bioAndAboutActivities = await getBioAndAboutActivities(limitCount, currentUserId);
+      const rawBioActivities: BioActivityData[] = await getBioAndAboutActivities(limitCount, currentUserId);
 
       // Transform bio and about activities to match page activity format
-      bioAndAboutActivities = bioAndAboutActivities.map(activity => {
+      bioAndAboutActivities = rawBioActivities.map((activity: BioActivityData): ActivityData | null => {
         if (activity.type === "bio_edit") {
           return {
             pageId: `user-bio-${activity.userId}`,
@@ -274,7 +322,7 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
           };
         }
         return null;
-      }).filter(activity => activity !== null);
+      }).filter((activity): activity is ActivityData => activity !== null);
     } catch (error) {
       console.error("Error fetching bio and about activities:", error);
     }
@@ -283,8 +331,8 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
     const allActivities = [...validActivities, ...bioAndAboutActivities]
       .sort((a, b) => {
         // Sort by timestamp in descending order (newest first)
-        const timeA = a.timestamp || 0;
-        const timeB = b.timestamp || 0;
+        const timeA = a.timestamp.getTime();
+        const timeB = b.timestamp.getTime();
         return timeB - timeA;
       })
       .slice(0, limitCount);
@@ -307,17 +355,17 @@ export const getRecentActivity = async (limitCount = 30, currentUserId = null) =
 /**
  * Helper function to get username from Firestore
  *
- * @param {string} userId - User ID to get username for
- * @returns {Promise<string>} - Username or null
+ * @param userId - User ID to get username for
+ * @returns Username or null
  */
-async function getUsernameById(userId) {
+async function getUsernameById(userId: string): Promise<string | null> {
   try {
     if (!userId) return null;
 
     // Try to get from Firestore
     const userDoc = await getDoc(doc(db, "users", userId));
     if (userDoc.exists()) {
-      const userData = userDoc.data();
+      const userData = userDoc.data() as User;
       return userData.username || userData.displayName || "Missing username";
     }
 
@@ -331,9 +379,10 @@ async function getUsernameById(userId) {
 /**
  * Generate empty activity data when the database is unavailable
  *
- * @returns {Array} - Empty array of activity objects
+ * @param limitCount - Maximum number of activities to return (unused but kept for compatibility)
+ * @returns Empty array of activity objects
  */
-export function getSampleActivities() {
+export function getSampleActivities(limitCount?: number): ActivityData[] {
   // Return an empty array instead of sample activities
   return [];
 }

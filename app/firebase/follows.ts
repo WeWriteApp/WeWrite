@@ -13,17 +13,66 @@ import {
   query,
   where,
   getDocs,
-  serverTimestamp
+  serverTimestamp,
+  type Firestore,
+  type DocumentData,
+  type DocumentSnapshot,
+  type QuerySnapshot,
+  type QueryDocumentSnapshot
 } from 'firebase/firestore';
+import type { Page, User } from '../types/database';
+
+// Type definitions for follow operations
+interface UserFollowsData {
+  userId: string;
+  followedPages: string[];
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+interface UserFollowingData {
+  userId: string;
+  following: string[];
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+interface UserFollowersData {
+  userId: string;
+  followers: string[];
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+interface PageFollowerData {
+  pageId: string;
+  userId: string;
+  followedAt?: any;
+  deleted?: boolean;
+  deletedAt?: any;
+}
+
+interface FollowRecordData {
+  followerId: string;
+  followedId: string;
+  followedAt?: any;
+  deleted?: boolean;
+  deletedAt?: any;
+}
+
+interface UnfollowResult {
+  success: boolean;
+  count: number;
+}
 
 /**
  * Follow a page
  *
- * @param {string} userId - The ID of the user following the page
- * @param {string} pageId - The ID of the page to follow
- * @returns {Promise<void>}
+ * @param userId - The ID of the user following the page
+ * @param pageId - The ID of the page to follow
+ * @returns Promise that resolves to true if successful
  */
-export const followPage = async (userId, pageId) => {
+export const followPage = async (userId: string, pageId: string): Promise<boolean> => {
   if (!userId || !pageId) {
     throw new Error('User ID and Page ID are required');
   }
@@ -54,7 +103,7 @@ export const followPage = async (userId, pageId) => {
     const pageDoc = await getDoc(pageRef);
 
     if (pageDoc.exists()) {
-      const pageData = pageDoc.data();
+      const pageData = pageDoc.data() as Page;
 
       // Check if followerCount field exists
       if (typeof pageData.followerCount === 'undefined') {
@@ -91,11 +140,11 @@ export const followPage = async (userId, pageId) => {
 /**
  * Unfollow a page
  *
- * @param {string} userId - The ID of the user unfollowing the page
- * @param {string} pageId - The ID of the page to unfollow
- * @returns {Promise<void>}
+ * @param userId - The ID of the user unfollowing the page
+ * @param pageId - The ID of the page to unfollow
+ * @returns Promise that resolves to true if successful
  */
-export const unfollowPage = async (userId, pageId) => {
+export const unfollowPage = async (userId: string, pageId: string): Promise<boolean> => {
   if (!userId || !pageId) {
     throw new Error('User ID and Page ID are required');
   }
@@ -126,7 +175,7 @@ export const unfollowPage = async (userId, pageId) => {
     const pageDoc = await getDoc(pageRef);
 
     if (pageDoc.exists()) {
-      const pageData = pageDoc.data();
+      const pageData = pageDoc.data() as Page;
 
       // Check if followerCount field exists
       if (typeof pageData.followerCount === 'undefined' || pageData.followerCount <= 0) {
@@ -182,11 +231,11 @@ export const unfollowPage = async (userId, pageId) => {
 /**
  * Check if a user is following a page
  *
- * @param {string} userId - The ID of the user
- * @param {string} pageId - The ID of the page
- * @returns {Promise<boolean>} - True if the user is following the page
+ * @param userId - The ID of the user
+ * @param pageId - The ID of the page
+ * @returns True if the user is following the page
  */
-export const isFollowingPage = async (userId, pageId) => {
+export const isFollowingPage = async (userId: string, pageId: string): Promise<boolean> => {
   if (!userId || !pageId) {
     return false;
   }
@@ -196,7 +245,7 @@ export const isFollowingPage = async (userId, pageId) => {
     const userFollowsDoc = await getDoc(userFollowsRef);
 
     if (userFollowsDoc.exists()) {
-      const data = userFollowsDoc.data();
+      const data = userFollowsDoc.data() as UserFollowsData;
       return data.followedPages && data.followedPages.includes(pageId);
     }
 
@@ -210,10 +259,10 @@ export const isFollowingPage = async (userId, pageId) => {
 /**
  * Get all pages followed by a user
  *
- * @param {string} userId - The ID of the user
- * @returns {Promise<Array<string>>} - Array of page IDs
+ * @param userId - The ID of the user
+ * @returns Array of page IDs
  */
-export const getFollowedPages = async (userId) => {
+export const getFollowedPages = async (userId: string): Promise<string[]> => {
   if (!userId) {
     return [];
   }
@@ -223,7 +272,7 @@ export const getFollowedPages = async (userId) => {
     const userFollowsDoc = await getDoc(userFollowsRef);
 
     if (userFollowsDoc.exists()) {
-      const data = userFollowsDoc.data();
+      const data = userFollowsDoc.data() as UserFollowsData;
       return data.followedPages || [];
     }
 
@@ -237,10 +286,10 @@ export const getFollowedPages = async (userId) => {
 /**
  * Get the follower count for a page
  *
- * @param {string} pageId - The ID of the page
- * @returns {Promise<number>} - The number of followers
+ * @param pageId - The ID of the page
+ * @returns The number of followers
  */
-export const getPageFollowerCount = async (pageId) => {
+export const getPageFollowerCount = async (pageId: string): Promise<number> => {
   if (!pageId) {
     return 0;
   }
@@ -250,7 +299,7 @@ export const getPageFollowerCount = async (pageId) => {
     const pageDoc = await getDoc(pageRef);
 
     if (pageDoc.exists()) {
-      const data = pageDoc.data();
+      const data = pageDoc.data() as Page;
       return data.followerCount || 0;
     }
 
@@ -264,10 +313,10 @@ export const getPageFollowerCount = async (pageId) => {
 /**
  * Get the count of pages a user follows
  *
- * @param {string} userId - The ID of the user
- * @returns {Promise<number>} - The number of pages the user follows
+ * @param userId - The ID of the user
+ * @returns The number of pages the user follows
  */
-export const getUserFollowingCount = async (userId) => {
+export const getUserFollowingCount = async (userId: string): Promise<number> => {
   if (!userId) {
     return 0;
   }
@@ -277,7 +326,7 @@ export const getUserFollowingCount = async (userId) => {
     const userFollowsDoc = await getDoc(userFollowsRef);
 
     if (userFollowsDoc.exists()) {
-      const data = userFollowsDoc.data();
+      const data = userFollowsDoc.data() as UserFollowsData;
       return data.followedPages?.length || 0;
     }
 
@@ -292,10 +341,10 @@ export const getUserFollowingCount = async (userId) => {
  * Get the count of followers for a user
  * This counts unique users who follow any page created by this user
  *
- * @param {string} userId - The ID of the user
- * @returns {Promise<number>} - The number of unique followers
+ * @param userId - The ID of the user
+ * @returns The number of unique followers
  */
-export const getUserFollowerCount = async (userId) => {
+export const getUserFollowerCount = async (userId: string): Promise<number> => {
   if (!userId) {
     return 0;
   }
@@ -339,7 +388,7 @@ export const getUserFollowerCount = async (userId) => {
 
         // Add each unique follower to the set, filtering out deleted ones in memory
         followersSnapshot.forEach(doc => {
-          const data = doc.data();
+          const data = doc.data() as PageFollowerData;
           // Only count followers that aren't deleted and aren't self-follows
           if (data.userId && data.userId !== userId && data.deleted !== true) {
             uniqueFollowers.add(data.userId);
@@ -362,10 +411,10 @@ export const getUserFollowerCount = async (userId) => {
  * Unfollow all pages by a specific user
  * This is useful for removing self-follows
  *
- * @param {string} userId - The ID of the user
- * @returns {Promise<{success: boolean, count: number}>} - Result with success status and count of unfollowed pages
+ * @param userId - The ID of the user
+ * @returns Result with success status and count of unfollowed pages
  */
-export const unfollowAllPagesByUser = async (userId) => {
+export const unfollowAllPagesByUser = async (userId: string): Promise<UnfollowResult> => {
   if (!userId) {
     return { success: false, count: 0 };
   }
@@ -408,11 +457,11 @@ export const unfollowAllPagesByUser = async (userId) => {
 /**
  * Follow a user
  *
- * @param {string} followerId - The ID of the user doing the following
- * @param {string} followedId - The ID of the user being followed
- * @returns {Promise<boolean>} - Whether the operation was successful
+ * @param followerId - The ID of the user doing the following
+ * @param followedId - The ID of the user being followed
+ * @returns Whether the operation was successful
  */
-export const followUser = async (followerId, followedId) => {
+export const followUser = async (followerId: string, followedId: string): Promise<boolean> => {
   if (!followerId || !followedId) {
     throw new Error('Follower ID and Followed ID are required');
   }
@@ -467,7 +516,7 @@ export const followUser = async (followerId, followedId) => {
     const followedUserDoc = await getDoc(followedUserRef);
 
     if (followedUserDoc.exists()) {
-      const userData = followedUserDoc.data();
+      const userData = followedUserDoc.data() as User;
 
       // Check if followerCount field exists
       if (typeof userData.followerCount === 'undefined') {
@@ -501,11 +550,11 @@ export const followUser = async (followerId, followedId) => {
 /**
  * Unfollow a user
  *
- * @param {string} followerId - The ID of the user doing the unfollowing
- * @param {string} followedId - The ID of the user being unfollowed
- * @returns {Promise<boolean>} - Whether the operation was successful
+ * @param followerId - The ID of the user doing the unfollowing
+ * @param followedId - The ID of the user being unfollowed
+ * @returns Whether the operation was successful
  */
-export const unfollowUser = async (followerId, followedId) => {
+export const unfollowUser = async (followerId: string, followedId: string): Promise<boolean> => {
   if (!followerId || !followedId) {
     throw new Error('Follower ID and Followed ID are required');
   }
@@ -538,7 +587,7 @@ export const unfollowUser = async (followerId, followedId) => {
     const followedUserDoc = await getDoc(followedUserRef);
 
     if (followedUserDoc.exists()) {
-      const userData = followedUserDoc.data();
+      const userData = followedUserDoc.data() as User;
 
       // Check if followerCount field exists
       if (typeof userData.followerCount === 'undefined' || userData.followerCount <= 0) {
@@ -575,10 +624,10 @@ export const unfollowUser = async (followerId, followedId) => {
 /**
  * Get users that a user follows
  *
- * @param {string} userId - The ID of the user
- * @returns {Promise<string[]>} - Array of user IDs that the user follows
+ * @param userId - The ID of the user
+ * @returns Array of user IDs that the user follows
  */
-export const getFollowedUsers = async (userId) => {
+export const getFollowedUsers = async (userId: string): Promise<string[]> => {
   if (!userId) {
     return [];
   }
@@ -588,7 +637,7 @@ export const getFollowedUsers = async (userId) => {
     const userFollowingDoc = await getDoc(userFollowingRef);
 
     if (userFollowingDoc.exists()) {
-      const data = userFollowingDoc.data();
+      const data = userFollowingDoc.data() as UserFollowingData;
       return data.following || [];
     }
 
@@ -602,10 +651,10 @@ export const getFollowedUsers = async (userId) => {
 /**
  * Get users that follow a user
  *
- * @param {string} userId - The ID of the user
- * @returns {Promise<string[]>} - Array of user IDs that follow the user
+ * @param userId - The ID of the user
+ * @returns Array of user IDs that follow the user
  */
-export const getFollowers = async (userId) => {
+export const getFollowers = async (userId: string): Promise<string[]> => {
   if (!userId) {
     return [];
   }
@@ -615,7 +664,7 @@ export const getFollowers = async (userId) => {
     const userFollowersDoc = await getDoc(userFollowersRef);
 
     if (userFollowersDoc.exists()) {
-      const data = userFollowersDoc.data();
+      const data = userFollowersDoc.data() as UserFollowersData;
       return data.followers || [];
     }
 
@@ -629,11 +678,11 @@ export const getFollowers = async (userId) => {
 /**
  * Check if a user follows another user
  *
- * @param {string} followerId - The ID of the potential follower
- * @param {string} followedId - The ID of the potentially followed user
- * @returns {Promise<boolean>} - Whether the follower follows the followed user
+ * @param followerId - The ID of the potential follower
+ * @param followedId - The ID of the potentially followed user
+ * @returns Whether the follower follows the followed user
  */
-export const checkIfFollowing = async (followerId, followedId) => {
+export const checkIfFollowing = async (followerId: string, followedId: string): Promise<boolean> => {
   if (!followerId || !followedId) {
     return false;
   }
@@ -643,7 +692,7 @@ export const checkIfFollowing = async (followerId, followedId) => {
     const userFollowingDoc = await getDoc(userFollowingRef);
 
     if (userFollowingDoc.exists()) {
-      const data = userFollowingDoc.data();
+      const data = userFollowingDoc.data() as UserFollowingData;
       return data.following && data.following.includes(followedId);
     }
 

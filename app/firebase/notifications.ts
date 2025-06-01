@@ -15,23 +15,38 @@ import {
   startAfter,
   serverTimestamp,
   increment,
-  writeBatch
+  writeBatch,
+  type DocumentSnapshot,
+  type QueryDocumentSnapshot,
+  type WriteBatch
 } from 'firebase/firestore';
+import type { Notification } from '../types/database';
+
+// Type definitions for notification operations
+interface NotificationData {
+  userId: string;
+  type: string;
+  sourceUserId?: string;
+  targetPageId?: string;
+  targetPageTitle?: string;
+  sourcePageId?: string;
+  sourcePageTitle?: string;
+  read?: boolean;
+  createdAt?: any;
+}
+
+interface NotificationResult {
+  notifications: Notification[];
+  lastDoc?: QueryDocumentSnapshot;
+}
 
 /**
  * Create a notification
  *
- * @param {Object} notificationData - The notification data
- * @param {string} notificationData.userId - The ID of the user receiving the notification
- * @param {string} notificationData.type - The type of notification (follow, link, etc.)
- * @param {string} notificationData.sourceUserId - The ID of the user who triggered the notification
- * @param {string} notificationData.targetPageId - The ID of the related page (if applicable)
- * @param {string} notificationData.targetPageTitle - The title of the related page (if applicable)
- * @param {string} notificationData.sourcePageId - The ID of the source page (for link notifications)
- * @param {string} notificationData.sourcePageTitle - The title of the source page (for link notifications)
- * @returns {Promise<string>} - The ID of the created notification
+ * @param notificationData - The notification data
+ * @returns The ID of the created notification
  */
-export const createNotification = async (notificationData) => {
+export const createNotification = async (notificationData: NotificationData): Promise<string> => {
   try {
     // Create a reference to the notifications collection for the user
     const notificationsRef = collection(db, 'users', notificationData.userId, 'notifications');
@@ -62,12 +77,16 @@ export const createNotification = async (notificationData) => {
 /**
  * Get notifications for a user
  *
- * @param {string} userId - The ID of the user
- * @param {number} pageSize - The number of notifications to fetch
- * @param {Object} lastDoc - The last document from the previous batch (for pagination)
- * @returns {Promise<Object>} - The notifications and the last document
+ * @param userId - The ID of the user
+ * @param pageSize - The number of notifications to fetch
+ * @param lastDoc - The last document from the previous batch (for pagination)
+ * @returns The notifications and the last document
  */
-export const getNotifications = async (userId, pageSize = 20, lastDoc = null) => {
+export const getNotifications = async (
+  userId: string,
+  pageSize: number = 20,
+  lastDoc: QueryDocumentSnapshot | null = null
+): Promise<NotificationResult> => {
   try {
     // Create a reference to the notifications collection for the user
     const notificationsRef = collection(db, 'users', userId, 'notifications');
@@ -93,13 +112,13 @@ export const getNotifications = async (userId, pageSize = 20, lastDoc = null) =>
     const snapshot = await getDocs(notificationsQuery);
 
     // Extract the notifications
-    const notifications = [];
+    const notifications: Notification[] = [];
     snapshot.forEach(doc => {
       notifications.push({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate() || new Date()
-      });
+      } as Notification);
     });
 
     // Get the last document for pagination
@@ -118,11 +137,11 @@ export const getNotifications = async (userId, pageSize = 20, lastDoc = null) =>
 /**
  * Mark a notification as read
  *
- * @param {string} userId - The ID of the user
- * @param {string} notificationId - The ID of the notification
- * @returns {Promise<boolean>} - True if successful
+ * @param userId - The ID of the user
+ * @param notificationId - The ID of the notification
+ * @returns True if successful
  */
-export const markNotificationAsRead = async (userId, notificationId) => {
+export const markNotificationAsRead = async (userId: string, notificationId: string): Promise<boolean> => {
   try {
     // Create a reference to the notification
     const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
@@ -136,7 +155,7 @@ export const markNotificationAsRead = async (userId, notificationId) => {
     const notificationData = notificationDoc.data();
 
     // If the notification is already read, don't decrement the counter
-    if (!notificationData.read) {
+    if (!notificationData?.read) {
       // Update the notification
       await updateDoc(notificationRef, {
         read: true
@@ -163,7 +182,7 @@ export const markNotificationAsRead = async (userId, notificationId) => {
  * @param {string} notificationId - The ID of the notification
  * @returns {Promise<boolean>} - True if successful
  */
-export const markNotificationAsUnread = async (userId, notificationId) => {
+export const markNotificationAsUnread = async (userId: string, notificationId: string): Promise<boolean> => {
   try {
     // Create a reference to the notification
     const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
@@ -177,7 +196,7 @@ export const markNotificationAsUnread = async (userId, notificationId) => {
     const notificationData = notificationDoc.data();
 
     // If the notification is already unread, don't increment the counter
-    if (notificationData.read) {
+    if (notificationData?.read) {
       // Update the notification
       await updateDoc(notificationRef, {
         read: false
@@ -203,7 +222,7 @@ export const markNotificationAsUnread = async (userId, notificationId) => {
  * @param {string} userId - The ID of the user
  * @returns {Promise<boolean>} - True if successful
  */
-export const markAllNotificationsAsRead = async (userId) => {
+export const markAllNotificationsAsRead = async (userId: string): Promise<boolean> => {
   try {
     console.log('markAllNotificationsAsRead called for userId:', userId);
 
@@ -260,7 +279,7 @@ export const markAllNotificationsAsRead = async (userId) => {
  * @param {string} userId - The ID of the user
  * @returns {Promise<number>} - The number of unread notifications
  */
-export const getUnreadNotificationsCount = async (userId) => {
+export const getUnreadNotificationsCount = async (userId: string): Promise<number> => {
   try {
     // Get the user document
     const userRef = doc(db, 'users', userId);
@@ -329,7 +348,12 @@ export const fixUnreadNotificationsCount = async (userId) => {
  * @param {string} pageTitle - The title of the page that was followed
  * @returns {Promise<string>} - The ID of the created notification
  */
-export const createFollowNotification = async (targetUserId, sourceUserId, pageId, pageTitle) => {
+export const createFollowNotification = async (
+  targetUserId: string,
+  sourceUserId: string,
+  pageId: string,
+  pageTitle: string
+): Promise<string | null> => {
   // Don't create notifications for self-follows
   if (targetUserId === sourceUserId) {
     return null;
@@ -356,13 +380,13 @@ export const createFollowNotification = async (targetUserId, sourceUserId, pageI
  * @returns {Promise<string>} - The ID of the created notification
  */
 export const createLinkNotification = async (
-  targetUserId,
-  sourceUserId,
-  targetPageId,
-  targetPageTitle,
-  sourcePageId,
-  sourcePageTitle
-) => {
+  targetUserId: string,
+  sourceUserId: string,
+  targetPageId: string,
+  targetPageTitle: string,
+  sourcePageId: string,
+  sourcePageTitle: string
+): Promise<string | null> => {
   // Don't create notifications for self-links
   if (targetUserId === sourceUserId) {
     return null;
@@ -493,7 +517,7 @@ export const deleteNotificationsForPage = async (pageId) => {
           let unreadCount = 0;
 
           // Add deletions to batch
-          for (const [notificationId, notificationDoc] of notificationsToDelete) {
+          for (const [notificationId, notificationDoc] of Array.from(notificationsToDelete)) {
             const notificationData = notificationDoc.data();
 
             // Count unread notifications

@@ -53,6 +53,8 @@ const HomeGroupsSection = dynamic(() => import("./components/groups/HomeGroupsSe
   ssr: false
 });
 
+
+
 const RandomPagesOptimized = dynamic(() => import("./components/features/RandomPagesOptimized"), {
   loading: () => <RandomPagesSkeleton limit={10} />,
   ssr: false
@@ -68,8 +70,8 @@ const DailyNotesSection = dynamic(() => import("./components/daily-notes/DailyNo
  * Displays either the landing page for unauthenticated users or the dashboard for authenticated users
  */
 const Home = React.memo(function Home() {
-  const { user, loading: authLoading } = useContext(AuthContext);
-  const { loading: dataLoading, resetLoading, error, recoveryAttempted } = useContext(DataContext);
+  const { user, loading: authLoading } = useContext(AuthContext) || {};
+  const { loading: dataLoading, resetLoading, error, recoveryAttempted } = useContext(DataContext) || {};
   const router = useRouter();
   const { theme } = useTheme();
   const [showLanding, setShowLanding] = useState<boolean>(true);
@@ -125,7 +127,9 @@ const Home = React.memo(function Home() {
   const handleRetry = useCallback(() => {
     console.log("Home page: Manual retry triggered");
     setLoadingRetryCount(prev => prev + 1);
-    resetLoading();
+    if (resetLoading) {
+      resetLoading();
+    }
   }, [resetLoading]);
 
   // Memoized authentication check to prevent infinite loops
@@ -165,7 +169,7 @@ const Home = React.memo(function Home() {
     return (
       <>
         <LandingPage />
-        <SiteFooter />
+        <SiteFooter className="" />
       </>
     );
   }
@@ -190,7 +194,7 @@ const Home = React.memo(function Home() {
   // Show optimized dashboard for logged-in users
   return (
     <SmartLoader
-      isLoading={isLoading}
+      isLoading={!!isLoading}
       message="Loading your dashboard..."
       timeoutMs={20000} // Increased timeout for stability
       autoRecover={false} // Disabled for stability
@@ -344,9 +348,9 @@ const Home = React.memo(function Home() {
             </LazySection>
           </StickySection>
 
-          <FloatingActionButton href="/new" />
+          <FloatingActionButton href="/new" onClick={() => {}} className="" />
         </main>
-        <SiteFooter />
+        <SiteFooter className="" />
       </Suspense>
     </SmartLoader>
   );

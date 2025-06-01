@@ -1,5 +1,6 @@
 import {
   getFirestore,
+  type Firestore,
   doc,
   getDoc,
   setDoc,
@@ -16,23 +17,49 @@ import {
   endBefore,
   limitToLast,
   startAt,
-  endAt
+  endAt,
+  type DocumentSnapshot,
+  type QuerySnapshot
 } from "firebase/firestore";
 import { app } from "./config";
 
-const db = getFirestore(app);
+const db: Firestore = getFirestore(app);
+
+// Type definitions for page views
+interface PageViewData {
+  pageId: string;
+  date: string;
+  hours: Record<number, number>;
+  totalViews: number;
+  lastUpdated: any; // Firebase Timestamp
+}
+
+interface ViewsLast24Hours {
+  total: number;
+  hourly: number[];
+}
+
+interface TrendingPage {
+  id: string;
+  title: string;
+  userId: string;
+  username: string;
+  views: number;
+  views24h: number;
+  hourlyViews?: number[];
+}
 
 /**
  * Records a page view with hourly granularity
  *
- * @param {string} pageId - The ID of the page being viewed
- * @param {string} userId - The ID of the user viewing the page (optional)
- * @returns {Promise<void>}
+ * @param pageId - The ID of the page being viewed
+ * @param userId - The ID of the user viewing the page (optional)
+ * @returns Promise<void>
  */
 // Keep track of pages we've already recorded views for in this session
-const viewedPages = new Set();
+const viewedPages = new Set<string>();
 
-export const recordPageView = async (pageId, userId = null) => {
+export const recordPageView = async (pageId: string, userId: string | null = null): Promise<void> => {
   try {
     if (!pageId) return;
 
@@ -56,7 +83,7 @@ export const recordPageView = async (pageId, userId = null) => {
     // Don't count views from the page owner to avoid inflating counts
     if (userId) {
       const pageDoc = await getDoc(doc(db, "pages", pageId));
-      if (pageDoc.exists() && pageDoc.data().userId === userId) {
+      if (pageDoc.exists() && pageDoc.data()?.userId === userId) {
         console.log("Page owner view, not counting");
         return;
       }
@@ -93,7 +120,7 @@ export const recordPageView = async (pageId, userId = null) => {
     } else {
       // Document doesn't exist, create it with initial data
       // Initialize all hours to 0
-      const hours = {};
+      const hours: Record<number, number> = {};
       for (let i = 0; i < 24; i++) {
         hours[i] = 0;
       }
@@ -106,7 +133,7 @@ export const recordPageView = async (pageId, userId = null) => {
         hours,
         totalViews: 1,
         lastUpdated: Timestamp.now()
-      });
+      } as PageViewData);
     }
 
     // Also update the total view count on the page document
@@ -124,10 +151,10 @@ export const recordPageView = async (pageId, userId = null) => {
 /**
  * Gets the view data for a page over the past 24 hours
  *
- * @param {string} pageId - The ID of the page
- * @returns {Promise<Object>} - View data with hourly breakdown and total
+ * @param pageId - The ID of the page
+ * @returns View data with hourly breakdown and total
  */
-export const getPageViewsLast24Hours = async (pageId) => {
+export const getPageViewsLast24Hours = async (pageId: string): Promise<ViewsLast24Hours> => {
   try {
     if (!pageId) return { total: 0, hourly: Array(24).fill(0) };
 
@@ -155,7 +182,7 @@ export const getPageViewsLast24Hours = async (pageId) => {
 
     // Process yesterday's data (only hours after current hour)
     if (yesterdayViewsDoc.exists()) {
-      const yesterdayData = yesterdayViewsDoc.data();
+      const yesterdayData = yesterdayViewsDoc.data() as PageViewData;
 
       // Add hours from yesterday that are within our 24-hour window
       for (let hour = currentHour + 1; hour < 24; hour++) {
@@ -167,7 +194,7 @@ export const getPageViewsLast24Hours = async (pageId) => {
 
     // Process today's data (only hours up to and including current hour)
     if (todayViewsDoc.exists()) {
-      const todayData = todayViewsDoc.data();
+      const todayData = todayViewsDoc.data() as PageViewData;
 
       // Add hours from today
       for (let hour = 0; hour <= currentHour; hour++) {
@@ -185,7 +212,7 @@ export const getPageViewsLast24Hours = async (pageId) => {
 
       // If the page doesn't have a 24-hour view count field or it's significantly different
       // from our calculated total, update it
-      if (pageData.views24h === undefined || Math.abs(pageData.views24h - total) > 5) {
+      if (pageData?.views24h === undefined || Math.abs((pageData?.views24h || 0) - total) > 5) {
         await updateDoc(doc(db, "pages", pageId), {
           views24h: total
         });
@@ -205,17 +232,17 @@ export const getPageViewsLast24Hours = async (pageId) => {
 /**
  * Gets the total view count for a page
  *
- * @param {string} pageId - The ID of the page
- * @returns {Promise<number>} - Total view count
+ * @param pageId - The ID of the page
+ * @returns Total view count
  */
-export const getPageTotalViews = async (pageId) => {
+export const getPageTotalViews = async (pageId: string): Promise<number> => {
   try {
     if (!pageId) return 0;
 
     const pageDoc = await getDoc(doc(db, "pages", pageId));
 
     if (pageDoc.exists()) {
-      return pageDoc.data().views || 0;
+      return pageDoc.data()?.views || 0;
     }
 
     return 0;
@@ -228,10 +255,10 @@ export const getPageTotalViews = async (pageId) => {
 /**
  * Gets the trending pages based on views in the last 24 hours
  *
- * @param {number} limitCount - Maximum number of pages to return
- * @returns {Promise<Array>} - Array of trending pages with their view counts
+ * @param limitCount - Maximum number of pages to return
+ * @returns Array of trending pages with their view counts
  */
-export const getTrendingPages = async (limitCount = 5) => {
+export const getTrendingPages = async (limitCount: number = 5): Promise<TrendingPage[]> => {
   try {
     console.log('getTrendingPages: Starting with limit', limitCount);
 
@@ -470,10 +497,10 @@ export const getTrendingPages = async (limitCount = 5) => {
 /**
  * Fallback method to get trending pages when pageViews collection access fails
  *
- * @param {number} limitCount - Maximum number of pages to return
- * @returns {Promise<Array>} - Array of trending pages with their view counts
+ * @param limitCount - Maximum number of pages to return
+ * @returns Array of trending pages with their view counts
  */
-async function getFallbackTrendingPages(limitCount = 5) {
+async function getFallbackTrendingPages(limitCount: number = 5): Promise<TrendingPage[]> {
   try {
     console.log('Using fallback method to get trending pages');
 

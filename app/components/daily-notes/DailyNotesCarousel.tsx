@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useContext, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import DayCard from './DayCard';
-import { AuthContext } from '../../providers/AuthProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/database';
 import { format, subDays, addDays } from 'date-fns';
@@ -41,7 +41,7 @@ interface DailyNotesCarouselProps {
  * - Maintains scroll position when loading new dates
  */
 export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNotesCarouselProps) {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const router = useRouter();
   const carouselRef = useRef<HTMLDivElement>(null);
 
@@ -133,7 +133,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
       const pageIdMap = new Map<string, string>();
 
       // Split dates into chunks of 10 for Firestore 'in' query limit
-      const chunks = [];
+      const chunks: string[][] = [];
       for (let i = 0; i < dateStrings.length; i += 10) {
         chunks.push(dateStrings.slice(i, i + 10));
       }
@@ -142,7 +142,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
       for (const chunk of chunks) {
         const chunkQuery = query(
           pagesRef,
-          where('userId', '==', user.uid),
+          where('userId', '==', user?.uid || ''),
           where('title', 'in', chunk)
         );
 

@@ -31,7 +31,7 @@ function initializeFirebase() {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-04-30.basil' as any,
 });
 
 // POST /api/subscription-success - Handle subscription success and cleanup
@@ -109,8 +109,8 @@ export async function POST(request: NextRequest) {
       status: subscription.status,
       amount: amount,
       tier: tier,
-      billingCycleStart: new Date(subscription.current_period_start * 1000).toISOString(),
-      billingCycleEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+      billingCycleStart: new Date((subscription as any).current_period_start * 1000).toISOString(),
+      billingCycleEnd: new Date((subscription as any).current_period_end * 1000).toISOString(),
       updatedAt: new Date().toISOString(),
     });
 

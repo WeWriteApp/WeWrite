@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../ui/card';
 import { Switch } from '../ui/switch';
 import { Button } from '../ui/button';
@@ -10,7 +10,7 @@ import { Loader, ChevronDown, Users, Settings, Eye, User, Globe } from 'lucide-r
 import { FeatureFlag } from '../../utils/feature-flags';
 import { collection, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/database';
-import { AuthContext } from '../../providers/AuthProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import UserAccessModal from './UserAccessModal';
 
 interface FeatureFlagState {
@@ -39,7 +39,7 @@ export default function FeatureFlagCard({
   onPersonalToggle,
   isLoading = false
 }: FeatureFlagCardProps) {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [userStats, setUserStats] = useState<UserAccessStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);

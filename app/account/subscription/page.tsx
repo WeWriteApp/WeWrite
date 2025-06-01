@@ -46,7 +46,7 @@ export default function SubscriptionPage() {
 
     async function fetchSubscription() {
       try {
-        const subscriptionData = await getUserSubscription(user.uid);
+        const subscriptionData = await getUserSubscription(user?.uid || '');
 
         if (subscriptionData) {
           const subscription = subscriptionData as Subscription;

@@ -18,6 +18,7 @@ import { PillStyleProvider } from "./contexts/PillStyleContext"
 import { PWAProvider } from "./providers/PWAProvider"
 import FeatureFlagListener from "./components/utils/FeatureFlagListener"
 import SlateEarlyPatch from "./components/editor/SlateEarlyPatch"
+import CacheInitializer from "./components/utils/CacheInitializer"
 
 // Import polyfills for browser compatibility
 import "intl-segmenter-polyfill"
@@ -139,6 +140,7 @@ export default function RootLayout({
                               <ToastProvider>
                                 <PillStyleProvider>
                                   <PWAProvider>
+                                    <CacheInitializer />
                                     <FeatureFlagListener>
                                       <ErrorBoundary name="layout" resetOnPropsChange={true}>
                                         <ClientLayout>

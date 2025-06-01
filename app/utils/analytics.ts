@@ -1,6 +1,6 @@
 'use client';
 
-import { initializeAnalytics } from "../firebase/config';
+import { initializeAnalytics } from "../firebase/config";
 import { getAnalytics, logEvent as firebaseLogEvent } from 'firebase/analytics';
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
 
@@ -234,7 +234,7 @@ class Analytics {
  * This ensures we only initialize analytics once
  */
 export const getAnalyticsInstance = (): Analytics => {
-  if (!analyticsInstance && typeof window !== 'undefined") {
+  if (!analyticsInstance && typeof window !== 'undefined') {
     analyticsInstance = new Analytics();
   }
   

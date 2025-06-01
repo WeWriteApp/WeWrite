@@ -1,27 +1,61 @@
-import {app} from './config';
-import { getAuth } from "firebase/auth";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, updateEmail as firebaseUpdateEmail, signInAnonymously } from 'firebase/auth';
-import { getFirestore, doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { app } from './config';
+import {
+  getAuth,
+  type Auth,
+  type User as FirebaseUser,
+  type UserCredential,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile,
+  updateEmail as firebaseUpdateEmail,
+  signInAnonymously
+} from 'firebase/auth';
+import {
+  getFirestore,
+  type Firestore,
+  doc,
+  getDoc,
+  updateDoc,
+  setDoc
+} from 'firebase/firestore';
 import Cookies from 'js-cookie';
+import type { User } from '../types/database';
 
-export const auth = getAuth(app);
-const db = getFirestore(app);
+export const auth: Auth = getAuth(app);
+const db: Firestore = getFirestore(app);
+
+// Auth result interfaces
+interface AuthResult {
+  user?: FirebaseUser;
+  success?: boolean;
+  error?: any;
+  code?: string;
+  message?: string;
+}
+
+interface UsernameAvailabilityResult {
+  isAvailable: boolean;
+  message: string;
+  error: string | null;
+  suggestions: string[];
+}
 
 // firebase database service
-export const createUser = async (email, password) => {
+export const createUser = async (email: string, password: string): Promise<UserCredential | Error> => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     return userCredential;
   } catch (error) {
-    return error;
+    return error as Error;
   }
 }
 
-export const loginUser = async (email, password) => {
+export const loginUser = async (email: string, password: string): Promise<AuthResult> => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return { user: userCredential.user };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Login error:", error);
 
     // Convert Firebase error codes to user-friendly messages
@@ -43,7 +77,21 @@ export const loginUser = async (email, password) => {
   }
 }
 
-export const logoutUser = async (keepPreviousSession = false, returnToPreviousAccount = false) => {
+interface LogoutResult {
+  success: boolean;
+  returnedToPrevious?: boolean;
+  error?: any;
+}
+
+interface SavedAccount {
+  uid: string;
+  email: string;
+  username?: string;
+  isCurrent?: boolean;
+  lastUsed?: string;
+}
+
+export const logoutUser = async (keepPreviousSession: boolean = false, returnToPreviousAccount: boolean = false): Promise<LogoutResult> => {
   try {
     // Check if we should return to a previous account
     if (returnToPreviousAccount) {
@@ -53,13 +101,13 @@ export const logoutUser = async (keepPreviousSession = false, returnToPreviousAc
       const savedAccountsJson = localStorage.getItem('savedAccounts');
       if (savedAccountsJson) {
         try {
-          const savedAccounts = JSON.parse(savedAccountsJson);
+          const savedAccounts: SavedAccount[] = JSON.parse(savedAccountsJson);
 
           // Find the account that was previously current (not the current one)
           // Sort by lastUsed to get the most recently used non-current account
           const nonCurrentAccounts = savedAccounts
             .filter(account => !account.isCurrent)
-            .sort((a, b) => new Date(b.lastUsed || 0) - new Date(a.lastUsed || 0));
+            .sort((a, b) => new Date(b.lastUsed || 0).getTime() - new Date(a.lastUsed || 0).getTime());
 
           if (nonCurrentAccounts.length > 0) {
             const previousAccount = nonCurrentAccounts[0];
@@ -148,11 +196,11 @@ export const logoutUser = async (keepPreviousSession = false, returnToPreviousAc
   }
 }
 
-export const addUsername = async (userId, username) => {
+export const addUsername = async (userId: string, username: string): Promise<AuthResult> => {
   try {
     // Check if username is available
-    const isAvailable = await checkUsernameAvailability(username);
-    if (!isAvailable) {
+    const availabilityResult = await checkUsernameAvailability(username);
+    if (!availabilityResult.isAvailable) {
       throw new Error('Username is already taken');
     }
 
@@ -183,7 +231,7 @@ export const addUsername = async (userId, username) => {
   }
 }
 
-export const getUserProfile = async (userId) => {
+export const getUserProfile = async (userId: string): Promise<User | null> => {
   if (!userId) return null;
 
   try {
@@ -192,7 +240,7 @@ export const getUserProfile = async (userId) => {
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {
-      return userDoc.data();
+      return userDoc.data() as User;
     }
 
     return null;
@@ -202,7 +250,7 @@ export const getUserProfile = async (userId) => {
   }
 }
 
-export const updateEmail = async (user, newEmail) => {
+export const updateEmail = async (user: FirebaseUser, newEmail: string): Promise<AuthResult> => {
   try {
     // Update the email in Firebase Authentication
     await firebaseUpdateEmail(user, newEmail);
@@ -220,7 +268,7 @@ export const updateEmail = async (user, newEmail) => {
   }
 }
 
-export const checkUsernameAvailability = async (username) => {
+export const checkUsernameAvailability = async (username: string): Promise<UsernameAvailabilityResult> => {
   try {
     if (!username || username.length < 3) {
       return {
@@ -280,11 +328,11 @@ export const checkUsernameAvailability = async (username) => {
 
 /**
  * Generate username suggestions based on the original username
- * @param {string} username - The original username
- * @returns {string[]} - Array of username suggestions
+ * @param username - The original username
+ * @returns Array of username suggestions
  */
-const generateUsernameSuggestions = (username) => {
-  const suggestions = [];
+const generateUsernameSuggestions = (username: string): string[] => {
+  const suggestions: string[] = [];
 
   // Add a random number (1-99) to the end
   for (let i = 0; i < 3; i++) {
@@ -299,16 +347,16 @@ const generateUsernameSuggestions = (username) => {
   suggestions.push(`${username}${new Date().getFullYear()}`);
 
   // Return unique suggestions only
-  return [...new Set(suggestions)].slice(0, 3);
+  return Array.from(new Set(suggestions)).slice(0, 3);
 }
 
 /**
  * Check which of the suggested usernames are available
- * @param {string[]} suggestions - Array of username suggestions
- * @returns {Promise<string[]>} - Array of available username suggestions
+ * @param suggestions - Array of username suggestions
+ * @returns Array of available username suggestions
  */
-const checkSuggestionsAvailability = async (suggestions) => {
-  const availableSuggestions = [];
+const checkSuggestionsAvailability = async (suggestions: string[]): Promise<string[]> => {
+  const availableSuggestions: string[] = [];
 
   for (const suggestion of suggestions) {
     try {
@@ -334,9 +382,9 @@ const checkSuggestionsAvailability = async (suggestions) => {
 /**
  * Sign in anonymously
  *
- * @returns {Promise<Object>} Result object with user or error
+ * @returns Result object with user or error
  */
-export const loginAnonymously = async () => {
+export const loginAnonymously = async (): Promise<AuthResult> => {
   try {
     const userCredential = await signInAnonymously(auth);
 
@@ -352,7 +400,7 @@ export const loginAnonymously = async () => {
     }, { merge: true });
 
     return { user: userCredential.user };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Anonymous login error:", error);
     return { code: error.code, message: error.message };
   }
