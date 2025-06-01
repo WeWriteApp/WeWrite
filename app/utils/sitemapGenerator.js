@@ -364,33 +364,34 @@ function escapeXml(text) {
 
 /**
  * Validate sitemap XML
+ * Made async to comply with "use server" directive
  */
-export function validateSitemap(xmlContent) {
+export async function validateSitemap(xmlContent) {
   const issues = [];
-  
+
   // Check for required elements
   if (!xmlContent.includes('<urlset')) {
     issues.push('Missing urlset element');
   }
-  
+
   if (!xmlContent.includes('xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"')) {
     issues.push('Missing or incorrect namespace');
   }
-  
+
   // Check URL count (Google limit is 50,000)
   const urlMatches = xmlContent.match(/<url>/g);
   const urlCount = urlMatches ? urlMatches.length : 0;
-  
+
   if (urlCount > 50000) {
     issues.push(`Too many URLs: ${urlCount} (limit: 50,000)`);
   }
-  
+
   // Check file size (Google limit is 50MB uncompressed)
   const sizeInMB = new Blob([xmlContent]).size / (1024 * 1024);
   if (sizeInMB > 50) {
     issues.push(`File too large: ${sizeInMB.toFixed(2)}MB (limit: 50MB)`);
   }
-  
+
   return {
     valid: issues.length === 0,
     issues,
