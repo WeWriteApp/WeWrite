@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import PillLink from "../utils/PillLink";
 import { formatRelativeTime } from "../../utils/formatRelativeTime";
-import { generateSimpleDiff, generateTextDiff, extractTextContent } from "../utils/generateTextDiff";
+import { generateSimpleDiff, generateTextDiff, extractTextContent } from "../../utils/generateTextDiff";
 import { useTheme } from "next-themes";
 import { cn, interactiveCard } from "../../lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
@@ -137,16 +137,16 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
       return;
     }
 
-    // For regular page activities, use click-to-edit functionality
-    if (activity.versionId) {
-      // Version links should go directly to the version (no edit mode)
+    // For regular page activities, determine navigation based on version status
+    if (activity.versionId && !activity.isCurrentVersion) {
+      // Past version links should go to the version page
       const url = `/${activity.pageId}/version/${activity.versionId}`;
-      console.log('ActivityCard: Version clicked, navigating to:', url);
+      console.log('ActivityCard: Past version clicked, navigating to version page:', url);
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       window.location.href = url;
     } else {
-      // Regular page links should use click-to-edit functionality
-      console.log('ActivityCard: Page clicked, using click-to-edit navigation');
+      // Current version or no version ID should use click-to-edit functionality for main page
+      console.log('ActivityCard: Current version clicked, using click-to-edit navigation to main page');
       navigateToPage(activity.pageId, user, pageData, user?.groups, router);
     }
   };
@@ -162,8 +162,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
     const groupId = activity.pageId.replace("group-about-", "");
     activityUrl = `/group/${groupId}`;
   } else {
-    // Regular page edits
-    activityUrl = activity.versionId
+    // Regular page edits - current version goes to main page, past versions go to version page
+    activityUrl = (activity.versionId && !activity.isCurrentVersion)
       ? `/${activity.pageId}/version/${activity.versionId}`
       : `/${activity.pageId}`;
   }

@@ -17,6 +17,9 @@ import DisabledLinkModal from "../utils/DisabledLinkModal";
 import { useClickToEdit } from "../../hooks/useClickToEdit";
 import EditModeBottomToolbar from "./EditModeBottomToolbar";
 import ErrorBoundary from "../utils/ErrorBoundary";
+import { Button } from "../ui/button";
+import { Alert, AlertDescription } from "../ui/alert";
+import { AlertTriangle, X } from "lucide-react";
 import type { SlateContent } from "../../types/database";
 
 // Safely check if ReactEditor methods exist before using them
@@ -125,6 +128,10 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
   // State for disabled link modal
   const [showDisabledLinkModal, setShowDisabledLinkModal] = useState(false);
+
+  // State for empty lines warning alert
+  const [showEmptyLinesAlert, setShowEmptyLinesAlert] = useState(false);
+  const [emptyLinesCount, setEmptyLinesCount] = useState(0);
 
   // Use keyboard shortcuts
   useKeyboardShortcuts({
@@ -370,6 +377,27 @@ const PageEditor: React.FC<PageEditorProps> = ({
     }
   };
 
+  // Handle empty lines count changes from the editor
+  const handleEmptyLinesChange = (count: number) => {
+    setEmptyLinesCount(count);
+
+    // Show alert if there are empty lines and it's not already dismissed
+    if (count > 0 && !showEmptyLinesAlert) {
+      setShowEmptyLinesAlert(true);
+    } else if (count === 0) {
+      setShowEmptyLinesAlert(false);
+    }
+  };
+
+  // Handle deleting all empty lines
+  const handleDeleteAllEmptyLines = () => {
+    if (editorRef.current && editorRef.current.deleteAllEmptyLines) {
+      editorRef.current.deleteAllEmptyLines();
+      setShowEmptyLinesAlert(false);
+      setEmptyLinesCount(0);
+    }
+  };
+
 
 
   // Handle link insertion
@@ -500,6 +528,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
                 ref={editorRef}
                 initialContent={currentEditorValue}
                 onChange={handleContentChange}
+                onEmptyLinesChange={handleEmptyLinesChange}
                 placeholder="Start typing..."
                 contentType="wiki"
               />
@@ -527,6 +556,39 @@ const PageEditor: React.FC<PageEditorProps> = ({
         isOpen={showDisabledLinkModal}
         onClose={() => setShowDisabledLinkModal(false)}
       />
+
+      {/* Empty Lines Warning Alert */}
+      {showEmptyLinesAlert && emptyLinesCount > 0 && (
+        <div className="mb-4">
+          <Alert className="border-amber-200 bg-amber-50 text-amber-800">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <div className="flex items-center justify-between w-full">
+              <AlertDescription className="flex-1">
+                You have {emptyLinesCount} empty line{emptyLinesCount !== 1 ? 's' : ''} that may affect readability. Would you like to remove them?
+              </AlertDescription>
+              <div className="flex items-center gap-2 ml-4">
+                <Button
+                  onClick={handleDeleteAllEmptyLines}
+                  variant="default"
+                  size="sm"
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  Delete All Empty Lines
+                </Button>
+                <Button
+                  onClick={() => setShowEmptyLinesAlert(false)}
+                  variant="ghost"
+                  size="sm"
+                  className="p-1 h-auto text-amber-600 hover:text-amber-800 hover:bg-amber-100"
+                  aria-label="Dismiss alert"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </Alert>
+        </div>
+      )}
 
       {/* Bottom Toolbar - unified for all editing scenarios */}
       {typeof onSave === 'function' && typeof onCancel === 'function' && (

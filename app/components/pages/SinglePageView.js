@@ -46,7 +46,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { ErrorDisplay } from "../ui/error-display";
-// toast import removed (unused)
+import { toast } from "../ui/use-toast";
 import { RecentPagesContext } from "../../contexts/RecentPagesContext";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { PageProvider } from "../../contexts/PageContext";
@@ -333,7 +333,11 @@ function SinglePageView({ params }) {
 
     if (confirmed) {
       try {
+        // Delete the page first
         await deletePage(page.id);
+
+        // Show success message
+        toast.success("Page deleted successfully");
 
         // Trigger success event
         if (typeof window !== 'undefined') {
@@ -342,12 +346,15 @@ function SinglePageView({ params }) {
           }));
         }
 
-        // Navigate to home page
+        // Navigate to home page after successful deletion
         router.push('/');
       } catch (error) {
         console.error("Error deleting page:", error);
-        setError(`Failed to delete page: ${error.message}`);
+        const errorMessage = `Failed to delete page: ${error.message}`;
+        setError(errorMessage);
+        toast.error("Failed to delete page");
         logError(error, { context: 'SinglePageView.handleDelete', pageId: page.id });
+        // Don't redirect if deletion failed
       }
     }
   };

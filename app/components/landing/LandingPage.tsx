@@ -90,20 +90,38 @@ const LandingPage = () => {
   }, []);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
+    let hasScrolledDown = false;
 
-      // Show pledge bar after scrolling past hero section (only if not dismissed)
-      if (!pledgeBarDismissed) {
-        const heroSection = document.querySelector('section[class*="pt-24"]'); // Hero section selector
-        if (heroSection) {
-          const heroRect = heroSection.getBoundingClientRect();
-          const heroBottom = heroRect.bottom;
-          // Show pledge bar when hero section is mostly out of view
-          setShowPledgeBar(heroBottom < window.innerHeight * 0.3);
-        } else {
-          // Fallback: show after scrolling 400px
-          setShowPledgeBar(window.scrollY > 400);
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      setIsScrolled(currentScrollY > 10);
+
+      // Auto-hide behavior for pledge bar: Hide on downward scroll and stay hidden
+      if (!pledgeBarDismissed && showPledgeBar && currentScrollY > 50) {
+        if (!hasScrolledDown) {
+          // User scrolled down - hide the bar and mark as scrolled
+          setShowPledgeBar(false);
+          hasScrolledDown = true;
+
+          // Store in sessionStorage to keep it hidden during the session
+          sessionStorage.setItem('landingPledgeBarHidden', 'true');
+        }
+      }
+
+      // Show pledge bar after scrolling past hero section (only if not dismissed and not previously hidden)
+      if (!pledgeBarDismissed && !hasScrolledDown) {
+        const wasHidden = sessionStorage.getItem('landingPledgeBarHidden') === 'true';
+        if (!wasHidden) {
+          const heroSection = document.querySelector('section[class*="pt-24"]'); // Hero section selector
+          if (heroSection) {
+            const heroRect = heroSection.getBoundingClientRect();
+            const heroBottom = heroRect.bottom;
+            // Show pledge bar when hero section is mostly out of view
+            setShowPledgeBar(heroBottom < window.innerHeight * 0.3);
+          } else {
+            // Fallback: show after scrolling 400px
+            setShowPledgeBar(currentScrollY > 400);
+          }
         }
       }
 

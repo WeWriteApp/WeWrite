@@ -674,7 +674,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
                       if (child.type === 'link') {
                         console.log('LINK_DEBUG: Found link in dense mode:', JSON.stringify(child));
                         try {
-                          return <LinkNode key={childIndex} node={child} />;
+                          return <LinkNode key={childIndex} node={child} canEdit={false} />;
                         } catch (error) {
                           console.error('LINK_RENDER_ERROR: Error rendering link in dense mode:', error);
                           return <span key={childIndex} className="text-red-500">[Link Error]</span>;
@@ -714,7 +714,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
 
                               if (grandchild.type === 'link') {
                                 try {
-                                  return <LinkNode key={`${childIndex}-${grandchildIndex}`} node={grandchild} />;
+                                  return <LinkNode key={`${childIndex}-${grandchildIndex}`} node={grandchild} canEdit={false} />;
                                 } catch (error) {
                                   console.error('LINK_RENDER_ERROR: Error rendering link in grandchild:', error);
                                   return <span key={`${childIndex}-${grandchildIndex}`} className="text-red-500">[Link Error]</span>;
@@ -868,7 +868,7 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
     if (child.type === 'link') {
       try {
         console.log('PARAGRAPH_LINK_DEBUG: Rendering link in paragraph:', JSON.stringify(child));
-        return <LinkNode key={i} node={child} />;
+        return <LinkNode key={i} node={child} canEdit={canEdit} />;
       } catch (error) {
         console.error('PARAGRAPH_LINK_ERROR: Error rendering link in paragraph:', error);
         return <span key={i} className="text-red-500">[Link Error]</span>;
@@ -992,7 +992,7 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
 
 // WeWrite only supports paragraph nodes, so we've removed CodeBlockNode, HeadingNode, and ListNode
 
-const LinkNode = ({ node }) => {
+const LinkNode = ({ node, canEdit = false }) => {
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
 
   // Add more robust error handling for invalid link nodes
@@ -1110,26 +1110,35 @@ const LinkNode = ({ node }) => {
     validatedNode.isProtocolLink === true ||
     (validatedNode.children?.[0]?.text === "WeWrite as a decentralized open protocol");
 
-  // IMPROVED: Extract display text with better fallbacks
+  // IMPROVED: Extract display text with better fallbacks and proper custom text handling
   const getTextFromNode = (node) => {
-    // CRITICAL FIX: Try multiple approaches to extract text
+    // NOTE: Compound links are now handled separately in the rendering logic,
+    // so this function only extracts the base text without compound formatting
 
-    // 1. Check for explicit displayText property
-    if (node.displayText && node.displayText !== 'Link') {
-      return node.displayText;
-    }
-
-    // 2. Check for text in children array
+    // CRITICAL FIX: Properly extract custom text from children array first
+    // This is the most important source of custom text that users configure
     if (node.children && Array.isArray(node.children) && node.children.length > 0) {
-      // Try to find the first child with text
+      // Concatenate all text from children to handle custom text properly
+      let customText = '';
       for (const child of node.children) {
-        if (child && child.text && child.text.trim()) {
-          return child.text;
+        if (child && child.text) {
+          customText += child.text;
         }
+      }
+      // If we found custom text and it's not just the default "Link", use it
+      if (customText.trim() && customText !== 'Link' && customText !== 'Page Link') {
+        console.log('CUSTOM_TEXT_DEBUG: Found custom text in children:', customText);
+        return customText.trim();
       }
     }
 
-    // 3. Check for pageTitle (for page links)
+    // 2. Check for explicit displayText property (backup for custom text)
+    if (node.displayText && node.displayText !== 'Link' && node.displayText.trim()) {
+      console.log('CUSTOM_TEXT_DEBUG: Found displayText:', node.displayText);
+      return node.displayText;
+    }
+
+    // 3. Check for pageTitle (for page links without custom text)
     if (node.pageTitle && node.pageTitle !== 'Link') {
       return node.pageTitle;
     }
@@ -1197,7 +1206,7 @@ const LinkNode = ({ node }) => {
     );
   }
 
-  // For internal page links, use the InternalLinkWithTitle component
+  // For internal page links, check if it's a compound link first
   if (pageId) {
     console.log('RENDERING_PAGE_LINK:', { pageId, displayText, validatedNode });
 
@@ -1208,6 +1217,93 @@ const LinkNode = ({ node }) => {
                               validatedNode.data?.originalPageTitle ||
                               null;
 
+    // Check if this is a compound link with author attribution
+    if (validatedNode.showAuthor && validatedNode.authorUsername) {
+      // Render compound link as two separate pills: [Page Title] by [Author Username]
+
+      // Use the extracted displayText which already handles custom text properly
+      let pageTitleText = displayText || originalPageTitle || 'Page';
+
+      // Remove @ symbol from username if present
+      const cleanUsername = validatedNode.authorUsername.replace(/^@/, '');
+
+      // Ensure href is properly formatted for internal links
+      const formattedHref = href.startsWith('/') ? href : `/pages/${pageId}`;
+
+      // Handle edit mode vs view mode click behavior
+      if (canEdit) {
+        // In edit mode, clicking should open the link editor
+        return (
+          <span className="inline-flex items-center gap-1 compound-link-container">
+            {/* Page title portion - clickable for editing */}
+            <span
+              className="inline-block cursor-pointer"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // TODO: Open link editor for this link
+                console.log('Edit mode: Open link editor for compound link');
+              }}
+            >
+              <span className="inline-flex items-center px-2 py-1 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/80 transition-colors">
+                {pageTitleText}
+              </span>
+            </span>
+
+            {/* "by" text */}
+            <span className="text-muted-foreground text-sm">by</span>
+
+            {/* Author username portion - clickable for editing */}
+            <span
+              className="inline-block cursor-pointer"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // TODO: Open link editor for this link
+                console.log('Edit mode: Open link editor for compound link');
+              }}
+            >
+              <span className="inline-flex items-center px-2 py-1 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/80 transition-colors">
+                {cleanUsername}
+              </span>
+            </span>
+          </span>
+        );
+      } else {
+        // In view mode, normal navigation behavior
+        return (
+          <span className="inline-flex items-center gap-1 compound-link-container">
+            {/* Page title portion - clickable pill */}
+            <span className="inline-block">
+              <PillLink
+                href={formattedHref}
+                isPublic={true}
+                className="inline page-link page-portion"
+                data-page-id={pageId}
+              >
+                {pageTitleText}
+              </PillLink>
+            </span>
+
+            {/* "by" text */}
+            <span className="text-muted-foreground text-sm">by</span>
+
+            {/* Author username portion - clickable pill */}
+            <span className="inline-block">
+              <PillLink
+                href={`/user/${cleanUsername}`}
+                isPublic={true}
+                className="inline user-link author-portion"
+              >
+                {cleanUsername}
+              </PillLink>
+            </span>
+          </span>
+        );
+      }
+    }
+
+    // Regular single page link (non-compound)
     // Ensure href is properly formatted for internal links
     const formattedHref = href.startsWith('/') ? href : `/pages/${pageId}`;
 
@@ -1224,6 +1320,9 @@ const LinkNode = ({ node }) => {
           href={formattedHref}
           displayText={finalDisplayText}
           originalPageTitle={originalPageTitle}
+          showAuthor={false}
+          authorUsername={null}
+          canEdit={canEdit}
         />
       </span>
     );
@@ -1231,12 +1330,6 @@ const LinkNode = ({ node }) => {
 
   // For external links, use the PillLink component with a modal confirmation
   if (isExternal) {
-    // Handle click on external link
-    const handleExternalLinkClick = (e) => {
-      e.preventDefault();
-      setShowExternalLinkModal(true);
-    };
-
     // Ensure we have a valid display text for external links
     let finalDisplayText = displayText;
 
@@ -1250,51 +1343,78 @@ const LinkNode = ({ node }) => {
       finalDisplayText = href;
     }
 
-    return (
-      <>
-        <span className="inline-block">
-          <PillLink
-            href={href}
-            isPublic={true}
-            className="external-link"
-            onClick={handleExternalLinkClick}
-          >
-            {finalDisplayText}
-            {/* Removed duplicate ExternalLink icon - PillLink already adds it */}
-          </PillLink>
-        </span>
-
-        <Modal
-          isOpen={showExternalLinkModal}
-          onClose={() => setShowExternalLinkModal(false)}
-          title="External Link"
-          footer={
-            <div className="flex justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowExternalLinkModal(false)}
-              >
-                Back
-              </Button>
-              <Button
-                variant="default"
-                onClick={() => {
-                  window.open(href, '_blank', 'noopener,noreferrer');
-                  setShowExternalLinkModal(false);
-                }}
-              >
-                Visit link
-              </Button>
-            </div>
-          }
+    // Handle edit mode vs view mode click behavior
+    if (canEdit) {
+      // In edit mode, clicking should open the link editor
+      return (
+        <span
+          className="inline-block cursor-pointer"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // TODO: Open link editor for this link
+            console.log('Edit mode: Open link editor for external link');
+          }}
         >
-          <p className="mb-4">You're about to visit an external website:</p>
-          <div className="bg-muted p-3 rounded mb-2 break-all">
-            <code>{href}</code>
-          </div>
-        </Modal>
-      </>
-    );
+          <span className="inline-flex items-center px-2 py-1 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/80 transition-colors">
+            {finalDisplayText}
+            <ExternalLink className="ml-1 h-3 w-3" />
+          </span>
+        </span>
+      );
+    } else {
+      // In view mode, normal external link behavior with modal
+      const handleExternalLinkClick = (e) => {
+        e.preventDefault();
+        setShowExternalLinkModal(true);
+      };
+
+      return (
+        <>
+          <span className="inline-block">
+            <PillLink
+              href={href}
+              isPublic={true}
+              className="external-link"
+              onClick={handleExternalLinkClick}
+            >
+              {finalDisplayText}
+              {/* Removed duplicate ExternalLink icon - PillLink already adds it */}
+            </PillLink>
+          </span>
+
+          <Modal
+            isOpen={showExternalLinkModal}
+            onClose={() => setShowExternalLinkModal(false)}
+            title="External Link"
+            footer={
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowExternalLinkModal(false)}
+                >
+                  Back
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    window.open(href, '_blank', 'noopener,noreferrer');
+                    setShowExternalLinkModal(false);
+                  }}
+                >
+                  Visit link
+                </Button>
+              </div>
+            }
+          >
+            <p className="mb-4">You're about to visit an external website:</p>
+            <div className="bg-muted p-3 rounded mb-2 break-all">
+              <code>{href}</code>
+            </div>
+          </Modal>
+        </>
+      );
+    }
   }
 
   // For other links (like special links), use the PillLink component
@@ -1314,21 +1434,42 @@ const LinkNode = ({ node }) => {
     displayText = "Link";
   }
 
-  return (
-    <span className="inline-block">
-      <PillLink
-        href={href}
-        isPublic={true}
-        className="inline special-link"
+  // Handle edit mode vs view mode click behavior for other links
+  if (canEdit) {
+    // In edit mode, clicking should open the link editor
+    return (
+      <span
+        className="inline-block cursor-pointer"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          // TODO: Open link editor for this link
+          console.log('Edit mode: Open link editor for special link');
+        }}
       >
-        {displayText}
-      </PillLink>
-    </span>
-  );
+        <span className="inline-flex items-center px-2 py-1 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/80 transition-colors">
+          {displayText}
+        </span>
+      </span>
+    );
+  } else {
+    // In view mode, normal navigation behavior
+    return (
+      <span className="inline-block">
+        <PillLink
+          href={href}
+          isPublic={true}
+          className="inline special-link"
+        >
+          {displayText}
+        </PillLink>
+      </span>
+    );
+  }
 };
 
 // Component for internal links that fetches and displays page titles
-const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle }) => {
+const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle, showAuthor, authorUsername, canEdit = false }) => {
   const [currentTitle, setCurrentTitle] = useState(null);
   const [isLoading, setIsLoading] = useState(false); // Start with false, only set to true when actually fetching
   const [fetchError, setFetchError] = useState(false);
@@ -1430,27 +1571,57 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle })
     textToDisplay = fallbackText;
   }
 
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="inline-block">
-            <PillLink
-              href={formattedHref}
-              isPublic={true}
-              className="inline page-link"
-              data-page-id={pageId}
+  // Handle edit mode vs view mode click behavior
+  if (canEdit) {
+    // In edit mode, clicking should open the link editor
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              className="inline-block cursor-pointer"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // TODO: Open link editor for this link
+                console.log('Edit mode: Open link editor for single link');
+              }}
             >
-              {textToDisplay}
-            </PillLink>
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{currentTitle || originalPageTitle || displayText || 'Page Link'}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
+              <span className="inline-flex items-center px-2 py-1 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/80 transition-colors">
+                {textToDisplay}
+              </span>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Click to edit link: {currentTitle || originalPageTitle || displayText || 'Page Link'}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  } else {
+    // In view mode, normal navigation behavior
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-block">
+              <PillLink
+                href={formattedHref}
+                isPublic={true}
+                className="inline page-link"
+                data-page-id={pageId}
+              >
+                {textToDisplay}
+              </PillLink>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{currentTitle || originalPageTitle || displayText || 'Page Link'}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
 };
 
 export default TextView;

@@ -47,6 +47,7 @@ export interface EditorProps extends BaseProps {
   contentType?: 'wiki' | 'about' | 'bio';
   onKeyDown?: (event: KeyboardEvent) => void;
   ref?: React.RefObject<EditorRef>;
+  onEmptyLinesChange?: (count: number) => void;
 }
 
 // PageEditor component props

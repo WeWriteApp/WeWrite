@@ -208,6 +208,7 @@ export interface EditorRef {
   insertLink: (url: any, text: any, options?: any) => boolean;
   openLinkEditor: (initialTab?: string) => boolean;
   setShowLinkEditor: (value: boolean) => boolean;
+  deleteAllEmptyLines: () => void;
 }
 
 export interface LinkData {

@@ -281,18 +281,22 @@ const PledgeBar = () => {
     }
   }, [pathname]);
 
-  // Add scroll event listener for visibility control
+  // Add scroll event listener for auto-hide behavior
   useEffect(() => {
     let ticking = false;
+    let hasScrolledDown = false;
 
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
-      // Show/hide based on scroll direction
-      if (currentScrollY < lastScrollY || currentScrollY < 100) {
-        setVisible(true);
-      } else if (currentScrollY > 300 && currentScrollY > lastScrollY) {
+      // Auto-hide behavior: Hide immediately on downward scroll and stay hidden
+      if (currentScrollY > lastScrollY && currentScrollY > 50 && !hasScrolledDown) {
+        // User scrolled down - hide the bar and mark as scrolled
         setVisible(false);
+        hasScrolledDown = true;
+
+        // Store in sessionStorage to keep it hidden during the session
+        sessionStorage.setItem('pledgeBarHidden', 'true');
       }
 
       // Check if we're at the bottom of the page
@@ -316,12 +320,21 @@ const PledgeBar = () => {
       }
     };
 
+    // Check if pledge bar was previously hidden in this session
+    const wasHidden = sessionStorage.getItem('pledgeBarHidden') === 'true';
+    if (wasHidden) {
+      setVisible(false);
+      hasScrolledDown = true;
+    }
+
     // Add scroll event listener
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    // Animate entry after a short delay
+    // Animate entry after a short delay (only if not previously hidden)
     const timer = setTimeout(() => {
-      setAnimateEntry(true);
+      if (!wasHidden) {
+        setAnimateEntry(true);
+      }
     }, 500);
 
     // Check if we should show the "more" button

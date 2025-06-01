@@ -38,6 +38,9 @@ interface ActivityData {
   activityType?: string;
   groupId?: string;
   groupName?: string;
+  versionId?: string;
+  isNewPage?: boolean;
+  isCurrentVersion?: boolean;
 }
 
 interface BioActivityData {
@@ -114,7 +117,8 @@ function convertToDate(timestamp: TimestampInput): Date {
 }
 
 /**
- * Gets recent activity data from Firestore
+ * Gets recent activity data from Firestore using a version-based approach
+ * This ensures each edit operation creates a separate activity entry
  *
  * @param limitCount - Maximum number of activities to return
  * @param currentUserId - The ID of the current user (for privacy filtering)
@@ -125,15 +129,17 @@ export const getRecentActivity = async (
   currentUserId: string | null = null
 ): Promise<ActivityResult> => {
   try {
-    console.log('getRecentActivity: Starting with limit', limitCount);
+    console.log('getRecentActivity: Starting version-based approach with limit', limitCount);
 
-    // FIXED: Removed select() function which was causing errors
-    // Query to get recent pages (only public pages)
+    // NEW APPROACH: Query all versions across all pages, sorted by creation time
+    // This will give us individual edit operations rather than just latest page states
+
+    // First, get recent public pages to know which pages to include
     const pagesQuery = query(
       collection(db, "pages"),
       where("isPublic", "==", true),
       orderBy("lastModified", "desc"),
-      firestoreLimit(limitCount * 2)
+      firestoreLimit(limitCount * 3) // Get more pages to ensure we have enough versions
     );
 
     let pagesSnapshot: QuerySnapshot<DocumentData>;
@@ -141,7 +147,6 @@ export const getRecentActivity = async (
       pagesSnapshot = await getDocs(pagesQuery);
     } catch (queryError) {
       console.error('Error executing Firestore query:', queryError);
-      // Return sample data for logged-out users
       return {
         activities: getSampleActivities(limitCount),
         note: "Using sample data due to database connection issues"
@@ -150,88 +155,33 @@ export const getRecentActivity = async (
 
     if (pagesSnapshot.empty) {
       console.log('getRecentActivity: No pages found');
-      // Return sample data when no real data exists
       return {
         activities: getSampleActivities(limitCount),
         note: "Using sample data because no pages were found"
       };
     }
 
-    console.log(`getRecentActivity: Found ${pagesSnapshot.size} pages`);
+    console.log(`getRecentActivity: Found ${pagesSnapshot.size} public pages`);
 
-    // Process each page to get its activity data
-    const activitiesPromises = pagesSnapshot.docs.map(async (pageDoc: QueryDocumentSnapshot<DocumentData>): Promise<ActivityData | null> => {
+    // Collect all versions from all public pages
+    const allVersionsPromises = pagesSnapshot.docs.map(async (pageDoc: QueryDocumentSnapshot<DocumentData>) => {
       const pageData = pageDoc.data() as Page;
       const pageId = pageDoc.id;
 
-      console.log(`Processing page ${pageId} with title "${pageData.title || 'Untitled'}"`);
-
-      // Skip pages without content
-      if (!pageData.content) {
-        console.log(`Skipping page ${pageId} - no content`);
-        return null;
-      }
-
       try {
-        // Get the page's history
-        console.log(`Fetching history for page ${pageId}`);
+        // Get ALL versions for this page, not just the latest one
+        const versionsQuery = query(
+          collection(db, "pages", pageId, "versions"),
+          orderBy("createdAt", "desc"),
+          firestoreLimit(10) // Get up to 10 recent versions per page
+        );
 
-        // Check if the history collection exists
-        try {
-          const historyQuery = query(
-            collection(db, "pages", pageId, "history"),
-            orderBy("timestamp", "desc"),
-            firestoreLimit(1)
-          );
+        const versionsSnapshot = await getDocs(versionsQuery);
 
-          const historySnapshot = await getDocs(historyQuery);
-
-          if (historySnapshot.empty) {
-            console.log(`No history found for page ${pageId}, using current content`);
-            // No history, use current content as the only version
-            const username = await getUsernameById(pageData.userId);
-            console.log(`Username for ${pageData.userId}: ${username}`);
-
-            return {
-              pageId,
-              pageName: pageData.title || "Untitled",
-              userId: pageData.userId,
-              username: username || "Unknown",
-              timestamp: convertToDate(pageData.lastModified),
-              currentContent: typeof pageData.content === 'string' ? pageData.content : JSON.stringify(pageData.content),
-              previousContent: "",
-              isPublic: pageData.isPublic
-            };
-          }
-
-          // Get the most recent history entry
-          const historyData = historySnapshot.docs[0].data();
-          console.log(`Found history entry for page ${pageId} from ${historyData.timestamp?.toDate()}`);
-
+        if (versionsSnapshot.empty) {
+          // No versions found, create activity from page data
           const username = await getUsernameById(pageData.userId);
-          console.log(`Username for ${pageData.userId}: ${username}`);
-
-          return {
-            pageId,
-            pageName: pageData.title || "Untitled",
-            userId: pageData.userId,
-            username: username || "Unknown",
-            timestamp: convertToDate(historyData.timestamp),
-            currentContent: typeof pageData.content === 'string' ? pageData.content : JSON.stringify(pageData.content),
-            previousContent: historyData.content || "",
-            isPublic: pageData.isPublic
-          };
-        } catch (historyErr) {
-          console.error(`Error in history query for page ${pageId}:`, historyErr);
-          throw historyErr;
-        }
-      } catch (err) {
-        console.error(`Error fetching history for page ${pageId}:`, err);
-
-        // Try to return a basic activity even if history fetch fails
-        try {
-          const username = await getUsernameById(pageData.userId);
-          return {
+          return [{
             pageId,
             pageName: pageData.title || "Untitled",
             userId: pageData.userId,
@@ -239,53 +189,68 @@ export const getRecentActivity = async (
             timestamp: convertToDate(pageData.lastModified),
             currentContent: typeof pageData.content === 'string' ? pageData.content : JSON.stringify(pageData.content),
             previousContent: "",
-            isPublic: pageData.isPublic
-          };
-        } catch (fallbackErr) {
-          console.error(`Failed to create fallback activity for ${pageId}:`, fallbackErr);
-          return null;
+            isPublic: pageData.isPublic,
+            isNewPage: true
+          }];
         }
+
+        // Process each version to create individual activities
+        const versionActivities = await Promise.all(
+          versionsSnapshot.docs.map(async (versionDoc, index) => {
+            const versionData = versionDoc.data();
+            const versionId = versionDoc.id;
+
+            // Get username for this version
+            const username = await getUsernameById(versionData.userId);
+
+            // Determine if this is a new page (first version)
+            const isNewPage = index === versionsSnapshot.docs.length - 1;
+
+            // Determine if this is the current version
+            const isCurrentVersion = pageData.currentVersion === versionId;
+
+            return {
+              pageId,
+              pageName: pageData.title || "Untitled",
+              userId: versionData.userId,
+              username: username || "Unknown",
+              timestamp: convertToDate(versionData.createdAt),
+              currentContent: versionData.content || "",
+              previousContent: versionData.previousContent || "",
+              isPublic: pageData.isPublic,
+              versionId: versionId,
+              isNewPage: isNewPage,
+              isCurrentVersion: isCurrentVersion
+            };
+          })
+        );
+
+        return versionActivities;
+      } catch (error) {
+        console.error(`Error fetching versions for page ${pageId}:`, error);
+        return [];
       }
     });
 
-    // Wait for all promises to resolve
-    const activityResults = await Promise.all(activitiesPromises);
+    // Wait for all version queries to complete
+    const allVersionsResults = await Promise.all(allVersionsPromises);
 
-    // Filter out null results and private pages
-    const validActivities = activityResults
+    // Flatten the array of arrays and filter out invalid activities
+    const allActivities = allVersionsResults
+      .flat()
       .filter(activity => {
-        // Skip null activities
-        if (activity === null) {
-          console.log('Filtering out null activity');
-          return false;
-        }
-        // Only show public pages
-        if (activity.isPublic !== true) {
-          console.log(`Filtering out private page ${activity.pageId}`);
+        if (!activity || !activity.isPublic) {
           return false;
         }
         return true;
-      });
-
-    // Note: Group membership filtering is currently disabled but kept for future use
-    // This code is commented out to avoid unused variable warnings
-    /*
-    if (currentUserId) {
-      try {
-        const rtdb = getDatabase();
-        const userGroupsRef = ref(rtdb, `users/${currentUserId}/groups`);
-        const userGroupsSnapshot = await get(userGroupsRef);
-
-        if (userGroupsSnapshot.exists()) {
-          // Store group IDs for potential future filtering
-          const userGroupIds = Object.keys(userGroupsSnapshot.val());
-          console.log(`User ${currentUserId} is a member of ${userGroupIds.length} groups`);
-        }
-      } catch (error) {
-        console.error("Error fetching user group memberships:", error);
-      }
-    }
-    */
+      })
+      .sort((a, b) => {
+        // Sort by timestamp in descending order (newest first)
+        const timeA = a.timestamp.getTime();
+        const timeB = b.timestamp.getTime();
+        return timeB - timeA;
+      })
+      .slice(0, limitCount); // Limit to requested count
 
     // Get bio and about page edit activities
     let bioAndAboutActivities: ActivityData[] = [];
@@ -327,8 +292,8 @@ export const getRecentActivity = async (
       console.error("Error fetching bio and about activities:", error);
     }
 
-    // Combine page activities with bio and about activities
-    const allActivities = [...validActivities, ...bioAndAboutActivities]
+    // Combine version-based page activities with bio and about activities
+    const finalActivities = [...allActivities, ...bioAndAboutActivities]
       .sort((a, b) => {
         // Sort by timestamp in descending order (newest first)
         const timeA = a.timestamp.getTime();
@@ -337,10 +302,8 @@ export const getRecentActivity = async (
       })
       .slice(0, limitCount);
 
-    console.log(`After combining: ${allActivities.length} total activities`);
-
-    console.log(`getRecentActivity: Returning ${allActivities.length} activities`);
-    return { activities: allActivities };
+    console.log(`getRecentActivity: Returning ${finalActivities.length} total activities (${allActivities.length} page versions + ${bioAndAboutActivities.length} bio/about edits)`);
+    return { activities: finalActivities };
   } catch (err) {
     console.error("Error fetching recent activity:", err);
     // Return sample data instead of empty array

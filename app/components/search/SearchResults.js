@@ -13,6 +13,7 @@ import Link from "next/link";
 import { PillLink } from "../utils/PillLink";
 import debounce from "lodash.debounce";
 import { Input } from "../ui/input";
+import { ClearableInput } from "../ui/clearable-input";
 import { navigateToPage } from "../../utils/pagePermissions";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/config";
@@ -38,8 +39,8 @@ const Loader = () => {
  * @param {string} initialSelectedId - Initially selected item ID
  * @param {boolean} editableOnly - Filter for editable pages only
  * @param {string} initialSearch - Initial search value
- * @param {string} displayText - Display text for link editor
- * @param {Function} setDisplayText - Function to update display text
+ * @param {string} displayText - Display text for link editor (legacy prop, no longer used for input)
+ * @param {Function} setDisplayText - Function to update display text (used to detect link editor mode)
  * @param {Function} onInputChange - Callback for input changes
  * @param {boolean} preventRedirect - Prevent redirect to search page
  * @param {string} className - Additional CSS classes
@@ -191,19 +192,28 @@ const SearchResults = ({
     }
   }, [debouncedSearch, onInputChange, characterCount, isLinkEditor, resetSearchResults]);
 
+  // Handle clearing the search input
+  const handleClear = useCallback(() => {
+    setSearch("");
+    setSelectedId(null);
+    resetSearchResults();
+
+    if (onInputChange) {
+      onInputChange("");
+    }
+
+    // Focus the input after clearing
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [onInputChange, resetSearchResults]);
+
   // Handle item selection
   const handleSelect = useCallback(async (item) => {
     setSelectedId(item.id);
 
     if (onSelect) {
       onSelect(item);
-    }
-
-    // In link editor mode, update display text if needed
-    if (isLinkEditor && setDisplayText) {
-      if (!displayText.trim() || displayText === search) {
-        setDisplayText(item.title || item.username || item.name);
-      }
     }
 
     // Navigate if not prevented and not in link editor mode
@@ -236,7 +246,7 @@ const SearchResults = ({
         }
       }
     }
-  }, [onSelect, isLinkEditor, setDisplayText, displayText, search, preventRedirect, router, user, pageDataCache]);
+  }, [onSelect, isLinkEditor, preventRedirect, router, user, pageDataCache]);
 
   // Get all unique pages for display
   const getAllUniquePages = useCallback(() => {
@@ -274,39 +284,37 @@ const SearchResults = ({
 
   return (
     <div className={`flex flex-col ${className}`}>
-      {/* Display Text Input - Only show in link editor mode */}
-      {isLinkEditor && setDisplayText && (
-        <div className="flex flex-col space-y-1 mb-3">
-          <label htmlFor="display-text" className="text-sm font-medium">Display Text</label>
-          <input
-            id="display-text"
-            type="text"
-            value={displayText}
-            onChange={(e) => setDisplayText(e.target.value)}
-            placeholder={selectedId ?
-              getAllUniquePages().find(page => page.id === selectedId)?.title || "Link text"
-              : "Link text"}
-            className="w-full px-3 py-2 border border-border rounded-md"
-          />
-        </div>
-      )}
-
       {/* Search Input */}
       <div className="relative">
-        <Input
-          ref={searchInputRef}
-          type="text"
-          placeholder={placeholder}
-          value={search}
-          onChange={handleSearchChange}
-          className="w-full pr-10"
-          autoComplete="off"
-        />
+        {isLinkEditor ? (
+          <ClearableInput
+            ref={searchInputRef}
+            type="text"
+            placeholder={placeholder}
+            value={search}
+            onChange={handleSearchChange}
+            onClear={handleClear}
+            className="w-full"
+            autoComplete="off"
+          />
+        ) : (
+          <Input
+            ref={searchInputRef}
+            type="text"
+            placeholder={placeholder}
+            value={search}
+            onChange={handleSearchChange}
+            className="w-full pr-10"
+            autoComplete="off"
+          />
+        )}
 
-        {/* Search Icon */}
-        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-          <Search className="h-4 w-4 text-muted-foreground" />
-        </div>
+        {/* Search Icon - only show for non-link editor mode */}
+        {!isLinkEditor && (
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <Search className="h-4 w-4 text-muted-foreground" />
+          </div>
+        )}
       </div>
 
       {/* Search Results */}
@@ -335,7 +343,7 @@ const SearchResults = ({
                           className="w-6 h-6 rounded-full"
                         />
                       )}
-                      <span className="font-medium">@{user.username}</span>
+                      <span className="font-medium">{user.username}</span>
                     </div>
                   </button>
                 ))}

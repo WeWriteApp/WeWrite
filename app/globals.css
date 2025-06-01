@@ -931,6 +931,61 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
   color: hsl(var(--primary)) !important;
 }
 
+/* COMPOUND LINK FIXES - Ensure proper separation and styling */
+.compound-link-container {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important; /* gap-1 equivalent */
+  flex-wrap: nowrap !important;
+}
+
+/* Prevent any global link styles from merging compound link pills */
+.compound-link-container > a,
+.compound-link-container > span > a {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  border-radius: 0.5rem !important; /* Maintain individual pill border radius */
+}
+
+/* Ensure compound link "by" text is properly spaced and styled */
+.compound-link-container > .text-muted-foreground {
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline !important;
+  flex-shrink: 0 !important;
+}
+
+/* Additional compound link fixes for edit mode */
+[data-slate-editor] .compound-link-container {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+  flex-wrap: nowrap !important;
+}
+
+/* Ensure compound link pills in edit mode maintain separation */
+[data-slate-editor] .compound-link-container .page-portion,
+[data-slate-editor] .compound-link-container .author-portion {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+  border-radius: 0.5rem !important;
+}
+
+/* Prevent any global styles from affecting compound link structure */
+.compound-link-container * {
+  box-sizing: border-box !important;
+}
+
+/* Ensure compound links don't get merged by any parent styles */
+.compound-link-container:not(.single-link) {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
 /* Comprehensive fix for text contrast issues */
 /* Ensure all text has sufficient contrast against its background */
 .text-muted-foreground {

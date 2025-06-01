@@ -49,39 +49,107 @@ function longestCommonSubsequence(str1, str2) {
 
 /**
  * Calculates character-level diff using Myers' algorithm (simplified)
- * This properly tracks additions and deletions separately
+ * This properly tracks additions and deletions separately and returns detailed diff information
  * @param {string} oldText - Previous text content
  * @param {string} newText - Current text content
- * @returns {Object} Object with added and removed character counts
+ * @returns {Object} Object with added and removed character counts plus detailed diff operations
  */
 export function calculateCharacterDiff(oldText, newText) {
   if (!oldText && !newText) {
-    return { added: 0, removed: 0 };
+    return { added: 0, removed: 0, operations: [] };
   }
 
   if (!oldText) {
-    return { added: newText.length, removed: 0 };
+    return {
+      added: newText.length,
+      removed: 0,
+      operations: [{ type: 'add', text: newText, start: 0 }]
+    };
   }
 
   if (!newText) {
-    return { added: 0, removed: oldText.length };
+    return {
+      added: 0,
+      removed: oldText.length,
+      operations: [{ type: 'remove', text: oldText, start: 0 }]
+    };
   }
 
-  // Use a simplified diff algorithm based on Longest Common Subsequence (LCS)
-  const lcs = longestCommonSubsequence(oldText, newText);
+  // Generate detailed diff operations using LCS-based algorithm
+  const operations = generateDiffOperations(oldText, newText);
 
-  // Calculate additions and deletions
-  const added = newText.length - lcs.length;
-  const removed = oldText.length - lcs.length;
+  // Calculate totals from operations
+  let added = 0;
+  let removed = 0;
 
-  // Debug logging for troubleshooting
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`Character diff: "${oldText}" -> "${newText}"`);
-    console.log(`LCS: "${lcs}" (length: ${lcs.length})`);
-    console.log(`Result: +${added} -${removed}`);
+  operations.forEach(op => {
+    if (op.type === 'add') {
+      added += op.text.length;
+    } else if (op.type === 'remove') {
+      removed += op.text.length;
+    }
+  });
+
+  return { added, removed, operations };
+}
+
+/**
+ * Generates detailed diff operations using a simpler but more reliable algorithm
+ * @param {string} oldText - Previous text content
+ * @param {string} newText - Current text content
+ * @returns {Array} Array of diff operations
+ */
+function generateDiffOperations(oldText, newText) {
+  const operations = [];
+
+  // Use a simpler approach: find common prefix and suffix, then handle the middle
+  let prefixLength = 0;
+  const minLength = Math.min(oldText.length, newText.length);
+
+  // Find common prefix
+  while (prefixLength < minLength && oldText[prefixLength] === newText[prefixLength]) {
+    prefixLength++;
   }
 
-  return { added, removed };
+  // Find common suffix
+  let suffixLength = 0;
+  while (suffixLength < minLength - prefixLength &&
+         oldText[oldText.length - 1 - suffixLength] === newText[newText.length - 1 - suffixLength]) {
+    suffixLength++;
+  }
+
+  // Add prefix as equal operations (character by character for granular tracking)
+  for (let i = 0; i < prefixLength; i++) {
+    operations.push({ type: 'equal', text: oldText[i], oldStart: i, newStart: i });
+  }
+
+  // Handle the middle section (differences)
+  const oldMiddleStart = prefixLength;
+  const oldMiddleEnd = oldText.length - suffixLength;
+  const newMiddleStart = prefixLength;
+  const newMiddleEnd = newText.length - suffixLength;
+
+  const oldMiddle = oldText.substring(oldMiddleStart, oldMiddleEnd);
+  const newMiddle = newText.substring(newMiddleStart, newMiddleEnd);
+
+  // If there are differences in the middle
+  if (oldMiddle.length > 0 || newMiddle.length > 0) {
+    if (oldMiddle.length > 0) {
+      operations.push({ type: 'remove', text: oldMiddle, start: oldMiddleStart });
+    }
+    if (newMiddle.length > 0) {
+      operations.push({ type: 'add', text: newMiddle, start: newMiddleStart });
+    }
+  }
+
+  // Add suffix as equal operations
+  for (let i = 0; i < suffixLength; i++) {
+    const oldIndex = oldText.length - suffixLength + i;
+    const newIndex = newText.length - suffixLength + i;
+    operations.push({ type: 'equal', text: oldText[oldIndex], oldStart: oldIndex, newStart: newIndex });
+  }
+
+  return operations;
 }
 
 /**
@@ -99,7 +167,6 @@ export function generateTextDiff(currentContent, previousContent) {
   try {
     // Check for missing content
     if (!currentContent) {
-      console.log("Missing current content for diff");
       return defaultReturn;
     }
 
@@ -110,7 +177,6 @@ export function generateTextDiff(currentContent, previousContent) {
 
       // If text is empty or too short
       if (!currentText || !currentText.trim() || currentText.length < 3) {
-        console.log("Current text too short for new page diff");
         return { added: currentText.length, removed: 0, preview: null };
       }
 
@@ -139,14 +205,14 @@ export function generateTextDiff(currentContent, previousContent) {
     // If both texts are empty or too short
     if (!currentText.trim() || !previousText.trim() ||
         (currentText.length < 3 && previousText.length < 3)) {
-      console.log("Texts too short for diff:", { currentText, previousText });
       return defaultReturn;
     }
 
-    // Use accurate character diff calculation
+    // Use accurate character diff calculation with detailed operations
     const charDiff = calculateCharacterDiff(previousText, currentText);
 
     // Generate enhanced diff preview that shows both additions and deletions
+    // This now uses the same LCS-based algorithm for consistency
     const diffPreview = generateEnhancedDiffPreview(previousText, currentText);
 
     return {
@@ -162,68 +228,92 @@ export function generateTextDiff(currentContent, previousContent) {
 
 /**
  * Generates an enhanced diff preview that shows both additions and deletions
+ * Uses the same LCS-based algorithm as character counting for consistency
  * @param {string} oldText - Previous text content
  * @param {string} newText - Current text content
  * @returns {Object|null} Enhanced diff preview object or null if no meaningful diff
  */
 function generateEnhancedDiffPreview(oldText, newText) {
   try {
-    // Find the first and last difference points
-    const firstDiff = findFirstDifferenceIndex(oldText, newText);
-    if (firstDiff === -1) {
+    // Get detailed diff operations using the same algorithm as character counting
+    const diffResult = calculateCharacterDiff(oldText, newText);
+
+    if (!diffResult.operations || diffResult.operations.length === 0) {
       return null; // No differences
     }
 
-    const lastDiffOld = findLastDifferenceIndex(oldText, newText);
-    const lastDiffNew = findLastDifferenceIndex(newText, oldText);
+    // Find the first and last change operations to determine context boundaries
+    let firstChangeIndex = -1;
+    let lastChangeIndex = -1;
 
-    // Calculate context boundaries with more generous context (up to 3 lines)
-    const contextStart = Math.max(0, firstDiff - 120); // ~3 lines of context before
-    const contextEndOld = Math.min(oldText.length, lastDiffOld + 120); // ~3 lines of context after
-    const contextEndNew = Math.min(newText.length, lastDiffNew + 120);
+    for (let i = 0; i < diffResult.operations.length; i++) {
+      const op = diffResult.operations[i];
+      if (op.type === 'add' || op.type === 'remove') {
+        if (firstChangeIndex === -1) {
+          firstChangeIndex = i;
+        }
+        lastChangeIndex = i;
+      }
+    }
 
-    // Extract the different sections
-    const beforeContext = oldText.substring(contextStart, firstDiff);
+    if (firstChangeIndex === -1) {
+      return null; // No actual changes found
+    }
 
-    // For the changed section, we need to be more sophisticated
-    const oldChangedSection = oldText.substring(firstDiff, lastDiffOld);
-    const newChangedSection = newText.substring(firstDiff, lastDiffNew);
-
-    // Get after context from the new text
-    const afterContext = newText.substring(lastDiffNew, contextEndNew);
-
-    // Determine what was added and removed
-    let addedText = "";
-    let removedText = "";
+    // Build the preview by extracting context and changes
+    let beforeContext = '';
+    let addedText = '';
+    let removedText = '';
+    let afterContext = '';
     let hasAdditions = false;
     let hasRemovals = false;
 
-    if (newText.length > oldText.length) {
-      // Net addition
-      addedText = newChangedSection;
-      hasAdditions = true;
+    // Extract before context (up to 120 characters before first change)
+    let beforeContextLength = 0;
+    for (let i = firstChangeIndex - 1; i >= 0 && beforeContextLength < 120; i--) {
+      const op = diffResult.operations[i];
+      if (op.type === 'equal') {
+        const textToAdd = op.text;
+        if (beforeContextLength + textToAdd.length <= 120) {
+          beforeContext = textToAdd + beforeContext;
+          beforeContextLength += textToAdd.length;
+        } else {
+          // Add partial text and break
+          const remainingSpace = 120 - beforeContextLength;
+          beforeContext = textToAdd.substring(textToAdd.length - remainingSpace) + beforeContext;
+          break;
+        }
+      }
+    }
 
-      // Check if there were also removals within the change
-      if (oldChangedSection.length > 0) {
-        removedText = oldChangedSection;
+    // Extract changes and collect added/removed text
+    for (let i = firstChangeIndex; i <= lastChangeIndex; i++) {
+      const op = diffResult.operations[i];
+      if (op.type === 'add') {
+        addedText += op.text;
+        hasAdditions = true;
+      } else if (op.type === 'remove') {
+        removedText += op.text;
         hasRemovals = true;
       }
-    } else if (oldText.length > newText.length) {
-      // Net removal
-      removedText = oldChangedSection;
-      hasRemovals = true;
+    }
 
-      // Check if there were also additions within the change
-      if (newChangedSection.length > 0) {
-        addedText = newChangedSection;
-        hasAdditions = true;
+    // Extract after context (up to 120 characters after last change)
+    let afterContextLength = 0;
+    for (let i = lastChangeIndex + 1; i < diffResult.operations.length && afterContextLength < 120; i++) {
+      const op = diffResult.operations[i];
+      if (op.type === 'equal') {
+        const textToAdd = op.text;
+        if (afterContextLength + textToAdd.length <= 120) {
+          afterContext += textToAdd;
+          afterContextLength += textToAdd.length;
+        } else {
+          // Add partial text and break
+          const remainingSpace = 120 - afterContextLength;
+          afterContext += textToAdd.substring(0, remainingSpace);
+          break;
+        }
       }
-    } else {
-      // Same length but different content (replacement)
-      addedText = newChangedSection;
-      removedText = oldChangedSection;
-      hasAdditions = true;
-      hasRemovals = true;
     }
 
     // Truncate if too long but preserve readability
@@ -366,10 +456,7 @@ export function extractTextContent(contentJsonString) {
       return '';
     }
 
-    // Log the content for debugging
-    console.log('Extracting text from content:', typeof contentJsonString === 'string'
-      ? contentJsonString.substring(0, 100) + '...'
-      : 'Object');
+
 
     // Parse JSON if it's a string
     let content;
@@ -407,15 +494,49 @@ export function extractTextContent(contentJsonString) {
           } else if (node.text) {
             text += node.text;
           } else if (node.type === 'link') {
-            // For link nodes, extract text from children and add special markers
-            if (node.children) {
-              const linkText = extractText(node.children);
-              // Add the link text with special markers to indicate it's a link
-              text += `[${linkText}]`;
-            } else if (node.url) {
-              // If no children but has URL, use the URL as text
-              text += `[${node.url}]`;
+            // For link nodes, extract text with compound link support
+            let linkText = '';
+
+            // Handle compound links with author attribution
+            if (node.showAuthor && node.authorUsername && node.pageId) {
+              // Determine the base text for compound links
+              let baseText = '';
+
+              // Check for custom text first
+              if (node.displayText && node.displayText !== 'Link' && node.displayText.trim()) {
+                baseText = node.displayText;
+              } else if (node.children) {
+                const childText = extractText(node.children);
+                if (childText && childText !== 'Link' && childText.trim()) {
+                  baseText = childText;
+                }
+              }
+
+              // Fall back to page title if no custom text
+              if (!baseText) {
+                baseText = node.pageTitle || node.originalPageTitle || 'Page';
+              }
+
+              // Remove @ symbol from username if present
+              const cleanUsername = node.authorUsername.replace(/^@/, '');
+              linkText = `${baseText} by ${cleanUsername}`;
             }
+            // Handle regular links
+            else {
+              // Check for custom text first
+              if (node.displayText && node.displayText !== 'Link' && node.displayText.trim()) {
+                linkText = node.displayText;
+              } else if (node.children) {
+                linkText = extractText(node.children);
+              } else if (node.pageTitle) {
+                linkText = node.pageTitle;
+              } else if (node.url) {
+                linkText = node.url;
+              }
+            }
+
+            // Add the link text with special markers to indicate it's a link
+            text += `[${linkText}]`;
           } else if (node.children) {
             text += extractText(node.children);
           } else if (node.content) {
@@ -443,15 +564,49 @@ export function extractTextContent(contentJsonString) {
           if (node.text) {
             text += node.text;
           } else if (node.type === 'link' || node.type === 'custom-link') {
-            // For link nodes, extract text from children and add special markers
-            if (node.children) {
-              const linkText = extractText(node.children);
-              // Add the link text with special markers to indicate it's a link
-              text += `[${linkText}]`;
-            } else if (node.url || node.__url) {
-              // If no children but has URL, use the URL as text
-              text += `[${node.url || node.__url}]`;
+            // For link nodes, extract text with compound link support
+            let linkText = '';
+
+            // Handle compound links with author attribution
+            if (node.showAuthor && node.authorUsername && (node.pageId || node.__pageId)) {
+              // Determine the base text for compound links
+              let baseText = '';
+
+              // Check for custom text first
+              if (node.displayText && node.displayText !== 'Link' && node.displayText.trim()) {
+                baseText = node.displayText;
+              } else if (node.children) {
+                const childText = extractText(node.children);
+                if (childText && childText !== 'Link' && childText.trim()) {
+                  baseText = childText;
+                }
+              }
+
+              // Fall back to page title if no custom text
+              if (!baseText) {
+                baseText = node.pageTitle || node.originalPageTitle || node.__pageTitle || 'Page';
+              }
+
+              // Remove @ symbol from username if present
+              const cleanUsername = node.authorUsername.replace(/^@/, '');
+              linkText = `${baseText} by ${cleanUsername}`;
             }
+            // Handle regular links
+            else {
+              // Check for custom text first
+              if (node.displayText && node.displayText !== 'Link' && node.displayText.trim()) {
+                linkText = node.displayText;
+              } else if (node.children) {
+                linkText = extractText(node.children);
+              } else if (node.pageTitle || node.__pageTitle) {
+                linkText = node.pageTitle || node.__pageTitle;
+              } else if (node.url || node.__url) {
+                linkText = node.url || node.__url;
+              }
+            }
+
+            // Add the link text with special markers to indicate it's a link
+            text += `[${linkText}]`;
           } else if (node.children) {
             text += extractText(node.children);
           }

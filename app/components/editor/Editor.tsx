@@ -15,12 +15,15 @@ import {
 } from "slate";
 import { Editable, withReact, useSlate, Slate, ReactEditor } from "slate-react";
 import { withHistory, HistoryEditor } from "slate-history";
-import { ExternalLink, Link as LinkIcon } from "lucide-react";
+import { ExternalLink, Link as LinkIcon, Info, X, AlertTriangle } from "lucide-react";
 import { useLineSettings } from '../../contexts/LineSettingsContext';
 import { usePillStyle } from '../../contexts/PillStyleContext';
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { useAuth } from '../../providers/AuthProvider';
 import { useAccentColor } from '../../contexts/AccentColorContext';
+import Modal from '../ui/modal';
+import { Button } from '../ui/button';
+import { Alert, AlertDescription } from '../ui/alert';
 import type { EditorProps, EditorRef, LinkData } from "../../types/components";
 import type { SlateContent, SlateNode, SlateChild } from "../../types/database";
 import DisabledLinkModal from "../utils/DisabledLinkModal";
@@ -275,7 +278,8 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
     onChange,
     placeholder = "Start typing...",
     contentType = "wiki",
-    onKeyDown
+    onKeyDown,
+    onEmptyLinesChange
   } = props;
 
   // Get user context for feature flags
@@ -426,6 +430,113 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
   const [showLinkEditor, setShowLinkEditor] = useState(false);
   const [linkEditorPosition, setLinkEditorPosition] = useState({ top: 0, left: 0 });
   const [initialLinkValues, setInitialLinkValues] = useState({});
+
+  // State for empty line guidance modal
+  const [showEmptyLineModal, setShowEmptyLineModal] = useState(false);
+
+  // State for empty lines warning alert
+  const [showEmptyLinesAlert, setShowEmptyLinesAlert] = useState(false);
+  const [emptyLinesCount, setEmptyLinesCount] = useState(0);
+
+  // Utility function to detect if a paragraph contains only whitespace
+  const isEmptyLine = useCallback((element: any) => {
+    if (element.type !== 'paragraph') return false;
+
+    // Check if all children are empty or contain only whitespace
+    return element.children.every((child: any) => {
+      if (child.text) {
+        // Check if text contains only whitespace characters
+        return /^\s*$/.test(child.text);
+      }
+      return true; // Non-text nodes are considered empty for this purpose
+    });
+  }, []);
+
+  // Function to count empty lines in the editor content
+  const countEmptyLines = useCallback(() => {
+    if (!editor || !editor.children) return 0;
+
+    let count = 0;
+    for (const node of editor.children) {
+      if (isEmptyLine(node)) {
+        count++;
+      }
+    }
+    return count;
+  }, [editor, isEmptyLine]);
+
+  // Function to update empty lines alert state
+  const updateEmptyLinesAlert = useCallback(() => {
+    const count = countEmptyLines();
+    setEmptyLinesCount(count);
+
+    // Notify parent component about empty lines count
+    if (onEmptyLinesChange) {
+      onEmptyLinesChange(count);
+    }
+
+    // Show alert if there are empty lines and it's not already dismissed
+    if (count > 0 && !showEmptyLinesAlert) {
+      setShowEmptyLinesAlert(true);
+    } else if (count === 0) {
+      setShowEmptyLinesAlert(false);
+    }
+  }, [countEmptyLines, showEmptyLinesAlert, onEmptyLinesChange]);
+
+  // Function to delete all empty lines
+  const deleteAllEmptyLines = useCallback(() => {
+    if (!editor || !editor.children) return;
+
+    // Save current selection to restore later
+    const currentSelection = editor.selection;
+
+    // Find all empty line paths (in reverse order to avoid index shifting)
+    const emptyLinePaths: Path[] = [];
+    for (let i = editor.children.length - 1; i >= 0; i--) {
+      const node = editor.children[i];
+      if (isEmptyLine(node)) {
+        emptyLinePaths.push([i]);
+      }
+    }
+
+    // Remove empty lines using Slate transforms
+    Editor.withoutNormalizing(editor, () => {
+      for (const path of emptyLinePaths) {
+        try {
+          Transforms.removeNodes(editor, { at: path });
+        } catch (error) {
+          console.warn('Failed to remove empty line at path:', path, error);
+        }
+      }
+    });
+
+    // Ensure we have at least one paragraph
+    if (editor.children.length === 0) {
+      Transforms.insertNodes(editor, {
+        type: 'paragraph',
+        children: [{ text: '' }]
+      });
+    }
+
+    // Try to restore selection or set to beginning
+    try {
+      if (currentSelection && Editor.hasPath(editor, currentSelection.anchor.path)) {
+        Transforms.select(editor, currentSelection);
+      } else {
+        // Set cursor to the beginning of the first paragraph
+        Transforms.select(editor, {
+          anchor: { path: [0, 0], offset: 0 },
+          focus: { path: [0, 0], offset: 0 }
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to restore selection after deleting empty lines:', error);
+    }
+
+    // Update alert state
+    setShowEmptyLinesAlert(false);
+    setEmptyLinesCount(0);
+  }, [editor, isEmptyLine]);
 
   // Track if we've already set up the editor
   const isInitializedRef = useRef(false);
@@ -578,6 +689,8 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
       // Log the link type for debugging
       console.log('Link type:', { isUserLinkType, isPageLinkType, isExternalLinkType });
 
+      console.log('[DEBUG] insertLink called with:', { url, text, options });
+
       // Create the initial link object with basic properties
       const initialLink = {
         type: 'link',
@@ -602,6 +715,8 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
         }),
         ...((options as any).isPublic === false && { isPublic: false })
       };
+
+      console.log('[DEBUG] Initial link object created:', initialLink);
 
       // CRITICAL FIX: Use the validator to ensure all required properties are present
       // This standardizes link creation and ensures backward compatibility
@@ -926,6 +1041,7 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
       setShowLinkEditor(value);
       return true;
     },
+    deleteAllEmptyLines, // Expose the deleteAllEmptyLines method
     // Add any other methods you want to expose
   }));
 
@@ -980,6 +1096,11 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
           console.error("Error in onChange callback:", onChangeError);
         }
       }
+
+      // Update empty lines alert after content changes
+      setTimeout(() => {
+        updateEmptyLinesAlert();
+      }, 0);
     } catch (error) {
       console.error("Error in handleEditorChange:", error);
 
@@ -1011,7 +1132,7 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
         }
       }
     }
-  }, [editor, onChange, handleParagraphIndices, editorValue]);
+  }, [editor, onChange, handleParagraphIndices, editorValue, updateEmptyLinesAlert]);
 
   // Render a paragraph element or link
   const renderElement = useCallback(({ attributes, children, element }) => {
@@ -1025,8 +1146,15 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
         // Use our utility function to get the paragraph index
         index = getParagraphIndex(element, editor);
 
+        // Check if this is an empty line
+        const isEmpty = isEmptyLine(element);
+
         return (
-          <div {...attributes} className="paragraph-with-number">
+          <div
+            {...attributes}
+            className={`paragraph-with-number relative ${isEmpty ? 'empty-line-highlight' : ''}`}
+            style={isEmpty ? { backgroundColor: 'rgba(255, 0, 0, 0.15)' } : {}}
+          >
             {/* Paragraph number inline at beginning - non-selectable and non-interactive */}
             <span
               contentEditable={false}
@@ -1042,12 +1170,43 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
               {index + 1}
             </span>
             <p className="inline">{children}</p>
+
+            {/* Info icon for empty lines */}
+            {isEmpty && (
+              <button
+                contentEditable={false}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-red-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-300"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowEmptyLineModal(true);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowEmptyLineModal(true);
+                  }
+                }}
+                tabIndex={0}
+                aria-label="Information about empty lines"
+                title="Click for guidance on empty lines"
+                style={{
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
+                  MozUserSelect: 'none',
+                  msUserSelect: 'none'
+                }}
+              >
+                <Info className="h-4 w-4 text-red-500" />
+              </button>
+            )}
           </div>
         );
       default:
         return <p {...attributes}>{children}</p>;
     }
-  }, [editor]);
+  }, [editor, isEmptyLine]);
 
   // Render a leaf (text with formatting)
   const renderLeaf = useCallback(({ attributes, children, leaf }) => {
@@ -1266,10 +1425,11 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
           return;
         }
 
-        // If we're inside the link, prevent deletion to maintain link integrity
-        // Users should edit link text through the modal only
+        // If we're inside the link, delete the entire link instead of partial text
         if (!Point.equals(selection.anchor, linkStart) && !Point.equals(selection.anchor, linkEnd)) {
           event.preventDefault();
+          console.log('Deleting link from inside:', linkNode);
+          Transforms.removeNodes(editor, { at: linkPath });
           return;
         }
       }
@@ -1510,14 +1670,64 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
           <LinkEditor
             position={linkEditorPosition}
             onSelect={(item) => {
-              // Insert the link
-              const url = item.isExternal ? item.url : `/pages/${item.pageId}`;
-              console.log('Inserting link with URL:', url, 'and pageId:', item.pageId);
+              console.log('[DEBUG] onSelect called with item:', item);
 
-              insertLink(
-                url,
-                item.displayText || item.title,
-                {
+              // Check if we're editing an existing link
+              if (linkEditorRef.current.selectedLinkElement && linkEditorRef.current.selectedLinkPath) {
+                console.log('[DEBUG] Editing existing link');
+                // Edit existing link
+                try {
+                  const displayText = item.displayText || item.title || item.pageTitle;
+
+                  // Create the updated link with compound link support
+                  let linkText = displayText;
+                  if (item.showAuthor && item.authorUsername) {
+                    console.log('[DEBUG] Creating compound link with author:', item.authorUsername);
+                    // For compound links, preserve custom text if available, otherwise use page title
+                    linkText = item.displayText || item.pageTitle || item.title;
+                  }
+
+                  const updatedLink = validateLink({
+                    type: "link",
+                    url: item.isExternal ? item.url : `/pages/${item.pageId}`,
+                    children: [{ text: linkText }],
+                    ...(item.isExternal && { isExternal: true }),
+                    ...(item.pageId && {
+                      pageId: item.pageId,
+                      pageTitle: item.pageTitle, // Always preserve the actual page title
+                      showAuthor: item.showAuthor || false,
+                      authorUsername: item.authorUsername || null
+                    })
+                  });
+
+                  console.log('[DEBUG] Updated link object:', updatedLink);
+
+                  // Apply the validated link properties
+                  Transforms.setNodes(
+                    editor,
+                    updatedLink,
+                    { at: linkEditorRef.current.selectedLinkPath }
+                  );
+
+                  console.log('Updated existing link:', updatedLink);
+                } catch (error) {
+                  console.error("Error updating existing link:", error);
+                }
+              } else {
+                console.log('[DEBUG] Creating new link');
+                // Insert new link
+                const url = item.isExternal ? item.url : `/pages/${item.pageId}`;
+                console.log('[DEBUG] Inserting new link with URL:', url, 'and pageId:', item.pageId);
+
+                // Create display text for compound links
+                let linkText = item.displayText || item.title;
+                if (item.showAuthor && item.authorUsername) {
+                  console.log('[DEBUG] Creating new compound link with author:', item.authorUsername);
+                  // For compound links, preserve custom text if available, otherwise use page title
+                  linkText = item.displayText || item.pageTitle || item.title;
+                }
+
+                const linkOptions = {
                   pageId: item.pageId,
                   pageTitle: item.pageTitle,
                   isExternal: item.isExternal,
@@ -1527,8 +1737,17 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
                   // Add compound link properties
                   showAuthor: item.showAuthor,
                   authorUsername: item.authorUsername
-                }
-              );
+                };
+
+                console.log('[DEBUG] Link options:', linkOptions);
+
+                insertLink(url, linkText, linkOptions);
+              }
+
+              // Reset link editor state
+              linkEditorRef.current.selectedLinkElement = null;
+              linkEditorRef.current.selectedLinkPath = null;
+
               // Hide the link editor
               setShowLinkEditor(false);
             }}
@@ -1537,9 +1756,38 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
             initialPageId={initialLinkValues.pageId || null}
             initialPageTitle={initialLinkValues.pageTitle || ""}
             initialTab={initialLinkValues.initialTab || "page"}
+            initialShowAuthor={initialLinkValues.showAuthor || false}
+            initialAuthorUsername={initialLinkValues.authorUsername || null}
           />
         </div>
       )}
+
+
+
+      {/* Empty Line Guidance Modal */}
+      <Modal
+        isOpen={showEmptyLineModal}
+        onClose={() => setShowEmptyLineModal(false)}
+        title="Content Structure Tip"
+        className="max-w-md"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            It's recommended to use one line at a time for better readability and structure.
+          </p>
+          <p className="text-sm text-gray-500">
+            Empty lines can make your content harder to read and navigate. Consider removing them or adding meaningful content.
+          </p>
+          <div className="flex justify-end">
+            <Button
+              onClick={() => setShowEmptyLineModal(false)}
+              variant="primary"
+            >
+              Got it
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Disabled Link Modal */}
       <DisabledLinkModal
@@ -1800,7 +2048,9 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
               text: initialText,
               pageId: element.pageId || null,
               pageTitle: element.pageTitle || initialText,
-              initialTab: initialTab
+              initialTab: initialTab,
+              showAuthor: element.showAuthor || false,
+              authorUsername: element.authorUsername || null
             });
           }
 
@@ -2076,34 +2326,76 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
   // Check if this is a compound link with author
   const isCompoundLink = element.showAuthor && element.pageTitle && element.authorUsername;
 
+  console.log('[DEBUG] Compound link check:', {
+    showAuthor: element.showAuthor,
+    pageTitle: element.pageTitle,
+    authorUsername: element.authorUsername,
+    isCompoundLink,
+    element
+  });
+
   if (isCompoundLink) {
-    // Render compound link: "[Page Title] by [Author Username]"
+    // Render compound link: "[Page Title] by [Author Username]" with separate clickable pills
     return (
       <>
         <span
           {...attributes}
           contentEditable={false}
-          className={`${baseStyles} ${isSelected ? 'ring-2 ring-primary ring-offset-1' : ''} compound-link`}
+          className="inline-flex items-center gap-1 compound-link-container group"
           data-pill-style={pillStyle}
           data-page-id={element.pageId || ''}
           data-link-type="compound"
           data-selected={isSelected ? 'true' : 'false'}
           title={`${element.pageTitle} by ${element.authorUsername}`}
-          onClick={handleClick}
         >
-          {element.isPublic === false && <Lock size={14} className="mr-1 flex-shrink-0" />}
+          {/* Page title portion - clickable pill */}
+          <a
+            className={`${baseStyles} ${isSelected ? 'ring-2 ring-primary ring-offset-1' : ''} page-portion`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Navigate to the page
+              window.location.href = `/pages/${element.pageId}`;
+            }}
+            href={`/pages/${element.pageId}`}
+            title={element.pageTitle}
+          >
+            {element.isPublic === false && <Lock size={14} className="mr-1 flex-shrink-0" />}
+            <span className="pill-text">
+              {element.children?.[0]?.text || element.pageTitle}
+            </span>
+          </a>
 
-          {/* Page title portion - clickable */}
-          <span className="pill-text page-portion">
-            {element.pageTitle}
-          </span>
+          <span className="text-muted-foreground text-sm">by</span>
 
-          <span className="mx-1 text-muted-foreground">by</span>
+          {/* Author username portion - clickable pill */}
+          <a
+            className={`${baseStyles} ${isSelected ? 'ring-2 ring-primary ring-offset-1' : ''} author-portion user-link`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Navigate to the user profile
+              window.location.href = `/users/${element.authorUsername}`;
+            }}
+            href={`/users/${element.authorUsername}`}
+            title={element.authorUsername}
+          >
+            <span className="pill-text">
+              {element.authorUsername}
+            </span>
+          </a>
 
-          {/* Author username portion - clickable */}
-          <span className="pill-text author-portion">
-            {element.authorUsername}
-          </span>
+          {/* Edit button for the compound link */}
+          <button
+            className="ml-1 p-0.5 rounded hover:bg-muted/50 transition-colors opacity-0 group-hover:opacity-100"
+            onClick={handleClick}
+            title="Edit link"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
         </span>
 
         {/* Hidden children for Slate.js structure */}
@@ -2161,9 +2453,12 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
  * @param {string} props.initialPageTitle - Initial page title for internal links
  * @param {string} props.initialTab - Initial tab to show ("page" or "external")
  */
-const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "", initialTab = "page" }) => {
+const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "", initialTab = "page", initialShowAuthor = false, initialAuthorUsername = null }) => {
   // Get accent color for button styling
   const { accentColor, customColors } = useAccentColor();
+
+  // Determine if we're editing an existing link
+  const isEditing = !!initialPageId || !!initialText;
 
   const [displayText, setDisplayText] = useState(initialText);
   const [pageTitle, setPageTitle] = useState(initialPageTitle);
@@ -2171,15 +2466,20 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
   const [activeTab, setActiveTab] = useState(initialTab || (initialPageId ? "page" : "external"));
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
   const [externalUrl, setExternalUrl] = useState("");
-  const [showAuthor, setShowAuthor] = useState(false);
+  const [showAuthor, setShowAuthor] = useState(initialShowAuthor);
   const [hasChanged, setHasChanged] = useState(false);
   const [isValid, setIsValid] = useState(true); // Start as valid to avoid initial error state
   const [validationMessage, setValidationMessage] = useState("");
   const [formTouched, setFormTouched] = useState(false); // Track if form has been interacted with - only show validation errors after user interaction
 
-  // New state for toggles
-  const [showCustomDisplayText, setShowCustomDisplayText] = useState(false);
-  const [showCustomLinkText, setShowCustomLinkText] = useState(false);
+
+
+  // Detect if the link has custom text (different from page title)
+  const hasCustomText = isEditing && initialText && initialPageTitle && initialText !== initialPageTitle;
+
+  // New state for toggles - initialize based on existing link state
+  const [showCustomDisplayText, setShowCustomDisplayText] = useState(hasCustomText);
+  const [showCustomLinkText, setShowCustomLinkText] = useState(hasCustomText);
 
   // Helper function to get accent color value
   const getAccentColorValue = () => {
@@ -2201,8 +2501,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
     return accentColors[accentColor] || '#1768FF';
   };
 
-  // Determine if we're editing an existing link or creating a new one
-  const isEditing = !!initialPageId || !!initialText;
+
 
   // Input refs for focus management
   const displayTextRef = useRef(null);
@@ -2407,27 +2706,40 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 
     // If showAuthor is enabled, fetch the author information
     if (showAuthor && item.id) {
+      console.log('[DEBUG] Show author is enabled, fetching author info for page:', item.id);
       try {
         // Fetch page details to get author information
         const response = await fetch(`/api/pages/${item.id}`);
+        console.log('[DEBUG] API response status:', response.status);
         if (response.ok) {
           const pageData = await response.json();
-          authorUsername = pageData.authorUsername || pageData.author?.username;
+          console.log('[DEBUG] Page data received:', pageData);
+          authorUsername = pageData.authorUsername || pageData.author?.username || pageData.username;
+          console.log('[DEBUG] Extracted author username:', authorUsername);
+        } else {
+          console.error('[DEBUG] API response not ok:', response.status, response.statusText);
+          const errorText = await response.text();
+          console.error('[DEBUG] API error response:', errorText);
         }
       } catch (error) {
-        console.error('Error fetching author information:', error);
+        console.error('[DEBUG] Error fetching author information:', error);
         // Continue without author info if fetch fails
       }
+    } else {
+      console.log('[DEBUG] Show author not enabled or no item.id:', { showAuthor, itemId: item.id });
     }
 
-    onSelect({
+    const linkData = {
       type: "page",
       pageId: item.id,
-      pageTitle: item.title || displayText,
+      pageTitle: item.title, // Always use the actual page title for compound links
       displayText: displayText || item.title,
       showAuthor,
       authorUsername
-    });
+    };
+
+    console.log('[DEBUG] Calling onSelect with link data:', linkData);
+    onSelect(linkData);
 
     // CRITICAL FIX: Use the parent component's state setter if available
     if (typeof window !== 'undefined' && window.currentLinkEditorRef && window.currentLinkEditorRef.setShowLinkEditor) {
@@ -2539,6 +2851,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                     }}
                     placeholder="Search pages..."
                     initialSelectedId={selectedPageId}
+                    initialSearch={isEditing && pageTitle ? pageTitle : ""}
                     displayText={displayText}
                     setDisplayText={setDisplayText}
                     preventRedirect={true}

@@ -129,7 +129,7 @@ const SearchResultsDisplay = React.memo(({
               <div key={`user-${user.id}`} className="flex items-center">
                 <div className="flex-none max-w-[60%]">
                   <PillLink href={`/user/${user.id}`} className="max-w-full">
-                    @{user.username}
+                    {user.username}
                   </PillLink>
                 </div>
                 <span className="text-xs text-muted-foreground ml-2 truncate">

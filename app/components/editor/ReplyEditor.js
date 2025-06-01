@@ -1459,6 +1459,78 @@ const LinkComponent = forwardRef(({ attributes, children, element, openLinkEdito
     flex-none
   `.trim().replace(/\s+/g, ' ');
 
+  // Check if this is a compound link with author
+  const isCompoundLink = validatedElement.showAuthor && validatedElement.pageTitle && validatedElement.authorUsername;
+
+  if (isCompoundLink) {
+    // Render compound link: "[Page Title] by [Author Username]" with separate clickable pills
+    return (
+      <>
+        <span
+          {...attributes}
+          contentEditable={false}
+          className="inline-flex items-center gap-1 compound-link-container group"
+          data-pill-style={pillStyle}
+          data-page-id={validatedElement.pageId || ''}
+          data-link-type="compound"
+          title={`${validatedElement.pageTitle} by ${validatedElement.authorUsername}`}
+        >
+          {/* Page title portion - clickable pill */}
+          <a
+            className={`${baseStyles} page-portion`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Navigate to the page
+              window.location.href = `/pages/${validatedElement.pageId}`;
+            }}
+            href={`/pages/${validatedElement.pageId}`}
+            title={validatedElement.pageTitle}
+          >
+            <span className="pill-text">
+              {validatedElement.children?.[0]?.text || validatedElement.pageTitle}
+            </span>
+          </a>
+
+          <span className="text-muted-foreground text-sm">by</span>
+
+          {/* Author username portion - clickable pill */}
+          <a
+            className={`${baseStyles} author-portion user-link`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Navigate to the user profile
+              window.location.href = `/users/${validatedElement.authorUsername}`;
+            }}
+            href={`/users/${validatedElement.authorUsername}`}
+            title={validatedElement.authorUsername}
+          >
+            <span className="pill-text">
+              {validatedElement.authorUsername}
+            </span>
+          </a>
+
+          {/* Edit button for the compound link */}
+          <button
+            className="ml-1 p-0.5 rounded hover:bg-muted/50 transition-colors opacity-0 group-hover:opacity-100"
+            onClick={handleClick}
+            title="Edit link"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2-2v-7"/>
+              <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
+        </span>
+
+        {/* Hidden children for Slate.js structure */}
+        <span style={{ display: 'none' }}>{children}</span>
+      </>
+    );
+  }
+
+  // Regular single link rendering
   return (
     <a
       {...attributes}

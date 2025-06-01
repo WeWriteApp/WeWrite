@@ -24,7 +24,6 @@ import ActivitySectionHeader from "./components/activity/ActivitySectionHeader";
 import RandomPagesHeader from "./components/features/RandomPagesHeader";
 import RecentActivity from "./components/features/RecentActivity";
 import { SmartLoader } from "./components/ui/smart-loader";
-import { InfiniteRefreshProtection, RefreshProtectionStatus } from "./components/debug/infinite-refresh-protection";
 
 // Context and provider imports
 import { AuthContext } from "./providers/AuthProvider";
@@ -171,8 +170,6 @@ const Home = React.memo(function Home() {
       <>
         <LandingPage />
         <SiteFooter className="" />
-        <InfiniteRefreshProtection showDebugPanel={process.env.NODE_ENV === 'development'} />
-        <RefreshProtectionStatus />
       </>
     );
   }
@@ -354,8 +351,6 @@ const Home = React.memo(function Home() {
           <FloatingActionButton href="/new" onClick={() => {}} className="" />
         </main>
         <SiteFooter className="" />
-        <InfiniteRefreshProtection showDebugPanel={process.env.NODE_ENV === 'development'} />
-        <RefreshProtectionStatus />
       </Suspense>
     </SmartLoader>
   );

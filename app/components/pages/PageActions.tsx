@@ -147,16 +147,25 @@ export function PageActions({
     const confirmed = await confirmDelete("this page");
     if (confirmed) {
       try {
-        // Immediately redirect to prevent any 404 flash
-        router.push("/");
-
-        // Delete the page in the background
+        // Delete the page first
         await deletePage(page.id);
+
+        // Show success message
         toast.success("Page deleted successfully");
+
+        // Trigger success event
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('page-deleted', {
+            detail: { pageId: page.id }
+          }));
+        }
+
+        // Navigate to home page after successful deletion
+        router.push("/");
       } catch (error) {
         console.error("Error deleting page:", error);
         toast.error("Failed to delete page");
-        // If deletion failed, we're already on home page which is safe
+        // Don't redirect if deletion failed
       }
     }
   };
