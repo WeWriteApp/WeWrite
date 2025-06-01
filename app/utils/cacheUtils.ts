@@ -9,24 +9,49 @@ interface CacheItem<T = any> {
   ttl: number;
 }
 
+// Legacy interface for backward compatibility with the old .js version
+interface LegacyCacheItem<T = any> {
+  value: T;
+  expiry: number;
+}
+
+// Default TTL (time-to-live) in milliseconds (15 minutes)
+// Increased from 5 minutes to reduce Firestore reads and improve cost efficiency
+const DEFAULT_TTL = 15 * 60 * 1000;
+
 /**
  * Generate a consistent cache key
+ * Supports both new signature (prefix, identifier) and legacy signature (type, id, subType)
  */
-export const generateCacheKey = (prefix: string, identifier: string): string => {
-  return `wewrite_${prefix}_${identifier}`;
+export const generateCacheKey = (
+  prefixOrType: string,
+  identifierOrId: string,
+  subType?: string
+): string => {
+  if (subType !== undefined) {
+    // Legacy signature: generateCacheKey(type, id, subType)
+    return `wewrite_${prefixOrType}_${identifierOrId}${subType ? `_${subType}` : ''}`;
+  } else {
+    // New signature: generateCacheKey(prefix, identifier)
+    return `wewrite_${prefixOrType}_${identifierOrId}`;
+  }
 };
 
 /**
  * Set an item in cache with TTL
+ * Supports both new format (with timestamp/ttl) and legacy format (with expiry)
  */
-export const setCacheItem = <T>(key: string, data: T, ttl: number = 5 * 60 * 1000): void => {
+export const setCacheItem = <T>(key: string, data: T, ttl: number = DEFAULT_TTL): void => {
   try {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') return;
+
     const cacheItem: CacheItem<T> = {
       data,
       timestamp: Date.now(),
       ttl
     };
-    
+
     localStorage.setItem(key, JSON.stringify(cacheItem));
   } catch (error) {
     console.warn('Error setting cache item:', error);
@@ -36,22 +61,44 @@ export const setCacheItem = <T>(key: string, data: T, ttl: number = 5 * 60 * 100
 
 /**
  * Get an item from cache, checking TTL
+ * Supports both new format (with timestamp/ttl) and legacy format (with expiry)
  */
 export const getCacheItem = <T>(key: string): T | null => {
   try {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') return null;
+
     const cached = localStorage.getItem(key);
     if (!cached) return null;
-    
-    const cacheItem: CacheItem<T> = JSON.parse(cached);
+
+    const parsedItem = JSON.parse(cached);
     const now = Date.now();
-    
-    // Check if cache item has expired
-    if (now - cacheItem.timestamp > cacheItem.ttl) {
-      localStorage.removeItem(key);
-      return null;
+
+    // Check if this is the new format (has timestamp and ttl)
+    if ('timestamp' in parsedItem && 'ttl' in parsedItem && 'data' in parsedItem) {
+      const cacheItem: CacheItem<T> = parsedItem;
+      // Check if cache item has expired
+      if (now - cacheItem.timestamp > cacheItem.ttl) {
+        localStorage.removeItem(key);
+        return null;
+      }
+      return cacheItem.data;
     }
-    
-    return cacheItem.data;
+
+    // Check if this is the legacy format (has value and expiry)
+    if ('value' in parsedItem && 'expiry' in parsedItem) {
+      const legacyItem: LegacyCacheItem<T> = parsedItem;
+      if (now > legacyItem.expiry) {
+        // Item has expired, remove it
+        localStorage.removeItem(key);
+        return null;
+      }
+      return legacyItem.value;
+    }
+
+    // If neither format matches, treat as corrupted and remove
+    localStorage.removeItem(key);
+    return null;
   } catch (error) {
     console.warn('Error getting cache item:', error);
     // Remove corrupted cache item
@@ -81,14 +128,14 @@ export const removeCacheItem = (key: string): void => {
 export const clearCacheByPrefix = (prefix: string): void => {
   try {
     const keysToRemove: string[] = [];
-    
+
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith(`wewrite_${prefix}_`)) {
         keysToRemove.push(key);
       }
     }
-    
+
     keysToRemove.forEach(key => localStorage.removeItem(key));
   } catch (error) {
     console.warn('Error clearing cache by prefix:', error);
@@ -96,21 +143,66 @@ export const clearCacheByPrefix = (prefix: string): void => {
 };
 
 /**
+ * Clear all cached items or items with a specific prefix
+ * Legacy function for backward compatibility with the old .js version
+ *
+ * @param {string} prefix - Optional prefix to clear only specific items
+ */
+export const clearCache = (prefix: string = ''): void => {
+  try {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') return;
+
+    if (!prefix) {
+      // Clear all cache items
+      localStorage.clear();
+      return;
+    }
+
+    // Clear items with specific prefix
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(prefix)) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch (error) {
+    console.error('Error clearing cache:', error);
+  }
+};
+
+/**
  * Clear expired cache items
+ * Supports both new format (with timestamp/ttl) and legacy format (with expiry)
  */
 export const clearExpiredCache = (): void => {
   try {
     const keysToRemove: string[] = [];
     const now = Date.now();
-    
+
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith('wewrite_')) {
         try {
           const cached = localStorage.getItem(key);
           if (cached) {
-            const cacheItem: CacheItem = JSON.parse(cached);
-            if (now - cacheItem.timestamp > cacheItem.ttl) {
+            const parsedItem = JSON.parse(cached);
+
+            // Check if this is the new format (has timestamp and ttl)
+            if ('timestamp' in parsedItem && 'ttl' in parsedItem) {
+              const cacheItem: CacheItem = parsedItem;
+              if (now - cacheItem.timestamp > cacheItem.ttl) {
+                keysToRemove.push(key);
+              }
+            }
+            // Check if this is the legacy format (has expiry)
+            else if ('expiry' in parsedItem) {
+              const legacyItem: LegacyCacheItem = parsedItem;
+              if (now > legacyItem.expiry) {
+                keysToRemove.push(key);
+              }
+            }
+            // If neither format matches, treat as corrupted
+            else {
               keysToRemove.push(key);
             }
           }
@@ -120,9 +212,9 @@ export const clearExpiredCache = (): void => {
         }
       }
     }
-    
+
     keysToRemove.forEach(key => localStorage.removeItem(key));
-    
+
     if (keysToRemove.length > 0) {
       console.log(`Cleared ${keysToRemove.length} expired cache items`);
     }

@@ -8,6 +8,7 @@
     "dev:safe": "./scripts/start-dev.sh",
     "dev:port": "./scripts/ensure-port-3000.sh",
     "build": "rm -rf .next && SKIP_TYPE_CHECK=1 NODE_OPTIONS='--max_old_space_size=4096' next build",
+    "seo:audit": "node scripts/seo-audit.js",
     "start": "next start",
     "lint": "next lint",
     "clean": "rm -rf .next node_modules/.cache"

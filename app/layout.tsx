@@ -28,8 +28,44 @@ const ClientLayout = dynamic(() => import("./ClientLayout"), { ssr: true })
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
-  title: "WeWrite - Home",
-  description: "Create, collaborate, and share your writing with others in real-time",
+  title: "WeWrite - The Social Wiki Where Every Page is a Fundraiser",
+  description: "Create, collaborate, and share your writing with others in real-time. Join the social wiki where every page is a fundraiser and writers can earn from their content.",
+  keywords: "collaborative writing, social wiki, fundraising, content creation, real-time collaboration, writing platform, community writing",
+  authors: [{ name: "WeWrite Team" }],
+  creator: "WeWrite",
+  publisher: "WeWrite",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  openGraph: {
+    title: "WeWrite - The Social Wiki Where Every Page is a Fundraiser",
+    description: "Create, collaborate, and share your writing with others in real-time. Join the social wiki where every page is a fundraiser and writers can earn from their content.",
+    url: process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app',
+    siteName: 'WeWrite',
+    type: 'website',
+    images: [
+      {
+        url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'}/images/og-image.png`,
+        width: 1200,
+        height: 630,
+        alt: 'WeWrite - Collaborative Writing Platform',
+      }
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "WeWrite - The Social Wiki Where Every Page is a Fundraiser",
+    description: "Create, collaborate, and share your writing with others in real-time. Join the social wiki where every page is a fundraiser and writers can earn from their content.",
+    images: [`${process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'}/images/og-image.png`],
+  },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: '32x32' },
@@ -38,6 +74,7 @@ export const metadata = {
     ],
     apple: { url: '/icons/apple-touch-icon.png', sizes: '180x180' },
   },
+  manifest: '/manifest.json',
 }
 
 export default function RootLayout({
@@ -49,7 +86,39 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="canonical" href={process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'} />
         <SlateEarlyPatch />
+
+        {/* Website Schema Markup */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: 'WeWrite',
+              description: 'The social wiki where every page is a fundraiser. Create, collaborate, and share your writing with others in real-time.',
+              url: process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app',
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: {
+                  '@type': 'EntryPoint',
+                  urlTemplate: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'}/search?q={search_term_string}`
+                },
+                'query-input': 'required name=search_term_string'
+              },
+              publisher: {
+                '@type': 'Organization',
+                name: 'WeWrite',
+                url: process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app',
+                logo: {
+                  '@type': 'ImageObject',
+                  url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'}/images/og-image.png`
+                }
+              }
+            })
+          }}
+        />
         <script dangerouslySetInnerHTML={{
           __html: `
             // Enhanced script to detect and recover from blank pages and script failures
@@ -91,31 +160,29 @@ export default function RootLayout({
                 originalError.apply(console, arguments);
               };
 
-              // Wait for a reasonable time after load to check if page is blank
+              // CRITICAL FIX: Blank page detection DISABLED to prevent infinite refresh loops
+              // This was the PRIMARY CAUSE of the infinite refresh issue affecting users
+
+              console.log('WeWrite: Blank page detection disabled for infinite refresh protection');
+
+              // Instead of automatic reload, just log the page state for debugging
               setTimeout(function() {
-                // Check if the page appears to be blank (minimal content)
-                var hasMinimalContent = document.body.innerHTML.length < 1000;
+                var hasMinimalContent = document.body.innerHTML.length < 800;
                 var hasNoVisibleElements = document.querySelectorAll('div, p, h1, h2, h3, button, a').length < 5;
+                var hasLoadingIndicator = document.body.innerHTML.includes('Loading') ||
+                                         document.body.innerHTML.includes('loader') ||
+                                         document.body.innerHTML.includes('spinner');
 
-                if (hasMinimalContent || hasNoVisibleElements) {
-                  console.warn('Detected potential blank page, attempting recovery...');
+                console.log('WeWrite Page State Check:', {
+                  contentLength: document.body.innerHTML.length,
+                  visibleElements: document.querySelectorAll('div, p, h1, h2, h3, button, a').length,
+                  hasLoadingIndicator: hasLoadingIndicator,
+                  url: window.location.href,
+                  timestamp: new Date().toISOString()
+                });
 
-                  // Add a flag to prevent reload loops
-                  var reloadCount = parseInt(localStorage.getItem('blankPageReloadCount') || '0');
-
-                  if (reloadCount < 1) { // Limit to 1 reload attempt to prevent loops
-                    localStorage.setItem('blankPageReloadCount', (reloadCount + 1).toString());
-
-                    // Force reload after a short delay
-                    setTimeout(function() {
-                      window.location.reload(true);
-                    }, 500);
-                  }
-                } else {
-                  // Reset the counter if page loaded successfully
-                  localStorage.setItem('blankPageReloadCount', '0');
-                }
-              }, 3000);
+                // NO AUTOMATIC RELOAD - this was causing the infinite refresh loop
+              }, 5000);
             });
           `
         }} />
