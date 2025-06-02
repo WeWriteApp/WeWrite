@@ -1658,11 +1658,11 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
           display: inline-block;
           width: auto;
           white-space: nowrap;
-          left: calc(0.75rem + 0.25rem + 0.75rem); /* paragraph min-width + margin-right + padding */
+          left: calc(0.75rem + 0.25rem + 0.5rem); /* paragraph min-width + margin-right + reduced padding */
           opacity: 0.6;
           font-size: 1rem; /* Match text size */
           line-height: 1.5; /* Match line height */
-          top: 0.75rem; /* Adjust vertical position to match text */
+          top: 0.5rem; /* Adjust vertical position to match reduced padding */
           color: var(--muted-foreground); /* Match text color */
           font-family: inherit; /* Ensure font matches */
         }
@@ -1697,7 +1697,7 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
           spellCheck={true}
           autoFocus={false}
           onKeyDown={handleKeyDown}
-          className="min-h-[200px] p-3 outline-none w-full max-w-none"
+          className="min-h-[200px] p-2 outline-none w-full max-w-none"
           // Critical fix: Preserve selection on blur to prevent cursor jumps
           onBlur={() => {
             try {

@@ -8,6 +8,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 import { Lock } from 'lucide-react';
+import { useDateFormat } from "../../contexts/DateFormatContext";
+import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 
 interface RandomPage {
   id: string;
@@ -34,6 +36,8 @@ interface RandomPagesTableProps {
  * Mobile: Stacked cards with same information
  */
 export default function RandomPagesTable({ pages, loading = false, denseMode = false }: RandomPagesTableProps) {
+  const { formatDateString } = useDateFormat();
+
   // Calculate minimum height based on expected content to prevent layout shifts
   const minHeight = pages.length > 0 ? `${Math.max(400, pages.length * 60 + 100)}px` : '400px';
 
@@ -63,7 +67,9 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
               href={`/${page.id}`}
               className="hover:scale-105 transition-transform"
             >
-              {page.title}
+              {page.title && isExactDateFormat(page.title)
+                ? formatDateString(page.title)
+                : page.title}
             </PillLink>
           ))}
         </div>
@@ -151,7 +157,9 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                       groupId={page.groupId}
                       className="text-sm max-w-full"
                     >
-                      {page.title}
+                      {page.title && isExactDateFormat(page.title)
+                        ? formatDateString(page.title)
+                        : page.title}
                     </PillLink>
                     {!page.isPublic && (
                       <Tooltip>
@@ -222,7 +230,9 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                 groupId={page.groupId}
                 className="text-base font-medium"
               >
-                {page.title}
+                {page.title && isExactDateFormat(page.title)
+                  ? formatDateString(page.title)
+                  : page.title}
               </PillLink>
               {!page.isPublic && (
                 <Tooltip>

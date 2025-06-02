@@ -17,6 +17,8 @@ import { ClearableInput } from "../ui/clearable-input";
 import { navigateToPage } from "../../utils/pagePermissions";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/config";
+import { useDateFormat } from "../../contexts/DateFormatContext";
+import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 
 // Simple Loader component
 const Loader = () => {
@@ -60,6 +62,7 @@ const SearchResults = ({
 }) => {
   const { user } = useContext(AuthContext);
   const router = useRouter();
+  const { formatDateString } = useDateFormat();
 
   // State management
   const [search, setSearch] = useState(initialSearch);
@@ -368,7 +371,9 @@ const SearchResults = ({
                       isOwned={page.userId === user?.uid}
                       className="pointer-events-none"
                     >
-                      {page.title}
+                      {page.title && isExactDateFormat(page.title)
+                        ? formatDateString(page.title)
+                        : page.title}
                     </PillLink>
                   </button>
                 ))}

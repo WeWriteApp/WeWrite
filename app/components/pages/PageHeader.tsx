@@ -824,8 +824,8 @@ export default function PageHeader({
         />
       )}
 
-      {/* Date Format Picker for Daily Notes */}
-      {isDailyNote && (
+      {/* Date Format Picker for Daily Notes - only show when explicitly opened */}
+      {isDailyNote && showDateFormatPicker && (
         <DateFormatPicker
           currentDate={title || undefined}
           isOpen={showDateFormatPicker}

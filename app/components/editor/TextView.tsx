@@ -11,7 +11,7 @@ import { useAuth } from "../../providers/AuthProvider";
 import { isExternalLink } from "../../utils/linkFormatters";
 import { validateLink, getLinkDisplayText, extractPageIdFromUrl } from '../../utils/linkValidator';
 import { Button } from "../ui/button";
-import { ExternalLink, Edit2, Edit } from "lucide-react";
+import { ExternalLink, Edit2 } from "lucide-react";
 import Modal from "../ui/modal";
 import { useControlledAnimation } from "../../hooks/useControlledAnimation";
 import type { TextViewProps } from "../../types/components";
@@ -522,13 +522,7 @@ const TextView: React.FC<TextViewProps> = ({
           onMouseLeave={() => canEdit && setIsHovering(false)}
           title={canEdit ? "Click to edit" : ""}
         >
-          {canEdit && (
-            <div className={`absolute top-3 right-3 transition-opacity duration-200 ${
-              isHovering ? 'opacity-70' : 'opacity-0'
-            }`}>
-              <Edit className="h-4 w-4 text-muted-foreground" />
-            </div>
-          )}
+
 
           {!parsedContents && !isSearch && (
             <div className="p-6 text-muted-foreground">No content available</div>

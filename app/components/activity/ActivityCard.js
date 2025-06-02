@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { useDateFormat } from "../../contexts/DateFormatContext";
+import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import DiffPreview, { DiffStats } from "./DiffPreview";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { AuthContext } from "../../providers/AuthProvider";
@@ -33,7 +34,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
   const { user } = useContext(AuthContext);
   const router = useRouter();
   const [pageData, setPageData] = useState(null);
-  const { formatDate } = useDateFormat();
+  const { formatDate, formatDateString } = useDateFormat();
 
   // Debug activity data
   useEffect(() => {
@@ -196,7 +197,9 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
         {/* Page title with fixed height and ellipsis */}
         <div className="flex-shrink-0 min-w-0 overflow-hidden h-[48px]">
           <PillLink href={`/${activity.pageId}`}>
-            {activity.pageName || "Untitled page"}
+            {activity.pageName && isExactDateFormat(activity.pageName)
+              ? formatDateString(activity.pageName)
+              : (activity.pageName || "Untitled page")}
           </PillLink>
         </div>
 

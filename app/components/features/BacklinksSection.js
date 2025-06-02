@@ -10,6 +10,8 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "../ui/tooltip";
+import { useDateFormat } from "../../contexts/DateFormatContext";
+import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 
 // Import the database function with dynamic import to avoid SSR issues
 const findBacklinksAsync = async (pageId, limit) => {
@@ -93,6 +95,7 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
   const [maxRetriesReached, setMaxRetriesReached] = useState(false);
   const emptyResultsCount = useRef(0);
   const pageIdRef = useRef(null);
+  const { formatDateString } = useDateFormat();
 
   useEffect(() => {
     const fetchBacklinks = async () => {
@@ -269,7 +272,9 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
                 href={`/${page.id}`}
                 className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
               >
-                {page.title || "Untitled"}
+                {page.title && isExactDateFormat(page.title)
+                  ? formatDateString(page.title)
+                  : (page.title || "Untitled")}
               </PillLink>
             </div>
           ))}

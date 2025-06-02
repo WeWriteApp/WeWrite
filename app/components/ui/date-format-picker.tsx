@@ -161,13 +161,8 @@ export function DateFormatPicker({
                       : "hover:bg-gray-50"
                   )}
                 >
-                  <div>
-                    <div className="font-medium text-sm">
-                      {description}
-                    </div>
-                    <div className="text-gray-500 text-xs mt-0.5">
-                      {previewText}
-                    </div>
+                  <div className="font-medium text-sm">
+                    {previewText}
                   </div>
                   {isSelected && (
                     <Check className="h-4 w-4 text-blue-600" />

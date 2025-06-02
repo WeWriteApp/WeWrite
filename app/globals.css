@@ -83,7 +83,8 @@
 /* Simple editor container */
 .editor-container {
   position: relative;
-  /* Padding is applied inline */
+  /* External margins applied inline for proper spacing from viewport edges */
+  /* Internal padding reduced to p-2 (8px) for better visual balance */
 }
 
 /* Make sure the editor content is visible */

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
+import { useDateFormat } from '../../contexts/DateFormatContext';
 
 /**
  * HistoryCard Component
@@ -16,13 +17,15 @@ import { format, formatDistanceToNow } from 'date-fns';
  * @param {string} props.content - Optional content associated with the action
  * @param {React.ReactNode} props.children - Optional additional content
  */
-export default function HistoryCard({ 
-  action, 
-  username, 
-  timestamp, 
+export default function HistoryCard({
+  action,
+  username,
+  timestamp,
   content,
-  children 
+  children
 }) {
+  const { formatDate } = useDateFormat();
+
   // Helper function to validate timestamp
   const isValidTimestamp = (timestamp) => {
     if (!timestamp) return false;
@@ -43,7 +46,7 @@ export default function HistoryCard({
         </div>
         {isValidTimestamp(timestamp) && (
           <div className="text-muted-foreground">
-            {format(new Date(timestamp), 'MMM d, yyyy, h:mm:ss a')}
+            {formatDate(new Date(timestamp))}
           </div>
         )}
         

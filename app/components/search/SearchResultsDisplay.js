@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { PillLink } from "../utils/PillLink";
 import PerformanceMonitor from '../utils/PerformanceMonitor';
 import { Pin } from 'lucide-react';
+import { useDateFormat } from "../../contexts/DateFormatContext";
+import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 
 /**
  * SearchResultsDisplay Component
@@ -28,6 +30,7 @@ const SearchResultsDisplay = React.memo(({
   userId,
   onSave
 }) => {
+  const { formatDateString } = useDateFormat();
   // Memoize the combined results to prevent unnecessary recalculations
   const combinedResults = useMemo(() => {
     if (!results) {
@@ -126,13 +129,13 @@ const SearchResultsDisplay = React.memo(({
           <div className="space-y-2">
             <h3 className="text-lg font-semibold mb-4">Users</h3>
             {results.users.map(user => (
-              <div key={`user-${user.id}`} className="flex items-center">
-                <div className="flex-none max-w-[60%]">
-                  <PillLink href={`/user/${user.id}`} className="max-w-full">
+              <div key={`user-${user.id}`} className="flex items-start gap-2 min-w-0">
+                <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-60px)]">
+                  <PillLink href={`/user/${user.id}`} className="max-w-full truncate">
                     {user.username}
                   </PillLink>
                 </div>
-                <span className="text-xs text-muted-foreground ml-2 truncate">
+                <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
                   User
                 </span>
               </div>
@@ -145,18 +148,20 @@ const SearchResultsDisplay = React.memo(({
           <div className="space-y-2">
             <h3 className="text-lg font-semibold mb-4">Pages</h3>
             {results.pages.map(page => (
-              <div key={`page-${page.id}`} className="flex items-center">
-                <div className="flex-none max-w-[60%]">
+              <div key={`page-${page.id}`} className="flex items-start gap-2 min-w-0">
+                <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-80px)]">
                   <PillLink
                     href={`/${page.id}`}
                     isPublic={page.isPublic}
                     isOwned={page.userId === userId}
-                    className="max-w-full"
+                    className="max-w-full truncate"
                   >
-                    {page.title}
+                    {page.title && isExactDateFormat(page.title)
+                      ? formatDateString(page.title)
+                      : page.title}
                   </PillLink>
                 </div>
-                <span className="text-xs text-muted-foreground ml-2 truncate">
+                <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
                   by {page.username || "Missing username"}
                 </span>
               </div>
@@ -169,13 +174,13 @@ const SearchResultsDisplay = React.memo(({
           <div className="space-y-2">
             <h3 className="text-lg font-semibold mb-4">Groups</h3>
             {results.groups.map(group => (
-              <div key={`group-${group.id}`} className="flex items-center">
-                <div className="flex-none max-w-[60%]">
-                  <PillLink href={`/group/${group.id}`} className="max-w-full">
+              <div key={`group-${group.id}`} className="flex items-start gap-2 min-w-0">
+                <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-70px)]">
+                  <PillLink href={`/group/${group.id}`} className="max-w-full truncate">
                     {group.name}
                   </PillLink>
                 </div>
-                <span className="text-xs text-muted-foreground ml-2 truncate">
+                <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
                   Group
                 </span>
               </div>

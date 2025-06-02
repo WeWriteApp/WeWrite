@@ -194,7 +194,7 @@ const SingleProfileView = ({ profile }) => {
 
   return (
     <ProfilePagesProvider userId={profile.uid}>
-      <div>
+      <div className="px-4 md:px-6 lg:px-8 max-w-4xl mx-auto">
         {/* Navigation bar */}
         <div className="flex items-center mb-6">
           <div className="flex-1">

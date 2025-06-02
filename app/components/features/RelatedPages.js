@@ -11,6 +11,8 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "../ui/tooltip";
+import { useDateFormat } from "../../contexts/DateFormatContext";
+import { isExactDateFormat as isDailyNoteFormat } from "../../utils/dailyNoteNavigation";
 
 /**
  * ENHANCED RELATED PAGES ALGORITHM
@@ -356,6 +358,7 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 8 })
   const [relatedPages, setRelatedPages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const { formatDateString } = useDateFormat();
 
   // Use a ref to track if we've already fetched data for this page
   // This prevents re-fetching during scroll events
@@ -595,7 +598,9 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 8 })
                 href={`/${page.id}`}
                 className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
               >
-                {page.title || "Untitled"}
+                {page.title && isDailyNoteFormat(page.title)
+                  ? formatDateString(page.title)
+                  : (page.title || "Untitled")}
               </PillLink>
             </div>
           ))}
