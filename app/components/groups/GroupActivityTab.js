@@ -7,6 +7,7 @@ import { Button } from "../ui/button";
 import { collection, query, where, orderBy, limit, getDocs, Timestamp, getDoc, doc } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { getDatabase, ref, get } from "firebase/database";
+import { getUsernameById } from "../../utils/userUtils";
 
 /**
  * GroupActivityTab Component
@@ -23,38 +24,7 @@ export default function GroupActivityTab({ group, limit = 10 }) {
   const [error, setError] = useState(null);
   const { user } = useContext(AuthContext);
 
-  // Helper function to get username from Firestore or RTDB
-  const getUsernameById = async (userId) => {
-    try {
-      if (!userId) return { username: null };
-
-      let username = null;
-
-      // Try Firestore first
-      const userDoc = await getDoc(doc(db, "users", userId));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        username = userData.username || userData.displayName;
-      }
-
-      // Fallback to RTDB if Firestore doesn't have the username
-      if (!username) {
-        const rtdb = getDatabase();
-        const userRef = ref(rtdb, `users/${userId}`);
-        const snapshot = await get(userRef);
-
-        if (snapshot.exists()) {
-          const userData = snapshot.val();
-          username = userData.username || userData.displayName || (userData.email ? userData.email.split('@')[0] : null);
-        }
-      }
-
-      return { username };
-    } catch (err) {
-      console.error("Error fetching user data:", err);
-      return { username: null };
-    }
-  };
+  // Note: getUsernameById is now imported from ../../utils/userUtils for consistency
 
   // Fetch activity data for the group
   useEffect(() => {
@@ -152,7 +122,7 @@ export default function GroupActivityTab({ group, limit = 10 }) {
 
           try {
             // Get username for this page
-            const { username } = await getUsernameById(pageData.userId);
+            const username = await getUsernameById(pageData.userId);
 
             // Format the timestamp
             let timestamp;
@@ -168,7 +138,7 @@ export default function GroupActivityTab({ group, limit = 10 }) {
               pageId,
               pageName: pageData.title || "Untitled",
               userId: pageData.userId,
-              username: username || "Unknown User",
+              username: username || "Missing username",
               timestamp: timestamp,
               isNewPage: false,
               currentContent: pageData.content,

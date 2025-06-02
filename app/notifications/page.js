@@ -55,7 +55,8 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto px-4 py-6">
+    <div className="min-h-screen bg-background">
+      <div className="container max-w-4xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
         {/* Direct implementation of back button */}
         <Button
@@ -133,6 +134,7 @@ export default function NotificationsPage() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }

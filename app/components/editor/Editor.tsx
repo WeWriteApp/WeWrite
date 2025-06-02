@@ -452,18 +452,76 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
     });
   }, []);
 
-  // Function to count empty lines in the editor content
+  // Smart function to determine if an empty line should be highlighted
+  const shouldHighlightEmptyLine = useCallback((element: any, index: number, allChildren: any[]) => {
+    // First check if it's actually an empty line
+    if (!isEmptyLine(element)) return false;
+
+    const totalLines = allChildren.length;
+
+    // Rule 1: Never highlight the final empty line
+    if (index === totalLines - 1) return false;
+
+    // Count consecutive empty lines from the end
+    let trailingEmptyCount = 0;
+    for (let i = totalLines - 1; i >= 0; i--) {
+      if (isEmptyLine(allChildren[i])) {
+        trailingEmptyCount++;
+      } else {
+        break;
+      }
+    }
+
+    // Rule 3: Smart handling of multiple trailing empty lines
+    if (index >= totalLines - trailingEmptyCount) {
+      // This is a trailing empty line
+      const positionFromEnd = totalLines - 1 - index;
+
+      // Always leave the last 2 empty lines unhighlighted
+      if (positionFromEnd < 2) return false;
+
+      // Only highlight if there are more than 2 trailing empty lines
+      return trailingEmptyCount > 2;
+    }
+
+    // Rule 2: Only highlight "orphaned" empty lines (surrounded by content)
+    // Check if there's non-empty content both before and after this empty line
+    let hasContentBefore = false;
+    let hasContentAfter = false;
+
+    // Check for content before
+    for (let i = index - 1; i >= 0; i--) {
+      if (!isEmptyLine(allChildren[i])) {
+        hasContentBefore = true;
+        break;
+      }
+    }
+
+    // Check for content after (excluding trailing empty lines)
+    for (let i = index + 1; i < totalLines - trailingEmptyCount; i++) {
+      if (!isEmptyLine(allChildren[i])) {
+        hasContentAfter = true;
+        break;
+      }
+    }
+
+    // Only highlight if there's content both before and after
+    return hasContentBefore && hasContentAfter;
+  }, [isEmptyLine]);
+
+  // Function to count empty lines that would be highlighted (problematic empty lines)
   const countEmptyLines = useCallback(() => {
     if (!editor || !editor.children) return 0;
 
     let count = 0;
-    for (const node of editor.children) {
-      if (isEmptyLine(node)) {
+    for (let i = 0; i < editor.children.length; i++) {
+      const node = editor.children[i];
+      if (shouldHighlightEmptyLine(node, i, editor.children)) {
         count++;
       }
     }
     return count;
-  }, [editor, isEmptyLine]);
+  }, [editor, shouldHighlightEmptyLine]);
 
   // Function to update empty lines alert state
   const updateEmptyLinesAlert = useCallback(() => {
@@ -483,18 +541,18 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
     }
   }, [countEmptyLines, showEmptyLinesAlert, onEmptyLinesChange]);
 
-  // Function to delete all empty lines
+  // Function to delete problematic empty lines (only those that would be highlighted)
   const deleteAllEmptyLines = useCallback(() => {
     if (!editor || !editor.children) return;
 
     // Save current selection to restore later
     const currentSelection = editor.selection;
 
-    // Find all empty line paths (in reverse order to avoid index shifting)
+    // Find all problematic empty line paths (in reverse order to avoid index shifting)
     const emptyLinePaths: Path[] = [];
     for (let i = editor.children.length - 1; i >= 0; i--) {
       const node = editor.children[i];
-      if (isEmptyLine(node)) {
+      if (shouldHighlightEmptyLine(node, i, editor.children)) {
         emptyLinePaths.push([i]);
       }
     }
@@ -536,7 +594,7 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
     // Update alert state
     setShowEmptyLinesAlert(false);
     setEmptyLinesCount(0);
-  }, [editor, isEmptyLine]);
+  }, [editor, shouldHighlightEmptyLine]);
 
   // Track if we've already set up the editor
   const isInitializedRef = useRef(false);
@@ -1146,14 +1204,14 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
         // Use our utility function to get the paragraph index
         index = getParagraphIndex(element, editor);
 
-        // Check if this is an empty line
-        const isEmpty = isEmptyLine(element);
+        // Check if this empty line should be highlighted (using smart highlighting rules)
+        const shouldHighlight = shouldHighlightEmptyLine(element, index, editor.children);
 
         return (
           <div
             {...attributes}
-            className={`paragraph-with-number relative ${isEmpty ? 'empty-line-highlight' : ''}`}
-            style={isEmpty ? { backgroundColor: 'rgba(255, 0, 0, 0.15)' } : {}}
+            className={`paragraph-with-number relative ${shouldHighlight ? 'empty-line-highlight' : ''}`}
+            style={shouldHighlight ? { backgroundColor: 'rgba(255, 0, 0, 0.15)' } : {}}
           >
             {/* Paragraph number inline at beginning - non-selectable and non-interactive */}
             <span
@@ -1172,7 +1230,7 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
             <p className="inline">{children}</p>
 
             {/* Info icon for empty lines */}
-            {isEmpty && (
+            {isEmptyLine(element) && (
               <button
                 contentEditable={false}
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-red-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-300"
@@ -1206,7 +1264,7 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
       default:
         return <p {...attributes}>{children}</p>;
     }
-  }, [editor, isEmptyLine]);
+  }, [editor, isEmptyLine, shouldHighlightEmptyLine]);
 
   // Render a leaf (text with formatting)
   const renderLeaf = useCallback(({ attributes, children, leaf }) => {

@@ -18,6 +18,7 @@ import {
 } from "firebase/firestore";
 import { app } from "./config";
 import { getBioAndAboutActivities } from "./bioActivity";
+import { getUsernameById } from "../utils/userUtils";
 import type { Page, User } from "../types/database";
 // Database imports are used in the commented-out code section
 // Keeping them for when the group membership filtering is re-enabled
@@ -315,29 +316,7 @@ export const getRecentActivity = async (
   }
 };
 
-/**
- * Helper function to get username from Firestore
- *
- * @param userId - User ID to get username for
- * @returns Username or null
- */
-async function getUsernameById(userId: string): Promise<string | null> {
-  try {
-    if (!userId) return null;
-
-    // Try to get from Firestore
-    const userDoc = await getDoc(doc(db, "users", userId));
-    if (userDoc.exists()) {
-      const userData = userDoc.data() as User;
-      return userData.username || userData.displayName || "Missing username";
-    }
-
-    return "Missing username";
-  } catch (err) {
-    console.error("Error fetching user data:", err);
-    return "Missing username";
-  }
-}
+// Note: getUsernameById is now imported from ../utils/userUtils for consistency
 
 /**
  * Generate empty activity data when the database is unavailable

@@ -1,34 +1,56 @@
 /**
  * Utilities for consistent user data management across the application
+ *
+ * This is the AUTHORITATIVE source for user data fetching.
+ * All other files should import getUsernameById from here instead of implementing their own.
  */
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { auth } from "../firebase/auth";
 import { getUserSubscription } from "../firebase/subscription";
+import type { User } from "../types/database";
 
 /**
  * Gets the username for a given user ID
  * Handles all the logic to ensure consistent username display throughout the app
- * @param {string} userId - The user ID to get the username for
- * @returns {Promise<string>} - The username or "Missing username" if not found
+ * This is the AUTHORITATIVE implementation - all other getUsernameById functions should be removed
+ * @param userId - The user ID to get the username for
+ * @returns The username or "Missing username" if not found
  */
-export const getUsernameById = async (userId) => {
+export const getUsernameById = async (userId: string): Promise<string> => {
   if (!userId) return "Missing username";
 
   try {
-    // Try to get user from Firestore users collection
+    // Try to get user from Firestore users collection first
     const userDocRef = doc(db, "users", userId);
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {
-      const userData = userDoc.data();
+      const userData = userDoc.data() as User;
 
-      // If username is "Anonymous", return "Missing username" instead
-      if (!userData.username || userData.username === "Anonymous") {
-        return "Missing username";
+      // Check for valid username (not empty, not "Anonymous", not "Missing username")
+      if (userData.username &&
+          userData.username !== "Anonymous" &&
+          userData.username !== "Missing username" &&
+          userData.username.trim() !== "") {
+        return userData.username.trim();
       }
 
-      return userData.username;
+      // Fallback to displayName if username is invalid
+      if (userData.displayName &&
+          userData.displayName !== "Anonymous" &&
+          userData.displayName !== "Missing username" &&
+          userData.displayName.trim() !== "") {
+        return userData.displayName.trim();
+      }
+
+      // Fallback to email prefix if both username and displayName are invalid
+      if (userData.email && userData.email.includes('@')) {
+        const emailPrefix = userData.email.split('@')[0];
+        if (emailPrefix && emailPrefix.trim() !== "") {
+          return emailPrefix.trim();
+        }
+      }
     }
 
     // Try to get from RTDB as a fallback
@@ -41,8 +63,29 @@ export const getUsernameById = async (userId) => {
 
       if (rtdbSnapshot.exists()) {
         const rtdbData = rtdbSnapshot.val();
-        if (rtdbData.username && rtdbData.username !== "Anonymous") {
-          return rtdbData.username;
+
+        // Check for valid username
+        if (rtdbData.username &&
+            rtdbData.username !== "Anonymous" &&
+            rtdbData.username !== "Missing username" &&
+            rtdbData.username.trim() !== "") {
+          return rtdbData.username.trim();
+        }
+
+        // Fallback to displayName
+        if (rtdbData.displayName &&
+            rtdbData.displayName !== "Anonymous" &&
+            rtdbData.displayName !== "Missing username" &&
+            rtdbData.displayName.trim() !== "") {
+          return rtdbData.displayName.trim();
+        }
+
+        // Fallback to email prefix
+        if (rtdbData.email && rtdbData.email.includes('@')) {
+          const emailPrefix = rtdbData.email.split('@')[0];
+          if (emailPrefix && emailPrefix.trim() !== "") {
+            return emailPrefix.trim();
+          }
         }
       }
     } catch (rtdbError) {
@@ -58,9 +101,9 @@ export const getUsernameById = async (userId) => {
 
 /**
  * Gets the current authenticated user's username
- * @returns {Promise<string>} - The current user's username or "Missing username" if not logged in
+ * @returns The current user's username or "Missing username" if not logged in
  */
-export const getCurrentUsername = async () => {
+export const getCurrentUsername = async (): Promise<string> => {
   // Import the utility here to ensure it's only used on the client
   const { getCurrentUser } = require('./currentUser');
 
@@ -89,10 +132,10 @@ export const getCurrentUsername = async () => {
 /**
  * Ensures a page's data has a valid username
  * If the page doesn't have a username, fetches it from the user profile
- * @param {Object} pageData - The page data object
- * @returns {Promise<Object>} - The enriched page data with valid username
+ * @param pageData - The page data object
+ * @returns The enriched page data with valid username
  */
-export const ensurePageUsername = async (pageData) => {
+export const ensurePageUsername = async (pageData: any): Promise<any> => {
   if (!pageData) return null;
 
   // If page already has a valid username, return as is
@@ -125,12 +168,17 @@ export const ensurePageUsername = async (pageData) => {
   };
 };
 
+interface SubscriptionTier {
+  tier: string | null;
+  status: string | null;
+}
+
 /**
  * Gets the subscription tier and status for a given user ID
- * @param {string} userId - The user ID to get the subscription tier for
- * @returns {Promise<Object>} - Object containing tier and status
+ * @param userId - The user ID to get the subscription tier for
+ * @returns Object containing tier and status
  */
-export const getUserSubscriptionTier = async (userId) => {
+export const getUserSubscriptionTier = async (userId: string): Promise<SubscriptionTier> => {
   if (!userId) return { tier: null, status: null };
 
   try {
@@ -142,8 +190,8 @@ export const getUserSubscriptionTier = async (userId) => {
     }
 
     // Return the tier and status
-    let tier = subscription.tier;
-    const status = subscription.status;
+    let tier = (subscription as any).tier;
+    const status = (subscription as any).status;
 
     // Convert legacy tier names if needed
     if (tier === 'bronze') {
@@ -155,8 +203,8 @@ export const getUserSubscriptionTier = async (userId) => {
     }
 
     // If no tier is set but we have an amount, determine tier based on amount
-    if (!tier && subscription.amount && (status === 'active' || status === 'trialing')) {
-      const amount = subscription.amount;
+    if (!tier && (subscription as any).amount && (status === 'active' || status === 'trialing')) {
+      const amount = (subscription as any).amount;
       if (amount >= 100) {
         tier = 'tier3';
       } else if (amount >= 50) {

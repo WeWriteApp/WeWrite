@@ -292,7 +292,7 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
           } catch (firestoreError) {
             console.error("Error fetching username from Firestore:", firestoreError);
             // Continue with a default username rather than failing
-            username = 'Anonymous';
+            username = 'Missing username';
           }
         }
       } catch (error) {

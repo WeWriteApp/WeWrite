@@ -90,13 +90,15 @@ export const createReplyAttribution = ({
   username = "Missing username"
 }) => {
   // Ensure we have a valid username - never use "Anonymous" as fallback
-  let displayUsername = "Missing username";
+  let displayUsername = username || "Missing username";
 
-  if (username &&
-      typeof username === 'string' &&
-      username.trim() !== "" &&
-      username.trim().toLowerCase() !== "anonymous" &&
-      username.trim() !== "Missing username") {
+  // Only override if the username is explicitly invalid
+  if (!username ||
+      typeof username !== 'string' ||
+      username.trim() === "" ||
+      username.trim().toLowerCase() === "anonymous") {
+    displayUsername = "Missing username";
+  } else {
     displayUsername = username.trim();
   }
 
