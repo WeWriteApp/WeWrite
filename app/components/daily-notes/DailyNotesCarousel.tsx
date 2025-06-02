@@ -9,6 +9,7 @@ import { db } from '../../firebase/database';
 import { format, subDays, addDays } from 'date-fns';
 import { Button } from '../ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useDateFormat } from '../../contexts/DateFormatContext';
 
 /**
  * Check if a title exactly matches the YYYY-MM-DD format
@@ -44,6 +45,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
   const { user } = useAuth();
   const router = useRouter();
   const carouselRef = useRef<HTMLDivElement>(null);
+  const { formatDateString } = useDateFormat();
 
   // State for dynamic date range
   const [daysBefore, setDaysBefore] = useState(15); // Days before today

@@ -106,9 +106,9 @@ export default function HeroSection({
 
       <div className="container mx-auto px-2 sm:px-4 md:px-6 relative z-10">
         <div className="flex flex-col lg:flex-row items-center gap-12">
-          {/* Mobile containerization - enhanced card styling on mobile */}
+          {/* Mobile containerization - enhanced card styling on mobile with increased outer margins and reduced inner padding */}
           {isMobile ? (
-            <div className="w-full mx-8 px-8 py-10 bg-background/80 dark:bg-card/90 backdrop-blur-md rounded-2xl border border-theme-medium shadow-xl hover:shadow-2xl transition-all duration-300 mb-8">
+            <div className="w-full mx-12 px-6 py-8 bg-background/80 dark:bg-card/90 backdrop-blur-md rounded-2xl border border-theme-medium shadow-xl hover:shadow-2xl transition-all duration-300 mb-6">
               <div className="text-center">
                 <ProgressiveHeroText
                   fadeInClass={fadeInClass}
@@ -178,10 +178,10 @@ export default function HeroSection({
             </div>
           )}
 
-          <div className={`flex-1 perspective-[1000px] ${fadeInClass} w-full ${isMobile ? '-mx-2 sm:-mx-4 md:mx-0' : ''}`} style={{ animationDelay: '0.2s' }}>
+          <div className={`flex-1 perspective-[1000px] ${fadeInClass} w-full ${isMobile ? '-mx-2 sm:-mx-4 md:mx-0 -mt-4' : ''}`} style={{ animationDelay: '0.2s' }}>
             <div
               className={`relative w-full transform-gpu transition-transform duration-300 ${
-                isMobile ? 'max-w-full mx-0' : 'max-w-[95%] sm:max-w-lg mx-auto'
+                isMobile ? 'max-w-full mx-0 -mx-2 sm:-mx-4' : 'max-w-[95%] sm:max-w-lg mx-auto'
               }`}
               style={{
                 transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,

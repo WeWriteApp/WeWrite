@@ -19,42 +19,39 @@ import {
 export default function PWABanner() {
   const { showBanner, setShowBanner } = usePWA();
   const [showInstructions, setShowInstructions] = useState(false);
+  const [isCollapsing, setIsCollapsing] = useState(false);
 
-  if (!showBanner) return null;
+  if (!showBanner && !isCollapsing) return null;
 
-  const handleDontRemind = () => {
+  const handleDismissWithAnimation = (action: 'dont_remind' | 'maybe_later') => {
+    setIsCollapsing(true);
+
     // Track in analytics
     try {
       const analyticsService = getAnalyticsService();
       analyticsService.trackEvent({
         category: EVENT_CATEGORIES.PWA,
         action: ANALYTICS_EVENTS.PWA_BANNER_ACTION,
-        label: 'Dont_Remind',
+        label: action === 'dont_remind' ? 'Dont_Remind' : 'Maybe_Later',
       });
     } catch (error) {
       console.error('Error tracking PWA banner action:', error);
     }
 
-    permanentlyDismissPWABanner();
-    setShowBanner(false);
+    // Start collapse animation, then dismiss after animation completes
+    setTimeout(() => {
+      if (action === 'dont_remind') {
+        permanentlyDismissPWABanner();
+      } else {
+        dismissPWABanner();
+      }
+      setShowBanner(false);
+      setIsCollapsing(false);
+    }, 300); // Match animation duration
   };
 
-  const handleMaybeLater = () => {
-    // Track in analytics
-    try {
-      const analyticsService = getAnalyticsService();
-      analyticsService.trackEvent({
-        category: EVENT_CATEGORIES.PWA,
-        action: ANALYTICS_EVENTS.PWA_BANNER_ACTION,
-        label: 'Maybe_Later',
-      });
-    } catch (error) {
-      console.error('Error tracking PWA banner action:', error);
-    }
-
-    dismissPWABanner();
-    setShowBanner(false);
-  };
+  const handleDontRemind = () => handleDismissWithAnimation('dont_remind');
+  const handleMaybeLater = () => handleDismissWithAnimation('maybe_later');
 
   const handleShowInstructions = () => {
     // Track in analytics
@@ -80,7 +77,11 @@ export default function PWABanner() {
 
   return (
     <>
-      <div className="bg-primary/10 border-b border-primary/20 px-4 py-3 flex flex-col">
+      <div
+        className={`bg-primary/10 border-b border-primary/20 px-4 py-3 flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${
+          isCollapsing ? 'max-h-0 py-0 opacity-0' : 'max-h-32 opacity-100'
+        }`}
+      >
         <div className="flex items-center space-x-2 mb-2">
           <Info className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium text-foreground">Want to use WeWrite as an app?</span>

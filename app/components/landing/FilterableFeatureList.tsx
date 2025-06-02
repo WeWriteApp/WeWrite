@@ -127,11 +127,11 @@ export function FilterableFeatureList({
   const hasActiveFilters = filters.inProgress || filters.comingSoon || filters.available;
 
   return (
-    <div className="w-full filter-chips-parent">
+    <div className="w-full filter-chips-parent overflow-visible">
       {/* Filter controls */}
-      <div className="mb-8 filter-chips-section">
-        {/* Wrapping container for filter chips - center aligned */}
-        <div className="filter-chips-container flex flex-wrap justify-center items-center gap-2 md:gap-3 px-4 sm:px-6">
+      <div className="mb-8 filter-chips-section overflow-visible">
+        {/* Wrapping container for filter chips - center aligned with overflow visible for shadows */}
+        <div className="filter-chips-container flex flex-wrap justify-center items-center gap-2 md:gap-3 px-4 sm:px-6 py-2 overflow-visible">
           {/* Direct container for chips without extra wrapping div */}
           <Button
             variant={filters.inProgress ? "default" : "outline"}
@@ -188,8 +188,12 @@ export function FilterableFeatureList({
             {filteredFeatures.map((feature, index) => (
               <div
                 key={feature.pageId}
-                className={`${fadeInClass}`}
-                style={{ animationDelay: `${index * 0.05}s` }}
+                className={`${fadeInClass} transition-all duration-500 ease-spring transform-gpu`}
+                style={{
+                  animationDelay: `${index * 0.05}s`,
+                  '--spring-duration': '0.5s',
+                  '--spring-easing': 'cubic-bezier(0.34, 1.56, 0.64, 1)'
+                }}
               >
                 <PagePreviewCard
                   title={feature.title}

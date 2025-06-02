@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "../ui/button";
-import { Loader, ChevronLeft, Share2, Lock, MoreHorizontal, Edit2, Plus, MessageSquare } from "lucide-react";
+import { Loader, ChevronLeft, ChevronRight, Share2, Lock, MoreHorizontal, Edit2, Plus, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/database";
@@ -24,6 +24,13 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from "../ui/dropdown-menu";
+import { useDateFormat } from "../../contexts/DateFormatContext";
+import { DateFormatPicker } from "../ui/date-format-picker";
+import {
+  navigateToPreviousDailyNote,
+  navigateToNextDailyNote,
+  isExactDateFormat as isDailyNoteFormat
+} from "../../utils/dailyNoteNavigation";
 
 // Dynamically import AddToPageButton to avoid SSR issues
 const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
@@ -33,12 +40,9 @@ const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
 
 /**
  * Check if a title exactly matches the YYYY-MM-DD format for daily notes
+ * @deprecated Use isDailyNoteFormat from dailyNoteNavigation utils instead
  */
-const isExactDateFormat = (title: string): boolean => {
-  if (!title || title.length !== 10) return false;
-  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-  return datePattern.test(title);
-};
+const isExactDateFormat = isDailyNoteFormat;
 
 export interface PageHeaderProps {
   title?: string;
@@ -96,6 +100,18 @@ export default function PageHeader({
   const [editingTitle, setEditingTitle] = React.useState<string>(title || "");
   const titleInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Date formatting context
+  const { formatDateString } = useDateFormat();
+
+  // Daily note navigation state
+  const [isNavigating, setIsNavigating] = React.useState<boolean>(false);
+  const [showDateFormatPicker, setShowDateFormatPicker] = React.useState<boolean>(false);
+
+  // Check if this is a daily note
+  const isDailyNote = React.useMemo(() => {
+    return title ? isExactDateFormat(title) : false;
+  }, [title]);
+
   // Function to determine if the current user can edit the page
   const canEdit = React.useMemo(() => {
     // Use prop value if provided, otherwise calculate
@@ -119,9 +135,10 @@ export default function PageHeader({
 
   // Handle title editing
   const handleTitleClick = () => {
-    // Prevent title editing for daily notes (YYYY-MM-DD format)
+    // For daily notes, open date format picker instead of editing title
     if (isExactDateFormat(title || "")) {
-      console.log('Title editing blocked for daily note:', title);
+      console.log('Opening date format picker for daily note:', title);
+      setShowDateFormatPicker(true);
       return;
     }
 
@@ -132,6 +149,37 @@ export default function PageHeader({
         titleInputRef.current?.focus();
         titleInputRef.current?.select();
       }, 0);
+    }
+  };
+
+  // Handle daily note navigation
+  const handleDailyNoteNavigation = async (direction: 'previous' | 'next') => {
+    if (!user?.uid || !title || !isExactDateFormat(title) || isNavigating) {
+      return;
+    }
+
+    setIsNavigating(true);
+
+    try {
+      const navigationResult = direction === 'previous'
+        ? await navigateToPreviousDailyNote(user.uid, title, isEditing)
+        : await navigateToNextDailyNote(user.uid, title, isEditing);
+
+      if (navigationResult) {
+        if (navigationResult.exists && navigationResult.pageId) {
+          // Navigate to existing note
+          router.push(`/pages/${navigationResult.pageId}`);
+        } else if (navigationResult.shouldCreateNew) {
+          // Navigate to create new note
+          router.push(`/new?title=${encodeURIComponent(navigationResult.dateString)}&type=daily-note`);
+        }
+      } else {
+        console.log(`No ${direction} daily note found`);
+      }
+    } catch (error) {
+      console.error(`Error navigating to ${direction} daily note:`, error);
+    } finally {
+      setIsNavigating(false);
     }
   };
 
@@ -466,8 +514,25 @@ export default function PageHeader({
               className={`flex-1 flex justify-center items-center ${isScrolled ? "cursor-pointer" : ""}`}
               onClick={isScrolled ? () => window.scrollTo({ top: 0, behavior: 'smooth' }) : undefined}
             >
+              {/* Left navigation chevron for daily notes */}
+              {isDailyNote && !isScrolled && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 mr-2 opacity-60 hover:opacity-100 transition-opacity duration-200"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDailyNoteNavigation('previous');
+                  }}
+                  disabled={isNavigating}
+                  title={isEditing ? "Previous calendar day" : "Previous daily note"}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              )}
+
               {/* Edit icon positioned outside and to the left of title container */}
-              {isEditing && canEdit && !isScrolled && !isExactDateFormat(title || "") && (
+              {isEditing && canEdit && !isScrolled && !isDailyNote && (
                 <Edit2
                   className="h-4 w-4 opacity-60 hover:opacity-100 transition-opacity duration-200 text-muted-foreground flex-shrink-0 mr-3 cursor-pointer"
                   onClick={(e) => {
@@ -531,14 +596,16 @@ export default function PageHeader({
                       ) : (
                         <span
                           className={`${isScrolled ? "text-ellipsis overflow-hidden" : ""} ${
-                            isEditing && canEdit && !isExactDateFormat(title || "")
+                            isEditing && canEdit && !isDailyNote
                               ? `cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 border transition-all duration-200 ${
                                   titleError
                                     ? "border-destructive hover:border-destructive/70"
                                     : "border-muted-foreground/20 hover:border-muted-foreground/30"
                                 }`
-                              : isExactDateFormat(title || "") && !isScrolled
-                              ? "flex flex-col items-center gap-1"
+                              : isDailyNote && !isScrolled
+                              ? "flex flex-col items-center gap-1 cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 border border-muted-foreground/20 hover:border-muted-foreground/30 transition-all duration-200"
+                              : isDailyNote
+                              ? "cursor-pointer"
                               : ""
                           }`}
                           style={isScrolled ? {
@@ -550,15 +617,14 @@ export default function PageHeader({
                           } : {}}
                           onClick={handleTitleClick}
                           title={
-                            isExactDateFormat(title || "")
-                              ? "Daily Note"
+                            isDailyNote
+                              ? "Click to change date format"
                               : (isEditing && canEdit ? "Click to edit title" : undefined)
                           }
                         >
-                          <span>{title || "Untitled"}</span>
-                          {isExactDateFormat(title || "") && !isScrolled && (
-                            <span className="text-xs text-muted-foreground font-normal">Daily Note</span>
-                          )}
+                          <span>
+                            {isDailyNote && title ? formatDateString(title) : (title || "Untitled")}
+                          </span>
                         </span>
                       )}
                       {isPrivate && <Lock className={`${isScrolled ? 'h-3 w-3' : 'h-4 w-4'} text-muted-foreground flex-shrink-0`} />}
@@ -656,6 +722,23 @@ export default function PageHeader({
                   )}
                 </p>
               </div>
+
+              {/* Right navigation chevron for daily notes */}
+              {isDailyNote && !isScrolled && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 ml-2 opacity-60 hover:opacity-100 transition-opacity duration-200"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDailyNoteNavigation('next');
+                  }}
+                  disabled={isNavigating}
+                  title={isEditing ? "Next calendar day" : "Next daily note"}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
             </div>
 
             {/* Right Side - Action Menu (only visible when not scrolled) */}
@@ -738,6 +821,15 @@ export default function PageHeader({
           isOpen={isAddToPageOpen}
           setIsOpen={setIsAddToPageOpen}
           hideButton={true}
+        />
+      )}
+
+      {/* Date Format Picker for Daily Notes */}
+      {isDailyNote && (
+        <DateFormatPicker
+          currentDate={title || undefined}
+          isOpen={showDateFormatPicker}
+          onClose={() => setShowDateFormatPicker(false)}
         />
       )}
     </>

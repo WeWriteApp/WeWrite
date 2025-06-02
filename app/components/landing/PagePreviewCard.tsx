@@ -81,12 +81,12 @@ export function PagePreviewCard({
   return (
     <div className="block h-full" onClick={handleCardClick}>
       <Card className={`h-full border hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col ${cardStyles} scroll-snap-align-start`}>
-        <div className="p-3 sm:p-4">
-          <div className="flex justify-between items-center mb-2">
-            <CardTitle className="text-base sm:text-lg mb-0 pr-2 line-clamp-2">
+        <div className="p-2 sm:p-3">
+          <div className="flex justify-between items-center mb-1">
+            <CardTitle className="text-sm sm:text-base mb-0 pr-2 line-clamp-2">
               {title}
             </CardTitle>
-            <ChevronRight className="h-5 w-5 flex-shrink-0" />
+            <ChevronRight className="h-4 w-4 flex-shrink-0" />
           </div>
           {!hideStatus && (
             <div className="mt-1">

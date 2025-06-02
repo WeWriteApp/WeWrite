@@ -376,31 +376,33 @@ export default function GroupMembersTab({ group, isOwner }) {
           <p>No members found</p>
         </div>
       ) : (
-        <div className="border border-theme-medium rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead>Member</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead className="text-right">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center justify-end gap-1 cursor-help">
-                          <Activity className="h-4 w-4 text-muted-foreground" />
-                          <span>Activity (24h)</span>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Group-specific activity in the last 24 hours</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </TableHead>
-                {isOwner && <TableHead className="w-[100px]">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
+        <>
+          {/* Desktop Table View */}
+          <div className="hidden md:block border border-theme-medium rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead>Member</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead className="text-right">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center justify-end gap-1 cursor-help">
+                            <Activity className="h-4 w-4 text-muted-foreground" />
+                            <span>Activity (24h)</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Group-specific activity in the last 24 hours</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableHead>
+                  {isOwner && <TableHead className="w-[100px]">Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
             <TableBody>
               {filteredMembers.map(member => (
                 <TableRow key={member.id}>
@@ -485,9 +487,96 @@ export default function GroupMembersTab({ group, isOwner }) {
                   )}
                 </TableRow>
               ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {filteredMembers.map(member => (
+              <div key={member.id} className="border border-theme-medium rounded-lg p-4 space-y-3">
+                {/* Member Info */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <PillLink href={`/user/${member.id}`}>
+                      {member.username || "Unknown User"}
+                    </PillLink>
+                    <Badge variant={getRoleBadgeVariant(member.role)}>
+                      {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                    </Badge>
+                  </div>
+                  {isOwner && member.role !== 'owner' && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {member.role !== 'admin' && (
+                          <DropdownMenuItem onClick={() => handleRoleChange(member.id, 'admin')}>
+                            <Shield className="h-4 w-4 mr-2" />
+                            Make Admin
+                          </DropdownMenuItem>
+                        )}
+                        {member.role === 'admin' && (
+                          <DropdownMenuItem onClick={() => handleRoleChange(member.id, 'member')}>
+                            <User className="h-4 w-4 mr-2" />
+                            Remove Admin
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                          onClick={() => handleRemoveMember(member.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Remove from Group
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+
+                {/* Joined Date and Activity */}
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1 cursor-help">
+                          <Clock className="h-3 w-3" />
+                          <span>Joined {formatJoinedDate(member.joinedAt).relative}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{formatJoinedDate(member.joinedAt).absolute}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs">24h Activity</span>
+                    <div className="w-16 h-6">
+                      {isLoadingActivity ? (
+                        <div className="flex justify-center items-center h-full">
+                          <Loader className="h-3 w-3 animate-spin" />
+                        </div>
+                      ) : (
+                        <SimpleSparkline
+                          data={memberActivityData[member.id]?.hourly || Array(24).fill(0)}
+                          height={24}
+                          strokeWidth={1.5}
+                          title="Member's edit activity in this group in the last 24 hours"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Add Member Dialog */}

@@ -12,6 +12,7 @@ import { SupporterIcon } from "../payments/SupporterIcon";
 import { format } from "date-fns";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/config";
+import { useDateFormat } from "../../contexts/DateFormatContext";
 import DiffPreview, { DiffStats } from "./DiffPreview";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { AuthContext } from "../../providers/AuthProvider";
@@ -24,13 +25,15 @@ import { useRouter } from "next/navigation";
  * @param {Object} activity - The activity data to display
  * @param {boolean} isCarousel - Whether this card is in a carousel
  * @param {boolean} compactLayout - Whether to use a more compact layout with less padding
+ * @param {boolean} useDynamicHeight - Whether to use dynamic height on mobile (for diff cards)
  */
-const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) => {
+const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, useDynamicHeight = false }) => {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const { user } = useContext(AuthContext);
   const router = useRouter();
   const [pageData, setPageData] = useState(null);
+  const { formatDate } = useDateFormat();
 
   // Debug activity data
   useEffect(() => {
@@ -168,12 +171,17 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
       : `/${activity.pageId}`;
   }
 
+  // Determine if this card has diff content (for dynamic height on mobile)
+  const hasDiffContent = textDiff && (textDiff.added?.length > 0 || textDiff.removed?.length > 0);
+
   return (
     <div
       className={cn(
         "w-full border border-theme-strong rounded-xl shadow-sm dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 cursor-pointer no-underline bg-card overflow-hidden",
-        // Mobile: variable height with minimum, Desktop: fixed height
-        "min-h-[160px] md:h-[200px]",
+        // Mobile: dynamic height for diff cards, fixed height for others; Desktop: always fixed height
+        useDynamicHeight && hasDiffContent
+          ? "min-h-[160px] md:h-[200px]" // Dynamic height on mobile for diff cards
+          : "min-h-[160px] md:h-[200px]", // Fixed minimum height for all others
         "flex flex-col",
         // Mobile-first padding with better spacing
         "p-5 md:p-4",
@@ -244,7 +252,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
               </TooltipTrigger>
               <TooltipContent>
                 <span>
-                  {activity.timestamp ? format(new Date(activity.timestamp), "yyyy MM/dd hh:mm:ss a") : ""}
+                  {activity.timestamp ? formatDate(new Date(activity.timestamp)) : ""}
                 </span>
               </TooltipContent>
             </Tooltip>
@@ -255,7 +263,13 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
       {/* Content section with flex-grow to fill remaining space */}
       <div className="flex flex-col flex-grow mt-3 justify-between">
         {/* Enhanced text diff preview showing both additions and deletions */}
-        <div className="relative min-w-0 h-[70px] overflow-hidden">
+        <div className={cn(
+          "relative min-w-0 overflow-hidden",
+          // Dynamic height on mobile for diff cards, fixed height otherwise
+          useDynamicHeight && hasDiffContent
+            ? "min-h-[70px] md:h-[70px]" // Dynamic height on mobile, fixed on desktop
+            : "h-[70px]" // Fixed height for all others
+        )}>
           <DiffPreview
             textDiff={textDiff}
             isNewPage={isNewPage}

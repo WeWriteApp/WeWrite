@@ -682,6 +682,44 @@ const LandingPage = () => {
       </div>
 
       <main className={`${isMobileView ? 'pt-24' : 'pt-20'}`}>
+        {/* SEO Content - Hidden but accessible to search engines */}
+        <div className="sr-only">
+          <h1>WeWrite - The Social Wiki Where Every Page is a Fundraiser</h1>
+          <p>
+            WeWrite is a revolutionary collaborative writing platform that combines the power of social wikis with innovative fundraising capabilities.
+            Create, edit, and share content with a global community while supporting your favorite writers through our unique page-based donation system.
+            Our platform enables real-time collaborative editing, allowing multiple users to work together seamlessly on documents, articles, stories, and any type of written content.
+          </p>
+          <p>
+            Join thousands of writers, readers, and content creators who are building the future of collaborative content creation.
+            Whether you're writing fiction, non-fiction, technical documentation, creative content, blog posts, research papers, or educational materials,
+            WeWrite provides the comprehensive tools and supportive community you need to succeed in your writing journey.
+          </p>
+          <p>
+            Our comprehensive feature set includes collaborative real-time editing with live cursors and instant synchronization,
+            innovative page-based fundraising system that allows readers to directly support their favorite content creators,
+            advanced trending content algorithms that surface the most engaging and popular writing,
+            detailed user reputation and leaderboard systems that recognize top contributors,
+            powerful group collaboration spaces for teams and communities, comprehensive activity tracking and social feeds,
+            multiple customizable reading modes for optimal user experience, fully responsive design optimized for all devices and screen sizes,
+            and a vibrant, supportive writing community that encourages creativity and collaboration.
+          </p>
+          <p>
+            The platform supports various content types including articles, stories, documentation, tutorials, research papers, creative writing,
+            technical guides, educational content, collaborative projects, and community-driven initiatives.
+            Writers can monetize their content through our unique fundraising system while readers can discover and support quality content.
+            Advanced features include version control, comment systems, real-time notifications, user profiles, content analytics,
+            search functionality, tagging systems, and integration with external tools and platforms.
+          </p>
+          <p>
+            WeWrite revolutionizes online content creation by combining Wikipedia-style collaborative editing with modern social features
+            and innovative monetization options. Users can create public or private pages, invite collaborators, track changes,
+            manage permissions, and build communities around shared interests and projects.
+            The platform emphasizes quality content, user engagement, and fair compensation for creators while maintaining
+            an ad-free environment focused on authentic content and meaningful connections.
+          </p>
+        </div>
+
         {/* Hero Section - Isolated to prevent re-renders affecting other components */}
         <HeroSection
           fadeInClass={fadeInClass}

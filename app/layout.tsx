@@ -15,6 +15,7 @@ import dynamic from "next/dynamic"
 import { ToastProvider } from "./providers/ToastProvider"
 import ErrorBoundary from "./components/utils/ErrorBoundary"
 import { PillStyleProvider } from "./contexts/PillStyleContext"
+import { DateFormatProvider } from "./contexts/DateFormatContext"
 import { PWAProvider } from "./providers/PWAProvider"
 import FeatureFlagListener from "./components/utils/FeatureFlagListener"
 import SlateEarlyPatch from "./components/editor/SlateEarlyPatch"
@@ -28,9 +29,12 @@ const ClientLayout = dynamic(() => import("./ClientLayout"), { ssr: true })
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
-  title: "WeWrite - The Social Wiki Where Every Page is a Fundraiser",
-  description: "Create, collaborate, and share your writing with others in real-time. Join the social wiki where every page is a fundraiser and writers can earn from their content.",
-  keywords: "collaborative writing, social wiki, fundraising, content creation, real-time collaboration, writing platform, community writing",
+  title: {
+    default: "WeWrite - The Social Wiki Where Every Page is a Fundraiser",
+    template: "%s | WeWrite"
+  },
+  description: "Create, collaborate, and share your writing with others in real-time. Join the social wiki where every page is a fundraiser and writers can earn from their content. Features real-time collaborative editing, trending content discovery, user leaderboards, group collaboration, and comprehensive activity feeds.",
+  keywords: "collaborative writing, social wiki, fundraising, content creation, real-time collaboration, writing platform, community writing, online editor, collaborative documents, content monetization, writer community, social content platform, wiki platform, fundraising platform, collaborative editing, real-time editing, content sharing, writer tools, online writing, collaborative platform",
   authors: [{ name: "WeWrite Team" }],
   creator: "WeWrite",
   publisher: "WeWrite",
@@ -89,7 +93,7 @@ export default function RootLayout({
         <link rel="canonical" href={process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'} />
         <SlateEarlyPatch />
 
-        {/* Website Schema Markup */}
+        {/* Enhanced Website Schema Markup */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -97,6 +101,7 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'WebSite',
               name: 'WeWrite',
+              alternateName: 'WeWrite App',
               description: 'The social wiki where every page is a fundraiser. Create, collaborate, and share your writing with others in real-time.',
               url: process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app',
               potentialAction: {
@@ -113,8 +118,35 @@ export default function RootLayout({
                 url: process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app',
                 logo: {
                   '@type': 'ImageObject',
-                  url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'}/images/og-image.png`
-                }
+                  url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'}/images/og-image.png`,
+                  width: 1200,
+                  height: 630
+                },
+                sameAs: [
+                  `${process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'}/about`,
+                  `${process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'}/features`
+                ]
+              },
+              mainEntity: {
+                '@type': 'SoftwareApplication',
+                name: 'WeWrite',
+                applicationCategory: 'BusinessApplication',
+                operatingSystem: 'Web Browser',
+                offers: {
+                  '@type': 'Offer',
+                  price: '0',
+                  priceCurrency: 'USD'
+                },
+                featureList: [
+                  'Real-time collaborative editing',
+                  'Page-based fundraising system',
+                  'Trending content discovery',
+                  'User leaderboards and reputation',
+                  'Group collaboration spaces',
+                  'Activity tracking and feeds',
+                  'Multiple reading modes',
+                  'Responsive design'
+                ]
               }
             })
           }}
@@ -206,22 +238,24 @@ export default function RootLayout({
                             <GAProvider>
                               <ToastProvider>
                                 <PillStyleProvider>
-                                  <PWAProvider>
-                                    <CacheInitializer />
-                                    <FeatureFlagListener>
-                                      <ErrorBoundary name="layout" resetOnPropsChange={true}>
-                                        <ClientLayout>
-                                          {children}
-                                        </ClientLayout>
+                                  <DateFormatProvider>
+                                    <PWAProvider>
+                                      <CacheInitializer />
+                                      <FeatureFlagListener>
+                                        <ErrorBoundary name="layout" resetOnPropsChange={true}>
+                                          <ClientLayout>
+                                            {children}
+                                          </ClientLayout>
+                                        </ErrorBoundary>
+                                      </FeatureFlagListener>
+                                      <ErrorBoundary name="vercel_analytics" resetOnPropsChange={false}>
+                                        <Analytics debug={process.env.NODE_ENV === 'development'} />
                                       </ErrorBoundary>
-                                    </FeatureFlagListener>
-                                    <ErrorBoundary name="vercel_analytics" resetOnPropsChange={false}>
-                                      <Analytics debug={process.env.NODE_ENV === 'development'} />
-                                    </ErrorBoundary>
-                                    <ErrorBoundary name="speed_insights" resetOnPropsChange={false}>
-                                      <SpeedInsights />
-                                    </ErrorBoundary>
-                                  </PWAProvider>
+                                      <ErrorBoundary name="speed_insights" resetOnPropsChange={false}>
+                                        <SpeedInsights />
+                                      </ErrorBoundary>
+                                    </PWAProvider>
+                                  </DateFormatProvider>
                                 </PillStyleProvider>
                               </ToastProvider>
                             </GAProvider>

@@ -140,6 +140,81 @@
   }
 }
 
+/* Spring animation keyframes for feature cards */
+@keyframes spring-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.05) translateY(-5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes spring-out {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+}
+
+/* Spring animation utility classes */
+.animate-spring-in {
+  animation: spring-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-spring-out {
+  animation: spring-out 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Page Editor Transition Improvements */
+.page-editor-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth edit mode transitions for title and body */
+.edit-mode-title-transition {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+.edit-mode-body-transition {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, padding 0.3s ease;
+}
+
+/* Prevent layout shift during edit mode transitions */
+.edit-mode-container {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateZ(0); /* Force hardware acceleration */
+  will-change: border, box-shadow, padding;
+}
+
+/* PWA Interface Improvements */
+/* PWA light mode styles */
+@media (display-mode: standalone) {
+  :root {
+    --pwa-background: #ffffff;
+    --pwa-status-bar: #000000;
+  }
+
+  body {
+    background-color: var(--pwa-background);
+  }
+
+  /* Status bar styling for PWA */
+  meta[name="theme-color"] {
+    content: var(--pwa-background);
+  }
+}
+
 @layer base {
   :root {
     /* Accent color variables - dynamically set by AccentColorContext */

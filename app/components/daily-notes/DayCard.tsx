@@ -5,6 +5,8 @@ import { cn } from '../../lib/utils';
 import { useTheme } from 'next-themes';
 import { Check } from 'lucide-react';
 import { usePillStyle, PILL_STYLES } from '../../contexts/PillStyleContext';
+import { useDateFormat } from '../../contexts/DateFormatContext';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface DayCardProps {
   date: Date;
@@ -25,6 +27,7 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { pillStyle } = usePillStyle();
+  const { formatDate } = useDateFormat();
 
   // Format date for display
   const dayNumber = date.getDate();
@@ -70,28 +73,31 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
   const cardStyles = getCardStyles();
 
   return (
-    <div
-      className={cn(
-        // Base styling without wewrite-card to avoid unwanted shadows and padding
-        "flex-shrink-0 cursor-pointer transition-all duration-200 hover:scale-105",
-        "flex flex-col items-center justify-center p-3 min-w-[80px] h-[90px]",
-        "active:scale-95 select-none rounded-xl relative", // Added relative positioning for checkmark
-        // Only add shadow for cards with notes
-        hasNote && "shadow-sm"
-        // Removed ring styling from today's card since we now use the "Today" chip
-      )}
-      style={cardStyles}
-      onClick={onClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-      aria-label={`${hasNote ? 'View note for' : 'Create note for'} ${date.toLocaleDateString()}`}
-    >
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div
+            className={cn(
+              // Base styling without wewrite-card to avoid unwanted shadows and padding
+              "flex-shrink-0 cursor-pointer transition-all duration-200 hover:scale-105",
+              "flex flex-col items-center justify-center p-3 min-w-[80px] h-[90px]",
+              "active:scale-95 select-none rounded-xl relative", // Added relative positioning for checkmark
+              // Only add shadow for cards with notes
+              hasNote && "shadow-sm"
+              // Removed ring styling from today's card since we now use the "Today" chip
+            )}
+            style={cardStyles}
+            onClick={onClick}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }}
+            aria-label={`${hasNote ? 'View note for' : 'Create note for'} ${date.toLocaleDateString()}`}
+          >
       {/* Checkmark icon for filled notes - positioned in top-right corner */}
       {hasNote && (
         <div className="absolute top-1.5 right-1.5 z-10">
@@ -106,40 +112,20 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
         </div>
       )}
 
-      {/* Day of week - small text at top */}
-      <div
-        className="text-xs font-medium uppercase tracking-wide"
-        style={{
-          color: hasNote
-            ? (pillStyle === PILL_STYLES.CLASSIC || pillStyle === PILL_STYLES.OUTLINE)
-              ? `${accentColor}80` // Add transparency to accent color
-              : 'rgba(255, 255, 255, 0.8)'
-            : cardStyles.color,
-          opacity: hasNote ? 0.8 : 0.7
-        }}
-      >
-        {dayOfWeek}
-      </div>
-
-      {/* Day number - large and prominent */}
-      <div
-        className="text-2xl font-bold leading-none"
-        style={{ color: cardStyles.color }}
-      >
-        {dayNumber}
-      </div>
-
-      {/* Month abbreviation - smaller text below */}
-      <div
-        className="text-xs font-medium mt-1 uppercase tracking-wide"
-        style={{
-          color: hasNote ? 'rgba(255, 255, 255, 0.8)' : cardStyles.color,
-          opacity: hasNote ? 0.8 : 0.7
-        }}
-      >
-        {monthAbbr}
-      </div>
-    </div>
+            {/* Day number - large and prominent */}
+            <div
+              className="text-2xl font-bold leading-none"
+              style={{ color: cardStyles.color }}
+            >
+              {dayNumber}
+            </div>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Daily Note - {formatDate(date)}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 });
 
