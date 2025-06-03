@@ -14,6 +14,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import SubscriptionManagement from '../components/payments/SubscriptionManagement';
 import { PaymentMethodsManager } from '../components/payments/PaymentMethodsManager';
 import PWAInstallationCard from '../components/utils/PWAInstallationCard';
+import { SyncQueueSettings } from '../components/utils/SyncQueueSettings';
 import { useFeatureFlag } from "../utils/feature-flags";
 
 // Define admin check locally to avoid import issues
@@ -290,28 +291,10 @@ export default function AccountPage() {
 
           {/* When subscription feature is disabled, don't show any subscription UI */}
 
-          {/* Admin Panel Link - Only visible for admins */}
-          {user && user.email && isAdmin(user.email) && (
-            <section>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Admin</CardTitle>
-                  <CardDescription>Access administrative tools and settings</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Manage feature flags, admin users, and other administrative settings.
-                  </p>
-                  <Button
-                    onClick={() => router.push('/admin')}
-                    className="w-full"
-                  >
-                    Go to Admin Panel
-                  </Button>
-                </CardContent>
-              </Card>
-            </section>
-          )}
+          {/* Sync Queue Settings */}
+          <section>
+            <SyncQueueSettings />
+          </section>
 
           {/* PWA Installation Status Card */}
           <section>

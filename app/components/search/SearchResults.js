@@ -46,6 +46,8 @@ const Loader = () => {
  * @param {Function} onInputChange - Callback for input changes
  * @param {boolean} preventRedirect - Prevent redirect to search page
  * @param {string} className - Additional CSS classes
+ * @param {boolean} autoFocus - Whether to auto-focus the input field
+ * @param {Function} onFocus - Callback when input receives focus
  */
 const SearchResults = ({
   onSelect = null,
@@ -59,6 +61,8 @@ const SearchResults = ({
   onInputChange = null,
   preventRedirect = false,
   className = "",
+  autoFocus = false,
+  onFocus = null,
 }) => {
   const { user } = useContext(AuthContext);
   const router = useRouter();
@@ -273,6 +277,41 @@ const SearchResults = ({
       debouncedSearch(initialSearch);
     }
   }, [initialSearch, debouncedSearch]);
+
+  // Auto-focus effect for link editor mode
+  useEffect(() => {
+    if (autoFocus && searchInputRef.current) {
+      // Wait for component to be fully mounted and any parent animations to complete
+      const focusTimer = setTimeout(() => {
+        if (searchInputRef.current) {
+          try {
+            searchInputRef.current.focus();
+
+            // Select all text if there's initial content
+            if (searchInputRef.current.value && typeof searchInputRef.current.select === 'function') {
+              searchInputRef.current.select();
+            }
+
+            // Trigger virtual keyboard on mobile devices
+            if (typeof window !== 'undefined' && 'ontouchstart' in window) {
+              searchInputRef.current.click();
+            }
+
+            // Call onFocus callback if provided
+            if (onFocus) {
+              onFocus();
+            }
+
+            console.log('[SearchResults] Auto-focused input field');
+          } catch (error) {
+            console.error('[SearchResults] Error during auto-focus:', error);
+          }
+        }
+      }, 100); // Small delay to ensure component is ready
+
+      return () => clearTimeout(focusTimer);
+    }
+  }, [autoFocus, onFocus]);
 
   // Cleanup on unmount
   useEffect(() => {

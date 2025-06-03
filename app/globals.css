@@ -1193,7 +1193,7 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
 /* Smooth transition states for sticky headers */
 .section-header-transitioning {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transition-property: transform, opacity, box-shadow, background-color;
+  transition-property: transform, top, opacity, box-shadow, background-color;
 }
 
 /* Positional slide animations - no fade effects, only position changes */
@@ -1236,6 +1236,7 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
 /* Smooth position transition for sticky headers */
 .section-header-position-transition {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              top 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

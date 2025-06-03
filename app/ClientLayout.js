@@ -18,7 +18,7 @@ import { AccentColorProvider } from "./contexts/AccentColorContext";
 import { MultiAccountProvider } from "./providers/MultiAccountProvider";
 import { NotificationProvider } from "./providers/NotificationProvider";
 import { RenderControlProvider } from "./providers/RenderControlProvider";
-import { GADebugger } from "./utils/ga-debug";
+
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import AdminFeaturesWrapper from './components/utils/AdminFeaturesWrapper';
@@ -40,6 +40,10 @@ const UsernameWarningBanner = dynamic(() => import('./components/auth/UsernameWa
 });
 
 const UsernameEnforcementBanner = dynamic(() => import('./components/auth/UsernameEnforcementBanner'), {
+  ssr: false
+});
+
+const UnverifiedUserBanner = dynamic(() => import('./components/utils/UnverifiedUserBanner'), {
   ssr: false
 });
 
@@ -100,6 +104,7 @@ export default function ClientLayout({ children }) {
 
                                   {!isAuthPage && <UsernameWarningBanner />}
                                   {!isAuthPage && <UsernameEnforcementBanner />}
+                                  {!isAuthPage && <UnverifiedUserBanner />}
                                   <FeatureFlagCookieManager />
                                   <main className="flex-grow">
                                     <AdminFeaturesWrapper>

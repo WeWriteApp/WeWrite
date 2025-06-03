@@ -20,7 +20,7 @@ import { generateCacheKey, getCacheItem, setCacheItem } from "../../utils/cacheU
 import { trackQueryPerformance } from "../../utils/queryMonitor";
 import { getBatchUserData } from "../../firebase/batchUserData";
 import { ShimmerEffect } from "../ui/skeleton";
-import { debugRecentActivity, debugUserActivity } from "../../utils/debugActivity";
+
 import { getUserPageCount } from "../../firebase/counters";
 
 // UserListSkeleton component removed as it's no longer needed
@@ -412,19 +412,7 @@ const TopUsers = () => {
     });
   }, [fetchUsersAndPages]);
 
-  // CRITICAL FIX: Debug function for development
-  const runDebugActivity = useCallback(async () => {
-    console.log('=== RUNNING ACTIVITY DEBUG ===');
-    await debugRecentActivity();
 
-    // Debug the first few users
-    if (allTimeUsers.length > 0) {
-      console.log('=== DEBUGGING INDIVIDUAL USERS ===');
-      for (let i = 0; i < Math.min(3, allTimeUsers.length); i++) {
-        await debugUserActivity(allTimeUsers[i].id);
-      }
-    }
-  }, [allTimeUsers]);
 
   // Initial data load
   useEffect(() => {
@@ -448,14 +436,7 @@ const TopUsers = () => {
                   {' | '}
                   <span>Cache: {isFreshData ? 'Fresh data' : 'From cache'}</span>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={runDebugActivity}
-                  className="text-xs h-6 px-2"
-                >
-                  Debug Activity
-                </Button>
+
               </div>
             )}
 

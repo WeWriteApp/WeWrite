@@ -20,7 +20,7 @@ export function ModernLoginForm({
   ...props
 }: React.ComponentPropsWithoutRef<"form">) {
   const router = useRouter()
-  const [email, setEmail] = useState("")
+  const [emailOrUsername, setEmailOrUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -30,11 +30,13 @@ export function ModernLoginForm({
 
   // Validate form inputs
   useEffect(() => {
+    // Accept either email format or username (3+ chars, alphanumeric + underscore)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const isEmailValid = emailRegex.test(email)
+    const usernameRegex = /^[a-zA-Z0-9_]{3,}$/
+    const isEmailOrUsernameValid = emailRegex.test(emailOrUsername) || usernameRegex.test(emailOrUsername)
     const isPasswordValid = password.length >= 6
-    setIsFormValid(isEmailValid && isPasswordValid)
-  }, [email, password])
+    setIsFormValid(isEmailOrUsernameValid && isPasswordValid)
+  }, [emailOrUsername, password])
 
   // Check for previous account
   useEffect(() => {
@@ -58,7 +60,7 @@ export function ModernLoginForm({
 
     try {
       // reCAPTCHA verification removed
-      const result = await loginUser(email, password)
+      const result = await loginUser(emailOrUsername, password)
 
       if (result.user) {
         // Successful login - redirect to home page
@@ -124,19 +126,19 @@ export function ModernLoginForm({
 
       <div className="grid gap-4">
         <div className="grid gap-2">
-          <Label htmlFor="email" className="text-sm font-medium">
-            Email
+          <Label htmlFor="emailOrUsername" className="text-sm font-medium">
+            Email or Username
           </Label>
           <Input
-            id="email"
-            type="email"
-            placeholder="name@example.com"
+            id="emailOrUsername"
+            type="text"
+            placeholder="name@example.com or username"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={emailOrUsername}
+            onChange={(e) => setEmailOrUsername(e.target.value)}
             tabIndex={1}
             className="h-10 bg-background"
-            autoComplete="email"
+            autoComplete="username"
           />
         </div>
 

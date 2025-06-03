@@ -4,14 +4,22 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import { X, Heart, Map, Info, MessageSquare, Github } from 'lucide-react';
 
+interface SiteFooterProps {
+  className?: string;
+}
+
+interface FooterLink {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  external: boolean;
+}
+
 /**
  * SiteFooter component for the application.
  * Displays links to various pages and external resources.
- *
- * @param {Object} props - Component props
- * @param {string} props.className - Additional CSS classes to apply to the footer
  */
-export default function SiteFooter({ className = "" }) {
+export default function SiteFooter({ className = "" }: SiteFooterProps) {
   const currentYear = new Date().getFullYear();
 
   // Interactive footer text options
@@ -25,14 +33,14 @@ export default function SiteFooter({ className = "" }) {
   const madeWithOptions = ["Made with agápē", "Vibe coded"];
   const locationOptions = ["in America", "in New York City", "on Earth"];
 
-  const animateTextChange = (element, newText, callback) => {
+  const animateTextChange = (element: HTMLElement | null, newText: string, callback: () => void): void => {
     if (!element) return;
 
     const originalText = element.innerText;
     const frames = 10; // Number of animation frames
     let frame = 0;
 
-    const animate = () => {
+    const animate = (): void => {
       if (frame < frames) {
         // During first half, scramble the text
         if (frame < frames / 2) {
@@ -104,7 +112,7 @@ export default function SiteFooter({ className = "" }) {
     );
   };
 
-  const footerLinks = [
+  const footerLinks: FooterLink[] = [
     {
       href: "https://x.com/WeWriteApp",
       label: "X",

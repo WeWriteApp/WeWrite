@@ -353,11 +353,23 @@ export default function PageHeader({
             setIsScrolled(shouldBeScrolled);
           }
 
-          // Calculate scroll progress
+          // Calculate scroll progress based on main content area only
           const windowHeight = window.innerHeight;
-          const documentHeight = document.documentElement.scrollHeight;
-          const maxScroll = documentHeight - windowHeight;
-          const progress = (lastScrollY / maxScroll) * 100;
+
+          // Find the main content area (exclude footer sections)
+          const mainContentElement = document.querySelector('[data-page-content]');
+          let maxScroll = document.documentElement.scrollHeight - windowHeight;
+
+          if (mainContentElement) {
+            // Calculate the height up to the end of main content
+            const mainContentRect = mainContentElement.getBoundingClientRect();
+            const mainContentBottom = mainContentRect.bottom + window.scrollY;
+
+            // Use the main content bottom as the effective scroll height
+            maxScroll = Math.max(0, mainContentBottom - windowHeight);
+          }
+
+          const progress = maxScroll > 0 ? (lastScrollY / maxScroll) * 100 : 0;
           setScrollProgress(Math.min(progress, 100));
 
           // Update the spacer height immediately to ensure proper spacing

@@ -21,25 +21,34 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 export const LINE_MODES = {
   NORMAL: 'normal',
   DENSE: 'dense'
-};
+} as const;
 
-const LineSettingsContext = createContext();
+export type LineMode = typeof LINE_MODES[keyof typeof LINE_MODES];
+
+interface LineSettingsContextType {
+  lineMode: LineMode;
+  setLineMode: (mode: LineMode) => void;
+  isEditMode: boolean;
+}
+
+interface LineSettingsProviderProps {
+  children: React.ReactNode;
+  isEditMode?: boolean;
+}
+
+const LineSettingsContext = createContext<LineSettingsContextType | undefined>(undefined);
 
 /**
  * LineSettingsProvider - Context provider for paragraph display settings
  *
  * Manages the current paragraph display mode (normal or dense) and persists
  * the selection in localStorage for consistent user experience across sessions.
- *
- * @param {Object} props - Component props
- * @param {React.ReactNode} props.children - Child components
- * @param {boolean} props.isEditMode - Whether the context is being used in edit mode
  */
-export function LineSettingsProvider({ children, isEditMode = false }) {
+export function LineSettingsProvider({ children, isEditMode = false }: LineSettingsProviderProps) {
   // Try to get the initial mode from localStorage if available
-  const getInitialMode = () => {
+  const getInitialMode = (): LineMode => {
     if (typeof window !== 'undefined') {
-      const savedMode = localStorage.getItem('lineMode');
+      const savedMode = localStorage.getItem('lineMode') as LineMode;
       if (savedMode === LINE_MODES.DENSE) {
         return LINE_MODES.DENSE;
       }
@@ -71,7 +80,7 @@ export function LineSettingsProvider({ children, isEditMode = false }) {
   }, []);
 
   // Custom setter function that also shows a toast notification and refreshes the page
-  const setLineModeWithNotification = (mode) => {
+  const setLineModeWithNotification = (mode: LineMode): void => {
     // Validate the mode before setting it
     if (mode !== LINE_MODES.NORMAL && mode !== LINE_MODES.DENSE) {
       console.error(`Invalid line mode: ${mode}`);
@@ -133,12 +142,12 @@ export function LineSettingsProvider({ children, isEditMode = false }) {
 /**
  * useLineSettings - Hook to access the LineSettings context
  *
- * @returns {Object} Context containing:
+ * @returns Context containing:
  *   - lineMode: Current paragraph display mode (normal or dense)
  *   - setLineMode: Function to update the paragraph display mode
  *   - isEditMode: Whether the context is being used in edit mode
  */
-export function useLineSettings() {
+export function useLineSettings(): LineSettingsContextType {
   const context = useContext(LineSettingsContext);
   if (context === undefined) {
     throw new Error('useLineSettings must be used within a LineSettingsProvider');

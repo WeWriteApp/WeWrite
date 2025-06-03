@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect, useContext } from "react"
-import { X, ChevronLeft, Palette, Settings, Check, Bell, User, Users } from "lucide-react"
+import { X, ChevronLeft, Palette, Settings, Check, Bell, User, Users, Shield } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { auth } from "../../firebase/config"
@@ -30,6 +30,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // Groups feature is now always enabled for all users
   const groupsEnabled = true;
+
+  // Check if user is admin
+  const isAdmin = (userEmail?: string | null): boolean => {
+    if (!userEmail) return false;
+    return userEmail === 'jamiegray2234@gmail.com';
+  };
 
   // Debug logging for groups feature flag in sidebar
   useEffect(() => {
@@ -241,6 +247,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <User className="h-5 w-5 mr-2" />
                 <span>Profile</span>
               </button>
+
+              {/* Admin Dashboard - Only visible for admins */}
+              {user && user.email && isAdmin(user.email) && (
+                <button
+                  onClick={() => router.push('/admin')}
+                  className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                >
+                  <Shield className="h-5 w-5 mr-2" />
+                  <span>Admin Dashboard</span>
+                </button>
+              )}
             </div>
           </div>
         );

@@ -24,7 +24,7 @@ import {
   DialogTitle,
   DialogClose
 } from "../ui/dialog";
-import SiteFooter from "./SiteFooter";
+import SiteFooter from "../layout/SiteFooter";
 
 export default function GroupDetails({ group }) {
   const { theme } = useTheme();

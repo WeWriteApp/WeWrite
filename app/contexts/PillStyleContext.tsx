@@ -9,21 +9,34 @@ export const PILL_STYLES = {
   FILLED: 'filled',
   OUTLINE: 'outline',
   CLASSIC: 'classic'
-};
+} as const;
+
+export type PillStyle = typeof PILL_STYLES[keyof typeof PILL_STYLES];
+
+interface PillStyleContextType {
+  pillStyle: PillStyle;
+  changePillStyle: (style: PillStyle) => void;
+  getPillStyleClasses: () => string;
+  getTextColorForPill: (backgroundColor: string) => string;
+}
+
+interface PillStyleProviderProps {
+  children: React.ReactNode;
+}
 
 // Create the context
-const PillStyleContext = createContext({
+const PillStyleContext = createContext<PillStyleContextType>({
   pillStyle: PILL_STYLES.FILLED,
   changePillStyle: () => {},
   getPillStyleClasses: () => '',
   getTextColorForPill: () => '#ffffff'
 });
 
-export function usePillStyle() {
+export function usePillStyle(): PillStyleContextType {
   return useContext(PillStyleContext);
 }
 
-export function PillStyleProvider({ children }) {
+export function PillStyleProvider({ children }: PillStyleProviderProps) {
   // Try to load from localStorage, default to filled
   const [pillStyle, setPillStyle] = useState(PILL_STYLES.FILLED);
   const { theme } = useTheme();
@@ -37,7 +50,7 @@ export function PillStyleProvider({ children }) {
   }, []);
 
   // Change pill style and save to localStorage
-  const changePillStyle = (style) => {
+  const changePillStyle = (style: PillStyle): void => {
     if (Object.values(PILL_STYLES).includes(style)) {
       setPillStyle(style);
       localStorage.setItem('pillStyle', style);
@@ -45,7 +58,7 @@ export function PillStyleProvider({ children }) {
   };
 
   // Get the appropriate classes based on the current pill style
-  const getPillStyleClasses = () => {
+  const getPillStyleClasses = (): string => {
     if (pillStyle === PILL_STYLES.OUTLINE) {
       return `
         bg-transparent text-primary
@@ -73,7 +86,7 @@ export function PillStyleProvider({ children }) {
 
   // Get the best text color for a pill based on its background
   // This ensures proper contrast for accessibility
-  const getTextColorForPill = (backgroundColor) => {
+  const getTextColorForPill = (backgroundColor: string): string => {
     // Force white text on dark backgrounds for better readability
     // This is a more aggressive approach to ensure contrast
     try {

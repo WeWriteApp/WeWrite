@@ -2566,6 +2566,9 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
   const pageSearchRef = useRef(null);
   const externalUrlRef = useRef(null);
 
+  // State to track if modal has been mounted (for animation timing)
+  const [isModalMounted, setIsModalMounted] = useState(false);
+
   // Track initial state for change detection
   const initialState = React.useRef({
     displayText: initialText,
@@ -2652,6 +2655,92 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
       validateForm();
     }
   }, [activeTab, selectedPageId, externalUrl, displayText, validateForm, formTouched]);
+
+  // Auto-focus and text selection logic after modal mounts
+  useEffect(() => {
+    // Set modal as mounted immediately
+    setIsModalMounted(true);
+
+    // Wait for modal animation to complete before focusing
+    const focusTimer = setTimeout(() => {
+      try {
+        if (activeTab === 'page') {
+          // Focus the page search input
+          if (pageSearchRef.current) {
+            const searchInput = pageSearchRef.current.querySelector('input') || pageSearchRef.current;
+            if (searchInput && typeof searchInput.focus === 'function') {
+              searchInput.focus();
+
+              // Select all text if there's initial content
+              if (searchInput.value && typeof searchInput.select === 'function') {
+                searchInput.select();
+              }
+
+              // Trigger virtual keyboard on mobile
+              if (typeof window !== 'undefined' && 'ontouchstart' in window) {
+                searchInput.click();
+              }
+
+              console.log('[LinkEditor] Auto-focused page search input');
+            }
+          }
+        } else if (activeTab === 'external') {
+          // Focus the external URL input
+          if (externalUrlRef.current) {
+            externalUrlRef.current.focus();
+
+            // Select all text if there's initial content
+            if (externalUrlRef.current.value) {
+              externalUrlRef.current.select();
+            }
+
+            // Trigger virtual keyboard on mobile
+            if (typeof window !== 'undefined' && 'ontouchstart' in window) {
+              externalUrlRef.current.click();
+            }
+
+            console.log('[LinkEditor] Auto-focused external URL input');
+          }
+        }
+      } catch (error) {
+        console.error('[LinkEditor] Error during auto-focus:', error);
+      }
+    }, 300); // Wait 300ms for modal animation to complete
+
+    return () => clearTimeout(focusTimer);
+  }, []); // Only run once when component mounts
+
+  // Handle tab changes - refocus when switching tabs
+  useEffect(() => {
+    if (!isModalMounted) return; // Don't run on initial mount
+
+    const focusTimer = setTimeout(() => {
+      try {
+        if (activeTab === 'page') {
+          if (pageSearchRef.current) {
+            const searchInput = pageSearchRef.current.querySelector('input') || pageSearchRef.current;
+            if (searchInput && typeof searchInput.focus === 'function') {
+              searchInput.focus();
+              if (searchInput.value && typeof searchInput.select === 'function') {
+                searchInput.select();
+              }
+            }
+          }
+        } else if (activeTab === 'external') {
+          if (externalUrlRef.current) {
+            externalUrlRef.current.focus();
+            if (externalUrlRef.current.value) {
+              externalUrlRef.current.select();
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[LinkEditor] Error during tab change focus:', error);
+      }
+    }, 100); // Shorter delay for tab changes
+
+    return () => clearTimeout(focusTimer);
+  }, [activeTab, isModalMounted]);
 
   // Helper function to validate URL format
   const isValidUrl = (url) => {
@@ -2913,7 +3002,8 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                     displayText={displayText}
                     setDisplayText={setDisplayText}
                     preventRedirect={true}
-                    onInputChange={(value) => {
+                    autoFocus={activeTab === 'page'}
+                    onInputChange={(value: string) => {
                       setFormTouched(true);
                       // If the input looks like a URL, switch to external tab
                       if (value && (value.startsWith('http://') || value.startsWith('https://') ||
@@ -2948,7 +3038,13 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                       onChange={handleDisplayTextChange}
                       placeholder="Enter custom link text"
                       className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
-                      onFocus={() => setFormTouched(true)}
+                      onFocus={(e) => {
+                        setFormTouched(true);
+                        // Select all text when focused
+                        if (e.target.value) {
+                          e.target.select();
+                        }
+                      }}
                     />
                   )}
                 </div>
@@ -2977,8 +3073,13 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                   onChange={handleExternalUrlChange}
                   placeholder="https://example.com"
                   className={`w-full p-2 bg-muted/50 rounded-lg border ${formTouched && !isValid && !externalUrl ? 'border-red-500' : 'border-border'} focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm`}
-                  autoFocus={!!initialText && !externalUrl}
-                  onFocus={() => setFormTouched(true)}
+                  onFocus={(e) => {
+                    setFormTouched(true);
+                    // Select all text when focused
+                    if (e.target.value) {
+                      e.target.select();
+                    }
+                  }}
                 />
                 {!externalUrl.startsWith('http://') && !externalUrl.startsWith('https://') && externalUrl && (
                   <p className="text-xs text-muted-foreground">
@@ -3005,7 +3106,13 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                     onChange={handleDisplayTextChange}
                     placeholder="Enter custom link text"
                     className="w-full p-2 bg-muted/50 rounded-lg border border-border focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground text-sm"
-                    onFocus={() => setFormTouched(true)}
+                    onFocus={(e) => {
+                      setFormTouched(true);
+                      // Select all text when focused
+                      if (e.target.value) {
+                        e.target.select();
+                      }
+                    }}
                   />
                 )}
               </div>

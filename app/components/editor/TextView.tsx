@@ -1176,27 +1176,18 @@ const LinkNode = ({ node, canEdit = false }) => {
     }
   }
 
-  // For protocol links, use a special component
+  // For protocol links, use a special component - no tooltip in view mode
   if (isProtocolLink) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="inline-block">
-              <PillLink
-                href="/protocol"
-                isPublic={true}
-                className="protocol-link"
-              >
-                {displayText || "WeWrite Protocol"}
-              </PillLink>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Learn about the WeWrite protocol</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <span className="inline-block">
+        <PillLink
+          href="/protocol"
+          isPublic={true}
+          className="protocol-link"
+        >
+          {displayText || "WeWrite Protocol"}
+        </PillLink>
+      </span>
     );
   }
 
@@ -1593,27 +1584,18 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle, s
       </TooltipProvider>
     );
   } else {
-    // In view mode, normal navigation behavior
+    // In view mode, normal navigation behavior - no tooltip
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="inline-block">
-              <PillLink
-                href={formattedHref}
-                isPublic={true}
-                className="inline page-link"
-                data-page-id={pageId}
-              >
-                {textToDisplay}
-              </PillLink>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{currentTitle || originalPageTitle || displayText || 'Page Link'}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <span className="inline-block">
+        <PillLink
+          href={formattedHref}
+          isPublic={true}
+          className="inline page-link"
+          data-page-id={pageId}
+        >
+          {textToDisplay}
+        </PillLink>
+      </span>
     );
   }
 };

@@ -5,11 +5,14 @@ import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { cn } from '../../lib/utils';
 
-// Simple utility function to combine class names
-const cn = (...classes) => {
-  return classes.filter(Boolean).join(' ');
-};
+interface FloatingActionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  href?: string;
+  icon?: React.ReactNode;
+  className?: string;
+}
 
 export function FloatingActionButton({
   onClick,
@@ -17,11 +20,11 @@ export function FloatingActionButton({
   icon = <Plus className="h-6 w-6 text-white" />,
   className,
   ...props
-}) {
+}: FloatingActionButtonProps) {
   const router = useRouter();
   const { accentColor } = useAccentColor();
 
-  const handleClick = (e) => {
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>): void => {
     if (onClick) {
       onClick(e);
     } else if (href) {

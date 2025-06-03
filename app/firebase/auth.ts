@@ -51,8 +51,38 @@ export const createUser = async (email: string, password: string): Promise<UserC
   }
 }
 
-export const loginUser = async (email: string, password: string): Promise<AuthResult> => {
+export const loginUser = async (emailOrUsername: string, password: string): Promise<AuthResult> => {
   try {
+    let email = emailOrUsername;
+
+    // Check if the input is a username (doesn't contain @)
+    if (!emailOrUsername.includes('@')) {
+      // Look up the email by username
+      const usernameDoc = await getDoc(doc(db, 'usernames', emailOrUsername.toLowerCase()));
+
+      if (!usernameDoc.exists()) {
+        return {
+          code: "auth/user-not-found",
+          message: "No account found with this username or email."
+        };
+      }
+
+      // Get the user ID from the username document
+      const userData = usernameDoc.data();
+      const userId = userData.uid;
+
+      // Get the user's email from the users collection
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (!userDoc.exists()) {
+        return {
+          code: "auth/user-not-found",
+          message: "No account found with this username or email."
+        };
+      }
+
+      email = userDoc.data().email;
+    }
+
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return { user: userCredential.user };
   } catch (error: any) {
@@ -62,7 +92,7 @@ export const loginUser = async (email: string, password: string): Promise<AuthRe
     let message = "An error occurred during login. Please try again.";
 
     if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
-      message = "Incorrect email or password. Please try again.";
+      message = "Incorrect username/email or password. Please try again.";
     } else if (error.code === "auth/invalid-email") {
       message = "Invalid email address format.";
     } else if (error.code === "auth/user-disabled") {

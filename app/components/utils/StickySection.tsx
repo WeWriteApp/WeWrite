@@ -46,9 +46,9 @@ function determineActiveSectionPrecise(): string | null {
   try {
     const scrollY = window.scrollY;
 
-    // Get main header height with fallback
-    const mainHeader = document.querySelector('header');
-    const mainHeaderHeight = mainHeader ? mainHeader.getBoundingClientRect().height : 56;
+    // Get main header height with multiple fallbacks
+    const mainHeader = document.querySelector('header') || document.querySelector('[data-header]') || document.querySelector('nav');
+    const mainHeaderHeight = mainHeader ? mainHeader.getBoundingClientRect().height : 64;
 
     // If we're at the very top, no section should be sticky
     if (scrollY < mainHeaderHeight) {
@@ -136,7 +136,7 @@ function determineActiveSectionPrecise(): string | null {
       if (pastSectionHeader && beforeNextSection && hasVisibleContent && sectionInViewport) {
         // Additional check: ensure there's meaningful content below the sticky header
         const contentBelowHeader = section.bottom - effectiveViewportTop;
-        const minContentThreshold = Math.min(50, section.headerHeight * 2); // Dynamic threshold
+        const minContentThreshold = Math.min(20, section.headerHeight); // More lenient threshold
 
         if (contentBelowHeader >= minContentThreshold) {
           if (process.env.NODE_ENV === 'development') {
@@ -449,9 +449,16 @@ export default function StickySection({
       }
 
       // Position sticky header at the top of the viewport (replacing main header)
+      headerElement.style.position = 'fixed';
       headerElement.style.top = '0px';
-      headerElement.classList.add('section-header-sticky');
+      headerElement.style.left = '0px';
+      headerElement.style.right = '0px';
+      headerElement.style.width = '100%';
+      headerElement.style.paddingLeft = '1.5rem'; // 24px consistent with main layout
+      headerElement.style.paddingRight = '1.5rem'; // 24px consistent with main layout
       headerElement.style.zIndex = '60'; // Same as main header z-index
+      headerElement.classList.add('section-header-sticky');
+
       setIsSticky(true);
 
       // Debug logging
@@ -460,37 +467,28 @@ export default function StickySection({
       }
     } else if (!shouldBeSticky && isSticky) {
       // No longer sticky - restore to original position
+      if (placeholderElement) {
+        placeholderElement.style.height = '0px';
+        placeholderElement.style.display = 'none';
+      }
 
-      // IMPORTANT: Use requestAnimationFrame to ensure smooth transition
-      requestAnimationFrame(() => {
-        if (placeholderElement) {
-          // Gradually remove placeholder to prevent jarring transitions
-          placeholderElement.style.height = '0px';
-          placeholderElement.style.display = 'none';
+      // Reset header positioning and styling
+      headerElement.style.position = '';
+      headerElement.style.top = '';
+      headerElement.style.left = '';
+      headerElement.style.right = '';
+      headerElement.style.width = '';
+      headerElement.style.paddingLeft = '';
+      headerElement.style.paddingRight = '';
+      headerElement.style.zIndex = '';
+      headerElement.classList.remove('section-header-sticky');
 
-          // Debug logging
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`[StickySection] ${sectionId} - Removing placeholder`);
-          }
-        }
+      setIsSticky(false);
 
-        // Reset header positioning and styling
-        headerElement.style.top = '';
-        headerElement.classList.remove('section-header-sticky');
-        headerElement.style.zIndex = '';
-
-        // Ensure the header is visible in its original position
-        headerElement.style.position = '';
-        headerElement.style.visibility = 'visible';
-        headerElement.style.opacity = '1';
-
-        setIsSticky(false);
-
-        // Debug logging
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`[StickySection] ${sectionId} - Restored to original position`);
-        }
-      });
+      // Debug logging
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[StickySection] ${sectionId} - Restored to original position`);
+      }
     }
   }, [isActiveStickySection, isSticky, sectionId]);
 
@@ -498,7 +496,7 @@ export default function StickySection({
     <div
       ref={sectionRef}
       id={sectionId}
-      className={cn('relative mb-6 overflow-hidden', className)}
+      className={cn('relative mb-6', className)}
     >
       {/* Placeholder to prevent layout shift when header becomes sticky */}
       <div

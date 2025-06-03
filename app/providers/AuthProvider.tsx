@@ -90,8 +90,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (hasPendingRedirect && auth.currentUser) {
       console.log('Found pending redirect with authenticated user, handling now...');
       localStorage.removeItem('authRedirectPending');
+      // Remove router.refresh() to prevent infinite loops in Chrome
       router.push('/');
-      router.refresh();
     } else if (switchToAccount || localStorage.getItem('accountSwitchInProgress') === 'true') {
       // Handle account switching
       try {

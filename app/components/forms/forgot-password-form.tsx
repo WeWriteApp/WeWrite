@@ -36,9 +36,25 @@ export function ForgotPasswordForm({
 
     try {
       await sendPasswordResetEmail(auth, email);
+      console.log("Password reset email sent successfully to:", email);
       setSuccess(true);
     } catch (error: any) {
-      setError(error.message || "Failed to send reset email");
+      console.error("Password reset error:", error);
+
+      // Handle specific Firebase error codes
+      let errorMessage = "Failed to send reset email";
+
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = "No account found with this email address";
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "Please enter a valid email address";
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = "Too many requests. Please try again later";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

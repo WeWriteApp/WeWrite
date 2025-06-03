@@ -20,6 +20,8 @@ import { PageProvider } from "../contexts/PageContext";
 import { LineSettingsProvider } from "../contexts/LineSettingsContext";
 import SiteFooter from "../components/layout/SiteFooter";
 import PledgeBar from "../components/payments/PledgeBar";
+import { shouldUseQueue, addToQueue } from "../utils/syncQueue";
+import { useSyncQueue } from "../contexts/SyncQueueContext";
 
 /**
  * Editor content node interface
@@ -65,6 +67,7 @@ export default function NewPage() {
   const authContext = useContext(AuthContext);
   const user = authContext?.user;
   const analytics = useWeWriteAnalytics();
+  const { refreshState } = useSyncQueue();
 
   // State that mimics SinglePageView
   const [isEditing] = useState(true); // Always in editing mode for new pages
@@ -269,18 +272,20 @@ export default function NewPage() {
       };
 
       console.log('Creating page with data:', { ...data, content: '(content omitted)' });
-      const res = await createPage(data);
 
-      if (res) {
-        console.log('Page created successfully with ID:', res);
+      // Check if we should use the sync queue
+      if (shouldUseQueue()) {
+        console.log('Adding page creation to sync queue');
+        const operationId = addToQueue('create', data);
 
         // Track analytics (non-blocking)
         try {
-          ReactGA.event({ category: "Page", action: "Add new page", label: title });
+          ReactGA.event({ category: "Page", action: "Add new page (queued)", label: title });
           analytics.trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, {
             label: title,
-            page_id: res,
-            is_reply: !!isReply
+            page_id: operationId,
+            is_reply: !!isReply,
+            queued: true
           });
         } catch (analyticsError) {
           console.error('Analytics tracking failed (non-fatal):', analyticsError);
@@ -289,15 +294,55 @@ export default function NewPage() {
         setHasContentChanged(false);
         setHasTitleChanged(false);
         setHasUnsavedChanges(false);
-
         setIsSaving(false);
-        router.push(`/${res}`);
+
+        // Refresh sync queue state
+        refreshState();
+
+        // Navigate to home or back since we don't have a page ID yet
+        if (isReply && searchParams) {
+          const replyToId = searchParams.get('replyTo');
+          if (replyToId) {
+            router.push(`/${replyToId}`);
+          } else {
+            router.push('/');
+          }
+        } else {
+          router.push('/');
+        }
         return true;
       } else {
-        console.error('Page creation failed: createPage returned null/false');
-        setIsSaving(false);
-        setError("Failed to create page. Please try again.");
-        return false;
+        // Normal page creation
+        const res = await createPage(data);
+
+        if (res) {
+          console.log('Page created successfully with ID:', res);
+
+          // Track analytics (non-blocking)
+          try {
+            ReactGA.event({ category: "Page", action: "Add new page", label: title });
+            analytics.trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, {
+              label: title,
+              page_id: res,
+              is_reply: !!isReply
+            });
+          } catch (analyticsError) {
+            console.error('Analytics tracking failed (non-fatal):', analyticsError);
+          }
+
+          setHasContentChanged(false);
+          setHasTitleChanged(false);
+          setHasUnsavedChanges(false);
+
+          setIsSaving(false);
+          router.push(`/${res}`);
+          return true;
+        } else {
+          console.error('Page creation failed: createPage returned null/false');
+          setIsSaving(false);
+          setError("Failed to create page. Please try again.");
+          return false;
+        }
       }
     } catch (error: any) {
       setIsSaving(false);

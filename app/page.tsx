@@ -204,7 +204,7 @@ const Home = React.memo(function Home() {
       <Suspense fallback={<DashboardSkeleton />}>
         <Header />
         <PWABanner />
-        <main className="p-6 bg-background overflow-hidden" data-component-name="Home">
+        <main className="p-6 bg-background" data-component-name="Home">
           {/* Critical above-the-fold content - load immediately */}
           <AddUsername />
 

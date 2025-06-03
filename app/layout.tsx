@@ -20,6 +20,7 @@ import { PWAProvider } from "./providers/PWAProvider"
 import FeatureFlagListener from "./components/utils/FeatureFlagListener"
 import SlateEarlyPatch from "./components/editor/SlateEarlyPatch"
 import CacheInitializer from "./components/utils/CacheInitializer"
+import { SyncQueueProvider } from "./contexts/SyncQueueContext"
 
 // Import polyfills for browser compatibility
 import "intl-segmenter-polyfill"
@@ -240,20 +241,22 @@ export default function RootLayout({
                                 <PillStyleProvider>
                                   <DateFormatProvider>
                                     <PWAProvider>
-                                      <CacheInitializer />
-                                      <FeatureFlagListener>
-                                        <ErrorBoundary name="layout" resetOnPropsChange={true}>
-                                          <ClientLayout>
-                                            {children}
-                                          </ClientLayout>
+                                      <SyncQueueProvider>
+                                        <CacheInitializer />
+                                        <FeatureFlagListener>
+                                          <ErrorBoundary name="layout" resetOnPropsChange={true}>
+                                            <ClientLayout>
+                                              {children}
+                                            </ClientLayout>
+                                          </ErrorBoundary>
+                                        </FeatureFlagListener>
+                                        <ErrorBoundary name="vercel_analytics" resetOnPropsChange={false}>
+                                          <Analytics debug={process.env.NODE_ENV === 'development'} />
                                         </ErrorBoundary>
-                                      </FeatureFlagListener>
-                                      <ErrorBoundary name="vercel_analytics" resetOnPropsChange={false}>
-                                        <Analytics debug={process.env.NODE_ENV === 'development'} />
-                                      </ErrorBoundary>
-                                      <ErrorBoundary name="speed_insights" resetOnPropsChange={false}>
-                                        <SpeedInsights />
-                                      </ErrorBoundary>
+                                        <ErrorBoundary name="speed_insights" resetOnPropsChange={false}>
+                                          <SpeedInsights />
+                                        </ErrorBoundary>
+                                      </SyncQueueProvider>
                                     </PWAProvider>
                                   </DateFormatProvider>
                                 </PillStyleProvider>

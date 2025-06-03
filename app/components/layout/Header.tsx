@@ -22,11 +22,25 @@ export default function Header() {
       const scrollY = window.scrollY;
       setIsScrolled(scrollY > 10);
 
-      // Calculate scroll progress for the progress bar
+      // Calculate scroll progress for the progress bar based on main content area only
       const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-      const scrolled = (winScroll / height) * 100;
-      setScrollProgress(scrolled);
+
+      // Find the main content area (exclude footer sections)
+      const mainContentElement = document.querySelector('[data-page-content]');
+      let contentHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+
+      if (mainContentElement) {
+        // Calculate the height up to the end of main content
+        const mainContentRect = mainContentElement.getBoundingClientRect();
+        const mainContentBottom = mainContentRect.bottom + window.scrollY;
+        const viewportHeight = window.innerHeight;
+
+        // Use the main content bottom as the effective scroll height
+        contentHeight = Math.max(0, mainContentBottom - viewportHeight);
+      }
+
+      const scrolled = contentHeight > 0 ? (winScroll / contentHeight) * 100 : 0;
+      setScrollProgress(Math.min(scrolled, 100));
     };
 
     // Initial update
