@@ -350,7 +350,7 @@ const Home = React.memo(function Home() {
             </LazySection>
           </StickySection>
 
-          <FloatingActionButton href="/new" onClick={() => {}} className="" />
+          <FloatingActionButton href="/new" className="" />
         </main>
         <SiteFooter className="" />
       </Suspense>
