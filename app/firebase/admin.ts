@@ -20,7 +20,27 @@ export const initAdmin = () => {
     
     if (process.env.GOOGLE_CLOUD_KEY_JSON) {
       // Parse from environment variable (Vercel/production)
-      serviceAccount = JSON.parse(process.env.GOOGLE_CLOUD_KEY_JSON);
+      try {
+        let jsonString = process.env.GOOGLE_CLOUD_KEY_JSON;
+
+        // Check if the string is base64 encoded (common in Vercel deployments)
+        // Base64 strings typically don't contain spaces and have specific patterns
+        if (!jsonString.includes(' ') && !jsonString.startsWith('{')) {
+          try {
+            // Try to decode as base64
+            jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
+            console.log('Decoded base64-encoded GOOGLE_CLOUD_KEY_JSON');
+          } catch (decodeError) {
+            console.warn('Failed to decode as base64, using original string:', decodeError.message);
+          }
+        }
+
+        serviceAccount = JSON.parse(jsonString);
+      } catch (parseError) {
+        console.error('Error parsing GOOGLE_CLOUD_KEY_JSON:', parseError.message);
+        console.error('First 50 characters of GOOGLE_CLOUD_KEY_JSON:', process.env.GOOGLE_CLOUD_KEY_JSON?.substring(0, 50));
+        throw new Error(`Failed to parse GOOGLE_CLOUD_KEY_JSON: ${parseError.message}`);
+      }
     } else {
       // Create from individual environment variables
       serviceAccount = {
@@ -54,7 +74,11 @@ export const initAdmin = () => {
 // Export admin instance
 export { admin };
 
-// Auto-initialize if in server environment
-if (typeof window === 'undefined') {
-  initAdmin();
+// Auto-initialize if in server environment, but not during build time
+if (typeof window === 'undefined' && process.env.NODE_ENV !== 'production' || process.env.VERCEL_ENV === 'production') {
+  try {
+    initAdmin();
+  } catch (error) {
+    console.warn('Firebase Admin auto-initialization failed, will retry on first use:', error.message);
+  }
 }

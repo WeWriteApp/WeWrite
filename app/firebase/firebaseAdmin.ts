@@ -71,6 +71,38 @@ export function getFirebaseAdmin(): typeof admin | null {
       } else {
         // Production initialization with proper credentials
         try {
+          // Check if we have GOOGLE_CLOUD_KEY_JSON first
+          if (process.env.GOOGLE_CLOUD_KEY_JSON) {
+            try {
+              let jsonString = process.env.GOOGLE_CLOUD_KEY_JSON;
+
+              // Check if the string is base64 encoded (common in Vercel deployments)
+              if (!jsonString.includes(' ') && !jsonString.startsWith('{')) {
+                try {
+                  // Try to decode as base64
+                  jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
+                  console.log('Decoded base64-encoded GOOGLE_CLOUD_KEY_JSON in firebaseAdmin');
+                } catch (decodeError) {
+                  console.warn('Failed to decode as base64, using original string:', decodeError.message);
+                }
+              }
+
+              const serviceAccount = JSON.parse(jsonString);
+
+              admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount as ServiceAccount),
+                databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || 'https://wewrite-ccd82-default-rtdb.firebaseio.com'
+              });
+
+              console.log('Firebase Admin initialized successfully with GOOGLE_CLOUD_KEY_JSON');
+              firebaseAdmin = admin;
+              return firebaseAdmin;
+            } catch (parseError) {
+              console.error('Error parsing GOOGLE_CLOUD_KEY_JSON in firebaseAdmin:', parseError.message);
+              // Fall through to individual environment variables
+            }
+          }
+
           // Log environment variables (without sensitive data)
           const envCheck: EnvironmentCheck = {
             hasProjectId: !!process.env.FIREBASE_PROJECT_ID || !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
