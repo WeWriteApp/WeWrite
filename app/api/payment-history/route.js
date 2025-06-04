@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
-import { initAdmin } from '../../firebase/admin';
 import { getStripeSecretKey } from '../../utils/stripeConfig';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 
 // Initialize Firebase Admin
-initAdmin();
+const admin = getFirebaseAdmin();
 
 // Initialize Stripe with the appropriate key based on environment
 const stripeSecretKey = getStripeSecretKey();
@@ -23,7 +23,7 @@ export async function POST(request) {
 
     // Verify the user exists in Firebase
     try {
-      await getAuth().getUser(userId);
+      await admin.auth().getUser(userId);
     } catch (error) {
       console.error('Error verifying user:', error);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -31,16 +31,25 @@ export async function POST(request) {
 
     // Get the user's subscription from Firestore
     const db = getFirestore();
-    const subscriptionRef = db.collection('subscriptions').where('userId', '==', userId);
-    const subscriptionSnapshot = await subscriptionRef.get();
 
     if (subscriptionSnapshot.empty) {
       return NextResponse.json({ payments: [] });
     }
 
-    const subscriptionDoc = subscriptionSnapshot.docs[0].data();
-    const stripeCustomerId = subscriptionDoc.stripeCustomerId;
+    // Fetch user data from Firestore
+    const userDocRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (!userDoc.exists()) {
+      return new NextResponse(JSON.stringify({ error: 'User not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
+    const userData = userDoc.data();
+    const stripeCustomerId = userData.stripeCustomerId;
+    
     if (!stripeCustomerId) {
       return NextResponse.json({ payments: [] });
     }

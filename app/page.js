@@ -96,7 +96,9 @@ export default function Home() {
 
         {/* 1. Recent Activity (moved to top) */}
         <div style={{ minHeight: isLoading ? '200px' : 'auto' }}>
-          <RecentActivity limit={4} />
+          <div>
+            <RecentActivity/>
+          </div>
         </div>
 
         {/* 2. My Pages */}
@@ -130,12 +132,16 @@ export default function Home() {
 
         {/* 3. Trending Pages */}
         <div style={{ minHeight: isLoading ? '300px' : 'auto' }}>
-          <TrendingPages limit={5} />
+          <div>
+            <TrendingPages/>
+          </div>
         </div>
 
         {/* 4. Top Users */}
         <div style={{ minHeight: isLoading ? '300px' : 'auto' }}>
-          <TopUsers />
+          <div>
+            <TopUsers/>
+          </div>
         </div>
 
         <FloatingActionButton href="/direct-create" />
