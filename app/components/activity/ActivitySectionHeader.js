@@ -72,13 +72,13 @@ const ActivitySectionHeader = () => {
                     variant="outline"
                     size="sm"
                     className={`gap-2 h-8 px-3 rounded-2xl hover:bg-muted/80 transition-colors ${
-                      viewMode === 'following' ? 'border-primary text-primary' : ''
+                      viewMode === 'following' || viewMode === 'mine' ? 'border-primary text-primary' : ''
                     }`}
-                    aria-label={`Filter activity: ${viewMode === 'all' ? 'All' : 'Following'}`}
+                    aria-label={`Filter activity: ${viewMode === 'all' ? 'All' : viewMode === 'following' ? 'Following' : 'Mine'}`}
                   >
                     <Filter className="h-4 w-4" />
                     <span className="sr-only md:not-sr-only md:inline-block">
-                      {viewMode === 'all' ? 'All' : 'Following'}
+                      {viewMode === 'all' ? 'All' : viewMode === 'following' ? 'Following' : 'Mine'}
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
@@ -126,6 +126,17 @@ const ActivitySectionHeader = () => {
                 {isLoadingFollows && (
                   <div className="h-4 w-4 ml-2 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
                 )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  console.log('Setting view mode to mine');
+                  setViewMode('mine');
+                }}
+                className="flex items-center justify-between cursor-pointer"
+              >
+                <span>Mine</span>
+                {viewMode === 'mine' && <Check className="h-4 w-4 ml-2" />}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

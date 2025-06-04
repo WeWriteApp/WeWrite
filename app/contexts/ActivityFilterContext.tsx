@@ -5,7 +5,7 @@ import React, { createContext, useState, useContext, useEffect, ReactNode } from
 /**
  * Activity view mode type
  */
-export type ActivityViewMode = 'all' | 'following';
+export type ActivityViewMode = 'all' | 'following' | 'mine';
 
 /**
  * Activity filter context interface
@@ -54,7 +54,7 @@ export const ActivityFilterProvider = ({ children }: ActivityFilterProviderProps
     if (typeof window !== 'undefined') {
       try {
         const savedViewMode = localStorage.getItem('activityViewMode') as ActivityViewMode | null;
-        if (savedViewMode && (savedViewMode === 'all' || savedViewMode === 'following')) {
+        if (savedViewMode && (savedViewMode === 'all' || savedViewMode === 'following' || savedViewMode === 'mine')) {
           console.log('Loading saved view mode from localStorage:', savedViewMode);
           setViewMode(savedViewMode);
         } else {
