@@ -22,6 +22,7 @@ import SiteFooter from "../components/layout/SiteFooter";
 import PledgeBar from "../components/payments/PledgeBar";
 import { shouldUseQueue, addToQueue } from "../utils/syncQueue";
 import { useSyncQueue } from "../contexts/SyncQueueContext";
+import SlideUpPage from "../components/ui/slide-up-page";
 
 /**
  * Editor content node interface
@@ -392,68 +393,70 @@ export default function NewPage() {
 
   // Render using the exact same structure as SinglePageView
   return (
-    <Layout>
-      <Head>
-        <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
-      </Head>
-      <PageHeader
-        title={title || (isReply ? "" : "Untitled")}
-        username={username}
-        userId={user?.uid}
-        isLoading={isLoading}
-        groupId={undefined} // New pages don't have groups initially
-        groupName={undefined}
-        scrollDirection="none"
-        isPrivate={!isPublic}
-        isEditing={isEditing}
-        setIsEditing={handleSetIsEditing}
-        onTitleChange={handleTitleChange}
-        titleError={titleError}
-        canEdit={true} // User can always edit their new page
-      />
-      <div className="pb-24 px-0 sm:px-2 w-full max-w-none min-h-screen">
-        {isEditing ? (
-          <>
-            <PageProvider>
-              <LineSettingsProvider isEditMode={true}>
-                <PageEditor
-                  title={isReply ? "" : title}
-                  setTitle={isDailyNote ? () => {} : handleTitleChange} // Lock title for daily notes
-                  initialContent={editorState}
-                  onContentChange={handleContentChange}
-                  isPublic={isPublic}
-                  setIsPublic={setIsPublic}
-                  location={location}
-                  setLocation={setLocation}
-                  isSaving={isSaving}
-                  error={error || ""}
-                  isNewPage={true}
-                  isReply={isReply}
-                  replyToId={searchParams?.get('replyTo') || ""}
-                  clickPosition={null}
-                  onSave={() => handleSave(editorContent || editorState)}
-                  onCancel={handleBackWithCheck}
+    <SlideUpPage>
+      <Layout>
+        <Head>
+          <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
+        </Head>
+        <PageHeader
+          title={title || (isReply ? "" : "Untitled")}
+          username={username}
+          userId={user?.uid}
+          isLoading={isLoading}
+          groupId={undefined} // New pages don't have groups initially
+          groupName={undefined}
+          scrollDirection="none"
+          isPrivate={!isPublic}
+          isEditing={isEditing}
+          setIsEditing={handleSetIsEditing}
+          onTitleChange={handleTitleChange}
+          titleError={titleError}
+          canEdit={true} // User can always edit their new page
+        />
+        <div className="pb-24 px-0 sm:px-2 w-full max-w-none min-h-screen">
+          {isEditing ? (
+            <>
+              <PageProvider>
+                <LineSettingsProvider isEditMode={true}>
+                  <PageEditor
+                    title={isReply ? "" : title}
+                    setTitle={isDailyNote ? () => {} : handleTitleChange} // Lock title for daily notes
+                    initialContent={editorState}
+                    onContentChange={handleContentChange}
+                    isPublic={isPublic}
+                    setIsPublic={setIsPublic}
+                    location={location}
+                    setLocation={setLocation}
+                    isSaving={isSaving}
+                    error={error || ""}
+                    isNewPage={true}
+                    isReply={isReply}
+                    replyToId={searchParams?.get('replyTo') || ""}
+                    clickPosition={null}
+                    onSave={() => handleSave(editorContent || editorState)}
+                    onCancel={handleBackWithCheck}
 
-                  page={null} // No existing page for new pages
-                />
+                    page={null} // No existing page for new pages
+                  />
 
-                {/* Unsaved Changes Dialog */}
-                <UnsavedChangesDialog
-                  isOpen={showUnsavedChangesDialog}
-                  onClose={handleCloseDialog}
-                  onStayAndSave={handleStayAndSave}
-                  onLeaveWithoutSaving={handleLeaveWithoutSaving}
-                  isSaving={isSaving || isHandlingNavigation}
-                  title="Unsaved Changes"
-                  description="You have unsaved changes. Do you want to save them before leaving?"
-                />
-              </LineSettingsProvider>
-            </PageProvider>
-          </>
-        ) : null}
-      </div>
-      <SiteFooter className="" />
-      {!isEditing && <PledgeBar />}
-    </Layout>
+                  {/* Unsaved Changes Dialog */}
+                  <UnsavedChangesDialog
+                    isOpen={showUnsavedChangesDialog}
+                    onClose={handleCloseDialog}
+                    onStayAndSave={handleStayAndSave}
+                    onLeaveWithoutSaving={handleLeaveWithoutSaving}
+                    isSaving={isSaving || isHandlingNavigation}
+                    title="Unsaved Changes"
+                    description="You have unsaved changes. Do you want to save them before leaving?"
+                  />
+                </LineSettingsProvider>
+              </PageProvider>
+            </>
+          ) : null}
+        </div>
+        <SiteFooter className="" />
+        {!isEditing && <PledgeBar />}
+      </Layout>
+    </SlideUpPage>
   );
 }
