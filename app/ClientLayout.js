@@ -54,6 +54,7 @@ const UnverifiedUserBanner = dynamic(() => import('./components/utils/Unverified
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith('/auth/');
+  const isHomePage = pathname === '/';
 
   // Use scroll restoration hook to ensure pages always start at the top
   useScrollToTop();
@@ -104,7 +105,6 @@ export default function ClientLayout({ children }) {
 
                                   {!isAuthPage && <UsernameWarningBanner />}
                                   {!isAuthPage && <UsernameEnforcementBanner />}
-                                  {!isAuthPage && <UnverifiedUserBanner />}
                                   <FeatureFlagCookieManager />
                                   <main className="flex-grow">
                                     <AdminFeaturesWrapper>

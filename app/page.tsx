@@ -20,6 +20,7 @@ import SiteFooter from "./components/layout/SiteFooter";
 import { SectionTitle } from "./components/ui/section-title";
 import StickySection from "./components/utils/StickySection";
 import PWABanner from "./components/utils/PWABanner";
+import UnverifiedUserBanner from "./components/utils/UnverifiedUserBanner";
 import ActivitySectionHeader from "./components/activity/ActivitySectionHeader";
 import RandomPagesHeader from "./components/features/RandomPagesHeader";
 import RecentActivity from "./components/features/RecentActivity";
@@ -204,6 +205,7 @@ const Home = React.memo(function Home() {
       <Suspense fallback={<DashboardSkeleton />}>
         <Header />
         <PWABanner />
+        <UnverifiedUserBanner />
         <main className="p-6 bg-background" data-component-name="Home">
           {/* Critical above-the-fold content - load immediately */}
           <AddUsername />
