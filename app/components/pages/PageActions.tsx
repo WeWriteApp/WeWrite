@@ -147,7 +147,10 @@ export function PageActions({
     const confirmed = await confirmDelete("this page");
     if (confirmed) {
       try {
-        // Delete the page first
+        // Immediately redirect to home page to prevent showing error state
+        router.push("/");
+
+        // Delete the page in the background
         await deletePage(page.id);
 
         // Show success message
@@ -159,13 +162,10 @@ export function PageActions({
             detail: { pageId: page.id }
           }));
         }
-
-        // Navigate to home page after successful deletion
-        router.push("/");
       } catch (error) {
         console.error("Error deleting page:", error);
         toast.error("Failed to delete page");
-        // Don't redirect if deletion failed
+        // Don't redirect if deletion failed - user is already redirected above
       }
     }
   };

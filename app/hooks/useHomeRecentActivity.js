@@ -14,9 +14,10 @@ import { getBatchUserData } from "../firebase/batchUserData";
  * @param {number} limitCount - Number of activities to fetch
  * @param {string|null} filterUserId - Optional user ID to filter activities by
  * @param {boolean} followedOnly - Whether to only show activities from followed pages
+ * @param {boolean} mineOnly - Whether to only show current user's activities
  * @returns {Object} - Object containing activities, loading state, error, and dummy functions for compatibility
  */
-const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false) => {
+const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false, mineOnly = false) => {
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
@@ -26,12 +27,17 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
   const limitRef = useRef(limitCount);
   const userIdRef = useRef(filterUserId);
   const followedOnlyRef = useRef(followedOnly);
+  const mineOnlyRef = useRef(mineOnly);
   const userRef = useRef(user);
 
   // Update refs when props change
   useEffect(() => {
     followedOnlyRef.current = followedOnly;
   }, [followedOnly]);
+
+  useEffect(() => {
+    mineOnlyRef.current = mineOnly;
+  }, [mineOnly]);
 
   useEffect(() => {
     userRef.current = user;
@@ -154,6 +160,19 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
       // Query to get recent pages
       let pagesQuery;
       let followedPageIds = [];
+
+      // If mineOnly is true, filter by current user's content
+      if (mineOnlyRef.current) {
+        if (!userRef.current) {
+          // If not logged in but in mine mode, return empty results
+          setActivities([]);
+          setLoading(false);
+          isFetchingRef.current = false;
+          return;
+        }
+        // Set userIdRef to current user for filtering
+        userIdRef.current = userRef.current.uid;
+      }
 
       // If followedOnly is true, get the list of pages the user follows
       if (followedOnlyRef.current) {
@@ -473,7 +492,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
 
   useEffect(() => {
     // Fetch data
-    console.log(`useHomeRecentActivity effect triggered with followedOnly=${followedOnly}`);
+    console.log(`useHomeRecentActivity effect triggered with followedOnly=${followedOnly}, mineOnly=${mineOnly}`);
     fetchRecentActivity();
 
     // Cleanup function
@@ -482,7 +501,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
       console.log('useHomeRecentActivity cleanup - marking as not fetching');
       isFetchingRef.current = false;
     };
-  }, [followedOnly]); // Re-run when followedOnly changes
+  }, [followedOnly, mineOnly]); // Re-run when followedOnly or mineOnly changes
 
   // Provide dummy values for hasMore and loadingMore to match the interface of useRecentActivity
   const hasMore = false;

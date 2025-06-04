@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { RefreshCw, CheckCircle, XCircle, Clock, Wifi, WifiOff } from 'lucide-react';
+import { RefreshCw, Clock, Wifi, WifiOff } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
 import { useSyncQueue } from '../../contexts/SyncQueueContext';
@@ -42,19 +42,7 @@ export function SyncQueueSettings() {
     });
   };
 
-  const getVerificationStatusIcon = () => {
-    if (isEmailVerified) {
-      return <CheckCircle className="h-5 w-5 text-green-600" />;
-    }
-    return <XCircle className="h-5 w-5 text-red-600" />;
-  };
 
-  const getVerificationStatusText = () => {
-    if (isEmailVerified) {
-      return "Verified";
-    }
-    return "Unverified";
-  };
 
   const getConnectionStatusIcon = () => {
     if (state.isOnline) {
@@ -84,21 +72,11 @@ export function SyncQueueSettings() {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Status Overview */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center space-x-2">
-            {getVerificationStatusIcon()}
-            <div>
-              <p className="text-sm font-medium">Email Status</p>
-              <p className="text-sm text-muted-foreground">{getVerificationStatusText()}</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            {getConnectionStatusIcon()}
-            <div>
-              <p className="text-sm font-medium">Connection</p>
-              <p className="text-sm text-muted-foreground">{getConnectionStatusText()}</p>
-            </div>
+        <div className="flex items-center space-x-2">
+          {getConnectionStatusIcon()}
+          <div>
+            <p className="text-sm font-medium">Connection Status</p>
+            <p className="text-sm text-muted-foreground">{getConnectionStatusText()}</p>
           </div>
         </div>
 

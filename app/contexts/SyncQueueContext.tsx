@@ -11,6 +11,7 @@ import {
   shouldUseQueue
 } from '../utils/syncQueue';
 import { useAuth } from '../providers/AuthProvider';
+import { checkEmailVerificationOnFeatureAccess } from '../services/emailVerificationNotifications';
 
 interface SyncQueueContextType {
   state: SyncQueueState;
@@ -51,6 +52,11 @@ export function SyncQueueProvider({ children }: SyncQueueProviderProps) {
   // Trigger manual sync
   const triggerSync = async () => {
     try {
+      // Check for email verification notification before syncing
+      if (!isEmailVerified()) {
+        await checkEmailVerificationOnFeatureAccess();
+      }
+
       await triggerManualSync();
       refreshState();
     } catch (error) {

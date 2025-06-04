@@ -439,6 +439,60 @@ export const createAppendNotification = async (
 };
 
 /**
+ * Check if an email verification notification already exists for a user
+ *
+ * @param {string} userId - The ID of the user
+ * @returns {Promise<boolean>} - Whether a recent email verification notification exists
+ */
+export const hasRecentEmailVerificationNotification = async (userId: string): Promise<boolean> => {
+  try {
+    const notificationsRef = collection(db, 'users', userId, 'notifications');
+
+    // Check for email verification notifications in the last 24 hours
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
+    const recentNotificationQuery = query(
+      notificationsRef,
+      where('type', '==', 'email_verification'),
+      where('createdAt', '>=', twentyFourHoursAgo),
+      limit(1)
+    );
+
+    const snapshot = await getDocs(recentNotificationQuery);
+    return !snapshot.empty;
+  } catch (error) {
+    console.error('Error checking for recent email verification notification:', error);
+    return false; // If there's an error, allow creating the notification
+  }
+};
+
+/**
+ * Create an email verification notification
+ *
+ * @param {string} userId - The ID of the user who needs to verify their email
+ * @returns {Promise<string|null>} - The ID of the created notification or null if throttled
+ */
+export const createEmailVerificationNotification = async (userId: string): Promise<string | null> => {
+  try {
+    // Check if a recent email verification notification already exists
+    const hasRecent = await hasRecentEmailVerificationNotification(userId);
+    if (hasRecent) {
+      console.log('Email verification notification throttled - recent notification exists');
+      return null;
+    }
+
+    return createNotification({
+      userId,
+      type: 'email_verification'
+    });
+  } catch (error) {
+    console.error('Error creating email verification notification:', error);
+    throw error;
+  }
+};
+
+/**
  * Delete all notifications related to a specific page
  * This function is called when a page is deleted to clean up orphaned notifications
  *

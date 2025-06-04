@@ -10,6 +10,7 @@ import { db } from "../firebase/config";
 import { rtdb } from "../firebase/rtdb";
 import Cookies from 'js-cookie';
 import { setAnalyticsUserInfo } from "../utils/analytics-user-tracking";
+import { checkEmailVerificationOnStartup } from "../services/emailVerificationNotifications";
 
 /**
  * User data interface
@@ -258,6 +259,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               email: user.email,
               username: userData.username || user.displayName || 'Missing username'
             });
+
+            // Check for email verification notification after user is authenticated
+            checkEmailVerificationOnStartup();
           } else {
             // No user document, create default data
             setUser({

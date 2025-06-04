@@ -7,7 +7,7 @@ import { getDatabase, ref, get } from "firebase/database";
 import { getRecentActivity } from "../firebase/activity";
 import { getBatchUserData } from "../firebase/batchUserData";
 
-const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false) => {
+const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false, mineOnly = false) => {
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
@@ -125,6 +125,19 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
         // Query to get recent pages
         let pagesQuery;
         let followedPageIds = [];
+
+        // If mineOnly is true, filter by current user's content
+        if (mineOnly) {
+          if (!user) {
+            // If not logged in but in mine mode, return empty results
+            setActivities([]);
+            setLoading(false);
+            setHasMore(false);
+            return;
+          }
+          // Set filterUserId to current user for filtering
+          filterUserId = user.uid;
+        }
 
         // If followedOnly is true, get the list of pages the user follows
         if (followedOnly) {
@@ -268,7 +281,7 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
     };
 
     fetchRecentActivity();
-  }, [user, limitCount, filterUserId, followedOnly]);
+  }, [user, limitCount, filterUserId, followedOnly, mineOnly]);
 
   // Function to load more activities
   const loadMore = useCallback(async () => {

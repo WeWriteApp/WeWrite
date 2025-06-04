@@ -87,8 +87,8 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
   let activityData = { activities: [], loading: true, error: null, hasMore: false, loadingMore: false, loadMore: () => {} };
   try {
     activityData = isHomepage
-      ? useHomeRecentActivity(limit, userId, viewMode === 'following')
-      : useRecentActivity(limit, userId, viewMode === 'following');
+      ? useHomeRecentActivity(limit, userId, viewMode === 'following', viewMode === 'mine')
+      : useRecentActivity(limit, userId, viewMode === 'following', viewMode === 'mine');
   } catch (err) {
     console.error("Error using activity hook:", err);
     setLocalError({

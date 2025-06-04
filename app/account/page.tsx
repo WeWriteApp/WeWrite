@@ -15,6 +15,7 @@ import SubscriptionManagement from '../components/payments/SubscriptionManagemen
 import { PaymentMethodsManager } from '../components/payments/PaymentMethodsManager';
 import PWAInstallationCard from '../components/utils/PWAInstallationCard';
 import { SyncQueueSettings } from '../components/utils/SyncQueueSettings';
+import { EmailVerificationStatus } from '../components/utils/EmailVerificationStatus';
 import { useFeatureFlag } from "../utils/feature-flags";
 
 // Define admin check locally to avoid import issues
@@ -194,6 +195,10 @@ export default function AccountPage() {
                     >
                       Edit
                     </button>
+                  </div>
+                  {/* Email verification status */}
+                  <div className="mt-2">
+                    <EmailVerificationStatus />
                   </div>
                   {emailError && (
                     <p className="text-sm text-red-500 mt-1">{emailError}</p>
