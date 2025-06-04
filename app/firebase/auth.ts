@@ -420,9 +420,11 @@ export const loginAnonymously = async (): Promise<AuthResult> => {
 
     // Create a basic profile for the anonymous user
     const userDocRef = doc(db, 'users', userCredential.user.uid);
+    // Use crypto-secure random ID for anonymous users
+    const anonymousId = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
     await setDoc(userDocRef, {
       email: null,
-      username: `anonymous_${Math.floor(Math.random() * 10000)}`,
+      username: `anonymous_${anonymousId}`,
       displayName: 'Anonymous User',
       isAnonymous: true,
       createdAt: new Date().toISOString(),

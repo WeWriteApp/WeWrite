@@ -9,7 +9,7 @@ import {
 } from "slate";
 import { Editable, withReact, useSlate, Slate } from "slate-react";
 import { withHistory } from "slate-history";
-import TypeaheadSearch from "../search/TypeaheadSearch";
+import SearchResults from "../search/SearchResults";
 import { X, Link as LinkIcon, ExternalLink, FileText, Globe } from "lucide-react";
 import { updateParagraphIndices, getParagraphIndex } from "../../utils/slate-path-fix";
 import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
@@ -1722,7 +1722,7 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
         <div className="flex-1 overflow-y-auto">
           {activeTab === 'page' ? (
             <div className="p-4">
-              <TypeaheadSearch
+              <SearchResults
                 onSelect={handlePageSelect}
                 placeholder="Search pages..."
                 initialSelectedId={selectedPageId}

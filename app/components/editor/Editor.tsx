@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   createEditor,
   Transforms,
@@ -68,7 +69,8 @@ declare module 'slate' {
     Text: CustomText;
   }
 }
-import TypeaheadSearch from "../search/TypeaheadSearch";
+import SearchResults from "../search/SearchResults";
+import FilteredSearchResults from "../search/FilteredSearchResults";
 // Import slate patches to handle DOM node resolution errors
 import "../../utils/slate-patch";
 
@@ -429,7 +431,17 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
   // CRITICAL FIX: Add missing state variables for link editor
   const [showLinkEditor, setShowLinkEditor] = useState(false);
   const [linkEditorPosition, setLinkEditorPosition] = useState({ top: 0, left: 0 });
-  const [initialLinkValues, setInitialLinkValues] = useState({});
+  const [initialLinkValues, setInitialLinkValues] = useState<{
+    text?: string;
+    pageId?: string | null;
+    pageTitle?: string;
+    initialTab?: string;
+    showAuthor?: boolean;
+    authorUsername?: string | null;
+  }>({});
+
+  // State to track if component is mounted (for portal rendering)
+  const [isMounted, setIsMounted] = useState(false);
 
   // State for empty line guidance modal
   const [showEmptyLineModal, setShowEmptyLineModal] = useState(false);
@@ -706,6 +718,12 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
   //   // Clean up the interval when the component unmounts
   //   return () => clearInterval(intervalId);
   // }, [editor, forceUpdateParagraphIndices]);
+
+  // Set mounted state for portal rendering
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   // Share the linkEditorRef with child components via window
   useEffect(() => {
@@ -1722,102 +1740,101 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
         />
       </Slate>
 
-      {/* Render the LinkEditor when showLinkEditor is true */}
-      {showLinkEditor && (
-        <div className="fixed inset-0 z-[1000]">
-          <LinkEditor
-            position={linkEditorPosition}
-            onSelect={(item) => {
-              console.log('[DEBUG] onSelect called with item:', item);
+      {/* Render the LinkEditor when showLinkEditor is true using createPortal */}
+      {showLinkEditor && isMounted && createPortal(
+        <LinkEditor
+          position={linkEditorPosition}
+          onSelect={(item) => {
+            console.log('[DEBUG] onSelect called with item:', item);
 
-              // Check if we're editing an existing link
-              if (linkEditorRef.current.selectedLinkElement && linkEditorRef.current.selectedLinkPath) {
-                console.log('[DEBUG] Editing existing link');
-                // Edit existing link
-                try {
-                  const displayText = item.displayText || item.title || item.pageTitle;
+            // Check if we're editing an existing link
+            if (linkEditorRef.current.selectedLinkElement && linkEditorRef.current.selectedLinkPath) {
+              console.log('[DEBUG] Editing existing link');
+              // Edit existing link
+              try {
+                const displayText = item.displayText || item.title || item.pageTitle;
 
-                  // Create the updated link with compound link support
-                  let linkText = displayText;
-                  if (item.showAuthor && item.authorUsername) {
-                    console.log('[DEBUG] Creating compound link with author:', item.authorUsername);
-                    // For compound links, preserve custom text if available, otherwise use page title
-                    linkText = item.displayText || item.pageTitle || item.title;
-                  }
-
-                  const updatedLink = validateLink({
-                    type: "link",
-                    url: item.isExternal ? item.url : `/pages/${item.pageId}`,
-                    children: [{ text: linkText }],
-                    ...(item.isExternal && { isExternal: true }),
-                    ...(item.pageId && {
-                      pageId: item.pageId,
-                      pageTitle: item.pageTitle, // Always preserve the actual page title
-                      showAuthor: item.showAuthor || false,
-                      authorUsername: item.authorUsername || null
-                    })
-                  });
-
-                  console.log('[DEBUG] Updated link object:', updatedLink);
-
-                  // Apply the validated link properties
-                  Transforms.setNodes(
-                    editor,
-                    updatedLink,
-                    { at: linkEditorRef.current.selectedLinkPath }
-                  );
-
-                  console.log('Updated existing link:', updatedLink);
-                } catch (error) {
-                  console.error("Error updating existing link:", error);
-                }
-              } else {
-                console.log('[DEBUG] Creating new link');
-                // Insert new link
-                const url = item.isExternal ? item.url : `/pages/${item.pageId}`;
-                console.log('[DEBUG] Inserting new link with URL:', url, 'and pageId:', item.pageId);
-
-                // Create display text for compound links
-                let linkText = item.displayText || item.title;
+                // Create the updated link with compound link support
+                let linkText = displayText;
                 if (item.showAuthor && item.authorUsername) {
-                  console.log('[DEBUG] Creating new compound link with author:', item.authorUsername);
+                  console.log('[DEBUG] Creating compound link with author:', item.authorUsername);
                   // For compound links, preserve custom text if available, otherwise use page title
                   linkText = item.displayText || item.pageTitle || item.title;
                 }
 
-                const linkOptions = {
-                  pageId: item.pageId,
-                  pageTitle: item.pageTitle,
-                  isExternal: item.isExternal,
-                  isUser: item.isUser,
-                  userId: item.userId,
-                  isPublic: item.isPublic !== false,
-                  // Add compound link properties
-                  showAuthor: item.showAuthor,
-                  authorUsername: item.authorUsername
-                };
+                const updatedLink = validateLink({
+                  type: "link",
+                  url: item.isExternal ? item.url : `/pages/${item.pageId}`,
+                  children: [{ text: linkText }],
+                  ...(item.isExternal && { isExternal: true }),
+                  ...(item.pageId && {
+                    pageId: item.pageId,
+                    pageTitle: item.pageTitle, // Always preserve the actual page title
+                    showAuthor: item.showAuthor || false,
+                    authorUsername: item.authorUsername || null
+                  })
+                });
 
-                console.log('[DEBUG] Link options:', linkOptions);
+                console.log('[DEBUG] Updated link object:', updatedLink);
 
-                insertLink(url, linkText, linkOptions);
+                // Apply the validated link properties
+                Transforms.setNodes(
+                  editor,
+                  updatedLink,
+                  { at: linkEditorRef.current.selectedLinkPath }
+                );
+
+                console.log('Updated existing link:', updatedLink);
+              } catch (error) {
+                console.error("Error updating existing link:", error);
+              }
+            } else {
+              console.log('[DEBUG] Creating new link');
+              // Insert new link
+              const url = item.isExternal ? item.url : `/pages/${item.pageId}`;
+              console.log('[DEBUG] Inserting new link with URL:', url, 'and pageId:', item.pageId);
+
+              // Create display text for compound links
+              let linkText = item.displayText || item.title;
+              if (item.showAuthor && item.authorUsername) {
+                console.log('[DEBUG] Creating new compound link with author:', item.authorUsername);
+                // For compound links, preserve custom text if available, otherwise use page title
+                linkText = item.displayText || item.pageTitle || item.title;
               }
 
-              // Reset link editor state
-              linkEditorRef.current.selectedLinkElement = null;
-              linkEditorRef.current.selectedLinkPath = null;
+              const linkOptions = {
+                pageId: item.pageId,
+                pageTitle: item.pageTitle,
+                isExternal: item.isExternal,
+                isUser: item.isUser,
+                userId: item.userId,
+                isPublic: item.isPublic !== false,
+                // Add compound link properties
+                showAuthor: item.showAuthor,
+                authorUsername: item.authorUsername
+              };
 
-              // Hide the link editor
-              setShowLinkEditor(false);
-            }}
-            setShowLinkEditor={setShowLinkEditor}
-            initialText={initialLinkValues.text || ""}
-            initialPageId={initialLinkValues.pageId || null}
-            initialPageTitle={initialLinkValues.pageTitle || ""}
-            initialTab={initialLinkValues.initialTab || "page"}
-            initialShowAuthor={initialLinkValues.showAuthor || false}
-            initialAuthorUsername={initialLinkValues.authorUsername || null}
-          />
-        </div>
+              console.log('[DEBUG] Link options:', linkOptions);
+
+              insertLink(url, linkText, linkOptions);
+            }
+
+            // Reset link editor state
+            linkEditorRef.current.selectedLinkElement = null;
+            linkEditorRef.current.selectedLinkPath = null;
+
+            // Hide the link editor
+            setShowLinkEditor(false);
+          }}
+          setShowLinkEditor={setShowLinkEditor}
+          initialText={initialLinkValues.text || ""}
+          initialPageId={initialLinkValues.pageId || null}
+          initialPageTitle={initialLinkValues.pageTitle || ""}
+          initialTab={initialLinkValues.initialTab || "page"}
+          initialShowAuthor={initialLinkValues.showAuthor || false}
+          initialAuthorUsername={initialLinkValues.authorUsername || null}
+        />,
+        document.body
       )}
 
 
@@ -2985,7 +3002,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
               <div>
                 {/* Page search - removed label */}
                 <div className="space-y-2">
-                  <TypeaheadSearch
+                  <FilteredSearchResults
                     ref={pageSearchRef}
                     onSelect={(page) => {
                       setSelectedPageId(page.id);

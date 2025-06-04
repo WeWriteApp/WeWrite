@@ -37,15 +37,8 @@ export async function getUserIdFromRequest(request) {
   // Get user ID from cookies or query parameters
   let userId;
 
-  // SECURITY FIX: Remove query parameter authentication
-  // This was a critical security vulnerability that allowed authentication bypass
-  // const url = new URL(request.url);
-  // const queryUserId = url.searchParams.get('userId');
-  //
-  // if (queryUserId) {
-  //   console.log('Using userId from query parameters:', queryUserId);
-  //   return queryUserId;
-  // }
+  // SECURITY: Query parameter authentication has been permanently removed
+  // to prevent authentication bypass vulnerabilities
 
   // Check for development mode
   const isDevelopment = process.env.NODE_ENV === 'development';

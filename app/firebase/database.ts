@@ -16,6 +16,7 @@ import {
   startAfter,
   writeBatch,
   Timestamp,
+
   type DocumentReference,
   type DocumentSnapshot,
   type QuerySnapshot,
@@ -459,7 +460,8 @@ export const listenToPageById = (
             // Validate content is proper JSON before parsing
             let parsedContent;
             try {
-              parsedContent = JSON.parse(versionData.content);
+              const contentString = typeof versionData.content === 'string' ? versionData.content : JSON.stringify(versionData.content);
+              parsedContent = JSON.parse(contentString);
               console.log(`Successfully parsed content for page ${pageId}, nodes:`,
                 Array.isArray(parsedContent) ? parsedContent.length : 'not an array');
             } catch (parseError) {
@@ -471,11 +473,18 @@ export const listenToPageById = (
             // Extract links from the validated parsed content
             const links = extractLinksFromNodes(parsedContent);
 
+            // Create properly typed version data
+            const typedVersionData: VersionData = {
+              content: typeof versionData.content === 'string' ? versionData.content : JSON.stringify(versionData.content),
+              createdAt: typeof versionData.createdAt === 'string' ? versionData.createdAt : versionData.createdAt.toString(),
+              userId: versionData.userId
+            };
+
             // Send updated page and version data immediately
-            onPageUpdate({ pageData, versionData, links });
+            onPageUpdate({ pageData, versionData: typedVersionData, links });
 
             // Update cache
-            cachedVersionData = versionData;
+            cachedVersionData = typedVersionData;
             cachedLinks = links;
 
             // If we have a version listener, remove it since we have the content directly
@@ -512,7 +521,14 @@ export const listenToPageById = (
         // Listener for the version document - only set up if needed
         unsubscribeVersion = onSnapshot(versionRef, { includeMetadataChanges: true }, async (versionSnap) => {
           if (versionSnap.exists()) {
-            const versionData = versionSnap.data();
+            const rawVersionData = versionSnap.data();
+
+            // Create properly typed version data
+            const versionData: VersionData = {
+              content: typeof rawVersionData.content === 'string' ? rawVersionData.content : JSON.stringify(rawVersionData.content),
+              createdAt: rawVersionData.createdAt,
+              userId: rawVersionData.userId
+            };
 
             // Extract links
             const links = extractLinksFromNodes(JSON.parse(versionData.content));
@@ -620,7 +636,8 @@ export const getPageById = async (pageId: string, userId: string | null = null):
             // Validate content is proper JSON before parsing
             let parsedContent;
             try {
-              parsedContent = JSON.parse(versionData.content);
+              const contentString = typeof versionData.content === 'string' ? versionData.content : JSON.stringify(versionData.content);
+              parsedContent = JSON.parse(contentString);
               console.log(`getPageById: Successfully parsed content for page ${pageId}, nodes:`,
                 Array.isArray(parsedContent) ? parsedContent.length : 'not an array');
             } catch (parseError) {
@@ -761,16 +778,20 @@ export const getPageVersionById = async (pageId: string, versionId: string): Pro
     // Return version data with ID and previous version if available
     return {
       id: versionSnap.id,
-      ...versionData,
-      previousVersion
-    };
+      content: versionData.content || '',
+      createdAt: versionData.createdAt || new Date().toISOString(),
+      userId: versionData.userId || 'unknown',
+      previousVersionId: versionData.previousVersionId,
+      previousVersion,
+      ...versionData
+    } as PageVersion;
   } catch (error) {
     console.error("Error fetching page version:", error);
     return null;
   }
 }
 
-export const getPageVersions = async (pageId, versionCount = 10) => {
+export const getPageVersions = async (pageId: string, versionCount: number = 10): Promise<any[]> => {
   try {
     if (!pageId) {
       console.error("getPageVersions called with invalid pageId:", pageId);
@@ -823,7 +844,7 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
       versions.sort((a, b) => {
         const dateA = a.createdAt instanceof Date ? a.createdAt : new Date();
         const dateB = b.createdAt instanceof Date ? b.createdAt : new Date();
-        return dateB - dateA;
+        return dateB.getTime() - dateA.getTime();
       });
 
       // Limit to the requested number
@@ -892,7 +913,7 @@ export const getPageVersions = async (pageId, versionCount = 10) => {
 
 // Import moved to top of file to avoid circular dependencies
 
-export const saveNewVersion = async (pageId, data) => {
+export const saveNewVersion = async (pageId: string, data: any): Promise<any> => {
   try {
     console.log('saveNewVersion called with pageId:', pageId);
 
@@ -1339,7 +1360,7 @@ export const deletePage = async (pageId: string): Promise<{ success: boolean; er
     }
 
     console.log(`Page deletion completed successfully for: ${pageId}`);
-    return true;
+    return { success: true };
   } catch (e) {
     console.error(`Error deleting page ${pageId}:`, e);
     return e;
@@ -1395,18 +1416,18 @@ function extractLinksFromNodes(nodes) {
     // Check if the node is a link
     if (node.type === 'link' && node.url) {
       // Create a link object with all relevant properties
-      const linkObj = {
+      const linkObj: any = {
         url: node.url,
         pageId: node.pageId,
         pageTitle: node.pageTitle
       };
 
       // Add additional properties if they exist
-      if (node.isExternal) linkObj.isExternal = true;
-      if (node.className) linkObj.className = node.className;
-      if (node.isPageLink) linkObj.isPageLink = true;
-      if (node.isUser) linkObj.isUser = true;
-      if (node.userId) linkObj.userId = node.userId;
+      if ((node as any).isExternal) linkObj.isExternal = true;
+      if ((node as any).className) linkObj.className = (node as any).className;
+      if ((node as any).isPageLink) linkObj.isPageLink = true;
+      if ((node as any).isUser) linkObj.isUser = true;
+      if ((node as any).userId) linkObj.userId = (node as any).userId;
 
       // Add the link to the array
       links.push(linkObj);
@@ -1512,17 +1533,17 @@ export async function findBacklinks(targetPageId, limit = 10) {
       if (pageData.id === normalizedTargetId) continue;
 
       // Skip if the page doesn't have content
-      if (!pageData.content) continue;
+      if (!(pageData as any).content) continue;
 
       try {
         // Parse the content to check for links
-        const content = JSON.parse(pageData.content);
+        const content = JSON.parse((pageData as any).content);
 
-        console.log(`Checking page ${pageData.id} (${pageData.title || 'Untitled'}) for links to ${normalizedTargetId}`);
+        console.log(`Checking page ${pageData.id} (${(pageData as any).title || 'Untitled'}) for links to ${normalizedTargetId}`);
 
         // Check if this page links to the target page
         if (pageContainsLinkTo(content, normalizedTargetId)) {
-          console.log(`Found backlink in page ${pageData.id} (${pageData.title || 'Untitled'})`);
+          console.log(`Found backlink in page ${pageData.id} (${(pageData as any).title || 'Untitled'})`);
           backlinkPages.push(pageData);
 
           // Break early if we've found enough backlinks
@@ -1697,11 +1718,11 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
       // Find groups where user is a member
       const userGroups = Object.entries(groups)
         .filter(([_, groupData]) =>
-          groupData.members && groupData.members[userId]
+          (groupData as any).members && (groupData as any).members[userId]
         )
         .map(([groupId, groupData]) => ({
           id: groupId,
-          ...groupData
+          ...(groupData as any)
         }));
 
       // For each group, get all pages
@@ -1737,7 +1758,7 @@ export const getEditablePagesByUser = async (userId, searchQuery = "") => {
     pages.sort((a, b) => {
       const dateA = new Date(a.lastModified || a.createdAt || 0);
       const dateB = new Date(b.lastModified || b.createdAt || 0);
-      return dateB - dateA; // Descending order (newest first)
+      return dateB.getTime() - dateA.getTime(); // Descending order (newest first)
     });
 
     // Client-side filtering for search
@@ -1774,15 +1795,15 @@ export async function getPageMetadata(pageId) {
     };
 
     // Ensure we have a valid username
-    if (!pageData.username || pageData.username === 'Anonymous' || pageData.username === 'Missing username') {
-      if (pageData.userId) {
+    if (!(pageData as any).username || (pageData as any).username === 'Anonymous' || (pageData as any).username === 'Missing username') {
+      if ((pageData as any).userId) {
         try {
           // Import the utility function to get username
           const { getUsernameById } = await import('../utils/userUtils');
-          const username = await getUsernameById(pageData.userId);
+          const username = await getUsernameById((pageData as any).userId);
 
           if (username && username !== 'Anonymous' && username !== 'Missing username') {
-            pageData.username = username;
+            (pageData as any).username = username;
           }
         } catch (error) {
           console.error('Error fetching username for page metadata:', error);
@@ -1791,14 +1812,14 @@ export async function getPageMetadata(pageId) {
     }
 
     // If we have a currentVersion, fetch it to get the content for OG image and description
-    if (pageData.currentVersion) {
+    if ((pageData as any).currentVersion) {
       try {
         const versionsRef = collection(db, 'pages', pageId, 'versions');
-        const versionDoc = doc(versionsRef, pageData.currentVersion);
+        const versionDoc = doc(versionsRef, (pageData as any).currentVersion);
         const versionSnapshot = await getDoc(versionDoc);
 
         if (versionSnapshot.exists()) {
-          pageData.content = versionSnapshot.data().content;
+          (pageData as any).content = versionSnapshot.data().content;
 
           // Extract the first paragraph of content for description
           try {
@@ -1820,7 +1841,7 @@ export async function getPageMetadata(pageId) {
 
                 if (paragraphText.length > 0) {
                   // Limit description to ~160 characters for SEO best practices
-                  pageData.description = paragraphText.length > 160
+                  (pageData as any).description = paragraphText.length > 160
                     ? paragraphText.substring(0, 157) + '...'
                     : paragraphText;
                 }
@@ -1864,7 +1885,7 @@ export async function getCachedPageTitle(pageId) {
   try {
     // Try to get from database
     const metadata = await getPageMetadata(pageId);
-    const title = metadata?.title || 'Untitled';
+    const title = (metadata as any)?.title || 'Untitled';
 
     // Only cache non-empty, meaningful titles
     if (title && title !== 'Untitled') {
@@ -2177,8 +2198,7 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
         pageQuery = query(
           pagesRef,
           where("userId", "==", userId),
-          orderBy("lastModified", "desc"),
-          select(...requiredFields)
+          orderBy("lastModified", "desc")
         );
       } else {
         // If viewing someone else's profile, only get public pages
@@ -2186,8 +2206,7 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
           pagesRef,
           where("userId", "==", userId),
           where("isPublic", "==", true),
-          orderBy("lastModified", "desc"),
-          select(...requiredFields)
+          orderBy("lastModified", "desc")
         );
       }
 
@@ -2209,7 +2228,7 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
       pagesSnapshot.forEach((doc) => {
         pages.push({
           id: doc.id,
-          ...doc.data()
+          ...(doc.data() as any)
         });
       });
 
@@ -2223,11 +2242,11 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
         // Find groups where user is a member
         const userGroups = Object.entries(groups)
           .filter(([_, groupData]) =>
-            groupData.members && groupData.members[userId]
+            (groupData as any).members && (groupData as any).members[userId]
           )
           .map(([groupId, groupData]) => ({
             id: groupId,
-            ...groupData
+            ...(groupData as any)
           }));
 
         // For each group, get all pages using batch operations
@@ -2297,7 +2316,7 @@ export async function getUserPages(userId, includePrivate = false, currentUserId
       pages.sort((a, b) => {
         const dateA = new Date(a.lastModified || a.createdAt || 0);
         const dateB = new Date(b.lastModified || b.createdAt || 0);
-        return dateB - dateA; // Descending order (newest first)
+        return dateB.getTime() - dateA.getTime(); // Descending order (newest first)
       });
 
       // Create result object with pagination info

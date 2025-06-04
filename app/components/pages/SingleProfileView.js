@@ -4,7 +4,7 @@ import { PillLink } from "../utils/PillLink";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DataContext } from "../../providers/DataProvider";
-import TypeaheadSearch from "../search/TypeaheadSearch";
+import SearchResults from "../search/SearchResults";
 import {
   ProfilePagesProvider,
   ProfilePagesContext,

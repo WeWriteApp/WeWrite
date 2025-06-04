@@ -4,7 +4,7 @@ import React, { useState, useContext } from 'react';
 import { Button } from '../ui/button';
 import { Plus, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '../ui/dialog';
-import TypeaheadSearch from '../search/TypeaheadSearch';
+import SearchResults from '../search/SearchResults';
 import { AuthContext } from '../../providers/AuthProvider';
 import { appendPageReference, getPageById } from '../../firebase/database';
 import { toast } from '../ui/use-toast';
@@ -282,7 +282,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
             >
               Select a page to add "{page?.title || 'this page'}" to. You can only add to pages you have permission to edit.
             </p>
-            <TypeaheadSearch
+            <SearchResults
               placeholder="Search your pages..."
               editableOnly={true}
               onSelect={handleAddToPage}

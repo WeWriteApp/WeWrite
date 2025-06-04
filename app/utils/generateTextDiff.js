@@ -3,6 +3,8 @@
  * This file contains all diff-related functionality in one place
  */
 
+import { extractTextContent as extractTextFromContent } from './textExtraction';
+
 /**
  * Finds the Longest Common Subsequence between two strings
  * This is used to determine what characters were actually changed

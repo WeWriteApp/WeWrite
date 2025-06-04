@@ -58,7 +58,7 @@ export default function NotificationsPage() {
     <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
-        {/* Direct implementation of back button */}
+        {/* Back button - icon only on mobile, text + icon on desktop */}
         <Button
           variant="outline"
           size="sm"
@@ -66,23 +66,26 @@ export default function NotificationsPage() {
             console.log("Direct navigation to home");
             window.location.href = "/";
           }}
-          className="flex items-center gap-1"
+          className="flex items-center gap-1 md:gap-1 md:px-3 px-2"
+          aria-label="Go back to home"
         >
           <ChevronLeft className="h-4 w-4" />
-          <span>Home</span>
+          <span className="hidden md:inline">Home</span>
         </Button>
 
-        <h1 className="text-2xl font-bold">Notifications</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-center flex-1 mx-2">Notifications</h1>
 
+        {/* Mark all as read button - icon only on mobile, text + icon on desktop */}
         <Button
           variant="outline"
           size="sm"
           onClick={handleMarkAllAsRead}
           disabled={loading}
-          className="flex items-center gap-1"
+          className="flex items-center gap-1 md:gap-1 md:px-3 px-2"
+          aria-label="Mark all notifications as read"
         >
           <CheckCheck className="h-4 w-4" />
-          <span>Mark all as read</span>
+          <span className="hidden md:inline">Mark all as read</span>
         </Button>
       </div>
 

@@ -1,64 +1,16 @@
 "use client";
 
+import { extractDescription as extractDescriptionFromText } from './textExtraction';
+
 /**
  * Extracts a clean description from Slate content
- * 
+ *
  * @param {Array|string} content - Slate content or string
  * @param {number} maxLength - Maximum length of description
  * @returns {string} - Clean description
  */
 export function extractDescription(content, maxLength = 160) {
-  if (!content) return '';
-  
-  let text = '';
-  
-  if (typeof content === 'string') {
-    try {
-      const parsed = JSON.parse(content);
-      text = extractTextFromSlate(parsed);
-    } catch {
-      text = content;
-    }
-  } else if (Array.isArray(content)) {
-    text = extractTextFromSlate(content);
-  } else {
-    text = String(content);
-  }
-  
-  // Clean up the text
-  text = text
-    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-    .replace(/\n+/g, ' ') // Replace newlines with spaces
-    .trim();
-  
-  // Truncate to maxLength
-  if (text.length > maxLength) {
-    text = text.substring(0, maxLength - 3) + '...';
-  }
-  
-  return text;
-}
-
-/**
- * Extracts plain text from Slate content
- * 
- * @param {Array} nodes - Slate nodes
- * @returns {string} - Plain text
- */
-function extractTextFromSlate(nodes) {
-  if (!Array.isArray(nodes)) return '';
-  
-  return nodes
-    .map(node => {
-      if (node.text !== undefined) {
-        return node.text;
-      }
-      if (node.children) {
-        return extractTextFromSlate(node.children);
-      }
-      return '';
-    })
-    .join(' ');
+  return extractDescriptionFromText(content, maxLength);
 }
 
 /**

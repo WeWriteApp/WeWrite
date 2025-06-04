@@ -36,7 +36,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { AuthContext } from "../../providers/AuthProvider";
 import { getDatabase, ref, onValue, set, get, update } from "firebase/database";
 import { app } from "../../firebase/config";
-import TypeaheadSearch from '../search/TypeaheadSearch';
+import SearchResults from '../search/SearchResults';
 import FollowButton from '../utils/FollowButton';
 import { useConfirmation } from "../../hooks/useConfirmation";
 import ConfirmationModal from '../utils/ConfirmationModal';

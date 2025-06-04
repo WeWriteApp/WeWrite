@@ -47,14 +47,15 @@ const newConfig: FirebaseConfig = {
 };
 
 // Debug config values (without sensitive data)
-console.log('[DEBUG] Firebase config:', {
-  projectId: newConfig.projectId,
-  measurementId: newConfig.measurementId,
-  hasApiKey: !!newConfig.apiKey,
-  hasAppId: !!newConfig.appId,
-  hasDatabaseURL: !!newConfig.databaseURL,
-  databaseURL: newConfig.databaseURL // Show the database URL for debugging
-});
+if (process.env.NODE_ENV === 'development') {
+  console.log('[DEBUG] Firebase config:', {
+    projectId: newConfig.projectId,
+    hasApiKey: !!newConfig.apiKey,
+    hasAppId: !!newConfig.appId,
+    hasDatabaseURL: !!newConfig.databaseURL,
+    hasMeasurementId: !!newConfig.measurementId
+  });
+}
 
 // Initialize Firebase
 export const app: FirebaseApp = initializeApp(newConfig);

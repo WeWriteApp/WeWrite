@@ -4,6 +4,7 @@ import { collection, query, where, orderBy, limit, getDocs } from 'firebase/fire
 interface SitemapOptions {
   limit?: number
   includePrivate?: boolean
+  includeInactive?: boolean
 }
 
 interface SitemapEntry {
@@ -210,6 +211,90 @@ export async function generateGroupsSitemap(options: SitemapOptions = {}): Promi
 
   } catch (error) {
     console.error('Error generating groups sitemap:', error)
+    throw error
+  }
+}
+
+export async function generateSitemapIndex(): Promise<string> {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'
+
+  const sitemaps = [
+    { url: `${baseUrl}/sitemap-pages.xml`, lastmod: new Date().toISOString() },
+    { url: `${baseUrl}/sitemap-users.xml`, lastmod: new Date().toISOString() },
+    { url: `${baseUrl}/sitemap-groups.xml`, lastmod: new Date().toISOString() },
+    { url: `${baseUrl}/sitemap-news.xml`, lastmod: new Date().toISOString() }
+  ]
+
+  const xmlEntries = sitemaps.map(sitemap => `
+  <sitemap>
+    <loc>${sitemap.url}</loc>
+    <lastmod>${sitemap.lastmod}</lastmod>
+  </sitemap>`).join('')
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  ${xmlEntries}
+</sitemapindex>`
+}
+
+export async function generateNewsSitemap(options: SitemapOptions = {}): Promise<string> {
+  const { limit: maxPages = 1000 } = options
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'
+
+  try {
+    // Query recent public pages for news sitemap
+    const pagesRef = collection(db, 'pages')
+    const recentDate = new Date()
+    recentDate.setDate(recentDate.getDate() - 2) // Last 2 days for news
+
+    const pagesQuery = query(
+      pagesRef,
+      where('isPublic', '==', true),
+      where('lastModified', '>=', recentDate),
+      orderBy('lastModified', 'desc'),
+      limit(maxPages)
+    )
+
+    const pagesSnapshot = await getDocs(pagesQuery)
+    const entries: Array<{
+      url: string
+      lastModified: Date
+      title: string
+    }> = []
+
+    pagesSnapshot.forEach((doc) => {
+      const data = doc.data()
+      const pageId = doc.id
+
+      entries.push({
+        url: `${baseUrl}/${pageId}`,
+        lastModified: data.lastModified?.toDate() || new Date(),
+        title: data.title || 'Untitled'
+      })
+    })
+
+    // Generate XML news sitemap
+    const xmlEntries = entries.map(entry => `
+  <url>
+    <loc>${entry.url}</loc>
+    <news:news>
+      <news:publication>
+        <news:name>WeWrite</news:name>
+        <news:language>en</news:language>
+      </news:publication>
+      <news:publication_date>${entry.lastModified.toISOString()}</news:publication_date>
+      <news:title>${entry.title}</news:title>
+    </news:news>
+  </url>`).join('')
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
+  ${xmlEntries}
+</urlset>`
+
+  } catch (error) {
+    console.error('Error generating news sitemap:', error)
     throw error
   }
 }

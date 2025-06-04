@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import usePages from "../../hooks/usePages";
 import UsernameHistory from "../auth/UsernameHistory";
 import FollowingList from './FollowingList';
-import TypeaheadSearch from "../search/TypeaheadSearch";
+import SearchResults from "../search/SearchResults";
 import UserBioTab from './UserBioTab';
 import { useFeatureFlag } from "../../utils/feature-flags";
 import FollowingTabContent from './FollowingTabContent';
@@ -433,7 +433,7 @@ export default function UserProfileTabs({ profile }) {
             }`}
           >
             <div className="mb-4">
-              <TypeaheadSearch
+              <SearchResults
                 userId={profile?.uid}
                 placeholder={`Search ${profile?.username || 'user'}'s pages...`}
               />

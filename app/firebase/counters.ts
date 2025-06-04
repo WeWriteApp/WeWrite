@@ -57,8 +57,8 @@ export const getUserPageCount = async (userId: string, viewerUserId: string | nu
     const cachedCount = getCacheItem(cacheKey);
     if (cachedCount !== null) {
       // Store in memory cache for faster future access
-      pageCountMemoryCache.set(cacheKey, { count: cachedCount, timestamp: Date.now() });
-      return cachedCount;
+      pageCountMemoryCache.set(cacheKey, { count: cachedCount as number, timestamp: Date.now() });
+      return cachedCount as number;
     }
 
     // If not in cache, get from database
@@ -143,7 +143,7 @@ export const getUserFollowerCount = async (userId: string): Promise<number> => {
     const cachedCount = getCacheItem(cacheKey);
 
     if (cachedCount !== null) {
-      return cachedCount;
+      return cachedCount as number;
     }
 
     // If not in cache, get from database
@@ -239,9 +239,10 @@ export const incrementUserPageCount = async (userId: string, isPublic: boolean =
 
     // Invalidate TopUsers cache since page counts changed
     invalidateTopUsersCache();
-  } catch (error) {
+  } catch (error: any) {
     // If the document doesn't exist, create it
     if (error.code === 'not-found') {
+      const counterDocRef = doc(db, 'counters', `user_${userId}`);
       await setDoc(counterDocRef, {
         pageCount: 1,
         lastUpdated: new Date()
@@ -342,7 +343,7 @@ export const updateUserPageCountForVisibilityChange = async (
 
     // Invalidate TopUsers cache since page counts changed
     invalidateTopUsersCache();
-  } catch (error) {
+  } catch (error: any) {
     // If the document doesn't exist, create it with the appropriate count
     if (error.code === 'not-found' && isNowPublic) {
       // Count existing public pages and create the counter
@@ -355,6 +356,7 @@ export const updateUserPageCountForVisibilityChange = async (
       const publicPagesSnapshot = await getDocs(publicPagesQuery);
       const count = publicPagesSnapshot.size;
 
+      const publicCounterDocRef = doc(db, 'counters', `user_${userId}_public`);
       await setDoc(publicCounterDocRef, {
         pageCount: count,
         lastUpdated: new Date()
@@ -380,7 +382,7 @@ export const getUserTotalViewCount = async (userId: string): Promise<number> => 
     const cachedCount = getCacheItem(cacheKey);
 
     if (cachedCount !== null) {
-      return cachedCount;
+      return cachedCount as number;
     }
 
     // If not in cache, get from database
