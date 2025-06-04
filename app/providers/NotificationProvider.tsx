@@ -10,6 +10,7 @@ import {
   markAllNotificationsAsRead,
   fixUnreadNotificationsCount
 } from "../firebase/notifications";
+import { checkEmailVerificationPeriodically } from "../services/emailVerificationNotifications";
 
 /**
  * Notification data interface
@@ -105,6 +106,9 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         setNotifications(notificationData);
         setLastDoc(lastVisible);
         setHasMore(notificationData.length === 20); // Assuming pageSize is 20
+
+        // Check for email verification notifications after fetching notifications
+        checkEmailVerificationPeriodically();
       } catch (error) {
         console.error("Error fetching notifications:", error);
       } finally {

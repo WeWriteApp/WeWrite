@@ -76,6 +76,18 @@ import { useConfirmation } from "../../hooks/useConfirmation";
 import ConfirmationModal from "../utils/ConfirmationModal";
 import { useLogging } from "../../providers/LoggingProvider";
 import { GroupsContext } from "../../providers/GroupsProvider";
+import {
+  shouldAllowRefresh,
+  recordSuccessfulLoad,
+  recordUserActivity,
+  isPageBlocked,
+  performHardReset,
+  initPageRefreshProtection,
+  getRefreshStatus
+} from "../../utils/page-refresh-protection";
+
+// Debug component for development
+const CircuitBreakerStatus = dynamic(() => import("../debug/CircuitBreakerStatus"), { ssr: false });
 
 // Username handling is now done directly in this component
 
@@ -127,6 +139,10 @@ function SinglePageView({ params }) {
   const [hasVisibilityChanged, setHasVisibilityChanged] = useState(false);
   const [hasLocationChanged, setHasLocationChanged] = useState(false);
   const [titleError, setTitleError] = useState(false);
+
+  // Circuit breaker state for page refresh protection
+  const [refreshProtectionActive, setRefreshProtectionActive] = useState(false);
+  const refreshProtectionCleanup = useRef(null);
 
   const { user } = useContext(AuthContext);
   const groups = useContext(GroupsContext);
@@ -333,7 +349,13 @@ function SinglePageView({ params }) {
 
     if (confirmed) {
       try {
-        // Delete the page first
+        // Set deleting state to prevent listener from processing "not found" errors
+        setIsDeleted(true);
+
+        // Immediately redirect to home page to prevent showing error state
+        router.push('/');
+
+        // Delete the page in the background
         await deletePage(page.id);
 
         // Show success message
@@ -345,16 +367,15 @@ function SinglePageView({ params }) {
             detail: { pageId: page.id }
           }));
         }
-
-        // Navigate to home page after successful deletion
-        router.push('/');
       } catch (error) {
         console.error("Error deleting page:", error);
+        // Reset deleted state if deletion failed
+        setIsDeleted(false);
         const errorMessage = `Failed to delete page: ${error.message}`;
         setError(errorMessage);
         toast.error("Failed to delete page");
         logError(error, { context: 'SinglePageView.handleDelete', pageId: page.id });
-        // Don't redirect if deletion failed
+        // Don't redirect if deletion failed - user is already redirected above
       }
     }
   };
@@ -502,8 +523,29 @@ function SinglePageView({ params }) {
 
   useEffect(() => {
     if (params.id) {
+      // Check circuit breaker before proceeding with page load
+      if (isPageBlocked(params.id)) {
+        console.error(`Page ${params.id} is blocked by circuit breaker`);
+        performHardReset(params.id, 'Page blocked by circuit breaker');
+        return;
+      }
+
+      // Check if this is an automatic refresh and if it should be allowed
+      const isAutomatic = !document.hasFocus() || performance.navigation?.type === 1;
+      if (isAutomatic && !shouldAllowRefresh(params.id, true)) {
+        console.error(`Automatic refresh blocked for page ${params.id}`);
+        performHardReset(params.id, 'Too many automatic refreshes detected');
+        return;
+      }
+
       setIsLoading(true);
       setLoadingTimedOut(false);
+
+      // Initialize page refresh protection
+      if (!refreshProtectionActive) {
+        setRefreshProtectionActive(true);
+        refreshProtectionCleanup.current = initPageRefreshProtection(params.id);
+      }
 
       // SCROLL RESTORATION FIX: Scroll to top when loading a new page
       // This ensures that when navigating to a new page, we always start at the top
@@ -570,7 +612,10 @@ function SinglePageView({ params }) {
 
         if (data.error) {
           console.error("SinglePageView: Error loading page:", data.error);
-          setError(data.error);
+          // Don't show error if page is being deleted - user is already redirected
+          if (!isDeleted) {
+            setError(data.error);
+          }
           setIsLoading(false);
           return;
         }
@@ -584,6 +629,9 @@ function SinglePageView({ params }) {
 
         setPage(pageData);
         setIsPublic(pageData.isPublic || false);
+
+        // Record successful page load for circuit breaker
+        recordSuccessfulLoad(params.id);
 
         // Check if the page belongs to a group
         if (pageData.groupId) {
@@ -772,6 +820,13 @@ function SinglePageView({ params }) {
           loadingTimeoutRef.current = null;
         }
 
+        // Clean up refresh protection
+        if (refreshProtectionCleanup.current) {
+          refreshProtectionCleanup.current();
+          refreshProtectionCleanup.current = null;
+        }
+        setRefreshProtectionActive(false);
+
         // Reset state to prevent memory leaks
         setIsLoading(false);
         setLoadingTimedOut(false);
@@ -817,7 +872,10 @@ function SinglePageView({ params }) {
 
         listenToPageById(params.id, (data) => {
           if (data.error) {
-            setError(data.error);
+            // Don't show error if page is being deleted - user is already redirected
+            if (!isDeleted) {
+              setError(data.error);
+            }
           } else {
             setPage(data.pageData || data);
 
@@ -1076,6 +1134,20 @@ function SinglePageView({ params }) {
               timeoutMs={10000}
               autoRecover={true}
               onRetry={() => {
+                // Check circuit breaker before retrying
+                if (isPageBlocked(params.id)) {
+                  console.error(`Retry blocked for page ${params.id} by circuit breaker`);
+                  performHardReset(params.id, 'Retry blocked by circuit breaker');
+                  return;
+                }
+
+                // Check if retry should be allowed
+                if (!shouldAllowRefresh(params.id, true)) {
+                  console.error(`Retry blocked for page ${params.id} - too many attempts`);
+                  performHardReset(params.id, 'Too many retry attempts');
+                  return;
+                }
+
                 // Attempt to reload the page data
                 if (params.id) {
                   setIsLoading(true);
@@ -1116,7 +1188,20 @@ function SinglePageView({ params }) {
                   message={error}
                   severity="warning"
                   title="Access Error"
-                  onRetry={() => window.location.reload()}
+                  onRetry={() => {
+                    // Check circuit breaker before reloading
+                    if (isPageBlocked(params.id)) {
+                      performHardReset(params.id, 'Page reload blocked by circuit breaker');
+                      return;
+                    }
+
+                    if (!shouldAllowRefresh(params.id, false)) {
+                      performHardReset(params.id, 'Too many reload attempts');
+                      return;
+                    }
+
+                    window.location.reload();
+                  }}
                 />
               </div>
             </div>
@@ -1139,6 +1224,20 @@ function SinglePageView({ params }) {
           timeoutMs={10000}
           autoRecover={true}
           onRetry={() => {
+            // Check circuit breaker before retrying
+            if (isPageBlocked(params.id)) {
+              console.error(`Retry blocked for page ${params.id} by circuit breaker`);
+              performHardReset(params.id, 'Retry blocked by circuit breaker');
+              return;
+            }
+
+            // Check if retry should be allowed
+            if (!shouldAllowRefresh(params.id, true)) {
+              console.error(`Retry blocked for page ${params.id} - too many attempts`);
+              performHardReset(params.id, 'Too many retry attempts');
+              return;
+            }
+
             // Attempt to reload the page data
             if (params.id) {
               setIsLoading(true);
@@ -1199,7 +1298,20 @@ function SinglePageView({ params }) {
             title="Page Error"
             showDetails={true}
             showRetry={true}
-            onRetry={() => window.location.reload()}
+            onRetry={() => {
+              // Check circuit breaker before reloading
+              if (isPageBlocked(params.id)) {
+                performHardReset(params.id, 'Page reload blocked by circuit breaker');
+                return;
+              }
+
+              if (!shouldAllowRefresh(params.id, false)) {
+                performHardReset(params.id, 'Too many reload attempts');
+                return;
+              }
+
+              window.location.reload();
+            }}
             className="mb-6"
           />
           <div className="flex gap-4">
@@ -1420,6 +1532,11 @@ function SinglePageView({ params }) {
       </PageProvider>
       <SiteFooter />
       {!isEditing && <PledgeBar />}
+
+      {/* Circuit Breaker Debug Component - Development Only */}
+      {process.env.NODE_ENV === 'development' && params.id && (
+        <CircuitBreakerStatus pageId={params.id} />
+      )}
     </Layout>
   );
 }

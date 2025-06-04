@@ -170,11 +170,12 @@ export interface Notification {
   metadata?: Record<string, any>;
 }
 
-export type NotificationType = 
+export type NotificationType =
   | 'page_mention'
   | 'page_follow'
   | 'group_invite'
-  | 'system_announcement';
+  | 'system_announcement'
+  | 'email_verification';
 
 // Feature flag types
 export interface FeatureFlag {

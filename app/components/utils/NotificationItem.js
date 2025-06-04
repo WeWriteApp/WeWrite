@@ -3,11 +3,12 @@
 import { useContext, useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
-import { Bell, Link as LinkIcon, FilePlus, MoreVertical, Check, X } from 'lucide-react';
+import { Bell, Link as LinkIcon, FilePlus, MoreVertical, Check, X, Mail, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { NotificationContext } from '../../providers/NotificationProvider';
 import UserBadge from './UserBadge';
 import { Button } from '../ui/button';
+import { dismissEmailVerificationNotifications } from '../../services/emailVerificationNotifications';
 
 /**
  * NotificationItem Component
@@ -75,6 +76,9 @@ export default function NotificationItem({ notification }) {
       if (notification.sourcePageId) {
         router.push(`/${notification.sourcePageId}`);
       }
+    } else if (notification.type === 'email_verification') {
+      // For email verification notifications, navigate to account settings
+      router.push('/account');
     }
   };
 
@@ -180,6 +184,78 @@ export default function NotificationItem({ notification }) {
                   {notification.targetPageTitle || 'their page'}
                 </span>
               </p>
+            </div>
+          </div>
+        );
+
+      case 'email_verification':
+        return (
+          <div className="flex items-start">
+            <div className="flex-shrink-0 mr-3 mt-1">
+              <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center">
+                <Mail className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-foreground font-medium mb-1">
+                Verify your email address
+              </p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Please verify your email to access all features and ensure your account is secure.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    try {
+                      // Import and call resend verification email function
+                      const { sendEmailVerification } = await import('firebase/auth');
+                      const { auth } = await import('../../firebase/auth');
+                      if (auth.currentUser) {
+                        await sendEmailVerification(auth.currentUser);
+                        // You could add a toast notification here
+                        console.log('Verification email resent');
+                      }
+                    } catch (error) {
+                      console.error('Error resending verification email:', error);
+                    }
+                  }}
+                  className="inline-flex items-center px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Resend Email
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    router.push('/account');
+                  }}
+                  className="inline-flex items-center px-2 py-1 text-xs border border-border rounded hover:bg-muted transition-colors"
+                >
+                  Go to Settings
+                </button>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    try {
+                      // Dismiss future email verification notifications
+                      dismissEmailVerificationNotifications();
+                      // Mark this notification as read
+                      await markAsRead(notification.id);
+                      console.log('Email verification notifications dismissed');
+                    } catch (error) {
+                      console.error('Error dismissing email verification notifications:', error);
+                    }
+                  }}
+                  className="inline-flex items-center px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Dismiss
+                </button>
+              </div>
             </div>
           </div>
         );
