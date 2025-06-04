@@ -1,0 +1,296 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
+import { db } from '../../firebase/config';
+import { rtdb } from '../../firebase/rtdb';
+import { ref, get } from 'firebase/database';
+import { getBatchUserData } from '../../firebase/batchUserData';
+import { cachedStatsService } from '../../services/CachedStatsService';
+import { getCacheItem, setCacheItem, generateCacheKey } from '../../utils/cacheUtils';
+
+// Cache TTL for dashboard data
+const DASHBOARD_CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+
+interface DashboardData {
+  recentPages: any[];
+  topUsers: any[];
+  userGroups: any[];
+  trendingPages: any[];
+  userStats?: any;
+  timestamp: number;
+  loadTime: number;
+}
+
+/**
+ * Optimized home dashboard endpoint that fetches all data in a single request
+ * Uses batch queries and caching for maximum performance
+ */
+export async function GET(request: NextRequest) {
+  const startTime = performance.now();
+  
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    const forceRefresh = searchParams.get('forceRefresh') === 'true';
+    
+    // Generate cache key based on user ID
+    const cacheKey = generateCacheKey('homeDashboard', userId || 'anonymous');
+    
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cachedData = getCacheItem<DashboardData>(cacheKey);
+      if (cachedData) {
+        console.log('Home dashboard: Using cached data');
+        return NextResponse.json({
+          ...cachedData,
+          cached: true,
+          cacheAge: Date.now() - cachedData.timestamp
+        });
+      }
+    }
+    
+    console.log('Home dashboard: Fetching fresh data');
+    
+    // Fetch all data in parallel for maximum performance
+    const [
+      recentPages,
+      topUsers,
+      userGroups,
+      trendingPages,
+      userStats
+    ] = await Promise.all([
+      getRecentPagesOptimized(20, userId),
+      getTopUsersOptimized(10, userId),
+      getUserGroupsOptimized(userId),
+      getTrendingPagesOptimized(5, userId),
+      userId ? getUserStatsOptimized(userId) : Promise.resolve(null)
+    ]);
+    
+    const endTime = performance.now();
+    const loadTime = endTime - startTime;
+    
+    const dashboardData: DashboardData = {
+      recentPages,
+      topUsers,
+      userGroups,
+      trendingPages,
+      userStats,
+      timestamp: Date.now(),
+      loadTime
+    };
+    
+    // Cache the result
+    setCacheItem(cacheKey, dashboardData, DASHBOARD_CACHE_TTL);
+    
+    console.log(`Home dashboard: Data fetched in ${loadTime.toFixed(2)}ms`);
+    
+    return NextResponse.json({
+      ...dashboardData,
+      cached: false
+    });
+    
+  } catch (error) {
+    console.error('Error fetching home dashboard data:', error);
+    
+    return NextResponse.json(
+      { 
+        error: 'Failed to fetch dashboard data',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Get recent pages with optimized queries
+ */
+async function getRecentPagesOptimized(limitCount: number, userId?: string | null): Promise<any[]> {
+  try {
+    let pagesQuery;
+    
+    if (userId) {
+      // For logged-in users, show their pages + public pages
+      pagesQuery = query(
+        collection(db, 'pages'),
+        orderBy('lastModified', 'desc'),
+        limit(limitCount * 2) // Get more to filter later
+      );
+    } else {
+      // For anonymous users, only public pages
+      pagesQuery = query(
+        collection(db, 'pages'),
+        where('isPublic', '==', true),
+        orderBy('lastModified', 'desc'),
+        limit(limitCount)
+      );
+    }
+    
+    const snapshot = await getDocs(pagesQuery);
+    const pages = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    // Get unique user IDs for batch fetching
+    const userIds = [...new Set(pages.map(page => page.userId).filter(Boolean))];
+    const batchUserData = await getBatchUserData(userIds);
+    
+    // Enhance pages with user data
+    const enhancedPages = pages.map(page => ({
+      ...page,
+      username: batchUserData[page.userId]?.username,
+      userTier: batchUserData[page.userId]?.tier
+    }));
+    
+    // Filter and limit results
+    const filteredPages = enhancedPages
+      .filter(page => {
+        if (!userId) return page.isPublic;
+        return page.isPublic || page.userId === userId;
+      })
+      .slice(0, limitCount);
+    
+    return filteredPages;
+    
+  } catch (error) {
+    console.error('Error fetching recent pages:', error);
+    return [];
+  }
+}
+
+/**
+ * Get top users with optimized queries
+ */
+async function getTopUsersOptimized(limitCount: number, currentUserId?: string | null): Promise<any[]> {
+  try {
+    // Fetch users from RTDB
+    const usersSnapshot = await get(ref(rtdb, 'users'));
+    
+    if (!usersSnapshot.exists()) {
+      return [];
+    }
+    
+    const userData = usersSnapshot.val();
+    const userEntries = Object.entries(userData);
+    
+    // Get all user IDs for batch fetching
+    const userIds = userEntries.map(([id]) => id);
+    const batchUserData = await getBatchUserData(userIds);
+    
+    // Process users with page counts
+    const usersWithStats = await Promise.all(
+      userEntries.slice(0, 50).map(async ([id, rtdbData]: [string, any]) => {
+        const batchedUser = batchUserData[id];
+        
+        // Get page count (this could be optimized further with pre-computed values)
+        let pageCount = 0;
+        try {
+          const userPagesQuery = query(
+            collection(db, 'pages'),
+            where('userId', '==', id),
+            where('isPublic', '==', true)
+          );
+          const pagesSnapshot = await getDocs(userPagesQuery);
+          pageCount = pagesSnapshot.size;
+        } catch (error) {
+          console.warn(`Error getting page count for user ${id}:`, error);
+        }
+        
+        return {
+          id,
+          username: batchedUser?.username || rtdbData.username || 'Unknown User',
+          pageCount,
+          tier: batchedUser?.tier,
+          subscriptionStatus: batchedUser?.subscriptionStatus,
+          photoURL: rtdbData.photoURL
+        };
+      })
+    );
+    
+    // Sort by page count and limit
+    return usersWithStats
+      .filter(user => user.pageCount > 0)
+      .sort((a, b) => b.pageCount - a.pageCount)
+      .slice(0, limitCount);
+    
+  } catch (error) {
+    console.error('Error fetching top users:', error);
+    return [];
+  }
+}
+
+/**
+ * Get user groups with optimized queries
+ */
+async function getUserGroupsOptimized(userId?: string | null): Promise<any[]> {
+  if (!userId) return [];
+  
+  try {
+    // Fetch user's groups from RTDB
+    const userGroupsSnapshot = await get(ref(rtdb, `userGroups/${userId}`));
+    
+    if (!userGroupsSnapshot.exists()) {
+      return [];
+    }
+    
+    const userGroups = userGroupsSnapshot.val();
+    const groupIds = Object.keys(userGroups);
+    
+    // Batch fetch group data
+    const groupPromises = groupIds.map(async (groupId) => {
+      const groupSnapshot = await get(ref(rtdb, `groups/${groupId}`));
+      if (groupSnapshot.exists()) {
+        return {
+          id: groupId,
+          ...groupSnapshot.val()
+        };
+      }
+      return null;
+    });
+    
+    const groups = await Promise.all(groupPromises);
+    return groups.filter(Boolean).slice(0, 5); // Limit to 5 groups
+    
+  } catch (error) {
+    console.error('Error fetching user groups:', error);
+    return [];
+  }
+}
+
+/**
+ * Get trending pages with optimized queries
+ */
+async function getTrendingPagesOptimized(limitCount: number, userId?: string | null): Promise<any[]> {
+  try {
+    // For now, use recent pages as trending (this could be enhanced with view counts)
+    const recentPages = await getRecentPagesOptimized(limitCount * 2, userId);
+    
+    // Simple trending algorithm: recent pages with more recent activity
+    const trendingPages = recentPages
+      .filter(page => {
+        const lastModified = new Date(page.lastModified);
+        const daysSinceModified = (Date.now() - lastModified.getTime()) / (1000 * 60 * 60 * 24);
+        return daysSinceModified <= 7; // Only pages modified in last 7 days
+      })
+      .slice(0, limitCount);
+    
+    return trendingPages;
+    
+  } catch (error) {
+    console.error('Error fetching trending pages:', error);
+    return [];
+  }
+}
+
+/**
+ * Get user statistics
+ */
+async function getUserStatsOptimized(userId: string): Promise<any> {
+  try {
+    const userStats = await cachedStatsService.getUserStats(userId);
+    return userStats;
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    return null;
+  }
+}

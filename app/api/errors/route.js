@@ -42,13 +42,19 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Error data is required' }, { status: 400 });
     }
 
-    // Log the error to Google Cloud
-    await logToGCP(error);
-    
+    // Try to log the error to Google Cloud, but don't fail if it doesn't work
+    try {
+      await logToGCP(error);
+    } catch (gcpError) {
+      console.error('Error logging to GCP (non-fatal):', gcpError);
+      // Continue execution - we don't want to fail the error reporting because of GCP issues
+    }
+
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
-    console.error('Error logging to GCP:', err);
-    return NextResponse.json({ error: 'Failed to log error' }, { status: 500 });
+    console.error('Error in error logging endpoint:', err);
+    // Return success even if GCP logging fails to prevent cascading errors
+    return NextResponse.json({ success: true, warning: 'Error logged locally only' }, { status: 200 });
   }
 }
 

@@ -8,12 +8,12 @@ import Link from 'next/link';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
-import { SupporterIcon } from '../../../components/SupporterIcon';
+import { SupporterIcon } from '../../../components/payments/SupporterIcon';
 import { getUserSubscription, cancelSubscription, listenToUserSubscription } from '../../../firebase/subscription';
 import { PaymentFeatureGuard } from '../../../components/PaymentFeatureGuard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 import { useFeatureFlag } from '../../../utils/feature-flags';
-import OpenCollectiveSupport from '../../../components/OpenCollectiveSupport';
+import OpenCollectiveSupport from '../../../components/payments/OpenCollectiveSupport';
 
 interface SubscriptionHistoryItem {
   id: string;
@@ -70,7 +70,7 @@ export default function ManageSubscriptionPage() {
           setLoading(false);
 
           // If we have a subscription, fetch payment history
-          if (subscriptionData.status === 'active') {
+          if ((subscriptionData as any).status === 'active') {
             fetchPaymentHistory(user.uid);
           }
         }
@@ -144,7 +144,7 @@ export default function ManageSubscriptionPage() {
               setSubscription(subscriptionData);
 
               // If we still have subscription data, force a page refresh
-              if (subscriptionData && subscriptionData.status !== 'canceled') {
+              if (subscriptionData && (subscriptionData as any).status !== 'canceled') {
                 console.log('Subscription data still exists, forcing page refresh');
                 window.location.reload();
               }

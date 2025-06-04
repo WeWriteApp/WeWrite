@@ -1,15 +1,15 @@
 "use client";
 
 import { useSearchParams } from 'next/navigation';
-import { ModernLoginForm } from "../../components/modern-login-form"
-import { ModernAuthLayout } from "../../components/modern-auth-layout"
+import { ModernLoginForm } from "../../components/forms/modern-login-form"
+import { ModernAuthLayout } from "../../components/layout/modern-auth-layout"
 import ReturnToPreviousAccount from "./ReturnToPreviousAccount"
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
-  const action = searchParams.get('action');
+  const action = searchParams?.get('action');
   const isPostingReply = action === 'posting_reply';
 
   return (

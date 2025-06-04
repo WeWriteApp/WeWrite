@@ -22,7 +22,7 @@ export function TrendingPagesSkeleton({ limit = 5 }: { limit?: number }) {
   return (
     <div className="space-y-4">
       {Array.from({ length: limit }).map((_, index) => (
-        <div key={index} className="border border-theme-medium rounded-2xl p-4 space-y-3">
+        <div key={index} className="border border-theme-strong rounded-xl shadow-sm p-4 space-y-3">
           <div className="flex items-start justify-between">
             <div className="flex-1 space-y-2">
               <Skeleton className="h-5 w-3/4" />

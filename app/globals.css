@@ -83,7 +83,8 @@
 /* Simple editor container */
 .editor-container {
   position: relative;
-  /* Padding is applied inline */
+  /* External margins applied inline for proper spacing from viewport edges */
+  /* Internal padding reduced to p-2 (8px) for better visual balance */
 }
 
 /* Make sure the editor content is visible */
@@ -137,6 +138,81 @@
     box-shadow: 0em -3em 0 0, 2em -2em 0 -1em,
     3em 0 0 -1em, 2em 2em 0 -1em, 0 3em 0 -1em,
     -2em 2em 0 0, -3em 0em 0 0, -2em -2em 0 0.2em;
+  }
+}
+
+/* Spring animation keyframes for feature cards */
+@keyframes spring-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.05) translateY(-5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes spring-out {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+}
+
+/* Spring animation utility classes */
+.animate-spring-in {
+  animation: spring-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-spring-out {
+  animation: spring-out 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Page Editor Transition Improvements */
+.page-editor-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth edit mode transitions for title and body */
+.edit-mode-title-transition {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+.edit-mode-body-transition {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, padding 0.3s ease;
+}
+
+/* Prevent layout shift during edit mode transitions */
+.edit-mode-container {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateZ(0); /* Force hardware acceleration */
+  will-change: border, box-shadow, padding;
+}
+
+/* PWA Interface Improvements */
+/* PWA light mode styles */
+@media (display-mode: standalone) {
+  :root {
+    --pwa-background: #ffffff;
+    --pwa-status-bar: #000000;
+  }
+
+  body {
+    background-color: var(--pwa-background);
+  }
+
+  /* Status bar styling for PWA */
+  meta[name="theme-color"] {
+    content: var(--pwa-background);
   }
 }
 
@@ -331,8 +407,8 @@
 /* Glass card styling - using theme variables for better light/dark mode support */
 .glass-card {
   border: 1px solid;
-  border-radius: 16px;
-  border-color: hsl(var(--border) / 0.2);
+  border-radius: 0.75rem; /* rounded-xl */
+  border-color: hsl(var(--border) / 0.4);
 }
 
 .glass-panel {
@@ -347,9 +423,9 @@
 .wewrite-card {
   background-color: hsl(var(--card));
   color: hsl(var(--card-foreground));
-  border-radius: 1rem; /* rounded-2xl */
-  border: 1px solid hsl(var(--border-theme-medium));
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+  border-radius: 0.75rem; /* rounded-xl */
+  border: 1px solid hsl(var(--border-theme-strong));
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
   overflow: hidden;
   /* Mobile-first padding with better spacing */
   padding: 1.25rem; /* p-5 on mobile */
@@ -368,7 +444,7 @@
 /* Dark mode adjustments for cards */
 .dark .wewrite-card {
   background-color: hsl(var(--card) / 0.9); /* dark:bg-card/90 */
-  border-color: hsl(var(--border-theme-medium));
+  border-color: hsl(var(--border-theme-strong));
 }
 
 /* Hover state for cards */
@@ -396,9 +472,11 @@ html[data-high-contrast="true"] .glass-panel {
 /* High contrast mode for specific card-like elements */
 html[data-high-contrast="true"] [class*="border-theme-"],
 html[data-high-contrast="true"] [class*="rounded-2xl"][class*="border"],
+html[data-high-contrast="true"] [class*="rounded-xl"][class*="border"],
 html[data-high-contrast="true"] [class*="rounded-lg"][class*="border"],
 html[data-high-contrast="true"] .card,
-html[data-high-contrast="true"] [class*="shadow-md"][class*="border"] {
+html[data-high-contrast="true"] [class*="shadow-md"][class*="border"],
+html[data-high-contrast="true"] [class*="shadow-sm"][class*="border"] {
   border-color: hsl(var(--border)) !important;
 }
 
@@ -929,6 +1007,61 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
   color: hsl(var(--primary)) !important;
 }
 
+/* COMPOUND LINK FIXES - Ensure proper separation and styling */
+.compound-link-container {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important; /* gap-1 equivalent */
+  flex-wrap: nowrap !important;
+}
+
+/* Prevent any global link styles from merging compound link pills */
+.compound-link-container > a,
+.compound-link-container > span > a {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  border-radius: 0.5rem !important; /* Maintain individual pill border radius */
+}
+
+/* Ensure compound link "by" text is properly spaced and styled */
+.compound-link-container > .text-muted-foreground {
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline !important;
+  flex-shrink: 0 !important;
+}
+
+/* Additional compound link fixes for edit mode */
+[data-slate-editor] .compound-link-container {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+  flex-wrap: nowrap !important;
+}
+
+/* Ensure compound link pills in edit mode maintain separation */
+[data-slate-editor] .compound-link-container .page-portion,
+[data-slate-editor] .compound-link-container .author-portion {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+  border-radius: 0.5rem !important;
+}
+
+/* Prevent any global styles from affecting compound link structure */
+.compound-link-container * {
+  box-sizing: border-box !important;
+}
+
+/* Ensure compound links don't get merged by any parent styles */
+.compound-link-container:not(.single-link) {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
 /* Comprehensive fix for text contrast issues */
 /* Ensure all text has sufficient contrast against its background */
 .text-muted-foreground {
@@ -1060,7 +1193,7 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
 /* Smooth transition states for sticky headers */
 .section-header-transitioning {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transition-property: transform, opacity, box-shadow, background-color;
+  transition-property: transform, top, opacity, box-shadow, background-color;
 }
 
 /* Positional slide animations - no fade effects, only position changes */
@@ -1103,6 +1236,7 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
 /* Smooth position transition for sticky headers */
 .section-header-position-transition {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              top 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

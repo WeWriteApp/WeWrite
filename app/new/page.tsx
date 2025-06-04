@@ -1,0 +1,459 @@
+"use client";
+
+import { useState, useEffect, useCallback, useContext } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Head from "next/head";
+import DashboardLayout from "../DashboardLayout";
+import PublicLayout from "../components/layout/PublicLayout";
+import { createPage } from "../firebase/database";
+import ReactGA from 'react-ga4';
+import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
+import { CONTENT_EVENTS } from "../constants/analytics-events";
+import { createReplyAttribution } from "../utils/linkUtils";
+import { AuthContext } from "../providers/AuthProvider";
+import PageHeader from "../components/pages/PageHeader";
+import PageEditor from "../components/editor/PageEditor";
+
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
+import UnsavedChangesDialog from "../components/utils/UnsavedChangesDialog";
+import { PageProvider } from "../contexts/PageContext";
+import { LineSettingsProvider } from "../contexts/LineSettingsContext";
+import SiteFooter from "../components/layout/SiteFooter";
+import PledgeBar from "../components/payments/PledgeBar";
+import { shouldUseQueue, addToQueue } from "../utils/syncQueue";
+import { useSyncQueue } from "../contexts/SyncQueueContext";
+
+/**
+ * Editor content node interface
+ */
+interface EditorNode {
+  type: string;
+  children: Array<{ text: string }>;
+  placeholder?: string;
+  isAttribution?: boolean;
+  [key: string]: any;
+}
+
+/**
+ * Check if a title exactly matches the YYYY-MM-DD format for daily notes
+ */
+const isExactDateFormat = (title: string): boolean => {
+  if (!title || title.length !== 10) return false;
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  return datePattern.test(title);
+};
+
+/**
+ * Page data interface for creation
+ */
+interface PageData {
+  title: string;
+  isPublic: boolean;
+  location: any;
+  content: string;
+  userId: string;
+  username: string;
+  lastModified: string;
+  isReply: boolean;
+}
+
+/**
+ * NewPage component that mimics SinglePageView structure for creating new pages
+ * This component emulates the exact same architecture as editing an existing page
+ */
+export default function NewPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const authContext = useContext(AuthContext);
+  const user = authContext?.user;
+  const analytics = useWeWriteAnalytics();
+  const { refreshState } = useSyncQueue();
+
+  // State that mimics SinglePageView
+  const [isEditing] = useState(true); // Always in editing mode for new pages
+  const [editorState, setEditorState] = useState<EditorNode[]>([{ type: "paragraph", children: [{ text: "" }] }]);
+  const [title, setTitle] = useState<string>("");
+  const [isPublic, setIsPublic] = useState<boolean>(true);
+  const [location, setLocation] = useState<any>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+
+  // Page-like state for consistency with SinglePageView
+  const [page, setPage] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // State for tracking changes and saving (mimics EditPage)
+  const [editorContent, setEditorContent] = useState<EditorNode[]>([]);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasContentChanged, setHasContentChanged] = useState<boolean>(false);
+  const [hasTitleChanged, setHasTitleChanged] = useState<boolean>(false);
+  const [titleError, setTitleError] = useState<boolean>(false);
+
+  // Determine page type
+  const isReply = searchParams?.has('replyTo') || false;
+  const isDailyNote = searchParams?.get('type') === 'daily-note' || isExactDateFormat(title);
+
+  // Initialize page-like object for new page creation
+  useEffect(() => {
+    const mockPage = {
+      id: null,
+      title: title,
+      isPublic: isPublic,
+      location: location,
+      userId: user?.uid || 'anonymous',
+      username: user?.username || user?.displayName || 'Anonymous',
+      content: JSON.stringify(editorState),
+      lastModified: new Date().toISOString(),
+      isReply: isReply
+    };
+    setPage(mockPage);
+  }, [title, isPublic, location, user, editorState, isReply]);
+
+  // Initialize content based on page type
+  useEffect(() => {
+    if (isReply && searchParams) {
+      const pageTitle = searchParams.get('page') || '';
+      const username = searchParams.get('username') || '';
+      const replyToId = searchParams.get('replyTo') || '';
+      const contentParam = searchParams.get('initialContent');
+
+      setTitle("");
+
+      if (contentParam) {
+        try {
+          const parsedContent = JSON.parse(decodeURIComponent(contentParam));
+          let completeContent = [...parsedContent];
+          if (completeContent.length < 2) {
+            completeContent.push({ type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." });
+          }
+          setEditorState(completeContent);
+          return;
+        } catch (error) {
+          console.error("Error parsing content from URL:", error);
+        }
+      }
+
+      const attribution = createReplyAttribution({
+        pageId: replyToId,
+        pageTitle: pageTitle,
+        userId: user?.uid || '',
+        username: username
+      });
+
+      const replyContent = [
+        attribution,
+        { type: "paragraph", children: [{ text: "" }], placeholder: "Start typing your reply..." }
+      ];
+
+      setEditorState(replyContent);
+    } else if (searchParams) {
+      const titleParam = searchParams.get('title');
+      const contentParam = searchParams.get('initialContent');
+
+      if (titleParam) {
+        try {
+          setTitle(decodeURIComponent(titleParam));
+        } catch {}
+      }
+
+      if (contentParam) {
+        try {
+          const parsedContent = JSON.parse(decodeURIComponent(contentParam));
+          setEditorState(parsedContent);
+        } catch {}
+      }
+    }
+  }, [isReply, searchParams]);
+
+  // Handle back navigation
+  const handleBack = () => {
+    let backUrl = '/';
+
+    if (isReply && searchParams) {
+      const replyToId = searchParams.get('replyTo');
+      if (replyToId) {
+        backUrl = `/${replyToId}`;
+      }
+    }
+
+    router.push(backUrl);
+  };
+
+  // Handle title changes
+  const handleTitleChange = (newTitle: string) => {
+    setTitle(newTitle);
+    setHasTitleChanged(newTitle !== "");
+
+    // Clear title error when user starts typing
+    if (titleError && newTitle && newTitle.trim() !== '') {
+      setTitleError(false);
+      setError(null);
+    }
+  };
+
+  // Handle setting editing state
+  const handleSetIsEditing = (editing: boolean) => {
+    if (!editing) {
+      handleBack();
+    }
+  };
+
+  // Handle content changes
+  const handleContentChange = (content: EditorNode[]) => {
+    setEditorContent(content);
+    setEditorState(content);
+
+    try {
+      const initialContent = JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]);
+      const newContent = JSON.stringify(content);
+      setHasContentChanged(initialContent !== newContent);
+    } catch (e) {
+      console.error('Error comparing content:', e);
+      setHasContentChanged(true);
+    }
+  };
+
+  // Update hasUnsavedChanges when content or title changes
+  useEffect(() => {
+    setHasUnsavedChanges(hasContentChanged || hasTitleChanged);
+  }, [hasContentChanged, hasTitleChanged]);
+
+  // Handle save
+  const handleSave = async (content: EditorNode[]): Promise<boolean> => {
+    // CRITICAL FIX: Enhanced title validation with visual feedback
+    if (!title || title.trim() === '') {
+      if (!isReply) {
+        setError("Please add a title before saving");
+        setTitleError(true);
+        return false;
+      }
+    }
+
+    // Clear title error if title is valid
+    setTitleError(false);
+
+    // Validate user authentication
+    if (!user || !user.uid) {
+      setError("You must be logged in to create a page");
+      return false;
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const username = user?.username || user?.displayName || 'Anonymous';
+      const userId = user.uid;
+
+      if (!content || !Array.isArray(content)) {
+        setError("Error: Invalid content format");
+        setIsSaving(false);
+        return false;
+      }
+
+      const hasActualContent = content.some(node =>
+        node.children && node.children.some(child => child.text && child.text.trim() !== '')
+      );
+
+      let finalContent = content;
+      if (!hasActualContent && !isReply) {
+        finalContent = [{ type: "paragraph", children: [{ text: "" }] }];
+      }
+
+      const data: PageData = {
+        title: isReply ? "" : title,
+        isPublic,
+        location,
+        content: JSON.stringify(finalContent),
+        userId,
+        username,
+        lastModified: new Date().toISOString(),
+        isReply: !!isReply,
+      };
+
+      console.log('Creating page with data:', { ...data, content: '(content omitted)' });
+
+      // Check if we should use the sync queue
+      if (shouldUseQueue()) {
+        console.log('Adding page creation to sync queue');
+        const operationId = addToQueue('create', data);
+
+        // Track analytics (non-blocking)
+        try {
+          ReactGA.event({ category: "Page", action: "Add new page (queued)", label: title });
+          analytics.trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, {
+            label: title,
+            page_id: operationId,
+            is_reply: !!isReply,
+            queued: true
+          });
+        } catch (analyticsError) {
+          console.error('Analytics tracking failed (non-fatal):', analyticsError);
+        }
+
+        setHasContentChanged(false);
+        setHasTitleChanged(false);
+        setHasUnsavedChanges(false);
+        setIsSaving(false);
+
+        // Refresh sync queue state
+        refreshState();
+
+        // Navigate to home or back since we don't have a page ID yet
+        if (isReply && searchParams) {
+          const replyToId = searchParams.get('replyTo');
+          if (replyToId) {
+            router.push(`/${replyToId}`);
+          } else {
+            router.push('/');
+          }
+        } else {
+          router.push('/');
+        }
+        return true;
+      } else {
+        // Normal page creation
+        const res = await createPage(data);
+
+        if (res) {
+          console.log('Page created successfully with ID:', res);
+
+          // Track analytics (non-blocking)
+          try {
+            ReactGA.event({ category: "Page", action: "Add new page", label: title });
+            analytics.trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, {
+              label: title,
+              page_id: res,
+              is_reply: !!isReply
+            });
+          } catch (analyticsError) {
+            console.error('Analytics tracking failed (non-fatal):', analyticsError);
+          }
+
+          setHasContentChanged(false);
+          setHasTitleChanged(false);
+          setHasUnsavedChanges(false);
+
+          setIsSaving(false);
+          router.push(`/${res}`);
+          return true;
+        } else {
+          console.error('Page creation failed: createPage returned null/false');
+          setIsSaving(false);
+          setError("Failed to create page. Please try again.");
+          return false;
+        }
+      }
+    } catch (error: any) {
+      setIsSaving(false);
+      setError("Failed to create page: " + (error.message || 'Unknown error'));
+      return false;
+    }
+  };
+
+  // Memoized save function for unsaved changes hook
+  const saveChanges = useCallback((): Promise<boolean> => {
+    return handleSave(editorContent || editorState);
+  }, [editorContent, editorState, title, isPublic, location, user, isReply]);
+
+  // Use unsaved changes hook
+  const {
+    showUnsavedChangesDialog,
+    handleNavigation,
+    handleStayAndSave,
+    handleLeaveWithoutSaving,
+    handleCloseDialog,
+    isHandlingNavigation
+  } = useUnsavedChanges(hasUnsavedChanges, saveChanges);
+
+  // Handle back navigation with unsaved changes check
+  const handleBackWithCheck = () => {
+    let backUrl = '/';
+
+    if (isReply && searchParams) {
+      const replyToId = searchParams.get('replyTo');
+      if (replyToId) {
+        backUrl = `/${replyToId}`;
+      }
+    }
+
+    if (hasUnsavedChanges) {
+      handleNavigation(backUrl);
+    } else {
+      router.push(backUrl);
+    }
+  };
+
+  // Determine the layout to use (same as SinglePageView)
+  const Layout = user ? DashboardLayout : PublicLayout;
+
+  // Get username for display
+  const username = user?.username || user?.displayName || 'Anonymous';
+
+  // Render using the exact same structure as SinglePageView
+  return (
+    <Layout>
+      <Head>
+        <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
+      </Head>
+      <PageHeader
+        title={title || (isReply ? "" : "Untitled")}
+        username={username}
+        userId={user?.uid}
+        isLoading={isLoading}
+        groupId={undefined} // New pages don't have groups initially
+        groupName={undefined}
+        scrollDirection="none"
+        isPrivate={!isPublic}
+        isEditing={isEditing}
+        setIsEditing={handleSetIsEditing}
+        onTitleChange={handleTitleChange}
+        titleError={titleError}
+        canEdit={true} // User can always edit their new page
+      />
+      <div className="pb-24 px-0 sm:px-2 w-full max-w-none min-h-screen">
+        {isEditing ? (
+          <>
+            <PageProvider>
+              <LineSettingsProvider isEditMode={true}>
+                <PageEditor
+                  title={isReply ? "" : title}
+                  setTitle={isDailyNote ? () => {} : handleTitleChange} // Lock title for daily notes
+                  initialContent={editorState}
+                  onContentChange={handleContentChange}
+                  isPublic={isPublic}
+                  setIsPublic={setIsPublic}
+                  location={location}
+                  setLocation={setLocation}
+                  isSaving={isSaving}
+                  error={error || ""}
+                  isNewPage={true}
+                  isReply={isReply}
+                  replyToId={searchParams?.get('replyTo') || ""}
+                  clickPosition={null}
+                  onSave={() => handleSave(editorContent || editorState)}
+                  onCancel={handleBackWithCheck}
+
+                  page={null} // No existing page for new pages
+                />
+
+                {/* Unsaved Changes Dialog */}
+                <UnsavedChangesDialog
+                  isOpen={showUnsavedChangesDialog}
+                  onClose={handleCloseDialog}
+                  onStayAndSave={handleStayAndSave}
+                  onLeaveWithoutSaving={handleLeaveWithoutSaving}
+                  isSaving={isSaving || isHandlingNavigation}
+                  title="Unsaved Changes"
+                  description="You have unsaved changes. Do you want to save them before leaving?"
+                />
+              </LineSettingsProvider>
+            </PageProvider>
+          </>
+        ) : null}
+      </div>
+      <SiteFooter className="" />
+      {!isEditing && <PledgeBar />}
+    </Layout>
+  );
+}

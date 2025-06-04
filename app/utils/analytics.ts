@@ -1,6 +1,6 @@
 'use client';
 
-import { initializeAnalytics } from '../firebase/config';
+import { initializeAnalytics } from "../firebase/config";
 import { getAnalytics, logEvent as firebaseLogEvent } from 'firebase/analytics';
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
 

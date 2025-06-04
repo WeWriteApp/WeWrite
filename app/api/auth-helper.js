@@ -1,11 +1,16 @@
 import { getAuth } from 'firebase-admin/auth';
-import { initAdmin, admin } from '../firebase/admin';
+import { initAdmin, admin } from "../firebase/admin";
 
-// Initialize Firebase Admin
-initAdmin();
-
-// Get auth instance
-const auth = getAuth();
+// Initialize Firebase Admin only if not during build time
+let auth;
+try {
+  const app = initAdmin();
+  if (app) {
+    auth = getAuth();
+  }
+} catch (error) {
+  console.warn('Firebase Admin initialization skipped during build time');
+}
 
 /**
  * Helper function to get the user ID from a request
@@ -23,18 +28,17 @@ const auth = getAuth();
  * @returns {Promise<string|null>} - The user ID or null if not authenticated
  */
 export async function getUserIdFromRequest(request) {
+  // Return null if auth is not available (during build time)
+  if (!auth) {
+    console.warn('Firebase Auth not available, returning null');
+    return null;
+  }
+
   // Get user ID from cookies or query parameters
   let userId;
 
-  // SECURITY FIX: Remove query parameter authentication
-  // This was a critical security vulnerability that allowed authentication bypass
-  // const url = new URL(request.url);
-  // const queryUserId = url.searchParams.get('userId');
-  //
-  // if (queryUserId) {
-  //   console.log('Using userId from query parameters:', queryUserId);
-  //   return queryUserId;
-  // }
+  // SECURITY: Query parameter authentication has been permanently removed
+  // to prevent authentication bypass vulnerabilities
 
   // Check for development mode
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -130,7 +134,7 @@ export async function getUserIdFromRequest(request) {
   // This was a critical security vulnerability that could allow unauthorized access
   // if (isDevelopment) {
   //   console.log('Development mode: Using default test user ID');
-  //   return 'test-user-id-for-development';
+  //   return "test-user-id-for-development';
   // }
 
   // No user ID found

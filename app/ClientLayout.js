@@ -6,7 +6,7 @@ import "./utils/slate-patch";
 import { ThemeProvider } from "./providers/ThemeProvider";
 import { AuthProvider } from "./providers/AuthProvider";
 import { LoggingProvider } from "./providers/LoggingProvider";
-import { Drawer } from "./components/Drawer";
+import { Drawer } from './components/utils/Drawer';
 import { DrawerProvider } from "./providers/DrawerProvider";
 import { MobileProvider } from "./providers/MobileProvider";
 import { DataProvider } from "./providers/DataProvider";
@@ -18,42 +18,43 @@ import { AccentColorProvider } from "./contexts/AccentColorContext";
 import { MultiAccountProvider } from "./providers/MultiAccountProvider";
 import { NotificationProvider } from "./providers/NotificationProvider";
 import { RenderControlProvider } from "./providers/RenderControlProvider";
-import { GADebugger } from "./utils/ga-debug";
+
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
-import AdminFeaturesWrapper from "./components/AdminFeaturesWrapper";
-import FeatureFlagCookieManager from "./components/FeatureFlagCookieManager";
+import AdminFeaturesWrapper from './components/utils/AdminFeaturesWrapper';
+import FeatureFlagCookieManager from "./components/utils/FeatureFlagCookieManager";
 import { PageTransition } from "./components/ui/page-transition";
-import ErrorBoundary from "./components/ErrorBoundary";
-import HydrationSafetyWrapper from "./components/HydrationSafetyWrapper";
+import ErrorBoundary from "./components/utils/ErrorBoundary";
+import HydrationSafetyWrapper from "./components/utils/HydrationSafetyWrapper";
 import { useEffect } from "react";
 import { initReloadProtection, getReloadStatus } from "./utils/reload-protection";
 import { useScrollToTop } from "./hooks/useScrollRestoration";
 
 // Dynamically import PendingReplyHandler with no SSR
-const PendingReplyHandler = dynamic(() => import('./components/PendingReplyHandler'), {
+const PendingReplyHandler = dynamic(() => import('./components/utils/PendingReplyHandler'), {
+  ssr: false
+});
+
+const UsernameWarningBanner = dynamic(() => import('./components/auth/UsernameWarningBanner'), {
+  ssr: false
+});
+
+const UsernameEnforcementBanner = dynamic(() => import('./components/auth/UsernameEnforcementBanner'), {
+  ssr: false
+});
+
+const UnverifiedUserBanner = dynamic(() => import('./components/utils/UnverifiedUserBanner'), {
   ssr: false
 });
 
 
-// Dynamically import components with no SSR
-const WindsurfOverlay = dynamic(() => import('./components/WindsurfOverlay'), {
-  ssr: false
-});
-
-const UsernameWarningBanner = dynamic(() => import('./components/UsernameWarningBanner'), {
-  ssr: false
-});
-
-const UsernameEnforcementBanner = dynamic(() => import('./components/UsernameEnforcementBanner'), {
-  ssr: false
-});
 
 
 
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith('/auth/');
+  const isHomePage = pathname === '/';
 
   // Use scroll restoration hook to ensure pages always start at the top
   useScrollToTop();
@@ -120,7 +121,6 @@ export default function ClientLayout({ children }) {
                                 {process.env.NODE_ENV === 'development' && (
                                   <>
                                     {/* <GADebugger /> */}
-                                    <WindsurfOverlay />
                                   </>
                                 )}
                               </LineSettingsProvider>

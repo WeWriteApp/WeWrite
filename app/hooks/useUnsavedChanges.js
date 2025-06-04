@@ -21,15 +21,7 @@ export function useUnsavedChanges(hasUnsavedChanges, saveFunction) {
   const [isHandlingNavigation, setIsHandlingNavigation] = useState(false);
 
   // Handle browser back/forward navigation and tab/window close
-  // DISABLED: Browser beforeunload warning to prevent duplicate modals
-  // Our custom UnsavedChangesDialog provides a better user experience
   useEffect(() => {
-    // Disabled to prevent duplicate warning modals
-    // The custom UnsavedChangesDialog handles unsaved changes warnings
-    // in a more user-friendly way than the browser's native beforeunload dialog
-
-    // Original beforeunload implementation commented out:
-    /*
     const handleBeforeUnload = (event) => {
       if (hasUnsavedChanges) {
         const message = 'You have unsaved changes. Are you sure you want to leave?';
@@ -46,7 +38,6 @@ export function useUnsavedChanges(hasUnsavedChanges, saveFunction) {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-    */
   }, [hasUnsavedChanges]);
 
   // Function to intercept navigation attempts

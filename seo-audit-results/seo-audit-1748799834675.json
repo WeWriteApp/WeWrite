@@ -1,0 +1,43 @@
+{
+  "timestamp": "2025-06-01T17:43:54.672Z",
+  "baseUrl": "http://localhost:3000",
+  "checks": {
+    "robotsTxt": {
+      "robotsFileExists": true,
+      "publicRobotsExists": false,
+      "issues": []
+    },
+    "sitemaps": {
+      "mainSitemapExists": true,
+      "pagesSitemapExists": true,
+      "usersSitemapExists": true,
+      "groupsSitemapExists": true,
+      "issues": []
+    },
+    "metaTags": {
+      "rootLayoutExists": true,
+      "pageLayoutExists": true,
+      "userLayoutExists": true,
+      "groupLayoutExists": true,
+      "issues": []
+    },
+    "structuredData": {
+      "schemaUtilExists": true,
+      "websiteSchemaInLayout": true,
+      "issues": []
+    },
+    "seoUtilities": {
+      "seoUtilsExists": true,
+      "performanceUtilsExists": true,
+      "headingUtilsExists": true,
+      "mobileUtilsExists": true,
+      "issues": []
+    },
+    "nextConfig": {
+      "configExists": true,
+      "issues": []
+    }
+  },
+  "recommendations": [],
+  "score": 100
+}

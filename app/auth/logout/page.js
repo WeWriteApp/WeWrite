@@ -8,7 +8,7 @@ const Logout = () => {
   useEffect(() => {
     logoutUser().then(() => {
       router.push('/')
-    });    
+    });
   }, []);
 
   return null;

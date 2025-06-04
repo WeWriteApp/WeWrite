@@ -2,19 +2,19 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../providers/AuthProvider';
+import { useAuth } from "../providers/AuthProvider";
 import { ArrowLeft, Check, AlertTriangle, ChevronLeft, ChevronRight, DollarSign, Clock } from 'lucide-react';
-import { SupporterIcon } from '../components/SupporterIcon';
+import { SupporterIcon } from '../components/payments/SupporterIcon';
 import Link from 'next/link';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { createCheckoutSession } from '../services/stripeService';
-import { cancelSubscription, listenToUserSubscription, updateSubscription } from '../firebase/subscription';
-import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
-import { useFeatureFlag } from '../utils/feature-flags.ts';
+import { cancelSubscription, listenToUserSubscription, updateSubscription } from "../firebase/subscription";
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
+import { useFeatureFlag } from "../utils/feature-flags";
 import { useSwipeable } from 'react-swipeable';
-import { CustomAmountModal } from '../components/CustomAmountModal';
-import { loadStripe } from '@stripe/stripe-js';
+import { CustomAmountModal } from "../components/payments/CustomAmountModal";
+import { loadStripe } from "@stripe/stripe-js";
 
 // Helper function to format relative time
 const getRelativeTimeString = (date: Date): string => {
@@ -23,7 +23,7 @@ const getRelativeTimeString = (date: Date): string => {
 
   // Less than a minute
   if (diffInSeconds < 60) {
-    return 'just now';
+    return "just now";
   }
 
   // Less than an hour
@@ -99,7 +99,7 @@ export default function SubscriptionPage() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [cancelLoading, setCancelLoading] = useState<boolean>(false);
   // Removed unused state
-  const [subscriptionHistory, setSubscriptionHistory] = useState<any[]>([]);
+  const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistoryEntry[]>([]);
   const [customAmountModalOpen, setCustomAmountModalOpen] = useState<boolean>(false);
   const carouselRef = useRef<HTMLDivElement>(null);
 
@@ -116,10 +116,20 @@ export default function SubscriptionPage() {
     status: string;
     amount: number;
     stripeSubscriptionId?: string;
+    stripeCustomerId?: string;
     createdAt?: string;
     billingCycleStart?: string;
     canceledAt?: string;
     [key: string]: any;
+  }
+
+  // Define subscription history entry type
+  interface SubscriptionHistoryEntry {
+    id: string;
+    date: string;
+    amount: number;
+    status: string;
+    description: string;
   }
 
   // Fetch subscription history function
@@ -127,7 +137,7 @@ export default function SubscriptionPage() {
     try {
       // If we have a subscription, create history entries based on it
       if (currentSubscription) {
-        const history = [];
+        const history: SubscriptionHistoryEntry[] = [];
 
         // Add the initial subscription creation
         if (currentSubscription.createdAt) {
@@ -401,7 +411,7 @@ export default function SubscriptionPage() {
 
         // If we have a client secret, we need to confirm the payment
         if (data.clientSecret) {
-          const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+          const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
           if (!stripe) {
             throw new Error('Failed to load Stripe');
           }
@@ -541,7 +551,7 @@ export default function SubscriptionPage() {
 
       // If we have a client secret, redirect to Stripe for payment
       if (data.clientSecret) {
-        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
         if (!stripe) {
           throw new Error('Failed to load Stripe');
         }
@@ -730,20 +740,6 @@ export default function SubscriptionPage() {
           <div
             ref={carouselRef}
             className="flex gap-4 md:gap-4 md:flex-wrap overflow-x-auto md:overflow-visible pb-4 snap-x snap-mandatory md:snap-none px-6 md:px-6"
-            {...useSwipeable({
-              onSwipedLeft: () => {
-                if (carouselRef.current) {
-                  carouselRef.current.scrollBy({ left: 300, behavior: 'smooth' });
-                }
-              },
-              onSwipedRight: () => {
-                if (carouselRef.current) {
-                  carouselRef.current.scrollBy({ left: -300, behavior: 'smooth' });
-                }
-              },
-              trackMouse: true,
-              trackTouch: true
-            })}
         >
           {supporterTiers.map((tier) => (
             <Card

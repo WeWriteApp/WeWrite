@@ -2,93 +2,265 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Pages collection
+
+    // Helper functions for admin access
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'jamiegray2234@gmail.com' ||
+        exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid))
+      );
+    }
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Pages collection - Core content with strict access controls
     match /pages/{pageId} {
-      // Allow reading if user is the owner
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      // Reading rules: Owner can always read, others based on visibility and group membership
+      allow read: if isAuthenticated() && (
+        // Page owner can always read their own pages
+        resource.data.userId == request.auth.uid ||
 
-      // Allow reading public pages that don't belong to a group
-      allow read: if resource.data.isPublic == true && resource.data.groupId == null;
+        // Public pages not in groups are readable by all authenticated users
+        (resource.data.isPublic == true && resource.data.groupId == null) ||
 
-      // For pages that belong to a group, check group access
-      allow read: if resource.data.groupId != null && (
-        // Public groups: all pages (public and private) are accessible to everyone
-        get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.isPublic == true ||
+        // Group pages: check group membership and visibility
+        (resource.data.groupId != null && (
+          // Public groups: all pages visible to authenticated users
+          get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.isPublic == true ||
 
-        // Private groups: only members can access
-        (request.auth != null &&
-          exists(/databases/$(database)/documents/groups/$(resource.data.groupId)/members/$(request.auth.uid)))
+          // Private groups: only members can access
+          exists(/databases/$(database)/documents/groups/$(resource.data.groupId)/members/$(request.auth.uid))
+        ))
       );
 
-      // Allow writing if user is the owner
-      allow write: if request.auth != null && resource.data.userId == request.auth.uid;
+      // Writing rules: Only page owner can modify, with data validation
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['title', 'content', 'isPublic', 'userId', 'createdAt']) &&
+        request.resource.data.title is string &&
+        request.resource.data.content is string &&
+        request.resource.data.isPublic is bool &&
+        request.resource.data.userId is string;
+
+      allow update: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId; // Prevent ownership transfer
+
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+
+      // Page versions subcollection
+      match /versions/{versionId} {
+        allow read: if isAuthenticated() && (
+          get(/databases/$(database)/documents/pages/$(pageId)).data.userId == request.auth.uid ||
+          (get(/databases/$(database)/documents/pages/$(pageId)).data.isPublic == true &&
+           get(/databases/$(database)/documents/pages/$(pageId)).data.groupId == null) ||
+          (get(/databases/$(database)/documents/pages/$(pageId)).data.groupId != null &&
+           get(/databases/$(database)/documents/groups/$(get(/databases/$(database)/documents/pages/$(pageId)).data.groupId)).data.isPublic == true)
+        );
+
+        allow write: if isAuthenticated() &&
+          get(/databases/$(database)/documents/pages/$(pageId)).data.userId == request.auth.uid;
+      }
+
+      // Page followers subcollection
+      match /followers/{followerId} {
+        allow read: if isAuthenticated() && (
+          request.auth.uid == followerId ||
+          get(/databases/$(database)/documents/pages/$(pageId)).data.userId == request.auth.uid
+        );
+
+        allow write: if isAuthenticated() && request.auth.uid == followerId;
+      }
     }
 
-    // User profiles
+    // User profiles - Public profile data with privacy controls
     match /users/{userId} {
-      // Allow reading any user profile
-      allow read: if true;
+      // Allow reading basic profile info by authenticated users
+      // Private fields should be handled by the application layer
+      allow read: if isAuthenticated();
 
-      // Allow writing only to own profile
-      allow write: if request.auth != null && userId == request.auth.uid;
+      // Allow writing only to own profile with data validation
+      allow create: if isOwner(userId) &&
+        request.resource.data.keys().hasAll(['email', 'uid', 'created']) &&
+        request.resource.data.email is string &&
+        request.resource.data.uid == userId;
+
+      allow update: if isOwner(userId) &&
+        request.resource.data.uid == resource.data.uid; // Prevent UID changes
+
+      allow delete: if isOwner(userId);
     }
 
-    // Username history
+    // Username history - Restricted access for privacy
     match /usernameHistory/{docId} {
-      // Allow reading any username history
-      allow read: if true;
+      // Only allow reading by the user who owns the history or admins
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
 
-      // Allow writing only to own history
-      allow write: if request.auth != null && resource.data.userId == request.auth.uid;
+      // Allow writing only to own history with validation
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['userId', 'oldUsername', 'newUsername', 'timestamp']);
+
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
-    // Feature flags - only admins can modify
+    // Groups collection - Community features with membership controls
+    match /groups/{groupId} {
+      // Reading: Public groups readable by all, private groups only by members
+      allow read: if isAuthenticated() && (
+        resource.data.isPublic == true ||
+        exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid))
+      );
+
+      // Writing: Only group owners and admins can modify group settings
+      allow create: if isAuthenticated() &&
+        request.resource.data.owner == request.auth.uid &&
+        request.resource.data.keys().hasAll(['name', 'isPublic', 'owner', 'created']);
+
+      allow update: if isAuthenticated() && (
+        resource.data.owner == request.auth.uid ||
+        (exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)).data.role == 'admin')
+      );
+
+      allow delete: if isAuthenticated() && resource.data.owner == request.auth.uid;
+
+      // Group members subcollection
+      match /members/{memberId} {
+        allow read: if isAuthenticated() && (
+          get(/databases/$(database)/documents/groups/$(groupId)).data.isPublic == true ||
+          exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid))
+        );
+
+        allow write: if isAuthenticated() && (
+          // Group owner can manage all members
+          get(/databases/$(database)/documents/groups/$(groupId)).data.owner == request.auth.uid ||
+          // Group admins can manage members
+          (exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)) &&
+           get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)).data.role == 'admin') ||
+          // Users can join/leave themselves
+          memberId == request.auth.uid
+        );
+      }
+    }
+
+    // Feature flags - Admin-only configuration
     match /config/featureFlags {
-      // Allow reading by anyone
-      allow read: if true;
+      // Only allow authenticated users to read feature flags
+      allow read: if isAuthenticated();
 
       // Only allow writing by admin users
-      allow write: if request.auth != null &&
-        (request.auth.token.email == 'jamiegray2234@gmail.com' ||
-         exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid)));
+      allow write: if isAdmin();
     }
 
-    // Page views - allow public read access for trending pages
+    // Admin users collection - Super restricted
+    match /adminUsers/{adminId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Counters collection - Read-only for most users, write for system
+    match /counters/{counterId} {
+      // Allow reading counter data for TopUsers and profile displays
+      allow read: if isAuthenticated();
+
+      // Only allow system operations (via admin or page owners for their own counters)
+      allow write: if isAdmin() || (
+        isAuthenticated() &&
+        counterId.matches('user_.*') &&
+        counterId.split('_')[1] == request.auth.uid
+      );
+    }
+
+    // Subscriptions collection - User-specific financial data
+    match /subscriptions/{subscriptionId} {
+      // Only allow users to read their own subscription data
+      allow read: if isOwner(subscriptionId);
+
+      // Only allow users to write their own subscription data or admins
+      allow write: if isOwner(subscriptionId) || isAdmin();
+    }
+
+    // Notifications collection - User-specific
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+
+      // System can create notifications, users can mark as read/delete
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Page views - Analytics data with privacy controls
     match /pageViews/{viewId} {
-      // Allow reading by anyone
-      allow read: if true;
-      // Only allow authenticated users to write
-      allow write: if request.auth != null;
+      // Allow reading aggregated view data for trending/analytics
+      allow read: if isAuthenticated();
+
+      // Only allow authenticated users to record views
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      // Prevent deletion of view records for analytics integrity
+      allow delete: if isAdmin();
     }
 
-    // Follower privacy rules
+    // User activity tracking - Privacy-sensitive data
+    match /userActivity/{activityId} {
+      // Only allow users to read their own activity or admins for analytics
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+
+      // Only allow system to write activity data
+      allow write: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Follower relationships - Privacy controls
     match /userFollowers/{userId} {
       // Only allow the user to read their own followers
-      allow read: if request.auth != null && userId == request.auth.uid;
-      // Only allow authenticated users to write
-      allow write: if request.auth != null;
+      allow read: if isOwner(userId);
+      allow write: if isAuthenticated();
     }
 
     match /userFollowing/{userId} {
       // Only allow the user to read who they're following
-      allow read: if request.auth != null && userId == request.auth.uid;
-      // Only allow authenticated users to write
-      allow write: if request.auth != null;
+      allow read: if isOwner(userId);
+      allow write: if isAuthenticated();
     }
 
     match /follows/{followId} {
       // Only allow the users involved in the follow relationship to read it
-      allow read: if request.auth != null &&
-        (request.auth.uid == resource.data.followerId ||
-         request.auth.uid == resource.data.followedId);
-      // Only allow authenticated users to write
-      allow write: if request.auth != null;
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.followerId ||
+        request.auth.uid == resource.data.followedId
+      );
+      allow write: if isAuthenticated();
     }
 
-    // Default rule - allow reading but restrict writing
-    match /{document=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
+    // Pledges/donations - Financial data security
+    match /pledges/{pledgeId} {
+      // Only allow users to read their own pledges or page owners to see pledges to their pages
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        get(/databases/$(database)/documents/pages/$(resource.data.pageId)).data.userId == request.auth.uid
+      );
+
+      allow write: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
+
+    // REMOVED: Dangerous default rule that allowed unrestricted access
+    // All collections must now have explicit rules defined above
+    // This ensures the principle of least privilege is enforced
   }
 }

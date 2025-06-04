@@ -1,20 +1,20 @@
 "use client";
 
-import { db } from '../firebase/database';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  doc, 
-  getDoc, 
+import { db } from "../firebase/database";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
   setDoc,
   updateDoc,
   increment,
   Timestamp,
   serverTimestamp
 } from 'firebase/firestore';
-import { createFollowNotification, createLinkNotification } from '../firebase/notifications';
+import { createFollowNotification, createLinkNotification } from "../firebase/notifications";
 
 /**
  * Backfill notifications for past follows and page links
@@ -22,7 +22,7 @@ import { createFollowNotification, createLinkNotification } from '../firebase/no
 export async function backfillNotifications() {
   try {
     console.log('Starting notification backfill...');
-    
+
     // Track statistics
     const stats = {
       followNotificationsCreated: 0,
@@ -31,16 +31,16 @@ export async function backfillNotifications() {
       pagesProcessed: 0,
       errors: 0
     };
-    
+
     // Step 1: Backfill follow notifications
     await backfillFollowNotifications(stats);
-    
+
     // Step 2: Backfill link notifications
     await backfillLinkNotifications(stats);
-    
+
     console.log('Notification backfill complete!');
     console.log('Statistics:', stats);
-    
+
     return { success: true, stats };
   } catch (error) {
     console.error('Error backfilling notifications:', error);
@@ -54,39 +54,39 @@ export async function backfillNotifications() {
 async function backfillFollowNotifications(stats) {
   try {
     console.log('Backfilling follow notifications...');
-    
+
     // Get all page follower records
     const pageFollowersRef = collection(db, 'pageFollowers');
     const pageFollowersSnapshot = await getDocs(pageFollowersRef);
-    
+
     console.log(`Processing ${pageFollowersSnapshot.size} page follower records...`);
-    
+
     // Process each follow record
     for (const followDoc of pageFollowersSnapshot.docs) {
       try {
         const followData = followDoc.data();
-        
+
         // Skip if this is a deleted follow
         if (followData.deleted) continue;
-        
+
         const pageId = followData.pageId;
         const followerId = followData.userId;
-        
+
         if (!pageId || !followerId) continue;
-        
+
         // Get the page details
         const pageRef = doc(db, 'pages', pageId);
         const pageDoc = await getDoc(pageRef);
-        
+
         if (!pageDoc.exists()) continue;
-        
+
         const pageData = pageDoc.data();
         const pageOwnerId = pageData.userId;
         const pageTitle = pageData.title || 'Untitled Page';
-        
+
         // Skip if the follower is the page owner (self-follow)
         if (followerId === pageOwnerId) continue;
-        
+
         // Check if a notification already exists
         const notificationsRef = collection(db, 'users', pageOwnerId, 'notifications');
         const notificationsQuery = query(
@@ -95,12 +95,12 @@ async function backfillFollowNotifications(stats) {
           where('sourceUserId', '==', followerId),
           where('targetPageId', '==', pageId)
         );
-        
+
         const existingNotifications = await getDocs(notificationsQuery);
-        
+
         // Skip if notification already exists
         if (!existingNotifications.empty) continue;
-        
+
         // Create the notification
         const notificationRef = doc(notificationsRef);
         await setDoc(notificationRef, {
@@ -111,14 +111,14 @@ async function backfillFollowNotifications(stats) {
           read: true, // Mark as read since it's a backfilled notification
           createdAt: followData.followedAt || serverTimestamp()
         });
-        
+
         stats.followNotificationsCreated++;
       } catch (error) {
         console.error('Error processing follow record:', error);
         stats.errors++;
       }
     }
-    
+
     console.log(`Created ${stats.followNotificationsCreated} follow notifications`);
     return stats;
   } catch (error) {
@@ -134,13 +134,13 @@ async function backfillFollowNotifications(stats) {
 async function backfillLinkNotifications(stats) {
   try {
     console.log('Backfilling link notifications...');
-    
+
     // Get all pages
     const pagesRef = collection(db, 'pages');
     const pagesSnapshot = await getDocs(pagesRef);
-    
+
     console.log(`Processing ${pagesSnapshot.size} pages for links...`);
-    
+
     // Process each page
     for (const pageDoc of pagesSnapshot.docs) {
       try {
@@ -148,12 +148,12 @@ async function backfillLinkNotifications(stats) {
         const pageData = pageDoc.data();
         const sourceUserId = pageData.userId;
         const sourcePageTitle = pageData.title || 'Untitled Page';
-        
+
         if (!sourceUserId) continue;
-        
+
         // Skip if the page doesn't have content
         if (!pageData.content) continue;
-        
+
         // Parse the content to extract links
         let parsedContent;
         try {
@@ -162,10 +162,10 @@ async function backfillLinkNotifications(stats) {
           console.error(`Error parsing content for page ${pageId}:`, error);
           continue;
         }
-        
+
         // Extract links from the content
         const links = extractLinksFromNodes(parsedContent);
-        
+
         // Process each link
         for (const link of links) {
           try {
@@ -173,17 +173,17 @@ async function backfillLinkNotifications(stats) {
             if (link.url && (link.url.startsWith('/') || link.url.startsWith('/pages/'))) {
               // Extract the page ID from the URL
               const targetPageId = link.url.replace('/pages/', '/').replace('/', '');
-              
+
               if (targetPageId && targetPageId !== pageId) { // Don't notify for self-links
                 // Get the target page to check its owner
                 const targetPageRef = doc(db, 'pages', targetPageId);
                 const targetPageDoc = await getDoc(targetPageRef);
-                
+
                 if (targetPageDoc.exists()) {
                   const targetPageData = targetPageDoc.data();
                   const targetUserId = targetPageData.userId;
                   const targetPageTitle = targetPageData.title || 'Untitled Page';
-                  
+
                   // Skip if the link is to a page owned by the same user
                   if (targetUserId && targetUserId !== sourceUserId) {
                     // Check if a notification already exists
@@ -195,12 +195,12 @@ async function backfillLinkNotifications(stats) {
                       where('targetPageId', '==', targetPageId),
                       where('sourcePageId', '==', pageId)
                     );
-                    
+
                     const existingNotifications = await getDocs(notificationsQuery);
-                    
+
                     // Skip if notification already exists
                     if (!existingNotifications.empty) continue;
-                    
+
                     // Create the notification
                     const notificationRef = doc(notificationsRef);
                     await setDoc(notificationRef, {
@@ -213,7 +213,7 @@ async function backfillLinkNotifications(stats) {
                       read: true, // Mark as read since it's a backfilled notification
                       createdAt: pageData.lastModified ? new Date(pageData.lastModified) : serverTimestamp()
                     });
-                    
+
                     stats.linkNotificationsCreated++;
                   }
                 }
@@ -224,7 +224,7 @@ async function backfillLinkNotifications(stats) {
             stats.errors++;
           }
         }
-        
+
         stats.pagesProcessed++;
         if (stats.pagesProcessed % 100 === 0) {
           console.log(`Processed ${stats.pagesProcessed} pages...`);
@@ -235,7 +235,7 @@ async function backfillLinkNotifications(stats) {
         stats.errors++;
       }
     }
-    
+
     console.log(`Created ${stats.linkNotificationsCreated} link notifications`);
     return stats;
   } catch (error) {

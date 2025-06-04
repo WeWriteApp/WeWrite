@@ -6,22 +6,50 @@ import { getUserIdFromRequest } from '../auth-helper';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../utils/stripeConfig';
 
-// Initialize Firebase Admin
-initAdmin();
+// Initialize Firebase Admin lazily
+let auth: any;
+let db: any;
 
-// Get auth and firestore instances
-const auth = getAuth();
-const db = getFirestore();
+function initializeFirebase() {
+  if (auth && db) return { auth, db }; // Already initialized
+
+  try {
+    const app = initAdmin();
+    if (!app) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { auth: null, db: null };
+    }
+
+    auth = getAuth();
+    db = getFirestore();
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in setup-intent route:', error);
+    return { auth: null, db: null };
+  }
+
+  return { auth, db };
+}
 
 // Get the appropriate Stripe key based on environment
 const stripeSecretKey = getStripeSecretKey();
 const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-04-30.basil' as any,
 });
 
 // POST /api/setup-intent - Create a setup intent for adding a payment method
 export async function POST(request: NextRequest) {
   try {
+    // Initialize Firebase lazily
+    const { auth: firebaseAuth, db: firestore } = initializeFirebase();
+
+    if (!firebaseAuth || !firestore) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
+    // Update local references
+    auth = firebaseAuth;
+    db = firestore;
+
     // Get user ID from request using our helper
     const userId = await getUserIdFromRequest(request);
 

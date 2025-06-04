@@ -3,22 +3,29 @@ import { initAdmin, admin } from '../../firebase/admin';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getDatabase } from 'firebase-admin/database';
 
-// Initialize Firebase Admin
+// Initialize Firebase Admin lazily
 let db;
 let rtdb;
 
-// Only initialize Firebase Admin on the server
-if (typeof window === 'undefined') {
+function initializeFirebase() {
+  if (db && rtdb) return { db, rtdb }; // Already initialized
+
   try {
-    // Initialize Firebase Admin using our centralized function
-    initAdmin();
+    const app = initAdmin();
+    if (!app) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { db: null, rtdb: null };
+    }
 
     // Get Firestore and RTDB instances
     db = getFirestore();
     rtdb = getDatabase();
   } catch (error) {
     console.error("Error initializing Firebase Admin:", error);
+    return { db: null, rtdb: null };
   }
+
+  return { db, rtdb };
 }
 
 export async function GET(request) {
@@ -36,6 +43,9 @@ export async function GET(request) {
   }
 
   try {
+    // Initialize Firebase lazily
+    const { db: firestore, rtdb: realtimeDb } = initializeFirebase();
+
     // Get userId from query parameter
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -49,8 +59,8 @@ export async function GET(request) {
 
     console.log(`API: Fetching username for user ID: ${userId}`);
 
-    // Check if we have admin initialized
-    if (!admin || !rtdb || !db) {
+    // Check if we have Firebase initialized
+    if (!firestore || !realtimeDb) {
       // Return a fallback response when Firebase Admin is not available
       return NextResponse.json(
         {
@@ -61,6 +71,10 @@ export async function GET(request) {
         { headers }
       );
     }
+
+    // Update local references
+    db = firestore;
+    rtdb = realtimeDb;
 
     // Get user data from RTDB
     const userSnapshot = await rtdb.ref(`users/${userId}`).get();

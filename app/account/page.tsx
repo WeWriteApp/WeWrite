@@ -2,19 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronLeft } from 'lucide-react';
-import { useAuth } from '../providers/AuthProvider';
-import { getUserSubscription } from '../firebase/subscription';
-import { doc, getDoc } from 'firebase/firestore';
-import { addUsername, updateEmail as updateFirebaseEmail } from '../firebase/auth';
-import { db } from '../firebase/database';
+import { useAuth } from "../providers/AuthProvider";
+import { getUserSubscription } from "../firebase/subscription";
+import { doc, getDoc } from "firebase/firestore";
+import { addUsername, updateEmail as updateFirebaseEmail } from "../firebase/auth";
+import { db } from "../firebase/database";
 import { useRouter } from 'next/navigation';
 
 import { Button } from "../components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../components/ui/card";
-import SubscriptionManagement from '../components/SubscriptionManagement';
-import { PaymentMethodsManager } from '../components/PaymentMethodsManager';
-import PWAInstallationCard from '../components/PWAInstallationCard';
-import { useFeatureFlag } from '../utils/feature-flags.ts';
+import SubscriptionManagement from '../components/payments/SubscriptionManagement';
+import { PaymentMethodsManager } from '../components/payments/PaymentMethodsManager';
+import PWAInstallationCard from '../components/utils/PWAInstallationCard';
+import { SyncQueueSettings } from '../components/utils/SyncQueueSettings';
+import { useFeatureFlag } from "../utils/feature-flags";
 
 // Define admin check locally to avoid import issues
 const isAdmin = (userEmail?: string | null): boolean => {
@@ -30,7 +31,7 @@ export default function AccountPage() {
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [paymentHistory, setPaymentHistory] = useState([]);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   useEffect(() => {
@@ -290,28 +291,10 @@ export default function AccountPage() {
 
           {/* When subscription feature is disabled, don't show any subscription UI */}
 
-          {/* Admin Panel Link - Only visible for admins */}
-          {user && user.email && isAdmin(user.email) && (
-            <section>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Admin</CardTitle>
-                  <CardDescription>Access administrative tools and settings</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Manage feature flags, admin users, and other administrative settings.
-                  </p>
-                  <Button
-                    onClick={() => router.push('/admin')}
-                    className="w-full"
-                  >
-                    Go to Admin Panel
-                  </Button>
-                </CardContent>
-              </Card>
-            </section>
-          )}
+          {/* Sync Queue Settings */}
+          <section>
+            <SyncQueueSettings />
+          </section>
 
           {/* PWA Installation Status Card */}
           <section>

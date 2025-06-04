@@ -8,7 +8,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { LoadingButton } from "../../components/ui/loading-button";
-import NavHeader from "../../components/NavHeader";
+import NavHeader from "../../components/layout/NavHeader";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { AlertCircle, CheckCircle } from "lucide-react";
 
@@ -26,9 +26,25 @@ export default function ResetPasswordPage() {
 
     try {
       await sendPasswordResetEmail(auth, email);
+      console.log("Password reset email sent successfully to:", email);
       setSuccess(true);
     } catch (error: any) {
-      setError(error.message || "Failed to send reset email");
+      console.error("Password reset error:", error);
+
+      // Handle specific Firebase error codes
+      let errorMessage = "Failed to send reset email";
+
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = "No account found with this email address";
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "Please enter a valid email address";
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = "Too many requests. Please try again later";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -36,9 +52,9 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="container max-w-md mx-auto px-4 py-8">
-      <NavHeader 
-        title="Reset Password" 
-        backUrl="/account" 
+      <NavHeader
+        title="Reset Password"
+        backUrl="/account"
         backLabel="Back to Account"
       />
 
@@ -50,13 +66,21 @@ export default function ResetPasswordPage() {
 
       <div className="space-y-6">
         {success ? (
-          <Alert className="bg-green-500/20 text-green-600 dark:text-green-200">
-            <CheckCircle className="h-4 w-4" />
-            <AlertTitle>Email Sent</AlertTitle>
-            <AlertDescription>
-              Check your email for instructions to reset your password.
-            </AlertDescription>
-          </Alert>
+          <div className="space-y-4">
+            <Alert className="bg-green-500/20 text-green-600 dark:text-green-200">
+              <CheckCircle className="h-4 w-4" />
+              <AlertTitle>Email Sent Successfully</AlertTitle>
+              <AlertDescription>
+                Check your email for instructions to reset your password. The reset link will expire in 1 hour.
+              </AlertDescription>
+            </Alert>
+            <Button
+              className="w-full"
+              onClick={() => router.push("/auth/login")}
+            >
+              Return to Login
+            </Button>
+          </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -88,7 +112,7 @@ export default function ResetPasswordPage() {
               >
                 Send Reset Link
               </LoadingButton>
-              
+
               <Button
                 type="button"
                 variant="outline"

@@ -30,7 +30,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "../components/ui/tooltip";
-import { PillLink } from "../components/PillLink";
+import { PillLink } from "../components/utils/PillLink";
 
 export default function LeaderboardPage() {
   const { user } = useContext(AuthContext);

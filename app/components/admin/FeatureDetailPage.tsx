@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthContext } from '../../providers/AuthProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
 import { DataTable } from '../ui/data-table';
@@ -77,7 +77,7 @@ interface FeatureDetailPageProps {
 export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [globalEnabled, setGlobalEnabled] = useState(feature.enabled);
@@ -353,7 +353,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
         const overridesSnapshot = await getDocs(featureOverridesQuery);
 
         // Update each override
-        const batch = db.batch();
+        const batch = (db as any).batch();
         overridesSnapshot.forEach(doc => {
           batch.update(doc.ref, {
             enabled: !globalEnabled,
@@ -526,7 +526,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
       setIsLoading(true);
 
       // Create a batch for Firestore operations
-      const batch = db.batch();
+      const batch = (db as any).batch();
 
       // Process each selected user
       for (const userId of selectedUsers) {

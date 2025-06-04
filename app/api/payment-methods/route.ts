@@ -6,21 +6,47 @@ import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../utils/stripeConfig';
 import { checkPaymentsFeatureFlag } from '../feature-flag-helper';
 
-// Initialize Firebase Admin
-initAdmin();
+// Initialize Firebase Admin lazily
+let db: any;
 
-// Get firestore instance
-const db = getFirestore();
+function initializeFirebase() {
+  if (db) return { db }; // Already initialized
+
+  try {
+    const app = initAdmin();
+    if (!app) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { db: null };
+    }
+
+    db = getFirestore();
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in payment-methods route:', error);
+    return { db: null };
+  }
+
+  return { db };
+}
 
 // Get the appropriate Stripe key based on environment
 const stripeSecretKey = getStripeSecretKey();
 const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-04-30.basil' as any,
 });
 
 // GET /api/payment-methods - Get all payment methods for the current user
 export async function GET(request: NextRequest) {
   try {
+    // Initialize Firebase lazily
+    const { db: firestore } = initializeFirebase();
+
+    if (!firestore) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
+    // Update local reference
+    db = firestore;
+
     // Check if payments feature is enabled
     const featureCheckResponse = await checkPaymentsFeatureFlag();
     if (featureCheckResponse) {
@@ -91,6 +117,16 @@ export async function GET(request: NextRequest) {
 // DELETE /api/payment-methods - Delete a payment method
 export async function DELETE(request: NextRequest) {
   try {
+    // Initialize Firebase lazily
+    const { db: firestore } = initializeFirebase();
+
+    if (!firestore) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
+    // Update local reference
+    db = firestore;
+
     // Check if payments feature is enabled
     const featureCheckResponse = await checkPaymentsFeatureFlag();
     if (featureCheckResponse) {

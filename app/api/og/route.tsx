@@ -7,10 +7,13 @@ export const runtime = 'edge';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    
-    // Get the page ID from the request
+
+    // Get parameters from the request
     const pageId = searchParams.get('id');
-    
+    const type = searchParams.get('type') || 'page';
+    const title = searchParams.get('title');
+    const author = searchParams.get('author');
+
     if (!pageId) {
       return new ImageResponse(
         (
@@ -81,13 +84,27 @@ export async function GET(request: Request) {
       );
     }
 
-    // For Edge runtime, we'll use a simplified approach without Firebase
-    // This will be a static demo of the OG image with the page ID
-    
-    // Mock data based on the page ID
-    const title = `Page ${pageId.substring(0, 8)}...`;
-    const author = 'Demo User';
-    const sponsorCount = 8;
+    // Generate dynamic content based on type and parameters
+    let displayTitle = title || `Content ${pageId.substring(0, 8)}...`;
+    let displayAuthor = author || 'WeWrite User';
+    let typeLabel = '';
+    let sponsorCount = 8; // Default for demo
+
+    switch (type) {
+      case 'group':
+        typeLabel = 'Group';
+        displayTitle = title || `Group ${pageId.substring(0, 8)}...`;
+        displayAuthor = author || 'WeWrite Community';
+        break;
+      case 'user':
+        typeLabel = 'Profile';
+        displayTitle = title || `User Profile`;
+        displayAuthor = author || displayTitle;
+        break;
+      default:
+        typeLabel = 'Page';
+        displayTitle = title || `Page ${pageId.substring(0, 8)}...`;
+    }
 
     // Sample content with links for the demo
     const contentWithLinks = `
@@ -120,7 +137,7 @@ export async function GET(request: Request) {
               marginBottom: '40px',
             }}
           >
-            {title}
+            {displayTitle}
           </div>
           
           {/* Page Content with Links */}
@@ -155,7 +172,7 @@ export async function GET(request: Request) {
                 border: '1px solid rgba(255, 255, 255, 0.2)',
               }}
             >
-              By {author}
+              By {displayAuthor}
             </div>
             
             <div

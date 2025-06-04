@@ -4,8 +4,8 @@ import { useState, useContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../components/ui/button";
 import { ChevronLeft, Clock, Filter, Check } from "lucide-react";
-import ActivityCard from "../components/ActivityCard";
-import { AuthContext } from "../providers/AuthProvider";
+import ActivityCard from "../components/activity/ActivityCard";
+import { useAuth } from "../providers/AuthProvider";
 import useStaticRecentActivity from "../hooks/useStaticRecentActivity";
 import { useActivityFilter } from "../contexts/ActivityFilterContext";
 import { getFollowedPages } from "../firebase/follows";
@@ -34,10 +34,10 @@ export default function ActivityPageClient({
   initialError: string | null
 }) {
   const router = useRouter();
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const { viewMode, setViewMode } = useActivityFilter();
   const [limit] = useState(30);
-  const [followedPages, setFollowedPages] = useState([]);
+  const [followedPages, setFollowedPages] = useState<any[]>([]);
   const [isLoadingFollows, setIsLoadingFollows] = useState(false);
 
   // Use the same hook that works on the home page
@@ -48,7 +48,7 @@ export default function ActivityPageClient({
   useEffect(() => {
     if (user && viewMode === 'following') {
       setIsLoadingFollows(true);
-      getFollowedPages(user.uid)
+      getFollowedPages(user?.uid || '')
         .then(pages => {
           setFollowedPages(pages);
         })

@@ -1,9 +1,9 @@
 import { fetchGroupFromFirebase } from "../../firebase/rtdb";
-import GroupProfileView from "../../components/GroupProfileView";
 import { Loader } from "lucide-react";
 import { redirect } from "next/navigation";
 import { isAdminServer } from "../../utils/server-feature-flags";
 import { cookies } from "next/headers";
+import GroupPageClient from "./GroupPageClient";
 
 export async function generateMetadata({ params }) {
   // Properly await the params object
@@ -80,7 +80,7 @@ export default async function Page({ params }) {
 
   return (
     <div className="container mx-auto max-w-5xl">
-      <GroupProfileView group={group} />
+      <GroupPageClient group={group} />
     </div>
   );
 }

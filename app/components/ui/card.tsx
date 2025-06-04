@@ -8,7 +8,7 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-2xl border-theme-medium bg-card text-card-foreground shadow-md dark:bg-card/90 dark:hover:bg-card/100 overflow-hidden hover:bg-muted/30 transition-all duration-200",
+      "rounded-xl border-theme-strong bg-card text-card-foreground shadow-sm dark:bg-card/90 dark:hover:bg-card/100 overflow-hidden hover:bg-muted/30 transition-all duration-200",
       // Mobile-first padding with better spacing
       "p-4 md:p-4",
       // Ensure proper spacing between cards when used in grids

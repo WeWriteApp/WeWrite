@@ -8,6 +8,7 @@
     "dev:safe": "./scripts/start-dev.sh",
     "dev:port": "./scripts/ensure-port-3000.sh",
     "build": "rm -rf .next && SKIP_TYPE_CHECK=1 NODE_OPTIONS='--max_old_space_size=4096' next build",
+    "seo:audit": "node scripts/seo-audit.js",
     "start": "next start",
     "lint": "next lint",
     "clean": "rm -rf .next node_modules/.cache"
@@ -53,6 +54,7 @@
     "firebase-functions": "^6.3.2",
     "framer-motion": "^12.5.0",
     "install": "^0.13.0",
+    "intl-segmenter-polyfill": "^0.4.4",
     "js-cookie": "^3.0.5",
     "lexical": "^0.16.1",
     "lodash.debounce": "^4.0.8",
@@ -104,6 +106,7 @@
     "path-browserify": "^1.0.1",
     "postcss": "^8.5.3",
     "stream-browserify": "^3.0.0",
+    "tsx": "^4.19.4",
     "typescript": "^5.8.3",
     "util": "^0.12.5"
   }

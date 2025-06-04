@@ -15,6 +15,10 @@ export function generateSchemaMarkup(type, data) {
       return generatePersonSchema(data);
     case 'group':
       return generateGroupSchema(data);
+    case 'webpage':
+      return generateWebPageSchema(data);
+    case 'collection':
+      return generateCollectionPageSchema(data);
     default:
       return null;
   }
@@ -97,7 +101,7 @@ function generatePersonSchema(data) {
 
 /**
  * Generates schema.org markup for a group
- * 
+ *
  * @param {object} data - The group data
  * @returns {object} - The schema markup object
  */
@@ -107,7 +111,9 @@ function generateGroupSchema(data) {
     description,
     url,
     imageUrl,
-    memberCount
+    memberCount,
+    createdAt,
+    createdBy
   } = data;
 
   return {
@@ -116,8 +122,91 @@ function generateGroupSchema(data) {
     name: name || 'Unnamed Group',
     description: description || '',
     url: url || '',
-    logo: imageUrl || '',
-    memberCount: memberCount || 0
+    logo: imageUrl ? {
+      '@type': 'ImageObject',
+      url: imageUrl
+    } : undefined,
+    numberOfEmployees: memberCount || 0,
+    foundingDate: createdAt || undefined,
+    founder: createdBy ? {
+      '@type': 'Person',
+      name: createdBy
+    } : undefined,
+    sameAs: url ? [url] : undefined
+  };
+}
+
+/**
+ * Generates schema.org markup for a WebPage
+ *
+ * @param {object} data - The webpage data
+ * @returns {object} - The schema markup object
+ */
+function generateWebPageSchema(data) {
+  const {
+    title,
+    description,
+    url,
+    datePublished,
+    dateModified,
+    authorName,
+    authorUrl,
+    breadcrumbs
+  } = data;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: title,
+    description: description || '',
+    url: url,
+    datePublished: datePublished || new Date().toISOString(),
+    dateModified: dateModified || new Date().toISOString(),
+    author: authorName ? {
+      '@type': 'Person',
+      name: authorName,
+      url: authorUrl || ''
+    } : undefined,
+    breadcrumb: breadcrumbs ? {
+      '@type': 'BreadcrumbList',
+      itemListElement: breadcrumbs
+    } : undefined,
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'WeWrite',
+      url: 'https://wewrite.app'
+    }
+  };
+}
+
+/**
+ * Generates schema.org markup for a CollectionPage (like user profiles or group pages)
+ *
+ * @param {object} data - The collection page data
+ * @returns {object} - The schema markup object
+ */
+function generateCollectionPageSchema(data) {
+  const {
+    title,
+    description,
+    url,
+    mainEntity,
+    numberOfItems
+  } = data;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: title,
+    description: description || '',
+    url: url,
+    mainEntity: mainEntity,
+    numberOfItems: numberOfItems || 0,
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'WeWrite',
+      url: 'https://wewrite.app'
+    }
   };
 }
 

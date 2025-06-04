@@ -51,17 +51,16 @@ export function PagePreviewCard({
   const cardStyles = getCardStyleByStatus(status);
   const router = useRouter();
 
-  // Handle card click with direct navigation
+  // Handle card click with proper Next.js navigation
   const handleCardClick = useCallback((e) => {
     e.preventDefault();
 
-    // Use window.location.href with a hash fragment to ensure the destination page loads at the top
-    // The hash fragment #top will be ignored but ensures the page loads at the top
-    window.location.href = `/${pageId}#top`;
+    // Use Next.js router for client-side navigation to prevent scroll-to-top issues
+    router.push(`/${pageId}`);
 
     // Prevent any default behavior or event bubbling
     return false;
-  }, [pageId]);
+  }, [pageId, router]);
 
   // Get status badge
   const getStatusBadge = () => {
@@ -82,12 +81,12 @@ export function PagePreviewCard({
   return (
     <div className="block h-full" onClick={handleCardClick}>
       <Card className={`h-full border hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col ${cardStyles} scroll-snap-align-start`}>
-        <div className="p-3 sm:p-4">
-          <div className="flex justify-between items-center mb-2">
-            <CardTitle className="text-base sm:text-lg mb-0 pr-2 line-clamp-2">
+        <div className="p-2 sm:p-3">
+          <div className="flex justify-between items-center mb-1">
+            <CardTitle className="text-sm sm:text-base mb-0 pr-2 line-clamp-2">
               {title}
             </CardTitle>
-            <ChevronRight className="h-5 w-5 flex-shrink-0" />
+            <ChevronRight className="h-4 w-4 flex-shrink-0" />
           </div>
           {!hideStatus && (
             <div className="mt-1">

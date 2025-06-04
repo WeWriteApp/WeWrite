@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { Button } from '../components/ui/button';
 import { ChevronLeft, Flame, Loader } from 'lucide-react';
 import Link from 'next/link';
-import PillLink from '../components/PillLink';
-import SimpleSparkline from '../components/SimpleSparkline';
-import { getTrendingPages, getPageViewsLast24Hours } from '../firebase/pageViews';
+import PillLink from '../components/utils/PillLink';
+import SimpleSparkline from '../components/utils/SimpleSparkline';
+import { getTrendingPages, getPageViewsLast24Hours } from "../firebase/pageViews";
+import { useDateFormat } from "../contexts/DateFormatContext";
+import { isExactDateFormat } from "../utils/dailyNoteNavigation";
 
 interface TrendingPage {
   id: string;
@@ -24,6 +26,7 @@ export default function TrendingPageClient() {
   const [trendingPages, setTrendingPages] = useState<TrendingPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { formatDateString } = useDateFormat();
 
   useEffect(() => {
     const fetchTrendingPages = async () => {
@@ -156,10 +159,10 @@ export default function TrendingPageClient() {
       ) : (
         <>
           {/* Desktop view: Table layout (hidden on mobile) */}
-          <div className="hidden md:block border border-theme-medium rounded-2xl overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 w-full">
+          <div className="hidden md:block border border-theme-strong rounded-xl overflow-hidden shadow-sm dark:bg-card/90 dark:hover:bg-card/100 w-full">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-theme-medium">
+                <tr className="border-b border-theme-strong">
                   <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Page</th>
                   <th className="text-left py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Author</th>
                   <th className="text-right py-2 px-4 font-medium text-muted-foreground text-sm whitespace-nowrap">Views (24h)</th>
@@ -175,7 +178,9 @@ export default function TrendingPageClient() {
                   >
                     <td className="py-3 px-4">
                       <PillLink href={`/${page.id}`}>
-                        {page.title || 'Untitled'}
+                        {page.title && isExactDateFormat(page.title)
+                          ? formatDateString(page.title)
+                          : (page.title || 'Untitled')}
                       </PillLink>
                     </td>
                     <td className="py-3 px-4">
@@ -214,7 +219,7 @@ export default function TrendingPageClient() {
             {trendingPages.map((page) => (
               <div
                 key={page.id}
-                className="group block bg-card border border-theme-medium rounded-2xl overflow-hidden shadow-md dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-all"
+                className="group block bg-card border border-theme-strong rounded-xl overflow-hidden shadow-sm dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 transition-all"
                 onClick={() => window.location.href = `/${page.id}`}
                 style={{ cursor: 'pointer' }}
               >
@@ -222,7 +227,11 @@ export default function TrendingPageClient() {
                   <div className="mb-3">
                     <h3 className="text-base font-medium mb-1">
                       <span className="inline-flex items-center my-0.5 text-sm font-medium rounded-lg px-2 py-0.5 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-                        <span className="truncate">{page.title || 'Untitled'}</span>
+                        <span className="truncate">
+                          {page.title && isExactDateFormat(page.title)
+                            ? formatDateString(page.title)
+                            : (page.title || 'Untitled')}
+                        </span>
                       </span>
                     </h3>
                     <div className="text-sm text-muted-foreground">

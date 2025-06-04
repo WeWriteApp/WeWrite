@@ -15,8 +15,8 @@ import {
   useElements
 } from '@stripe/react-stripe-js';
 import { useTheme } from '../../../providers/ThemeProvider';
-import { useFeatureFlag } from '../../../utils/feature-flags.ts';
-import OpenCollectiveSupport from '../../../components/OpenCollectiveSupport';
+import { useFeatureFlag } from '../../../utils/feature-flags';
+import OpenCollectiveSupport from '../../../components/payments/OpenCollectiveSupport';
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -229,7 +229,7 @@ export default function SubscriptionPaymentPage() {
       return;
     }
 
-    const amountParam = searchParams.get('amount');
+    const amountParam = searchParams?.get('amount');
     if (!amountParam) {
       router.push('/account/subscription');
       return;
@@ -247,7 +247,7 @@ export default function SubscriptionPaymentPage() {
           },
           body: JSON.stringify({
             amount: parsedAmount,
-            userId: user.uid
+            userId: user?.uid || ''
           }),
         });
 

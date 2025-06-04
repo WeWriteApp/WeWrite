@@ -1,9 +1,9 @@
 "use client";
 
-import { useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthContext } from '../../providers/AuthProvider';
-import { isAdmin } from '../../utils/feature-flags.ts';
+import { useAuth } from "../../providers/AuthProvider";
+import { isAdmin } from "../../utils/feature-flags";
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { ArrowLeft, Shield, Database, RefreshCw } from 'lucide-react';
@@ -13,7 +13,7 @@ import { useToast } from '../../components/ui/use-toast';
 
 export default function SetupFeaturesPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useContext(AuthContext);
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);

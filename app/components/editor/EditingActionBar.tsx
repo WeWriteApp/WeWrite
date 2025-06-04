@@ -1,0 +1,168 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { Button } from "../ui/button";
+import { X, Check, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+export interface EditingActionBarProps {
+  onSave: () => void;
+  onCancel: () => void;
+  onDelete?: () => void;
+  isSaving?: boolean;
+  hasUnsavedChanges?: boolean;
+  className?: string;
+}
+
+export default function EditingActionBar({
+  onSave,
+  onCancel,
+  onDelete,
+  isSaving = false,
+  hasUnsavedChanges = false,
+  className = ""
+}: EditingActionBarProps) {
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState(0);
+
+  // Detect mobile keyboard opening/closing
+  useEffect(() => {
+    const initialHeight = window.innerHeight;
+    setViewportHeight(initialHeight);
+
+    const handleResize = () => {
+      const currentHeight = window.innerHeight;
+      const heightDifference = initialHeight - currentHeight;
+
+      // If height decreased by more than 150px, assume keyboard is open
+      setIsKeyboardOpen(heightDifference > 150);
+      setViewportHeight(currentHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + S to save
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        onSave();
+      }
+      // Escape to cancel
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onSave, onCancel]);
+
+  const actionBarVariants = {
+    hidden: {
+      opacity: 0,
+      y: 20,
+      scale: 0.95
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 400,
+        damping: 25
+      }
+    },
+    exit: {
+      opacity: 0,
+      y: 20,
+      scale: 0.95,
+      transition: {
+        duration: 0.2
+      }
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        variants={actionBarVariants}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        className={`fixed z-50 ${className}`}
+        style={{
+          bottom: isKeyboardOpen ? '10px' : '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          transition: 'bottom 0.3s ease-in-out'
+        }}
+      >
+        <div className={`
+          flex items-center gap-2 px-4 py-2
+          bg-background/95 backdrop-blur-sm
+          border border-border rounded-2xl shadow-lg
+          ${isKeyboardOpen ? 'bg-background border-2' : ''}
+        `}>
+          {/* Cancel Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="gap-2 rounded-xl"
+          >
+            <X className="h-4 w-4" />
+            <span className="hidden sm:inline">Cancel</span>
+          </Button>
+
+          {/* Save Button */}
+          <Button
+            onClick={onSave}
+            disabled={isSaving}
+            className="gap-2 rounded-xl bg-green-600 hover:bg-green-700 text-white"
+            size="sm"
+          >
+            {isSaving ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                <span className="hidden sm:inline">Saving...</span>
+              </>
+            ) : (
+              <>
+                <Check className="h-4 w-4" />
+                <span className="hidden sm:inline">Save</span>
+              </>
+            )}
+          </Button>
+
+          {/* Delete Button (optional) */}
+          {onDelete && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onDelete}
+              disabled={isSaving}
+              className="gap-2 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Delete</span>
+            </Button>
+          )}
+        </div>
+
+        {/* Unsaved changes indicator */}
+        {hasUnsavedChanges && !isSaving && (
+          <div className="absolute -top-2 -right-2">
+            <div className="h-3 w-3 bg-orange-500 rounded-full animate-pulse" />
+          </div>
+        )}
+      </motion.div>
+    </AnimatePresence>
+  );
+}

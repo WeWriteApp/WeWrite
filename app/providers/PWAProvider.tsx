@@ -1,8 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { isPWA, shouldShowPWABanner } from '../utils/pwa-detection';
-import { getAnalyticsService } from '../utils/analytics-service';
+import { isPWA, shouldShowPWABanner } from "../utils/pwa-detection";
+import { getAnalyticsService } from "../utils/analytics-service";
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
 
 // Define the context type

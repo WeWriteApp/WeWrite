@@ -224,6 +224,15 @@ export function validateLink(linkData) {
       }
     }
 
+    // CRITICAL FIX: Preserve compound link properties
+    // These properties are used for rendering compound links with author information
+    if (linkData.showAuthor !== undefined) {
+      link.showAuthor = linkData.showAuthor;
+    }
+    if (linkData.authorUsername !== undefined) {
+      link.authorUsername = linkData.authorUsername;
+    }
+
     // Add version tracking for future compatibility
     if (!link.linkVersion) {
       link.linkVersion = 3; // Increment version to indicate the new format
@@ -240,6 +249,9 @@ export function validateLink(linkData) {
       displayText: fallbackDisplayText,
       originalPageTitle: linkData?.pageTitle || linkData?.originalPageTitle || null,
       pageId: linkData?.pageId || null,
+      // Preserve compound link properties in fallback
+      showAuthor: linkData?.showAuthor || false,
+      authorUsername: linkData?.authorUsername || null,
       linkVersion: 3,
       isError: true,
       id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
