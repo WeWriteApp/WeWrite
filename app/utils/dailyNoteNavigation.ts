@@ -13,11 +13,16 @@ export function isExactDateFormat(title: string): boolean {
 
 /**
  * Parse a YYYY-MM-DD string into a Date object
+ * Uses local timezone to avoid offset issues
  */
 export function parseDateString(dateString: string): Date | null {
   try {
     if (!isExactDateFormat(dateString)) return null;
-    const date = new Date(dateString);
+
+    // Parse YYYY-MM-DD manually to avoid timezone offset issues
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // month is 0-indexed
+
     return isNaN(date.getTime()) ? null : date;
   } catch (error) {
     console.error('Error parsing date string:', error);

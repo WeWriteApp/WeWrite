@@ -211,10 +211,10 @@ export function resetAllCircuitBreakers() {
  * Specific circuit breakers for common operations
  */
 
-// Page reload circuit breaker
+// Page reload circuit breaker with enhanced infinite reload detection
 export const pageReloadBreaker = getCircuitBreaker('page_reload', {
-  failureThreshold: 2,
-  resetTimeMs: 120000 // 2 minutes
+  failureThreshold: 3, // Trigger after 3 consecutive reloads
+  resetTimeMs: 30000 // 30 seconds window
 });
 
 // Analytics script loading circuit breaker

@@ -414,10 +414,11 @@ export default function NewPage() {
           canEdit={true} // User can always edit their new page
         />
         <div className="pb-24 px-0 sm:px-2 w-full max-w-none min-h-screen">
-          {isEditing ? (
-            <>
-              <PageProvider>
-                <LineSettingsProvider isEditMode={true}>
+          <div className="transition-all duration-300 ease-in-out opacity-100">
+            {isEditing ? (
+              <div className="animate-in fade-in-0 duration-300">
+                <PageProvider>
+                  <LineSettingsProvider isEditMode={true}>
                   <PageEditor
                     title={isReply ? "" : title}
                     setTitle={isDailyNote ? () => {} : handleTitleChange} // Lock title for daily notes
@@ -451,8 +452,9 @@ export default function NewPage() {
                   />
                 </LineSettingsProvider>
               </PageProvider>
-            </>
-          ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
         <SiteFooter className="" />
         {!isEditing && <PledgeBar />}

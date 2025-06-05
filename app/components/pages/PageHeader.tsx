@@ -529,9 +529,9 @@ export default function PageHeader({
               {/* Left navigation chevron for daily notes */}
               {isDailyNote && !isScrolled && (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="icon"
-                  className="h-8 w-8 mr-2 opacity-60 hover:opacity-100 transition-opacity duration-200"
+                  className="h-8 w-8 mr-2 transition-opacity duration-200"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDailyNoteNavigation('previous');
@@ -738,9 +738,9 @@ export default function PageHeader({
               {/* Right navigation chevron for daily notes */}
               {isDailyNote && !isScrolled && (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="icon"
-                  className="h-8 w-8 ml-2 opacity-60 hover:opacity-100 transition-opacity duration-200"
+                  className="h-8 w-8 ml-2 transition-opacity duration-200"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDailyNoteNavigation('next');

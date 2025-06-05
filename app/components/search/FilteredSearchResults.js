@@ -61,6 +61,7 @@ const FilteredSearchResults = forwardRef(({
   const [selectedId, setSelectedId] = useState(initialSelectedId);
   const [pageDataCache, setPageDataCache] = useState(new Map());
   const [activeFilter, setActiveFilter] = useState('recent');
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
   // Refs
   const searchInputRef = useRef(null);
@@ -79,13 +80,13 @@ const FilteredSearchResults = forwardRef(({
   }, []);
 
   // Fetch filtered results based on active filter
-  const fetchFilteredResults = useCallback(async (searchTerm, filter) => {
+  const fetchFilteredResults = useCallback(async (searchTerm, filter, searchMode = false) => {
     if (!user) {
       console.log('[FilteredSearchResults] No user, skipping fetch');
       return;
     }
 
-    console.log('[FilteredSearchResults] Fetching results for filter:', filter, 'searchTerm:', searchTerm, 'userId:', user.uid);
+    console.log('[FilteredSearchResults] Fetching results for filter:', filter, 'searchTerm:', searchTerm, 'searchMode:', searchMode, 'userId:', user.uid);
 
     // Cancel any ongoing request
     if (abortControllerRef.current) {
@@ -101,7 +102,10 @@ const FilteredSearchResults = forwardRef(({
       const encodedSearch = encodeURIComponent(searchTerm.trim());
       let queryUrl;
 
-      if (filter === 'recent') {
+      // In search mode, use general search API instead of filtered APIs
+      if (searchMode && searchTerm.trim()) {
+        queryUrl = `/api/search?searchTerm=${encodedSearch}&userId=${user.uid}`;
+      } else if (filter === 'recent') {
         queryUrl = `/api/recent-pages?userId=${user.uid}&searchTerm=${encodedSearch}&limit=20`;
       } else {
         queryUrl = `/api/my-pages?userId=${user.uid}&searchTerm=${encodedSearch}&limit=20`;
@@ -124,8 +128,10 @@ const FilteredSearchResults = forwardRef(({
       const data = await response.json();
       console.log('[FilteredSearchResults] Response data:', data);
 
-      setPages(data.pages || []);
-      console.log('[FilteredSearchResults] Set pages:', data.pages?.length || 0, 'pages');
+      // Handle different response formats - general search API returns {pages, users}, filtered APIs return {pages}
+      const pages = data.pages || [];
+      setPages(pages);
+      console.log('[FilteredSearchResults] Set pages:', pages.length, 'pages');
 
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -141,7 +147,7 @@ const FilteredSearchResults = forwardRef(({
 
   // Debounced search function
   const debouncedSearch = useCallback(
-    debounce(async (searchTerm) => {
+    debounce(async (searchTerm, searchMode = false) => {
       if (!searchTerm && !isLinkEditor) {
         resetSearchResults();
         return;
@@ -151,7 +157,7 @@ const FilteredSearchResults = forwardRef(({
         return;
       }
 
-      await fetchFilteredResults(searchTerm, activeFilter);
+      await fetchFilteredResults(searchTerm, activeFilter, searchMode);
     }, 500),
     [user, isLinkEditor, resetSearchResults, fetchFilteredResults, activeFilter]
   );
@@ -165,9 +171,16 @@ const FilteredSearchResults = forwardRef(({
       onInputChange(value);
     }
 
+    // When user types text, enter search mode and deselect filter chips
+    if (value.trim().length > 0) {
+      setIsSearchMode(true);
+    } else {
+      setIsSearchMode(false);
+    }
+
     // Only search if we have minimum characters or in link editor mode
     if (value.trim().length >= characterCount || isLinkEditor) {
-      debouncedSearch(value);
+      debouncedSearch(value, value.trim().length > 0);
     } else {
       resetSearchResults();
     }
@@ -177,6 +190,7 @@ const FilteredSearchResults = forwardRef(({
   const handleClear = useCallback(() => {
     setSearch("");
     setSelectedId(null);
+    setIsSearchMode(false); // Exit search mode when clearing
     resetSearchResults();
 
     if (onInputChange) {
@@ -192,12 +206,13 @@ const FilteredSearchResults = forwardRef(({
   // Handle filter change
   const handleFilterChange = useCallback((filter) => {
     setActiveFilter(filter);
+    setIsSearchMode(false); // Exit search mode when selecting a filter
     // Re-run search with new filter
     if (search.trim().length >= characterCount || isLinkEditor) {
-      fetchFilteredResults(search, filter);
+      fetchFilteredResults(search, filter, false);
     } else if (isLinkEditor) {
       // In link editor mode, always show results even without search
-      fetchFilteredResults('', filter);
+      fetchFilteredResults('', filter, false);
     }
   }, [search, characterCount, isLinkEditor, fetchFilteredResults]);
 
@@ -334,7 +349,7 @@ const FilteredSearchResults = forwardRef(({
           <button
             onClick={() => handleFilterChange('recent')}
             className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
-              activeFilter === 'recent'
+              activeFilter === 'recent' && !isSearchMode
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground'
             }`}
@@ -344,7 +359,7 @@ const FilteredSearchResults = forwardRef(({
           <button
             onClick={() => handleFilterChange('my-pages')}
             className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
-              activeFilter === 'my-pages'
+              activeFilter === 'my-pages' && !isSearchMode
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground'
             }`}
@@ -366,7 +381,7 @@ const FilteredSearchResults = forwardRef(({
             {pages.length > 0 && (
               <div>
                 <h3 className="text-xs font-medium text-muted-foreground mb-1 px-2">
-                  {activeFilter === 'recent' ? 'Recent Pages' : 'My Pages'}
+                  {isSearchMode ? 'Search Results' : (activeFilter === 'recent' ? 'Recent Pages' : 'My Pages')}
                 </h3>
                 {pages.map((page) => (
                   <button
@@ -394,9 +409,9 @@ const FilteredSearchResults = forwardRef(({
             {/* No Results */}
             {(search.length >= 2 || isLinkEditor) && pages.length === 0 && !isSearching && (
               <div className="p-3 text-center text-muted-foreground">
-                {search.length >= 2 
+                {search.length >= 2
                   ? `No results found for "${search}"`
-                  : `No ${activeFilter === 'recent' ? 'recent pages' : 'pages'} found`
+                  : `No ${isSearchMode ? 'results' : (activeFilter === 'recent' ? 'recent pages' : 'pages')} found`
                 }
               </div>
             )}

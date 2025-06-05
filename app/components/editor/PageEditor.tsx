@@ -484,11 +484,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
     <div className="editor-container w-full max-w-none mx-4 md:mx-6 lg:mx-8">
 
       <div
-        className={`w-full max-w-none transition-all duration-200 ${
-          !isNewPage
-            ? "border border-primary/30 rounded-lg p-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 hover:border-primary/40"
-            : ""
-        }`}
+        className="w-full max-w-none transition-all duration-200 border border-primary/30 rounded-lg p-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 hover:border-primary/40"
       >
         {isHydrated ? (
           <ErrorBoundary
@@ -538,7 +534,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
           <div className="w-full min-h-[200px] flex items-center justify-center">
             <div className="loader loader-md"></div>
             <div className="ml-3 text-muted-foreground">
-              {isNewPage ? "Initializing new page editor..." : "Loading editor..."}
+              Loading editor...
             </div>
           </div>
         )}

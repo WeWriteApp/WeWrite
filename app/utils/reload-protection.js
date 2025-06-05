@@ -97,20 +97,39 @@ export function resetReloadProtection() {
  * Safe reload function that respects protection limits
  */
 export function safeReload(reason = 'unknown') {
-  // First check circuit breaker
+  // First check new infinite reload detector
   try {
-    const { pageReloadBreaker } = require('./circuit-breaker');
-    if (!pageReloadBreaker.canExecute()) {
-      console.error(`Circuit breaker: Blocked reload attempt (reason: ${reason})`);
+    const { infiniteReloadDetector } = require('./infiniteReloadDetector');
+    if (infiniteReloadDetector.isTriggered()) {
+      console.error(`Infinite reload detector: Blocked reload attempt (reason: ${reason})`);
 
       if (typeof window !== 'undefined') {
-        alert('Too many reload attempts detected. The page reload function has been temporarily disabled to prevent infinite loops. Please wait a few minutes or contact support if the issue persists.');
+        console.warn('Reload blocked by infinite reload protection. Debug modal should be displayed.');
       }
 
       return false;
     }
+
+    // Record the reload attempt
+    infiniteReloadDetector.recordManualReload(reason);
   } catch (error) {
-    console.warn('Circuit breaker not available, falling back to basic protection:', error);
+    console.warn('Infinite reload detector not available, falling back to circuit breaker:', error);
+
+    // Fallback to old circuit breaker
+    try {
+      const { pageReloadBreaker } = require('./circuit-breaker');
+      if (!pageReloadBreaker.canExecute()) {
+        console.error(`Circuit breaker: Blocked reload attempt (reason: ${reason})`);
+
+        if (typeof window !== 'undefined') {
+          alert('Too many reload attempts detected. The page reload function has been temporarily disabled to prevent infinite loops. Please wait a few minutes or contact support if the issue persists.');
+        }
+
+        return false;
+      }
+    } catch (error) {
+      console.warn('Circuit breaker not available, falling back to basic protection:', error);
+    }
   }
 
   if (!canReload()) {

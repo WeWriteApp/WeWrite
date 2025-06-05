@@ -102,9 +102,16 @@ export function DateFormatProvider({ children }: DateFormatProviderProps) {
         return dateString;
       }
 
-      // Parse the date string
-      const dateObj = new Date(dateString);
-      
+      // Parse the date string safely to avoid timezone offset issues
+      let dateObj: Date;
+      if (isISODateString(dateString)) {
+        // Parse YYYY-MM-DD manually to avoid timezone offset issues
+        const [year, month, day] = dateString.split('-').map(Number);
+        dateObj = new Date(year, month - 1, day); // month is 0-indexed
+      } else {
+        dateObj = new Date(dateString);
+      }
+
       // Validate date
       if (isNaN(dateObj.getTime())) {
         console.warn('Invalid date string provided to formatDateString:', dateString);
