@@ -21,6 +21,7 @@ import FeatureFlagListener from "./components/utils/FeatureFlagListener"
 import SlateEarlyPatch from "./components/editor/SlateEarlyPatch"
 import CacheInitializer from "./components/utils/CacheInitializer"
 import { SyncQueueProvider } from "./contexts/SyncQueueContext"
+import InfiniteReloadProtection from "./components/debug/InfiniteReloadProtection"
 
 // Import polyfills for browser compatibility
 import "intl-segmenter-polyfill"
@@ -221,13 +222,14 @@ export default function RootLayout({
         }} />
       </head>
       <body className={inter.className}>
-        <ErrorBoundary name="root" resetOnPropsChange={true}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
+        <InfiniteReloadProtection>
+          <ErrorBoundary name="root" resetOnPropsChange={true}>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
             <ErrorBoundary name="auth" resetOnPropsChange={true}>
               <AuthProvider>
                 <ErrorBoundary name="app" resetOnPropsChange={true}>
@@ -272,6 +274,7 @@ export default function RootLayout({
             </ErrorBoundary>
           </ThemeProvider>
         </ErrorBoundary>
+        </InfiniteReloadProtection>
       </body>
     </html>
   )

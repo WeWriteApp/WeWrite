@@ -40,8 +40,25 @@ export function DateFormatPicker({
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
   const setIsOpen = onClose ? (open: boolean) => !open && onClose() : setInternalIsOpen;
 
-  // Create a preview date object
-  const previewDate = new Date(currentDate);
+  // Create a preview date object - parse safely to avoid timezone offset issues
+  const previewDate = (() => {
+    try {
+      // Check if it's in YYYY-MM-DD format
+      const isoPattern = /^\d{4}-\d{2}-\d{2}$/;
+      if (isoPattern.test(currentDate)) {
+        // Parse YYYY-MM-DD manually to avoid timezone offset issues
+        const [year, month, day] = currentDate.split('-').map(Number);
+        return new Date(year, month - 1, day); // month is 0-indexed
+      } else {
+        // For other formats, use regular Date constructor
+        return new Date(currentDate);
+      }
+    } catch (error) {
+      console.error('Error parsing currentDate:', error);
+      // Fallback to a default date
+      return new Date(2025, 5, 5); // June 5, 2025
+    }
+  })();
 
   // Handle click outside to close dropdown
   useEffect(() => {

@@ -185,10 +185,23 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   private handleRefreshPage = () => {
     // Use safe reload to prevent infinite loops
     import('../../utils/reload-protection').then(({ safeReload }) => {
-      safeReload('ErrorBoundary user action');
+      const reloadSuccessful = safeReload('ErrorBoundary user action');
+      if (!reloadSuccessful) {
+        console.warn('ErrorBoundary: Reload blocked by protection system');
+      }
     }).catch(() => {
-      // Fallback to direct reload if import fails
-      window.location.reload();
+      // Check infinite reload detector before fallback
+      import('../../utils/infiniteReloadDetector').then(({ infiniteReloadDetector }) => {
+        if (!infiniteReloadDetector.isTriggered()) {
+          window.location.reload();
+        } else {
+          console.warn('ErrorBoundary: Fallback reload blocked by infinite reload detector');
+        }
+      }).catch(() => {
+        // Ultimate fallback - but log it
+        console.warn('ErrorBoundary: Using ultimate fallback reload');
+        window.location.reload();
+      });
     });
   };
 
