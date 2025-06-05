@@ -88,6 +88,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const switchToAccount = localStorage.getItem('switchToAccount');
     const accountSwitchInProgress = localStorage.getItem('accountSwitchInProgress') === 'true';
 
+    // Check if user is already authenticated to prevent redirect loops
+    const isAlreadyAuthenticated = localStorage.getItem('authState') === 'authenticated' &&
+                                   (Cookies.get('authenticated') === 'true' || Cookies.get('session'));
+
     if (hasPendingRedirect && auth.currentUser) {
       console.log('Found pending redirect with authenticated user, handling now...');
       localStorage.removeItem('authRedirectPending');
@@ -169,11 +173,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         // Check if we're on the login page and redirect to home if needed
         if (window.location.pathname.includes('/auth/')) {
-          console.log('On auth page with previous session, redirecting to home...');
-          router.push('/');
+          // Only redirect if not already authenticated to prevent loops
+          if (!isAlreadyAuthenticated) {
+            console.log('On auth page with previous session, redirecting to home...');
+            router.push('/');
+          } else {
+            console.log('Already authenticated, clearing previous session instead of redirecting...');
+            localStorage.removeItem('previousUserSession');
+          }
+        } else {
+          // If we're not on an auth page and have a previous session,
+          // clear it to prevent infinite redirect loops
+          console.log('Not on auth page, clearing previous session to prevent redirect loops...');
+          localStorage.removeItem('previousUserSession');
         }
       } catch (error) {
         console.error('Error parsing previous user session:', error);
+        // Clear invalid session data
+        localStorage.removeItem('previousUserSession');
       }
     }
   }, [router]);
@@ -223,6 +240,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         localStorage.setItem('isAuthenticated', 'true');
         // Clear any previous user session since we have a new login
         localStorage.removeItem('previousUserSession');
+        // Also clear account switching flags to prevent redirect loops
+        localStorage.removeItem('accountSwitchInProgress');
+        localStorage.removeItem('switchToAccount');
 
         try {
           // Get user data from Firestore
