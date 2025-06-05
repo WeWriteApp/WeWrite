@@ -3,19 +3,7 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { CompactSectionSkeleton } from './skeleton-loaders';
 
-// Safely import circuit breaker with fallback
-let getCircuitBreaker;
-try {
-  const circuitBreakerModule = require('../../utils/circuit-breaker');
-  getCircuitBreaker = circuitBreakerModule.getCircuitBreaker;
-} catch (error) {
-  console.warn('Circuit breaker not available, using fallback');
-  getCircuitBreaker = () => ({
-    canExecute: () => true,
-    recordSuccess: () => {},
-    recordFailure: () => {}
-  });
-}
+// Removed circuit breaker complexity - simplified lazy loading
 
 interface LazySectionProps {
   children: React.ReactNode;
@@ -52,10 +40,6 @@ export function LazySection({
   const [shouldLoad, setShouldLoad] = useState(false);
   const [hasError, setHasError] = useState(false);
   const elementRef = useRef<HTMLDivElement>(null);
-  const circuitBreaker = getCircuitBreaker(`lazy_section_${name}`, {
-    failureThreshold: 3,
-    resetTimeMs: 60000 // 1 minute
-  });
 
   // Priority-based delays
   const priorityDelays = {
@@ -70,13 +54,6 @@ export function LazySection({
     const element = elementRef.current;
     if (!element) return;
 
-    // Check circuit breaker before setting up observer
-    if (!circuitBreaker.canExecute()) {
-      console.warn(`LazySection ${name}: Circuit breaker is open, not loading`);
-      setHasError(true);
-      return;
-    }
-
     const observer = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
@@ -85,14 +62,7 @@ export function LazySection({
 
           // Apply priority-based delay
           setTimeout(() => {
-            try {
-              setShouldLoad(true);
-              circuitBreaker.recordSuccess();
-            } catch (error) {
-              console.error(`LazySection ${name}: Error during load:`, error);
-              circuitBreaker.recordFailure();
-              setHasError(true);
-            }
+            setShouldLoad(true);
           }, effectiveDelay);
 
           // Disconnect observer after first intersection
@@ -110,7 +80,7 @@ export function LazySection({
     return () => {
       observer.disconnect();
     };
-  }, [threshold, rootMargin, effectiveDelay, name, circuitBreaker]);
+  }, [threshold, rootMargin, effectiveDelay, name]);
 
   // Error boundary for the lazy-loaded content
   const ErrorFallback = () => (
@@ -121,8 +91,6 @@ export function LazySection({
           setHasError(false);
           setShouldLoad(false);
           setIsVisible(false);
-          // Reset circuit breaker
-          circuitBreaker.reset();
         }}
         className="mt-2 text-sm text-primary hover:underline"
       >
@@ -191,36 +159,16 @@ export function useLazyLoading(name: string) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Safely get circuit breaker
-  let circuitBreaker;
-  try {
-    circuitBreaker = getCircuitBreaker(`lazy_hook_${name}`);
-  } catch (err) {
-    console.warn(`Circuit breaker not available for ${name}:`, err);
-    // Fallback object that always allows execution
-    circuitBreaker = {
-      canExecute: () => true,
-      recordSuccess: () => {},
-      recordFailure: () => {}
-    };
-  }
-
   const executeWithProtection = async (operation: () => Promise<any>) => {
-    if (!circuitBreaker.canExecute()) {
-      throw new Error(`Circuit breaker is open for ${name}`);
-    }
-
     setIsLoading(true);
     setError(null);
 
     try {
       const result = await operation();
-      circuitBreaker.recordSuccess();
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
-      circuitBreaker.recordFailure();
       throw err;
     } finally {
       setIsLoading(false);
@@ -231,7 +179,7 @@ export function useLazyLoading(name: string) {
     isLoading,
     error,
     executeWithProtection,
-    canExecute: circuitBreaker.canExecute()
+    canExecute: true // Always allow execution (removed circuit breaker)
   };
 }
 

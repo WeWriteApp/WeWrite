@@ -226,18 +226,10 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       });
     }
 
-    // Force a re-render if user is authenticated but pages aren't loading
-    if (isAuthenticated && user?.uid && pages && !pages.length && !loading) {
-      console.log("DataProvider: User authenticated but no pages loaded, forcing refresh");
-      // Use a small timeout to avoid immediate re-render
-      const timer = setTimeout(() => {
-        // This will trigger the usePages hook to re-fetch
-        const refreshEvent = new CustomEvent('force-refresh-pages');
-        window.dispatchEvent(refreshEvent);
-      }, 1000);
-
-      return () => clearTimeout(timer);
-    }
+    // REMOVED: Automatic refresh logic that was causing infinite reload loops
+    // Having zero pages is a valid state for users and should not trigger automatic refreshes
+    // This was causing the infinite refresh bug where users with no pages would get stuck
+    // in a continuous reload loop every second.
   }, [user, isAuthenticated, pages, loading]);
 
   // Handle errors from usePages
