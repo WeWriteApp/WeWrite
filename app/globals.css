@@ -187,6 +187,29 @@
   transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
 }
 
+/* Slide-up page animation improvements */
+.slide-up-page {
+  /* Ensure smooth rendering during animation */
+  will-change: transform, opacity;
+  /* Prevent content from being selectable during animation */
+  user-select: none;
+  /* Ensure proper layering */
+  isolation: isolate;
+}
+
+.slide-up-page.animation-complete {
+  /* Re-enable text selection after animation */
+  user-select: auto;
+  /* Reset will-change for performance */
+  will-change: auto;
+}
+
+/* Prevent body scroll during slide-up animation */
+.slide-up-active {
+  overflow: hidden;
+  height: 100vh;
+}
+
 .edit-mode-body-transition {
   transition: border-color 0.3s ease, box-shadow 0.3s ease, padding 0.3s ease;
 }

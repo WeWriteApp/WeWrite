@@ -28,7 +28,9 @@ export function FloatingActionButton({
     if (onClick) {
       onClick(e);
     } else if (href) {
-      router.push(href);
+      // Add source parameter when navigating to /new to trigger slide-up animation
+      const targetUrl = href === '/new' ? '/new?source=fab' : href;
+      router.push(targetUrl);
     }
   };
 
