@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import AuthManager from "../utils/AuthManager";
-import { auth } from "../firebase/auth";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../firebase/config";
 
 export default function SwitchAccountPage() {
   const router = useRouter();
@@ -22,10 +20,18 @@ export default function SwitchAccountPage() {
         }
 
         setStatus('Getting account data...');
-        
-        // Get the current account from AuthManager
-        const currentAccount = AuthManager.getCurrentAccount();
-        
+
+        // Get the current account from localStorage (simplified from AuthManager)
+        let currentAccount = null;
+        try {
+          const accountJson = localStorage.getItem('wewrite_current_account');
+          if (accountJson) {
+            currentAccount = JSON.parse(accountJson);
+          }
+        } catch (error) {
+          console.error('Error getting current account:', error);
+        }
+
         if (!currentAccount) {
           setError('No account to switch to found');
           setTimeout(() => router.push('/'), 1000);

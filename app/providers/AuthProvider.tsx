@@ -2,9 +2,9 @@
 
 import { useContext, createContext, useState, useEffect, ReactNode } from "react";
 import { auth } from "../firebase/config";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { getDatabase, ref, onValue, update } from "firebase/database";
+import { ref, update } from "firebase/database";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { rtdb } from "../firebase/rtdb";
@@ -27,16 +27,7 @@ interface UserData {
   [key: string]: any;
 }
 
-/**
- * Account data interface for switching
- */
-interface AccountData {
-  uid: string;
-  email: string;
-  username: string;
-  isCurrent?: boolean;
-  [key: string]: any;
-}
+
 
 /**
  * Auth context interface
@@ -86,7 +77,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const hasPendingRedirect = localStorage.getItem('authRedirectPending') === 'true';
     const previousUserSession = localStorage.getItem('previousUserSession');
     const switchToAccount = localStorage.getItem('switchToAccount');
-    const accountSwitchInProgress = localStorage.getItem('accountSwitchInProgress') === 'true';
 
     // Check if user is already authenticated to prevent redirect loops
     const isAlreadyAuthenticated = localStorage.getItem('authState') === 'authenticated' &&

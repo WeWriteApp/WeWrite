@@ -133,9 +133,21 @@ export const DataProvider = ({ children }: DataProviderProps) => {
           console.warn("DataProvider: Short timeout reached, attempting recovery");
           setRecoveryAttempted(true);
 
-          // Trigger a refresh event to retry data fetching
-          const refreshEvent = new CustomEvent('force-refresh-pages');
-          window.dispatchEvent(refreshEvent);
+          // Add throttling to prevent rapid recovery attempts
+          const lastRecoveryTime = sessionStorage.getItem('lastRecoveryTime');
+          const now = Date.now();
+          const timeSinceLastRecovery = lastRecoveryTime ? now - parseInt(lastRecoveryTime) : Infinity;
+
+          // Only trigger recovery if it's been at least 10 seconds since last recovery
+          if (timeSinceLastRecovery >= 10000) {
+            sessionStorage.setItem('lastRecoveryTime', now.toString());
+
+            // Trigger a refresh event to retry data fetching
+            const refreshEvent = new CustomEvent('force-refresh-pages');
+            window.dispatchEvent(refreshEvent);
+          } else {
+            console.log("DataProvider: Recovery throttled, too soon since last attempt");
+          }
         }
       }, 5000); // 5 seconds timeout for first recovery attempt
 

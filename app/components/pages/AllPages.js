@@ -24,18 +24,10 @@ const AllPages = () => {
       pagesData: pages?.slice(0, 2) || [] // Show first 2 pages for debugging
     });
 
-    // If we have a user but no pages and we're not loading, try to force a refresh
-    if (user?.uid && !pages?.length && !loading) {
-      console.log("AllPages: User authenticated but no pages loaded, triggering manual refresh");
+    // REMOVED: Automatic refresh logic that was causing infinite reload loops
+    // The force-refresh-pages event was being triggered repeatedly when users had no pages,
+    // causing the infinite reload issue. Users with no pages is a valid state.
 
-      // Manually trigger a refresh after a delay
-      const timer = setTimeout(() => {
-        const refreshEvent = new CustomEvent('force-refresh-pages');
-        window.dispatchEvent(refreshEvent);
-      }, 2000);
-
-      return () => clearTimeout(timer);
-    }
   }, [loading, isAuthenticated, user, pages]);
 
   useEffect(() => {
