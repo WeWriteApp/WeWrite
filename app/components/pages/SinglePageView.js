@@ -76,18 +76,9 @@ import { useConfirmation } from "../../hooks/useConfirmation";
 import ConfirmationModal from "../utils/ConfirmationModal";
 import { useLogging } from "../../providers/LoggingProvider";
 import { GroupsContext } from "../../providers/GroupsProvider";
-import {
-  shouldAllowRefresh,
-  recordSuccessfulLoad,
-  recordUserActivity,
-  isPageBlocked,
-  performHardReset,
-  initPageRefreshProtection,
-  getRefreshStatus
-} from "../../utils/page-refresh-protection";
+// Removed page refresh protection imports
 
-// Debug component for development
-const CircuitBreakerStatus = dynamic(() => import("../debug/CircuitBreakerStatus"), { ssr: false });
+// Removed circuit breaker debug component
 
 // Username handling is now done directly in this component
 
@@ -140,9 +131,7 @@ function SinglePageView({ params }) {
   const [hasLocationChanged, setHasLocationChanged] = useState(false);
   const [titleError, setTitleError] = useState(false);
 
-  // Circuit breaker state for page refresh protection
-  const [refreshProtectionActive, setRefreshProtectionActive] = useState(false);
-  const refreshProtectionCleanup = useRef(null);
+  // Removed circuit breaker state
 
   const { user } = useContext(AuthContext);
   const groups = useContext(GroupsContext);
@@ -523,29 +512,8 @@ function SinglePageView({ params }) {
 
   useEffect(() => {
     if (params.id) {
-      // Check circuit breaker before proceeding with page load
-      if (isPageBlocked(params.id)) {
-        console.error(`Page ${params.id} is blocked by circuit breaker`);
-        performHardReset(params.id, 'Page blocked by circuit breaker');
-        return;
-      }
-
-      // Check if this is an automatic refresh and if it should be allowed
-      const isAutomatic = !document.hasFocus() || performance.navigation?.type === 1;
-      if (isAutomatic && !shouldAllowRefresh(params.id, true)) {
-        console.error(`Automatic refresh blocked for page ${params.id}`);
-        performHardReset(params.id, 'Too many automatic refreshes detected');
-        return;
-      }
-
       setIsLoading(true);
       setLoadingTimedOut(false);
-
-      // Initialize page refresh protection
-      if (!refreshProtectionActive) {
-        setRefreshProtectionActive(true);
-        refreshProtectionCleanup.current = initPageRefreshProtection(params.id);
-      }
 
       // SCROLL RESTORATION FIX: Scroll to top when loading a new page
       // This ensures that when navigating to a new page, we always start at the top
@@ -630,8 +598,7 @@ function SinglePageView({ params }) {
         setPage(pageData);
         setIsPublic(pageData.isPublic || false);
 
-        // Record successful page load for circuit breaker
-        recordSuccessfulLoad(params.id);
+        // Removed circuit breaker logic
 
         // Check if the page belongs to a group
         if (pageData.groupId) {
@@ -820,12 +787,7 @@ function SinglePageView({ params }) {
           loadingTimeoutRef.current = null;
         }
 
-        // Clean up refresh protection
-        if (refreshProtectionCleanup.current) {
-          refreshProtectionCleanup.current();
-          refreshProtectionCleanup.current = null;
-        }
-        setRefreshProtectionActive(false);
+        // Removed refresh protection cleanup
 
         // Reset state to prevent memory leaks
         setIsLoading(false);
@@ -1533,10 +1495,7 @@ function SinglePageView({ params }) {
       <SiteFooter />
       {!isEditing && <PledgeBar />}
 
-      {/* Circuit Breaker Debug Component - Development Only */}
-      {process.env.NODE_ENV === 'development' && params.id && (
-        <CircuitBreakerStatus pageId={params.id} />
-      )}
+      {/* Removed circuit breaker debug component */}
     </Layout>
   );
 }
