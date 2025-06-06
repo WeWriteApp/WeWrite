@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
 import { ArrowLeft, Check, AlertTriangle, XCircle, DollarSign, Clock } from 'lucide-react';
-import { SupporterIcon } from '../components/SupporterIcon';
+import { SupporterIcon } from '../components/payments/SupporterIcon';
 import Link from 'next/link';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';

@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { getStripeSecretKey } from '../../utils/stripeConfig';
 
 export async function GET(request) {
   try {
     const productId = "prod_RqrsHKfbMnaIHX"
     // Initialize Stripe
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const stripe = new Stripe(getStripeSecretKey());
     
     async function getPricesForProduct(productId) {
       const priceList = await stripe.prices.list({
