@@ -28,6 +28,7 @@ export async function POST(request) {
       event = stripe.webhooks.constructEvent(body, signature, endpointSecret);
     } catch (err) {
       return err(`Webhook signature verification failed: ${err.message}`);
+    }
 
     // Handle the event
     switch (event.type) {

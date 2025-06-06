@@ -3,10 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
-import { ChevronLeft, Menu } from "lucide-react";
-import { Sidebar } from "../layout/Sidebar";
-import { useState, useEffect } from "react";
-import { useAuth } from "../../providers/AuthProvider";
+import { ChevronLeft } from "lucide-react";
+import { useEffect } from "react";
 
 export interface NavHeaderProps {
   title?: string;
@@ -14,7 +12,6 @@ export interface NavHeaderProps {
   backLabel?: string;
   rightContent?: React.ReactNode;
   className?: string;
-  showSidebar?: boolean;
 }
 
 /**
@@ -27,12 +24,9 @@ export default function NavHeader({
   backUrl,
   backLabel = "Back",
   rightContent,
-  className = "",
-  showSidebar = true
+  className = ""
 }: NavHeaderProps) {
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user } = useAuth();
 
   const handleBack = () => {
     if (backUrl) {
@@ -68,17 +62,6 @@ export default function NavHeader({
       {/* Top row with buttons on mobile, full header on desktop */}
       <div className="flex items-center justify-between w-full">
         <div className="flex items-center">
-          {showSidebar && (
-            <Button
-              onClick={() => setSidebarOpen(true)}
-              variant="outline"
-              size="icon"
-              aria-label="Menu"
-              className="mr-3 transition-all duration-200"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-          )}
           {backUrl !== undefined && (
             <Button variant="outline" size="sm" onClick={handleBack} className="mr-3">
               <ChevronLeft className="h-5 w-5 mr-2" />
@@ -105,8 +88,7 @@ export default function NavHeader({
         </h1>
       )}
 
-      {/* Render the sidebar outside the main layout */}
-      {showSidebar && user && <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />}
+      {/* Mobile overflow sidebar functionality moved to MobileBottomNav */}
     </div>
   );
 }

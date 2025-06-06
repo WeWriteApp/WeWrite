@@ -7,9 +7,11 @@ import AuthNav from "../auth/AuthNav";
 import { Button } from "../ui/button";
 import { Heart } from "lucide-react";
 import SupportUsModal from "../payments/SupportUsModal";
+import { useSidebarContext } from "./UnifiedSidebar";
 
 export default function Header() {
   const router = useRouter();
+  const { sidebarWidth } = useSidebarContext();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const [showSupportModal, setShowSupportModal] = React.useState(false);
@@ -67,7 +69,15 @@ export default function Header() {
 
   return (
     <>
-      <header ref={headerRef} className={`relative left-0 right-0 z-[60] ${isScrolled ? 'shadow-sm' : ''}`}>
+      <header
+        ref={headerRef}
+        className={`relative top-0 z-[60] transition-all duration-300 ease-in-out ${isScrolled ? 'shadow-sm' : ''}`}
+        style={{
+          left: window.innerWidth >= 768 ? `${sidebarWidth}px` : '0px', // Respect sidebar on desktop
+          right: '0px',
+          width: window.innerWidth >= 768 ? `calc(100% - ${sidebarWidth}px)` : '100%' // Adjust width for sidebar
+        }}
+      >
         <div className={`relative header-border-transition border-visible bg-background transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>
           <div className={`w-full flex items-center h-full px-6 transition-all duration-200`}>
             <div className="flex-1 flex items-center">
@@ -78,7 +88,7 @@ export default function Header() {
             {/* Logo/Title (centered) */}
             <div className="flex items-center justify-center">
               <Link href="/" className="flex items-center space-x-2 transition-all duration-200 hover:scale-110 hover:text-primary">
-                <span className="font-bold dark:text-white text-primary">WeWrite</span>
+                <span className="font-bold text-foreground">WeWrite</span>
               </Link>
             </div>
 

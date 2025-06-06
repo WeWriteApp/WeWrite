@@ -1641,7 +1641,7 @@ const LinkEditor = ({ onSelect, setShowLinkEditor, initialText = "", initialPage
 
       onSelect({
         url: finalUrl,
-        displayText: displayText || externalUrl,
+        displayText: displayText || finalUrl,
         isExternal: true
       });
     }

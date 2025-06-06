@@ -2659,8 +2659,13 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
       }
     }
 
-    // Validate display text
-    if (!displayText.trim()) {
+    // Validate display text - for external links, allow empty display text when custom text is disabled
+    // (the URL will be used as display text in that case)
+    if (activeTab === "page" && !displayText.trim()) {
+      setIsValid(false);
+      setValidationMessage("Please enter display text for the link");
+      return false;
+    } else if (activeTab === "external" && showCustomLinkText && !displayText.trim()) {
       setIsValid(false);
       setValidationMessage("Please enter display text for the link");
       return false;
@@ -2669,14 +2674,14 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
     setIsValid(true);
     setValidationMessage("");
     return true;
-  }, [activeTab, selectedPageId, externalUrl, displayText, formTouched]);
+  }, [activeTab, selectedPageId, externalUrl, displayText, formTouched, showCustomLinkText]);
 
   // Update validation when form changes, but only if the form has been touched
   useEffect(() => {
     if (formTouched) {
       validateForm();
     }
-  }, [activeTab, selectedPageId, externalUrl, displayText, validateForm, formTouched]);
+  }, [activeTab, selectedPageId, externalUrl, displayText, validateForm, formTouched, showCustomLinkText]);
 
   // Auto-focus and text selection logic after modal mounts
   useEffect(() => {
@@ -2776,9 +2781,11 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
   const isPageValid = activeTab === 'page' && !!selectedPageId;
   const isExternalValid = activeTab === 'external' && isValidUrl(externalUrl);
 
-  // For external links, enable button immediately when URL is valid, regardless of display text
+  // For external links, enable button when URL is valid and either:
+  // 1. Custom link text is disabled (URL will be used as display text), or
+  // 2. Custom link text is enabled and display text is provided
   const canSave = (activeTab === 'page' && isPageValid) ||
-                  (activeTab === 'external' && isExternalValid);
+                  (activeTab === 'external' && isExternalValid && (!showCustomLinkText || displayText.trim()));
 
   // Handle close
   const handleClose = () => {
@@ -2835,7 +2842,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
     onSelect({
       type: "external",
       url: finalUrl,
-      displayText: displayText || externalUrl,
+      displayText: displayText || finalUrl,
       isExternal: true
     });
 

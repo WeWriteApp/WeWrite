@@ -153,7 +153,7 @@ export default function AccountPage() {
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-2xl font-bold">Account Settings</h1>
+        <h1 className="text-2xl font-bold">Settings</h1>
       </div>
 
       {user && (

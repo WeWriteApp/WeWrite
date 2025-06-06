@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { cn } from '../../lib/utils';
+import { useSidebarContext } from '../layout/UnifiedSidebar';
 
 interface StickySectionProps {
   children: React.ReactNode;
@@ -296,6 +297,9 @@ export default function StickySection({
   const placeholderRef = useRef<HTMLDivElement>(null);
   const [isSticky, setIsSticky] = useState<boolean>(false);
   const [isAtSectionTop, setIsAtSectionTop] = useState<boolean>(false);
+
+  // Get sidebar context for proper positioning
+  const { sidebarWidth } = useSidebarContext();
   const [isActiveStickySection, setIsActiveStickySection] = useState<boolean>(false);
 
   // Smart click handler for sticky headers
@@ -448,12 +452,12 @@ export default function StickySection({
         }
       }
 
-      // Position sticky header at the top of the viewport (replacing main header)
+      // Position sticky header at the top of the viewport, respecting sidebar width on desktop
       headerElement.style.position = 'fixed';
       headerElement.style.top = '0px';
-      headerElement.style.left = '0px';
+      headerElement.style.left = window.innerWidth >= 768 ? `${sidebarWidth}px` : '0px'; // Respect sidebar on desktop
       headerElement.style.right = '0px';
-      headerElement.style.width = '100%';
+      headerElement.style.width = window.innerWidth >= 768 ? `calc(100% - ${sidebarWidth}px)` : '100%'; // Adjust width for sidebar
       headerElement.style.paddingLeft = '1.5rem'; // 24px consistent with main layout
       headerElement.style.paddingRight = '1.5rem'; // 24px consistent with main layout
       headerElement.style.zIndex = '60'; // Same as main header z-index

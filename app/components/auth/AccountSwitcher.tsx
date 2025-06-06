@@ -65,8 +65,8 @@ export function AccountSwitcher() {
     setIsOpen(false);
 
     if (account.isCurrent) {
-      // If it's the current account, just go to account settings
-      router.push('/account');
+      // If it's the current account, just go to settings
+      router.push('/settings');
     } else {
       // If it's a different account, switch to it
       console.log('AccountSwitcher: Switching to account:', account.email);
@@ -269,12 +269,12 @@ export function AccountSwitcher() {
                 variant="outline"
                 onClick={() => {
                   setIsOpen(false);
-                  router.push('/account');
+                  router.push('/settings');
                 }}
                 className="w-full justify-start mt-2"
               >
                 <Settings className="h-4 w-4 mr-2" />
-                Account Settings
+                Settings
               </Button>
 
               <Button

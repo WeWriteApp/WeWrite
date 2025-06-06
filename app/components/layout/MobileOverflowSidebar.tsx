@@ -2,13 +2,13 @@
 
 import * as React from "react"
 import { useState, useEffect, useContext } from "react"
-import { X, ChevronLeft, Palette, Settings, Check, Bell, User, Users, Shield } from "lucide-react"
+import { X, ChevronLeft, Palette, Settings, Check, Bell, User, Users, Shield, Globe, Lock, Link as LinkIcon, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { auth } from "../../firebase/config"
 import { signOut } from "firebase/auth"
 import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
+import { Switch } from "../ui/switch"
 import { useTheme } from "next-themes"
 import { AccountSwitcher } from "../auth/AccountSwitcher"
 import { AccentColorSwitcher } from "../utils/AccentColorSwitcher"
@@ -16,13 +16,27 @@ import PillStyleToggle from "../utils/PillStyleToggle"
 import NotificationBadge from "../utils/NotificationBadge"
 import { AuthContext } from "../../providers/AuthProvider"
 import { useFeatureFlag } from "../../utils/feature-flags"
+import MapEditor from "../editor/MapEditor"
 
 interface SidebarProps {
   isOpen: boolean
   onClose: () => void
+  // Editor functions (optional - only provided when in edit mode)
+  editorProps?: {
+    isPublic?: boolean;
+    setIsPublic?: (value: boolean) => void;
+    location?: { lat: number; lng: number } | null;
+    setLocation?: (location: { lat: number; lng: number } | null) => void;
+    onInsertLink?: () => void;
+    onCancel?: () => void;
+    onSave?: () => void;
+    onDelete?: () => void;
+    isSaving?: boolean;
+    linkFunctionalityEnabled?: boolean;
+  }
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarProps) {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [currentSection, setCurrentSection] = useState<string | null>(null)
@@ -30,6 +44,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   // Groups feature is now always enabled for all users
   const groupsEnabled = true;
+
+  // Check if map feature is enabled
+  const mapFeatureEnabled = useFeatureFlag('map_view', user?.email);
+
+  // Determine if we're in edit mode
+  const isEditMode = !!(editorProps?.onSave && editorProps?.onCancel);
 
   // Check if user is admin
   const isAdmin = (userEmail?: string | null): boolean => {
@@ -233,7 +253,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               </button>
 
               <button
-                onClick={() => router.push('/account')}
+                onClick={() => router.push('/settings')}
                 className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
               >
                 <Settings className="h-5 w-5 mr-2" />
@@ -259,6 +279,92 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </button>
               )}
             </div>
+
+            {/* Editor Functions (only show in edit mode) */}
+            {isEditMode && (
+              <>
+                <div className="border-t border-border my-4" />
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-foreground px-2">Editor</h3>
+
+                  {/* Public/Private visibility switcher */}
+                  <div
+                    className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted cursor-pointer"
+                    onClick={() => editorProps?.setIsPublic?.(!editorProps?.isPublic)}
+                  >
+                    <div className="flex items-center">
+                      {editorProps?.isPublic ? (
+                        <Globe className="h-5 w-5 mr-2 text-green-500" />
+                      ) : (
+                        <Lock className="h-5 w-5 mr-2 text-muted-foreground" />
+                      )}
+                      <span>{editorProps?.isPublic ? "Public" : "Private"}</span>
+                    </div>
+                    <Switch
+                      checked={editorProps?.isPublic || false}
+                      onCheckedChange={editorProps?.setIsPublic}
+                      aria-label="Toggle page visibility"
+                    />
+                  </div>
+
+                  {/* Insert Link button */}
+                  <button
+                    onClick={editorProps?.onInsertLink}
+                    className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                  >
+                    <LinkIcon className="h-5 w-5 mr-2" />
+                    <span>Insert Link</span>
+                  </button>
+
+                  {/* Location button - only show if map feature is enabled */}
+                  {mapFeatureEnabled && (
+                    <div className="px-3">
+                      <MapEditor
+                        location={editorProps?.location}
+                        onChange={editorProps?.setLocation}
+                        compact={false}
+                      />
+                    </div>
+                  )}
+
+                  {/* Delete button (only show if onDelete is provided) */}
+                  {editorProps?.onDelete && (
+                    <button
+                      onClick={editorProps?.onDelete}
+                      disabled={editorProps?.isSaving}
+                      className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+                    >
+                      <Trash2 className="h-5 w-5 mr-2" />
+                      <span>Delete</span>
+                    </button>
+                  )}
+
+                  {/* Cancel and Save buttons */}
+                  <div className="flex gap-2 px-3">
+                    <Button
+                      onClick={editorProps?.onCancel}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={editorProps?.onSave}
+                      disabled={editorProps?.isSaving}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {editorProps?.isSaving ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent mr-2" />
+                      ) : (
+                        <Check className="h-4 w-4 mr-2" />
+                      )}
+                      {editorProps?.isSaving ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         );
     }
@@ -303,3 +409,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     </>
   )
 }
+
+// Default export for backward compatibility
+export default MobileOverflowSidebar;

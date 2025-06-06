@@ -2,6 +2,9 @@
 
 // Import Slate patches early to ensure they're applied before any Slate components load
 import "./utils/slate-patch";
+import MobileBottomNav from "./components/layout/MobileBottomNav";
+import { SidebarProvider } from "./components/layout/UnifiedSidebar";
+import SidebarLayout from "./components/layout/SidebarLayout";
 
 import { ThemeProvider } from "./providers/ThemeProvider";
 import { AuthProvider } from "./providers/AuthProvider";
@@ -80,25 +83,32 @@ export default function ClientLayout({ children }) {
                             <DrawerProvider>
                               <LineSettingsProvider>
                                 <Drawer />
-                                <div className="flex flex-col min-h-screen bg-background pb-8">
-                                  {/* Handle pending replies after authentication */}
-                                  <PendingReplyHandler />
+                                <SidebarProvider>
+                                  <SidebarLayout>
+                                    <div className="flex flex-col min-h-screen bg-background pb-20 md:pb-8">
+                                      {/* Handle pending replies after authentication */}
+                                      <PendingReplyHandler />
 
-                                  {!isAuthPage && <UsernameWarningBanner />}
-                                  {!isAuthPage && <UsernameEnforcementBanner />}
-                                  <FeatureFlagCookieManager />
-                                  <main className="flex-grow">
-                                    <AdminFeaturesWrapper>
-                                      <ErrorBoundary>
-                                        <HydrationSafetyWrapper>
-                                          <PageTransition enableTransitions={!isAuthPage}>
-                                            {children}
-                                          </PageTransition>
-                                        </HydrationSafetyWrapper>
-                                      </ErrorBoundary>
-                                    </AdminFeaturesWrapper>
-                                  </main>
-                                </div>
+                                      {!isAuthPage && <UsernameWarningBanner />}
+                                      {!isAuthPage && <UsernameEnforcementBanner />}
+                                      <FeatureFlagCookieManager />
+                                      <main className="flex-grow">
+                                        <AdminFeaturesWrapper>
+                                          <ErrorBoundary>
+                                            <HydrationSafetyWrapper>
+                                              <PageTransition enableTransitions={!isAuthPage}>
+                                                {children}
+                                              </PageTransition>
+                                            </HydrationSafetyWrapper>
+                                          </ErrorBoundary>
+                                        </AdminFeaturesWrapper>
+                                      </main>
+
+                                      {/* Mobile Bottom Navigation */}
+                                      {!isAuthPage && <MobileBottomNav />}
+                                    </div>
+                                  </SidebarLayout>
+                                </SidebarProvider>
                                 {process.env.NODE_ENV === 'development' && (
                                   <>
                                     {/* <GADebugger /> */}

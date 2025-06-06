@@ -15,7 +15,7 @@ import { toast } from "../ui/use-toast";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import DisabledLinkModal from "../utils/DisabledLinkModal";
 import { useClickToEdit } from "../../hooks/useClickToEdit";
-import EditModeBottomToolbar from "./EditModeBottomToolbar";
+import { EditorProvider } from "../layout/UnifiedSidebar";
 import ErrorBoundary from "../utils/ErrorBoundary";
 import { Button } from "../ui/button";
 import { Alert, AlertDescription } from "../ui/alert";
@@ -481,7 +481,19 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
 
   return (
-    <div className="editor-container w-full max-w-none mx-4 md:mx-6 lg:mx-8">
+    <EditorProvider
+      isPublic={isPublic}
+      setIsPublic={setIsPublic}
+      location={location}
+      setLocation={setLocation}
+      onInsertLink={handleInsertLink}
+      onCancel={onCancel}
+      onSave={onSave}
+      onDelete={onDelete}
+      isSaving={isSaving}
+      linkFunctionalityEnabled={linkFunctionalityEnabled}
+    >
+      <div className="editor-container w-full max-w-none mx-4 md:mx-6 lg:mx-8">
 
       <div
         className="w-full max-w-none transition-all duration-200 border border-primary/30 rounded-lg p-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 hover:border-primary/40"
@@ -586,22 +598,8 @@ const PageEditor: React.FC<PageEditorProps> = ({
         </div>
       )}
 
-      {/* Bottom Toolbar - unified for all editing scenarios */}
-      {typeof onSave === 'function' && typeof onCancel === 'function' && (
-        <EditModeBottomToolbar
-          isPublic={isPublic || false}
-          setIsPublic={setIsPublic || (() => {})}
-          location={location}
-          setLocation={setLocation || (() => {})}
-          onInsertLink={handleInsertLink}
-          onCancel={onCancel}
-          onSave={onSave}
-          onDelete={onDelete} // Only passed for existing pages
-          isSaving={isSaving}
-          linkFunctionalityEnabled={linkFunctionalityEnabled}
-        />
-      )}
-    </div>
+      </div>
+    </EditorProvider>
   );
 };
 

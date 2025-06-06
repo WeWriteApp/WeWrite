@@ -107,6 +107,7 @@ const TextView: React.FC<TextViewProps> = ({
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
   const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
   const [isHovering, setIsHovering] = useState<boolean>(false);
+  const [showEditTooltip, setShowEditTooltip] = useState<boolean>(false);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number; clientX: number; clientY: number } | null>(null);
   const { user } = useAuth();
   const { page } = usePage();
@@ -475,9 +476,11 @@ const TextView: React.FC<TextViewProps> = ({
 
     // Don't trigger edit mode if clicking on interactive elements
     const target = event.target;
-    const isInteractiveElement = target.closest('a, button, [role="button"], .no-edit-trigger');
+    const isInteractiveElement = target.closest('a, button, [role="button"], .no-edit-trigger, [data-pill-style]');
 
     if (isInteractiveElement) {
+      // Prevent the edit mode from being triggered
+      event.stopPropagation();
       return;
     }
 
@@ -518,9 +521,32 @@ const TextView: React.FC<TextViewProps> = ({
             canEdit && isHovering ? 'bg-muted/20' : ''
           } transition-colors duration-150`}
           onClick={handleContentClick}
-          onMouseEnter={() => canEdit && setIsHovering(true)}
-          onMouseLeave={() => canEdit && setIsHovering(false)}
-          title={canEdit ? "Click to edit" : ""}
+          onMouseEnter={(e) => {
+            if (canEdit) {
+              // Only show hover state if not hovering over interactive elements
+              const target = e.target;
+              const isInteractiveElement = target.closest('a, button, [role="button"], .no-edit-trigger, [data-pill-style]');
+              if (!isInteractiveElement) {
+                setIsHovering(true);
+                setShowEditTooltip(true);
+              }
+            }
+          }}
+          onMouseLeave={() => {
+            if (canEdit) {
+              setIsHovering(false);
+              setShowEditTooltip(false);
+            }
+          }}
+          onMouseMove={(e) => {
+            if (canEdit) {
+              // Dynamically check if we're hovering over interactive elements
+              const target = e.target;
+              const isInteractiveElement = target.closest('a, button, [role="button"], .no-edit-trigger, [data-pill-style]');
+              setShowEditTooltip(!isInteractiveElement);
+            }
+          }}
+          title={canEdit && showEditTooltip ? "Click to edit" : ""}
         >
 
 

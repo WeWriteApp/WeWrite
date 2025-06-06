@@ -15,7 +15,7 @@ import { DashboardSkeleton, ActivitySkeleton, TrendingPagesSkeleton, TopUsersSke
 import LazySection from "./components/ui/lazy-section";
 import { Button } from "./components/ui/button";
 import LandingPage from "./components/landing/LandingPage";
-import { FloatingActionButton } from "./components/ui/floating-action-button";
+
 import SiteFooter from "./components/layout/SiteFooter";
 import { SectionTitle } from "./components/ui/section-title";
 import StickySection from "./components/utils/StickySection";
@@ -349,8 +349,6 @@ const Home = React.memo(function Home() {
               <TopUsersOptimized limit={10} priority="low" />
             </LazySection>
           </StickySection>
-
-          <FloatingActionButton href="/new" className="" />
         </main>
         <SiteFooter className="" />
       </Suspense>

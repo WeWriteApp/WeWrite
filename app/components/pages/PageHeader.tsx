@@ -17,6 +17,7 @@ import ClickableByline from "../utils/ClickableByline";
 import { useAuth } from "../../providers/AuthProvider";
 import { handleAddToPage, handleReply, handleShare } from "../../utils/pageActionHandlers";
 import { useFeatureFlag } from "../../utils/feature-flags";
+import { useSidebarContext } from "../layout/UnifiedSidebar";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -81,6 +82,7 @@ export default function PageHeader({
 }: PageHeaderProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const { sidebarWidth } = useSidebarContext();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const [headerHeight, setHeaderHeight] = React.useState(0);
@@ -494,14 +496,16 @@ export default function PageHeader({
     <>
       <header
         ref={headerRef}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out will-change-transform header-border-transition ${
+        className={`fixed top-0 z-50 transition-all duration-300 ease-out will-change-transform header-border-transition ${
           isScrolled
             ? "bg-background/80 backdrop-blur-sm shadow-sm"
             : "bg-background border-visible"
         }`}
         style={{
           transform: 'translateZ(0)', // Force GPU acceleration
-          width: '100%'
+          left: window.innerWidth >= 768 ? `${sidebarWidth}px` : '0px', // Respect sidebar on desktop
+          right: '0px',
+          width: window.innerWidth >= 768 ? `calc(100% - ${sidebarWidth}px)` : '100%' // Adjust width for sidebar
         }}
       >
         <div className="relative mx-auto px-2 md:px-4">
