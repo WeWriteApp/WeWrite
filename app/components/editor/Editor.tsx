@@ -460,7 +460,12 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
         // Check if text contains only whitespace characters
         return /^\s*$/.test(child.text);
       }
-      return true; // Non-text nodes are considered empty for this purpose
+      // FIX: Links and other non-text nodes should be considered as content
+      // Only return true (empty) for truly empty nodes, not links
+      if (child.type === 'link') {
+        return false; // Links are valid content, not empty
+      }
+      return true; // Other non-text nodes are considered empty for this purpose
     });
   }, []);
 

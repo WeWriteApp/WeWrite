@@ -978,17 +978,27 @@ body {
   color: inherit; /* Keep the text color unchanged */
 }
 
-/* Pill link text - allow full display unless container constrains */
+/* FIX: Allow pill links to display full text and only truncate when absolutely necessary */
 .pill-text {
+  display: inline-block;
+  white-space: nowrap;
+  /* Remove aggressive max-width constraint - let content flow naturally */
+  max-width: none;
+  /* Only apply overflow handling when the parent container constrains width */
+  overflow: visible;
+}
+
+/* Only truncate when the container specifically requests it */
+.truncate-requested .pill-text {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-/* Truncate links in the editor to prevent layout shifts */
+/* Truncate links in the editor only when they would cause layout issues */
 .truncate-link {
-  max-width: 100%;
+  /* Only constrain width when absolutely necessary for layout */
+  max-width: calc(100vw - 4rem); /* Prevent viewport overflow with generous margin */
   display: inline-flex !important;
   white-space: nowrap !important;
   overflow: hidden !important;
@@ -1001,18 +1011,12 @@ body {
   white-space: nowrap;
 }
 
-/* Allow pill links to display full text when space permits */
-.pill-text {
-  display: inline-block;
-  white-space: nowrap;
-  max-width: 100%; /* Use available space, let container control width */
-}
-
-/* Ensure pill links stay on the same line as paragraph numbers */
+/* FIX: Allow pill links to use available space more generously */
 .paragraph-with-number a {
   display: inline-flex !important;
   align-items: center;
-  max-width: calc(100% - 3rem); /* Account for paragraph number width with more generous space */
+  /* Increase available space for links - only constrain when truly necessary */
+  max-width: calc(100vw - 6rem); /* Account for paragraph number and margins with generous space */
 }
 
 /* Ensure proper text contrast in pill links */

@@ -367,13 +367,15 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
           <div className="prose dark:prose-invert max-w-none">
             {bioContent ? (
               <div className="group">
-                {/* Use TextView for the same interactive experience as normal pages */}
+                {/* FIX: Use TextView with direct tap-to-edit functionality matching unified PageEditor experience */}
                 <TextView
                   content={bioContent}
                   canEdit={isProfileOwner}
                   onActiveLine={() => {
-                    // Enable editing when user clicks on a line
-                    setIsEditing(true);
+                    // FIX: Direct tap-to-edit - enter edit mode immediately when user taps bio content
+                    if (isProfileOwner) {
+                      setIsEditing(true);
+                    }
                   }}
                   showLineNumbers={false} // Bio doesn't need line numbers
                 />

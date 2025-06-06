@@ -33,7 +33,8 @@ a.external-link,
   min-height: 1.5rem !important;
   width: fit-content !important;
   min-width: fit-content !important;
-  max-width: none !important;
+  /* FIX: Allow links to display full text, only constrain when viewport would overflow */
+  max-width: calc(100vw - 4rem) !important;
   flex: none !important;
   position: relative !important;
   visibility: visible !important;
