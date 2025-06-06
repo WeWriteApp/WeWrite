@@ -1,23 +1,20 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { updateSubscription } from '../../../firebase/subscription';
 import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/stripeConfig';
-import { db } from '../../../firebase/database';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-
-// Helper function to determine tier based on amount
-function determineTierFromAmount(amount) {
-  return amount >= 50 ? 'tier3' : amount >= 20 ? 'tier2' : amount >= 10 ? 'tier1' : 'tier0';
-}
 
 // Initialize Stripe with the appropriate key based on environment
 const stripeSecretKey = getStripeSecretKey();
-const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2023-10-16',
-});
+const stripe = new Stripe(stripeSecretKey);
 const endpointSecret = getStripeWebhookSecret();
-console.log('Stripe initialized for webhook handler with API version 2023-10-16');
+console.log('Stripe initialized for webhook handler');
 
+function err(msg) {
+  console.error("⚠️ " + msg);
+  return NextResponse.json(
+    { error: msg },
+    { status: 400 }
+  );
+}
 export async function POST(request) {
   try {
     const body = await request.text();
@@ -27,207 +24,91 @@ export async function POST(request) {
 
     // Verify webhook signature
     try {
-      // In development, we might not have a valid signature
-      if (process.env.NODE_ENV === 'development' && !signature) {
-        console.log('Development mode: Skipping signature verification');
-        // Parse the event from the body
-        event = JSON.parse(body);
-      } else {
-        event = stripe.webhooks.constructEvent(body, signature, endpointSecret);
-      }
+      console.log("SECRET ", endpointSecret);
+      event = stripe.webhooks.constructEvent(body, signature, endpointSecret);
     } catch (err) {
-      console.error(`⚠️ Webhook signature verification failed.`, err.message);
-      return NextResponse.json(
-        { error: `Webhook signature verification failed: ${err.message}` },
-        { status: 400 }
-      );
-    }
-
-    // Log the event type for debugging
-    console.log(`Received webhook event: ${event.type}`);
+      return err(`Webhook signature verification failed: ${err.message}`);
 
     // Handle the event
     switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object;
 
-        // Extract the Firebase user ID from metadata
-        const userId = session.metadata.firebaseUID;
-
-        if (!userId) {
-          console.error('No Firebase user ID found in session metadata');
-          break;
-        }
-
-        // Get subscription details
-        const subscription = await stripe.subscriptions.retrieve(session.subscription);
-
-        // Get tier information from metadata
-        const tier = session.metadata?.tier ||
-                    subscription.metadata?.tier ||
-                    determineTierFromAmount(subscription.items.data[0].price.unit_amount / 100);
-
-        console.log(`Webhook: Updating subscription for user ${userId} to active status`);
-
-        // Update subscription in Firestore
-        await updateSubscription(userId, {
-          stripeSubscriptionId: session.subscription,
-          status: 'active',
-          amount: subscription.items.data[0].price.unit_amount / 100,
-          stripePriceId: subscription.items.data[0].price.id,
-          tier: tier,
-          billingCycleStart: new Date(subscription.current_period_start * 1000).toISOString(),
-          billingCycleEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-
-        // Also update the user document to include tier information for quick access
-        const userRef = doc(db, 'users', userId);
-        await updateDoc(userRef, {
-          tier: tier,
-          subscriptionStatus: 'active',
-          updatedAt: serverTimestamp()
-        });
-
-        break;
-      }
-
-      case 'invoice.payment_succeeded': {
+      case 'invoice.paid': {
         const invoice = event.data.object;
 
-        // Only handle subscription invoices
+
+        // Case 1: Subscription invoice
         if (invoice.subscription) {
           const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
-          const customer = await stripe.customers.retrieve(invoice.customer);
-          const userId = customer.metadata.firebaseUID;
 
-          if (!userId) {
-            console.error('No Firebase user ID found in customer metadata');
-            break;
+          const valueStr = subscription.metadata?.subscription_value;
+
+          if (!valueStr) {
+            return err(`Missing subscription_value in invoice metadata`);
           }
 
-          // Get tier information from metadata
-          const tier = customer.metadata?.tier ||
-                      subscription.metadata?.tier ||
-                      determineTierFromAmount(subscription.items.data[0].price.unit_amount / 100);
+          const value = parseInt(valueStr, 10);
+          if (isNaN(value)) {
+            return err('Invalid subscription_value in metadata');
+          }
 
-          console.log(`Webhook: Updating subscription for user ${userId} to active status (invoice payment)`);
 
-          // Update subscription in Firestore
-          await updateSubscription(userId, {
+          //const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+          console.log("subscription paid: ", value/100);
+          await stripe.subscriptions.update(subscription.id, {
+            metadata: {
+              ...subscription.metadata,
+              current_credit: value.toString()
+            }
+          });
+        }
+
+        // Case 2: One-time invoice with upgrade tag
+        else if (invoice.metadata?.tag === 'upgrade') {
+          // Parse custom value from metadata
+          const valueStr = invoice.metadata?.subscription_value;
+          if (!valueStr) {
+            return err(`Missing subscription_value in invoice metadata`);
+          }
+
+          const value = parseInt(valueStr, 10);
+          if (isNaN(value)) {
+            return err('Invalid subscription_value in metadata');
+          }
+
+          console.log("upgrade invoice paid: ", value/100);
+
+          const subscriptions = await stripe.subscriptions.list({
+            customer: invoice.customer,
             status: 'active',
-            amount: subscription.items.data[0].price.unit_amount / 100,
-            stripePriceId: subscription.items.data[0].price.id,
-            tier: tier,
-            billingCycleStart: new Date(subscription.current_period_start * 1000).toISOString(),
-            billingCycleEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-            updatedAt: new Date().toISOString(),
+            limit: 1,
           });
 
-          // Also update the user document to include tier information for quick access
-          const userRef = doc(db, 'users', userId);
-          await updateDoc(userRef, {
-            tier: tier,
-            subscriptionStatus: 'active',
-            updatedAt: serverTimestamp()
-          });
-        }
+          const activeSub = subscriptions.data[0];
+          if (activeSub) {
+            const item = activeSub.items.data[0];
+            const currentCredit = parseInt(activeSub.metadata.current_credit || '0', 10);
+            const newCredit = currentCredit + value;
 
-        break;
-      }
+            console.log("new credit ", newCredit);
+            await stripe.subscriptions.update(activeSub.id, {
+              items: [{
+                id: item.id, // subscription item ID
+                price: invoice.metadata.price_id, // new price ID
+              }],
+              proration_behavior: 'none',
 
-      case 'invoice.payment_failed': {
-        const invoice = event.data.object;
-
-        // Only handle subscription invoices
-        if (invoice.subscription) {
-          const customer = await stripe.customers.retrieve(invoice.customer);
-          const userId = customer.metadata.firebaseUID;
-
-          if (!userId) {
-            console.error('No Firebase user ID found in customer metadata');
-            break;
+              metadata: {
+                ...activeSub.metadata,
+                current_credit: newCredit.toString()
+              }
+            });
           }
-
-          // Update subscription in Firestore
-          await updateSubscription(userId, {
-            status: 'past_due',
-          });
+          else {
+            return err(`Subscription not found`);
+          }
         }
 
         break;
-      }
-
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object;
-        const customer = await stripe.customers.retrieve(subscription.customer);
-        const userId = customer.metadata.firebaseUID;
-
-        if (!userId) {
-          console.error('No Firebase user ID found in customer metadata');
-          break;
-        }
-
-        // Get tier information from metadata
-        const tier = customer.metadata?.tier ||
-                    subscription.metadata?.tier ||
-                    determineTierFromAmount(subscription.items.data[0].price.unit_amount / 100);
-
-        console.log(`Webhook: Updating subscription for user ${userId} to ${subscription.status} status`);
-
-        // Update subscription in Firestore
-        await updateSubscription(userId, {
-          status: subscription.status,
-          amount: subscription.items.data[0].price.unit_amount / 100,
-          stripePriceId: subscription.items.data[0].price.id,
-          tier: tier,
-          billingCycleStart: new Date(subscription.current_period_start * 1000).toISOString(),
-          billingCycleEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-
-        // Also update the user document to include tier information for quick access
-        const userRef = doc(db, 'users', userId);
-        await updateDoc(userRef, {
-          tier: tier,
-          subscriptionStatus: subscription.status,
-          updatedAt: serverTimestamp()
-        });
-
-        break;
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object;
-        const customer = await stripe.customers.retrieve(subscription.customer);
-        const userId = customer.metadata.firebaseUID;
-
-        if (!userId) {
-          console.error('No Firebase user ID found in customer metadata');
-          break;
-        }
-
-        console.log(`Webhook: Updating subscription for user ${userId} to canceled status`);
-
-        // Update subscription in Firestore
-        await updateSubscription(userId, {
-          status: 'canceled',
-          updatedAt: new Date().toISOString(),
-        });
-
-        // Also update the user document to remove tier information
-        const userRef = doc(db, 'users', userId);
-        await updateDoc(userRef, {
-          tier: null,
-          subscriptionStatus: 'canceled',
-          updatedAt: serverTimestamp()
-        });
-
-        break;
-      }
-
-      default: {
-        console.log(`Unhandled event type: ${event.type}`);
       }
     }
 
