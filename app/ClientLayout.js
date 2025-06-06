@@ -26,8 +26,6 @@ import FeatureFlagCookieManager from "./components/utils/FeatureFlagCookieManage
 import { PageTransition } from "./components/ui/page-transition";
 import ErrorBoundary from "./components/utils/ErrorBoundary";
 import HydrationSafetyWrapper from "./components/utils/HydrationSafetyWrapper";
-import { useEffect } from "react";
-import { initReloadProtection, getReloadStatus } from "./utils/reload-protection";
 import { useScrollToTop } from "./hooks/useScrollRestoration";
 
 // Dynamically import PendingReplyHandler with no SSR
@@ -59,24 +57,7 @@ export default function ClientLayout({ children }) {
   // Use scroll restoration hook to ensure pages always start at the top
   useScrollToTop();
 
-  // Initialize reload protection only for specific scenarios
-  // Disabled global reload protection to prevent unwanted navigation warnings
-  useEffect(() => {
-    // Only initialize reload protection in development or when specifically needed
-    if (process.env.NODE_ENV === 'development') {
-      // Log reload status for debugging without initializing protection
-      const status = getReloadStatus();
-      console.log('Reload protection status (monitoring only):', status);
 
-      // Enhanced logging for potential infinite loop detection
-      if (status.potentialLoop) {
-        console.warn('Reload protection: Potential infinite loop detected!', status);
-      }
-    }
-
-    // Note: Global reload protection disabled to prevent unwanted beforeunload warnings
-    // Individual pages can still use reload protection if needed
-  }, []);
 
   return (
     <ThemeProvider

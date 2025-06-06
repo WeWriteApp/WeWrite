@@ -86,8 +86,7 @@ import {
   getRefreshStatus
 } from "../../utils/page-refresh-protection";
 
-// Debug component for development
-const CircuitBreakerStatus = dynamic(() => import("../debug/CircuitBreakerStatus"), { ssr: false });
+
 
 // Username handling is now done directly in this component
 
@@ -1533,10 +1532,7 @@ function SinglePageView({ params }) {
       <SiteFooter />
       {!isEditing && <PledgeBar />}
 
-      {/* Circuit Breaker Debug Component - Development Only */}
-      {process.env.NODE_ENV === 'development' && params.id && (
-        <CircuitBreakerStatus pageId={params.id} />
-      )}
+
     </Layout>
   );
 }
