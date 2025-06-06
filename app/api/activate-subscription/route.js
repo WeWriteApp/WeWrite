@@ -1,11 +1,14 @@
 import { db } from '../../firebase/database';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import Stripe from 'stripe';
-import { checkPaymentsFeatureFlag } from '../feature-flag-helper';
 import { NextResponse } from 'next/server';
+import { getStripeSecretKey } from '../../utils/stripeConfig';
+import { checkPaymentsFeatureFlag } from '../feature-flag-helper';
 
 // Initialize Stripe with the secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(getStripeSecretKey());
+const admin = getFirebaseAdmin();
 
 export async function POST(request) {
   try {
@@ -14,6 +17,7 @@ export async function POST(request) {
     if (featureCheckResponse) {
       return featureCheckResponse;
     }
+
     // Parse request body
     const { tier, customAmount, userId } = await request.json();
     const amount = customAmount;
@@ -38,12 +42,12 @@ export async function POST(request) {
       console.error('Error verifying user:', error);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-
+    
+    
     // Fetch user data from Firestore
     const userDocRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userDocRef);
-
+    
     if (!userDoc.exists()) {
       return new NextResponse(JSON.stringify({ error: 'User not found' }), {
         status: 404,
@@ -52,18 +56,18 @@ export async function POST(request) {
     }
 
     const userData = userDoc.data();
-
+    
     let stripeCustomerId = userData.stripeCustomerId;
-
+    
     if (!stripeCustomerId) {
       // If no customer ID, check if one already exists in Stripe
       if (userData.email) {
         // First check if a customer with this email already exists
-        const existingCustomers = await stripe.customers.list({
+        const existingCustomers = await stripe.customers.list({ 
           email: userData.email,
           limit: 1
         });
-
+        
         if (existingCustomers.data.length > 0) {
           // Use existing customer
           stripeCustomerId = existingCustomers.data[0].id;
@@ -75,7 +79,7 @@ export async function POST(request) {
             },
             email: userData.email
           });
-
+          
           stripeCustomerId = customer.id;
         }
       } else {
@@ -85,14 +89,13 @@ export async function POST(request) {
             userId: userId
           }
         });
-
+        
         stripeCustomerId = customer.id;
       }
       userData["stripeCustomerId"] = stripeCustomerId;
       await updateDoc(userDocRef, userData);
     }
     
->>>>>>> origin/payments
 
     let subscriptions = await stripe.subscriptions.list({
       customer: stripeCustomerId,
@@ -201,10 +204,10 @@ export async function POST(request) {
     }
 
     return new NextResponse(JSON.stringify({ updated: true }));
-
+    
   } catch (subscriptionError) {
     console.error('Error creating Stripe subscription:', subscriptionError);
-
+    
     return new NextResponse(JSON.stringify({
       error: subscriptionError.message || 'Failed to create subscription',
       details: subscriptionError.raw || {}
@@ -213,4 +216,4 @@ export async function POST(request) {
       headers: { 'Content-Type': 'application/json' }
     });
   }
-}
+} 

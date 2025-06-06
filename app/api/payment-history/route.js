@@ -32,10 +32,6 @@ export async function POST(request) {
     // Get the user's subscription from Firestore
     const db = getFirestore();
 
-    if (subscriptionSnapshot.empty) {
-      return NextResponse.json({ payments: [] });
-    }
-
     // Fetch user data from Firestore
     const userDocRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userDocRef);
