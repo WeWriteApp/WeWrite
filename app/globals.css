@@ -1374,3 +1374,25 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* Desktop Sidebar Navigation Alignment */
+@media (min-width: 768px) {
+  /* Ensure desktop sidebar navigation items maintain left-aligned text */
+  .sidebar-text-container span {
+    text-align: left !important;
+  }
+}
+
+/* Mobile Bottom Navigation Icon and Text Alignment */
+@media (max-width: 767px) {
+  /* Center-align mobile bottom navigation icons and text */
+  .mobile-bottom-nav-button {
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-bottom-nav-button span {
+    text-align: center;
+  }
+}
