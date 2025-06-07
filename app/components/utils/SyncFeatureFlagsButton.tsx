@@ -10,7 +10,6 @@ import { RefreshCw, CheckCircle } from 'lucide-react';
 // Define the complete set of feature flags that should exist
 const COMPLETE_FEATURE_FLAGS = {
   payments: false,
-  username_management: false,
   map_view: false,
   calendar_view: false,
   groups: true,
@@ -73,11 +72,6 @@ export default function SyncFeatureFlagsButton() {
           createdAt: timestamp,
           lastModified: timestamp,
           description: 'Enable subscription functionality and UI for managing user subscriptions.'
-        },
-        username_management: {
-          createdAt: timestamp,
-          lastModified: timestamp,
-          description: 'Allow admins to manage user usernames and handle username-related operations.'
         },
         map_view: {
           createdAt: timestamp,

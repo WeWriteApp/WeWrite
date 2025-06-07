@@ -37,14 +37,7 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlag[] = [
     createdAt: new Date().toISOString(),
     lastModified: new Date().toISOString()
   },
-  {
-    id: 'username_management',
-    name: 'Username Management',
-    description: 'Allow admins to manage user usernames and handle username-related operations.',
-    enabled: false,
-    createdAt: new Date().toISOString(),
-    lastModified: new Date().toISOString()
-  },
+
   {
     id: 'map_view',
     name: 'Map View',

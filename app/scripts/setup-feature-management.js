@@ -24,7 +24,6 @@ export async function setupFeatureManagement() {
       console.log('Feature flags document does not exist, creating...');
       await setDoc(featureFlagsRef, {
         payments: false,
-        username_management: false,
         map_view: false,
         calendar_view: false,
         groups: true, // Groups is now enabled by default
@@ -49,11 +48,7 @@ export async function setupFeatureManagement() {
           lastModified: now,
           description: 'Enable subscription functionality and UI'
         },
-        username_management: {
-          createdAt: now,
-          lastModified: now,
-          description: 'Allow admins to manage user usernames'
-        },
+
         map_view: {
           createdAt: now,
           lastModified: now,
@@ -158,7 +153,6 @@ export async function setupFeatureManagement() {
 function getDefaultDescription(flagId) {
   const descriptions = {
     subscription_management: 'Enable subscription functionality and UI',
-    username_management: 'Allow admins to manage user usernames',
     map_view: 'Enable map view for pages with location data',
     calendar_view: 'Enable calendar view for activity tracking',
     groups: 'Enable groups functionality and UI'

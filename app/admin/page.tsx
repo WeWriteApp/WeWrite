@@ -6,6 +6,7 @@ import { useAuth } from "../providers/AuthProvider";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Checkbox } from '../components/ui/checkbox';
 
 import { SwipeableTabs, SwipeableTabsList, SwipeableTabsTrigger, SwipeableTabsContent } from '../components/ui/swipeable-tabs';
 import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -48,6 +49,7 @@ export default function AdminPage() {
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hideGloballyEnabled, setHideGloballyEnabled] = useState(false);
 
   // Feature flags state - using system string names for easier identification
   const [featureFlags, setFeatureFlags] = useState<FeatureFlagState[]>([
@@ -57,12 +59,7 @@ export default function AdminPage() {
       description: 'Enable subscription functionality and UI for managing user subscriptions',
       enabled: false
     },
-    {
-      id: 'username_management',
-      name: 'username_management',
-      description: 'Allow admins to manage user usernames and handle username-related operations',
-      enabled: false
-    },
+
     {
       id: 'map_view',
       name: 'map_view',
@@ -100,6 +97,23 @@ export default function AdminPage() {
       enabled: false
     }
   ]);
+
+  // Load filter state from session storage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedFilterState = sessionStorage.getItem('admin-hide-globally-enabled');
+      if (savedFilterState !== null) {
+        setHideGloballyEnabled(JSON.parse(savedFilterState));
+      }
+    }
+  }, []);
+
+  // Persist filter state to session storage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('admin-hide-globally-enabled', JSON.stringify(hideGloballyEnabled));
+    }
+  }, [hideGloballyEnabled]);
 
   // Check if user is admin
   useEffect(() => {
@@ -437,6 +451,11 @@ export default function AdminPage() {
     });
   };
 
+  // Filter feature flags based on hideGloballyEnabled setting
+  const filteredFeatureFlags = hideGloballyEnabled
+    ? featureFlags.filter(flag => !flag.enabled)
+    : featureFlags;
+
   if (authLoading || !user) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -512,6 +531,24 @@ export default function AdminPage() {
             </div>
           </div>
 
+          {/* Filter Controls */}
+          <div className="flex items-center space-x-2 mb-4 p-3 bg-muted/30 rounded-lg border">
+            <Checkbox
+              id="hide-globally-enabled"
+              checked={hideGloballyEnabled}
+              onCheckedChange={(checked) => setHideGloballyEnabled(checked as boolean)}
+            />
+            <label
+              htmlFor="hide-globally-enabled"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            >
+              Hide globally enabled flags
+            </label>
+            <span className="text-xs text-muted-foreground ml-2">
+              ({filteredFeatureFlags.length} of {featureFlags.length} flags shown)
+            </span>
+          </div>
+
           {isLoading ? (
             <div className="flex justify-center py-4">
               <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -521,7 +558,7 @@ export default function AdminPage() {
 
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {featureFlags.map(flag => (
+                {filteredFeatureFlags.map(flag => (
                   <FeatureFlagCard
                     key={flag.id}
                     flag={flag}
