@@ -8,6 +8,7 @@ import { Loader, Check, X } from 'lucide-react';
 import { checkUsernameAvailability, addUsername } from '../../firebase/auth';
 import { useAuth } from '../../providers/AuthProvider';
 import { cn } from '../../lib/utils';
+import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername } from '../../utils/usernameValidation';
 
 export default function UsernameEnforcementModal() {
   const { user } = useAuth();
@@ -30,11 +31,30 @@ export default function UsernameEnforcementModal() {
 
   // Check username availability with debounce
   useEffect(() => {
-    if (!username || username.length < 3) {
+    if (!username) {
       setIsAvailable(null);
       setValidationMessage("");
       setValidationError(null);
       setUsernameSuggestions([]);
+      return;
+    }
+
+    // First, validate format client-side
+    const formatValidation = validateUsernameFormat(username);
+    if (!formatValidation.isValid) {
+      setIsAvailable(false);
+      setValidationError(formatValidation.error);
+      setValidationMessage(formatValidation.message || "");
+
+      // If it contains whitespace, suggest a cleaned version
+      if (formatValidation.error === "CONTAINS_WHITESPACE") {
+        const cleanSuggestion = suggestCleanUsername(username);
+        if (cleanSuggestion && cleanSuggestion !== username) {
+          setUsernameSuggestions([cleanSuggestion]);
+        }
+      } else {
+        setUsernameSuggestions([]);
+      }
       return;
     }
 
@@ -105,8 +125,9 @@ export default function UsernameEnforcementModal() {
     }
   };
 
-  // Validate username format
-  const isValidFormat = username.length >= 3 && /^[a-zA-Z0-9_]+$/.test(username);
+  // Validate username format using the new validation utility
+  const formatValidation = validateUsernameFormat(username);
+  const isValidFormat = formatValidation.isValid;
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
@@ -133,7 +154,7 @@ export default function UsernameEnforcementModal() {
               {/* Validation messages */}
               {!isValidFormat && username.length > 0 && (
                 <p className="text-sm text-red-500">
-                  Username must be at least 3 characters and contain only letters, numbers, and underscores.
+                  {formatValidation.message || "Username must be at least 3 characters and contain only letters, numbers, and underscores. Spaces and whitespace characters are not allowed."}
                 </p>
               )}
 
@@ -153,9 +174,11 @@ export default function UsernameEnforcementModal() {
                   <p className="text-sm text-red-500">{validationMessage || "Username is already taken."}</p>
 
                   {/* Username suggestions */}
-                  {validationError === "USERNAME_TAKEN" && usernameSuggestions.length > 0 && (
+                  {(validationError === "USERNAME_TAKEN" || validationError === "CONTAINS_WHITESPACE") && usernameSuggestions.length > 0 && (
                     <div className="mt-3">
-                      <p className="text-sm text-foreground mb-2">Try one of these instead:</p>
+                      <p className="text-sm text-foreground mb-2">
+                        {validationError === "CONTAINS_WHITESPACE" ? "Try this instead:" : "Try one of these instead:"}
+                      </p>
                       <div className="flex flex-wrap gap-2">
                         {usernameSuggestions.map((suggestion, index) => (
                           <button

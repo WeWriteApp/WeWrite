@@ -12,6 +12,7 @@ import { Check, Loader2, X, AlertCircle } from "lucide-react";
 import { AuthLayout } from "../../components/layout/auth-layout";
 import { cn } from "../../lib/utils";
 import { debounce } from "lodash";
+import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername } from "../../utils/usernameValidation";
 
 export default function SetupUsernamePage() {
   const [username, setUsername] = useState("");
@@ -51,12 +52,25 @@ export default function SetupUsernamePage() {
     setValidationMessage(null);
     setUsernameSuggestions([]);
 
-    // Skip validation for empty or too short usernames
-    if (!value || value.length < 3) {
+    // Skip validation for empty usernames
+    if (!value) {
       setIsAvailable(null);
-      if (value.length > 0 && value.length < 3) {
-        setValidationError("USERNAME_TOO_SHORT");
-        setValidationMessage("Username must be at least 3 characters");
+      return;
+    }
+
+    // First, validate format client-side
+    const formatValidation = validateUsernameFormat(value);
+    if (!formatValidation.isValid) {
+      setIsAvailable(false);
+      setValidationError(formatValidation.error);
+      setValidationMessage(formatValidation.message);
+
+      // If it contains whitespace, suggest a cleaned version
+      if (formatValidation.error === "CONTAINS_WHITESPACE") {
+        const cleanSuggestion = suggestCleanUsername(value);
+        if (cleanSuggestion && cleanSuggestion !== value) {
+          setUsernameSuggestions([cleanSuggestion]);
+        }
       }
       return;
     }
@@ -236,7 +250,7 @@ export default function SetupUsernamePage() {
           )}
           
           <p className="text-xs text-muted-foreground">
-            Username must be at least 3 characters and can only contain letters, numbers, and underscores.
+            Username must be at least 3 characters and can only contain letters, numbers, and underscores. Spaces and whitespace characters are not allowed.
           </p>
         </div>
 

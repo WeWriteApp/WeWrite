@@ -12,6 +12,7 @@ import { createUser, addUsername, checkUsernameAvailability, loginAnonymously } 
 import { Check, Loader2, X } from "lucide-react"
 import { debounce } from "lodash"
 import { Separator } from "../ui/separator"
+import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername } from "../../utils/usernameValidation"
 
 export function ModernRegisterForm({
   className,
@@ -51,12 +52,25 @@ export function ModernRegisterForm({
     setValidationMessage(null)
     setUsernameSuggestions([])
 
-    // Skip validation for empty or too short usernames
-    if (!value || value.length < 3) {
+    // Skip validation for empty usernames
+    if (!value) {
       setIsAvailable(null)
-      if (value.length > 0 && value.length < 3) {
-        setValidationError("USERNAME_TOO_SHORT")
-        setValidationMessage("Username must be at least 3 characters")
+      return
+    }
+
+    // First, validate format client-side
+    const formatValidation = validateUsernameFormat(value)
+    if (!formatValidation.isValid) {
+      setIsAvailable(false)
+      setValidationError(formatValidation.error)
+      setValidationMessage(formatValidation.message)
+
+      // If it contains whitespace, suggest a cleaned version
+      if (formatValidation.error === "CONTAINS_WHITESPACE") {
+        const cleanSuggestion = suggestCleanUsername(value)
+        if (cleanSuggestion && cleanSuggestion !== value) {
+          setUsernameSuggestions([cleanSuggestion])
+        }
       }
       return
     }
@@ -256,9 +270,11 @@ export function ModernRegisterForm({
               <p className="text-xs">{validationMessage}</p>
 
               {/* Username suggestions */}
-              {validationError === "USERNAME_TAKEN" && usernameSuggestions.length > 0 && (
+              {(validationError === "USERNAME_TAKEN" || validationError === "CONTAINS_WHITESPACE") && usernameSuggestions.length > 0 && (
                 <div className="mt-2">
-                  <p className="text-xs text-foreground mb-1.5">Try one of these instead:</p>
+                  <p className="text-xs text-foreground mb-1.5">
+                    {validationError === "CONTAINS_WHITESPACE" ? "Try this instead:" : "Try one of these instead:"}
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {usernameSuggestions.map((suggestion, index) => (
                       <button

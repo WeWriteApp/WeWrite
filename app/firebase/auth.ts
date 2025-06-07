@@ -309,6 +309,16 @@ export const checkUsernameAvailability = async (username: string): Promise<Usern
       };
     }
 
+    // Check for whitespace characters (comprehensive Unicode whitespace detection)
+    if (/\s/.test(username)) {
+      return {
+        isAvailable: false,
+        message: "Usernames cannot contain spaces or whitespace characters",
+        error: "CONTAINS_WHITESPACE",
+        suggestions: []
+      };
+    }
+
     // Check if username contains only alphanumeric characters and underscores
     if (!/^[a-zA-Z0-9_]+$/.test(username)) {
       return {

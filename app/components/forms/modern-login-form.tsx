@@ -30,10 +30,11 @@ export function ModernLoginForm({
 
   // Validate form inputs
   useEffect(() => {
-    // Accept either email format or username (3+ chars, alphanumeric + underscore)
+    // Accept either email format or username (3+ chars, alphanumeric + underscore, no whitespace)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     const usernameRegex = /^[a-zA-Z0-9_]{3,}$/
-    const isEmailOrUsernameValid = emailRegex.test(emailOrUsername) || usernameRegex.test(emailOrUsername)
+    const hasWhitespace = /\s/.test(emailOrUsername)
+    const isEmailOrUsernameValid = !hasWhitespace && (emailRegex.test(emailOrUsername) || usernameRegex.test(emailOrUsername))
     const isPasswordValid = password.length >= 6
     setIsFormValid(isEmailOrUsernameValid && isPasswordValid)
   }, [emailOrUsername, password])
