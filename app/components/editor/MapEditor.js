@@ -15,7 +15,7 @@ import MapView from './MapView';
  * @param {Object} props.location - The current location object with lat and lng properties
  * @param {Function} props.onChange - Callback when the location changes
  */
-const MapEditor = ({ location, onChange }) => {
+const MapEditor = ({ location, onChange, compact = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [tempLocation, setTempLocation] = useState(location);
 
@@ -47,10 +47,15 @@ const MapEditor = ({ location, onChange }) => {
         <DialogTrigger asChild>
           <Button
             variant={location ? "default" : "outline"}
-            className="flex items-center gap-1.5 bg-background/90 border-input"
+            className={`flex items-center gap-1.5 bg-background/90 border-input ${
+              compact ? "justify-center w-12 h-12 p-0" : ""
+            }`}
+            title={compact ? (location ? 'Edit Location' : 'Add Location') : ""}
           >
-            <MapPin className="h-4 w-4" />
-            <span className="text-sm font-medium">{location ? 'Edit Location' : 'Add Location'}</span>
+            <MapPin className="h-4 w-4 flex-shrink-0" />
+            {!compact && (
+              <span className="text-sm font-medium">{location ? 'Edit Location' : 'Add Location'}</span>
+            )}
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh]">

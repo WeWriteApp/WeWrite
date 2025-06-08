@@ -108,9 +108,9 @@ export default function SubscriptionPage() {
     <PaymentFeatureGuard redirectTo="/account">
       <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8">
-        <Link href="/account" className="inline-flex items-center text-blue-500 hover:text-blue-600">
+        <Link href="/settings" className="inline-flex items-center text-blue-500 hover:text-blue-600">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Account
+          Back to Settings
         </Link>
       </div>
 

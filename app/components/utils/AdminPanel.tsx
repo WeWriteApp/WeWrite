@@ -62,12 +62,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       description: 'Enable subscription functionality and UI',
       enabled: false
     },
-    {
-      id: 'username_management',
-      name: 'username_management',
-      description: 'Allow admins to manage user usernames',
-      enabled: false
-    },
+
     {
       id: 'map_view',
       name: 'map_view',

@@ -266,8 +266,8 @@
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: var(--accent-h) 30% 96%;
-    --accent-foreground: var(--accent-h) 47% 11%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -287,9 +287,6 @@
 
     /* Active line highlight in editor */
     --active-line-highlight: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.1);
-
-    /* Custom text highlight */
-    --accent: var(--accent-h) var(--accent-s) var(--accent-l);
   }
 
   .dark {
@@ -313,7 +310,7 @@
     --muted: 217 33% 18%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: var(--accent-h) 33% 18%;
+    --accent: 217 33% 18%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84% 60%;
@@ -978,17 +975,27 @@ body {
   color: inherit; /* Keep the text color unchanged */
 }
 
-/* Pill link text - allow full display unless container constrains */
+/* FIX: Allow pill links to display full text and only truncate when absolutely necessary */
 .pill-text {
+  display: inline-block;
+  white-space: nowrap;
+  /* Remove aggressive max-width constraint - let content flow naturally */
+  max-width: none;
+  /* Only apply overflow handling when the parent container constrains width */
+  overflow: visible;
+}
+
+/* Only truncate when the container specifically requests it */
+.truncate-requested .pill-text {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-/* Truncate links in the editor to prevent layout shifts */
+/* Truncate links in the editor only when they would cause layout issues */
 .truncate-link {
-  max-width: 100%;
+  /* Only constrain width when absolutely necessary for layout */
+  max-width: calc(100vw - 4rem); /* Prevent viewport overflow with generous margin */
   display: inline-flex !important;
   white-space: nowrap !important;
   overflow: hidden !important;
@@ -1001,18 +1008,12 @@ body {
   white-space: nowrap;
 }
 
-/* Allow pill links to display full text when space permits */
-.pill-text {
-  display: inline-block;
-  white-space: nowrap;
-  max-width: 100%; /* Use available space, let container control width */
-}
-
-/* Ensure pill links stay on the same line as paragraph numbers */
+/* FIX: Allow pill links to use available space more generously */
 .paragraph-with-number a {
   display: inline-flex !important;
   align-items: center;
-  max-width: calc(100% - 3rem); /* Account for paragraph number width with more generous space */
+  /* Increase available space for links - only constrain when truly necessary */
+  max-width: calc(100vw - 6rem); /* Account for paragraph number and margins with generous space */
 }
 
 /* Ensure proper text contrast in pill links */
@@ -1187,11 +1188,8 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
 /* Section header sticky styling - enhanced when sticky */
 .section-header-sticky {
   position: fixed !important;
-  /* top will be set dynamically via JavaScript - should be 0px to replace main header */
+  /* top, left, right, and width will be set dynamically via JavaScript to respect sidebar */
   top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  width: 100% !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
   background-color: hsl(var(--background)) !important;
   backdrop-filter: blur(12px);
@@ -1203,6 +1201,8 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
   padding-right: 1.5rem !important;
   /* Prevent any content bleed-through */
   border-bottom: 1px solid hsl(var(--border)) !important;
+  /* Smooth transitions when sidebar state changes */
+  transition: left 0.3s ease-in-out, width 0.3s ease-in-out !important;
   /* Smooth transition when becoming sticky */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   transition-property: transform, box-shadow, background-color, backdrop-filter;
@@ -1264,6 +1264,47 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
               background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Sidebar smooth animations */
+.sidebar-smooth-transition {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateZ(0); /* Force hardware acceleration */
+  will-change: width, transform, box-shadow;
+  /* Ensure sidebar doesn't create shadows outside its boundaries */
+  overflow: visible;
+  contain: layout;
+}
+
+/* Sidebar hover state improvements */
+.sidebar-hover-overlay {
+  transform: translateX(0);
+  box-shadow: 4px 0 12px -4px rgba(0, 0, 0, 0.15);
+}
+
+/* Sidebar content fade transitions - simplified */
+.sidebar-content-fade {
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Sidebar icon positioning - prevent layout shifts */
+.sidebar-icon-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem; /* 48px */
+  height: 3rem; /* 48px */
+  flex-shrink: 0;
+}
+
+/* Sidebar text animation */
+.sidebar-text-container {
+  overflow: hidden;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* Enhanced shadow and backdrop when sticky */
 .section-header-enhanced {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -1319,5 +1360,45 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
     -moz-user-select: text;
     -ms-user-select: text;
     user-select: text;
+  }
+}
+
+/* Mobile Bottom Navigation Styles */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Ensure content doesn't get hidden behind bottom nav on mobile */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Desktop Sidebar Navigation Alignment */
+@media (min-width: 768px) {
+  /* Ensure desktop sidebar navigation items maintain left-aligned text */
+  .sidebar-text-container span {
+    text-align: left !important;
+  }
+}
+
+/* Mobile Bottom Navigation Icon and Text Alignment */
+@media (max-width: 767px) {
+  /* Center-align mobile bottom navigation icons and text */
+  .mobile-bottom-nav-button {
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-bottom-nav-button span {
+    text-align: center;
+  }
+
+  /* Remove all sidebar shadows on mobile to prevent left edge artifacts */
+  .sidebar-hover-overlay,
+  .sidebar-smooth-transition {
+    box-shadow: none !important;
   }
 }

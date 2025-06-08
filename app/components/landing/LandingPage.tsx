@@ -613,7 +613,7 @@ const LandingPage = () => {
         <div className="w-full bg-background/90 backdrop-blur-xl shadow-sm py-2">
           <div className="container mx-auto flex justify-between items-center px-4">
             <h1
-              className="text-xl font-bold cursor-pointer dark:text-white text-primary"
+              className="text-xl font-bold cursor-pointer text-foreground"
               onClick={() => {
                 // Track mobile logo click in Google Analytics
                 analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {

@@ -5,8 +5,9 @@ import { ChevronLeft } from 'lucide-react';
 import { useAuth } from "../providers/AuthProvider";
 import { getUserSubscription } from "../firebase/subscription";
 import { doc, getDoc } from "firebase/firestore";
-import { addUsername, updateEmail as updateFirebaseEmail } from "../firebase/auth";
+import { addUsername, updateEmail as updateFirebaseEmail, checkUsernameAvailability } from "../firebase/auth";
 import { db } from "../firebase/database";
+import { validateUsernameFormat, getUsernameErrorMessage } from '../utils/usernameValidation';
 import { useRouter } from 'next/navigation';
 
 import { Button } from "../components/ui/button";
@@ -99,8 +100,26 @@ export default function AccountPage() {
     if (!user) return;
     if (!newUsername || newUsername === username) return;
 
+    // Validate username format first
+    const formatValidation = validateUsernameFormat(newUsername);
+    if (!formatValidation.isValid) {
+      alert(`Invalid username: ${formatValidation.message}`);
+      return;
+    }
+
     try {
       setLoading(true);
+
+      // Check username availability
+      const availabilityResult = await checkUsernameAvailability(newUsername);
+
+      if (typeof availabilityResult === 'object' && !availabilityResult.isAvailable) {
+        alert(`Username not available: ${availabilityResult.message}`);
+        return;
+      } else if (typeof availabilityResult === 'boolean' && !availabilityResult) {
+        alert('Username is already taken. Please choose a different username.');
+        return;
+      }
 
       // Add username to user profile
       await addUsername(user.uid, newUsername);
@@ -153,7 +172,7 @@ export default function AccountPage() {
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-2xl font-bold">Account Settings</h1>
+        <h1 className="text-2xl font-bold">Settings</h1>
       </div>
 
       {user && (
@@ -172,8 +191,8 @@ export default function AccountPage() {
                     <p className="text-foreground">{username || 'No username set'}</p>
                     <button
                       onClick={() => {
-                        const newUsername = prompt("Enter new username:", username);
-                        if (newUsername) handleUsernameChange(newUsername);
+                        const newUsername = prompt("Enter new username (letters, numbers, and underscores only - no spaces):", username);
+                        if (newUsername && newUsername.trim()) handleUsernameChange(newUsername.trim());
                       }}
                       className="text-sm text-foreground/60 hover:text-foreground"
                     >

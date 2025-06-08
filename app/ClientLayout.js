@@ -2,6 +2,9 @@
 
 // Import Slate patches early to ensure they're applied before any Slate components load
 import "./utils/slate-patch";
+import MobileBottomNav from "./components/layout/MobileBottomNav";
+import { SidebarProvider } from "./components/layout/UnifiedSidebar";
+import SidebarLayout from "./components/layout/SidebarLayout";
 
 import { ThemeProvider } from "./providers/ThemeProvider";
 import { AuthProvider } from "./providers/AuthProvider";
@@ -18,6 +21,7 @@ import { AccentColorProvider } from "./contexts/AccentColorContext";
 import { MultiAccountProvider } from "./providers/MultiAccountProvider";
 import { NotificationProvider } from "./providers/NotificationProvider";
 import { RenderControlProvider } from "./providers/RenderControlProvider";
+import { TextSelectionProvider } from "./providers/TextSelectionProvider";
 
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
@@ -26,8 +30,6 @@ import FeatureFlagCookieManager from "./components/utils/FeatureFlagCookieManage
 import { PageTransition } from "./components/ui/page-transition";
 import ErrorBoundary from "./components/utils/ErrorBoundary";
 import HydrationSafetyWrapper from "./components/utils/HydrationSafetyWrapper";
-import { useEffect } from "react";
-// Removed reload protection import
 import { useScrollToTop } from "./hooks/useScrollRestoration";
 
 // Dynamically import PendingReplyHandler with no SSR
@@ -59,8 +61,6 @@ export default function ClientLayout({ children }) {
   // Use scroll restoration hook to ensure pages always start at the top
   useScrollToTop();
 
-  // Removed reload protection logic (simplified)
-
   return (
     <ThemeProvider
       attribute="class"
@@ -82,25 +82,34 @@ export default function ClientLayout({ children }) {
                             <DrawerProvider>
                               <LineSettingsProvider>
                                 <Drawer />
-                                <div className="flex flex-col min-h-screen bg-background pb-8">
-                                  {/* Handle pending replies after authentication */}
-                                  <PendingReplyHandler />
+                                <SidebarProvider>
+                                  <SidebarLayout>
+                                    <div className="flex flex-col min-h-screen bg-background pb-20 md:pb-8">
+                                      {/* Handle pending replies after authentication */}
+                                      <PendingReplyHandler />
 
-                                  {!isAuthPage && <UsernameWarningBanner />}
-                                  {!isAuthPage && <UsernameEnforcementBanner />}
-                                  <FeatureFlagCookieManager />
-                                  <main className="flex-grow">
-                                    <AdminFeaturesWrapper>
-                                      <ErrorBoundary>
-                                        <HydrationSafetyWrapper>
-                                          <PageTransition enableTransitions={!isAuthPage}>
-                                            {children}
-                                          </PageTransition>
-                                        </HydrationSafetyWrapper>
-                                      </ErrorBoundary>
-                                    </AdminFeaturesWrapper>
-                                  </main>
-                                </div>
+                                      {!isAuthPage && <UsernameWarningBanner />}
+                                      {!isAuthPage && <UsernameEnforcementBanner />}
+                                      <FeatureFlagCookieManager />
+                                      <main className="flex-grow">
+                                        <AdminFeaturesWrapper>
+                                          <ErrorBoundary>
+                                            <HydrationSafetyWrapper>
+                                              <TextSelectionProvider>
+                                                <PageTransition enableTransitions={!isAuthPage}>
+                                                  {children}
+                                                </PageTransition>
+                                              </TextSelectionProvider>
+                                            </HydrationSafetyWrapper>
+                                          </ErrorBoundary>
+                                        </AdminFeaturesWrapper>
+                                      </main>
+
+                                      {/* Mobile Bottom Navigation */}
+                                      {!isAuthPage && <MobileBottomNav />}
+                                    </div>
+                                  </SidebarLayout>
+                                </SidebarProvider>
                                 {process.env.NODE_ENV === 'development' && (
                                   <>
                                     {/* <GADebugger /> */}

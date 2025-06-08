@@ -3,7 +3,7 @@ import React, { useState, useContext, useRef } from "react";
 import { PillLink } from "./PillLink";
 import { Button } from "../ui/button";
 import SupporterBadge from "../payments/SupporterBadge";
-import { User, Clock, FileText, Lock, Plus, Loader, Info, Users, BookText, Heart } from "lucide-react";
+import { User, Clock, FileText, Lock, Plus, Loader, Info, Users, BookText, Heart, ArrowUpDown, Check } from "lucide-react";
 import { AuthContext } from "../../providers/AuthProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -17,6 +17,12 @@ import SearchResults from "../search/SearchResults";
 import UserBioTab from './UserBioTab';
 import { useFeatureFlag } from "../../utils/feature-flags";
 import FollowingTabContent from './FollowingTabContent';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 
 
 
@@ -64,6 +70,9 @@ export default function UserProfileTabs({ profile }) {
   const [dragX, setDragX] = useState(0);
   const tabsRef = useRef(null);
 
+  // Sorting state for pages tab
+  const [sortBy, setSortBy] = useState("recently-edited"); // "recently-edited", "recently-created", "alphabetical"
+
   // Check if groups feature is enabled
   const groupsEnabled = useFeatureFlag('groups', user?.email);
 
@@ -79,6 +88,37 @@ export default function UserProfileTabs({ profile }) {
     fetchMorePages,
     fetchMorePrivatePages
   } = usePages(profile?.uid, true, user?.uid, true); // Pass isUserPage=true to use higher limit
+
+  // Sort pages based on selected sort option
+  const sortedPages = React.useMemo(() => {
+    if (!pages || pages.length === 0) return pages;
+
+    const pagesCopy = [...pages];
+
+    switch (sortBy) {
+      case "recently-created":
+        return pagesCopy.sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0);
+          const dateB = new Date(b.createdAt || 0);
+          return dateB - dateA; // Newest first
+        });
+
+      case "alphabetical":
+        return pagesCopy.sort((a, b) => {
+          const titleA = (a.title || "Untitled").toLowerCase();
+          const titleB = (b.title || "Untitled").toLowerCase();
+          return titleA.localeCompare(titleB); // A-Z
+        });
+
+      case "recently-edited":
+      default:
+        return pagesCopy.sort((a, b) => {
+          const dateA = new Date(a.updatedAt || a.createdAt || 0);
+          const dateB = new Date(b.updatedAt || b.createdAt || 0);
+          return dateB - dateA; // Newest first
+        });
+    }
+  }, [pages, sortBy]);
 
   // Determine which tabs to show in the requested order
   const visibleTabs = ["bio", "pages", "activity"];
@@ -438,13 +478,55 @@ export default function UserProfileTabs({ profile }) {
                 placeholder={`Search ${profile?.username || 'user'}'s pages...`}
               />
             </div>
+
+            {/* Sort dropdown */}
+            <div className="flex justify-between items-center mb-4">
+              <div className="text-sm text-muted-foreground">
+                {sortedPages?.length || 0} page{(sortedPages?.length || 0) !== 1 ? 's' : ''}
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <ArrowUpDown className="h-4 w-4" />
+                    Sort by{' '}
+                    {sortBy === "recently-edited" && "Recently edited"}
+                    {sortBy === "recently-created" && "Recently created"}
+                    {sortBy === "alphabetical" && "Alphabetical"}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem
+                    onClick={() => setSortBy("recently-edited")}
+                    className="flex items-center justify-between cursor-pointer"
+                  >
+                    <span>Recently edited</span>
+                    {sortBy === "recently-edited" && <Check className="h-4 w-4" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSortBy("recently-created")}
+                    className="flex items-center justify-between cursor-pointer"
+                  >
+                    <span>Recently created</span>
+                    {sortBy === "recently-created" && <Check className="h-4 w-4" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSortBy("alphabetical")}
+                    className="flex items-center justify-between cursor-pointer"
+                  >
+                    <span>Alphabetical</span>
+                    {sortBy === "alphabetical" && <Check className="h-4 w-4" />}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
             {isLoading ? (
               <div className="flex justify-center py-8">
                 <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
               <>
-                <PageList pageList={pages} emptyMessage="No public pages yet" isCurrentUserList={isCurrentUser} />
+                <PageList pageList={sortedPages} emptyMessage="No public pages yet" isCurrentUserList={isCurrentUser} />
                 {loadingError && (
                   <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
                     {loadingError}

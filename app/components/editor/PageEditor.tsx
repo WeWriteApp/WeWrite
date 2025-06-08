@@ -15,11 +15,11 @@ import { toast } from "../ui/use-toast";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import DisabledLinkModal from "../utils/DisabledLinkModal";
 import { useClickToEdit } from "../../hooks/useClickToEdit";
-import EditModeBottomToolbar from "./EditModeBottomToolbar";
+import { EditorProvider } from "../layout/UnifiedSidebar";
 import ErrorBoundary from "../utils/ErrorBoundary";
 import { Button } from "../ui/button";
 import { Alert, AlertDescription } from "../ui/alert";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle, X, Link, Check } from "lucide-react";
 import type { SlateContent } from "../../types/database";
 
 // Safely check if ReactEditor methods exist before using them
@@ -480,11 +480,37 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
 
 
+  // Debug logging for EditorProvider props
+  console.log('[PageEditor] EditorProvider props:', {
+    isPublic,
+    hasSetIsPublic: !!setIsPublic,
+    hasLocation: !!location,
+    hasSetLocation: !!setLocation,
+    hasOnInsertLink: !!handleInsertLink,
+    hasOnCancel: !!onCancel,
+    hasOnSave: !!onSave,
+    hasOnDelete: !!onDelete,
+    isSaving,
+    linkFunctionalityEnabled
+  });
+
   return (
-    <div className="editor-container w-full max-w-none mx-4 md:mx-6 lg:mx-8">
+    <EditorProvider
+      isPublic={isPublic}
+      setIsPublic={setIsPublic}
+      location={location}
+      setLocation={setLocation}
+      onInsertLink={handleInsertLink}
+      onCancel={onCancel}
+      onSave={onSave}
+      onDelete={onDelete}
+      isSaving={isSaving}
+      linkFunctionalityEnabled={linkFunctionalityEnabled}
+    >
+      <div className="editor-container w-full max-w-none px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
 
       <div
-        className="w-full max-w-none transition-all duration-200 border border-primary/30 rounded-lg p-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 hover:border-primary/40"
+        className="w-full max-w-none transition-all duration-200 border border-primary/30 rounded-lg p-4 md:p-6 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 hover:border-primary/40"
       >
         {isHydrated ? (
           <ErrorBoundary
@@ -586,22 +612,69 @@ const PageEditor: React.FC<PageEditorProps> = ({
         </div>
       )}
 
-      {/* Bottom Toolbar - unified for all editing scenarios */}
-      {typeof onSave === 'function' && typeof onCancel === 'function' && (
-        <EditModeBottomToolbar
-          isPublic={isPublic || false}
-          setIsPublic={setIsPublic || (() => {})}
-          location={location}
-          setLocation={setLocation || (() => {})}
-          onInsertLink={handleInsertLink}
-          onCancel={onCancel}
-          onSave={onSave}
-          onDelete={onDelete} // Only passed for existing pages
-          isSaving={isSaving}
-          linkFunctionalityEnabled={linkFunctionalityEnabled}
-        />
-      )}
-    </div>
+      {/* Page Editor Action Buttons */}
+      <div className="mt-8 flex flex-col items-stretch gap-3 w-full md:flex-row md:flex-wrap md:items-center md:justify-center">
+        {/* Insert Link Button */}
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={handleInsertLink}
+          disabled={isSaving}
+          className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+        >
+          <Link className="h-5 w-5" />
+          <span>Insert Link</span>
+        </Button>
+
+        {/* Cancel Button */}
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={onCancel}
+          disabled={isSaving}
+          className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+        >
+          <X className="h-5 w-5" />
+          <span>Cancel</span>
+        </Button>
+
+        {/* Save Button */}
+        <Button
+          onClick={onSave}
+          disabled={isSaving}
+          size="lg"
+          className="gap-2 w-full md:w-auto rounded-2xl font-medium bg-green-600 hover:bg-green-700 text-white"
+        >
+          {isSaving ? (
+            <>
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-background border-t-transparent" />
+              <span>Saving...</span>
+            </>
+          ) : (
+            <>
+              <Check className="h-5 w-5" />
+              <span>Save</span>
+            </>
+          )}
+        </Button>
+
+        {/* Delete Button (optional - only shown when onDelete is provided) */}
+        {onDelete && (
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={onDelete}
+            disabled={isSaving}
+            className="gap-2 w-full md:w-auto rounded-2xl font-medium text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            <AlertTriangle className="h-5 w-5" />
+            <span>Delete</span>
+          </Button>
+        )}
+      </div>
+
+      </div>
+    </EditorProvider>
   );
 };
 

@@ -7,6 +7,7 @@ import { db } from '../../firebase/config'
 import { debounce } from 'lodash'
 import { checkUsernameAvailability } from '../../firebase/auth'
 import { cn } from '../../lib/utils'
+import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername } from '../../utils/usernameValidation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '../ui/dialog'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -27,11 +28,30 @@ export function UsernameModal({ isOpen, onClose, email, onUsernameSet }: Usernam
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([])
 
   const checkUsername = async (username: string) => {
-    if (!username || username.length < 3) {
+    if (!username) {
       setIsAvailable(null)
       setValidationMessage("")
       setValidationError(null)
       setUsernameSuggestions([])
+      return
+    }
+
+    // First, validate format client-side
+    const formatValidation = validateUsernameFormat(username)
+    if (!formatValidation.isValid) {
+      setIsAvailable(false)
+      setValidationError(formatValidation.error)
+      setValidationMessage(formatValidation.message || "")
+
+      // If it contains whitespace, suggest a cleaned version
+      if (formatValidation.error === "CONTAINS_WHITESPACE") {
+        const cleanSuggestion = suggestCleanUsername(username)
+        if (cleanSuggestion && cleanSuggestion !== username) {
+          setUsernameSuggestions([cleanSuggestion])
+        }
+      } else {
+        setUsernameSuggestions([])
+      }
       return
     }
 
@@ -160,9 +180,11 @@ export function UsernameModal({ isOpen, onClose, email, onUsernameSet }: Usernam
               <p className="text-sm text-red-500">{validationMessage || "This username is not available"}</p>
 
               {/* Username suggestions */}
-              {validationError === "USERNAME_TAKEN" && usernameSuggestions.length > 0 && (
+              {(validationError === "USERNAME_TAKEN" || validationError === "CONTAINS_WHITESPACE") && usernameSuggestions.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-sm text-foreground mb-2">Try one of these instead:</p>
+                  <p className="text-sm text-foreground mb-2">
+                    {validationError === "CONTAINS_WHITESPACE" ? "Try this instead:" : "Try one of these instead:"}
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {usernameSuggestions.map((suggestion, index) => (
                       <button

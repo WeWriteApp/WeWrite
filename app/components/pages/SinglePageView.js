@@ -76,9 +76,6 @@ import { useConfirmation } from "../../hooks/useConfirmation";
 import ConfirmationModal from "../utils/ConfirmationModal";
 import { useLogging } from "../../providers/LoggingProvider";
 import { GroupsContext } from "../../providers/GroupsProvider";
-// Removed page refresh protection imports
-
-// Removed circuit breaker debug component
 
 // Username handling is now done directly in this component
 
@@ -130,8 +127,6 @@ function SinglePageView({ params }) {
   const [hasVisibilityChanged, setHasVisibilityChanged] = useState(false);
   const [hasLocationChanged, setHasLocationChanged] = useState(false);
   const [titleError, setTitleError] = useState(false);
-
-  // Removed circuit breaker state
 
   const { user } = useContext(AuthContext);
   const groups = useContext(GroupsContext);
@@ -598,8 +593,6 @@ function SinglePageView({ params }) {
         setPage(pageData);
         setIsPublic(pageData.isPublic || false);
 
-        // Removed circuit breaker logic
-
         // Check if the page belongs to a group
         if (pageData.groupId) {
           setGroupId(pageData.groupId);
@@ -786,8 +779,6 @@ function SinglePageView({ params }) {
           clearTimeout(loadingTimeoutRef.current);
           loadingTimeoutRef.current = null;
         }
-
-        // Removed refresh protection cleanup
 
         // Reset state to prevent memory leaks
         setIsLoading(false);
@@ -1096,20 +1087,6 @@ function SinglePageView({ params }) {
               timeoutMs={10000}
               autoRecover={true}
               onRetry={() => {
-                // Check circuit breaker before retrying
-                if (isPageBlocked(params.id)) {
-                  console.error(`Retry blocked for page ${params.id} by circuit breaker`);
-                  performHardReset(params.id, 'Retry blocked by circuit breaker');
-                  return;
-                }
-
-                // Check if retry should be allowed
-                if (!shouldAllowRefresh(params.id, true)) {
-                  console.error(`Retry blocked for page ${params.id} - too many attempts`);
-                  performHardReset(params.id, 'Too many retry attempts');
-                  return;
-                }
-
                 // Attempt to reload the page data
                 if (params.id) {
                   setIsLoading(true);
@@ -1151,17 +1128,6 @@ function SinglePageView({ params }) {
                   severity="warning"
                   title="Access Error"
                   onRetry={() => {
-                    // Check circuit breaker before reloading
-                    if (isPageBlocked(params.id)) {
-                      performHardReset(params.id, 'Page reload blocked by circuit breaker');
-                      return;
-                    }
-
-                    if (!shouldAllowRefresh(params.id, false)) {
-                      performHardReset(params.id, 'Too many reload attempts');
-                      return;
-                    }
-
                     window.location.reload();
                   }}
                 />
@@ -1186,20 +1152,6 @@ function SinglePageView({ params }) {
           timeoutMs={10000}
           autoRecover={true}
           onRetry={() => {
-            // Check circuit breaker before retrying
-            if (isPageBlocked(params.id)) {
-              console.error(`Retry blocked for page ${params.id} by circuit breaker`);
-              performHardReset(params.id, 'Retry blocked by circuit breaker');
-              return;
-            }
-
-            // Check if retry should be allowed
-            if (!shouldAllowRefresh(params.id, true)) {
-              console.error(`Retry blocked for page ${params.id} - too many attempts`);
-              performHardReset(params.id, 'Too many retry attempts');
-              return;
-            }
-
             // Attempt to reload the page data
             if (params.id) {
               setIsLoading(true);
@@ -1261,17 +1213,6 @@ function SinglePageView({ params }) {
             showDetails={true}
             showRetry={true}
             onRetry={() => {
-              // Check circuit breaker before reloading
-              if (isPageBlocked(params.id)) {
-                performHardReset(params.id, 'Page reload blocked by circuit breaker');
-                return;
-              }
-
-              if (!shouldAllowRefresh(params.id, false)) {
-                performHardReset(params.id, 'Too many reload attempts');
-                return;
-              }
-
               window.location.reload();
             }}
             className="mb-6"
@@ -1367,7 +1308,7 @@ function SinglePageView({ params }) {
           )
         }
       />
-      <div className="pb-24 px-0 sm:px-2 w-full max-w-none min-h-screen">
+      <div className="pb-24 px-2 md:px-4 w-full max-w-none min-h-screen">
         <div className={`transition-all duration-300 ease-in-out ${isEditing ? 'opacity-100' : 'opacity-100'}`}>
           {isEditing ? (
             <div className="animate-in fade-in-0 duration-300">
@@ -1444,6 +1385,7 @@ function SinglePageView({ params }) {
                               (page.groupId && hasGroupAccess)
                             )
                           }
+                          isEditing={isEditing}
                         />
                       </TextViewErrorBoundary>
                       {/* Add text selection menu */}
@@ -1495,7 +1437,6 @@ function SinglePageView({ params }) {
       <SiteFooter />
       {!isEditing && <PledgeBar />}
 
-      {/* Removed circuit breaker debug component */}
     </Layout>
   );
 }

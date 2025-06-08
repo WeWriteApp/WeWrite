@@ -222,7 +222,7 @@ export default function RootLayout({
         }} />
       </head>
       <body className={inter.className}>
-        <ErrorBoundary name="root" resetOnPropsChange={true}>
+          <ErrorBoundary name="root" resetOnPropsChange={true}>
             <ThemeProvider
               attribute="class"
               defaultTheme="system"
