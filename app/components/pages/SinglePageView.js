@@ -1312,7 +1312,7 @@ function SinglePageView({ params }) {
           )
         }
       />
-      <div className="pb-24 px-0 sm:px-2 w-full max-w-none min-h-screen">
+      <div className="pb-24 px-2 md:px-4 w-full max-w-none min-h-screen">
         <div className={`transition-all duration-300 ease-in-out ${isEditing ? 'opacity-100' : 'opacity-100'}`}>
           {isEditing ? (
             <div className="animate-in fade-in-0 duration-300">
@@ -1389,6 +1389,7 @@ function SinglePageView({ params }) {
                               (page.groupId && hasGroupAccess)
                             )
                           }
+                          isEditing={isEditing}
                         />
                       </TextViewErrorBoundary>
                       {/* Add text selection menu */}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useContext, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Menu, Home, User, Plus } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useAuth } from '../../providers/AuthProvider';
@@ -21,6 +21,7 @@ import { isPWA } from '../../utils/pwa-detection';
  */
 export default function MobileBottomNav() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuth();
   const editorContext = useEditorContext();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -61,14 +62,20 @@ export default function MobileBottomNav() {
     router.push('/new?source=mobile-nav');
   };
 
+  // Determine active states for navigation buttons
+  const isHomeActive = pathname === '/';
+  const isProfileActive = pathname === `/user/${user?.uid}`;
+  const isNewPageActive = pathname === '/new';
+  const isMenuActive = sidebarOpen;
+
   return (
     <>
       {/* Bottom Navigation - Only visible on mobile */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border shadow-lg">
         <div className={cn(
-          "flex items-center justify-around px-4 py-3 safe-area-bottom",
+          "flex items-center justify-around px-4 pt-3 pb-6 safe-area-bottom",
           // Add extra bottom padding in PWA mode to account for PWA bottom bar
-          isPWAMode && "pb-6"
+          isPWAMode && "pb-8"
         )}>
           {/* Menu Button */}
           <Button
@@ -76,16 +83,31 @@ export default function MobileBottomNav() {
             size="lg"
             onClick={handleMenuClick}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 h-12 min-w-[60px] rounded-lg",
-              "hover:bg-accent/10 active:bg-accent/20 transition-colors",
-              "text-muted-foreground hover:text-foreground",
+              "flex flex-col items-center justify-center gap-0.5 h-16 flex-1 rounded-lg p-2",
+              "transition-all duration-200 ease-in-out",
+              // Base states with enhanced light mode contrast
+              "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
+              // Active state styling with theme-aware borders
+              isMenuActive
+                ? "bg-primary/10 text-primary border border-primary/30 dark:border-primary/40"
+                : [
+                    // Light mode: higher contrast colors
+                    "text-slate-600 hover:text-slate-900",
+                    // Dark mode: existing muted colors
+                    "dark:text-muted-foreground dark:hover:text-foreground"
+                  ],
+              // Touch feedback for mobile
+              "touch-manipulation select-none",
               // Mobile-specific center alignment (≤768px)
               "mobile-bottom-nav-button"
             )}
             aria-label="Menu"
+            aria-pressed={isMenuActive}
           >
-            <Menu className="h-5 w-5" />
-            <span className="text-xs font-medium text-center">Menu</span>
+            <div className="flex flex-col items-center justify-center flex-1 gap-0.5">
+              <Menu className="h-5 w-5 flex-shrink-0" />
+              <span className="text-xs font-medium text-center leading-none">Menu</span>
+            </div>
           </Button>
 
           {/* Home Button */}
@@ -94,16 +116,31 @@ export default function MobileBottomNav() {
             size="lg"
             onClick={handleHomeClick}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 h-12 min-w-[60px] rounded-lg",
-              "hover:bg-accent/10 active:bg-accent/20 transition-colors",
-              "text-muted-foreground hover:text-foreground",
+              "flex flex-col items-center justify-center gap-0.5 h-16 flex-1 rounded-lg p-2",
+              "transition-all duration-200 ease-in-out",
+              // Base states with enhanced light mode contrast
+              "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
+              // Active state styling with theme-aware borders
+              isHomeActive
+                ? "bg-primary/10 text-primary border border-primary/30 dark:border-primary/40"
+                : [
+                    // Light mode: higher contrast colors
+                    "text-slate-600 hover:text-slate-900",
+                    // Dark mode: existing muted colors
+                    "dark:text-muted-foreground dark:hover:text-foreground"
+                  ],
+              // Touch feedback for mobile
+              "touch-manipulation select-none",
               // Mobile-specific center alignment (≤768px)
               "mobile-bottom-nav-button"
             )}
             aria-label="Home"
+            aria-pressed={isHomeActive}
           >
-            <Home className="h-5 w-5" />
-            <span className="text-xs font-medium text-center">Home</span>
+            <div className="flex flex-col items-center justify-center flex-1 gap-0.5">
+              <Home className="h-5 w-5 flex-shrink-0" />
+              <span className="text-xs font-medium text-center leading-none">Home</span>
+            </div>
           </Button>
 
           {/* Profile Button - Only show when authenticated */}
@@ -112,16 +149,31 @@ export default function MobileBottomNav() {
             size="lg"
             onClick={handleProfileClick}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 h-12 min-w-[60px] rounded-lg",
-              "hover:bg-accent/10 active:bg-accent/20 transition-colors",
-              "text-muted-foreground hover:text-foreground",
+              "flex flex-col items-center justify-center gap-0.5 h-16 flex-1 rounded-lg p-2",
+              "transition-all duration-200 ease-in-out",
+              // Base states with enhanced light mode contrast
+              "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
+              // Active state styling with theme-aware borders
+              isProfileActive
+                ? "bg-primary/10 text-primary border border-primary/30 dark:border-primary/40"
+                : [
+                    // Light mode: higher contrast colors
+                    "text-slate-600 hover:text-slate-900",
+                    // Dark mode: existing muted colors
+                    "dark:text-muted-foreground dark:hover:text-foreground"
+                  ],
+              // Touch feedback for mobile
+              "touch-manipulation select-none",
               // Mobile-specific center alignment (≤768px)
               "mobile-bottom-nav-button"
             )}
             aria-label="Profile"
+            aria-pressed={isProfileActive}
           >
-            <User className="h-5 w-5" />
-            <span className="text-xs font-medium text-center">Profile</span>
+            <div className="flex flex-col items-center justify-center flex-1 gap-0.5">
+              <User className="h-5 w-5 flex-shrink-0" />
+              <span className="text-xs font-medium text-center leading-none">Profile</span>
+            </div>
           </Button>
 
           {/* New Page Button - Only show when authenticated */}
@@ -130,16 +182,31 @@ export default function MobileBottomNav() {
             size="lg"
             onClick={handleNewPageClick}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 h-12 min-w-[60px] rounded-lg",
-              "hover:bg-accent/10 active:bg-accent/20 transition-colors",
-              "text-primary hover:text-primary/80",
+              "flex flex-col items-center justify-center gap-0.5 h-16 flex-1 rounded-lg p-2",
+              "transition-all duration-200 ease-in-out",
+              // Base states with enhanced light mode contrast
+              "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
+              // Active state styling with theme-aware borders
+              isNewPageActive
+                ? "bg-primary/10 text-primary border border-primary/30 dark:border-primary/40"
+                : [
+                    // Light mode: higher contrast colors
+                    "text-slate-600 hover:text-slate-900",
+                    // Dark mode: existing muted colors
+                    "dark:text-muted-foreground dark:hover:text-foreground"
+                  ],
+              // Touch feedback for mobile
+              "touch-manipulation select-none",
               // Mobile-specific center alignment (≤768px)
               "mobile-bottom-nav-button"
             )}
             aria-label="New Page"
+            aria-pressed={isNewPageActive}
           >
-            <Plus className="h-5 w-5" />
-            <span className="text-xs font-medium text-center">New Page</span>
+            <div className="flex flex-col items-center justify-center flex-1 gap-0.5">
+              <Plus className="h-5 w-5 flex-shrink-0" />
+              <span className="text-xs font-medium text-center leading-none">New Page</span>
+            </div>
           </Button>
         </div>
       </div>

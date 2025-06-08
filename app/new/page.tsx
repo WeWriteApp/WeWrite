@@ -94,6 +94,29 @@ export default function NewPage() {
   const isReply = searchParams?.has('replyTo') || false;
   const isDailyNote = searchParams?.get('type') === 'daily-note' || isExactDateFormat(title);
 
+  // Initialize content from URL parameters (for text selection feature)
+  useEffect(() => {
+    if (searchParams) {
+      const urlTitle = searchParams.get('title');
+      const urlContent = searchParams.get('content');
+
+      if (urlTitle && urlTitle.trim()) {
+        setTitle(urlTitle.trim());
+      }
+
+      if (urlContent && urlContent.trim()) {
+        // Create editor content from the URL parameter
+        const contentNodes = [
+          {
+            type: "paragraph",
+            children: [{ text: urlContent.trim() }]
+          }
+        ];
+        setEditorState(contentNodes);
+      }
+    }
+  }, [searchParams]);
+
   // Initialize page-like object for new page creation
   useEffect(() => {
     const mockPage = {
@@ -413,7 +436,7 @@ export default function NewPage() {
           titleError={titleError}
           canEdit={true} // User can always edit their new page
         />
-        <div className="pb-24 px-0 sm:px-2 w-full max-w-none min-h-screen">
+        <div className="pb-24 px-2 md:px-4 w-full max-w-none min-h-screen">
           <div className="transition-all duration-300 ease-in-out opacity-100">
             {isEditing ? (
               <div className="animate-in fade-in-0 duration-300">

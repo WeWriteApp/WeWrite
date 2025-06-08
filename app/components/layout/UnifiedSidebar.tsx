@@ -101,6 +101,14 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     toggleExpanded
   };
 
+  // Debug logging for SidebarProvider
+  console.log('[SidebarProvider] Render check:', {
+    isMounted,
+    hasUser: !!user,
+    userEmail: user?.email,
+    shouldRenderSidebar: isMounted && user
+  });
+
   return (
     <SidebarContext.Provider value={contextValue}>
       {/* Only render sidebar for authenticated users */}
@@ -175,6 +183,16 @@ function UnifiedSidebarContent({
   // Determine if we're in edit mode (editor functions are available)
   const isEditMode = !!(editorContext.onSave && editorContext.onCancel);
 
+  // Debug logging for edit mode detection
+  console.log('[UnifiedSidebar] Edit mode detection:', {
+    isEditMode,
+    hasOnSave: !!editorContext.onSave,
+    hasOnCancel: !!editorContext.onCancel,
+    hasOnInsertLink: !!editorContext.onInsertLink,
+    hasOnDelete: !!editorContext.onDelete,
+    editorContext
+  });
+
   // Determine if sidebar should show content (expanded or hovering)
   const showContent = isExpanded || isHovering;
 
@@ -207,6 +225,15 @@ function UnifiedSidebarContent({
     { value: "dark", label: "Dark", icon: <Moon className="h-4 w-4 mr-2" /> },
     { value: "system", label: "System", icon: <Laptop className="h-4 w-4 mr-2" /> },
   ];
+
+  // Debug logging for sidebar rendering
+  console.log('[UnifiedSidebar] Rendering sidebar:', {
+    user: !!user,
+    isEditMode,
+    showContent,
+    isExpanded,
+    isHovering
+  });
 
   // Render the sidebar
   const sidebarContent = (

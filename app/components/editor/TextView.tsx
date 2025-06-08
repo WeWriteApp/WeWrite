@@ -97,7 +97,8 @@ const TextView: React.FC<TextViewProps> = ({
   showDiff = false,
   canEdit: propCanEdit,
   onActiveLine,
-  showLineNumbers = true
+  showLineNumbers = true,
+  isEditing = false
 }) => {
   const [parsedContents, setParsedContents] = useState<SlateContent | null>(null);
   const [language, setLanguage] = useState<string | null>(null);
@@ -566,6 +567,7 @@ const TextView: React.FC<TextViewProps> = ({
               onActiveLine={handleActiveLine}
               showDiff={showDiff}
               clickPosition={clickPosition}
+              isEditing={isEditing}
             />
           )}
         </div>
@@ -610,7 +612,7 @@ const TextView: React.FC<TextViewProps> = ({
   }
 };
 
-export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false, clickPosition = null }) => {
+export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false, clickPosition = null, isEditing = false }) => {
   // Wrap in try-catch to handle any rendering errors
   try {
     // Additional safety checks for browser compatibility
@@ -694,7 +696,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
                       if (child.type === 'link') {
                         console.log('LINK_DEBUG: Found link in dense mode:', JSON.stringify(child));
                         try {
-                          return <LinkNode key={childIndex} node={child} canEdit={false} />;
+                          return <LinkNode key={childIndex} node={child} canEdit={false} isEditing={false} />;
                         } catch (error) {
                           console.error('LINK_RENDER_ERROR: Error rendering link in dense mode:', error);
                           return <span key={childIndex} className="text-red-500">[Link Error]</span>;
@@ -734,7 +736,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
 
                               if (grandchild.type === 'link') {
                                 try {
-                                  return <LinkNode key={`${childIndex}-${grandchildIndex}`} node={grandchild} canEdit={false} />;
+                                  return <LinkNode key={`${childIndex}-${grandchildIndex}`} node={grandchild} canEdit={false} isEditing={false} />;
                                 } catch (error) {
                                   console.error('LINK_RENDER_ERROR: Error rendering link in grandchild:', error);
                                   return <span key={`${childIndex}-${grandchildIndex}`} className="text-red-500">[Link Error]</span>;
@@ -775,7 +777,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
       <div className="w-full text-left min-h-screen">
         {contents.map((node, index) => (
           <React.Fragment key={index}>
-            {loadedParagraphs.includes(index) && renderNode(node, mode, index, canEdit, activeLineIndex, onActiveLine, showDiff)}
+            {loadedParagraphs.includes(index) && renderNode(node, mode, index, canEdit, activeLineIndex, onActiveLine, showDiff, isEditing)}
           </React.Fragment>
         ))}
       </div>
@@ -783,7 +785,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
   }
 
   // If it's a single node, render it directly
-  return renderNode(contents, mode, 0, canEdit, activeLineIndex, onActiveLine, showDiff);
+  return renderNode(contents, mode, 0, canEdit, activeLineIndex, onActiveLine, showDiff, isEditing);
 
   } catch (error) {
     console.error('Error rendering content:', error);
@@ -815,7 +817,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
 };
 
 // Render content based on node type
-const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false) => {
+const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false, isEditing = false) => {
   if (!node) return null;
 
   // Add special debugging for paragraph 2 (index 1)
@@ -845,6 +847,7 @@ const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, 
           isActive={activeLineIndex === index}
           onActiveLine={onActiveLine}
           showDiff={showDiff}
+          isEditing={isEditing}
         />
       );
     }
@@ -864,7 +867,7 @@ const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, 
  * - Standard text size (1rem/16px)
  * - Proper spacing between paragraphs
  */
-const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onActiveLine = null, showDiff = false }) => {
+const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onActiveLine = null, showDiff = false, isEditing = false }) => {
   const { lineMode } = useLineSettings();
   const paragraphRef = useRef(null);
   const [lineHovered, setLineHovered] = useState(false);
@@ -888,7 +891,7 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
     if (child.type === 'link') {
       try {
         console.log('PARAGRAPH_LINK_DEBUG: Rendering link in paragraph:', JSON.stringify(child));
-        return <LinkNode key={i} node={child} canEdit={canEdit} />;
+        return <LinkNode key={i} node={child} canEdit={canEdit} isEditing={isEditing} />;
       } catch (error) {
         console.error('PARAGRAPH_LINK_ERROR: Error rendering link in paragraph:', error);
         return <span key={i} className="text-red-500">[Link Error]</span>;
@@ -930,7 +933,7 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
         <React.Fragment key={i}>
           {child.children.map((grandchild, grandchildIndex) => {
             if (grandchild.type === 'link') {
-              return <LinkNode key={`${i}-${grandchildIndex}`} node={grandchild} />;
+              return <LinkNode key={`${i}-${grandchildIndex}`} node={grandchild} canEdit={canEdit} isEditing={isEditing} />;
             } else if (grandchild.text) {
               let className = '';
               if (grandchild.bold) className += ' font-bold';
@@ -993,10 +996,13 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
         {canEdit && (
           <Edit2
             className={`h-4 w-4 text-muted-foreground flex-shrink-0 ml-2 cursor-pointer transition-opacity duration-200 ${
-              // Desktop: only show on hover, Mobile: show permanently on first line only
-              index === 0
-                ? 'opacity-60 hover:opacity-100 md:opacity-0 md:group-hover:opacity-60 md:hover:opacity-100'
-                : 'opacity-0 group-hover:opacity-60 hover:opacity-100 hidden md:block'
+              // When in edit mode: show all edit buttons prominently
+              // When not in edit mode: Desktop shows on hover, Mobile shows permanently on first line only
+              isEditing
+                ? 'opacity-80 hover:opacity-100' // Always visible when editing
+                : index === 0
+                  ? 'opacity-60 hover:opacity-100 md:opacity-0 md:group-hover:opacity-60 md:hover:opacity-100'
+                  : 'opacity-0 group-hover:opacity-60 hover:opacity-100 hidden md:block'
             }`}
             onClick={(e) => {
               e.stopPropagation();
@@ -1012,7 +1018,7 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
 
 // WeWrite only supports paragraph nodes, so we've removed CodeBlockNode, HeadingNode, and ListNode
 
-const LinkNode = ({ node, canEdit = false }) => {
+const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
 
   // Add more robust error handling for invalid link nodes
@@ -1242,7 +1248,7 @@ const LinkNode = ({ node, canEdit = false }) => {
       const formattedHref = href.startsWith('/') ? href : `/pages/${pageId}`;
 
       // Handle edit mode vs view mode click behavior
-      if (canEdit) {
+      if (canEdit && isEditing) {
         // In edit mode, clicking should open the link editor
         return (
           <span className="inline-flex items-center gap-1 compound-link-container">
@@ -1334,6 +1340,7 @@ const LinkNode = ({ node, canEdit = false }) => {
           showAuthor={false}
           authorUsername={null}
           canEdit={canEdit}
+          isEditing={isEditing}
         />
       </span>
     );
@@ -1355,7 +1362,7 @@ const LinkNode = ({ node, canEdit = false }) => {
     }
 
     // Handle edit mode vs view mode click behavior
-    if (canEdit) {
+    if (canEdit && isEditing) {
       // In edit mode, clicking should open the link editor
       return (
         <span
@@ -1446,7 +1453,7 @@ const LinkNode = ({ node, canEdit = false }) => {
   }
 
   // Handle edit mode vs view mode click behavior for other links
-  if (canEdit) {
+  if (canEdit && isEditing) {
     // In edit mode, clicking should open the link editor
     return (
       <span
@@ -1480,7 +1487,7 @@ const LinkNode = ({ node, canEdit = false }) => {
 };
 
 // Component for internal links that fetches and displays page titles
-const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle, showAuthor, authorUsername, canEdit = false }) => {
+const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle, showAuthor, authorUsername, canEdit = false, isEditing = false }) => {
   const [currentTitle, setCurrentTitle] = useState(null);
   const [isLoading, setIsLoading] = useState(false); // Start with false, only set to true when actually fetching
   const [fetchError, setFetchError] = useState(false);
@@ -1583,7 +1590,7 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle, s
   }
 
   // Handle edit mode vs view mode click behavior
-  if (canEdit) {
+  if (canEdit && isEditing) {
     // In edit mode, clicking should open the link editor
     return (
       <TooltipProvider>

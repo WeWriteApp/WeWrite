@@ -266,8 +266,8 @@
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: var(--accent-h) 30% 96%;
-    --accent-foreground: var(--accent-h) 47% 11%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -287,9 +287,6 @@
 
     /* Active line highlight in editor */
     --active-line-highlight: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.1);
-
-    /* Custom text highlight */
-    --accent: var(--accent-h) var(--accent-s) var(--accent-l);
   }
 
   .dark {
@@ -313,7 +310,7 @@
     --muted: 217 33% 18%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: var(--accent-h) 33% 18%;
+    --accent: 217 33% 18%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84% 60%;
@@ -1274,12 +1271,15 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
               box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   transform: translateZ(0); /* Force hardware acceleration */
   will-change: width, transform, box-shadow;
+  /* Ensure sidebar doesn't create shadows outside its boundaries */
+  overflow: visible;
+  contain: layout;
 }
 
 /* Sidebar hover state improvements */
 .sidebar-hover-overlay {
   transform: translateX(0);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: 4px 0 12px -4px rgba(0, 0, 0, 0.15);
 }
 
 /* Sidebar content fade transitions - simplified */
@@ -1394,5 +1394,11 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
 
   .mobile-bottom-nav-button span {
     text-align: center;
+  }
+
+  /* Remove all sidebar shadows on mobile to prevent left edge artifacts */
+  .sidebar-hover-overlay,
+  .sidebar-smooth-transition {
+    box-shadow: none !important;
   }
 }

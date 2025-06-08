@@ -664,8 +664,8 @@ export default function PageHeader({
                     groupId && groupName ? (
                       <span className="flex items-center gap-1 justify-center mx-auto">
                         <span className="whitespace-nowrap flex-shrink-0">in</span>
-                        {/* If user can change ownership, use ClickableByline, otherwise use Link */}
-                        {user && userId && user.uid === userId && pageId ? (
+                        {/* Show ClickableByline only in edit mode for page owners, otherwise show Link for navigation */}
+                        {user && userId && user.uid === userId && pageId && isEditing ? (
                           <ClickableByline
                             isLoading={isLoading}
                             isChanging={false}
@@ -694,8 +694,8 @@ export default function PageHeader({
                     ) : (
                       <span className="flex items-center gap-1 justify-center mx-auto">
                         <span className="whitespace-nowrap flex-shrink-0">by</span>
-                        {/* If user can change ownership, use ClickableByline, otherwise use Link */}
-                        {user && userId && user.uid === userId && pageId ? (
+                        {/* Show ClickableByline only in edit mode for page owners, otherwise show Link for navigation */}
+                        {user && userId && user.uid === userId && pageId && isEditing ? (
                           <ClickableByline
                             isLoading={isLoading}
                             isChanging={false}

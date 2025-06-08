@@ -21,6 +21,7 @@ import { AccentColorProvider } from "./contexts/AccentColorContext";
 import { MultiAccountProvider } from "./providers/MultiAccountProvider";
 import { NotificationProvider } from "./providers/NotificationProvider";
 import { RenderControlProvider } from "./providers/RenderControlProvider";
+import { TextSelectionProvider } from "./providers/TextSelectionProvider";
 
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
@@ -96,9 +97,11 @@ export default function ClientLayout({ children }) {
                                         <AdminFeaturesWrapper>
                                           <ErrorBoundary>
                                             <HydrationSafetyWrapper>
-                                              <PageTransition enableTransitions={!isAuthPage}>
-                                                {children}
-                                              </PageTransition>
+                                              <TextSelectionProvider>
+                                                <PageTransition enableTransitions={!isAuthPage}>
+                                                  {children}
+                                                </PageTransition>
+                                              </TextSelectionProvider>
                                             </HydrationSafetyWrapper>
                                           </ErrorBoundary>
                                         </AdminFeaturesWrapper>

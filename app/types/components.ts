@@ -37,6 +37,7 @@ export interface TextViewProps extends BaseProps {
   canEdit?: boolean;
   onActiveLine?: (lineIndex: number) => void;
   showLineNumbers?: boolean;
+  isEditing?: boolean;
 }
 
 // Editor component props
