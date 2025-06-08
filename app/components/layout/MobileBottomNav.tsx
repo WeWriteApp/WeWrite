@@ -87,9 +87,9 @@ export default function MobileBottomNav() {
               "transition-all duration-200 ease-in-out",
               // Base states with enhanced light mode contrast
               "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
-              // Active state styling with accent color in light mode
+              // Active state styling with stronger visual distinction
               isMenuActive
-                ? "bg-accent/10 text-accent border border-accent/30 dark:bg-accent/20 dark:text-accent dark:border-accent/40"
+                ? "bg-accent text-accent-foreground shadow-sm border border-accent/50 dark:bg-accent dark:text-accent-foreground dark:border-accent/60"
                 : [
                     // Light mode: higher contrast colors
                     "text-slate-600 hover:text-slate-900",
@@ -120,9 +120,9 @@ export default function MobileBottomNav() {
               "transition-all duration-200 ease-in-out",
               // Base states with enhanced light mode contrast
               "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
-              // Active state styling with accent color in light mode
+              // Active state styling with stronger visual distinction
               isHomeActive
-                ? "bg-accent/10 text-accent border border-accent/30 dark:bg-accent/20 dark:text-accent dark:border-accent/40"
+                ? "bg-accent text-accent-foreground shadow-sm border border-accent/50 dark:bg-accent dark:text-accent-foreground dark:border-accent/60"
                 : [
                     // Light mode: higher contrast colors
                     "text-slate-600 hover:text-slate-900",
@@ -153,9 +153,9 @@ export default function MobileBottomNav() {
               "transition-all duration-200 ease-in-out",
               // Base states with enhanced light mode contrast
               "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
-              // Active state styling with accent color in light mode
+              // Active state styling with stronger visual distinction
               isProfileActive
-                ? "bg-accent/10 text-accent border border-accent/30 dark:bg-accent/20 dark:text-accent dark:border-accent/40"
+                ? "bg-accent text-accent-foreground shadow-sm border border-accent/50 dark:bg-accent dark:text-accent-foreground dark:border-accent/60"
                 : [
                     // Light mode: higher contrast colors
                     "text-slate-600 hover:text-slate-900",
@@ -186,9 +186,9 @@ export default function MobileBottomNav() {
               "transition-all duration-200 ease-in-out",
               // Base states with enhanced light mode contrast
               "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
-              // Active state styling with accent color in light mode
+              // Active state styling with stronger visual distinction
               isNewPageActive
-                ? "bg-accent/10 text-accent border border-accent/30 dark:bg-accent/20 dark:text-accent dark:border-accent/40"
+                ? "bg-accent text-accent-foreground shadow-sm border border-accent/50 dark:bg-accent dark:text-accent-foreground dark:border-accent/60"
                 : [
                     // Light mode: higher contrast colors
                     "text-slate-600 hover:text-slate-900",
