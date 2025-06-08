@@ -158,6 +158,7 @@ export const PillLink = forwardRef(({
           href="#"
           onClick={(e) => {
             e.preventDefault();
+            e.stopPropagation(); // Prevent event bubbling to parent containers
             setShowExternalLinkModal(true);
           }}
           className={baseStyles}
@@ -219,6 +220,7 @@ export const PillLink = forwardRef(({
         // Only prevent default and navigate if we have a valid href
         if (href && href !== '#') {
           e.preventDefault(); // Prevent default to handle navigation manually
+          e.stopPropagation(); // CRITICAL: Stop event bubbling to prevent edit mode activation
 
           console.log('PillLink clicked:', {
             href,

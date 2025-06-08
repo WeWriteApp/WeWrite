@@ -73,9 +73,9 @@ export default function MobileBottomNav() {
       {/* Bottom Navigation - Only visible on mobile */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border shadow-lg">
         <div className={cn(
-          "flex items-center justify-around px-4 pt-3 pb-6 safe-area-bottom",
+          "flex items-center justify-around px-4 pt-3 pb-7 safe-area-bottom",
           // Add extra bottom padding in PWA mode to account for PWA bottom bar
-          isPWAMode && "pb-8"
+          isPWAMode && "pb-9"
         )}>
           {/* Menu Button */}
           <Button
@@ -83,13 +83,13 @@ export default function MobileBottomNav() {
             size="lg"
             onClick={handleMenuClick}
             className={cn(
-              "flex flex-col items-center justify-center gap-0.5 h-16 flex-1 rounded-lg p-2",
+              "flex flex-col items-center justify-center gap-1 h-16 flex-1 rounded-lg p-2",
               "transition-all duration-200 ease-in-out",
               // Base states with enhanced light mode contrast
               "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
-              // Active state styling with theme-aware borders
+              // Active state styling with accent color in light mode
               isMenuActive
-                ? "bg-primary/10 text-primary border border-primary/30 dark:border-primary/40"
+                ? "bg-accent/10 text-accent border border-accent/30 dark:bg-accent/20 dark:text-accent dark:border-accent/40"
                 : [
                     // Light mode: higher contrast colors
                     "text-slate-600 hover:text-slate-900",
@@ -104,7 +104,7 @@ export default function MobileBottomNav() {
             aria-label="Menu"
             aria-pressed={isMenuActive}
           >
-            <div className="flex flex-col items-center justify-center flex-1 gap-0.5">
+            <div className="flex flex-col items-center justify-center flex-1 gap-1">
               <Menu className="h-5 w-5 flex-shrink-0" />
               <span className="text-xs font-medium text-center leading-none">Menu</span>
             </div>
@@ -116,13 +116,13 @@ export default function MobileBottomNav() {
             size="lg"
             onClick={handleHomeClick}
             className={cn(
-              "flex flex-col items-center justify-center gap-0.5 h-16 flex-1 rounded-lg p-2",
+              "flex flex-col items-center justify-center gap-1 h-16 flex-1 rounded-lg p-2",
               "transition-all duration-200 ease-in-out",
               // Base states with enhanced light mode contrast
               "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
-              // Active state styling with theme-aware borders
+              // Active state styling with accent color in light mode
               isHomeActive
-                ? "bg-primary/10 text-primary border border-primary/30 dark:border-primary/40"
+                ? "bg-accent/10 text-accent border border-accent/30 dark:bg-accent/20 dark:text-accent dark:border-accent/40"
                 : [
                     // Light mode: higher contrast colors
                     "text-slate-600 hover:text-slate-900",
@@ -137,7 +137,7 @@ export default function MobileBottomNav() {
             aria-label="Home"
             aria-pressed={isHomeActive}
           >
-            <div className="flex flex-col items-center justify-center flex-1 gap-0.5">
+            <div className="flex flex-col items-center justify-center flex-1 gap-1">
               <Home className="h-5 w-5 flex-shrink-0" />
               <span className="text-xs font-medium text-center leading-none">Home</span>
             </div>
@@ -149,13 +149,13 @@ export default function MobileBottomNav() {
             size="lg"
             onClick={handleProfileClick}
             className={cn(
-              "flex flex-col items-center justify-center gap-0.5 h-16 flex-1 rounded-lg p-2",
+              "flex flex-col items-center justify-center gap-1 h-16 flex-1 rounded-lg p-2",
               "transition-all duration-200 ease-in-out",
               // Base states with enhanced light mode contrast
               "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
-              // Active state styling with theme-aware borders
+              // Active state styling with accent color in light mode
               isProfileActive
-                ? "bg-primary/10 text-primary border border-primary/30 dark:border-primary/40"
+                ? "bg-accent/10 text-accent border border-accent/30 dark:bg-accent/20 dark:text-accent dark:border-accent/40"
                 : [
                     // Light mode: higher contrast colors
                     "text-slate-600 hover:text-slate-900",
@@ -170,7 +170,7 @@ export default function MobileBottomNav() {
             aria-label="Profile"
             aria-pressed={isProfileActive}
           >
-            <div className="flex flex-col items-center justify-center flex-1 gap-0.5">
+            <div className="flex flex-col items-center justify-center flex-1 gap-1">
               <User className="h-5 w-5 flex-shrink-0" />
               <span className="text-xs font-medium text-center leading-none">Profile</span>
             </div>
@@ -182,13 +182,13 @@ export default function MobileBottomNav() {
             size="lg"
             onClick={handleNewPageClick}
             className={cn(
-              "flex flex-col items-center justify-center gap-0.5 h-16 flex-1 rounded-lg p-2",
+              "flex flex-col items-center justify-center gap-1 h-16 flex-1 rounded-lg p-2",
               "transition-all duration-200 ease-in-out",
               // Base states with enhanced light mode contrast
               "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
-              // Active state styling with theme-aware borders
+              // Active state styling with accent color in light mode
               isNewPageActive
-                ? "bg-primary/10 text-primary border border-primary/30 dark:border-primary/40"
+                ? "bg-accent/10 text-accent border border-accent/30 dark:bg-accent/20 dark:text-accent dark:border-accent/40"
                 : [
                     // Light mode: higher contrast colors
                     "text-slate-600 hover:text-slate-900",
@@ -203,7 +203,7 @@ export default function MobileBottomNav() {
             aria-label="New Page"
             aria-pressed={isNewPageActive}
           >
-            <div className="flex flex-col items-center justify-center flex-1 gap-0.5">
+            <div className="flex flex-col items-center justify-center flex-1 gap-1">
               <Plus className="h-5 w-5 flex-shrink-0" />
               <span className="text-xs font-medium text-center leading-none">New Page</span>
             </div>

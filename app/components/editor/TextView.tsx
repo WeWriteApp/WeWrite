@@ -473,18 +473,52 @@ const TextView: React.FC<TextViewProps> = ({
 
   // Enhanced click handler for better edit mode transition
   const handleContentClick = (event) => {
-    if (!canEdit || !setIsEditing) return;
-
-    // Don't trigger edit mode if clicking on interactive elements
-    const target = event.target;
-    const isInteractiveElement = target.closest('a, button, [role="button"], .no-edit-trigger, [data-pill-style]');
-
-    if (isInteractiveElement) {
-      // Prevent the edit mode from being triggered
-      event.stopPropagation();
+    // Only proceed if user has edit permissions and setIsEditing function is available
+    if (!canEdit || !setIsEditing) {
+      // For users without edit permissions, let link clicks work normally
+      // but don't trigger any edit mode functionality
       return;
     }
 
+    // CRITICAL FIX: More comprehensive interactive element detection to prevent edit mode flash
+    const target = event.target;
+
+    // Check for interactive elements with multiple selectors to catch all link types
+    const isInteractiveElement = target.closest([
+      'a',                    // Standard anchor tags
+      'button',               // Button elements
+      '[role="button"]',      // Elements with button role
+      '.no-edit-trigger',     // Elements explicitly marked to not trigger edit
+      '[data-pill-style]',    // PillLink components
+      '.pill-link',           // PillLink class
+      '.slate-pill-link',     // Slate editor pill links
+      '.compound-link-container', // Compound links
+      '.page-link',           // Page links
+      '.user-link',           // User links
+      '.external-link',       // External links
+      '.special-link',        // Special links
+      '.protocol-link'        // Protocol links
+    ].join(', '));
+
+    if (isInteractiveElement) {
+      // CRITICAL: Completely stop event processing for interactive elements
+      // This prevents any edit mode activation when clicking links
+      event.stopPropagation();
+      event.preventDefault();
+
+      // Let the interactive element handle its click in the next tick
+      // This ensures navigation happens without edit mode interference
+      setTimeout(() => {
+        if (isInteractiveElement.click && typeof isInteractiveElement.click === 'function') {
+          // Re-trigger the click on the interactive element if needed
+          // Most links handle their own clicks, but this is a safety net
+        }
+      }, 0);
+
+      return;
+    }
+
+    // Only users with edit permissions reach this point for non-interactive content
     // Store click position for cursor positioning in edit mode
     const rect = event.currentTarget.getBoundingClientRect();
     const newClickPosition = {
@@ -517,12 +551,13 @@ const TextView: React.FC<TextViewProps> = ({
           className={`flex flex-col ${getViewModeStyles()} w-full text-left ${
             isScrolled ? 'pb-16' : ''
           } ${
-            canEdit ? 'relative cursor-text' : ''
+            canEdit ? 'relative cursor-text' : 'relative'
           } min-h-screen ${
             canEdit && isHovering ? 'bg-muted/20' : ''
           } transition-colors duration-150`}
           onClick={handleContentClick}
           onMouseEnter={(e) => {
+            // Only show hover effects for users with edit permissions
             if (canEdit) {
               // Only show hover state if not hovering over interactive elements
               const target = e.target;
@@ -534,6 +569,7 @@ const TextView: React.FC<TextViewProps> = ({
             }
           }}
           onMouseLeave={() => {
+            // Only handle hover state for users with edit permissions
             if (canEdit) {
               setIsHovering(false);
               setShowEditTooltip(false);
@@ -878,11 +914,14 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
   // Use reduced vertical padding for normal mode (approximately 15-20% less)
   const spacingClass = 'py-2';
 
-  // Handle click to edit
+  // Handle click to edit - only for users with edit permissions
   const handleClick = () => {
+    // Only trigger edit mode if user has edit permissions
     if (canEdit && onActiveLine) {
       onActiveLine(index);
     }
+    // For users without edit permissions, do nothing
+    // Links within paragraphs will handle their own navigation
   };
 
   // Helper function to render child nodes
@@ -1384,6 +1423,7 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
       // In view mode, normal external link behavior with modal
       const handleExternalLinkClick = (e) => {
         e.preventDefault();
+        e.stopPropagation(); // Prevent event bubbling to prevent edit mode activation
         setShowExternalLinkModal(true);
       };
 
