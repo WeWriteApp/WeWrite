@@ -21,8 +21,23 @@ import { generateDiffContent } from '../../../utils/diffUtils';
 import { PageProvider } from '../../../contexts/PageContext';
 import { LineSettingsProvider } from '../../../contexts/LineSettingsContext';
 
-export default function PageVersionView({ params }: { params: Promise<{ id: string, versionId: string }> }) {
-  const { id, versionId } = use(params);
+export default function PageVersionView({ params }: { params: Promise<{ id: string, versionId: string }> | { id: string, versionId: string } }) {
+  // Handle both Promise and object params
+  let unwrappedParams;
+  try {
+    // If params is a Promise, use React.use() to unwrap it
+    if (params && typeof params.then === 'function') {
+      unwrappedParams = use(params);
+    } else {
+      // If params is already an object, use it directly
+      unwrappedParams = params || {};
+    }
+  } catch (error) {
+    console.error("Error unwrapping params in PageVersionView:", error);
+    unwrappedParams = {};
+  }
+
+  const { id, versionId } = unwrappedParams;
   const [page, setPage] = useState<any>(null);
   const [version, setVersion] = useState<any>(null);
   const [currentVersion, setCurrentVersionData] = useState<any>(null);

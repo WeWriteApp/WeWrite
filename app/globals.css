@@ -221,6 +221,43 @@
   will-change: border, box-shadow, padding;
 }
 
+/* New page creation layout stability */
+.new-page-container {
+  min-height: 100vh;
+  contain: layout style;
+  transform: translateZ(0);
+}
+
+.new-page-header {
+  height: 64px;
+  min-height: 64px;
+  max-height: 64px;
+  contain: layout;
+}
+
+.new-page-content {
+  min-height: calc(100vh - 64px);
+  padding-top: 64px;
+  contain: layout;
+}
+
+.page-editor-stable {
+  min-height: 400px;
+  contain: layout style;
+  transform: translateZ(0);
+  will-change: auto;
+}
+
+/* Prevent layout shift in editor loading states */
+.editor-loading-placeholder {
+  min-height: 400px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  contain: layout;
+}
+
 /* PWA Interface Improvements */
 /* PWA light mode styles */
 @media (display-mode: standalone) {

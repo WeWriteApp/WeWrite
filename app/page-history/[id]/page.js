@@ -11,7 +11,22 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { Loader } from '../../components/utils/Loader';
 
 export default function PageHistoryPage({ params }) {
-  const { id } = use(params);
+  // Handle both Promise and object params
+  let unwrappedParams;
+  try {
+    // If params is a Promise, use React.use() to unwrap it
+    if (params && typeof params.then === 'function') {
+      unwrappedParams = use(params);
+    } else {
+      // If params is already an object, use it directly
+      unwrappedParams = params || {};
+    }
+  } catch (error) {
+    console.error("Error unwrapping params in PageHistoryPage:", error);
+    unwrappedParams = {};
+  }
+
+  const { id } = unwrappedParams;
   const [versions, setVersions] = useState([]);
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);

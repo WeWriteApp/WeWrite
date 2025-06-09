@@ -16,8 +16,21 @@ import { use } from "react";
 
 export default function GlobalIDPage({ params }) {
   // Extract the ID from params and handle potential slashes
-  // Use React.use() to unwrap params as recommended by Next.js
-  const unwrappedParams = use(params);
+  // Check if params is a Promise or already an object
+  let unwrappedParams;
+  try {
+    // If params is a Promise, use React.use() to unwrap it
+    if (params && typeof params.then === 'function') {
+      unwrappedParams = use(params);
+    } else {
+      // If params is already an object, use it directly
+      unwrappedParams = params || {};
+    }
+  } catch (error) {
+    console.error("Error unwrapping params:", error);
+    unwrappedParams = {};
+  }
+
   let { id } = unwrappedParams;
 
   // Ensure id is defined before processing
