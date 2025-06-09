@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { cn } from '../../lib/utils';
 import { useSidebarContext } from '../layout/UnifiedSidebar';
 
@@ -299,8 +299,22 @@ export default function StickySection({
   const [isAtSectionTop, setIsAtSectionTop] = useState<boolean>(false);
 
   // Get sidebar context for proper positioning
-  const { sidebarWidth } = useSidebarContext();
+  const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
   const [isActiveStickySection, setIsActiveStickySection] = useState<boolean>(false);
+
+  // Calculate header positioning width - only respond to persistent expanded state, not hover
+  // Hover state should overlay without affecting header positioning
+  const headerSidebarWidth = useMemo(() => {
+    // Only adjust header position for persistent expanded state
+    // Hover state (temporary overlay) should not affect header positioning
+    if (isExpanded && !isHovering) {
+      return sidebarWidth; // Use full expanded width (256px)
+    } else if (sidebarWidth > 0) {
+      return 64; // Use collapsed width (64px) for both collapsed and hover states
+    } else {
+      return 0; // No sidebar (user not authenticated)
+    }
+  }, [isExpanded, isHovering, sidebarWidth]);
 
   // Smart click handler for sticky headers
   const handleHeaderClick = useCallback((event: React.MouseEvent<HTMLDivElement>): void => {
@@ -455,9 +469,9 @@ export default function StickySection({
       // Position sticky header at the top of the viewport, respecting sidebar width on desktop
       headerElement.style.position = 'fixed';
       headerElement.style.top = '0px';
-      headerElement.style.left = window.innerWidth >= 768 ? `${sidebarWidth}px` : '0px'; // Respect sidebar on desktop
+      headerElement.style.left = window.innerWidth >= 768 ? `${headerSidebarWidth}px` : '0px'; // Only respond to persistent expanded state
       headerElement.style.right = '0px';
-      headerElement.style.width = window.innerWidth >= 768 ? `calc(100% - ${sidebarWidth}px)` : '100%'; // Adjust width for sidebar
+      headerElement.style.width = window.innerWidth >= 768 ? `calc(100% - ${headerSidebarWidth}px)` : '100%'; // Adjust width for persistent state only
       headerElement.style.paddingLeft = '1.5rem'; // 24px consistent with main layout
       headerElement.style.paddingRight = '1.5rem'; // 24px consistent with main layout
       headerElement.style.zIndex = '60'; // Same as main header z-index
@@ -494,7 +508,7 @@ export default function StickySection({
         console.log(`[StickySection] ${sectionId} - Restored to original position`);
       }
     }
-  }, [isActiveStickySection, isSticky, sectionId]);
+  }, [isActiveStickySection, isSticky, sectionId, headerSidebarWidth]);
 
   return (
     <div

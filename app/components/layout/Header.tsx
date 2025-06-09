@@ -11,11 +11,25 @@ import { useSidebarContext } from "./UnifiedSidebar";
 
 export default function Header() {
   const router = useRouter();
-  const { sidebarWidth } = useSidebarContext();
+  const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const [showSupportModal, setShowSupportModal] = React.useState(false);
   const headerRef = React.useRef<HTMLDivElement>(null);
+
+  // Calculate header positioning width - only respond to persistent expanded state, not hover
+  // Hover state should overlay without affecting header positioning
+  const headerSidebarWidth = React.useMemo(() => {
+    // Only adjust header position for persistent expanded state
+    // Hover state (temporary overlay) should not affect header positioning
+    if (isExpanded && !isHovering) {
+      return sidebarWidth; // Use full expanded width (256px)
+    } else if (sidebarWidth > 0) {
+      return 64; // Use collapsed width (64px) for both collapsed and hover states
+    } else {
+      return 0; // No sidebar (user not authenticated)
+    }
+  }, [isExpanded, isHovering, sidebarWidth]);
 
   // Calculate and update header height
   React.useEffect(() => {
@@ -73,9 +87,9 @@ export default function Header() {
         ref={headerRef}
         className={`relative top-0 z-[60] transition-all duration-300 ease-in-out ${isScrolled ? 'shadow-sm' : ''}`}
         style={{
-          left: window.innerWidth >= 768 ? `${sidebarWidth}px` : '0px', // Respect sidebar on desktop
+          left: window.innerWidth >= 768 ? `${headerSidebarWidth}px` : '0px', // Only respond to persistent expanded state
           right: '0px',
-          width: window.innerWidth >= 768 ? `calc(100% - ${sidebarWidth}px)` : '100%' // Adjust width for sidebar
+          width: window.innerWidth >= 768 ? `calc(100% - ${headerSidebarWidth}px)` : '100%' // Adjust width for persistent state only
         }}
       >
         <div className={`relative header-border-transition border-visible bg-background transition-all duration-200 ${isScrolled ? "h-14" : "h-20"}`}>

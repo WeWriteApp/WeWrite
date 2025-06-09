@@ -82,11 +82,25 @@ export default function PageHeader({
 }: PageHeaderProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const { sidebarWidth } = useSidebarContext();
+  const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const [headerHeight, setHeaderHeight] = React.useState(0);
   const headerRef = React.useRef<HTMLDivElement>(null);
+
+  // Calculate header positioning width - only respond to persistent expanded state, not hover
+  // Hover state should overlay without affecting header positioning
+  const headerSidebarWidth = React.useMemo(() => {
+    // Only adjust header position for persistent expanded state
+    // Hover state (temporary overlay) should not affect header positioning
+    if (isExpanded && !isHovering) {
+      return sidebarWidth; // Use full expanded width (256px)
+    } else if (sidebarWidth > 0) {
+      return 64; // Use collapsed width (64px) for both collapsed and hover states
+    } else {
+      return 0; // No sidebar (user not authenticated)
+    }
+  }, [isExpanded, isHovering, sidebarWidth]);
   const spacerRef = React.useRef<HTMLDivElement>(null);
   const [displayUsername, setDisplayUsername] = React.useState<string>(username || "Anonymous");
   const [tier, setTier] = React.useState<string | null>(initialTier || null);
@@ -503,9 +517,9 @@ export default function PageHeader({
         }`}
         style={{
           transform: 'translateZ(0)', // Force GPU acceleration
-          left: window.innerWidth >= 768 ? `${sidebarWidth}px` : '0px', // Respect sidebar on desktop
+          left: window.innerWidth >= 768 ? `${headerSidebarWidth}px` : '0px', // Only respond to persistent expanded state
           right: '0px',
-          width: window.innerWidth >= 768 ? `calc(100% - ${sidebarWidth}px)` : '100%' // Adjust width for sidebar
+          width: window.innerWidth >= 768 ? `calc(100% - ${headerSidebarWidth}px)` : '100%' // Adjust width for persistent state only
         }}
       >
         <div className="relative mx-auto px-2 md:px-4">
