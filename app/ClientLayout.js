@@ -61,8 +61,6 @@ export default function ClientLayout({ children }) {
   // Use scroll restoration hook to ensure pages always start at the top
   useScrollToTop();
 
-
-
   return (
     <ThemeProvider
       attribute="class"

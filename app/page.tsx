@@ -149,7 +149,7 @@ const Home = React.memo(function Home() {
     if (user) {
       setShowLanding(false);
     }
-  }, [authLoading, user, dataLoading, recoveryAttempted]);
+  }, [authLoading, user, dataLoading]); // Removed recoveryAttempted from dependencies to prevent infinite loops
 
   useEffect(() => {
     authCheck();

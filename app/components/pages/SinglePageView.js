@@ -77,8 +77,6 @@ import ConfirmationModal from "../utils/ConfirmationModal";
 import { useLogging } from "../../providers/LoggingProvider";
 import { GroupsContext } from "../../providers/GroupsProvider";
 
-
-
 // Username handling is now done directly in this component
 
 /**
@@ -129,8 +127,6 @@ function SinglePageView({ params }) {
   const [hasVisibilityChanged, setHasVisibilityChanged] = useState(false);
   const [hasLocationChanged, setHasLocationChanged] = useState(false);
   const [titleError, setTitleError] = useState(false);
-
-
 
   const { user } = useContext(AuthContext);
   const groups = useContext(GroupsContext);
@@ -1440,7 +1436,6 @@ function SinglePageView({ params }) {
       </PageProvider>
       <SiteFooter />
       {!isEditing && <PledgeBar />}
-
 
     </Layout>
   );

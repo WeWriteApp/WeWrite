@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { getUserSubscription } from "../../firebase/subscription";
 import { Button } from '../../components/ui/button';
+import { PaymentFeatureGuard } from '../../components/PaymentFeatureGuard';
 
 // Define the Subscription interface
 interface Subscription {
