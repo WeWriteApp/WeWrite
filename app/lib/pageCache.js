@@ -33,7 +33,7 @@ const generateCacheKey = (userId, isPublic = null, isOwner = false, pageLimit = 
 const isCacheValid = (cacheKey) => {
   const cacheEntry = memoryCache[cacheKey];
   if (!cacheEntry) return false;
-  
+
   const now = Date.now();
   return (now - cacheEntry.timestamp) < CACHE_EXPIRY;
 };
@@ -48,7 +48,7 @@ const cacheData = (cacheKey, data, lastKey = null) => {
     timestamp: Date.now(),
     lastKey
   };
-  
+
   // Also store in localStorage for persistence across page refreshes
   try {
     const storageData = {
@@ -71,7 +71,7 @@ const getCachedData = (cacheKey) => {
   if (memoryCache[cacheKey]) {
     return memoryCache[cacheKey];
   }
-  
+
   // Then try localStorage
   try {
     const storedData = localStorage.getItem(cacheKey);
@@ -91,7 +91,7 @@ const getCachedData = (cacheKey) => {
   } catch (e) {
     console.warn('Failed to retrieve cached pages from localStorage:', e);
   }
-  
+
   return null;
 };
 
@@ -101,19 +101,19 @@ const getCachedData = (cacheKey) => {
 export const fetchPages = async (userId, isPublic = null, currentUserId = null, pageLimit = 20, startAfterDoc = null) => {
   // Determine if current user is the owner
   const isOwner = currentUserId && userId === currentUserId;
-  
+
   // Generate cache key
   const cacheKey = generateCacheKey(userId, isPublic, isOwner, pageLimit);
-  
+
   // If we're not paginating and cache is valid, return cached data
   if (!startAfterDoc && isCacheValid(cacheKey)) {
     console.log('Using cached pages data');
     return getCachedData(cacheKey);
   }
-  
+
   // Build the query
   let pagesQuery;
-  
+
   try {
     if (isPublic === null && isOwner) {
       // Get all pages (public and private) for the owner
@@ -145,11 +145,11 @@ export const fetchPages = async (userId, isPublic = null, currentUserId = null, 
         limit(pageLimit)
       );
     }
-    
+
     // Execute the query
     const snapshot = await getDocs(pagesQuery);
     const pagesArray = [];
-    
+
     snapshot.forEach((doc) => {
       try {
         const pageData = { id: doc.id, ...doc.data() };
@@ -158,15 +158,15 @@ export const fetchPages = async (userId, isPublic = null, currentUserId = null, 
         console.error(`Error processing document ${doc.id}:`, docError);
       }
     });
-    
+
     // Get the last document for pagination
     const lastDoc = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
-    
+
     // Cache the results if this is not a pagination request
     if (!startAfterDoc) {
       cacheData(cacheKey, pagesArray, lastDoc);
     }
-    
+
     return {
       data: pagesArray,
       timestamp: Date.now(),
@@ -186,14 +186,14 @@ export const clearPagesCache = (userId = null) => {
   if (userId) {
     // Clear only cache for this user
     const keyPrefix = `${CACHE_KEY_PREFIX}${userId}`;
-    
+
     // Clear memory cache
     Object.keys(memoryCache).forEach(key => {
       if (key.startsWith(keyPrefix)) {
         delete memoryCache[key];
       }
     });
-    
+
     // Clear localStorage cache
     if (typeof localStorage !== 'undefined') {
       Object.keys(localStorage).forEach(key => {
@@ -209,7 +209,7 @@ export const clearPagesCache = (userId = null) => {
         delete memoryCache[key];
       }
     });
-    
+
     // Clear localStorage cache
     if (typeof localStorage !== 'undefined') {
       Object.keys(localStorage).forEach(key => {

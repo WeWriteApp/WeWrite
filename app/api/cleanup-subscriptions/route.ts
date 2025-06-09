@@ -4,20 +4,49 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { initAdmin } from '../../firebase/admin';
 import Stripe from 'stripe';
 
-// Initialize Firebase Admin
-initAdmin();
+// Initialize Firebase Admin lazily
+let auth: any;
+let db: any;
 
-// Get auth and firestore instances
-const auth = getAuth();
-const db = getFirestore();
+function initializeFirebase() {
+  if (auth && db) return { auth, db }; // Already initialized
+
+  try {
+    const app = initAdmin();
+    if (!app) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { auth: null, db: null };
+    }
+
+    auth = getAuth();
+    db = getFirestore();
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in cleanup-subscriptions route:', error);
+    return { auth: null, db: null };
+  }
+
+  return { auth, db };
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-04-30.basil' as any,
 });
 
 // POST /api/cleanup-subscriptions - One-time cleanup of subscription data
 export async function POST(request: NextRequest) {
   try {
+    // Initialize Firebase lazily
+    const { auth: firebaseAuth, db: firestore } = initializeFirebase();
+
+    if (!firebaseAuth || !firestore) {
+      console.error('Firebase Admin not initialized properly in cleanup-subscriptions route');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
+    // Update local references
+    auth = firebaseAuth;
+    db = firestore;
+
     // Check for admin authorization
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -113,42 +142,42 @@ export async function POST(request: NextRequest) {
     for (const userDoc of userSubscriptionsSnapshot.docs) {
       try {
         const userId = userDoc.id;
-        
+
         // Check if user has a subscription
         const userSubRef = db.collection('users').doc(userId).collection('subscription').doc('current');
         const userSubDoc = await userSubRef.get();
-        
+
         if (userSubDoc.exists) {
           const subscriptionData = userSubDoc.data();
           if (!subscriptionData) continue;
-          
+
           results.processed++;
-          
+
           // Check if this is a valid subscription
           let needsFixing = false;
           let fixedData = { ...subscriptionData };
-          
+
           // Ensure required fields have values
           if (fixedData.status === undefined) {
             fixedData.status = 'canceled';
             needsFixing = true;
           }
-          
+
           if (fixedData.amount === undefined) {
             fixedData.amount = 0;
             needsFixing = true;
           }
-          
+
           if (fixedData.tier === undefined) {
             fixedData.tier = null;
             needsFixing = true;
           }
-          
+
           if (fixedData.stripeSubscriptionId === undefined) {
             fixedData.stripeSubscriptionId = null;
             needsFixing = true;
           }
-          
+
           // If status is active but no stripeSubscriptionId, set to canceled
           if (fixedData.status === 'active' && !fixedData.stripeSubscriptionId) {
             fixedData.status = 'canceled';
@@ -157,12 +186,12 @@ export async function POST(request: NextRequest) {
             fixedData.canceledAt = new Date().toISOString();
             needsFixing = true;
           }
-          
+
           // If needs fixing, update the data
           if (needsFixing) {
             // Update the user path
             await userSubRef.set(fixedData, { merge: true });
-            
+
             results.fixed++;
             results.details.push(`Fixed subscription in user path for ${userId}`);
           }
@@ -180,7 +209,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error cleaning up subscriptions:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: error.message || 'Internal server error',
       success: false
     }, { status: 500 });

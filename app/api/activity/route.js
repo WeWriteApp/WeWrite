@@ -1,27 +1,39 @@
 import { NextResponse } from 'next/server';
 import { initAdmin, admin } from '../../firebase/admin';
+import { getUsernameById } from '../../utils/userUtils';
 
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
 
-// Initialize Firebase Admin
+// Initialize Firebase Admin lazily
 let db, rtdb;
-try {
-  initAdmin();
 
-  // Get Firestore and RTDB instances
-  db = admin.firestore();
+function initializeFirebase() {
+  if (db) return { db, rtdb }; // Already initialized
 
-  // Try to get RTDB instance, but handle case where it might not be available
   try {
-    rtdb = admin.database();
-  } catch (dbError) {
-    console.warn('Warning: Could not initialize Firebase Realtime Database:', dbError.message);
-    rtdb = null;
+    const app = initAdmin();
+    if (!app) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { db: null, rtdb: null };
+    }
+
+    // Get Firestore and RTDB instances
+    db = admin.firestore();
+
+    // Try to get RTDB instance, but handle case where it might not be available
+    try {
+      rtdb = admin.database();
+    } catch (dbError) {
+      console.warn('Warning: Could not initialize Firebase Realtime Database:', dbError.message);
+      rtdb = null;
+    }
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in activity API route:', error);
+    return { db: null, rtdb: null };
   }
-} catch (error) {
-  console.error('Error initializing Firebase Admin in activity API route:', error);
-  // We'll handle this case in the GET handler
+
+  return { db, rtdb };
 }
 
 // Define headers at the module level to avoid reference errors
@@ -38,35 +50,20 @@ export async function GET(request) {
   try {
     console.log('API: /api/activity endpoint called');
 
-    // Check if Firebase Admin was initialized successfully
-    if (!db) {
-      console.warn('API: Firebase Firestore not available, attempting to initialize again');
-      try {
-        initAdmin();
-        db = admin.firestore();
-        try {
-          rtdb = admin.database();
-        } catch (dbError) {
-          console.warn('Warning: Could not initialize Firebase Realtime Database:', dbError.message);
-          rtdb = null;
-        }
-      } catch (initError) {
-        console.error('API: Failed to initialize Firebase Admin on retry:', initError);
-        return NextResponse.json({
-          activities: [],
-          message: "Firebase not initialized properly"
-        }, { status: 500, headers: corsHeaders });
-      }
+    // Initialize Firebase lazily
+    const { db: firestore, rtdb: realtimeDb } = initializeFirebase();
 
-      // Check if initialization was successful
-      if (!db) {
-        console.error('API: Firebase Firestore still not available after retry');
-        return NextResponse.json({
-          activities: [],
-          message: "Firebase not initialized properly"
-        }, { status: 500, headers: corsHeaders });
-      }
+    if (!firestore) {
+      console.error('API: Firebase Firestore not available');
+      return NextResponse.json({
+        activities: [],
+        message: "Firebase not initialized properly"
+      }, { status: 500, headers: corsHeaders });
     }
+
+    // Update local references
+    db = firestore;
+    rtdb = realtimeDb;
 
     // Get limit from query parameter - using a static approach
     // Instead of directly using request.url which causes static rendering issues
@@ -121,7 +118,7 @@ export async function GET(request) {
             pageId,
             pageName: pageData.title || "Untitled",
             userId: pageData.userId,
-            username: await getUsernameById(db, rtdb, pageData.userId),
+            username: await getUsernameById(pageData.userId),
             timestamp: pageData.lastModified?.toDate() || new Date(),
             currentContent: pageData.content,
             previousContent: "",
@@ -136,7 +133,7 @@ export async function GET(request) {
           pageId,
           pageName: pageData.title || "Untitled",
           userId: pageData.userId,
-          username: await getUsernameById(db, rtdb, pageData.userId),
+          username: await getUsernameById(pageData.userId),
           timestamp: historyData.timestamp?.toDate() || new Date(),
           currentContent: pageData.content,
           previousContent: historyData.content || "",
@@ -202,38 +199,4 @@ export async function GET(request) {
   }
 }
 
-// Helper function to get username from Firestore or RTDB
-async function getUsernameById(db, rtdb, userId) {
-  try {
-    if (!userId) return "Missing username";
-
-    let username = null;
-
-    // Try to get from Firestore first
-    const userDoc = await db.collection("users").doc(userId).get();
-    if (userDoc.exists) {
-      const userData = userDoc.data();
-      username = userData.username || userData.displayName;
-    }
-
-    // Fallback to RTDB if Firestore doesn't have the username and RTDB is available
-    if (!username && rtdb) {
-      try {
-        const userRef = rtdb.ref(`users/${userId}`);
-        const snapshot = await userRef.once('value');
-
-        if (snapshot.exists()) {
-          const userData = snapshot.val();
-          username = userData.username || userData.displayName || (userData.email ? userData.email.split('@')[0] : null);
-        }
-      } catch (rtdbError) {
-        console.warn(`Warning: Could not fetch user data from RTDB for user ${userId}:`, rtdbError.message);
-      }
-    }
-
-    return username || "Missing username";
-  } catch (err) {
-    console.error("Error fetching user data:", err);
-    return "Missing username";
-  }
-}
+// Note: getUsernameById is now imported from ../../utils/userUtils for consistency

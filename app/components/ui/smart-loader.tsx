@@ -6,7 +6,7 @@ import { useLoadingTimeout } from '../../hooks/useLoadingTimeout';
 import { Button } from './button';
 import { AlertCircle, RefreshCw, Clock } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { safeReload } from '../../utils/reload-protection';
+
 
 interface SmartLoaderProps {
   isLoading: boolean;
@@ -123,16 +123,9 @@ export function SmartLoader({
     }
   };
 
-  // Safe page refresh using global reload protection
+  // Simple page refresh (removed circuit breaker complexity)
   const handleSafeRefresh = () => {
-    // Import the global reload protection utility
-    import('../../utils/reload-protection').then(({ safeReload }) => {
-      safeReload('SmartLoader user action');
-    }).catch((error) => {
-      console.error('Error importing reload protection:', error);
-      // Fallback to direct reload if import fails
-      window.location.reload();
-    });
+    window.location.reload();
   };
 
   // Add a safety mechanism to force-complete loading after a maximum time

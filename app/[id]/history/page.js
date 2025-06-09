@@ -1,19 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPageVersions, getPageById } from '../../firebase/database';
 import DashboardLayout from '../../DashboardLayout';
 import { Button } from '../../components/ui/button';
 import { ChevronLeft, Clock } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
-import { Loader } from '../../components/Loader';
-import ActivityCard from '../../components/ActivityCard';
+import { Loader } from '../../components/utils/Loader';
+import ActivityCard from '../../components/activity/ActivityCard';
 import { generateSimpleDiff, generateTextDiff } from '../../utils/generateTextDiff';
-import PageHeader from '../../components/PageHeader.tsx';
+import PageHeader from '../../components/pages/PageHeader';
 
 export default function PageHistoryPage({ params }) {
-  const { id } = params;
+  const { id } = use(params);
   const [page, setPage] = useState(null);
   const [versions, setVersions] = useState([]);
   const [activities, setActivities] = useState([]);

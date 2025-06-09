@@ -83,7 +83,8 @@
 /* Simple editor container */
 .editor-container {
   position: relative;
-  /* Padding is applied inline */
+  /* External margins applied inline for proper spacing from viewport edges */
+  /* Internal padding reduced to p-2 (8px) for better visual balance */
 }
 
 /* Make sure the editor content is visible */
@@ -140,6 +141,104 @@
   }
 }
 
+/* Spring animation keyframes for feature cards */
+@keyframes spring-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.05) translateY(-5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes spring-out {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+}
+
+/* Spring animation utility classes */
+.animate-spring-in {
+  animation: spring-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-spring-out {
+  animation: spring-out 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Page Editor Transition Improvements */
+.page-editor-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth edit mode transitions for title and body */
+.edit-mode-title-transition {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+/* Slide-up page animation improvements */
+.slide-up-page {
+  /* Ensure smooth rendering during animation */
+  will-change: transform, opacity;
+  /* Prevent content from being selectable during animation */
+  user-select: none;
+  /* Ensure proper layering */
+  isolation: isolate;
+}
+
+.slide-up-page.animation-complete {
+  /* Re-enable text selection after animation */
+  user-select: auto;
+  /* Reset will-change for performance */
+  will-change: auto;
+}
+
+/* Prevent body scroll during slide-up animation */
+.slide-up-active {
+  overflow: hidden;
+  height: 100vh;
+}
+
+.edit-mode-body-transition {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, padding 0.3s ease;
+}
+
+/* Prevent layout shift during edit mode transitions */
+.edit-mode-container {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateZ(0); /* Force hardware acceleration */
+  will-change: border, box-shadow, padding;
+}
+
+/* PWA Interface Improvements */
+/* PWA light mode styles */
+@media (display-mode: standalone) {
+  :root {
+    --pwa-background: #ffffff;
+    --pwa-status-bar: #000000;
+  }
+
+  body {
+    background-color: var(--pwa-background);
+  }
+
+  /* Status bar styling for PWA */
+  meta[name="theme-color"] {
+    content: var(--pwa-background);
+  }
+}
+
 @layer base {
   :root {
     /* Accent color variables - dynamically set by AccentColorContext */
@@ -167,8 +266,8 @@
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: var(--accent-h) 30% 96%;
-    --accent-foreground: var(--accent-h) 47% 11%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -188,9 +287,6 @@
 
     /* Active line highlight in editor */
     --active-line-highlight: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.1);
-
-    /* Custom text highlight */
-    --accent: var(--accent-h) var(--accent-s) var(--accent-l);
   }
 
   .dark {
@@ -214,7 +310,7 @@
     --muted: 217 33% 18%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: var(--accent-h) 33% 18%;
+    --accent: 217 33% 18%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84% 60%;
@@ -331,8 +427,8 @@
 /* Glass card styling - using theme variables for better light/dark mode support */
 .glass-card {
   border: 1px solid;
-  border-radius: 16px;
-  border-color: hsl(var(--border) / 0.2);
+  border-radius: 0.75rem; /* rounded-xl */
+  border-color: hsl(var(--border) / 0.4);
 }
 
 .glass-panel {
@@ -347,9 +443,9 @@
 .wewrite-card {
   background-color: hsl(var(--card));
   color: hsl(var(--card-foreground));
-  border-radius: 1rem; /* rounded-2xl */
-  border: 1px solid hsl(var(--border-theme-medium));
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+  border-radius: 0.75rem; /* rounded-xl */
+  border: 1px solid hsl(var(--border-theme-strong));
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
   overflow: hidden;
   /* Mobile-first padding with better spacing */
   padding: 1.25rem; /* p-5 on mobile */
@@ -368,7 +464,7 @@
 /* Dark mode adjustments for cards */
 .dark .wewrite-card {
   background-color: hsl(var(--card) / 0.9); /* dark:bg-card/90 */
-  border-color: hsl(var(--border-theme-medium));
+  border-color: hsl(var(--border-theme-strong));
 }
 
 /* Hover state for cards */
@@ -396,9 +492,11 @@ html[data-high-contrast="true"] .glass-panel {
 /* High contrast mode for specific card-like elements */
 html[data-high-contrast="true"] [class*="border-theme-"],
 html[data-high-contrast="true"] [class*="rounded-2xl"][class*="border"],
+html[data-high-contrast="true"] [class*="rounded-xl"][class*="border"],
 html[data-high-contrast="true"] [class*="rounded-lg"][class*="border"],
 html[data-high-contrast="true"] .card,
-html[data-high-contrast="true"] [class*="shadow-md"][class*="border"] {
+html[data-high-contrast="true"] [class*="shadow-md"][class*="border"],
+html[data-high-contrast="true"] [class*="shadow-sm"][class*="border"] {
   border-color: hsl(var(--border)) !important;
 }
 
@@ -877,17 +975,27 @@ body {
   color: inherit; /* Keep the text color unchanged */
 }
 
-/* Pill link text - allow full display unless container constrains */
+/* FIX: Allow pill links to display full text and only truncate when absolutely necessary */
 .pill-text {
+  display: inline-block;
+  white-space: nowrap;
+  /* Remove aggressive max-width constraint - let content flow naturally */
+  max-width: none;
+  /* Only apply overflow handling when the parent container constrains width */
+  overflow: visible;
+}
+
+/* Only truncate when the container specifically requests it */
+.truncate-requested .pill-text {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-/* Truncate links in the editor to prevent layout shifts */
+/* Truncate links in the editor only when they would cause layout issues */
 .truncate-link {
-  max-width: 100%;
+  /* Only constrain width when absolutely necessary for layout */
+  max-width: calc(100vw - 4rem); /* Prevent viewport overflow with generous margin */
   display: inline-flex !important;
   white-space: nowrap !important;
   overflow: hidden !important;
@@ -900,18 +1008,12 @@ body {
   white-space: nowrap;
 }
 
-/* Allow pill links to display full text when space permits */
-.pill-text {
-  display: inline-block;
-  white-space: nowrap;
-  max-width: 100%; /* Use available space, let container control width */
-}
-
-/* Ensure pill links stay on the same line as paragraph numbers */
+/* FIX: Allow pill links to use available space more generously */
 .paragraph-with-number a {
   display: inline-flex !important;
   align-items: center;
-  max-width: calc(100% - 3rem); /* Account for paragraph number width with more generous space */
+  /* Increase available space for links - only constrain when truly necessary */
+  max-width: calc(100vw - 6rem); /* Account for paragraph number and margins with generous space */
 }
 
 /* Ensure proper text contrast in pill links */
@@ -927,6 +1029,61 @@ a[class*="bg-primary"], button[class*="bg-primary"], div[class*="bg-primary"] {
 /* Ensure outline pills use the accent color for text */
 a.bg-transparent, button.bg-transparent, div.bg-transparent {
   color: hsl(var(--primary)) !important;
+}
+
+/* COMPOUND LINK FIXES - Ensure proper separation and styling */
+.compound-link-container {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important; /* gap-1 equivalent */
+  flex-wrap: nowrap !important;
+}
+
+/* Prevent any global link styles from merging compound link pills */
+.compound-link-container > a,
+.compound-link-container > span > a {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  border-radius: 0.5rem !important; /* Maintain individual pill border radius */
+}
+
+/* Ensure compound link "by" text is properly spaced and styled */
+.compound-link-container > .text-muted-foreground {
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline !important;
+  flex-shrink: 0 !important;
+}
+
+/* Additional compound link fixes for edit mode */
+[data-slate-editor] .compound-link-container {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+  flex-wrap: nowrap !important;
+}
+
+/* Ensure compound link pills in edit mode maintain separation */
+[data-slate-editor] .compound-link-container .page-portion,
+[data-slate-editor] .compound-link-container .author-portion {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+  border-radius: 0.5rem !important;
+}
+
+/* Prevent any global styles from affecting compound link structure */
+.compound-link-container * {
+  box-sizing: border-box !important;
+}
+
+/* Ensure compound links don't get merged by any parent styles */
+.compound-link-container:not(.single-link) {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 /* Comprehensive fix for text contrast issues */
@@ -1031,11 +1188,8 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
 /* Section header sticky styling - enhanced when sticky */
 .section-header-sticky {
   position: fixed !important;
-  /* top will be set dynamically via JavaScript - should be 0px to replace main header */
+  /* top, left, right, and width will be set dynamically via JavaScript to respect sidebar */
   top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  width: 100% !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
   background-color: hsl(var(--background)) !important;
   backdrop-filter: blur(12px);
@@ -1047,6 +1201,8 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
   padding-right: 1.5rem !important;
   /* Prevent any content bleed-through */
   border-bottom: 1px solid hsl(var(--border)) !important;
+  /* Smooth transitions when sidebar state changes */
+  transition: left 0.3s ease-in-out, width 0.3s ease-in-out !important;
   /* Smooth transition when becoming sticky */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   transition-property: transform, box-shadow, background-color, backdrop-filter;
@@ -1060,7 +1216,7 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
 /* Smooth transition states for sticky headers */
 .section-header-transitioning {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transition-property: transform, opacity, box-shadow, background-color;
+  transition-property: transform, top, opacity, box-shadow, background-color;
 }
 
 /* Positional slide animations - no fade effects, only position changes */
@@ -1103,8 +1259,50 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
 /* Smooth position transition for sticky headers */
 .section-header-position-transition {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              top 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Sidebar smooth animations */
+.sidebar-smooth-transition {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateZ(0); /* Force hardware acceleration */
+  will-change: width, transform, box-shadow;
+  /* Ensure sidebar doesn't create shadows outside its boundaries */
+  overflow: visible;
+  contain: layout;
+}
+
+/* Sidebar hover state improvements */
+.sidebar-hover-overlay {
+  transform: translateX(0);
+  box-shadow: 4px 0 12px -4px rgba(0, 0, 0, 0.15);
+}
+
+/* Sidebar content fade transitions - simplified */
+.sidebar-content-fade {
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Sidebar icon positioning - prevent layout shifts */
+.sidebar-icon-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem; /* 48px */
+  height: 3rem; /* 48px */
+  flex-shrink: 0;
+}
+
+/* Sidebar text animation */
+.sidebar-text-container {
+  overflow: hidden;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Enhanced shadow and backdrop when sticky */
@@ -1162,5 +1360,58 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
     -moz-user-select: text;
     -ms-user-select: text;
     user-select: text;
+  }
+}
+
+/* Mobile Bottom Navigation Styles */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Ensure content doesn't get hidden behind bottom nav on mobile */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Desktop Sidebar Navigation Alignment */
+@media (min-width: 768px) {
+  /* Ensure desktop sidebar navigation items maintain left-aligned text */
+  .sidebar-text-container span {
+    text-align: left !important;
+  }
+}
+
+/* Mobile Bottom Navigation Icon and Text Alignment */
+@media (max-width: 767px) {
+  /* Center-align mobile bottom navigation icons and text */
+  .mobile-bottom-nav-button {
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-bottom-nav-button span {
+    text-align: center;
+  }
+
+  /* Remove all sidebar shadows on mobile to prevent left edge artifacts */
+  .sidebar-hover-overlay,
+  .sidebar-smooth-transition {
+    box-shadow: none !important;
+  }
+
+  /* Ensure no shadows leak from any sidebar-related elements */
+  [class*="sidebar"],
+  .fixed.left-0,
+  .fixed[class*="left-"] {
+    box-shadow: none !important;
+  }
+
+  /* Remove shadows from any elements that might be positioned on the left edge */
+  .fixed.z-\[100\],
+  .fixed[class*="z-"] {
+    box-shadow: none !important;
   }
 }

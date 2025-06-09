@@ -5,8 +5,9 @@ import { AuthContext } from "../providers/AuthProvider";
 import { getPageVersions } from "../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
 import { getRecentActivity } from "../firebase/activity";
+import { getBatchUserData } from "../firebase/batchUserData";
 
-const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false) => {
+const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false, mineOnly = false) => {
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
@@ -125,6 +126,19 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
         let pagesQuery;
         let followedPageIds = [];
 
+        // If mineOnly is true, filter by current user's content
+        if (mineOnly) {
+          if (!user) {
+            // If not logged in but in mine mode, return empty results
+            setActivities([]);
+            setLoading(false);
+            setHasMore(false);
+            return;
+          }
+          // Set filterUserId to current user for filtering
+          filterUserId = user.uid;
+        }
+
         // If followedOnly is true, get the list of pages the user follows
         if (followedOnly) {
           if (!user) {
@@ -163,24 +177,24 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
             user ? user.uid : null
           );
 
-          // Process the activities to add subscription info
-          const activitiesWithSubscriptions = await Promise.all(
-            recentActivities.map(async (activity) => {
-              if (!activity.userId) return activity;
+          // Extract unique user IDs from activities
+          const uniqueUserIds = [...new Set(recentActivities.map(activity => activity.userId).filter(Boolean))];
 
-              try {
-                const { tier, subscriptionStatus } = await getUsernameById(activity.userId);
-                return {
-                  ...activity,
-                  tier,
-                  subscriptionStatus
-                };
-              } catch (error) {
-                console.error("Error adding subscription info to activity:", error);
-                return activity;
-              }
-            })
-          );
+          // Batch fetch user data for all users at once
+          const batchUserData = await getBatchUserData(uniqueUserIds);
+
+          // Process the activities to add user info from batch data
+          const activitiesWithSubscriptions = recentActivities.map((activity) => {
+            if (!activity.userId) return activity;
+
+            const userData = batchUserData[activity.userId];
+            return {
+              ...activity,
+              tier: userData?.tier,
+              subscriptionStatus: userData?.subscriptionStatus,
+              username: userData?.username
+            };
+          });
 
           // Filter activities based on the current filters
           let validActivities = activitiesWithSubscriptions;
@@ -267,7 +281,7 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
     };
 
     fetchRecentActivity();
-  }, [user, limitCount, filterUserId, followedOnly]);
+  }, [user, limitCount, filterUserId, followedOnly, mineOnly]);
 
   // Function to load more activities
   const loadMore = useCallback(async () => {

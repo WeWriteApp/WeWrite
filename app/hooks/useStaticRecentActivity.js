@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useRef } from "react";
+import { useState, useEffect, useContext, useRef, useCallback } from "react";
 import { collection, query, orderBy, limit, getDocs, where, getDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { AuthContext } from "../providers/AuthProvider";
@@ -7,21 +7,25 @@ import { getDatabase, ref, get } from "firebase/database";
 import { getRecentActivity } from "../firebase/activity";
 
 /**
- * useStaticRecentActivity - A hook that loads recent activity data only once when the component mounts
- * This is a simplified version of useRecentActivity that doesn't support pagination or reloading
- * Optimized for memory usage and performance
+ * useStaticRecentActivity - A hook that loads recent activity data with optional pagination
+ * This is a simplified version of useRecentActivity optimized for memory usage and performance
  *
- * @param {number} limitCount - Number of activities to fetch
+ * @param {number} limitCount - Number of activities to fetch per page
  * @param {string|null} filterUserId - Optional user ID to filter activities by
  * @param {boolean} followedOnly - Whether to only show activities from followed pages
- * @returns {Object} - Object containing activities, loading state, and error
+ * @param {boolean} enablePagination - Whether to enable pagination functionality
+ * @returns {Object} - Object containing activities, loading state, error, and pagination functions
  */
-const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false) => {
+const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false, enablePagination = false) => {
   // Limit the number of activities to reduce memory usage
   const actualLimit = Math.min(limitCount, 10);
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [allActivities, setAllActivities] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const { user } = useContext(AuthContext);
 
   // Helper function to get username and subscription info from Firestore (primary) or Firebase Realtime Database (fallback)
@@ -190,8 +194,10 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
 
         try {
           // Use getRecentActivity to get activities including bio and about edits
+          // Fetch more activities if pagination is enabled
+          const fetchLimit = enablePagination ? limitCount * 10 : limitCount * 2;
           const { activities: recentActivities } = await getRecentActivity(
-            limitCount * 2,
+            fetchLimit,
             user ? user.uid : null
           );
 
@@ -237,14 +243,21 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
             });
           }
 
-          // Limit the number of activities
-          validActivities = validActivities.slice(0, actualLimit);
-
-
-
-          // Store in ref first, then update state
-          activitiesRef.current = validActivities;
-          setActivities(validActivities);
+          if (enablePagination) {
+            // Store all activities for pagination
+            setAllActivities(validActivities);
+            // Show first page
+            const firstPageActivities = validActivities.slice(0, limitCount);
+            setActivities(firstPageActivities);
+            setHasMore(validActivities.length > limitCount);
+            activitiesRef.current = firstPageActivities;
+          } else {
+            // Limit the number of activities for non-paginated view
+            validActivities = validActivities.slice(0, actualLimit);
+            // Store in ref first, then update state
+            activitiesRef.current = validActivities;
+            setActivities(validActivities);
+          }
         } catch (err) {
           console.error("Error with Firestore query:", err);
 
@@ -278,7 +291,40 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
     // Empty dependency array ensures this only runs once
   }, []);
 
-  return { activities, loading, error };
+  // Function to load more activities (pagination)
+  const loadMore = useCallback(async () => {
+    if (!enablePagination || loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const startIndex = currentPage * limitCount;
+      const endIndex = startIndex + limitCount;
+
+      const nextPageActivities = allActivities.slice(startIndex, endIndex);
+
+      if (nextPageActivities.length > 0) {
+        setActivities(prev => [...prev, ...nextPageActivities]);
+        setCurrentPage(nextPage);
+        setHasMore(endIndex < allActivities.length);
+      } else {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.error('Error loading more activities:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [enablePagination, loadingMore, hasMore, currentPage, limitCount, allActivities]);
+
+  return {
+    activities,
+    loading,
+    error,
+    hasMore: enablePagination ? hasMore : false,
+    loadingMore: enablePagination ? loadingMore : false,
+    loadMore: enablePagination ? loadMore : () => {}
+  };
 };
 
 export default useStaticRecentActivity;

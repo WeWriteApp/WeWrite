@@ -9,7 +9,7 @@ import { Button } from "../../components/ui/button";
 import { MultiSelect } from "../../components/ui/multi-select";
 import { searchUsers } from "../../firebase/database";
 import { useFeatureFlag } from "../../utils/feature-flags";
-import VisibilityDropdown from "../../components/VisibilityDropdown";
+import VisibilityDropdown from "../../components/utils/VisibilityDropdown";
 
 export default function Page() {
   const { user } = useContext(AuthContext);

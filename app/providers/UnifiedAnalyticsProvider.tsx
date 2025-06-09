@@ -3,14 +3,14 @@
 import { ReactNode, useEffect, useState, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
-import { getAnalyticsInstance } from '../utils/analytics';
-import { useRouter } from 'next/navigation';
+import { getAnalyticsInstance } from "../utils/analytics";
+import { useRouter } from "next/navigation";
 import {
   getAnalyticsPageTitle,
   getAnalyticsPageTitleForId,
   trackPageViewWhenReady,
   isContentReadyForAnalytics
-} from '../utils/analytics-page-titles';
+} from "../utils/analytics-page-titles";
 
 /**
  * UnifiedAnalyticsProvider
@@ -145,7 +145,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
       const url = pathname + (searchParams?.toString() || '');
 
       // Get a standardized page title for analytics
-      const pageTitle = typeof document !== 'undefined'
+      const pageTitle = typeof document !== "undefined"
         ? getAnalyticsPageTitle(pathname, searchParams, document.title)
         : getPageTitle(pathname);
 

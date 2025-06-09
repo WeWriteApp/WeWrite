@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { getPageMetadata } from '../firebase/database';
+import { getPageMetadata } from "../firebase/database";
 import Script from 'next/script';
 
 export async function generateMetadata({ params }) {
@@ -28,20 +28,54 @@ export async function generateMetadata({ params }) {
       const description = metadata.description ||
         'Create, collaborate, and share your writing with others on WeWrite - the social wiki where every page is a fundraiser.';
 
+      const canonicalUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/${id}`;
+      const imageUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/og?id=${id}`;
+
       return {
         title: formattedTitle,
         description: description,
+        keywords: metadata.tags ? metadata.tags.join(', ') : 'writing, collaboration, social wiki, fundraising',
+        authors: [{ name: metadata.username || 'Anonymous' }],
+        creator: metadata.username || 'Anonymous',
+        publisher: 'WeWrite',
+        alternates: {
+          canonical: canonicalUrl,
+        },
+        robots: {
+          index: metadata.isPublic !== false,
+          follow: true,
+          googleBot: {
+            index: metadata.isPublic !== false,
+            follow: true,
+            'max-video-preview': -1,
+            'max-image-preview': 'large',
+            'max-snippet': -1,
+          },
+        },
         openGraph: {
           title: formattedTitle,
           description: description,
-          url: `${process.env.NEXT_PUBLIC_BASE_URL}/${id}`,
+          url: canonicalUrl,
           siteName: 'WeWrite',
           type: 'article',
+          publishedTime: metadata.createdAt,
+          modifiedTime: metadata.lastModified,
+          authors: [metadata.username || 'Anonymous'],
+          images: [
+            {
+              url: imageUrl,
+              width: 1200,
+              height: 630,
+              alt: formattedTitle,
+            }
+          ],
         },
         twitter: {
           card: 'summary_large_image',
           title: formattedTitle,
           description: description,
+          images: [imageUrl],
+          creator: metadata.username ? `@${metadata.username}` : undefined,
         }
       };
     }

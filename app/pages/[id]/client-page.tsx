@@ -1,9 +1,11 @@
 "use client";
 
-import SinglePageView from "../../components/SinglePageView";
+import { use } from "react";
+import SinglePageView from "../../components/pages/SinglePageView";
 
-export default function ClientPage({ params }: { params: { id: string } }) {
-  // Ensure we're passing a valid params object to SinglePageView
-  const validParams = params || { id: '' };
+export default function ClientPage({ params }: { params: Promise<{ id: string }> }) {
+  // Unwrap the params Promise using React.use()
+  const { id } = use(params);
+  const validParams = { id: id || '' };
   return <SinglePageView params={validParams} />;
 }

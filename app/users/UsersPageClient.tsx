@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Button } from '../components/ui/button';
 import { ChevronLeft, Trophy, Loader, ChevronUp, ChevronDown, Info, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
-import { PillLink } from '../components/PillLink';
+import { PillLink } from '../components/utils/PillLink';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
-import { SupporterIcon } from "../components/SupporterIcon";
+import { SupporterIcon } from "../components/payments/SupporterIcon";
 import { collection, getDocs, query, orderBy, limit as firestoreLimit, getDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
-import SimpleSparkline from "../components/SimpleSparkline";
+import SimpleSparkline from "../components/utils/SimpleSparkline";
 import { getBatchUserActivityLast24Hours } from "../firebase/userActivity";
 
 interface User {

@@ -34,7 +34,7 @@ async function searchPagesInFirestoreUnlimited(userId, searchTerm, groupIds = []
 
       // Split search term into words for multi-word search
       const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 0);
-      
+
       if (searchWords.length === 1) {
         // Single word search - check if any word in title starts with search term
         const titleWords = title.split(/\s+/).map(word => word.toLowerCase());
@@ -78,7 +78,7 @@ async function searchPagesInFirestoreUnlimited(userId, searchTerm, groupIds = []
 
         const userPagesSnapshot = await getDocs(userPagesQuery);
         totalUserPages += userPagesSnapshot.size;
-        
+
         if (userPagesSnapshot.empty || userPagesSnapshot.size < 1000) {
           hasMore = false;
         } else {
@@ -143,7 +143,7 @@ async function searchPagesInFirestoreUnlimited(userId, searchTerm, groupIds = []
 
         const publicPagesSnapshot = await getDocs(publicPagesQuery);
         totalPublicPages += publicPagesSnapshot.size;
-        
+
         if (publicPagesSnapshot.empty || publicPagesSnapshot.size < 1000) {
           hasMore = false;
         } else {

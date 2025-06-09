@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useContext } from "react";
-import EnhancedMyGroups from "../components/EnhancedMyGroups";
+import EnhancedMyGroups from "../components/groups/EnhancedMyGroups";
 import { Button } from "../components/ui/button";
 import { Plus, ChevronLeft } from "lucide-react";
 import Link from "next/link";
@@ -92,7 +92,7 @@ function GroupsLoadingSkeleton() {
   return (
     <div className="space-y-4">
       {/* Desktop view skeleton (md and up) */}
-      <div className="hidden md:block border border-theme-medium rounded-lg overflow-hidden shadow-md dark:bg-card/90 w-full">
+      <div className="hidden md:block border border-theme-strong rounded-xl overflow-hidden shadow-sm dark:bg-card/90 w-full">
         <div className="p-4">
           <div className="flex justify-between border-b border-border pb-2">
             <Skeleton className="h-5 w-20" />

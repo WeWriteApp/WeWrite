@@ -10,15 +10,16 @@
 .paragraph-number-inline {
   @apply text-muted-foreground text-xs select-none;
   display: inline-block;
-  min-width: 1.5rem; /* Fixed width for consistent alignment */
+  min-width: 0.75rem; /* Match edit mode width */
   text-align: right;
   vertical-align: baseline; /* Align with the baseline of the text */
   opacity: 0.8; /* Slightly increased opacity for better visibility */
   position: relative;
   top: 0; /* Remove vertical offset for proper alignment */
-  margin-right: 0.5rem; /* Consistent margin for proper spacing */
+  margin-right: 0.25rem; /* Match edit mode margin */
   float: none; /* Ensure it flows with text */
   line-height: 1.5; /* Match the line height of paragraph text */
+  font-size: 0.75rem; /* Match edit mode font size */
 }
 
 /* Dark mode specific styling for paragraph numbers */
@@ -52,15 +53,16 @@
   padding-left: 0;
 }
 
-/* Paragraph with inline number at beginning */
+/* Paragraph with inline number at beginning - standardized spacing */
 .paragraph-with-number {
-  margin-bottom: 1.25rem; /* Consistent spacing between paragraphs */
+  margin-bottom: 1.1rem; /* Averaged spacing between view mode (1.25rem) and edit mode (0.95rem) */
   position: relative; /* Needed for proper positioning */
 }
 
-/* Reduced vertical spacing for normal mode paragraphs */
-.normal-mode .paragraph-with-number {
-  margin-bottom: 0.95rem; /* Further reduced by ~24% from 1.25rem */
+/* Consistent spacing for both normal mode and edit mode */
+.normal-mode .paragraph-with-number,
+.edit-mode .paragraph-with-number {
+  margin-bottom: 1.1rem; /* Same spacing for both modes */
 }
 
 /* Properly position paragraph numbers inline with text */

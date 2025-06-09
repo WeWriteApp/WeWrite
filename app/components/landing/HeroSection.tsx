@@ -8,6 +8,8 @@ import { useSwipeable } from 'react-swipeable';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { ANALYTICS_EVENTS } from '../../constants/analytics-events';
+import SparkleBackground from './SparkleBackground';
+import ProgressiveHeroText from './ProgressiveHeroText';
 
 // Carousel images for hero section
 const heroImages = [
@@ -94,66 +96,29 @@ export default function HeroSection({
 
   return (
     <section
-      className="pt-24 md:pt-28 pb-16 md:pb-20 relative overflow-hidden"
+      className="pt-16 md:pt-28 pb-16 md:pb-20 relative overflow-hidden"
       ref={heroSectionRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setRotation({ x: 0, y: 0 })}
     >
+      {/* Animated sparkle particles background */}
+      <SparkleBackground />
+
       <div className="container mx-auto px-2 sm:px-4 md:px-6 relative z-10">
         <div className="flex flex-col lg:flex-row items-center gap-12">
-          {/* Mobile containerization - enhanced card styling on mobile */}
+          {/* Mobile containerization - enhanced card styling on mobile with increased outer margins and reduced inner padding */}
           {isMobile ? (
-            <div className="w-full mx-4 sm:mx-6 px-3 sm:px-6 py-4 sm:py-8 bg-background/80 dark:bg-card/90 backdrop-blur-md rounded-2xl border border-theme-medium shadow-xl hover:shadow-2xl transition-all duration-300">
-              <div className={`text-center ${fadeInClass}`}>
-                <h1 className="text-4xl font-bold mb-6">
-                  Write, share, earn.
-                </h1>
-                <p className="text-lg md:text-xl text-muted-foreground mb-8">
-                  WeWrite is a free speech platform and social wiki where every page is a <span
-                    className="cursor-pointer relative group"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      // Track fundraiser text click in Google Analytics
-                      analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
-                        label: 'Fundraiser text click: scroll to features',
-                        link_type: 'text',
-                        link_text: 'fundraiser',
-                        link_url: '#features'
-                      });
-                      const targetElement = document.getElementById('features');
-                      if (targetElement) {
-                        const headerHeight = window.innerWidth >= 768 ? 60 : 100;
-                        const targetPosition = targetElement.getBoundingClientRect().top + window.scrollY - headerHeight;
-                        window.scrollTo({ top: targetPosition, behavior: 'smooth' });
-                      }
-                    }}
-                  >
-                    fundraiser
-                    <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 text-xs bg-black/80 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-                      Coming soon
-                    </span>
-                  </span>. Write a hundred pages, you've just written a hundred <span
-                    ref={platformRef}
-                    onClick={handlePlatformClick}
-                    className="cursor-pointer hover:text-primary transition-colors select-none"
-                    title="Click me!"
-                  >
-                    {platformOptions[platformIndex]}
-                  </span>.
-                </p>
-                <div className="flex flex-col gap-4">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white w-full"
-                    asChild
-                  >
-                    <Link href="/auth/login">Sign In</Link>
-                  </Button>
-                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white w-full" asChild>
-                    <Link href="/auth/register">Create Account</Link>
-                  </Button>
-                </div>
+            <div className="w-full mx-12 px-6 py-8 bg-background/80 dark:bg-card/90 backdrop-blur-md rounded-2xl border border-theme-medium shadow-xl hover:shadow-2xl transition-all duration-300 mb-6">
+              <div className="text-center">
+                <ProgressiveHeroText
+                  fadeInClass={fadeInClass}
+                  platformOptions={platformOptions}
+                  platformIndex={platformIndex}
+                  handlePlatformClick={handlePlatformClick}
+                  platformRef={platformRef}
+                  analytics={analytics}
+                />
+
               </div>
             </div>
           ) : (
@@ -213,10 +178,10 @@ export default function HeroSection({
             </div>
           )}
 
-          <div className={`flex-1 perspective-[1000px] ${fadeInClass} w-full ${isMobile ? '-mx-2 sm:-mx-4 md:mx-0' : ''}`} style={{ animationDelay: '0.2s' }}>
+          <div className={`flex-1 perspective-[1000px] ${fadeInClass} w-full ${isMobile ? '-mx-2 sm:-mx-4 md:mx-0 -mt-4' : ''}`} style={{ animationDelay: '0.2s' }}>
             <div
               className={`relative w-full transform-gpu transition-transform duration-300 ${
-                isMobile ? 'max-w-full mx-0' : 'max-w-[95%] sm:max-w-lg mx-auto'
+                isMobile ? 'max-w-full mx-0 -mx-2 sm:-mx-4' : 'max-w-[95%] sm:max-w-lg mx-auto'
               }`}
               style={{
                 transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,

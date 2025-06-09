@@ -1,25 +1,28 @@
 "use client";
 
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPageById, getPageVersionById, setCurrentVersion } from '../../../firebase/database';
 import DashboardLayout from '../../../DashboardLayout';
 import { Button } from '../../../components/ui/button';
 import { ChevronLeft, ChevronRight, Clock, RotateCcw, Eye } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { Loader } from '../../../components/Loader';
-import PageHeader from '../../../components/PageHeader.tsx';
-import { AuthContext } from '../../../providers/AuthProvider';
+import { Loader } from '../../../components/utils/Loader';
+import PageHeader from '../../../components/pages/PageHeader';
+import { useAuth } from '../../../providers/AuthProvider';
 import { Switch } from '../../../components/ui/switch';
 import { Label } from '../../../components/ui/label';
 import { Alert, AlertDescription } from '../../../components/ui/alert';
-import TextView from '../../../components/TextView';
+import TextView from '../../../components/editor/TextView';
+import TextViewErrorBoundary from '../../../components/editor/TextViewErrorBoundary';
 import { toast } from '../../../components/ui/use-toast';
 import { generateTextDiff } from '../../../utils/generateTextDiff';
 import { generateDiffContent } from '../../../utils/diffUtils';
+import { PageProvider } from '../../../contexts/PageContext';
+import { LineSettingsProvider } from '../../../contexts/LineSettingsContext';
 
-export default function PageVersionView({ params }: { params: { id: string, versionId: string } }) {
-  const { id, versionId } = params;
+export default function PageVersionView({ params }: { params: Promise<{ id: string, versionId: string }> }) {
+  const { id, versionId } = use(params);
   const [page, setPage] = useState<any>(null);
   const [version, setVersion] = useState<any>(null);
   const [currentVersion, setCurrentVersionData] = useState<any>(null);
@@ -30,7 +33,7 @@ export default function PageVersionView({ params }: { params: { id: string, vers
   const [diffContent, setDiffContent] = useState<any>(null);
   const [versionIndex, setVersionIndex] = useState(-1);
   const router = useRouter();
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const isOwner = user && page && user.uid === page.userId;
 
   useEffect(() => {
@@ -69,7 +72,7 @@ export default function PageVersionView({ params }: { params: { id: string, vers
         }
 
         // Fetch all versions to enable navigation between versions
-        const { versions } = await getPageById(id, true);
+        const { versions } = await getPageById(id, null);
         if (versions && versions.length > 0) {
           setVersions(versions);
           // Find the index of the current version
@@ -96,55 +99,42 @@ export default function PageVersionView({ params }: { params: { id: string, vers
           ? JSON.parse(version.content)
           : version.content;
 
+        let previousContent = null;
+
         // First try to use the stored previousContent if available
-        if (version.previousContent) {
+        if (version.previousContent && version.previousContent !== '' && version.previousContent !== '[]') {
           console.log('Using stored previousContent for diff generation');
-          const previousContent = typeof version.previousContent === 'string'
+          previousContent = typeof version.previousContent === 'string'
             ? JSON.parse(version.previousContent)
             : version.previousContent;
-
-          // Generate diff content with added/removed markers
-          const diffResult = generateDiffContent(versionContent, previousContent);
-
-          // Set the diff content
-          setDiffContent(diffResult);
         }
         // Then try to use the previousVersion if available
         else if (version.previousVersion && version.previousVersion.content) {
           console.log('Using previousVersion content for diff generation');
-          const previousContent = typeof version.previousVersion.content === 'string'
+          previousContent = typeof version.previousVersion.content === 'string'
             ? JSON.parse(version.previousVersion.content)
             : version.previousVersion.content;
-
-          // Generate diff content with added/removed markers
-          const diffResult = generateDiffContent(versionContent, previousContent);
-
-          // Set the diff content
-          setDiffContent(diffResult);
         }
-        // Finally fall back to the current version
-        else if (currentVersion) {
-          console.log('Using current version content for diff generation');
-          const currentContent = typeof currentVersion.content === 'string'
-            ? JSON.parse(currentVersion.content)
-            : currentVersion.content;
-
-          // Generate diff content with added/removed markers
-          const diffResult = generateDiffContent(versionContent, currentContent);
-
-          // Set the diff content
-          setDiffContent(diffResult);
-        }
+        // Finally fall back to empty content for new pages
         else {
-          console.log('No previous content available for diff generation');
-          setDiffContent(null);
-          setShowDiff(false);
+          console.log('No previous content available, treating as new page');
+          previousContent = [];
         }
+
+        // Generate diff content with added/removed markers
+        const diffResult = generateDiffContent(versionContent, previousContent);
+        console.log('Generated diff content:', diffResult);
+
+        // Set the diff content
+        setDiffContent(diffResult);
       } catch (err) {
         console.error('Error generating diff:', err);
         setDiffContent(null);
         setShowDiff(false);
       }
+    } else {
+      // Clear diff content when not showing diff
+      setDiffContent(null);
     }
   }, [showDiff, version, currentVersion]);
 
@@ -193,7 +183,9 @@ export default function PageVersionView({ params }: { params: { id: string, vers
     return (
       <DashboardLayout>
         <div className="flex justify-center items-center min-h-screen">
-          <Loader />
+          <Loader show={true} message="Loading..." id="version-loader">
+            <div />
+          </Loader>
         </div>
       </DashboardLayout>
     );
@@ -205,8 +197,6 @@ export default function PageVersionView({ params }: { params: { id: string, vers
         <div className="p-4">
           <PageHeader
             title="Error"
-            backUrl={`/${id}`}
-            backLabel="Back to page"
           />
           <div className="text-destructive text-center p-8">
             <p>{error}</p>
@@ -274,13 +264,24 @@ export default function PageVersionView({ params }: { params: { id: string, vers
         </div>
 
         {/* Content */}
-        <div className="border rounded-lg p-4 mb-6">
+        <div className="border-theme-strong rounded-lg p-4 mb-6">
           {version?.content ? (
-            <TextView
-              content={showDiff && diffContent ? diffContent : JSON.parse(version.content)}
-              viewMode="normal"
-              showDiff={showDiff}
-            />
+            <PageProvider>
+              <LineSettingsProvider>
+                <TextViewErrorBoundary fallbackContent={
+                  <div className="p-4 text-muted-foreground">
+                    <p>Unable to display version content. The version may have formatting issues.</p>
+                    <p className="text-sm mt-2">Version ID: {params.versionId}</p>
+                  </div>
+                }>
+                  <TextView
+                    content={showDiff && diffContent ? diffContent : JSON.parse(version.content)}
+                    viewMode="normal"
+                    showDiff={showDiff}
+                  />
+                </TextViewErrorBoundary>
+              </LineSettingsProvider>
+            </PageProvider>
           ) : (
             <p className="text-muted-foreground text-center py-8">No content available for this version</p>
           )}

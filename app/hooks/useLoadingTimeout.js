@@ -18,7 +18,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
  * @param {boolean} autoRecover - Whether to automatically recover from stalled states
  * @returns {Object} - Loading state information and control functions
  */
-export function useLoadingTimeout(isLoading, timeoutMs = 10000, onTimeout = null, autoRecover = true) {
+export function useLoadingTimeout(isLoading, timeoutMs = 10000, onTimeout = null, autoRecover = false) {
   const [isTimedOut, setIsTimedOut] = useState(false);
   const [startTime, setStartTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);

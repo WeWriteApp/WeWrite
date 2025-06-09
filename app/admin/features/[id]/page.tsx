@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { AuthContext } from '../../../providers/AuthProvider';
-import { useContext } from 'react';
-import { isAdmin } from '../../../utils/feature-flags.ts';
+import { useAuth } from '../../../providers/AuthProvider';
+import { isAdmin } from '../../../utils/feature-flags';
 import { PageLoader } from '../../../components/ui/page-loader';
 import FeatureDetailPage from '../../../components/admin/FeatureDetailPage';
 import { doc, getDoc } from 'firebase/firestore';
@@ -16,7 +15,7 @@ import Link from 'next/link';
 export default function FeatureDetail() {
   const router = useRouter();
   const params = useParams();
-  const { user, loading: authLoading } = useContext(AuthContext);
+  const { user, loading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [featureData, setFeatureData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);

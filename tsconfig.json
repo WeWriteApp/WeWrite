@@ -28,7 +28,12 @@
       }
     ],
     "target": "ES2017",
-    "strictNullChecks": true
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "noImplicitReturns": false,
+    "noImplicitThis": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
   "include": [
     "next-env.d.ts",

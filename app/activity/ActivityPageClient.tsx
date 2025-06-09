@@ -4,8 +4,8 @@ import { useState, useContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../components/ui/button";
 import { ChevronLeft, Clock, Filter, Check } from "lucide-react";
-import ActivityCard from "../components/ActivityCard";
-import { AuthContext } from "../providers/AuthProvider";
+import ActivityCard from "../components/activity/ActivityCard";
+import { useAuth } from "../providers/AuthProvider";
 import useStaticRecentActivity from "../hooks/useStaticRecentActivity";
 import { useActivityFilter } from "../contexts/ActivityFilterContext";
 import { getFollowedPages } from "../firebase/follows";
@@ -34,21 +34,21 @@ export default function ActivityPageClient({
   initialError: string | null
 }) {
   const router = useRouter();
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const { viewMode, setViewMode } = useActivityFilter();
   const [limit] = useState(30);
-  const [followedPages, setFollowedPages] = useState([]);
+  const [followedPages, setFollowedPages] = useState<any[]>([]);
   const [isLoadingFollows, setIsLoadingFollows] = useState(false);
 
-  // Use the same hook that works on the home page
+  // Use the same hook that works on the home page with pagination enabled
   // This is more reliable than server-side fetching or API calls
-  const { activities, loading: isLoading, error } = useStaticRecentActivity(limit);
+  const { activities, loading: isLoading, error, hasMore, loadingMore, loadMore } = useStaticRecentActivity(20, null, false, true);
 
   // Load followed pages when user is available and viewMode is 'following'
   useEffect(() => {
     if (user && viewMode === 'following') {
       setIsLoadingFollows(true);
-      getFollowedPages(user.uid)
+      getFollowedPages(user?.uid || '')
         .then(pages => {
           setFollowedPages(pages);
         })
@@ -63,12 +63,23 @@ export default function ActivityPageClient({
   }, [user, viewMode]);
 
   // Filter activities based on view mode
-  const filteredActivities = viewMode === 'following' && user
-    ? activities.filter(activity => {
+  const filteredActivities = (() => {
+    if (viewMode === 'following' && user) {
+      return activities.filter(activity => {
         // Include activities from followed pages
         return followedPages.some(page => page.id === activity.pageId);
-      })
-    : activities;
+      });
+    } else if (viewMode === 'mine' && user) {
+      return activities.filter(activity => {
+        // Include activities from current user's pages or bio edits
+        if (activity.activityType === "bio_edit") {
+          return activity.pageId.includes(user.uid);
+        }
+        return activity.userId === user.uid;
+      });
+    }
+    return activities;
+  })();
 
   // Determine which activities to display - prefer filtered client-side data
   // but fall back to server-side data if available
@@ -98,13 +109,13 @@ export default function ActivityPageClient({
                   variant="outline"
                   size="sm"
                   className={`gap-2 h-8 px-3 rounded-2xl hover:bg-muted/80 transition-colors ${
-                    viewMode === 'following' ? 'border-primary text-primary' : ''
+                    viewMode === 'following' || viewMode === 'mine' ? 'border-primary text-primary' : ''
                   }`}
-                  aria-label={`Filter activity: ${viewMode === 'all' ? 'All' : 'Following'}`}
+                  aria-label={`Filter activity: ${viewMode === 'all' ? 'All' : viewMode === 'following' ? 'Following' : 'Mine'}`}
                 >
                   <Filter className="h-4 w-4" />
                   <span className="sr-only md:not-sr-only md:inline-block">
-                    {viewMode === 'all' ? 'All' : 'Following'}
+                    {viewMode === 'all' ? 'All' : viewMode === 'following' ? 'Following' : 'Mine'}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
@@ -136,6 +147,18 @@ export default function ActivityPageClient({
               <div className="flex items-center justify-between w-full">
                 <span>Following</span>
                 {viewMode === 'following' && <Check className="h-4 w-4" />}
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.preventDefault();
+                setViewMode('mine');
+              }}
+              className="cursor-pointer"
+            >
+              <div className="flex items-center justify-between w-full">
+                <span>Mine</span>
+                {viewMode === 'mine' && <Check className="h-4 w-4" />}
               </div>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -194,16 +217,40 @@ export default function ActivityPageClient({
 
       {/* Activity grid with data - Dynamic height on mobile, fixed on larger screens */}
       {!isLoading && hasActivities && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-4">
-          {activitiesToDisplay.map((activity, index) => (
-            <div key={`${activity.pageId || 'unknown'}-${index}`} className="md:h-[200px]">
-              <ActivityCard
-                activity={activity}
-                isCarousel={false}
-              />
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-4">
+            {activitiesToDisplay.map((activity, index) => (
+              <div key={`${activity.pageId || 'unknown'}-${index}`} className="md:h-[200px]">
+                <ActivityCard
+                  activity={activity}
+                  isCarousel={false}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Load More Button */}
+          {hasMore && (
+            <div className="flex justify-center mt-8">
+              <Button
+                onClick={loadMore}
+                disabled={loadingMore}
+                variant="outline"
+                size="lg"
+                className="px-8 py-3 rounded-2xl"
+              >
+                {loadingMore ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2"></div>
+                    Loading...
+                  </>
+                ) : (
+                  'Load 20 more'
+                )}
+              </Button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       {/* Empty state */}
@@ -213,12 +260,19 @@ export default function ActivityPageClient({
           <p className="text-muted-foreground mb-2">
             {viewMode === 'following'
               ? "No activity from pages you're following"
+              : viewMode === 'mine'
+              ? "No activity from your pages"
               : "No recent activity to display"
             }
           </p>
           {viewMode === 'following' && (
             <p className="text-sm text-muted-foreground">
               Try switching to "All" to see all activity, or follow some pages to see their updates here.
+            </p>
+          )}
+          {viewMode === 'mine' && (
+            <p className="text-sm text-muted-foreground">
+              Create or edit some pages to see your activity here.
             </p>
           )}
         </div>

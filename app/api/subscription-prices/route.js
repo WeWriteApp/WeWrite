@@ -1,25 +1,29 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { getStripeSecretKey } from '../../utils/stripeConfig';
 
-export async function GET() {
+export async function GET(request) {
   try {
+    const productId = "prod_RqrsHKfbMnaIHX"
     // Initialize Stripe
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const stripe = new Stripe(getStripeSecretKey());
     
+    async function getPricesForProduct(productId) {
+      const priceList = await stripe.prices.list({
+        product: productId,
+        active: true, // only active prices
+        limit: 10,    // optional: limit how many prices you fetch
+      });
+      return priceList.data; // this will be an array of Price objects
+    }
+
     // Fetch all active subscription prices
-    const prices = await stripe.prices.list({
-      active: true,
-      type: 'recurring',
-      limit: 5,
-      expand: ['data.product']
-    });
-    
+    const prices = await getPricesForProduct(productId);
+
     // Format the response
-    const formattedPrices = prices.data.map(price => {
+    const formattedPrices = prices.map(price => {
       return {
         id: price.id,
-        productId: price.product.id,
-        productName: price.product.name,
         unitAmount: price.unit_amount / 100,
         currency: price.currency,
         interval: price.recurring.interval,

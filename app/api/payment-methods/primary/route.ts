@@ -4,19 +4,45 @@ import { initAdmin } from '../../../firebase/admin';
 import { getUserIdFromRequest } from '../../auth-helper';
 import Stripe from 'stripe';
 
-// Initialize Firebase Admin
-initAdmin();
+// Initialize Firebase Admin lazily
+let db: any;
 
-// Get firestore instance
-const db = getFirestore();
+function initializeFirebase() {
+  if (db) return { db }; // Already initialized
+
+  try {
+    const app = initAdmin();
+    if (!app) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { db: null };
+    }
+
+    db = getFirestore();
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in payment-methods/primary route:', error);
+    return { db: null };
+  }
+
+  return { db };
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-04-30.basil' as any,
 });
 
 // POST /api/payment-methods/primary - Set a payment method as primary
 export async function POST(request: NextRequest) {
   try {
+    // Initialize Firebase lazily
+    const { db: firestore } = initializeFirebase();
+
+    if (!firestore) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
+    // Update local reference
+    db = firestore;
+
     // Get user ID from request using our helper
     const userId = await getUserIdFromRequest(request);
 

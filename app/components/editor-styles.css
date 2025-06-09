@@ -33,7 +33,8 @@ a.external-link,
   min-height: 1.5rem !important;
   width: fit-content !important;
   min-width: fit-content !important;
-  max-width: none !important;
+  /* FIX: Allow links to display full text, only constrain when viewport would overflow */
+  max-width: calc(100vw - 4rem) !important;
   flex: none !important;
   position: relative !important;
   visibility: visible !important;
@@ -78,4 +79,37 @@ a[data-user-id]::before {
   display: inline-flex !important;
   float: none !important;
   vertical-align: middle !important;
+}
+
+/* COMPOUND LINK STYLING - Ensures separate pill appearance */
+.compound-link-container {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important; /* Equivalent to gap-1 */
+  flex-wrap: nowrap !important;
+}
+
+/* Ensure compound link pills maintain separation */
+.compound-link-container .page-portion,
+.compound-link-container .author-portion {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+/* Ensure "by" text in compound links is properly styled */
+.compound-link-container .text-muted-foreground {
+  display: inline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* Prevent compound link container from being treated as a single link */
+.compound-link-container:hover {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }

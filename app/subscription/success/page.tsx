@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '../../providers/AuthProvider';
-import { SubscriptionSuccessModal } from '../../components/SubscriptionSuccessModal';
-import { useFeatureFlag } from '../../utils/feature-flags';
+import { useAuth } from "../../providers/AuthProvider";
+import { SubscriptionSuccessModal } from '../../components/payments/SubscriptionSuccessModal';
+import { useFeatureFlag } from "../../utils/feature-flags";
 
 export default function SubscriptionSuccessPage() {
   const { user } = useAuth();
@@ -33,7 +33,7 @@ export default function SubscriptionSuccessPage() {
       return;
     }
 
-    const sessionId = searchParams.get('session_id');
+    const sessionId = searchParams?.get('session_id');
 
     if (!sessionId) {
       setError('No session ID provided');
@@ -80,10 +80,10 @@ export default function SubscriptionSuccessPage() {
     handleSubscriptionSuccess();
   }, [user, router, searchParams, isPaymentsEnabled]);
 
-  // If the modal is closed, redirect to the account page
+  // If the modal is closed, redirect to the settings page
   const handleModalClose = () => {
     setShowModal(false);
-    router.push('/account');
+    router.push('/settings');
   };
 
   if (isLoading) {

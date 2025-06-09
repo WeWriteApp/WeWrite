@@ -2,23 +2,25 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../providers/AuthProvider';
+import { useAuth } from "../providers/AuthProvider";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Checkbox } from '../components/ui/checkbox';
 
 import { SwipeableTabs, SwipeableTabsList, SwipeableTabsTrigger, SwipeableTabsContent } from '../components/ui/swipeable-tabs';
 import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight } from 'lucide-react';
-import { db } from '../firebase/database';
+import { db } from "../firebase/database";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
-import { FeatureFlag, isAdmin } from '../utils/feature-flags.ts';
+import { FeatureFlag, isAdmin } from "../utils/feature-flags";
 import { usePWA } from '../providers/PWAProvider';
-import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import SyncFeatureFlagsButton from '../components/SyncFeatureFlagsButton';
+import { useFeatureFlags } from "../hooks/useFeatureFlags";
+import SyncFeatureFlagsButton from '../components/utils/SyncFeatureFlagsButton';
 import Link from 'next/link';
-import EnhancedFeatureFlagCard from '../components/admin/EnhancedFeatureFlagCard';
-import FeatureFlagTestPanel from '../components/FeatureFlagTestPanel';
+import FeatureFlagCard from '../components/admin/FeatureFlagCard';
+import { UserManagement } from '../components/admin/UserManagement';
+
 
 interface User {
   id: string;
@@ -47,6 +49,7 @@ export default function AdminPage() {
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hideGloballyEnabled, setHideGloballyEnabled] = useState(false);
 
   // Feature flags state - using system string names for easier identification
   const [featureFlags, setFeatureFlags] = useState<FeatureFlagState[]>([
@@ -56,12 +59,7 @@ export default function AdminPage() {
       description: 'Enable subscription functionality and UI for managing user subscriptions',
       enabled: false
     },
-    {
-      id: 'username_management',
-      name: 'username_management',
-      description: 'Allow admins to manage user usernames and handle username-related operations',
-      enabled: false
-    },
+
     {
       id: 'map_view',
       name: 'map_view',
@@ -99,6 +97,23 @@ export default function AdminPage() {
       enabled: false
     }
   ]);
+
+  // Load filter state from session storage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedFilterState = sessionStorage.getItem('admin-hide-globally-enabled');
+      if (savedFilterState !== null) {
+        setHideGloballyEnabled(JSON.parse(savedFilterState));
+      }
+    }
+  }, []);
+
+  // Persist filter state to session storage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('admin-hide-globally-enabled', JSON.stringify(hideGloballyEnabled));
+    }
+  }, [hideGloballyEnabled]);
 
   // Check if user is admin
   useEffect(() => {
@@ -147,9 +162,9 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Error loading admin users:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load admin users',
-        variant: 'destructive'
+        title: "Error",
+        description: "Failed to load admin users",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
@@ -436,6 +451,11 @@ export default function AdminPage() {
     });
   };
 
+  // Filter feature flags based on hideGloballyEnabled setting
+  const filteredFeatureFlags = hideGloballyEnabled
+    ? featureFlags.filter(flag => !flag.enabled)
+    : featureFlags;
+
   if (authLoading || !user) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -483,6 +503,13 @@ export default function AdminPage() {
               className="flex items-center gap-2 px-4 py-3 whitespace-nowrap border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary font-medium transition-all"
             >
               <Users className="h-4 w-4" />
+              User Management
+            </SwipeableTabsTrigger>
+            <SwipeableTabsTrigger
+              value="admins"
+              className="flex items-center gap-2 px-4 py-3 whitespace-nowrap border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary font-medium transition-all"
+            >
+              <Shield className="h-4 w-4" />
               Admin Users
             </SwipeableTabsTrigger>
             <SwipeableTabsTrigger
@@ -504,6 +531,24 @@ export default function AdminPage() {
             </div>
           </div>
 
+          {/* Filter Controls */}
+          <div className="flex items-center space-x-2 mb-4 p-3 bg-muted/30 rounded-lg border">
+            <Checkbox
+              id="hide-globally-enabled"
+              checked={hideGloballyEnabled}
+              onCheckedChange={(checked) => setHideGloballyEnabled(checked as boolean)}
+            />
+            <label
+              htmlFor="hide-globally-enabled"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            >
+              Hide globally enabled flags
+            </label>
+            <span className="text-xs text-muted-foreground ml-2">
+              ({filteredFeatureFlags.length} of {featureFlags.length} flags shown)
+            </span>
+          </div>
+
           {isLoading ? (
             <div className="flex justify-center py-4">
               <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -513,23 +558,31 @@ export default function AdminPage() {
 
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {featureFlags.map(flag => (
-                <EnhancedFeatureFlagCard
-                  key={flag.id}
-                  flag={flag}
-                  userEmail={user?.email || ''}
-                  userId={user?.uid || ''}
-                  onToggleGlobal={(flagId, checked) => toggleFeatureFlag(flagId, checked)}
-                  onNavigate={(flagId) => router.push(`/admin/features/${flagId}`)}
-                />
-              ))}
+                {filteredFeatureFlags.map(flag => (
+                  <FeatureFlagCard
+                    key={flag.id}
+                    flag={flag}
+                    onToggle={(flagId, checked) => toggleFeatureFlag(flagId, checked)}
+                    onPersonalToggle={(flagId, checked) => {
+                      // Personal toggle doesn't need to update the global state
+                      // The component handles its own personal state
+                      console.log(`Personal toggle for ${flagId}: ${checked}`);
+                    }}
+                    isLoading={isLoading}
+                  />
+                ))}
               </div>
             </>
           )}
         </SwipeableTabsContent>
 
-        {/* Admin Users Tab */}
+        {/* User Management Tab */}
         <SwipeableTabsContent value="users" className="space-y-4 pt-4">
+          <UserManagement />
+        </SwipeableTabsContent>
+
+        {/* Admin Users Tab */}
+        <SwipeableTabsContent value="admins" className="space-y-4 pt-4">
           <div className="mb-6">
             <h2 className="text-2xl font-bold mb-2">Admin Users</h2>
             <p className="text-muted-foreground">Manage users with administrative privileges</p>
@@ -688,6 +741,55 @@ export default function AdminPage() {
               </span>
               <div className="mt-2">
                 <SyncFeatureFlagsButton />
+              </div>
+            </div>
+
+            {/* Sync Queue Demo Tool */}
+            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Sync Queue Demo</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Simulate unverified email state to test the sync queue functionality.
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => {
+                    // Temporarily override email verification status
+                    if (typeof window !== 'undefined') {
+                      const currentOverride = localStorage.getItem('demo_unverified_email');
+                      if (currentOverride === 'true') {
+                        localStorage.removeItem('demo_unverified_email');
+                        toast({
+                          title: 'Demo Mode Disabled',
+                          description: 'Email verification status restored to normal.',
+                          variant: 'default'
+                        });
+                      } else {
+                        localStorage.setItem('demo_unverified_email', 'true');
+                        toast({
+                          title: 'Demo Mode Enabled',
+                          description: 'Simulating unverified email state. Refresh the page to see the banner.',
+                          variant: 'default'
+                        });
+                      }
+
+                      // Trigger a page refresh to show the banner
+                      setTimeout(() => {
+                        window.location.reload();
+                      }, 1000);
+                    }
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  {typeof window !== 'undefined' && localStorage.getItem('demo_unverified_email') === 'true'
+                    ? 'Disable Demo Mode'
+                    : 'Enable Demo Mode'
+                  }
+                </Button>
               </div>
             </div>
 
@@ -858,10 +960,7 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* Feature Flag Testing Panel */}
-          <div className="mt-8">
-            <FeatureFlagTestPanel />
-          </div>
+
         </SwipeableTabsContent>
       </SwipeableTabs>
     </div>

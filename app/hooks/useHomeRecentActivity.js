@@ -4,6 +4,7 @@ import { db } from "../firebase/config";
 import { AuthContext } from "../providers/AuthProvider";
 import { getPageVersions } from "../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
+import { getBatchUserData } from "../firebase/batchUserData";
 
 /**
  * useHomeRecentActivity - A hook that loads recent activity data for the homepage
@@ -13,9 +14,10 @@ import { getDatabase, ref, get } from "firebase/database";
  * @param {number} limitCount - Number of activities to fetch
  * @param {string|null} filterUserId - Optional user ID to filter activities by
  * @param {boolean} followedOnly - Whether to only show activities from followed pages
+ * @param {boolean} mineOnly - Whether to only show current user's activities
  * @returns {Object} - Object containing activities, loading state, error, and dummy functions for compatibility
  */
-const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false) => {
+const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false, mineOnly = false) => {
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
@@ -25,12 +27,17 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
   const limitRef = useRef(limitCount);
   const userIdRef = useRef(filterUserId);
   const followedOnlyRef = useRef(followedOnly);
+  const mineOnlyRef = useRef(mineOnly);
   const userRef = useRef(user);
 
   // Update refs when props change
   useEffect(() => {
     followedOnlyRef.current = followedOnly;
   }, [followedOnly]);
+
+  useEffect(() => {
+    mineOnlyRef.current = mineOnly;
+  }, [mineOnly]);
 
   useEffect(() => {
     userRef.current = user;
@@ -154,6 +161,19 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
       let pagesQuery;
       let followedPageIds = [];
 
+      // If mineOnly is true, filter by current user's content
+      if (mineOnlyRef.current) {
+        if (!userRef.current) {
+          // If not logged in but in mine mode, return empty results
+          setActivities([]);
+          setLoading(false);
+          isFetchingRef.current = false;
+          return;
+        }
+        // Set userIdRef to current user for filtering
+        userIdRef.current = userRef.current.uid;
+      }
+
       // If followedOnly is true, get the list of pages the user follows
       if (followedOnlyRef.current) {
         if (!userRef.current) {
@@ -272,23 +292,43 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
           console.log(`Sorted followed pages by lastModified, using ${pageDocs.length} pages`);
         }
 
-        // Process each page to get its recent activity
-        const activitiesPromises = pageDocs.map(async (doc) => {
+        // Extract all unique user IDs from page versions for batch fetching
+        const allUserIds = new Set();
+        const pageVersionsMap = new Map();
+
+        // First pass: collect all user IDs and page versions
+        for (const doc of pageDocs) {
           const pageData = { id: doc.id, ...doc.data() };
 
           // Check if the page belongs to a private group and if the user has access
           const hasAccess = await checkPageGroupAccess(pageData);
-          if (!hasAccess) return null;
+          if (!hasAccess) continue;
 
           try {
             // Get the two most recent versions of this page
             const versions = await getPageVersions(pageData.id, 2);
 
-            if (!versions || versions.length === 0) {
-              // No versions found
-              return null;
-            }
+            if (!versions || versions.length === 0) continue;
 
+            pageVersionsMap.set(pageData.id, { pageData, versions });
+
+            // Collect user IDs for batch fetching
+            versions.forEach(version => {
+              if (version.userId) {
+                allUserIds.add(version.userId);
+              }
+            });
+          } catch (err) {
+            console.error("Error processing page versions:", err);
+          }
+        }
+
+        // Batch fetch all user data at once
+        const batchUserData = await getBatchUserData([...allUserIds]);
+
+        // Process each page to get its recent activity
+        const activitiesPromises = Array.from(pageVersionsMap.entries()).map(async ([pageId, { pageData, versions }]) => {
+          try {
             const currentVersion = versions[0];
 
             // Handle newly created pages (only one version)
@@ -298,7 +338,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
                 return null;
               }
 
-              // Get the user who made the edit
+              // Get the user who made the edit from batch data
               let username = null;
               let userId = null;
               let tier = null;
@@ -307,11 +347,11 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
               // Try to get username from the version data first
               if (currentVersion.userId) {
                 userId = currentVersion.userId;
-                // If we have userId, try to fetch username and subscription info from the database
-                const userData = await getUsernameById(currentVersion.userId);
-                username = userData.username;
-                tier = userData.tier;
-                subscriptionStatus = userData.subscriptionStatus;
+                // Get user data from batch fetch
+                const userData = batchUserData[currentVersion.userId];
+                username = userData?.username;
+                tier = userData?.tier;
+                subscriptionStatus = userData?.subscriptionStatus;
               }
 
               // Use page content directly if available, otherwise use version content
@@ -350,7 +390,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
               return null;
             }
 
-            // Get the user who made the edit
+            // Get the user who made the edit from batch data
             let username = null;
             let userId = null;
             let tier = null;
@@ -359,11 +399,11 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
             // Try to get username from the version data first
             if (currentVersion.userId) {
               userId = currentVersion.userId;
-              // If we have userId, try to fetch username and subscription info from the database
-              const userData = await getUsernameById(currentVersion.userId);
-              username = userData.username;
-              tier = userData.tier;
-              subscriptionStatus = userData.subscriptionStatus;
+              // Get user data from batch fetch
+              const userData = batchUserData[currentVersion.userId];
+              username = userData?.username;
+              tier = userData?.tier;
+              subscriptionStatus = userData?.subscriptionStatus;
             }
 
             // Use page content directly if available, otherwise use version content
@@ -452,7 +492,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
 
   useEffect(() => {
     // Fetch data
-    console.log(`useHomeRecentActivity effect triggered with followedOnly=${followedOnly}`);
+    console.log(`useHomeRecentActivity effect triggered with followedOnly=${followedOnly}, mineOnly=${mineOnly}`);
     fetchRecentActivity();
 
     // Cleanup function
@@ -461,7 +501,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
       console.log('useHomeRecentActivity cleanup - marking as not fetching');
       isFetchingRef.current = false;
     };
-  }, [followedOnly]); // Re-run when followedOnly changes
+  }, [followedOnly, mineOnly]); // Re-run when followedOnly or mineOnly changes
 
   // Provide dummy values for hasMore and loadingMore to match the interface of useRecentActivity
   const hasMore = false;

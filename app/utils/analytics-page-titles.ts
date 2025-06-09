@@ -9,8 +9,8 @@
  * Updated to ensure human-readable page titles in reports.
  */
 
-import { getPageMetadata, getCachedPageTitle } from '../firebase/database';
-import { auth } from '../firebase/auth';
+import { getPageMetadata, getCachedPageTitle } from "../firebase/database";
+import { auth } from "../firebase/auth";
 
 // Cache for page titles to avoid excessive database queries
 const pageTitleCache = new Map<string, string>();
@@ -59,12 +59,12 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/auth/switch-account': 'Account Switcher',
   '/auth/logout': 'Logout Page',
 
-  // Account pages
-  '/account': 'Account Settings',
-  '/account/subscription': 'Subscription Settings',
-  '/account/payment': 'Payment Settings',
-  '/account/notifications': 'Notification Settings',
-  '/account/security': 'Security Settings',
+  // Settings pages
+  '/settings': 'Settings',
+  '/settings/subscription': 'Subscription Settings',
+  '/settings/payment': 'Payment Settings',
+  '/settings/notifications': 'Notification Settings',
+  '/settings/security': 'Security Settings',
 
   // Other static pages
   '/sandbox': 'Sandbox Page',
@@ -73,7 +73,7 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/about': 'About Page',
   '/contact': 'Contact Page',
   '/help': 'Help Center',
-  '/faq': 'FAQ Page'
+  '/faq': "FAQ Page"
 };
 
 /**
@@ -175,18 +175,18 @@ export function getAnalyticsPageTitle(
 
     // Try to get the page title and author from the DOM first (most accurate)
     const contentTitle = document.querySelector('h1')?.textContent;
-    let username = null;
+    let username: string | null = null;
 
     // Try to extract username from document title
     if (documentTitle && documentTitle.includes(' by ')) {
       const parts = documentTitle.split(' by ');
       if (parts.length >= 2) {
         const authorPart = parts[1];
-        username = authorPart.split(' on WeWrite')[0];
+        const extractedUsername = authorPart.split(' on WeWrite')[0];
 
         // Skip "Anonymous" usernames - we'll try to get a better one later
-        if (username === 'Anonymous') {
-          username = null;
+        if (extractedUsername !== 'Anonymous') {
+          username = extractedUsername;
         }
       }
     }
@@ -229,11 +229,12 @@ export function getAnalyticsPageTitle(
       // If no group, try to find username in the page
       const authorElement = document.querySelector('[data-author-username]');
       if (authorElement) {
-        username = authorElement.getAttribute('data-author-username') ||
+        const extractedUsername = authorElement.getAttribute('data-author-username') ||
                   authorElement.textContent;
 
         // Skip "Anonymous" usernames
-        if (username && username !== 'Anonymous' && username !== 'Missing username') {
+        if (extractedUsername && extractedUsername !== 'Anonymous' && extractedUsername !== 'Missing username') {
+          username = extractedUsername;
           return `Page: ${contentTitle} by ${username}`;
         }
       }
@@ -294,9 +295,10 @@ export function getAnalyticsPageTitle(
       // If no group, try to find username in the page
       const authorElement = document.querySelector('[data-author-username]');
       if (authorElement) {
-        username = authorElement.getAttribute('data-author-username') ||
+        const extractedUsername = authorElement.getAttribute('data-author-username') ||
                   authorElement.textContent;
-        if (username) {
+        if (extractedUsername) {
+          username = extractedUsername;
           return `Page: ${cachedTitle} by ${username}`;
         }
       }
@@ -311,8 +313,8 @@ export function getAnalyticsPageTitle(
         !documentTitle.includes('undefined')) {
       // Clean up the document title
       let cleanTitle = documentTitle;
-      let extractedUsername = null;
-      let extractedGroupName = null;
+      let extractedUsername: string | null = null;
+      let extractedGroupName: string | null = null;
 
       // Remove "WeWrite - " prefix if present
       if (cleanTitle.startsWith('WeWrite - ')) {
@@ -497,7 +499,7 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
             }
           } else {
             // For regular pages, try to get the username
-            let username = null;
+            let username: string | null = null;
 
             // Try to get username from metadata
             if (metadata.username &&
@@ -561,7 +563,7 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
             pageTitle = `Page: ${metadata.title} in ${metadata.groupName}`;
           } else {
             // For regular pages, try to get the username
-            let username = null;
+            let username: string | null = null;
 
             // Try to get username from metadata
             if (metadata.username &&
@@ -618,14 +620,17 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
         const pathname = window.location.pathname;
 
         // Try to get the username from the DOM or document title
-        let username = null;
+        let username: string | null = null;
 
         // Try to extract username from document title
         if (document.title && document.title.includes(' by ')) {
           const parts = document.title.split(' by ');
           if (parts.length >= 2) {
             const authorPart = parts[1];
-            username = authorPart.split(' on WeWrite')[0];
+            const extractedUsername = authorPart.split(' on WeWrite')[0];
+            if (extractedUsername !== 'Anonymous') {
+              username = extractedUsername;
+            }
           }
         }
 
@@ -633,8 +638,11 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
         if (!username) {
           const authorElement = document.querySelector('[data-author-username]');
           if (authorElement) {
-            username = authorElement.getAttribute('data-author-username') ||
+            const extractedUsername = authorElement.getAttribute('data-author-username') ||
                       authorElement.textContent;
+            if (extractedUsername && extractedUsername !== 'Anonymous') {
+              username = extractedUsername;
+            }
           }
         }
 
@@ -682,14 +690,17 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
         const h1Element = document.querySelector('h1');
         if (h1Element && h1Element.textContent && h1Element.textContent !== 'Untitled') {
           // Try to get the username from the DOM or document title
-          let username = null;
+          let username: string | null = null;
 
           // Try to extract username from document title
           if (document.title && document.title.includes(' by ')) {
             const parts = document.title.split(' by ');
             if (parts.length >= 2) {
               const authorPart = parts[1];
-              username = authorPart.split(' on WeWrite')[0];
+              const extractedUsername = authorPart.split(' on WeWrite')[0];
+              if (extractedUsername !== 'Anonymous') {
+                username = extractedUsername;
+              }
             }
           }
 
@@ -697,8 +708,11 @@ async function fetchAndCachePageTitle(pageId: string): Promise<void> {
           if (!username) {
             const authorElement = document.querySelector('[data-author-username]');
             if (authorElement) {
-              username = authorElement.getAttribute('data-author-username') ||
+              const extractedUsername = authorElement.getAttribute('data-author-username') ||
                         authorElement.textContent;
+              if (extractedUsername && extractedUsername !== 'Anonymous') {
+                username = extractedUsername;
+              }
             }
           }
 
@@ -776,18 +790,18 @@ export function isContentReadyForAnalytics(pageId: string, currentTitle?: string
 
   // Try to get the page title from the DOM
   const contentTitle = document.querySelector('h1')?.textContent;
-  let username = null;
+  let username: string | null = null;
 
   // Try to extract username from document title
   if (document.title && document.title.includes(' by ')) {
     const parts = document.title.split(' by ');
     if (parts.length >= 2) {
       const authorPart = parts[1];
-      username = authorPart.split(' on WeWrite')[0];
+      const extractedUsername = authorPart.split(' on WeWrite')[0];
 
       // Skip "Anonymous" usernames
-      if (username === 'Anonymous') {
-        username = null;
+      if (extractedUsername !== 'Anonymous') {
+        username = extractedUsername;
       }
     }
   }
@@ -796,12 +810,12 @@ export function isContentReadyForAnalytics(pageId: string, currentTitle?: string
   if (!username) {
     const authorElement = document.querySelector('[data-author-username]');
     if (authorElement) {
-      username = authorElement.getAttribute('data-author-username') ||
+      const extractedUsername = authorElement.getAttribute('data-author-username') ||
                 authorElement.textContent;
 
       // Skip "Anonymous" usernames
-      if (username === 'Anonymous' || username === 'Missing username') {
-        username = null;
+      if (extractedUsername && extractedUsername !== 'Anonymous' && extractedUsername !== 'Missing username') {
+        username = extractedUsername;
       }
     }
   }
@@ -939,7 +953,7 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
         return `Page: ${cachedTitle} in ${metadata.groupName}`;
       } else {
         // For regular pages, try to get the username
-        let username = null;
+        let username: string | null = null;
 
         // Try to get username from metadata
         if (metadata?.username &&
@@ -984,7 +998,7 @@ export async function getAnalyticsPageTitleForId(pageId: string): Promise<string
         return `Page: ${metadata.title} in ${metadata.groupName}`;
       } else {
         // For regular pages, try to get the username
-        let username = null;
+        let username: string | null = null;
 
         // Try to get username from metadata
         if (metadata.username &&
