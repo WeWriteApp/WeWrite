@@ -14,7 +14,22 @@ import { PageProvider } from '../../contexts/PageContext';
 import { LineSettingsProvider } from '../../contexts/LineSettingsContext';
 
 export default function UserPage({ params }) {
-  const { id } = use(params);
+  // Handle both Promise and object params
+  let unwrappedParams;
+  try {
+    // If params is a Promise, use React.use() to unwrap it
+    if (params && typeof params.then === 'function') {
+      unwrappedParams = use(params);
+    } else {
+      // If params is already an object, use it directly
+      unwrappedParams = params || {};
+    }
+  } catch (error) {
+    console.error("Error unwrapping params in UserPage:", error);
+    unwrappedParams = {};
+  }
+
+  const { id } = unwrappedParams;
   const router = useRouter();
   const { user } = useAuth();
   const isPaymentsEnabled = useFeatureFlag('payments', user?.email);

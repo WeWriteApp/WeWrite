@@ -1720,7 +1720,7 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
           spellCheck={true}
           autoFocus={false}
           onKeyDown={handleKeyDown}
-          className="min-h-[200px] p-2 outline-none w-full max-w-none"
+          className="min-h-[400px] p-2 outline-none w-full max-w-none page-editor-stable"
           // Critical fix: Preserve selection on blur to prevent cursor jumps
           onBlur={() => {
             try {

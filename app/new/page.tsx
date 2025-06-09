@@ -23,6 +23,7 @@ import PledgeBar from "../components/payments/PledgeBar";
 import { shouldUseQueue, addToQueue } from "../utils/syncQueue";
 import { useSyncQueue } from "../contexts/SyncQueueContext";
 import SlideUpPage from "../components/ui/slide-up-page";
+import { NewPageSkeleton } from "../components/skeletons/PageEditorSkeleton";
 
 /**
  * Editor content node interface
@@ -85,6 +86,7 @@ export default function NewPage() {
   // Page-like state for consistency with SinglePageView
   const [page, setPage] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isInitializing, setIsInitializing] = useState<boolean>(true);
 
   // State for tracking changes and saving (mimics EditPage)
   const [editorContent, setEditorContent] = useState<EditorNode[]>([]);
@@ -101,6 +103,15 @@ export default function NewPage() {
   // Determine page type
   const isReply = searchParams?.has('replyTo') || false;
   const isDailyNote = searchParams?.get('type') === 'daily-note' || isExactDateFormat(title);
+
+  // Initialize the page after a brief delay to prevent layout shift
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitializing(false);
+    }, 150); // Brief delay to ensure smooth rendering
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Initialize content from URL parameters (for text selection feature)
   useEffect(() => {
@@ -437,6 +448,20 @@ export default function NewPage() {
   // Get username for display
   const username = user?.username || user?.displayName || 'Anonymous';
 
+  // Show skeleton during initialization to prevent layout shift
+  if (isInitializing) {
+    return (
+      <SlideUpPage>
+        <Layout>
+          <Head>
+            <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
+          </Head>
+          <NewPageSkeleton />
+        </Layout>
+      </SlideUpPage>
+    );
+  }
+
   // Render using the exact same structure as SinglePageView
   return (
     <SlideUpPage>
@@ -464,10 +489,10 @@ export default function NewPage() {
             setSelectedGroupName(newGroupName);
           }}
         />
-        <div className="pb-24 px-2 md:px-4 w-full max-w-none min-h-screen">
-          <div className="transition-all duration-300 ease-in-out opacity-100">
+        <div className="pb-24 px-2 md:px-4 w-full max-w-none min-h-screen pt-16">
+          <div className="transition-all duration-300 ease-in-out opacity-100 min-h-[calc(100vh-8rem)]">
             {isEditing ? (
-              <div className="animate-in fade-in-0 duration-300">
+              <div className="animate-in fade-in-0 duration-300 min-h-[500px]">
                 <PageProvider>
                   <LineSettingsProvider isEditMode={true}>
                   <PageEditor

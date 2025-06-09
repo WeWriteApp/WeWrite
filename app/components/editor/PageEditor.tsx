@@ -21,6 +21,7 @@ import { Button } from "../ui/button";
 import { Alert, AlertDescription } from "../ui/alert";
 import { AlertTriangle, X, Link, Check } from "lucide-react";
 import type { SlateContent } from "../../types/database";
+import { PageEditorSkeleton } from "../skeletons/PageEditorSkeleton";
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {
@@ -545,7 +546,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
             }
           >
             {/* Simplified editor wrapper */}
-            <div className="slate-editor-wrapper">
+            <div className="slate-editor-wrapper page-editor-stable">
               <Editor
                 ref={editorRef}
                 initialContent={currentEditorValue}
@@ -557,12 +558,11 @@ const PageEditor: React.FC<PageEditorProps> = ({
             </div>
           </ErrorBoundary>
         ) : (
-          <div className="w-full min-h-[200px] flex items-center justify-center">
-            <div className="loader loader-md"></div>
-            <div className="ml-3 text-muted-foreground">
-              Loading editor...
-            </div>
-          </div>
+          <PageEditorSkeleton
+            showTitle={false}
+            showToolbar={true}
+            minHeight="400px"
+          />
         )}
       </div>
 

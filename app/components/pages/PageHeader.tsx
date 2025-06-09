@@ -515,7 +515,7 @@ export default function PageHeader({
     <>
       <header
         ref={headerRef}
-        className={`fixed top-0 z-50 transition-all duration-300 ease-out will-change-transform header-border-transition ${
+        className={`fixed top-0 z-50 transition-all duration-300 ease-out will-change-transform header-border-transition min-h-[64px] ${
           isScrolled
             ? "bg-background/80 backdrop-blur-sm shadow-sm"
             : "bg-background border-visible"

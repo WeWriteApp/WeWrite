@@ -97,7 +97,7 @@ export function SlideUpPage({
   // If animation is disabled or not needed, render normally
   if (!enableAnimation || !shouldAnimate) {
     return (
-      <div className={cn("min-h-screen", className)}>
+      <div className={cn("min-h-screen new-page-container", className)}>
         {children}
       </div>
     );
@@ -110,7 +110,7 @@ export function SlideUpPage({
           <motion.div
             key="slide-up-page"
             className={cn(
-              "min-h-screen",
+              "min-h-screen new-page-container",
               // Use fixed positioning to overlay the entire viewport
               "fixed inset-0 z-[100] bg-background",
               // Ensure smooth rendering
@@ -140,7 +140,7 @@ export function SlideUpPage({
 
       {/* Fallback content when animation completes or doesn't trigger */}
       {(!shouldAnimate || isAnimationComplete) && (
-        <div className={cn("min-h-screen", className)}>
+        <div className={cn("min-h-screen new-page-container", className)}>
           {children}
         </div>
       )}
