@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Menu, Home, User, Plus } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -26,6 +26,33 @@ export default function MobileBottomNav() {
   const editorContext = useEditorContext();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isPWAMode, setIsPWAMode] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check if current route is an individual page (should hide mobile nav)
+  const isIndividualPageRoute = useCallback(() => {
+    // Pattern: /[pageId] where pageId is a dynamic route parameter
+    // Exclude known static routes like /user, /group, /new, etc.
+    const staticRoutes = [
+      '/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
+      '/login', '/signup', '/subscription', '/settings', '/privacy', '/terms'
+    ];
+
+    // Check if it's a static route
+    if (staticRoutes.includes(pathname)) {
+      return false;
+    }
+
+    // Check if it starts with known dynamic route patterns that should show nav
+    if (pathname.startsWith('/user/') || pathname.startsWith('/group/')) {
+      return false;
+    }
+
+    // If it's a single segment path that's not in static routes, it's likely a page ID
+    const segments = pathname.split('/').filter(Boolean);
+    return segments.length === 1 && !staticRoutes.includes(`/${segments[0]}`);
+  }, [pathname]);
 
   // Check PWA mode on mount and window resize
   useEffect(() => {
@@ -38,8 +65,58 @@ export default function MobileBottomNav() {
     return () => window.removeEventListener('resize', checkPWAMode);
   }, []);
 
+  // Scroll detection for auto-hide functionality
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      // Clear existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+
+      // Debounce scroll events to prevent flickering
+      scrollTimeoutRef.current = setTimeout(() => {
+        // Show toolbar when at top of page
+        if (currentScrollY <= 10) {
+          setIsVisible(true);
+        }
+        // Hide when scrolling down, show when scrolling up
+        else if (Math.abs(currentScrollY - lastScrollY) > 5) {
+          if (currentScrollY > lastScrollY && currentScrollY > 100) {
+            // Scrolling down and not near top - hide
+            setIsVisible(false);
+          } else if (currentScrollY < lastScrollY) {
+            // Scrolling up - show
+            setIsVisible(true);
+          }
+        }
+
+        setLastScrollY(currentScrollY);
+      }, 10); // Small debounce delay
+    };
+
+    // Only add scroll listener on mobile devices
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    if (mediaQuery.matches) {
+      window.addEventListener('scroll', handleScroll, { passive: true });
+    }
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [lastScrollY]);
+
   // Don't render if no user (will show login buttons instead)
   if (!user) {
+    return null;
+  }
+
+  // Don't render on individual page routes (mobile only)
+  if (isIndividualPageRoute()) {
     return null;
   }
 
@@ -70,12 +147,21 @@ export default function MobileBottomNav() {
 
   return (
     <>
-      {/* Bottom Navigation - Only visible on mobile */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border shadow-lg">
+      {/* Bottom Navigation - Only visible on mobile with auto-hide functionality */}
+      <div
+        className={cn(
+          "md:hidden fixed left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border shadow-lg",
+          "transition-transform duration-300 ease-in-out",
+          // Auto-hide functionality
+          isVisible ? "translate-y-0" : "translate-y-full",
+          // Improved positioning with proper bottom spacing
+          "bottom-2" // Move up slightly from bottom edge
+        )}
+      >
         <div className={cn(
-          "flex items-center justify-around px-4 pt-3 pb-7 safe-area-bottom",
+          "flex items-center justify-around px-4 pt-3 pb-4 safe-area-bottom",
           // Add extra bottom padding in PWA mode to account for PWA bottom bar
-          isPWAMode && "pb-9"
+          isPWAMode && "pb-6"
         )}>
           {/* Menu Button */}
           <Button
