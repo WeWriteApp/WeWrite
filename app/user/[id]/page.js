@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getDatabase, ref, get, query, orderByChild, equalTo } from 'firebase/database';
 import { getUserSubscription } from '../../firebase/subscription';
@@ -14,7 +14,7 @@ import { PageProvider } from '../../contexts/PageContext';
 import { LineSettingsProvider } from '../../contexts/LineSettingsContext';
 
 export default function UserPage({ params }) {
-  const { id } = params;
+  const { id } = use(params);
   const router = useRouter();
   const { user } = useAuth();
   const isPaymentsEnabled = useFeatureFlag('payments', user?.email);

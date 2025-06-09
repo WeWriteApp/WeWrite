@@ -2,22 +2,24 @@
 
 import React, { useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Menu, Home, User, Plus } from 'lucide-react';
+import { Menu, Home, User, Plus, Bell } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useAuth } from '../../providers/AuthProvider';
 import { MobileOverflowSidebar } from './MobileOverflowSidebar';
 import { useEditorContext } from './UnifiedSidebar';
 import { cn } from '../../lib/utils';
 import { isPWA } from '../../utils/pwa-detection';
+import NotificationBadge from '../utils/NotificationBadge';
 
 /**
  * MobileBottomNav Component
- * 
- * A fixed bottom navigation toolbar for mobile devices with 4 main actions:
+ *
+ * A fixed bottom navigation toolbar for mobile devices with 5 main actions:
  * - Menu: Opens sidebar navigation
  * - Home: Navigate to home page
  * - Profile: Navigate to user's profile (authenticated users only)
  * - New Page: Create new page (authenticated users only)
+ * - Notifications: Navigate to notifications page (authenticated users only)
  */
 export default function MobileBottomNav() {
   const router = useRouter();
@@ -115,8 +117,8 @@ export default function MobileBottomNav() {
     return null;
   }
 
-  // Don't render on individual page routes (mobile only)
-  if (isIndividualPageRoute()) {
+  // Don't render on individual page routes (mobile only) - but keep on notifications page
+  if (isIndividualPageRoute() && pathname !== '/notifications') {
     return null;
   }
 
@@ -139,10 +141,15 @@ export default function MobileBottomNav() {
     router.push('/new?source=mobile-nav');
   };
 
+  const handleNotificationsClick = () => {
+    router.push('/notifications');
+  };
+
   // Determine active states for navigation buttons
   const isHomeActive = pathname === '/';
   const isProfileActive = pathname === `/user/${user?.uid}`;
   const isNewPageActive = pathname === '/new';
+  const isNotificationsActive = pathname === '/notifications';
   const isMenuActive = sidebarOpen;
 
   return (
@@ -150,27 +157,41 @@ export default function MobileBottomNav() {
       {/* Bottom Navigation - Only visible on mobile with auto-hide functionality */}
       <div
         className={cn(
-          "md:hidden fixed left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border shadow-lg",
+          "md:hidden fixed left-0 right-0 bottom-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border shadow-lg",
           "transition-transform duration-300 ease-in-out",
           // Auto-hide functionality
-          isVisible ? "translate-y-0" : "translate-y-full",
-          // Improved positioning with proper bottom spacing
-          "bottom-2" // Move up slightly from bottom edge
+          isVisible ? "translate-y-0" : "translate-y-full"
         )}
       >
-        <div className={cn(
-          "flex items-center justify-around px-4 pt-3 pb-4 safe-area-bottom",
-          // Add extra bottom padding in PWA mode to account for PWA bottom bar
-          isPWAMode && "pb-6"
-        )}>
+        <div
+          className={cn(
+            "flex items-center justify-around px-4 pt-2",
+            // Prevent line wrapping and ensure single row layout
+            "flex-nowrap whitespace-nowrap",
+            // Handle potential overflow on very narrow screens
+            "overflow-x-auto",
+            // Increased base bottom padding for better spacing
+            "pb-6",
+            // Additional PWA bottom padding for home indicator
+            isPWAMode && "pb-10"
+          )}
+          style={{
+            // Ensure proper PWA safe area spacing - extends internal padding, not transparent space
+            paddingBottom: isPWAMode ? 'max(env(safe-area-inset-bottom), 40px)' : '24px',
+            // Ensure minimum width to prevent compression
+            minWidth: '100%'
+          }}
+        >
           {/* Menu Button */}
           <Button
             variant="ghost"
             size="lg"
             onClick={handleMenuClick}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 h-16 flex-1 rounded-lg p-2",
+              "flex flex-col items-center justify-center h-12 flex-1 rounded-lg p-2",
               "transition-all duration-200 ease-in-out",
+              // Prevent shrinking and maintain minimum size
+              "flex-shrink-0 min-w-0",
               // Base states with enhanced light mode contrast
               "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
               // Active state styling with stronger visual distinction
@@ -190,10 +211,7 @@ export default function MobileBottomNav() {
             aria-label="Menu"
             aria-pressed={isMenuActive}
           >
-            <div className="flex flex-col items-center justify-center flex-1 gap-1">
-              <Menu className="h-5 w-5 flex-shrink-0" />
-              <span className="text-xs font-medium text-center leading-none">Menu</span>
-            </div>
+            <Menu className="h-5 w-5 flex-shrink-0" />
           </Button>
 
           {/* Home Button */}
@@ -202,8 +220,10 @@ export default function MobileBottomNav() {
             size="lg"
             onClick={handleHomeClick}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 h-16 flex-1 rounded-lg p-2",
+              "flex flex-col items-center justify-center h-12 flex-1 rounded-lg p-2",
               "transition-all duration-200 ease-in-out",
+              // Prevent shrinking and maintain minimum size
+              "flex-shrink-0 min-w-0",
               // Base states with enhanced light mode contrast
               "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
               // Active state styling with stronger visual distinction
@@ -223,10 +243,7 @@ export default function MobileBottomNav() {
             aria-label="Home"
             aria-pressed={isHomeActive}
           >
-            <div className="flex flex-col items-center justify-center flex-1 gap-1">
-              <Home className="h-5 w-5 flex-shrink-0" />
-              <span className="text-xs font-medium text-center leading-none">Home</span>
-            </div>
+            <Home className="h-5 w-5 flex-shrink-0" />
           </Button>
 
           {/* Profile Button - Only show when authenticated */}
@@ -235,8 +252,10 @@ export default function MobileBottomNav() {
             size="lg"
             onClick={handleProfileClick}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 h-16 flex-1 rounded-lg p-2",
+              "flex flex-col items-center justify-center h-12 flex-1 rounded-lg p-2",
               "transition-all duration-200 ease-in-out",
+              // Prevent shrinking and maintain minimum size
+              "flex-shrink-0 min-w-0",
               // Base states with enhanced light mode contrast
               "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
               // Active state styling with stronger visual distinction
@@ -256,10 +275,40 @@ export default function MobileBottomNav() {
             aria-label="Profile"
             aria-pressed={isProfileActive}
           >
-            <div className="flex flex-col items-center justify-center flex-1 gap-1">
-              <User className="h-5 w-5 flex-shrink-0" />
-              <span className="text-xs font-medium text-center leading-none">Profile</span>
-            </div>
+            <User className="h-5 w-5 flex-shrink-0" />
+          </Button>
+
+          {/* Notifications Button - Only show when authenticated */}
+          <Button
+            variant="ghost"
+            size="lg"
+            onClick={handleNotificationsClick}
+            className={cn(
+              "flex flex-col items-center justify-center h-12 flex-1 rounded-lg p-2 relative",
+              "transition-all duration-200 ease-in-out",
+              // Prevent shrinking and maintain minimum size
+              "flex-shrink-0 min-w-0",
+              // Base states with enhanced light mode contrast
+              "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
+              // Active state styling with stronger visual distinction
+              isNotificationsActive
+                ? "bg-accent text-accent-foreground shadow-sm border border-accent/50 dark:bg-accent dark:text-accent-foreground dark:border-accent/60"
+                : [
+                    // Light mode: higher contrast colors
+                    "text-slate-600 hover:text-slate-900",
+                    // Dark mode: existing muted colors
+                    "dark:text-muted-foreground dark:hover:text-foreground"
+                  ],
+              // Touch feedback for mobile
+              "touch-manipulation select-none",
+              // Mobile-specific center alignment (≤768px)
+              "mobile-bottom-nav-button"
+            )}
+            aria-label="Notifications"
+            aria-pressed={isNotificationsActive}
+          >
+            <Bell className="h-5 w-5 flex-shrink-0" />
+            <NotificationBadge className="absolute -top-1 -right-1" />
           </Button>
 
           {/* New Page Button - Only show when authenticated */}
@@ -268,8 +317,10 @@ export default function MobileBottomNav() {
             size="lg"
             onClick={handleNewPageClick}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 h-16 flex-1 rounded-lg p-2",
+              "flex flex-col items-center justify-center h-12 flex-1 rounded-lg p-2",
               "transition-all duration-200 ease-in-out",
+              // Prevent shrinking and maintain minimum size
+              "flex-shrink-0 min-w-0",
               // Base states with enhanced light mode contrast
               "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
               // Active state styling with stronger visual distinction
@@ -289,10 +340,7 @@ export default function MobileBottomNav() {
             aria-label="New Page"
             aria-pressed={isNewPageActive}
           >
-            <div className="flex flex-col items-center justify-center flex-1 gap-1">
-              <Plus className="h-5 w-5 flex-shrink-0" />
-              <span className="text-xs font-medium text-center leading-none">New Page</span>
-            </div>
+            <Plus className="h-5 w-5 flex-shrink-0" />
           </Button>
         </div>
       </div>

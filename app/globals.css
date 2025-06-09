@@ -1401,4 +1401,17 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
   .sidebar-smooth-transition {
     box-shadow: none !important;
   }
+
+  /* Ensure no shadows leak from any sidebar-related elements */
+  [class*="sidebar"],
+  .fixed.left-0,
+  .fixed[class*="left-"] {
+    box-shadow: none !important;
+  }
+
+  /* Remove shadows from any elements that might be positioned on the left edge */
+  .fixed.z-\[100\],
+  .fixed[class*="z-"] {
+    box-shadow: none !important;
+  }
 }

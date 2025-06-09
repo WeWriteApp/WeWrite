@@ -61,6 +61,8 @@ export interface PageHeaderProps {
   onTitleChange?: (newTitle: string) => void;
   canEdit?: boolean;
   titleError?: boolean;
+  pageId?: string | null;
+  onOwnershipChange?: (newGroupId: string | null, newGroupName: string | null) => void;
 }
 
 export default function PageHeader({
@@ -79,6 +81,8 @@ export default function PageHeader({
   onTitleChange,
   canEdit: propCanEdit = false,
   titleError = false,
+  pageId: propPageId = null,
+  onOwnershipChange,
 }: PageHeaderProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -91,16 +95,17 @@ export default function PageHeader({
   // Calculate header positioning width - only respond to persistent expanded state, not hover
   // Hover state should overlay without affecting header positioning
   const headerSidebarWidth = React.useMemo(() => {
-    // Only adjust header position for persistent expanded state
-    // Hover state (temporary overlay) should not affect header positioning
-    if (isExpanded && !isHovering) {
+    // Header should only respond to persistent expanded state, not hover state
+    // When expanded: always use full width (256px) regardless of hover
+    // When collapsed: always use collapsed width (64px) regardless of hover
+    if (isExpanded) {
       return sidebarWidth; // Use full expanded width (256px)
     } else if (sidebarWidth > 0) {
-      return 64; // Use collapsed width (64px) for both collapsed and hover states
+      return 64; // Use collapsed width (64px) for collapsed state
     } else {
       return 0; // No sidebar (user not authenticated)
     }
-  }, [isExpanded, isHovering, sidebarWidth]);
+  }, [isExpanded, sidebarWidth]);
   const spacerRef = React.useRef<HTMLDivElement>(null);
   const [displayUsername, setDisplayUsername] = React.useState<string>(username || "Anonymous");
   const [tier, setTier] = React.useState<string | null>(initialTier || null);
@@ -109,7 +114,7 @@ export default function PageHeader({
   const subscriptionEnabled = useFeatureFlag('payments', user?.email);
   const [groupId, setGroupId] = React.useState<string | null>(initialGroupId || null);
   const [groupName, setGroupName] = React.useState<string | null>(initialGroupName || null);
-  const [pageId, setPageId] = React.useState<string | null>(null);
+  const [pageId, setPageId] = React.useState<string | null>(propPageId);
   const [hasGroupAccess, setHasGroupAccess] = React.useState<boolean>(false);
   const [isAddToPageOpen, setIsAddToPageOpen] = React.useState<boolean>(false);
   const [isEditingTitle, setIsEditingTitle] = React.useState<boolean>(false);
@@ -693,6 +698,9 @@ export default function PageHeader({
                                 onOwnershipChange={(newGroupId, newGroupName) => {
                                   setGroupId(newGroupId);
                                   setGroupName(newGroupName);
+                                  if (onOwnershipChange) {
+                                    onOwnershipChange(newGroupId, newGroupName);
+                                  }
                                 }}
                               />
                             }
@@ -721,6 +729,9 @@ export default function PageHeader({
                                 onOwnershipChange={(newGroupId, newGroupName) => {
                                   setGroupId(newGroupId);
                                   setGroupName(newGroupName);
+                                  if (onOwnershipChange) {
+                                    onOwnershipChange(newGroupId, newGroupName);
+                                  }
                                 }}
                               />
                             }

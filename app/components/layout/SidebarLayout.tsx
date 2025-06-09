@@ -21,8 +21,10 @@ export default function SidebarLayout({ children, className }: SidebarLayoutProp
   const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
 
   // Calculate the actual width that should push content
-  // Hover state should overlay (not push), so only use width for persistent expanded state
-  const contentPushWidth = isExpanded && !isHovering ? sidebarWidth : sidebarWidth > 0 ? 64 : 0;
+  // Content should only respond to persistent expanded state, not hover state
+  // When expanded: always use full width (256px) regardless of hover
+  // When collapsed: always use collapsed width (64px) regardless of hover
+  const contentPushWidth = isExpanded ? sidebarWidth : sidebarWidth > 0 ? 64 : 0;
 
   return (
     <div className="flex min-h-screen">

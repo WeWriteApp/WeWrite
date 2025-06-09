@@ -54,13 +54,13 @@ export default function ResetPasswordPage() {
     <div className="container max-w-md mx-auto px-4 py-8">
       <NavHeader
         title="Reset Password"
-        backUrl="/account"
-        backLabel="Back to Account"
+        backUrl="/settings"
+        backLabel="Back to Settings"
       />
 
       {/* Add meta tag for password managers */}
       <head>
-        <meta name="apple-itunes-app" content="app-id=123456789, app-argument=https://wewrite.com/account/reset-password" />
+        <meta name="apple-itunes-app" content="app-id=123456789, app-argument=https://wewrite.com/settings/reset-password" />
         <meta name="password-reset" content="true" />
       </head>
 

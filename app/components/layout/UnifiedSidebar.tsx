@@ -7,7 +7,7 @@ import { Switch } from "../ui/switch";
 import {
   Home, Search, User, Settings, ChevronLeft, ChevronRight, Bell, Plus,
   Globe, Lock, Link as LinkIcon, X, Check, Trash2, MapPin, Palette, Shield,
-  Sun, Moon, Laptop, ArrowLeft
+  Sun, Moon, Laptop, ArrowLeft, Clock
 } from "lucide-react";
 import { useAuth } from "../../providers/AuthProvider";
 import { useRouter } from "next/navigation";
@@ -201,6 +201,7 @@ function UnifiedSidebarContent({
   const navItems = [
     { icon: Home, label: 'Home', href: '/' },
     { icon: Search, label: 'Search', href: '/search' },
+    { icon: Clock, label: 'Recents', href: '/recents' },
     { icon: Plus, label: 'New Page', href: '/new' },
     { icon: Bell, label: 'Notifications', href: '/notifications' },
     { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/login' },
@@ -240,7 +241,7 @@ function UnifiedSidebarContent({
     /* Desktop Sidebar - Hidden on mobile */
     <div
       className={cn(
-        "hidden md:flex fixed left-0 top-0 h-screen bg-background border-r border-border z-[50] flex-col",
+        "hidden md:flex fixed left-0 top-0 h-screen bg-background border-r border-border z-[100] flex-col",
         "sidebar-smooth-transition",
         showContent ? "w-64" : "w-16",
         isHovering && !isExpanded ? "sidebar-hover-overlay" : ""

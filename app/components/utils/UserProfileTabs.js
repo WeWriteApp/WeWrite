@@ -15,6 +15,7 @@ import UsernameHistory from "../auth/UsernameHistory";
 import FollowingList from './FollowingList';
 import SearchResults from "../search/SearchResults";
 import UserBioTab from './UserBioTab';
+import UserGroupsTab from './UserGroupsTab';
 import { useFeatureFlag } from "../../utils/feature-flags";
 import FollowingTabContent from './FollowingTabContent';
 import {
@@ -577,25 +578,7 @@ export default function UserProfileTabs({ profile }) {
                   : "hidden"
               }`}
             >
-              <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                  <Users className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">User Groups</h3>
-                <p className="text-sm text-muted-foreground max-w-md mb-4">
-                  {isCurrentUser
-                    ? "Groups that you belong to will appear here."
-                    : `Only public groups that ${profile?.username || 'this user'} belongs to will be visible here.`}
-                </p>
-                {isCurrentUser && (
-                  <Link href="/groups">
-                    <Button variant="outline" className="gap-2">
-                      <Users className="h-4 w-4" />
-                      View My Groups
-                    </Button>
-                  </Link>
-                )}
-              </div>
+              <UserGroupsTab profile={profile} />
             </TabsContent>
           )}
 

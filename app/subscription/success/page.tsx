@@ -80,10 +80,10 @@ export default function SubscriptionSuccessPage() {
     handleSubscriptionSuccess();
   }, [user, router, searchParams, isPaymentsEnabled]);
 
-  // If the modal is closed, redirect to the account page
+  // If the modal is closed, redirect to the settings page
   const handleModalClose = () => {
     setShowModal(false);
-    router.push('/account');
+    router.push('/settings');
   };
 
   if (isLoading) {

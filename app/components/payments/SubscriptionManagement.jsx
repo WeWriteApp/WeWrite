@@ -351,7 +351,7 @@ export default function SubscriptionManagement() {
 
         {isActive && (
           <div className="space-y-4">
-            <Link href="/account/subscription/manage" className="block w-full">
+            <Link href="/settings/subscription/manage" className="block w-full">
               <div className="flex items-center gap-3 p-4 bg-primary/5 border-2 border-primary rounded-lg hover:border-primary hover:shadow-lg transition-all cursor-pointer group">
                 <div className="flex-shrink-0">
                   <SupporterIcon tier={subscription.tier} status="active" size="lg" />
@@ -461,7 +461,7 @@ export default function SubscriptionManagement() {
 
         {isPastDue && (
           <div className="space-y-4">
-            <Link href="/account/subscription/manage" className="block w-full">
+            <Link href="/settings/subscription/manage" className="block w-full">
               <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg hover:shadow-sm transition-all cursor-pointer group">
                 <div className="flex-shrink-0">
                   <AlertTriangle className="h-6 w-6 text-amber-500" />

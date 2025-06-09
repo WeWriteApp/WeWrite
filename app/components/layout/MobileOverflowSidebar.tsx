@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect, useContext } from "react"
-import { X, ChevronLeft, Palette, Settings, Check, Bell, User, Users, Shield, Globe, Lock, Link as LinkIcon, Trash2 } from "lucide-react"
+import { X, ChevronLeft, Palette, Settings, Check, User, Users, Shield, Globe, Lock, Link as LinkIcon, Trash2, Clock } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { auth } from "../../firebase/config"
 import { signOut } from "firebase/auth"
@@ -13,7 +13,7 @@ import { useTheme } from "next-themes"
 import { AccountSwitcher } from "../auth/AccountSwitcher"
 import { AccentColorSwitcher } from "../utils/AccentColorSwitcher"
 import PillStyleToggle from "../utils/PillStyleToggle"
-import NotificationBadge from "../utils/NotificationBadge"
+
 import { AuthContext } from "../../providers/AuthProvider"
 import { useFeatureFlag } from "../../utils/feature-flags"
 import MapEditor from "../editor/MapEditor"
@@ -221,13 +221,14 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
             {/* Main Menu Items */}
             <div className="space-y-1">
               <button
-                onClick={() => router.push('/notifications')}
+                onClick={() => router.push('/recents')}
                 className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
               >
-                <Bell className="h-5 w-5 mr-2" />
-                <span>Notifications</span>
-                <NotificationBadge className="ml-auto" />
+                <Clock className="h-5 w-5 mr-2" />
+                <span>Recents</span>
               </button>
+
+
 
               {/* Groups navigation item - now always visible for all users */}
               <button

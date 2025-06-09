@@ -55,7 +55,7 @@ const SubscriptionStatusCard: React.FC<SubscriptionStatusCardProps> = ({
 
           <button
             className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90 transition-colors"
-            onClick={() => router.push('/account/subscription')}
+            onClick={() => router.push('/settings/subscription')}
           >
             Set up subscription
           </button>

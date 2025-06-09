@@ -273,18 +273,18 @@ export default function SubscriptionPaymentPage() {
     setSuccess(true);
     // Redirect to the success page after successful payment
     setTimeout(() => {
-      router.push('/account/subscription/success');
+      router.push('/settings/subscription/success');
     }, 1500);
   };
 
   const handleCancel = () => {
-    router.push('/account/subscription');
+    router.push('/settings/subscription');
   };
 
   return (
     <div className="max-w-md mx-auto p-4">
       <div className="mb-4">
-        <Link href="/account/subscription" className="inline-flex items-center text-primary hover:text-primary/80 text-sm">
+        <Link href="/settings/subscription" className="inline-flex items-center text-primary hover:text-primary/80 text-sm">
           <ArrowLeft className="h-3 w-3 mr-1" />
           Back to Subscription Options
         </Link>

@@ -76,7 +76,7 @@ const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customConten
         body: JSON.stringify({ amount, userId: user.uid }),
       });
       if (res.ok) {
-        router.push(`/account/subscription/payment?amount=${amount}`);
+        router.push(`/settings/subscription/payment?amount=${amount}`);
       } else {
         const data = await res.json();
         setError(data.error || 'Failed to start subscription.');

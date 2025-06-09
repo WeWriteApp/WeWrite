@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback, useContext, useRef } from "react";
 import { Button } from "../ui/button";
-import { Edit, Save, X, Loader, AlertTriangle, History, Link } from "lucide-react";
+import { Edit, Save, X, Loader, AlertTriangle, History } from "lucide-react";
 import { rtdb } from "../../firebase/rtdb";
 import { ref, update, get, push, child } from "firebase/database";
 import { toast } from "../ui/use-toast";
@@ -10,28 +10,25 @@ import dynamic from "next/dynamic";
 import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../utils/UnsavedChangesDialog";
 import { AuthContext } from "../../providers/AuthProvider";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+
 import EmptyContentState from '../utils/EmptyContentState';
 import { GroupAboutSkeleton } from "../ui/page-skeleton";
-import { useFeatureFlag } from "../../utils/feature-flags";
-import DisabledLinkModal from "../utils/DisabledLinkModal";
+
 import TextView from "../editor/TextView";
 import type { GroupAboutTabProps } from "../../types/components";
 import type { SlateContent, Group } from "../../types/database";
+import { PageProvider } from "../../contexts/PageContext";
+import { LineSettingsProvider } from "../../contexts/LineSettingsContext";
 
-// Import the unified editor dynamically to avoid SSR issues
-const Editor = dynamic(() => import("../editor/Editor"), { ssr: false });
+// Import the unified PageEditor component
+const PageEditor = dynamic(() => import("../editor/PageEditor"), { ssr: false });
 
 const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEdit }) => {
   // Check if the user is a member of the group
   const { user } = useContext(AuthContext);
   const [canEdit, setCanEdit] = useState<boolean>(propCanEdit);
 
-  // Check if link functionality is enabled
-  const linkFunctionalityEnabled = useFeatureFlag('link_functionality', user?.email);
 
-  // State for disabled link modal
-  const [showDisabledLinkModal, setShowDisabledLinkModal] = useState<boolean>(false);
 
   // Check if the user is a member of the group
   useEffect(() => {
@@ -51,10 +48,20 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
   const [error, setError] = useState<string | null>(null);
   const [lastEditor, setLastEditor] = useState<string | null>(group.aboutLastEditor || null);
   const [lastEditTime, setLastEditTime] = useState<string | null>(group.aboutLastEditTime || null);
-  const editorRef = useRef<any>(null);
+  const [clickPosition, setClickPosition] = useState<{ x: number; y: number; clientX: number; clientY: number } | null>(null);
 
   // Track if content has changed
   const hasUnsavedChanges = isEditing && aboutContent !== originalContent;
+
+  // Enhanced setIsEditing function that captures click position
+  const handleSetIsEditing = (editing: boolean, position: { x: number; y: number; clientX: number; clientY: number } | null = null) => {
+    setIsEditing(editing);
+    if (editing && position) {
+      setClickPosition(position);
+    } else if (!editing) {
+      setClickPosition(null); // Clear position when exiting edit mode
+    }
+  };
 
   // Load the about content from the database
   useEffect(() => {
@@ -139,7 +146,7 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
       setOriginalContent(aboutContent);
       setLastEditor(editorName);
       setLastEditTime(currentTime);
-      setIsEditing(false);
+      handleSetIsEditing(false);
 
       toast.success("Group information updated successfully");
       return true; // Indicate success for the useUnsavedChanges hook
@@ -176,7 +183,7 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
     } else {
       // No changes, just exit edit mode
       setAboutContent(originalContent);
-      setIsEditing(false);
+      handleSetIsEditing(false);
     }
   };
 
@@ -185,91 +192,7 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
     setAboutContent(content);
   };
 
-  // Handle inserting a link
-  const handleInsertLink = () => {
-    // Check if link functionality is enabled
-    if (!linkFunctionalityEnabled) {
-      console.log('[DEBUG] Link functionality is disabled, showing modal');
-      setShowDisabledLinkModal(true);
-      return;
-    }
 
-    if (editorRef.current) {
-      console.log("[DEBUG] Editor ref exists, attempting to open link editor");
-
-      // Focus the editor first
-      try {
-        editorRef.current.focus();
-        console.log("[DEBUG] Editor focused successfully");
-      } catch (focusError) {
-        console.error("[DEBUG] Error focusing editor:", focusError);
-      }
-
-      // CRITICAL FIX: Try multiple approaches to ensure the link editor appears
-
-      // 1. Try direct method call if available
-      if (typeof editorRef.current.setShowLinkEditor === 'function') {
-        console.log("[DEBUG] Using direct setShowLinkEditor method");
-        editorRef.current.setShowLinkEditor(true);
-      }
-
-      // 2. Directly dispatch the custom event to show the link editor
-      try {
-        const event = new CustomEvent('show-link-editor', {
-          detail: {
-            position: {
-              top: window.innerHeight / 2,
-              left: window.innerWidth / 2,
-            },
-            initialTab: 'page',
-            showLinkEditor: true,
-            source: 'insert-link-button-group'
-          }
-        });
-        document.dispatchEvent(event);
-        console.log("[DEBUG] Directly dispatched show-link-editor event from group button");
-
-        // 3. Force a global event as well
-        window.dispatchEvent(new CustomEvent('linkEditorStateChange', {
-          detail: {
-            showLinkEditor: true
-          }
-        }));
-      } catch (eventError) {
-        console.error("[DEBUG] Error dispatching event:", eventError);
-
-        // 4. Fallback to using the openLinkEditor method if available
-        if (editorRef.current.openLinkEditor) {
-          console.log("[DEBUG] Falling back to openLinkEditor method");
-          try {
-            // Open the link editor directly without creating a temporary link first
-            // Pass "page" as the initial tab to show
-            const result = editorRef.current.openLinkEditor("page");
-            console.log("[DEBUG] openLinkEditor result:", result);
-          } catch (error) {
-            console.error("[DEBUG] Error opening link editor:", error);
-            toast.error("Could not open link editor. Please try again.");
-          }
-        } else {
-          console.error("[DEBUG] openLinkEditor method not available");
-          toast.error("Link insertion is not available. Please try again later.");
-        }
-      }
-    } else {
-      console.error("Editor ref not available");
-      toast.error("Editor is not ready. Please try again later.");
-    }
-  };
-
-  // Handle keyboard shortcuts
-  const handleKeyDown = (event) => {
-    // Save on Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux)
-    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
-      handleSave();
-      toast.info("Saving changes...");
-    }
-  };
 
   if (isLoading && !aboutContent) {
     return (
@@ -305,7 +228,7 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsEditing(true)}
+            onClick={() => handleSetIsEditing(true)}
             className="gap-1"
           >
             <Edit className="h-4 w-4" />
@@ -344,48 +267,29 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
       {/* Content display or editor */}
       <div className="bg-card rounded-lg border border-border p-4">
         {isEditing ? (
-          <div>
-            {/* Editor toolbar */}
-            <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-              {/* Insert Link button */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={handleInsertLink}
-                      variant="outline"
-                      className={`flex items-center gap-1.5 bg-background/90 border-input ${
-                        !linkFunctionalityEnabled ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                      disabled={!linkFunctionalityEnabled}
-                    >
-                      <Link className="h-4 w-4" />
-                      <span className="text-sm font-medium">Insert Link</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{linkFunctionalityEnabled ? 'Insert a link to a page or external site' : 'Link functionality is temporarily disabled'}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              {/* Keyboard shortcut hint */}
-              <div className="text-xs text-muted-foreground">
-                Press <kbd className="px-1 py-0.5 bg-muted rounded border border-border">⌘</kbd>+<kbd className="px-1 py-0.5 bg-muted rounded border border-border">Enter</kbd> to save
-              </div>
-            </div>
-
-            {/* Editor */}
-            <div className="min-h-[300px]">
-              <Editor
-                ref={editorRef}
-                initialContent={aboutContent}
-                onChange={handleContentChange}
-                placeholder="Write about this group..."
-                contentType="about"
-                onKeyDown={handleKeyDown}
-              />
-            </div>
+          <div className="animate-in fade-in-0 duration-300">
+            <PageProvider>
+              <LineSettingsProvider>
+                <PageEditor
+                  title="" // Group about doesn't have a title
+                  setTitle={() => {}} // Group about doesn't have a title
+                  initialContent={aboutContent}
+                  onContentChange={handleContentChange}
+                  isPublic={group.isPublic || false} // Use group's privacy setting
+                  setIsPublic={() => {}} // Group about doesn't have privacy settings
+                  location={null} // Group about doesn't have location
+                  setLocation={() => {}} // Group about doesn't have location
+                  onSave={handleSave}
+                  onCancel={handleCancel}
+                  onDelete={null} // Group about doesn't have delete functionality
+                  isSaving={isLoading}
+                  error={error || ""}
+                  isNewPage={false}
+                  clickPosition={clickPosition}
+                  page={null} // Group about is not a page
+                />
+              </LineSettingsProvider>
+            </PageProvider>
           </div>
         ) : (
           <div className="prose dark:prose-invert max-w-none">
@@ -395,16 +299,13 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
                 <TextView
                   content={aboutContent}
                   canEdit={canEdit}
-                  onActiveLine={() => {
-                    // Enable editing when user clicks on a line
-                    setIsEditing(true);
-                  }}
+                  setIsEditing={handleSetIsEditing}
                   showLineNumbers={false} // Group about doesn't need line numbers
                 />
               </div>
             ) : (
               <EmptyContentState
-                onActivate={() => setIsEditing(true)}
+                onActivate={() => handleSetIsEditing(true)}
                 isOwner={canEdit}
                 ownerMessage="This group doesn't have a description yet."
                 visitorMessage="This group doesn't have a description yet."
@@ -433,11 +334,7 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
         isSaving={isLoading || isHandlingNavigation}
       />
 
-      {/* Disabled Link Modal */}
-      <DisabledLinkModal
-        isOpen={showDisabledLinkModal}
-        onClose={() => setShowDisabledLinkModal(false)}
-      />
+
     </div>
   );
 };

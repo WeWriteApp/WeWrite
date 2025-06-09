@@ -14,6 +14,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../components/ui/card";
 import SubscriptionManagement from '../components/payments/SubscriptionManagement';
 import { PaymentMethodsManager } from '../components/payments/PaymentMethodsManager';
+import { PledgesList } from '../components/payments/PledgesList';
 import PWAInstallationCard from '../components/utils/PWAInstallationCard';
 import { SyncQueueSettings } from '../components/utils/SyncQueueSettings';
 import { EmailVerificationStatus } from '../components/utils/EmailVerificationStatus';
@@ -35,6 +36,9 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  // Check payments feature flag
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
 
   useEffect(() => {
     if (!user) {
@@ -269,13 +273,18 @@ export default function AccountPage() {
           </section>
 
           {/* Subscription Management Section - Only visible when payments feature flag is enabled */}
-          {user && user.email && useFeatureFlag('payments', user.email) && (
+          {user && user.email && isPaymentsEnabled && (
             <section>
               <SubscriptionManagement />
 
               {/* Payment Methods Section */}
               <div className="mt-6">
                 <PaymentMethodsManager />
+              </div>
+
+              {/* Pledges List Section */}
+              <div className="mt-6">
+                <PledgesList />
               </div>
 
               {/* Payment History */}

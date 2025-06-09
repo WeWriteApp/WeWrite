@@ -194,7 +194,7 @@ const SingleProfileView = ({ profile }) => {
 
   return (
     <ProfilePagesProvider userId={profile.uid}>
-      <div className="px-4 md:px-6 lg:px-8 max-w-4xl mx-auto">
+      <div>
         {/* Navigation bar */}
         <div className="flex items-center mb-6">
           <div className="flex-1">
@@ -258,7 +258,7 @@ const SingleProfileView = ({ profile }) => {
                 variant="outline"
                 size="sm"
                 className="gap-1"
-                onClick={() => router.push('/account')}
+                onClick={() => router.push('/settings')}
               >
                 <Settings className="h-4 w-4" />
                 <span>Settings</span>

@@ -1838,6 +1838,8 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
           initialTab={initialLinkValues.initialTab || "page"}
           initialShowAuthor={initialLinkValues.showAuthor || false}
           initialAuthorUsername={initialLinkValues.authorUsername || null}
+          initialExternalUrl={initialLinkValues.externalUrl || ""}
+          initialHasCustomText={initialLinkValues.hasCustomText || false}
         />,
         document.body
       )}
@@ -2130,7 +2132,10 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
               pageTitle: element.pageTitle || initialText,
               initialTab: initialTab,
               showAuthor: element.showAuthor || false,
-              authorUsername: element.authorUsername || null
+              authorUsername: element.authorUsername || null,
+              // Add external link specific data
+              externalUrl: isExternalLinkType ? element.url : null,
+              hasCustomText: element.hasCustomText || false
             });
           }
 
@@ -2230,6 +2235,8 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
 
   // Handle selection from the link editor
   const handleSelection = useCallback((item) => {
+    console.log('[DEBUG] handleSelection called with item:', item);
+
     // Check if this is an external link
     if (item.isExternal) {
       const displayText = item.displayText || item.url;
@@ -2242,8 +2249,11 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
             type: "link",
             url: item.url,
             children: [{ text: displayText }],
-            isExternal: true
+            isExternal: true,
+            hasCustomText: item.hasCustomText || false
           });
+
+          console.log('[DEBUG] Updating existing external link with:', updatedLink);
 
           // Apply the validated link properties
           Transforms.setNodes(
@@ -2251,6 +2261,19 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
             updatedLink,
             { at: selectedLinkPath }
           );
+
+          // Force editor to re-render by triggering a change event
+          setTimeout(() => {
+            try {
+              const event = new Event('input', { bubbles: true });
+              const editorElement = document.querySelector('[data-slate-editor=true]');
+              if (editorElement) {
+                editorElement.dispatchEvent(event);
+              }
+            } catch (error) {
+              console.error('[DEBUG] Error triggering editor refresh:', error);
+            }
+          }, 100);
         } catch (error) {
           console.error("Error updating existing link:", error);
           // Try fallback approach - insert a new link
@@ -2261,7 +2284,8 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
               type: "link",
               url: item.url,
               children: [{ text: displayText }],
-              isExternal: true
+              isExternal: true,
+              hasCustomText: item.hasCustomText || false
             });
 
             // Make sure we have a valid selection
@@ -2285,8 +2309,11 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
             type: "link",
             url: item.url,
             children: [{ text: displayText }],
-            isExternal: true
+            isExternal: true,
+            hasCustomText: item.hasCustomText || false
           });
+
+          console.log('[DEBUG] Inserting new external link with:', link);
 
           // Make sure we have a valid selection
           if (!editor.selection) {
@@ -2533,7 +2560,7 @@ const LinkComponent = ({ attributes, children, element, editor }) => {
  * @param {string} props.initialPageTitle - Initial page title for internal links
  * @param {string} props.initialTab - Initial tab to show ("page" or "external")
  */
-const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "", initialTab = "page", initialShowAuthor = false, initialAuthorUsername = null }) => {
+const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", initialPageId = null, initialPageTitle = "", initialTab = "page", initialShowAuthor = false, initialAuthorUsername = null, initialExternalUrl = "", initialHasCustomText = false }) => {
   // Get accent color for button styling
   const { accentColor, customColors } = useAccentColor();
 
@@ -2545,7 +2572,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
   // Use the initialTab parameter if provided, otherwise determine based on initialPageId
   const [activeTab, setActiveTab] = useState(initialTab || (initialPageId ? "page" : "external"));
   const [selectedPageId, setSelectedPageId] = useState(initialPageId);
-  const [externalUrl, setExternalUrl] = useState("");
+  const [externalUrl, setExternalUrl] = useState(initialExternalUrl);
   const [showAuthor, setShowAuthor] = useState(initialShowAuthor);
   const [hasChanged, setHasChanged] = useState(false);
   const [isValid, setIsValid] = useState(true); // Start as valid to avoid initial error state
@@ -2554,12 +2581,41 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 
 
 
-  // Detect if the link has custom text (different from page title)
-  const hasCustomText = isEditing && initialText && initialPageTitle && initialText !== initialPageTitle;
+  // Detect if the link has custom text (different from page title or URL)
+  const hasCustomText = isEditing && initialText && (
+    (initialPageTitle && initialText !== initialPageTitle) ||
+    (activeTab === 'external' && initialText !== externalUrl && initialText !== `https://${externalUrl}`) ||
+    initialHasCustomText
+  );
 
   // New state for toggles - initialize based on existing link state
   const [showCustomDisplayText, setShowCustomDisplayText] = useState(hasCustomText);
   const [showCustomLinkText, setShowCustomLinkText] = useState(hasCustomText);
+
+  // Handle custom text toggle changes with proper field clearing
+  const handleCustomDisplayTextToggle = (enabled) => {
+    setShowCustomDisplayText(enabled);
+    if (!enabled) {
+      // When disabling custom text, clear the display text field
+      setDisplayText('');
+    } else if (enabled && !displayText.trim()) {
+      // When enabling custom text from OFF state, ensure field is empty for clean start
+      setDisplayText('');
+    }
+    setFormTouched(true);
+  };
+
+  const handleCustomLinkTextToggle = (enabled) => {
+    setShowCustomLinkText(enabled);
+    if (!enabled) {
+      // When disabling custom text, clear the display text field
+      setDisplayText('');
+    } else if (enabled && !displayText.trim()) {
+      // When enabling custom text from OFF state, ensure field is empty for clean start
+      setDisplayText('');
+    }
+    setFormTouched(true);
+  };
 
   // Helper function to get accent color value
   const getAccentColorValue = () => {
@@ -2590,6 +2646,8 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 
   // State to track if modal has been mounted (for animation timing)
   const [isModalMounted, setIsModalMounted] = useState(false);
+
+
 
   // Track initial state for change detection
   const initialState = React.useRef({
@@ -2839,11 +2897,22 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
       finalUrl = 'https://' + finalUrl;
     }
 
+    // Determine display text based on custom text toggle
+    let finalDisplayText;
+    if (showCustomLinkText && displayText.trim()) {
+      // Custom text is enabled and provided
+      finalDisplayText = displayText.trim();
+    } else {
+      // Custom text is disabled or empty, use URL as display text
+      finalDisplayText = finalUrl;
+    }
+
     onSelect({
       type: "external",
       url: finalUrl,
-      displayText: displayText || finalUrl,
-      isExternal: true
+      displayText: finalDisplayText,
+      isExternal: true,
+      hasCustomText: showCustomLinkText && displayText.trim() !== ''
     });
 
     // CRITICAL FIX: Use the parent component's state setter if available
@@ -3053,7 +3122,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                   <div className="flex items-center gap-3 mb-3">
                     <Switch
                       checked={showCustomDisplayText}
-                      onCheckedChange={setShowCustomDisplayText}
+                      onCheckedChange={handleCustomDisplayTextToggle}
                       id="custom-link-text-toggle"
                     />
                     <label htmlFor="custom-link-text-toggle" className="text-sm font-medium select-none">Custom link text</label>
@@ -3122,7 +3191,7 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                 <div className="flex items-center gap-3 mb-3">
                   <Switch
                     checked={showCustomLinkText}
-                    onCheckedChange={setShowCustomLinkText}
+                    onCheckedChange={handleCustomLinkTextToggle}
                     id="custom-link-text-toggle-external"
                   />
                   <label htmlFor="custom-link-text-toggle-external" className="text-sm font-medium select-none">Custom link text</label>

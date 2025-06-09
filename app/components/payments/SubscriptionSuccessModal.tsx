@@ -51,7 +51,7 @@ export function SubscriptionSuccessModal({
 
   const handleGoToAccount = () => {
     onOpenChange(false);
-    router.push('/account');
+    router.push('/settings');
   };
 
   return (

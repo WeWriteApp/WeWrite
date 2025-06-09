@@ -59,12 +59,12 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/auth/switch-account': 'Account Switcher',
   '/auth/logout': 'Logout Page',
 
-  // Account pages
-  '/account': 'Account Settings',
-  '/account/subscription': 'Subscription Settings',
-  '/account/payment': 'Payment Settings',
-  '/account/notifications': 'Notification Settings',
-  '/account/security': 'Security Settings',
+  // Settings pages
+  '/settings': 'Settings',
+  '/settings/subscription': 'Subscription Settings',
+  '/settings/payment': 'Payment Settings',
+  '/settings/notifications': 'Notification Settings',
+  '/settings/security': 'Security Settings',
 
   // Other static pages
   '/sandbox': 'Sandbox Page',

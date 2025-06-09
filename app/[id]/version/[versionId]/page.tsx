@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPageById, getPageVersionById, setCurrentVersion } from '../../../firebase/database';
 import DashboardLayout from '../../../DashboardLayout';
@@ -21,8 +21,8 @@ import { generateDiffContent } from '../../../utils/diffUtils';
 import { PageProvider } from '../../../contexts/PageContext';
 import { LineSettingsProvider } from '../../../contexts/LineSettingsContext';
 
-export default function PageVersionView({ params }: { params: { id: string, versionId: string } }) {
-  const { id, versionId } = params;
+export default function PageVersionView({ params }: { params: Promise<{ id: string, versionId: string }> }) {
+  const { id, versionId } = use(params);
   const [page, setPage] = useState<any>(null);
   const [version, setVersion] = useState<any>(null);
   const [currentVersion, setCurrentVersionData] = useState<any>(null);

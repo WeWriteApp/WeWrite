@@ -20,16 +20,17 @@ export default function Header() {
   // Calculate header positioning width - only respond to persistent expanded state, not hover
   // Hover state should overlay without affecting header positioning
   const headerSidebarWidth = React.useMemo(() => {
-    // Only adjust header position for persistent expanded state
-    // Hover state (temporary overlay) should not affect header positioning
-    if (isExpanded && !isHovering) {
+    // Header should only respond to persistent expanded state, not hover state
+    // When expanded: always use full width (256px) regardless of hover
+    // When collapsed: always use collapsed width (64px) regardless of hover
+    if (isExpanded) {
       return sidebarWidth; // Use full expanded width (256px)
     } else if (sidebarWidth > 0) {
-      return 64; // Use collapsed width (64px) for both collapsed and hover states
+      return 64; // Use collapsed width (64px) for collapsed state
     } else {
       return 0; // No sidebar (user not authenticated)
     }
-  }, [isExpanded, isHovering, sidebarWidth]);
+  }, [isExpanded, sidebarWidth]);
 
   // Calculate and update header height
   React.useEffect(() => {

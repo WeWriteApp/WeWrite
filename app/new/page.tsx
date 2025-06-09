@@ -56,6 +56,10 @@ interface PageData {
   username: string;
   lastModified: string;
   isReply: boolean;
+  replyTo?: string | null;
+  replyToTitle?: string | null;
+  replyToUsername?: string | null;
+  groupId?: string | null;
 }
 
 /**
@@ -89,6 +93,10 @@ export default function NewPage() {
   const [hasContentChanged, setHasContentChanged] = useState<boolean>(false);
   const [hasTitleChanged, setHasTitleChanged] = useState<boolean>(false);
   const [titleError, setTitleError] = useState<boolean>(false);
+
+  // Group ownership state
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedGroupName, setSelectedGroupName] = useState<string | null>(null);
 
   // Determine page type
   const isReply = searchParams?.has('replyTo') || false;
@@ -284,6 +292,17 @@ export default function NewPage() {
         finalContent = [{ type: "paragraph", children: [{ text: "" }] }];
       }
 
+      // Get reply information from URL parameters if this is a reply
+      let replyToId = null;
+      let replyToTitle = null;
+      let replyToUsername = null;
+
+      if (isReply && searchParams) {
+        replyToId = searchParams.get('replyTo');
+        replyToTitle = searchParams.get('page');
+        replyToUsername = searchParams.get('username');
+      }
+
       const data: PageData = {
         title: isReply ? "" : title,
         isPublic,
@@ -293,6 +312,10 @@ export default function NewPage() {
         username,
         lastModified: new Date().toISOString(),
         isReply: !!isReply,
+        replyTo: replyToId,
+        replyToTitle: replyToTitle,
+        replyToUsername: replyToUsername,
+        groupId: selectedGroupId,
       };
 
       console.log('Creating page with data:', { ...data, content: '(content omitted)' });
@@ -426,8 +449,8 @@ export default function NewPage() {
           username={username}
           userId={user?.uid}
           isLoading={isLoading}
-          groupId={undefined} // New pages don't have groups initially
-          groupName={undefined}
+          groupId={selectedGroupId}
+          groupName={selectedGroupName}
           scrollDirection="none"
           isPrivate={!isPublic}
           isEditing={isEditing}
@@ -435,6 +458,11 @@ export default function NewPage() {
           onTitleChange={handleTitleChange}
           titleError={titleError}
           canEdit={true} // User can always edit their new page
+          pageId={null} // No page ID for new pages, but needed for ownership dropdown
+          onOwnershipChange={(newGroupId: string | null, newGroupName: string | null) => {
+            setSelectedGroupId(newGroupId);
+            setSelectedGroupName(newGroupName);
+          }}
         />
         <div className="pb-24 px-2 md:px-4 w-full max-w-none min-h-screen">
           <div className="transition-all duration-300 ease-in-out opacity-100">

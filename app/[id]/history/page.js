@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPageVersions, getPageById } from '../../firebase/database';
 import DashboardLayout from '../../DashboardLayout';
@@ -13,7 +13,7 @@ import { generateSimpleDiff, generateTextDiff } from '../../utils/generateTextDi
 import PageHeader from '../../components/pages/PageHeader';
 
 export default function PageHistoryPage({ params }) {
-  const { id } = params;
+  const { id } = use(params);
   const [page, setPage] = useState(null);
   const [versions, setVersions] = useState([]);
   const [activities, setActivities] = useState([]);

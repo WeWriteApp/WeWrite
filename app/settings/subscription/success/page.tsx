@@ -18,9 +18,9 @@ export default function SubscriptionSuccessPage() {
     return (
       <div className="max-w-md mx-auto p-4">
         <div className="mb-4">
-          <Link href="/account" className="inline-flex items-center text-primary hover:text-primary/80 text-sm">
+          <Link href="/settings" className="inline-flex items-center text-primary hover:text-primary/80 text-sm">
             <ArrowLeft className="h-3 w-3 mr-1" />
-            Back to Account
+            Back to Settings
           </Link>
         </div>
         <OpenCollectiveSupport
@@ -32,9 +32,9 @@ export default function SubscriptionSuccessPage() {
   }
 
   useEffect(() => {
-    // Optional: Automatically redirect to account after a delay
+    // Optional: Automatically redirect to settings after a delay
     const timer = setTimeout(() => {
-      router.push('/account?refresh=true');
+      router.push('/settings?refresh=true');
     }, 5000);
 
     return () => clearTimeout(timer);
@@ -55,14 +55,14 @@ export default function SubscriptionSuccessPage() {
         <p className="text-white/70 text-sm">You now have full access to all WeWrite features and content.</p>
       </div>
 
-      <p className="text-sm text-white/50 mb-6">You will be automatically redirected to your account in a few seconds.</p>
+      <p className="text-sm text-white/50 mb-6">You will be automatically redirected to your settings in a few seconds.</p>
 
       <div className="flex justify-center">
         <Link
-          href="/account?refresh=true"
+          href="/settings?refresh=true"
           className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
         >
-          Go to Your Account
+          Go to Your Settings
         </Link>
       </div>
     </div>

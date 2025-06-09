@@ -290,7 +290,7 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
           onClose={() => setShowSubscriptionLimitModal(false)}
           message="You've reached your subscription limit. Would you like to adjust your subscription amount to pledge more?"
           primaryActionLabel="Adjust Subscription"
-          primaryActionHref="/account"
+          primaryActionHref="/settings"
           secondaryActionLabel="Cancel"
         />,
         document.body

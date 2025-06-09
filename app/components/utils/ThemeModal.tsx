@@ -50,7 +50,7 @@ export default function ThemeModal({ open, onOpenChange }: ThemeModalProps) {
           </div>
         </RadioGroup.Root>
 
-        <Link href="/account" className="flex items-center space-x-3 cursor-pointer hover:bg-accent rounded-md p-1.5 mt-4">
+        <Link href="/settings" className="flex items-center space-x-3 cursor-pointer hover:bg-accent rounded-md p-1.5 mt-4">
           <User className="h-4 w-4" />
           <span className="text-sm">Account Settings</span>
         </Link>

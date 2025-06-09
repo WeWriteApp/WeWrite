@@ -112,25 +112,28 @@ export default function PageOwnershipDropdown({
         newGroupName = group?.name || null;
       }
 
-      // Update the page in Firestore
-      await updatePage(pageId, {
-        groupId: newGroupId,
-        lastModified: new Date().toISOString()
-      });
+      // For new pages (pageId is null), only update the callback
+      // For existing pages, update Firestore
+      if (pageId) {
+        await updatePage(pageId, {
+          groupId: newGroupId,
+          lastModified: new Date().toISOString()
+        });
+
+        // Show success toast for existing pages
+        toast({
+          title: 'Ownership updated',
+          description: newGroupId
+            ? `Page moved to "${newGroupName}" group`
+            : `Page is now owned by you personally`,
+          variant: 'default'
+        });
+      }
 
       // Call the onOwnershipChange callback if provided
       if (onOwnershipChange) {
         onOwnershipChange(newGroupId, newGroupName);
       }
-
-      // Show success toast
-      toast({
-        title: 'Ownership updated',
-        description: newGroupId
-          ? `Page moved to "${newGroupName}" group`
-          : `Page is now owned by you personally`,
-        variant: 'default'
-      });
 
     } catch (error) {
       console.error('Error changing page ownership:', error);

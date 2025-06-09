@@ -77,8 +77,8 @@ export default function NotificationItem({ notification }) {
         router.push(`/${notification.sourcePageId}`);
       }
     } else if (notification.type === 'email_verification') {
-      // For email verification notifications, navigate to account settings
-      router.push('/account');
+      // For email verification notifications, navigate to settings
+      router.push('/settings');
     }
   };
 
