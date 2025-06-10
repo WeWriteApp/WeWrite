@@ -265,57 +265,55 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
       </div>
 
       {/* Content display or editor */}
-      <div className="bg-card rounded-lg border border-border p-4">
-        {isEditing ? (
-          <div className="animate-in fade-in-0 duration-300">
-            <PageProvider>
-              <LineSettingsProvider>
-                <PageEditor
-                  title="" // Group about doesn't have a title
-                  setTitle={() => {}} // Group about doesn't have a title
-                  initialContent={aboutContent}
-                  onContentChange={handleContentChange}
-                  isPublic={group.isPublic || false} // Use group's privacy setting
-                  setIsPublic={() => {}} // Group about doesn't have privacy settings
-                  location={null} // Group about doesn't have location
-                  setLocation={() => {}} // Group about doesn't have location
-                  onSave={handleSave}
-                  onCancel={handleCancel}
-                  onDelete={null} // Group about doesn't have delete functionality
-                  isSaving={isLoading}
-                  error={error || ""}
-                  isNewPage={false}
-                  clickPosition={clickPosition}
-                  page={null} // Group about is not a page
-                />
-              </LineSettingsProvider>
-            </PageProvider>
-          </div>
-        ) : (
-          <div className="prose dark:prose-invert max-w-none">
-            {aboutContent ? (
-              <div className="group">
-                {/* Use TextView for the same interactive experience as normal pages */}
-                <TextView
-                  content={aboutContent}
-                  canEdit={canEdit}
-                  setIsEditing={handleSetIsEditing}
-                  showLineNumbers={false} // Group about doesn't need line numbers
-                />
-              </div>
-            ) : (
-              <EmptyContentState
-                onActivate={() => handleSetIsEditing(true)}
-                isOwner={canEdit}
-                ownerMessage="This group doesn't have a description yet."
-                visitorMessage="This group doesn't have a description yet."
-                message="to add a description"
-                placeholder="Describe the purpose of this group, its goals, or guidelines for members."
+      {isEditing ? (
+        <div className="animate-in fade-in-0 duration-300">
+          <PageProvider>
+            <LineSettingsProvider>
+              <PageEditor
+                title="" // Group about doesn't have a title
+                setTitle={() => {}} // Group about doesn't have a title
+                initialContent={aboutContent}
+                onContentChange={handleContentChange}
+                isPublic={group.isPublic || false} // Use group's privacy setting
+                setIsPublic={() => {}} // Group about doesn't have privacy settings
+                location={null} // Group about doesn't have location
+                setLocation={() => {}} // Group about doesn't have location
+                onSave={handleSave}
+                onCancel={handleCancel}
+                onDelete={null} // Group about doesn't have delete functionality
+                isSaving={isLoading}
+                error={error || ""}
+                isNewPage={false}
+                clickPosition={clickPosition}
+                page={null} // Group about is not a page
               />
-            )}
-          </div>
-        )}
-      </div>
+            </LineSettingsProvider>
+          </PageProvider>
+        </div>
+      ) : (
+        <div className="prose dark:prose-invert max-w-none">
+          {aboutContent ? (
+            <div className="group">
+              {/* Use TextView for the same interactive experience as normal pages */}
+              <TextView
+                content={aboutContent}
+                canEdit={canEdit}
+                setIsEditing={handleSetIsEditing}
+                showLineNumbers={false} // Group about doesn't need line numbers
+              />
+            </div>
+          ) : (
+            <EmptyContentState
+              onActivate={() => handleSetIsEditing(true)}
+              isOwner={canEdit}
+              ownerMessage="This group doesn't have a description yet."
+              visitorMessage="This group doesn't have a description yet."
+              message="to add a description"
+              placeholder="Describe the purpose of this group, its goals, or guidelines for members."
+            />
+          )}
+        </div>
+      )}
 
       {/* Group info and last editor */}
       <div className="text-xs text-muted-foreground mt-4 space-y-1">

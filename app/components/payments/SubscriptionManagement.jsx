@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 
 import { useAuth } from '../../providers/AuthProvider';
 import { getUserSubscription, cancelSubscription, listenToUserSubscription, updateSubscription } from '../../firebase/subscription';
+import { getOptimizedUserSubscription, createOptimizedSubscriptionListener } from '../../firebase/optimizedSubscription';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Check, X, AlertTriangle, Clock, CreditCard, ExternalLink } from 'lucide-react';
@@ -55,11 +56,15 @@ export default function SubscriptionManagement() {
     }
   };
 
-  // Function to get subscription data
+  // Function to get subscription data with optimization
   const getSubscriptionData = async (userId) => {
     try {
-      // Get subscription data directly
-      const subscriptionData = await getUserSubscription(userId, { verbose: true });
+      // Use optimized subscription fetching with caching
+      const subscriptionData = await getOptimizedUserSubscription(userId, {
+        useCache: true,
+        cacheTTL: 10 * 60 * 1000, // 10 minutes cache
+        verbose: true
+      });
 
       if (subscriptionData) {
         return subscriptionData;
@@ -97,9 +102,9 @@ export default function SubscriptionManagement() {
 
     fetchSubscriptionData();
 
-    // Set up the real-time listener
-    const unsubscribe = listenToUserSubscription(user.uid, (userSubscription) => {
-      console.log('Subscription data received from listener:', userSubscription);
+    // Set up the optimized real-time listener with throttling
+    const unsubscribe = createOptimizedSubscriptionListener(user.uid, (userSubscription) => {
+      console.log('Subscription data received from optimized listener:', userSubscription);
       if (userSubscription) {
         setSubscription(userSubscription);
         setLoading(false);

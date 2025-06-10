@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft } from 'lucide-react';
 import { useAuth } from "../providers/AuthProvider";
 import { getUserSubscription } from "../firebase/subscription";
 import { doc, getDoc } from "firebase/firestore";
@@ -12,13 +11,17 @@ import { useRouter } from 'next/navigation';
 
 import { Button } from "../components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "../components/ui/card";
-import SubscriptionManagement from '../components/payments/SubscriptionManagement';
-import { PaymentMethodsManager } from '../components/payments/PaymentMethodsManager';
-import { PledgesList } from '../components/payments/PledgesList';
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { PayoutsManager } from '../components/payments/PayoutsManager';
+import { PaymentMethodsOverview } from '../components/payments/PaymentMethodsOverview';
+import { PledgesOverview } from '../components/payments/PledgesOverview';
+import { SubscriptionOverview } from '../components/payments/SubscriptionOverview';
 import PWAInstallationCard from '../components/utils/PWAInstallationCard';
 import { SyncQueueSettings } from '../components/utils/SyncQueueSettings';
 import { EmailVerificationStatus } from '../components/utils/EmailVerificationStatus';
 import { useFeatureFlag } from "../utils/feature-flags";
+import { ChevronLeft, Edit3, Save, X, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 
 // Define admin check locally to avoid import issues
 const isAdmin = (userEmail?: string | null): boolean => {
@@ -37,6 +40,12 @@ export default function AccountPage() {
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
+  // Edit state management
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [tempUsername, setTempUsername] = useState('');
+  const [tempEmail, setTempEmail] = useState('');
+
   // Check payments feature flag
   const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
 
@@ -49,6 +58,57 @@ export default function AccountPage() {
     loadUserData();
   }, [user, router]);
 
+  const handleEditUsername = () => {
+    setTempUsername(username);
+    setIsEditingUsername(true);
+  };
+
+  const handleSaveUsername = async () => {
+    if (!tempUsername.trim()) return;
+
+    setLoading(true);
+    try {
+      await handleUsernameChange(tempUsername);
+      setIsEditingUsername(false);
+    } catch (error) {
+      console.error('Error updating username:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelUsername = () => {
+    setTempUsername(username);
+    setIsEditingUsername(false);
+  };
+
+  const handleEditEmail = () => {
+    setTempEmail(email);
+    setIsEditingEmail(true);
+  };
+
+  const handleSaveEmail = async () => {
+    if (!tempEmail.trim()) return;
+
+    setLoading(true);
+    setEmailError('');
+    try {
+      await handleEmailChange(tempEmail);
+      setIsEditingEmail(false);
+    } catch (error) {
+      console.error('Error updating email:', error);
+      setEmailError(error.message || 'Failed to update email');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelEmail = () => {
+    setTempEmail(email);
+    setIsEditingEmail(false);
+    setEmailError('');
+  };
+
   const loadUserData = async () => {
     if (!user) return;
 
@@ -59,8 +119,12 @@ export default function AccountPage() {
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        setUsername(userData.username || '');
-        setEmail(user.email || '');
+        const currentUsername = userData.username || '';
+        const currentEmail = user.email || '';
+        setUsername(currentUsername);
+        setEmail(currentEmail);
+        setTempUsername(currentUsername);
+        setTempEmail(currentEmail);
       }
 
       // Load subscription data
@@ -166,69 +230,168 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="px-5 py-6 max-w-3xl mx-auto">
-      <div className="flex items-center mb-8">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => router.push('/')}
-          className="mr-4"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-2xl font-bold">Settings</h1>
-      </div>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="flex items-center mb-8">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => router.push('/')}
+            className="mr-4 shadow-sm"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
+            <p className="text-muted-foreground mt-1">Manage your account and preferences</p>
+          </div>
+        </div>
 
-      {user && (
-        <div className="space-y-6">
+        {user && (
+          <div className="space-y-8">
           {/* Profile Section */}
           <section>
-            <Card>
-              <CardHeader>
-                <CardTitle>Profile</CardTitle>
-                <CardDescription>Manage your personal information</CardDescription>
+            <Card className="shadow-sm border-border/50">
+              <CardHeader className="pb-6">
+                <CardTitle className="text-xl font-semibold">Profile</CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Manage your personal information and account settings
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-1">Username</label>
-                  <div className="flex justify-between items-center">
-                    <p className="text-foreground">{username || 'No username set'}</p>
-                    <button
-                      onClick={() => {
-                        const newUsername = prompt("Enter new username (letters, numbers, and underscores only - no spaces):", username);
-                        if (newUsername && newUsername.trim()) handleUsernameChange(newUsername.trim());
-                      }}
-                      className="text-sm text-foreground/60 hover:text-foreground"
-                    >
-                      Edit
-                    </button>
+              <CardContent className="space-y-6">
+                {/* Username Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="username" className="text-sm font-medium text-foreground">
+                    Username
+                  </Label>
+                  <div className="flex gap-3 items-center">
+                    <div className="flex-1">
+                      <Input
+                        id="username"
+                        type="text"
+                        value={isEditingUsername ? tempUsername : username}
+                        onChange={(e) => setTempUsername(e.target.value)}
+                        disabled={!isEditingUsername}
+                        placeholder={username || "No username set"}
+                        className={`transition-all duration-200 ${
+                          isEditingUsername
+                            ? 'border-primary ring-1 ring-primary/20 bg-background'
+                            : 'border-border/50 bg-muted/30 text-muted-foreground'
+                        }`}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      {isEditingUsername ? (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={handleSaveUsername}
+                            disabled={loading || !tempUsername.trim()}
+                            className="h-9 px-3"
+                          >
+                            <Save className="h-4 w-4 mr-1" />
+                            Save
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleCancelUsername}
+                            disabled={loading}
+                            className="h-9 px-3"
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleEditUsername}
+                          className="h-9 px-3"
+                        >
+                          <Edit3 className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-foreground/80 mb-1">Email</label>
-                  <div className="flex justify-between items-center">
-                    <p className="text-foreground">{email}</p>
-                    <button
-                      onClick={() => {
-                        const newEmail = prompt("Enter new email:", email);
-                        if (newEmail) handleEmailChange(newEmail);
-                      }}
-                      className="text-sm text-foreground/60 hover:text-foreground"
-                    >
-                      Edit
-                    </button>
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium text-foreground">
+                    Email Address
+                  </Label>
+                  <div className="flex gap-3 items-center">
+                    <div className="flex-1">
+                      <Input
+                        id="email"
+                        type="email"
+                        value={isEditingEmail ? tempEmail : email}
+                        onChange={(e) => setTempEmail(e.target.value)}
+                        disabled={!isEditingEmail}
+                        placeholder="Enter your email address"
+                        className={`transition-all duration-200 ${
+                          isEditingEmail
+                            ? 'border-primary ring-1 ring-primary/20 bg-background'
+                            : 'border-border/50 bg-muted/30 text-muted-foreground'
+                        }`}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      {isEditingEmail ? (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={handleSaveEmail}
+                            disabled={loading || !tempEmail.trim()}
+                            className="h-9 px-3"
+                          >
+                            <Save className="h-4 w-4 mr-1" />
+                            Save
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleCancelEmail}
+                            disabled={loading}
+                            className="h-9 px-3"
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleEditEmail}
+                          className="h-9 px-3"
+                        >
+                          <Edit3 className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  {/* Email verification status */}
-                  <div className="mt-2">
+
+                  {/* Email Verification Status */}
+                  <div className="mt-3">
                     <EmailVerificationStatus />
                   </div>
+
+                  {/* Email Error */}
                   {emailError && (
-                    <p className="text-sm text-red-500 mt-1">{emailError}</p>
+                    <div className="flex items-center gap-2 mt-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
+                      <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      <p className="text-sm text-red-700 dark:text-red-300">{emailError}</p>
+                    </div>
                   )}
                 </div>
               </CardContent>
-              <CardFooter className="flex justify-end pt-4 border-t">
+              <CardFooter className="pt-6 border-t border-border/50">
                 <Button
                   variant="destructive"
                   size="sm"
@@ -265,6 +428,7 @@ export default function AccountPage() {
                       });
                     }
                   }}
+                  className="ml-auto"
                 >
                   Logout
                 </Button>
@@ -272,69 +436,56 @@ export default function AccountPage() {
             </Card>
           </section>
 
-          {/* Subscription Management Section - Only visible when payments feature flag is enabled */}
+          {/* Payment-related sections - Only visible when payments feature flag is enabled */}
           {user && user.email && isPaymentsEnabled && (
-            <section>
-              <SubscriptionManagement />
+            <div className="space-y-8">
+              {/* Payment Sections Header */}
+              <div className="border-b border-border/50 pb-4">
+                <h2 className="text-xl font-semibold text-foreground">Payment & Billing</h2>
+                <p className="text-muted-foreground mt-1">Manage your subscription, payment methods, and earnings</p>
+              </div>
+
+              {/* Subscription Section */}
+              <section className="space-y-1">
+                <SubscriptionOverview />
+              </section>
 
               {/* Payment Methods Section */}
-              <div className="mt-6">
-                <PaymentMethodsManager />
-              </div>
+              <section className="space-y-1">
+                <PaymentMethodsOverview />
+              </section>
 
-              {/* Pledges List Section */}
-              <div className="mt-6">
-                <PledgesList />
-              </div>
+              {/* Pledges Section */}
+              <section className="space-y-1">
+                <PledgesOverview />
+              </section>
 
-              {/* Payment History */}
-              {paymentHistory.length > 0 && (
-                <div className="mt-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Payment History</CardTitle>
-                      <CardDescription>Your recent subscription payments</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {isLoadingHistory ? (
-                        <div className="py-4 flex justify-center">
-                          <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
-                        </div>
-                      ) : (
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                          {paymentHistory.map((payment, index) => (
-                            <div key={index} className="flex justify-between items-center py-2 border-b border-border/40 last:border-0">
-                              <div>
-                                <p className="text-sm font-medium">${payment.amount.toFixed(2)}</p>
-                                <p className="text-xs text-muted-foreground">{new Date(payment.created * 1000).toLocaleDateString()}</p>
-                              </div>
-                              <span className={`text-xs px-2 py-1 rounded-full ${payment.status === 'succeeded' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100'}`}>
-                                {payment.status}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-            </section>
+              {/* Payouts Section */}
+              <section className="space-y-1">
+                <PayoutsManager />
+              </section>
+            </div>
           )}
 
-          {/* When subscription feature is disabled, don't show any subscription UI */}
+          {/* Account Settings - Always visible */}
+          <div className="space-y-8">
+            {/* Account Settings Header */}
+            <div className="border-b border-border/50 pb-4">
+              <h2 className="text-xl font-semibold text-foreground">Account Settings</h2>
+              <p className="text-muted-foreground mt-1">Configure your app preferences and installation options</p>
+            </div>
 
-          {/* Sync Queue Settings */}
-          <section>
-            <SyncQueueSettings />
-          </section>
+            <section className="space-y-6">
+              {/* Sync Queue Settings */}
+              <SyncQueueSettings />
 
-          {/* PWA Installation Status Card */}
-          <section>
-            <PWAInstallationCard />
-          </section>
-        </div>
-      )}
+              {/* PWA Installation */}
+              <PWAInstallationCard />
+            </section>
+          </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

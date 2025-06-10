@@ -294,9 +294,28 @@ export default function NewPage() {
         return false;
       }
 
-      const hasActualContent = content.some(node =>
-        node.children && node.children.some(child => child.text && child.text.trim() !== '')
-      );
+      // CRITICAL FIX: Enhanced content validation to include links
+      // This fixes the bug where link-only content was not being recognized as valid
+      const hasActualContent = content.some(node => {
+        if (node.children && Array.isArray(node.children)) {
+          return node.children.some(child => {
+            // Check for text content
+            if (child.text && child.text.trim() !== '') {
+              return true;
+            }
+            // Check for link content (links are valid content even without text)
+            if (child.type === 'link' || child.url || child.pageId) {
+              return true;
+            }
+            return false;
+          });
+        }
+        // Check if the node itself is a link
+        if (node.type === 'link' || node.url || node.pageId) {
+          return true;
+        }
+        return false;
+      });
 
       let finalContent = content;
       if (!hasActualContent && !isReply) {

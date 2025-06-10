@@ -941,11 +941,41 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
     try {
       parsedContent = JSON.parse(contentString);
 
-      // Validate that content is not empty array or has empty paragraphs only
-      // Less strict validation to allow saving
+      // Validate that content is not empty array
       if (Array.isArray(parsedContent) && parsedContent.length === 0) {
         console.error("Cannot save empty array content");
         return null;
+      }
+
+      // CRITICAL FIX: Check if content has meaningful data (text or links)
+      // This fixes the bug where link-only content was being rejected
+      if (Array.isArray(parsedContent)) {
+        const hasContent = parsedContent.some(node => {
+          // Check if node has text content
+          if (node.children && Array.isArray(node.children)) {
+            return node.children.some(child => {
+              // Check for text content
+              if (child.text && child.text.trim() !== '') {
+                return true;
+              }
+              // Check for link content (links are valid content even without text)
+              if (child.type === 'link' || child.url || child.pageId) {
+                return true;
+              }
+              return false;
+            });
+          }
+          // Check if the node itself is a link
+          if (node.type === 'link' || node.url || node.pageId) {
+            return true;
+          }
+          return false;
+        });
+
+        if (!hasContent) {
+          console.error("Cannot save content with no meaningful data (no text or links)");
+          return null;
+        }
       }
 
       // Extract links from the content to check for page links

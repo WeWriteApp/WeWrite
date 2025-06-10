@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { ReactSearchAutocomplete } from 'react-search-autocomplete';
-import HighlightedText from './HighlightedText';
+import HighlightedText from '../utils/HighlightedText';
 
 const CustomSearchAutocomplete = (props) => {
   const { onKeyDown, ...otherProps } = props;

@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
 import { SupporterIcon } from '../../../components/payments/SupporterIcon';
 import { getUserSubscription, cancelSubscription, listenToUserSubscription } from '../../../firebase/subscription';
+import { getOptimizedUserSubscription, createOptimizedSubscriptionListener } from '../../../firebase/optimizedSubscription';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 import { useFeatureFlag } from '../../../utils/feature-flags';
 import OpenCollectiveSupport from '../../../components/payments/OpenCollectiveSupport';
@@ -57,12 +58,16 @@ export default function ManageSubscriptionPage() {
       return;
     }
 
-    // First, directly fetch the subscription data
+    // First, directly fetch the subscription data with optimization
     const fetchSubscriptionDirectly = async () => {
       try {
-        console.log('Directly fetching subscription data for user:', user.uid);
-        const subscriptionData = await getUserSubscription(user.uid);
-        console.log('Direct subscription fetch result:', subscriptionData);
+        console.log('Directly fetching optimized subscription data for user:', user.uid);
+        const subscriptionData = await getOptimizedUserSubscription(user.uid, {
+          useCache: true,
+          cacheTTL: 10 * 60 * 1000, // 10 minutes cache
+          verbose: process.env.NODE_ENV === 'development'
+        });
+        console.log('Direct optimized subscription fetch result:', subscriptionData);
 
         if (subscriptionData) {
           setSubscription(subscriptionData);
@@ -74,15 +79,15 @@ export default function ManageSubscriptionPage() {
           }
         }
       } catch (error) {
-        console.error('Error directly fetching subscription:', error);
+        console.error('Error directly fetching optimized subscription:', error);
       }
     };
 
     fetchSubscriptionDirectly();
 
-    // Set up subscription listener as a backup
-    const unsubscribe = listenToUserSubscription(user.uid, (userSubscription) => {
-      console.log('Subscription data received from listener:', userSubscription);
+    // Set up optimized subscription listener with throttling
+    const unsubscribe = createOptimizedSubscriptionListener(user.uid, (userSubscription) => {
+      console.log('Subscription data received from optimized listener:', userSubscription);
       setSubscription(userSubscription);
       setLoading(false);
 
@@ -90,7 +95,7 @@ export default function ManageSubscriptionPage() {
       if (userSubscription && userSubscription.status === 'active') {
         fetchPaymentHistory(user.uid);
       }
-    });
+    }, { verbose: process.env.NODE_ENV === 'development' });
 
     return () => {
       if (unsubscribe) unsubscribe();

@@ -8,6 +8,7 @@ import { Badge } from '../ui/badge';
 import { Heart, ExternalLink, Trash2, Edit3, DollarSign } from 'lucide-react';
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { listenToUserPledges, updatePledge, deletePledge } from '../../firebase/subscription';
+import { getOptimizedUserPledges, getOptimizedPageInfo } from '../../firebase/optimizedSubscription';
 import { getDocById } from '../../firebase/database';
 import { useToast } from '../ui/use-toast';
 import Link from 'next/link';
@@ -56,30 +57,36 @@ export function PledgesList() {
       return;
     }
 
-    const unsubscribe = listenToUserPledges(user.uid, async (pledgesData) => {
+    const fetchPledgesOptimized = async () => {
       try {
-        // Fetch page details for each pledge
-        const pledgesWithDetails = await Promise.all(
-          pledgesData.map(async (pledge) => {
-            try {
-              const pageData = await getDocById('pages', pledge.pageId);
-              return {
-                ...pledge,
-                title: pageData?.title || 'Untitled Page',
-                authorName: pageData?.authorName || 'Unknown Author',
-                isPublic: pageData?.isPublic || false,
-              };
-            } catch (err) {
-              console.error(`Error fetching page data for ${pledge.pageId}:`, err);
-              return {
-                ...pledge,
-                title: 'Untitled Page',
-                authorName: 'Unknown Author',
-                isPublic: false,
-              };
-            }
-          })
-        );
+        // Use optimized pledges fetching with caching
+        const pledgesData = await getOptimizedUserPledges(user.uid, {
+          useCache: true,
+          cacheTTL: 5 * 60 * 1000 // 5 minutes cache
+        });
+
+        if (pledgesData.length === 0) {
+          setPledges([]);
+          setLoading(false);
+          return;
+        }
+
+        // Extract unique page IDs
+        const pageIds = pledgesData.map(pledge => pledge.pageId);
+
+        // Use optimized batch page info fetching
+        const pageInfoMap = await getOptimizedPageInfo(pageIds, {
+          useCache: true,
+          cacheTTL: 15 * 60 * 1000 // 15 minutes cache for page info
+        });
+
+        // Combine pledge data with page info
+        const pledgesWithDetails = pledgesData.map(pledge => ({
+          ...pledge,
+          title: pageInfoMap[pledge.pageId]?.title || 'Untitled Page',
+          authorName: pageInfoMap[pledge.pageId]?.displayName || pageInfoMap[pledge.pageId]?.username || 'Unknown Author',
+          isPublic: pageInfoMap[pledge.pageId]?.isPublic || false,
+        }));
 
         // Sort by amount (highest first)
         pledgesWithDetails.sort((a, b) => b.amount - a.amount);
@@ -90,6 +97,32 @@ export function PledgesList() {
         setError(err.message || 'Failed to load pledges');
       } finally {
         setLoading(false);
+      }
+    };
+
+    // Initial fetch with optimized functions
+    fetchPledgesOptimized();
+
+    // Set up a less frequent listener for real-time updates
+    // Only listen for changes, don't fetch page data on every update
+    const unsubscribe = listenToUserPledges(user.uid, async (pledgesData) => {
+      // Only refetch if the number of pledges changed or amounts changed significantly
+      const currentPledgeIds = pledges.map(p => p.pageId).sort();
+      const newPledgeIds = pledgesData.map(p => p.pageId).sort();
+
+      const pledgesChanged = currentPledgeIds.length !== newPledgeIds.length ||
+        currentPledgeIds.some((id, index) => id !== newPledgeIds[index]);
+
+      if (pledgesChanged) {
+        // Re-fetch with optimized functions
+        fetchPledgesOptimized();
+      } else {
+        // Just update amounts without refetching page data
+        const updatedPledges = pledges.map(existingPledge => {
+          const updatedPledge = pledgesData.find(p => p.pageId === existingPledge.pageId);
+          return updatedPledge ? { ...existingPledge, amount: updatedPledge.amount } : existingPledge;
+        });
+        setPledges(updatedPledges);
       }
     });
 

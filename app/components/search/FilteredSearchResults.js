@@ -369,8 +369,8 @@ const FilteredSearchResults = forwardRef(({
         </div>
       )}
 
-      {/* Search Results */}
-      <div className={`space-y-1 transition-all max-h-[40vh] overflow-y-auto ${
+      {/* Search Results - fixed height for link editor to prevent layout shift */}
+      <div className={`space-y-1 transition-all ${isLinkEditor ? 'h-[280px]' : 'max-h-[40vh]'} overflow-y-auto ${
         (search.length >= characterCount || isLinkEditor) ? "opacity-100" : "opacity-0"
       }`}>
         {isSearching && (search.length >= characterCount || isLinkEditor) ? (
