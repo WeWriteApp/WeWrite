@@ -1,8 +1,8 @@
 // This is a temporary file to fix the issue
 "use client";
 import React, { useEffect, useState, useContext, useRef, useCallback, useMemo } from "react";
-import TextSelectionMenu from "../editor/TextSelectionMenu";
-import TextHighlighter from "../utils/TextHighlighter";
+import { TextSelectionProvider } from "../../providers/TextSelectionProvider";
+import UnifiedTextHighlighter from "../text-highlighting/UnifiedTextHighlighter";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { getDatabase, ref, onValue, update } from "firebase/database";
@@ -1364,35 +1364,46 @@ function SinglePageView({ params }) {
               <div className="page-content w-full max-w-none break-words px-1">
                 <PageProvider>
                   <LineSettingsProvider>
-                    <div ref={contentRef}>
-                      <TextViewErrorBoundary fallbackContent={
-                        <div className="p-4 text-muted-foreground">
-                          <p>Unable to display page content. The page may have formatting issues.</p>
-                          <p className="text-sm mt-2">Page ID: {page.id}</p>
-                        </div>
-                      }>
-                        <TextView
-                          key={`content-${page.id}`} /* Use stable key based on page ID */
-                          content={editorState}
-                          viewMode={lineMode}
-                          onRenderComplete={handlePageFullyRendered}
-                          setIsEditing={handleSetIsEditing}
-                          canEdit={
-                            user?.uid && (
-                              // User is the page owner
-                              user.uid === page.userId ||
-                              // OR page belongs to a group and user is a member of that group
-                              (page.groupId && hasGroupAccess)
-                            )
-                          }
-                          isEditing={isEditing}
+                    <TextSelectionProvider
+                      contentRef={contentRef}
+                      enableCopy={true}
+                      enableShare={true}
+                      enableAddToPage={true}
+                      username={user?.displayName || user?.username}
+                    >
+                      <div ref={contentRef}>
+                        <TextViewErrorBoundary fallbackContent={
+                          <div className="p-4 text-muted-foreground">
+                            <p>Unable to display page content. The page may have formatting issues.</p>
+                            <p className="text-sm mt-2">Page ID: {page.id}</p>
+                          </div>
+                        }>
+                          <TextView
+                            key={`content-${page.id}`} /* Use stable key based on page ID */
+                            content={editorState}
+                            viewMode={lineMode}
+                            onRenderComplete={handlePageFullyRendered}
+                            setIsEditing={handleSetIsEditing}
+                            canEdit={
+                              user?.uid && (
+                                // User is the page owner
+                                user.uid === page.userId ||
+                                // OR page belongs to a group and user is a member of that group
+                                (page.groupId && hasGroupAccess)
+                              )
+                            }
+                            isEditing={isEditing}
+                          />
+                        </TextViewErrorBoundary>
+
+                        {/* Unified text highlighting for URL-based highlights */}
+                        <UnifiedTextHighlighter
+                          contentRef={contentRef}
+                          showNotification={true}
+                          autoScroll={true}
                         />
-                      </TextViewErrorBoundary>
-                      {/* Add text selection menu */}
-                      <TextSelectionMenu contentRef={contentRef} />
-                      {/* Add text highlighter */}
-                      <TextHighlighter contentRef={contentRef} />
-                    </div>
+                      </div>
+                    </TextSelectionProvider>
                   </LineSettingsProvider>
                 </PageProvider>
               </div>

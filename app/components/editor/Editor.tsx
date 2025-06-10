@@ -3075,8 +3075,8 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
           </div>
         </div>
 
-        {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Scrollable content area - fixed height to prevent layout shift */}
+        <div className="flex-1 overflow-y-auto h-[400px]">
 
           {activeTab === 'page' ? (
             <div className="p-4">

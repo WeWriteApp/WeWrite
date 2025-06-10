@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../ui/button';
-import { Plus, FileText, Type } from 'lucide-react';
+import { Plus, FileText, Type, Copy, Link, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { toast } from '../ui/use-toast';
 import {
   Dialog,
   DialogContent,
@@ -11,10 +12,16 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 
-interface TextSelectionMenuProps {
+interface UnifiedTextSelectionMenuProps {
   selectedText: string;
   position: { x: number; y: number };
   onClose: () => void;
+  onCopy?: (text: string) => Promise<{ success: boolean; message: string }>;
+  onCreateLink?: (text: string) => { success: boolean; link?: string; message: string };
+  enableCopy?: boolean;
+  enableShare?: boolean;
+  enableAddToPage?: boolean;
+  username?: string;
 }
 
 interface AddToPageModalProps {
@@ -28,22 +35,14 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, isOpen, o
   const wordCount = selectedText.trim().split(/\s+/).length;
 
   const handleAddAsTitle = () => {
-    // Navigate to new page with title pre-filled
-    const params = new URLSearchParams({
-      title: selectedText.trim(),
-      content: ''
-    });
-    router.push(`/new?${params.toString()}`);
+    const encodedText = encodeURIComponent(selectedText);
+    router.push(`/new?title=${encodedText}`);
     onClose();
   };
 
   const handleAddAsBody = () => {
-    // Navigate to new page with content pre-filled
-    const params = new URLSearchParams({
-      title: '',
-      content: selectedText.trim()
-    });
-    router.push(`/new?${params.toString()}`);
+    const encodedText = encodeURIComponent(selectedText);
+    router.push(`/new?content=${encodedText}`);
     onClose();
   };
 
@@ -84,7 +83,7 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, isOpen, o
                   <FileText className="h-4 w-4" />
                   <div className="text-left">
                     <div className="font-medium">Add as Body Text</div>
-                    <div className="text-xs text-muted-foreground">Use as page content with blank title</div>
+                    <div className="text-xs text-muted-foreground">Use as page content</div>
                   </div>
                 </Button>
               </div>
@@ -92,13 +91,10 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, isOpen, o
           ) : (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                This text will be added as the page content with a blank title field.
+                This text will be added as the content of a new page.
               </p>
-              <Button
-                onClick={handleAddAsBody}
-                className="w-full gap-2"
-              >
-                <Plus className="h-4 w-4" />
+              <Button onClick={handleAddAsBody} className="w-full">
+                <FileText className="h-4 w-4 mr-2" />
                 Create New Page
               </Button>
             </div>
@@ -109,7 +105,17 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, isOpen, o
   );
 };
 
-const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({ selectedText, position, onClose }) => {
+const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
+  selectedText,
+  position,
+  onClose,
+  onCopy,
+  onCreateLink,
+  enableCopy = true,
+  enableShare = true,
+  enableAddToPage = true,
+  username
+}) => {
   const [showModal, setShowModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -135,6 +141,42 @@ const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({ selectedText, pos
     };
   }, [onClose]);
 
+  const handleCopy = async () => {
+    if (onCopy) {
+      const result = await onCopy(selectedText);
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } else {
+      // Fallback copy implementation
+      try {
+        await navigator.clipboard.writeText(selectedText);
+        toast.success('Text copied to clipboard');
+      } catch (error) {
+        toast.error('Failed to copy text');
+      }
+    }
+    onClose();
+  };
+
+  const handleCreateLink = () => {
+    if (onCreateLink) {
+      const result = onCreateLink(selectedText);
+      if (result.success && result.link) {
+        navigator.clipboard.writeText(result.link).then(() => {
+          toast.success('Link copied to clipboard');
+        }).catch(() => {
+          toast.error('Failed to copy link');
+        });
+      } else {
+        toast.error(result.message);
+      }
+    }
+    onClose();
+  };
+
   const handleAddToPage = () => {
     setShowModal(true);
   };
@@ -144,26 +186,55 @@ const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({ selectedText, pos
     onClose();
   };
 
+  // Calculate menu position to ensure it stays within viewport
+  const menuStyle = {
+    left: `${Math.max(10, Math.min(position.x, window.innerWidth - 200))}px`,
+    top: `${Math.max(10, position.y)}px`,
+    transform: 'translate(-50%, -100%)',
+  };
+
   return (
     <>
       <div
         ref={menuRef}
-        className="fixed z-50 bg-background border border-border rounded-lg shadow-lg p-1"
-        style={{
-          left: `${position.x}px`,
-          top: `${position.y}px`,
-          transform: 'translate(-50%, -100%)',
-        }}
+        className="fixed z-50 bg-background border border-border rounded-lg shadow-lg p-1 flex gap-1"
+        style={menuStyle}
       >
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleAddToPage}
-          className="gap-2 text-sm whitespace-nowrap"
-        >
-          <Plus className="h-3 w-3" />
-          Add to Page
-        </Button>
+        {enableCopy && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCopy}
+            className="gap-2 text-sm whitespace-nowrap"
+          >
+            <Copy className="h-3 w-3" />
+            Copy
+          </Button>
+        )}
+        
+        {enableShare && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCreateLink}
+            className="gap-2 text-sm whitespace-nowrap"
+          >
+            <Link className="h-3 w-3" />
+            Share
+          </Button>
+        )}
+        
+        {enableAddToPage && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleAddToPage}
+            className="gap-2 text-sm whitespace-nowrap"
+          >
+            <Plus className="h-3 w-3" />
+            Add to Page
+          </Button>
+        )}
       </div>
 
       <AddToPageModal
@@ -175,4 +246,4 @@ const TextSelectionMenu: React.FC<TextSelectionMenuProps> = ({ selectedText, pos
   );
 };
 
-export default TextSelectionMenu;
+export default UnifiedTextSelectionMenu;

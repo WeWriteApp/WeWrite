@@ -239,56 +239,54 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
       </div>
 
       {/* Content display or editor */}
-      <div className="bg-card rounded-lg border border-border p-4">
-        {isEditing ? (
-          <div className="animate-in fade-in-0 duration-300">
-            <PageProvider>
-              <LineSettingsProvider>
-                <PageEditor
-                  title="" // Bio doesn't have a title
-                  setTitle={() => {}} // Bio doesn't have a title
-                  initialContent={bioContent}
-                  onContentChange={handleContentChange}
-                  isPublic={true} // Bio is always public
-                  setIsPublic={() => {}} // Bio doesn't have privacy settings
-                  location={null} // Bio doesn't have location
-                  setLocation={() => {}} // Bio doesn't have location
-                  onSave={handleSave}
-                  onCancel={handleCancel}
-                  onDelete={null} // Bio doesn't have delete functionality
-                  isSaving={isLoading}
-                  error={error || ""}
-                  isNewPage={false}
-                  clickPosition={clickPosition}
-                  page={null} // Bio is not a page
-                />
-              </LineSettingsProvider>
-            </PageProvider>
-          </div>
-        ) : (
-          <div className="prose dark:prose-invert max-w-none">
-            {bioContent ? (
-              <div className="group">
-                {/* Use TextView with direct tap-to-edit functionality matching unified PageEditor experience */}
-                <TextView
-                  content={bioContent}
-                  canEdit={isProfileOwner}
-                  setIsEditing={handleSetIsEditing}
-                  showLineNumbers={false} // Bio doesn't need line numbers
-                />
-              </div>
-            ) : (
-              <EmptyContentState
-                onActivate={() => handleSetIsEditing(true)}
-                isOwner={isProfileOwner}
-                ownerMessage="You haven't added a bio yet."
-                visitorMessage={`${profile.username || "This user"} hasn't added a bio yet.`}
-                placeholder="Share information about yourself, your interests, or your background."
+      {isEditing ? (
+        <div className="animate-in fade-in-0 duration-300">
+          <PageProvider>
+            <LineSettingsProvider>
+              <PageEditor
+                title="" // Bio doesn't have a title
+                setTitle={() => {}} // Bio doesn't have a title
+                initialContent={bioContent}
+                onContentChange={handleContentChange}
+                isPublic={true} // Bio is always public
+                setIsPublic={() => {}} // Bio doesn't have privacy settings
+                location={null} // Bio doesn't have location
+                setLocation={() => {}} // Bio doesn't have location
+                onSave={handleSave}
+                onCancel={handleCancel}
+                onDelete={null} // Bio doesn't have delete functionality
+                isSaving={isLoading}
+                error={error || ""}
+                isNewPage={false}
+                clickPosition={clickPosition}
+                page={null} // Bio is not a page
               />
-            )}
-          </div>
-        )}
-      </div>
+            </LineSettingsProvider>
+          </PageProvider>
+        </div>
+      ) : (
+        <div className="prose dark:prose-invert max-w-none">
+          {bioContent ? (
+            <div className="group">
+              {/* Use TextView with direct tap-to-edit functionality matching unified PageEditor experience */}
+              <TextView
+                content={bioContent}
+                canEdit={isProfileOwner}
+                setIsEditing={handleSetIsEditing}
+                showLineNumbers={false} // Bio doesn't need line numbers
+              />
+            </div>
+          ) : (
+            <EmptyContentState
+              onActivate={() => handleSetIsEditing(true)}
+              isOwner={isProfileOwner}
+              ownerMessage="You haven't added a bio yet."
+              visitorMessage={`${profile.username || "This user"} hasn't added a bio yet.`}
+              placeholder="Share information about yourself, your interests, or your background."
+            />
+          )}
+        </div>
+      )}
 
       {/* Last edit info */}
       {lastEditor && lastEditTime && (

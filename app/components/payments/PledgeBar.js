@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
 import { AuthContext } from "../../providers/AuthProvider";
 import { getUserSubscription, getPledge, createPledge, updatePledge, listenToUserPledges } from "../../firebase/subscription";
+import { getOptimizedUserSubscription, getOptimizedUserPledges, createOptimizedSubscriptionListener } from "../../firebase/optimizedSubscription";
 import { getPageStats, getDocById } from "../../firebase/database";
 import { Button } from "../ui/button";
 import { Eye, Users, DollarSign, Plus, Minus, ChevronUp, ChevronDown } from 'lucide-react';
@@ -135,9 +136,12 @@ const PledgeBar = () => {
 
     const fetchSubscriptionAndPledge = async () => {
       try {
-        // Always get user's subscription regardless of feature flag
-        // This ensures we have the data for both own page stats and other user's pledge bar
-        const userSubscription = await getUserSubscription(user.uid);
+        // Use optimized subscription fetching with caching
+        const userSubscription = await getOptimizedUserSubscription(user.uid, {
+          useCache: true,
+          cacheTTL: 10 * 60 * 1000, // 10 minutes cache
+          verbose: process.env.NODE_ENV === 'development'
+        });
         setSubscription(userSubscription);
         console.log('PledgeBar: User subscription status:', userSubscription?.status);
 
@@ -151,7 +155,7 @@ const PledgeBar = () => {
           // Check if user has maxed out their subscription
           setMaxedOut(available <= 0);
 
-          // Get current pledge for this page
+          // Get current pledge for this page using optimized function
           const pledge = await getPledge(user.uid, pageId);
           if (pledge) {
             setCurrentPledge(pledge);
@@ -162,22 +166,38 @@ const PledgeBar = () => {
             setPledges([pledge]);
           }
 
-          // Set up listener for all user pledges
-          const unsubscribe = listenToUserPledges(user.uid, (pledges) => {
-            setAllPledges(pledges);
-
-            // Find the current page pledge in the list
-            const pagePledge = pledges.find(p => p.pageId === pageId);
-            if (pagePledge) {
-              setPledges([pagePledge]);
-            }
-
-            // Calculate total pledges for other pages (excluding current page)
-            const otherPledgesTotal = pledges
-              .filter(p => p.pageId !== pageId)
-              .reduce((sum, pledge) => sum + (pledge.amount || 0), 0);
-            setTotalOtherPledges(otherPledgesTotal);
+          // Use optimized pledges fetching with caching
+          const allUserPledges = await getOptimizedUserPledges(user.uid, {
+            useCache: true,
+            cacheTTL: 5 * 60 * 1000 // 5 minutes cache
           });
+          setAllPledges(allUserPledges);
+
+          // Find the current page pledge in the list
+          const pagePledge = allUserPledges.find(p => p.pageId === pageId);
+          if (pagePledge) {
+            setPledges([pagePledge]);
+          }
+
+          // Calculate total pledges for other pages (excluding current page)
+          const otherPledgesTotal = allUserPledges
+            .filter(p => p.pageId !== pageId)
+            .reduce((sum, pledge) => sum + (pledge.amount || 0), 0);
+          setTotalOtherPledges(otherPledgesTotal);
+
+          // Set up optimized real-time listener with throttling
+          const unsubscribe = createOptimizedSubscriptionListener(user.uid, (updatedSubscription) => {
+            if (updatedSubscription) {
+              setSubscription(updatedSubscription);
+
+              // Recalculate available funds
+              const totalAmount = updatedSubscription.amount || 0;
+              const pledgedAmount = updatedSubscription.pledgedAmount || 0;
+              const available = Math.max(0, totalAmount - pledgedAmount);
+              setAvailableFunds(available);
+              setMaxedOut(available <= 0);
+            }
+          }, { verbose: process.env.NODE_ENV === 'development' });
 
           return () => unsubscribe();
         }
