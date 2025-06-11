@@ -13,7 +13,7 @@ import { Switch } from '../../../components/ui/switch';
 import { Label } from '../../../components/ui/label';
 import { Alert, AlertDescription } from '../../../components/ui/alert';
 import TextView from '../../../components/editor/TextView';
-import TextViewErrorBoundary from '../../../components/editor/TextViewErrorBoundary';
+import TextViewErrorBoundary from '../../../components/editor/TextViewErrorBoundary.js';
 import { toast } from '../../../components/ui/use-toast';
 import { generateTextDiff } from '../../../utils/generateTextDiff';
 import { generateDiffContent } from '../../../utils/diffUtils';

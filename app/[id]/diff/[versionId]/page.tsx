@@ -9,7 +9,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { Loader } from '../../../components/utils/Loader';
 import { Alert, AlertDescription } from '../../../components/ui/alert';
 import TextView from '../../../components/editor/TextView';
-import TextViewErrorBoundary from '../../../components/editor/TextViewErrorBoundary';
+import TextViewErrorBoundary from '../../../components/editor/TextViewErrorBoundary.js';
 import { generateDiffContent } from '../../../utils/diffUtils';
 import { PageProvider } from '../../../contexts/PageContext';
 import { LineSettingsProvider } from '../../../contexts/LineSettingsContext';
