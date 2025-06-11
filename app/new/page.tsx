@@ -24,7 +24,6 @@ import { useSyncQueue } from "../contexts/SyncQueueContext";
 import SlideUpPage from "../components/ui/slide-up-page";
 import { NewPageSkeleton } from "../components/skeletons/PageEditorSkeleton";
 import { toast } from "../components/ui/use-toast";
-import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
 
 /**
  * Editor content node interface
