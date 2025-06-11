@@ -1,5 +1,7 @@
 import { db } from '../firebase/config'
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore'
+import { ref, get } from 'firebase/database'
+import { rtdb } from '../firebase/rtdb'
 
 interface SitemapOptions {
   limit?: number
@@ -163,37 +165,39 @@ export async function generateGroupsSitemap(options: SitemapOptions = {}): Promi
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
   
   try {
-    // Query public groups from Firestore
-    const groupsRef = collection(db, 'groups')
-    const groupsQuery = query(
-      groupsRef,
-      where('isPublic', '==', true),
-      orderBy('lastActivity', 'desc'),
-      limit(maxGroups)
-    )
-
-    const groupsSnapshot = await getDocs(groupsQuery)
+    // Query public groups from RTDB (not Firestore)
+    const groupsRef = ref(rtdb, 'groups')
+    const groupsSnapshot = await get(groupsRef)
     const entries: SitemapEntry[] = []
 
-    groupsSnapshot.forEach((doc) => {
-      const data = doc.data()
-      const groupId = doc.id
-      
-      const lastActivity = data.lastActivity?.toDate() || data.createdAt?.toDate() || new Date()
-      const memberCount = data.memberCount || 0
+    if (groupsSnapshot.exists()) {
+      const groups = groupsSnapshot.val()
 
-      let priority = 0.5
-      if (memberCount > 100) priority = 0.8
-      else if (memberCount > 20) priority = 0.7
-      else if (memberCount > 5) priority = 0.6
+      // Filter for public groups and create entries
+      Object.entries(groups).forEach(([groupId, groupData]: [string, any]) => {
+        // Only include public groups
+        if (!groupData.isPublic) return
 
-      entries.push({
-        url: `${baseUrl}/group/${groupId}`,
-        lastModified: lastActivity,
-        changeFrequency: 'weekly',
-        priority
+        const lastActivity = groupData.lastActivity ? new Date(groupData.lastActivity) :
+                           groupData.createdAt ? new Date(groupData.createdAt) : new Date()
+        const memberCount = groupData.members ? Object.keys(groupData.members).length : 0
+
+        let priority = 0.5
+        if (memberCount > 100) priority = 0.8
+        else if (memberCount > 20) priority = 0.7
+        else if (memberCount > 5) priority = 0.6
+
+        entries.push({
+          url: `${baseUrl}/group/${groupId}`,
+          lastModified: lastActivity,
+          changeFrequency: 'weekly',
+          priority
+        })
       })
-    })
+
+      // Limit the results
+      entries.splice(maxGroups)
+    }
 
     // Generate XML sitemap
     const xmlEntries = entries.map(entry => `

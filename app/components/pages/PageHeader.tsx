@@ -5,8 +5,8 @@ import Link from "next/link";
 import { Button } from "../ui/button";
 import { Loader, ChevronLeft, ChevronRight, Share2, Lock, MoreHorizontal, Edit2, Plus, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../firebase/database";
+import { ref, get } from "firebase/database";
+import { rtdb } from "../../firebase/rtdb";
 import dynamic from 'next/dynamic';
 
 import { getUsernameById, getUserSubscriptionTier } from "../../utils/userUtils";
@@ -298,11 +298,11 @@ export default function PageHeader({
 
     const checkGroupAccess = async () => {
       try {
-        const groupRef = doc(db, 'groups', groupId);
-        const groupDoc = await getDoc(groupRef);
+        const groupRef = ref(rtdb, 'groups/' + groupId);
+        const groupSnapshot = await get(groupRef);
 
-        if (groupDoc.exists()) {
-          const groupData = groupDoc.data();
+        if (groupSnapshot.exists()) {
+          const groupData = groupSnapshot.val();
           // Check if the user is a member of the group
           const isMember = user.uid && groupData.members && groupData.members[user.uid];
           setHasGroupAccess(!!isMember);
