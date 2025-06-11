@@ -252,7 +252,6 @@ export default function PageDiff({ params }: PageDiffProps) {
             View Current Page
           </Button>
         </div>
-      </div>
     </div>
   );
 }

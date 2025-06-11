@@ -317,7 +317,6 @@ export default function PageVersionView({ params }: { params: Promise<{ id: stri
             </Button>
           )}
         </div>
-      </div>
     </div>
   );
 }
