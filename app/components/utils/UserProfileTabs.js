@@ -3,7 +3,8 @@ import React, { useState, useContext, useRef } from "react";
 import { PillLink } from "./PillLink";
 import { Button } from "../ui/button";
 import SupporterBadge from "../payments/SupporterBadge";
-import { User, Clock, FileText, Lock, Plus, Loader, Info, Users, BookText, Heart, ArrowUpDown, Check } from "lucide-react";
+import { User, Clock, FileText, Lock, Plus, Loader, Info, Users, BookText, Heart, ArrowUpDown, Check, ChevronUp, ChevronDown } from "lucide-react";
+import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { AuthContext } from "../../providers/AuthProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -71,11 +72,25 @@ export default function UserProfileTabs({ profile }) {
   const [dragX, setDragX] = useState(0);
   const tabsRef = useRef(null);
 
-  // Sorting state for pages tab
-  const [sortBy, setSortBy] = useState("recently-edited"); // "recently-edited", "recently-created", "alphabetical"
+  // Sorting state for pages tab with persistence
+  const [sortBy, setSortBy] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('profile-pages-sort-by') || "recently-edited";
+    }
+    return "recently-edited";
+  });
+  const [sortDirection, setSortDirection] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('profile-pages-sort-direction') || "desc";
+    }
+    return "desc";
+  });
 
   // Check if groups feature is enabled
   const groupsEnabled = useFeatureFlag('groups', user?.email);
+
+  // Analytics tracking
+  const { trackSortingInteraction, trackInteractionEvent, events } = useWeWriteAnalytics();
 
   // Use the usePages hook to get the user's pages
   const {
@@ -90,7 +105,7 @@ export default function UserProfileTabs({ profile }) {
     fetchMorePrivatePages
   } = usePages(profile?.uid, true, user?.uid, true); // Pass isUserPage=true to use higher limit
 
-  // Sort pages based on selected sort option
+  // Sort pages based on selected sort option and direction
   const sortedPages = React.useMemo(() => {
     if (!pages || pages.length === 0) return pages;
 
@@ -101,14 +116,16 @@ export default function UserProfileTabs({ profile }) {
         return pagesCopy.sort((a, b) => {
           const dateA = new Date(a.createdAt || 0);
           const dateB = new Date(b.createdAt || 0);
-          return dateB - dateA; // Newest first
+          const result = dateB - dateA; // Newest first by default
+          return sortDirection === "asc" ? -result : result;
         });
 
       case "alphabetical":
         return pagesCopy.sort((a, b) => {
           const titleA = (a.title || "Untitled").toLowerCase();
           const titleB = (b.title || "Untitled").toLowerCase();
-          return titleA.localeCompare(titleB); // A-Z
+          const result = titleA.localeCompare(titleB); // A-Z by default
+          return sortDirection === "desc" ? -result : result;
         });
 
       case "recently-edited":
@@ -116,10 +133,76 @@ export default function UserProfileTabs({ profile }) {
         return pagesCopy.sort((a, b) => {
           const dateA = new Date(a.updatedAt || a.createdAt || 0);
           const dateB = new Date(b.updatedAt || b.createdAt || 0);
-          return dateB - dateA; // Newest first
+          const result = dateB - dateA; // Newest first by default
+          return sortDirection === "asc" ? -result : result;
         });
     }
-  }, [pages, sortBy]);
+  }, [pages, sortBy, sortDirection]);
+
+  // Helper function to get descriptive sort labels
+  const getSortLabel = (sortType, direction) => {
+    switch (sortType) {
+      case "recently-edited":
+        return direction === "desc" ? "Recently Edited" : "Oldest Edited";
+      case "recently-created":
+        return direction === "desc" ? "Recently Created" : "Oldest Created";
+      case "alphabetical":
+        return direction === "asc" ? "A to Z" : "Z to A";
+      default:
+        return "Sort";
+    }
+  };
+
+  // Helper function to toggle sort direction or change sort type
+  const handleSortChange = (newSortBy) => {
+    const oldSortBy = sortBy;
+    const oldDirection = sortDirection;
+
+    if (sortBy === newSortBy) {
+      // Same sort type, toggle direction
+      const newDirection = sortDirection === "asc" ? "desc" : "asc";
+      setSortDirection(newDirection);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('profile-pages-sort-direction', newDirection);
+      }
+
+      // Track direction toggle
+      trackSortingInteraction(newSortBy, newDirection, 'profile_pages', {
+        previous_direction: oldDirection,
+        action_type: 'direction_toggle'
+      });
+    } else {
+      // Different sort type, set to default direction
+      setSortBy(newSortBy);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('profile-pages-sort-by', newSortBy);
+      }
+
+      // Set default direction based on sort type
+      let newDirection;
+      switch (newSortBy) {
+        case "alphabetical":
+          newDirection = "asc"; // A-Z is more intuitive as default
+          break;
+        case "recently-edited":
+        case "recently-created":
+        default:
+          newDirection = "desc"; // Recent first is more intuitive as default
+          break;
+      }
+      setSortDirection(newDirection);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('profile-pages-sort-direction', newDirection);
+      }
+
+      // Track sort type change
+      trackSortingInteraction(newSortBy, newDirection, 'profile_pages', {
+        previous_sort_type: oldSortBy,
+        previous_direction: oldDirection,
+        action_type: 'sort_type_change'
+      });
+    }
+  };
 
   // Determine which tabs to show in the requested order
   const visibleTabs = ["bio", "pages", "activity"];
@@ -187,6 +270,17 @@ export default function UserProfileTabs({ profile }) {
   const handleTabChange = (newTab) => {
     const currentIndex = visibleTabs.indexOf(activeTab);
     const newIndex = visibleTabs.indexOf(newTab);
+
+    // Track tab switching
+    if (newTab !== activeTab) {
+      trackInteractionEvent(events.TAB_CHANGED, {
+        from_tab: activeTab,
+        to_tab: newTab,
+        location: 'user_profile',
+        user_id: profile?.uid,
+        is_current_user: isCurrentUser
+      });
+    }
 
     // Set direction for animation
     let animationDirection = 0;
@@ -488,33 +582,39 @@ export default function UserProfileTabs({ profile }) {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
-                    <ArrowUpDown className="h-4 w-4" />
-                    Sort by{' '}
-                    {sortBy === "recently-edited" && "Recently edited"}
-                    {sortBy === "recently-created" && "Recently created"}
-                    {sortBy === "alphabetical" && "Alphabetical"}
+                    {sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    {getSortLabel(sortBy, sortDirection)}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem
-                    onClick={() => setSortBy("recently-edited")}
+                    onClick={() => handleSortChange("recently-edited")}
                     className="flex items-center justify-between cursor-pointer"
                   >
-                    <span>Recently edited</span>
+                    <span className="flex items-center gap-2">
+                      {sortBy === "recently-edited" && sortDirection === "desc" ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                      {getSortLabel("recently-edited", sortBy === "recently-edited" ? (sortDirection === "desc" ? "asc" : "desc") : "desc")}
+                    </span>
                     {sortBy === "recently-edited" && <Check className="h-4 w-4" />}
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => setSortBy("recently-created")}
+                    onClick={() => handleSortChange("recently-created")}
                     className="flex items-center justify-between cursor-pointer"
                   >
-                    <span>Recently created</span>
+                    <span className="flex items-center gap-2">
+                      {sortBy === "recently-created" && sortDirection === "desc" ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                      {getSortLabel("recently-created", sortBy === "recently-created" ? (sortDirection === "desc" ? "asc" : "desc") : "desc")}
+                    </span>
                     {sortBy === "recently-created" && <Check className="h-4 w-4" />}
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => setSortBy("alphabetical")}
+                    onClick={() => handleSortChange("alphabetical")}
                     className="flex items-center justify-between cursor-pointer"
                   >
-                    <span>Alphabetical</span>
+                    <span className="flex items-center gap-2">
+                      {sortBy === "alphabetical" && sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      {getSortLabel("alphabetical", sortBy === "alphabetical" ? (sortDirection === "asc" ? "desc" : "asc") : "asc")}
+                    </span>
                     {sortBy === "alphabetical" && <Check className="h-4 w-4" />}
                   </DropdownMenuItem>
                 </DropdownMenuContent>

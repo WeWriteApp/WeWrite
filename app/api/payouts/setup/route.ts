@@ -20,11 +20,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { stripeConnectedAccountId, country } = body;
+    const { stripeConnectedAccountId, country, forceCreate = false } = body;
 
     if (!stripeConnectedAccountId) {
-      return NextResponse.json({ 
-        error: 'Stripe connected account ID is required' 
+      return NextResponse.json({
+        error: 'Stripe connected account ID is required'
       }, { status: 400 });
     }
 
@@ -34,27 +34,50 @@ export async function POST(request: NextRequest) {
     const userData = userDoc.data();
 
     if (userData?.stripeConnectedAccountId !== stripeConnectedAccountId) {
-      return NextResponse.json({ 
-        error: 'Invalid connected account' 
+      return NextResponse.json({
+        error: 'Invalid connected account'
       }, { status: 400 });
     }
 
     // Check if recipient already exists
     const existingRecipient = await payoutService.getPayoutRecipient(userId);
     if (existingRecipient) {
+      // Verify Stripe account status for existing recipient
+      const accountStatus = await stripePayoutService.verifyStripeAccount(stripeConnectedAccountId);
+
       return NextResponse.json({
         success: true,
-        data: existingRecipient,
+        data: {
+          recipient: existingRecipient,
+          accountStatus
+        },
         message: 'Payout recipient already exists'
+      });
+    }
+
+    // Only create payout recipient if explicitly requested (when user has earnings)
+    // or if forceCreate is true
+    if (!forceCreate) {
+      // Just verify account status without creating recipient
+      const accountStatus = await stripePayoutService.verifyStripeAccount(stripeConnectedAccountId);
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          recipient: null,
+          accountStatus,
+          message: 'Bank account verified. Payout recipient will be created when you have earnings to withdraw.'
+        },
+        message: 'Account verified successfully'
       });
     }
 
     // Verify Stripe account status
     const accountStatus = await stripePayoutService.verifyStripeAccount(stripeConnectedAccountId);
-    
+
     // Create payout recipient
     const recipientResult = await payoutService.createPayoutRecipient(userId, stripeConnectedAccountId);
-    
+
     if (!recipientResult.success) {
       return NextResponse.json({
         error: recipientResult.error
@@ -72,7 +95,7 @@ export async function POST(request: NextRequest) {
       .where('userId', '==', userId)
       .get();
 
-    const splitPromises = pagesSnapshot.docs.map(pageDoc => 
+    const splitPromises = pagesSnapshot.docs.map(pageDoc =>
       payoutService.createDefaultRevenueSplit('page', pageDoc.id, userId)
     );
 
@@ -83,7 +106,7 @@ export async function POST(request: NextRequest) {
       .where('createdBy', '==', userId)
       .get();
 
-    const groupSplitPromises = groupsSnapshot.docs.map(groupDoc => 
+    const groupSplitPromises = groupsSnapshot.docs.map(groupDoc =>
       payoutService.createDefaultRevenueSplit('group', groupDoc.id, userId)
     );
 

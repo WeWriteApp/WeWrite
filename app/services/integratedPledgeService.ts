@@ -4,7 +4,8 @@
  */
 
 import { realPledgeService } from './realPledgeService';
-import { createPledge, updatePledge, deletePledge, getUserSubscription } from '../firebase/subscription';
+import { createPledge, updatePledge, deletePledge } from '../firebase/subscription';
+import { getOptimizedUserSubscription } from '../firebase/optimizedSubscription';
 import { Pledge, PaymentTransaction, UserEarnings } from '../types/database';
 
 export class IntegratedPledgeService {
@@ -182,9 +183,13 @@ export class IntegratedPledgeService {
    */
   async getAvailableFunds(userId: string): Promise<number> {
     try {
-      // Get user subscription
-      const subscription = await getUserSubscription(userId);
-      
+      // Get user subscription using optimized version
+      const subscription = await getOptimizedUserSubscription(userId, {
+        useCache: true,
+        cacheTTL: 5 * 60 * 1000, // 5 minutes cache
+        verbose: false
+      });
+
       if (!subscription || subscription.status !== 'active') {
         return 0;
       }

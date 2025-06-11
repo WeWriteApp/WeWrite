@@ -7,7 +7,7 @@
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { auth } from "../firebase/auth";
-import { getUserSubscription } from "../firebase/subscription";
+import { getOptimizedUserSubscription } from "../firebase/optimizedSubscription";
 import type { User } from "../types/database";
 
 /**
@@ -182,8 +182,12 @@ export const getUserSubscriptionTier = async (userId: string): Promise<Subscript
   if (!userId) return { tier: null, status: null };
 
   try {
-    // Get the user's subscription data
-    const subscription = await getUserSubscription(userId);
+    // Get the user's subscription data using optimized version
+    const subscription = await getOptimizedUserSubscription(userId, {
+      useCache: true,
+      cacheTTL: 5 * 60 * 1000, // 5 minutes cache
+      verbose: false
+    });
 
     if (!subscription) {
       return { tier: null, status: null };

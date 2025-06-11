@@ -58,11 +58,14 @@ export function PayoutsManager() {
   const [loading, setLoading] = useState(true);
   const [setupLoading, setSetupLoading] = useState(false);
   const [realEarnings, setRealEarnings] = useState<any>(null);
+  const [bankAccountConnected, setBankAccountConnected] = useState(false);
+  const [stripeAccountStatus, setStripeAccountStatus] = useState<any>(null);
 
   useEffect(() => {
     if (user && isPaymentsEnabled) {
       loadPayoutSetup();
       loadRealEarningsData();
+      checkBankAccountStatus();
     }
   }, [user, isPaymentsEnabled]);
 
@@ -75,6 +78,32 @@ export function PayoutsManager() {
       setRealEarnings(userEarnings);
     } catch (error) {
       console.error('Error loading real earnings data:', error);
+    }
+  };
+
+  const checkBankAccountStatus = async () => {
+    if (!user?.stripeConnectedAccountId) {
+      setBankAccountConnected(false);
+      return;
+    }
+
+    try {
+      // Check if Stripe account exists and is set up
+      const response = await fetch('/api/stripe/account-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stripeConnectedAccountId: user.stripeConnectedAccountId
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setStripeAccountStatus(result.data);
+        setBankAccountConnected(result.data?.payouts_enabled || false);
+      }
+    } catch (error) {
+      console.error('Error checking bank account status:', error);
     }
   };
 
@@ -113,63 +142,101 @@ export function PayoutsManager() {
     }
   };
 
-  const handleSetupPayouts = async () => {
+  const handleSetupBankAccount = async () => {
     try {
       setSetupLoading(true);
 
-      // Check if user has a connected account
-      if (!user?.stripeConnectedAccountId) {
-        // Create Stripe Connect account first
-        const connectResponse = await fetch('/api/create-connect-account', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.uid }),
-        });
-
-        if (connectResponse.ok) {
-          const result = await connectResponse.json();
-          window.location.href = result.url;
-          return;
-        } else {
-          const errorData = await connectResponse.json();
-          throw new Error(errorData.error || 'Failed to create Stripe account');
-        }
-      }
-
-      // Setup payouts with existing connected account
-      const response = await fetch('/api/payouts/setup', {
+      // Always create/redirect to Stripe Connect account setup
+      const connectResponse = await fetch('/api/create-connect-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stripeConnectedAccountId: user.stripeConnectedAccountId,
-          country: 'US' // Default to US, could be made dynamic
-        }),
+        body: JSON.stringify({ userId: user.uid }),
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        setSetup(result.data);
-        toast({
-          title: "Payouts Set Up",
-          description: "Your payout system has been configured successfully!",
-        });
+      if (connectResponse.ok) {
+        const result = await connectResponse.json();
+        window.location.href = result.url;
+        return;
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to setup payouts');
+        const errorData = await connectResponse.json();
+        throw new Error(errorData.error || 'Failed to create Stripe account');
       }
     } catch (error: any) {
-      console.error('Error setting up payouts:', error);
+      console.error('Error setting up bank account:', error);
 
       // Use enhanced error toast with copy functionality
-      showErrorToastWithCopy("Payout setup failed", {
-        description: error.message || "Failed to setup payouts. Please try again.",
+      showErrorToastWithCopy("Bank account setup failed", {
+        description: error.message || "Failed to setup bank account. Please try again.",
         additionalInfo: {
-          errorType: "PAYOUT_SETUP_ERROR",
+          errorType: "BANK_ACCOUNT_SETUP_ERROR",
           userId: user?.uid,
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent,
           url: window.location.href,
           stripeConnectedAccountId: user?.stripeConnectedAccountId,
+          errorMessage: error.message,
+          errorStack: error.stack,
+        },
+      });
+    } finally {
+      setSetupLoading(false);
+    }
+  };
+
+  const handleRequestPayout = async () => {
+    try {
+      setSetupLoading(true);
+
+      // First ensure payout recipient exists - force creation since user has earnings
+      if (!setup?.recipient) {
+        const setupResponse = await fetch('/api/payouts/setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            stripeConnectedAccountId: user.stripeConnectedAccountId,
+            country: 'US', // Default to US, could be made dynamic
+            forceCreate: true // Force creation of payout recipient
+          }),
+        });
+
+        if (!setupResponse.ok) {
+          const errorData = await setupResponse.json();
+          throw new Error(errorData.error || 'Failed to setup payout recipient');
+        }
+
+        const setupResult = await setupResponse.json();
+        setSetup(setupResult.data);
+      }
+
+      // Request payout
+      const response = await fetch('/api/payouts/earnings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'request_payout' }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Payout Requested",
+          description: "Your payout request has been submitted successfully!",
+        });
+        loadPayoutSetup(); // Refresh data
+        loadRealEarningsData(); // Refresh earnings data
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to request payout');
+      }
+    } catch (error: any) {
+      console.error('Error requesting payout:', error);
+
+      showErrorToastWithCopy("Payout request failed", {
+        description: error.message || "Failed to request payout. Please try again.",
+        additionalInfo: {
+          errorType: "PAYOUT_REQUEST_ERROR",
+          userId: user?.uid,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          url: window.location.href,
           errorMessage: error.message,
           errorStack: error.stack,
         },
@@ -220,7 +287,12 @@ export function PayoutsManager() {
     );
   }
 
-  // Show setup screen if no payout recipient exists
+  // Calculate current earnings
+  const currentEarnings = realEarnings?.totalEarnings || 0;
+  const minimumThreshold = 25; // $25 minimum payout
+  const canRequestPayout = bankAccountConnected && currentEarnings >= minimumThreshold;
+
+  // Show comprehensive payout interface
   return (
     <Card className="wewrite-card">
       <CardHeader>
@@ -229,45 +301,135 @@ export function PayoutsManager() {
           Payouts
         </CardTitle>
         <CardDescription>
-          Set up payouts to start earning from your content
+          Manage your creator earnings and payout settings
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="text-center py-8">
-          <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">Payouts Not Set Up</h3>
-          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            Connect your bank account to start receiving payments from supporters.
-            You'll earn money when people pledge to your pages and groups.
-          </p>
-          <Button
-            onClick={handleSetupPayouts}
-            disabled={setupLoading}
-            size="lg"
-          >
-            {setupLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                Setting up...
-              </>
-            ) : (
-              <>
-                <Wallet className="h-4 w-4 mr-2" />
-                Set Up Payouts
-              </>
-            )}
-          </Button>
-
-          <div className="mt-8 p-4 bg-muted rounded-lg text-left">
-            <h4 className="font-medium mb-2">How it works:</h4>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Supporters pledge monthly amounts to your content</li>
-              <li>• You earn 93% of pledges (7% platform fee)</li>
-              <li>• Payouts processed monthly on the 1st</li>
-              <li>• Minimum payout threshold: $25</li>
-              <li>• International payouts supported</li>
-            </ul>
+      <CardContent className="space-y-6">
+        {/* Current Earnings Display */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 bg-muted/30 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <DollarSign className="h-4 w-4 text-green-600" />
+              <span className="text-sm font-medium">Current Earnings</span>
+            </div>
+            <p className="text-2xl font-bold">${currentEarnings.toFixed(2)}</p>
           </div>
+
+          <div className="p-4 bg-muted/30 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="h-4 w-4 text-blue-600" />
+              <span className="text-sm font-medium">Minimum Payout</span>
+            </div>
+            <p className="text-2xl font-bold">${minimumThreshold.toFixed(2)}</p>
+          </div>
+
+          <div className="p-4 bg-muted/30 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Bank Account</span>
+            </div>
+            <p className="text-sm font-medium">
+              {bankAccountConnected ? (
+                <Badge variant="default" className="bg-green-100 text-green-800">Connected</Badge>
+              ) : (
+                <Badge variant="secondary">Not Connected</Badge>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Bank Account Setup Section */}
+        <div className="border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-medium">Bank Account Setup</h3>
+              <p className="text-sm text-muted-foreground">
+                Connect your bank account to receive payments from supporters
+              </p>
+            </div>
+            <Button
+              onClick={handleSetupBankAccount}
+              disabled={setupLoading}
+              variant={bankAccountConnected ? "outline" : "default"}
+            >
+              {setupLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                  Setting up...
+                </>
+              ) : bankAccountConnected ? (
+                <>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Manage Account
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Connect Bank Account
+                </>
+              )}
+            </Button>
+          </div>
+
+          {stripeAccountStatus && (
+            <div className="text-sm text-muted-foreground">
+              Status: {stripeAccountStatus.payouts_enabled ? 'Verified and ready for payouts' : 'Pending verification'}
+            </div>
+          )}
+        </div>
+
+        {/* Payout Request Section */}
+        <div className="border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-medium">Request Payout</h3>
+              <p className="text-sm text-muted-foreground">
+                {canRequestPayout
+                  ? "You can request a payout of your current earnings"
+                  : `Minimum payout amount is $${minimumThreshold}. Current balance: $${currentEarnings.toFixed(2)}`
+                }
+              </p>
+            </div>
+            <Button
+              onClick={handleRequestPayout}
+              disabled={!canRequestPayout || setupLoading}
+              variant={canRequestPayout ? "default" : "secondary"}
+            >
+              {setupLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Request Payout
+                </>
+              )}
+            </Button>
+          </div>
+
+          {!bankAccountConnected && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Bank Account Required</AlertTitle>
+              <AlertDescription>
+                You need to connect a bank account before you can request payouts.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+
+        {/* How it Works */}
+        <div className="p-4 bg-muted/30 rounded-lg">
+          <h4 className="font-medium mb-2">How it works:</h4>
+          <ul className="text-sm text-muted-foreground space-y-1">
+            <li>• Supporters pledge monthly amounts to your content</li>
+            <li>• You earn 93% of pledges (7% platform fee)</li>
+            <li>• Payouts processed monthly on the 1st</li>
+            <li>• Minimum payout threshold: $25</li>
+            <li>• International payouts supported</li>
+          </ul>
         </div>
       </CardContent>
     </Card>

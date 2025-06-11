@@ -117,17 +117,12 @@ export function middleware(request) {
 
     // If not an admin, redirect to home page
     if (!isAdmin) {
-      console.log(`[DEBUG] Non-admin user (${userEmail || 'unknown'}) attempted to access admin-only path: ${path}`);
       return NextResponse.redirect(new URL("/", request.url));
     }
   }
 
   // For groups paths, allow access for all authenticated users
   if (isGroupsPath) {
-    // Log for debugging
-    console.log(`[DEBUG] Middleware - Groups path detected: ${path}`);
-    console.log(`[DEBUG] Middleware - Groups feature is now enabled for all users`);
-
     // Always set the feature flag cookie to true for groups paths
     const response = NextResponse.next();
     response.cookies.set("feature_groups", "true", {

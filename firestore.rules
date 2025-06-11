@@ -233,6 +233,24 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Feature overrides - Personal feature flag overrides for users
+    match /featureOverrides/{overrideId} {
+      // Allow users to read their own feature overrides or admins to read all
+      allow read: if isAuthenticated() && (
+        overrideId.matches('.*_.*') &&
+        overrideId.split('_')[0] == request.auth.uid ||
+        isAdmin()
+      );
+
+      // Allow users to create/update their own feature overrides or admins to manage all
+      allow write: if isAuthenticated() && (
+        overrideId.matches('.*_.*') &&
+        overrideId.split('_')[0] == request.auth.uid &&
+        request.resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+    }
+
     // Counters collection - Read-only for most users, write for system
     match /counters/{counterId} {
       // Allow reading counter data for TopUsers and profile displays

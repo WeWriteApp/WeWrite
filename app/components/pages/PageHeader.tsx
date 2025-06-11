@@ -32,6 +32,7 @@ import {
   navigateToNextDailyNote,
   isExactDateFormat as isDailyNoteFormat
 } from "../../utils/dailyNoteNavigation";
+import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 
 // Dynamically import AddToPageButton to avoid SSR issues
 const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
@@ -90,6 +91,7 @@ export default function PageHeader({
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const [headerHeight, setHeaderHeight] = React.useState(0);
+  const { trackInteractionEvent, events } = useWeWriteAnalytics();
   const headerRef = React.useRef<HTMLDivElement>(null);
 
   // Calculate header positioning width - only respond to persistent expanded state, not hover
@@ -180,6 +182,14 @@ export default function PageHeader({
     }
 
     setIsNavigating(true);
+
+    // Track navigation attempt
+    trackInteractionEvent(events.DAILY_NOTES_NAVIGATION, {
+      direction: direction,
+      current_date: title,
+      is_editing: isEditing,
+      user_id: user.uid
+    });
 
     try {
       const navigationResult = direction === 'previous'
@@ -552,7 +562,7 @@ export default function PageHeader({
               {/* Left navigation chevron for daily notes */}
               {isDailyNote && !isScrolled && (
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="icon"
                   className="h-8 w-8 mr-2 transition-opacity duration-200"
                   onClick={(e) => {
@@ -560,7 +570,7 @@ export default function PageHeader({
                     handleDailyNoteNavigation('previous');
                   }}
                   disabled={isNavigating}
-                  title={isEditing ? "Previous calendar day" : "Previous daily note"}
+                  title={isEditing ? "Previous calendar day (creates new note)" : "Previous daily note (existing notes only)"}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -767,7 +777,7 @@ export default function PageHeader({
               {/* Right navigation chevron for daily notes */}
               {isDailyNote && !isScrolled && (
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="icon"
                   className="h-8 w-8 ml-2 transition-opacity duration-200"
                   onClick={(e) => {
@@ -775,7 +785,7 @@ export default function PageHeader({
                     handleDailyNoteNavigation('next');
                   }}
                   disabled={isNavigating}
-                  title={isEditing ? "Next calendar day" : "Next daily note"}
+                  title={isEditing ? "Next calendar day (creates new note)" : "Next daily note (existing notes only)"}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>

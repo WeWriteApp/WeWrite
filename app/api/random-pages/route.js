@@ -17,8 +17,9 @@ export async function GET(request) {
     const limitCount = parseInt(searchParams.get('limit') || '10', 10);
     const userId = searchParams.get('userId'); // For access control
     const includePrivate = searchParams.get('includePrivate') === 'true'; // Privacy toggle
+    const excludeOwnPages = searchParams.get('excludeOwnPages') === 'true'; // "Not mine" filter
 
-    console.log('Random pages API: Requested limit:', limitCount, 'User ID:', userId, 'Include private:', includePrivate);
+    console.log('Random pages API: Requested limit:', limitCount, 'User ID:', userId, 'Include private:', includePrivate, 'Exclude own pages:', excludeOwnPages);
 
     // Import Firebase modules
     const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
@@ -163,6 +164,11 @@ export async function GET(request) {
         }
         // Only include private pages if the user owns them AND has enabled the privacy toggle
         return isOwner && includePrivate;
+      }
+
+      // Apply "Not mine" filter - exclude pages authored by current user
+      if (excludeOwnPages && userId && page.userId === userId) {
+        return false;
       }
 
       // For public pages, apply additional group-based filtering

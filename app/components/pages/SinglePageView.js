@@ -75,6 +75,7 @@ import { useConfirmation } from "../../hooks/useConfirmation";
 import ConfirmationModal from "../utils/ConfirmationModal";
 import { useLogging } from "../../providers/LoggingProvider";
 import { GroupsContext } from "../../providers/GroupsProvider";
+import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 
 
 
@@ -140,6 +141,7 @@ function SinglePageView({ params, initialEditMode = false }) {
   const router = useRouter();
   const contentRef = useRef(null);
   const { logError } = useLogging();
+  const { trackEditingFlow, trackContentEvent, events } = useWeWriteAnalytics();
 
   // Use confirmation modal hook for delete functionality
   const { confirmationState, confirmDelete, closeConfirmation } = useConfirmation();
@@ -175,7 +177,7 @@ function SinglePageView({ params, initialEditMode = false }) {
   };
 
   // Handle save action - comprehensive save logic moved from EditPage
-  const handleSave = useCallback(async (inputContent) => {
+  const handleSave = useCallback(async (inputContent, saveMethod = 'button') => {
     console.log("SinglePageView handleSave called with content:", {
       contentType: typeof inputContent,
       isArray: Array.isArray(inputContent),
@@ -204,6 +206,15 @@ function SinglePageView({ params, initialEditMode = false }) {
     setTitleError(false);
     setIsSaving(true);
     setError(null);
+
+    // Track save attempt
+    trackEditingFlow.saved(params.id, saveMethod, {
+      page_title: title,
+      has_content_changes: hasContentChanged,
+      has_title_changes: hasTitleChanged,
+      has_visibility_changes: hasVisibilityChanged,
+      has_location_changes: hasLocationChanged
+    });
 
     try {
       // Use the provided content or fall back to current editor content
@@ -291,7 +302,7 @@ function SinglePageView({ params, initialEditMode = false }) {
 
       // Exit edit mode after successful save
       setTimeout(() => {
-        setIsEditing(false);
+        handleSetIsEditing(false);
       }, 300);
 
       return true;
@@ -307,7 +318,18 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   // Handle cancel action
   const handleCancel = () => {
-    setIsEditing(false);
+    // Track cancellation if there were unsaved changes
+    if (hasContentChanged || hasTitleChanged || hasVisibilityChanged || hasLocationChanged) {
+      trackEditingFlow.cancelled(params.id, {
+        page_title: title,
+        had_content_changes: hasContentChanged,
+        had_title_changes: hasTitleChanged,
+        had_visibility_changes: hasVisibilityChanged,
+        had_location_changes: hasLocationChanged
+      });
+    }
+
+    handleSetIsEditing(false);
     setHasContentChanged(false);
     setHasTitleChanged(false);
     setHasVisibilityChanged(false);
@@ -320,6 +342,13 @@ function SinglePageView({ params, initialEditMode = false }) {
     setIsEditing(editing);
     if (editing && position) {
       setClickPosition(position);
+      // Track edit mode entry
+      trackEditingFlow.started(params.id, {
+        page_title: page?.title,
+        is_public: page?.isPublic,
+        has_group: !!page?.groupId,
+        click_position: position ? 'click' : 'keyboard'
+      });
     } else if (!editing) {
       setClickPosition(null); // Clear position when exiting edit mode
     }
@@ -351,6 +380,14 @@ function SinglePageView({ params, initialEditMode = false }) {
 
         // Delete the page in the background
         await deletePage(page.id);
+
+        // Track successful deletion
+        trackContentEvent(events.PAGE_DELETED, {
+          page_id: page.id,
+          page_title: page.title,
+          was_public: page.isPublic,
+          had_group: !!page.groupId
+        });
 
         // Show success message
         toast.success("Page deleted successfully");
@@ -399,7 +436,12 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   // Memoized save function for the useUnsavedChanges hook
   const saveChanges = useCallback(() => {
-    return handleSave(editorContent || editorState);
+    return handleSave(editorContent || editorState, 'button');
+  }, [editorContent, editorState, handleSave]);
+
+  // Keyboard save handler
+  const handleKeyboardSave = useCallback(() => {
+    return handleSave(editorContent || editorState, 'keyboard');
   }, [editorContent, editorState, handleSave]);
 
   // Use the unsaved changes hook
@@ -469,7 +511,8 @@ function SinglePageView({ params, initialEditMode = false }) {
         // OR page belongs to a group and user is a member of that group
         (page?.groupId && hasGroupAccess)
       )
-    )
+    ),
+    handleSave: isEditing ? handleKeyboardSave : null
   });
 
   // Use a ref to track if we've already recorded a view for this page

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from "../providers/AuthProvider";
-import { getUserSubscription } from "../firebase/subscription";
 import { doc, getDoc } from "firebase/firestore";
 import { addUsername, updateEmail as updateFirebaseEmail, checkUsernameAvailability } from "../firebase/auth";
 import { db } from "../firebase/database";
@@ -141,10 +140,17 @@ export default function AccountPage() {
         setTempEmail(currentEmail);
       }
 
-      // Load subscription data
-      const userSubscription = await getUserSubscription(user.uid);
-      if (userSubscription && typeof userSubscription === 'object' && 'status' in userSubscription && userSubscription.status === 'active') {
-        fetchPaymentHistory(user.uid);
+      // Load subscription data via API
+      try {
+        const response = await fetch('/api/account-subscription');
+        if (response.ok) {
+          const userSubscription = await response.json();
+          if (userSubscription && typeof userSubscription === 'object' && 'status' in userSubscription && userSubscription.status === 'active') {
+            fetchPaymentHistory(user.uid);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching subscription data:', error);
       }
     } catch (error) {
       console.error('Error loading user data:', error);

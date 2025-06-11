@@ -7,7 +7,7 @@ import { NotificationContext } from '../providers/NotificationProvider';
 import NavHeader from '../components/layout/NavHeader';
 import NotificationItem from '../components/utils/NotificationItem';
 import { Button } from '../components/ui/button';
-import { Loader, Bell, CheckCheck, ChevronLeft } from 'lucide-react';
+import { Loader, CheckCheck, ChevronLeft } from 'lucide-react';
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -127,9 +127,6 @@ export default function NotificationsPage() {
           </>
         ) : (
           <div className="bg-card rounded-xl border-theme-strong shadow-sm p-8 text-center">
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4 mx-auto">
-              <Bell className="h-5 w-5 text-primary" />
-            </div>
             <h3 className="text-lg font-medium mb-2">No notifications yet</h3>
             <p className="text-sm text-foreground opacity-80 max-w-md mx-auto">
               When someone follows your pages, links to them, or adds them to their own pages, you'll see notifications here.

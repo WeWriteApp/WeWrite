@@ -27,13 +27,8 @@ export function SubscriptionOverview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // If payments feature flag is disabled, don't render anything
-  if (!isPaymentsEnabled) {
-    return null;
-  }
-
   useEffect(() => {
-    if (!user) {
+    if (!user || !isPaymentsEnabled) {
       setLoading(false);
       return;
     }
@@ -53,7 +48,12 @@ export function SubscriptionOverview() {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [user]);
+  }, [user, isPaymentsEnabled]);
+
+  // If payments feature flag is disabled, don't render anything
+  if (!isPaymentsEnabled) {
+    return null;
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

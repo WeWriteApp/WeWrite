@@ -198,24 +198,6 @@ export default function RootLayout({
               // CRITICAL FIX: Blank page detection DISABLED to prevent infinite refresh loops
               // This was the PRIMARY CAUSE of the infinite refresh issue affecting users
 
-              console.log('WeWrite: Blank page detection disabled for infinite refresh protection');
-
-              // Instead of automatic reload, just log the page state for debugging
-              setTimeout(function() {
-                var hasMinimalContent = document.body.innerHTML.length < 800;
-                var hasNoVisibleElements = document.querySelectorAll('div, p, h1, h2, h3, button, a').length < 5;
-                var hasLoadingIndicator = document.body.innerHTML.includes('Loading') ||
-                                         document.body.innerHTML.includes('loader') ||
-                                         document.body.innerHTML.includes('spinner');
-
-                console.log('WeWrite Page State Check:', {
-                  contentLength: document.body.innerHTML.length,
-                  visibleElements: document.querySelectorAll('div, p, h1, h2, h3, button, a').length,
-                  hasLoadingIndicator: hasLoadingIndicator,
-                  url: window.location.href,
-                  timestamp: new Date().toISOString()
-                });
-
                 // NO AUTOMATIC RELOAD - this was causing the infinite refresh loop
               }, 5000);
             });

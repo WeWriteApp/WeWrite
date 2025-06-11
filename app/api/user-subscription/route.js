@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getUserIdFromRequest } from '../auth-helper';
 import { getUserSubscriptionServer } from '../../firebase/subscription-server';
 
 export async function GET(request) {
   try {
-    // Get user ID from request using our helper
-    const userId = await getUserIdFromRequest(request);
+    // Get userId from query parameters
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
 
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
     // Get the user's subscription from Firestore with verbose: false to reduce logging
@@ -21,7 +21,7 @@ export async function GET(request) {
     // Return the subscription data
     return NextResponse.json(subscription);
   } catch (error) {
-    console.error('Error fetching subscription data:', error);
+    console.error('Error fetching user subscription data:', error);
     return NextResponse.json(
       { error: error.message || 'An error occurred while fetching subscription data' },
       { status: 500 }

@@ -302,7 +302,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
   const toggleFeatureFlag = async (flagId: FeatureFlag) => {
     try {
       setIsLoading(true);
-      console.log(`[DEBUG] Starting toggle for feature flag: ${flagId}`);
+
 
       // Get current feature flags from database first to avoid race conditions
       const featureFlagsRef = doc(db, 'config', 'featureFlags');
@@ -317,8 +317,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       const currentDatabaseValue = flagsData[flagId] || false;
       const newValue = !currentDatabaseValue;
 
-      console.log(`[DEBUG] Current database value for ${flagId}: ${currentDatabaseValue}`);
-      console.log(`[DEBUG] New value for ${flagId}: ${newValue}`);
+
 
       // Update the database first
       const updatedFlagsData = {
@@ -327,7 +326,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       };
 
       await setDoc(featureFlagsRef, updatedFlagsData);
-      console.log(`[DEBUG] Successfully updated ${flagId} in database to ${newValue}`);
+
 
       // Update local state after successful database write
       setFeatureFlags(prev =>
@@ -353,7 +352,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       });
 
     } catch (error) {
-      console.error('[DEBUG] Error toggling feature flag:', error);
+      console.error('Error toggling feature flag:', error);
 
       // Provide more specific error messages
       let errorMessage = 'Failed to update feature flag';

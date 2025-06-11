@@ -19,7 +19,10 @@ const SupportUsModal = ({ isOpen, onClose }) => {
   if (isPaymentsEnabled) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border border-border dark:border-neutral-700 bg-white dark:bg-neutral-900 animate-in fade-in-0 zoom-in-95 duration-300">
+        <DialogContent
+          className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border border-border dark:border-neutral-700 bg-white dark:bg-neutral-900 animate-in fade-in-0 zoom-in-95 duration-300"
+          aria-describedby="support-modal-description"
+        >
           <DialogClose asChild>
             <Button variant="outline" size="icon" className="absolute right-4 top-4">
               <X className="h-4 w-4" />
@@ -37,7 +40,7 @@ const SupportUsModal = ({ isOpen, onClose }) => {
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto py-4">
-            <p className="text-center text-muted-foreground mb-8">
+            <p id="support-modal-description" className="text-center text-muted-foreground mb-8">
               Support WeWrite development and unlock the ability to pledge to your favorite pages by activating your subscription.
             </p>
 
@@ -67,7 +70,10 @@ const SupportUsModal = ({ isOpen, onClose }) => {
   // If payments are disabled, show OpenCollective support flow
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border border-border dark:border-neutral-700 bg-white dark:bg-neutral-900 animate-in fade-in-0 zoom-in-95 duration-300">
+      <DialogContent
+        className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border border-border dark:border-neutral-700 bg-white dark:bg-neutral-900 animate-in fade-in-0 zoom-in-95 duration-300"
+        aria-describedby="support-modal-description-2"
+      >
         <DialogClose asChild>
           <Button variant="outline" size="icon" className="absolute right-4 top-4">
             <X className="h-4 w-4" />
@@ -85,7 +91,7 @@ const SupportUsModal = ({ isOpen, onClose }) => {
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto py-4">
-          <p className="text-center text-muted-foreground mb-8">
+          <p id="support-modal-description-2" className="text-center text-muted-foreground mb-8">
             We are still working on the ability to donate to pages. Please support us on OpenCollective so we can pay for development!
           </p>
 

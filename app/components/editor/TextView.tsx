@@ -1055,7 +1055,7 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
       title={canEdit ? "Click to edit" : ""}
     >
       {/* Paragraph with inline number at beginning */}
-      <div className="paragraph-with-number py-1.5 flex">
+      <div className="paragraph-with-number py-1.5 flex items-baseline">
         {/* Paragraph number - fixed width for consistent alignment */}
         <span
           className="paragraph-number-inline select-none flex-shrink-0"
@@ -1066,10 +1066,7 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
             textAlign: 'right',
             marginRight: '0.25rem',
             fontSize: '0.75rem',
-            lineHeight: '1.5',
-            verticalAlign: 'baseline',
-            position: 'relative',
-            top: '0'
+            lineHeight: '1.5'
           }}
         >{index + 1}</span>
 

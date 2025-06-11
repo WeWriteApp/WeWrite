@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 import { useAuth } from '../../providers/AuthProvider';
-import { getUserSubscription, cancelSubscription, listenToUserSubscription, updateSubscription } from '../../firebase/subscription';
+import { cancelSubscription, listenToUserSubscription, updateSubscription } from '../../firebase/subscription';
 import { getOptimizedUserSubscription, createOptimizedSubscriptionListener } from '../../firebase/optimizedSubscription';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';

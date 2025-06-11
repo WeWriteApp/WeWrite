@@ -20,7 +20,7 @@ import { db } from "../../firebase/database";
 
 import UserProfileTabs from '../utils/UserProfileTabs';
 import { getUserFollowerCount, getUserPageCount, getUserTotalViewCount } from "../../firebase/counters";
-import { getUserSubscription } from "../../firebase/subscription";
+// getUserSubscription removed - using optimized listener instead
 import SimpleSparkline from "../utils/SimpleSparkline";
 import { getUserActivityLast24Hours } from "../../firebase/userActivity";
 

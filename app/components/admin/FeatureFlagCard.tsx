@@ -11,6 +11,7 @@ import { FeatureFlag } from '../../utils/feature-flags';
 import { collection, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/database';
 import { useAuth } from '../../providers/AuthProvider';
+import { useToast } from '../ui/use-toast';
 import UserAccessModal from './UserAccessModal';
 
 interface FeatureFlagState {
@@ -40,6 +41,7 @@ export default function FeatureFlagCard({
   isLoading = false
 }: FeatureFlagCardProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [isExpanded, setIsExpanded] = useState(false);
   const [userStats, setUserStats] = useState<UserAccessStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
@@ -167,8 +169,25 @@ export default function FeatureFlagCard({
       } catch (eventError) {
         console.warn('Could not dispatch personal feature flag change event:', eventError);
       }
+
+      // Show success message
+      toast({
+        title: 'Success',
+        description: `Personal ${flag.name} feature ${checked ? 'enabled' : 'disabled'}`,
+        variant: 'default'
+      });
     } catch (error) {
       console.error('Error toggling personal feature flag:', error);
+
+      // Revert the UI state
+      setPersonalEnabled(!checked);
+
+      // Show error message
+      toast({
+        title: 'Error',
+        description: `Failed to ${checked ? 'enable' : 'disable'} personal ${flag.name} feature`,
+        variant: 'destructive'
+      });
     } finally {
       setLoadingPersonal(false);
     }

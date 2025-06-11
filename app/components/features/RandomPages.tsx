@@ -21,19 +21,19 @@ interface RandomPage {
   groupIsPublic?: boolean;
 }
 
-interface RandomPagesOptimizedProps {
+interface RandomPagesProps {
   limit?: number;
   priority?: 'high' | 'medium' | 'low';
 }
 
 /**
- * Optimized RandomPages component that fetches and displays random pages
+ * RandomPages component that fetches and displays random pages
  * with shuffle functionality and responsive table/card layout
  */
-const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
+const RandomPages = React.memo(function RandomPages({
   limit = 10,
   priority = 'low'
-}: RandomPagesOptimizedProps) {
+}: RandomPagesProps) {
   const { user } = useAuth();
   const [randomPages, setRandomPages] = useState<RandomPage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,8 +41,9 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
   const [error, setError] = useState<string | null>(null);
   const [includePrivatePages, setIncludePrivatePages] = useState(false);
   const [denseMode, setDenseMode] = useState(false);
+  const [excludeOwnPages, setExcludeOwnPages] = useState(false);
 
-  console.log('RandomPagesOptimized: Rendering with props:', { limit, priority });
+  console.log('RandomPages: Rendering with props:', { limit, priority });
 
   // Load preferences from localStorage on mount
   useEffect(() => {
@@ -56,11 +57,16 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
       if (savedDenseModePreference === 'true') {
         setDenseMode(true);
       }
+
+      const savedExcludeOwnPreference = localStorage.getItem('randomPages_excludeOwnPages');
+      if (savedExcludeOwnPreference === 'true') {
+        setExcludeOwnPages(true);
+      }
     }
   }, []);
 
   // Fetch random pages from API
-  const fetchRandomPages = useCallback(async (isShuffling = false, includePrivate = includePrivatePages) => {
+  const fetchRandomPages = useCallback(async (isShuffling = false, includePrivate = includePrivatePages, excludeOwn = excludeOwnPages) => {
     try {
       if (isShuffling) {
         setShuffling(true);
@@ -84,6 +90,11 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
       // Add privacy preference
       if (includePrivate) {
         params.append('includePrivate', 'true');
+      }
+
+      // Add "Not mine" filter preference
+      if (excludeOwn) {
+        params.append('excludeOwnPages', 'true');
       }
 
       const response = await fetch(`/api/random-pages?${params}`);
@@ -122,13 +133,13 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
       setLoading(false);
       setShuffling(false);
     }
-  }, [limit, user?.uid, denseMode]);
+  }, [limit, user?.uid, denseMode, includePrivatePages, excludeOwnPages]);
 
   // Handle shuffle button click
-  const handleShuffle = useCallback((includePrivate = includePrivatePages) => {
-    console.log('RandomPages: Shuffle button clicked', { includePrivate });
-    fetchRandomPages(true, includePrivate);
-  }, [fetchRandomPages, includePrivatePages]);
+  const handleShuffle = useCallback((includePrivate = includePrivatePages, excludeOwn = excludeOwnPages) => {
+    console.log('RandomPages: Shuffle button clicked', { includePrivate, excludeOwn });
+    fetchRandomPages(true, includePrivate, excludeOwn);
+  }, [fetchRandomPages, includePrivatePages, excludeOwnPages]);
 
   // Initial fetch on component mount
   useEffect(() => {
@@ -139,21 +150,25 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
   useEffect(() => {
     const handleShuffleEvent = (event: CustomEvent) => {
       const includePrivate = event.detail?.includePrivate ?? includePrivatePages;
-      console.log('RandomPages: Shuffle event received', { includePrivate });
+      const excludeOwn = event.detail?.excludeOwnPages ?? excludeOwnPages;
+      console.log('RandomPages: Shuffle event received', { includePrivate, excludeOwn });
 
-      // Update local state if privacy setting changed
+      // Update local state if settings changed
       if (includePrivate !== includePrivatePages) {
         setIncludePrivatePages(includePrivate);
       }
+      if (excludeOwn !== excludeOwnPages) {
+        setExcludeOwnPages(excludeOwn);
+      }
 
-      handleShuffle(includePrivate);
+      handleShuffle(includePrivate, excludeOwn);
     };
 
     window.addEventListener('shuffleRandomPages', handleShuffleEvent as EventListener);
     return () => {
       window.removeEventListener('shuffleRandomPages', handleShuffleEvent as EventListener);
     };
-  }, [handleShuffle, includePrivatePages]);
+  }, [handleShuffle, includePrivatePages, excludeOwnPages]);
 
   // Listen for dense mode changes from header
   useEffect(() => {
@@ -172,9 +187,9 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
   // Re-fetch when dense mode changes to get appropriate number of results
   useEffect(() => {
     if (randomPages.length > 0) {
-      fetchRandomPages(false, includePrivatePages);
+      fetchRandomPages(false, includePrivatePages, excludeOwnPages);
     }
-  }, [denseMode, fetchRandomPages, includePrivatePages, randomPages.length]);
+  }, [denseMode, fetchRandomPages, includePrivatePages, excludeOwnPages, randomPages.length]);
 
   // Show loading skeleton on initial load
   if (loading && !shuffling) {
@@ -224,4 +239,4 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
   );
 });
 
-export default RandomPagesOptimized;
+export default RandomPages;

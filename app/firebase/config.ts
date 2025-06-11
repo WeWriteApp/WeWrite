@@ -46,16 +46,7 @@ const newConfig: FirebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Debug config values (without sensitive data)
-if (process.env.NODE_ENV === 'development') {
-  console.log('[DEBUG] Firebase config:', {
-    projectId: newConfig.projectId,
-    hasApiKey: !!newConfig.apiKey,
-    hasAppId: !!newConfig.appId,
-    hasDatabaseURL: !!newConfig.databaseURL,
-    hasMeasurementId: !!newConfig.measurementId
-  });
-}
+
 
 // Initialize Firebase
 export const app: FirebaseApp = initializeApp(newConfig);

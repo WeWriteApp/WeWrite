@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
 import { AuthContext } from "../../providers/AuthProvider";
-import { getUserSubscription, getPledge, createPledge, updatePledge, listenToUserPledges } from "../../firebase/subscription";
+import { getPledge, createPledge, updatePledge, listenToUserPledges } from "../../firebase/subscription";
 import { getOptimizedUserSubscription, getOptimizedUserPledges, createOptimizedSubscriptionListener } from "../../firebase/optimizedSubscription";
 import { getPageStats, getDocById } from "../../firebase/database";
 import { realPledgeService } from "../../services/realPledgeService";

@@ -36,25 +36,12 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
   const [pageData, setPageData] = useState(null);
   const { formatDate, formatDateString } = useDateFormat();
 
-  // Debug activity data
+  // Validate activity data
   useEffect(() => {
     if (!activity) {
       console.error('ActivityCard: No activity data provided');
       return;
     }
-
-    // More detailed logging to debug the issue with newer items not being clickable
-    console.log('ActivityCard: Rendering activity', {
-      pageId: activity.pageId,
-      pageName: activity.pageName,
-      userId: activity.userId,
-      username: activity.username,
-      timestamp: activity.timestamp,
-      versionId: activity.versionId,
-      href: activity.versionId ? `/${activity.pageId}/version/${activity.versionId}` : `/${activity.pageId}`,
-      isNewPage: activity.isNewPage,
-      fullActivity: { ...activity }
-    });
   }, [activity]);
 
   // Fetch page data for permission checking (only for regular page activities)

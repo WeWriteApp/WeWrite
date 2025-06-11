@@ -23,6 +23,8 @@ import { shouldUseQueue, addToQueue } from "../utils/syncQueue";
 import { useSyncQueue } from "../contexts/SyncQueueContext";
 import SlideUpPage from "../components/ui/slide-up-page";
 import { NewPageSkeleton } from "../components/skeletons/PageEditorSkeleton";
+import { toast } from "../components/ui/use-toast";
+import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
 
 /**
  * Editor content node interface
@@ -71,7 +73,7 @@ export default function NewPage() {
   const searchParams = useSearchParams();
   const authContext = useContext(AuthContext);
   const user = authContext?.user;
-  const analytics = useWeWriteAnalytics();
+  const { trackPageCreationFlow, trackEditingFlow } = useWeWriteAnalytics();
   const { refreshState } = useSyncQueue();
 
   // State that mimics SinglePageView
@@ -107,6 +109,14 @@ export default function NewPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitializing(false);
+
+      // Track page creation started
+      trackPageCreationFlow.started({
+        is_reply: isReply,
+        is_daily_note: isDailyNote,
+        has_initial_content: !!(searchParams?.get('content') || searchParams?.get('initialContent')),
+        has_initial_title: !!searchParams?.get('title')
+      });
     }, 150); // Brief delay to ensure smooth rendering
 
     return () => clearTimeout(timer);
@@ -261,7 +271,7 @@ export default function NewPage() {
   }, [hasContentChanged, hasTitleChanged]);
 
   // Handle save
-  const handleSave = async (content: EditorNode[]): Promise<boolean> => {
+  const handleSave = async (content: EditorNode[], saveMethod: 'keyboard' | 'button' = 'button'): Promise<boolean> => {
     // CRITICAL FIX: Enhanced title validation with visual feedback
     if (!title || title.trim() === '') {
       if (!isReply) {
@@ -282,6 +292,9 @@ export default function NewPage() {
 
     setIsSaving(true);
     setError(null);
+
+    // Show immediate feedback that save is starting
+    toast.success("Creating page...", { duration: 2000 });
 
     try {
       const username = user?.username || user?.displayName || 'Anonymous';
@@ -321,6 +334,14 @@ export default function NewPage() {
         finalContent = [{ type: "paragraph", children: [{ text: "" }] }];
       }
 
+      // Track save attempt with content validation results
+      trackPageCreationFlow.saved(saveMethod, {
+        is_reply: isReply,
+        is_daily_note: isDailyNote,
+        has_title: !!(title && title.trim()),
+        has_content: hasActualContent
+      });
+
       // Get reply information from URL parameters if this is a reply
       let replyToId = null;
       let replyToTitle = null;
@@ -357,11 +378,12 @@ export default function NewPage() {
         // Track analytics (non-blocking)
         try {
           ReactGA.event({ category: "Page", action: "Add new page (queued)", label: title });
-          analytics.trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, {
+          trackPageCreationFlow.completed(operationId, {
             label: title,
-            page_id: operationId,
             is_reply: !!isReply,
-            queued: true
+            is_daily_note: isDailyNote,
+            queued: true,
+            save_method: saveMethod
           });
         } catch (analyticsError) {
           console.error('Analytics tracking failed (non-fatal):', analyticsError);
@@ -370,22 +392,33 @@ export default function NewPage() {
         setHasContentChanged(false);
         setHasTitleChanged(false);
         setHasUnsavedChanges(false);
+
+        // Show success feedback for queued save
+        toast.success("Page queued for creation!", {
+          description: "Your page will be created when you're back online.",
+          duration: 3000
+        });
+
         setIsSaving(false);
 
         // Refresh sync queue state
         refreshState();
 
-        // Navigate to home or back since we don't have a page ID yet
-        if (isReply && searchParams) {
-          const replyToId = searchParams.get('replyTo');
-          if (replyToId) {
-            router.push(`/${replyToId}`);
+        // Small delay to ensure user sees the success message before redirect
+        setTimeout(() => {
+          // Navigate to home or back since we don't have a page ID yet
+          if (isReply && searchParams) {
+            const replyToId = searchParams.get('replyTo');
+            if (replyToId) {
+              router.push(`/${replyToId}`);
+            } else {
+              router.push('/');
+            }
           } else {
             router.push('/');
           }
-        } else {
-          router.push('/');
-        }
+        }, 500);
+
         return true;
       } else {
         // Normal page creation
@@ -397,10 +430,12 @@ export default function NewPage() {
           // Track analytics (non-blocking)
           try {
             ReactGA.event({ category: "Page", action: "Add new page", label: title });
-            analytics.trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, {
+            trackPageCreationFlow.completed(res, {
               label: title,
-              page_id: res,
-              is_reply: !!isReply
+              is_reply: !!isReply,
+              is_daily_note: isDailyNote,
+              queued: false,
+              save_method: saveMethod
             });
           } catch (analyticsError) {
             console.error('Analytics tracking failed (non-fatal):', analyticsError);
@@ -410,8 +445,16 @@ export default function NewPage() {
           setHasTitleChanged(false);
           setHasUnsavedChanges(false);
 
+          // Show success feedback before redirecting
+          toast.success("Page created successfully!", { duration: 3000 });
+
           setIsSaving(false);
-          router.push(`/${res}`);
+
+          // Small delay to ensure user sees the success message before redirect
+          setTimeout(() => {
+            router.push(`/${res}`);
+          }, 500);
+
           return true;
         } else {
           console.error('Page creation failed: createPage returned null/false');
@@ -429,7 +472,12 @@ export default function NewPage() {
 
   // Memoized save function for unsaved changes hook
   const saveChanges = useCallback((): Promise<boolean> => {
-    return handleSave(editorContent || editorState);
+    return handleSave(editorContent || editorState, 'button');
+  }, [editorContent, editorState, title, isPublic, location, user, isReply]);
+
+  // Keyboard save handler
+  const handleKeyboardSave = useCallback(() => {
+    handleSave(editorContent || editorState, 'keyboard');
   }, [editorContent, editorState, title, isPublic, location, user, isReply]);
 
   // Use unsaved changes hook
@@ -453,7 +501,14 @@ export default function NewPage() {
       }
     }
 
+    // Track abandonment if there are unsaved changes
     if (hasUnsavedChanges) {
+      trackPageCreationFlow.abandoned({
+        is_reply: isReply,
+        is_daily_note: isDailyNote,
+        has_title: !!(title && title.trim()),
+        has_content: hasContentChanged
+      });
       handleNavigation(backUrl);
     } else {
       router.push(backUrl);
@@ -528,7 +583,8 @@ export default function NewPage() {
                     isReply={isReply}
                     replyToId={searchParams?.get('replyTo') || ""}
                     clickPosition={null}
-                    onSave={() => handleSave(editorContent || editorState)}
+                    onSave={() => handleSave(editorContent || editorState, 'button')}
+                    onKeyboardSave={() => handleSave(editorContent || editorState, 'keyboard')}
                     onCancel={handleBackWithCheck}
 
                     page={null} // No existing page for new pages

@@ -121,8 +121,12 @@ export default function AdminPage() {
       if (user.email !== 'jamiegray2234@gmail.com') {
         router.push('/');
       } else {
-        loadAdminUsers();
-        loadFeatureFlags();
+        try {
+          loadAdminUsers();
+          loadFeatureFlags();
+        } catch (error) {
+          console.error('Error in admin data loading:', error);
+        }
       }
     } else if (!authLoading && !user) {
       router.push('/auth/login?redirect=/admin');
@@ -182,7 +186,6 @@ export default function AdminPage() {
 
       if (featureFlagsDoc.exists()) {
         const flagsData = featureFlagsDoc.data();
-        console.log('[DEBUG] Feature flags from database:', flagsData);
 
         // Filter out any flags that aren't defined in our FeatureFlag type
         const validFlags = {};
@@ -190,16 +193,8 @@ export default function AdminPage() {
           // Only include keys that match our defined feature flags
           if (featureFlags.some(flag => flag.id === key)) {
             validFlags[key] = flagsData[key];
-          } else {
-            console.log(`[DEBUG] Removing undefined feature flag from database: ${key}`);
           }
         });
-
-        // Specifically check for admin_features flag
-        if ('admin_features' in flagsData) {
-          console.log('[DEBUG] Found admin_features flag in database, removing it');
-          // No need to add it to validFlags since it's not in our FeatureFlag type
-        }
 
         // Update local state with data from Firestore
         setFeatureFlags(prev => {
@@ -207,14 +202,11 @@ export default function AdminPage() {
             ...flag,
             enabled: validFlags[flag.id] !== undefined ? validFlags[flag.id] : flag.enabled
           }));
-          console.log('[DEBUG] Updated local feature flags state:', updatedFlags);
           return updatedFlags;
         });
 
         // Check if the 'groups' flag exists in the database
         if (validFlags['groups'] === undefined) {
-          console.log("[DEBUG] 'groups' feature flag not found in database, initializing it");
-
           // Add the 'groups' flag to the database
           await setDoc(featureFlagsRef, {
             ...validFlags,
@@ -224,12 +216,10 @@ export default function AdminPage() {
 
         // If we found invalid flags, update the database to remove them
         if (Object.keys(validFlags).length !== Object.keys(flagsData).length) {
-          console.log('[DEBUG] Updating database to remove invalid feature flags');
           await setDoc(featureFlagsRef, validFlags);
         }
       } else {
         // If the document doesn't exist, create it with all feature flags
-        console.log("[DEBUG] Feature flags document not found, creating it");
 
         const initialFlags = {};
         featureFlags.forEach(flag => {
@@ -353,45 +343,78 @@ export default function AdminPage() {
     }
   };
 
-  // Toggle feature flag
+  // Toggle feature flag with robust error handling and retry logic
   const toggleFeatureFlag = async (flagId: FeatureFlag, newState?: boolean) => {
     try {
       setIsLoading(true);
-      console.log(`[DEBUG] Starting toggle for feature flag: ${flagId}`);
 
-      // Get current feature flags from database first to avoid race conditions
+
+      // Check if user is admin
+      if (!user || user.email !== 'jamiegray2234@gmail.com') {
+        throw new Error('Admin access required');
+      }
+
       const featureFlagsRef = doc(db, 'config', 'featureFlags');
-      const featureFlagsDoc = await getDoc(featureFlagsRef);
 
-      let flagsData = {};
-      if (featureFlagsDoc.exists()) {
-        flagsData = featureFlagsDoc.data();
-        console.log('[DEBUG] Current flags in database:', flagsData);
+      // Get current value if newState is not provided
+      let newEnabledState = newState;
+      if (newState === undefined) {
+        const featureFlagsDoc = await getDoc(featureFlagsRef);
+        const currentValue = featureFlagsDoc.exists() ? featureFlagsDoc.data()[flagId] || false : false;
+        newEnabledState = !currentValue;
+      }
 
-        // Check if admin_features flag exists and remove it
-        if ('admin_features' in flagsData) {
-          console.log('[DEBUG] Found admin_features flag in database, removing it');
-          delete flagsData['admin_features'];
+
+
+      // Multiple retry strategies to handle "blocked by client" errors
+      let updateSuccess = false;
+      let lastError = null;
+
+      // Strategy 1: Try updateDoc
+      if (!updateSuccess) {
+        try {
+          await updateDoc(featureFlagsRef, {
+            [flagId]: newEnabledState
+          });
+          updateSuccess = true;
+        } catch (updateError) {
+          lastError = updateError;
         }
       }
 
-      // Get the current value from the database (not local state)
-      const currentDatabaseValue = flagsData[flagId] || false;
-      const newEnabledState = newState !== undefined ? newState : !currentDatabaseValue;
+      // Strategy 2: Try setDoc with merge
+      if (!updateSuccess) {
+        try {
+          const currentDoc = await getDoc(featureFlagsRef);
+          const currentData = currentDoc.exists() ? currentDoc.data() : {};
+          await setDoc(featureFlagsRef, {
+            ...currentData,
+            [flagId]: newEnabledState
+          });
+          updateSuccess = true;
+        } catch (setDocError) {
+          lastError = setDocError;
+        }
+      }
 
-      console.log(`[DEBUG] Current database value for ${flagId}: ${currentDatabaseValue}`);
-      console.log(`[DEBUG] New value for ${flagId}: ${newEnabledState}`);
+      // Strategy 3: Try with a small delay (sometimes helps with rate limiting)
+      if (!updateSuccess) {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await updateDoc(featureFlagsRef, {
+            [flagId]: newEnabledState
+          });
+          updateSuccess = true;
+        } catch (delayedError) {
+          lastError = delayedError;
+        }
+      }
 
-      // Update the database first
-      const updatedFlagsData = {
-        ...flagsData,
-        [flagId]: newEnabledState
-      };
+      if (!updateSuccess) {
+        throw lastError || new Error('All update strategies failed');
+      }
 
-      console.log('[DEBUG] Updated flags to save:', updatedFlagsData);
 
-      await setDoc(featureFlagsRef, updatedFlagsData);
-      console.log(`[DEBUG] Successfully updated ${flagId} in database to ${newEnabledState}`);
 
       // Update local state after successful database write
       setFeatureFlags(prev =>
@@ -416,26 +439,45 @@ export default function AdminPage() {
       });
 
     } catch (error) {
-      console.error('[DEBUG] Error toggling feature flag:', error);
+      console.error('Error toggling feature flag:', error);
 
-      // Provide more specific error messages
+      // Enhanced error handling with specific solutions
       let errorMessage = 'Failed to update feature flag';
+      let showConsoleHelp = false;
+
       if (error.code === 'permission-denied') {
         errorMessage = 'Permission denied. You may not have admin access.';
       } else if (error.code === 'unavailable') {
         errorMessage = 'Database is temporarily unavailable. Please try again.';
+      } else if (error.message?.includes('blocked') || error.message?.includes('client')) {
+        errorMessage = 'Request blocked by browser security or ad blocker. Try disabling ad blockers or use browser console.';
+        showConsoleHelp = true;
+      } else if (error.message?.includes('network')) {
+        errorMessage = 'Network error occurred. Check your internet connection.';
       } else if (error.message) {
         errorMessage = `Error: ${error.message}`;
+        showConsoleHelp = true;
       }
 
+      // Show enhanced error message
       toast({
         title: 'Error',
-        description: errorMessage,
+        description: errorMessage + (showConsoleHelp ? ` Console command: enableFeatureFlag("${flagId}")` : ''),
         variant: 'destructive'
       });
 
+      // Log console command for easy copy-paste
+      if (showConsoleHelp) {
+        console.log(`%c🚀 Console Command to Fix This:`, 'color: #00ff00; font-weight: bold; font-size: 14px;');
+        console.log(`%cenableFeatureFlag("${flagId}")`, 'color: #ffff00; font-weight: bold; font-size: 12px; background: #333; padding: 4px;');
+      }
+
       // Reload feature flags from database to ensure consistency
-      await loadFeatureFlags();
+      try {
+        await loadFeatureFlags();
+      } catch (reloadError) {
+        console.error('Failed to reload feature flags after error:', reloadError);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -456,16 +498,40 @@ export default function AdminPage() {
     ? featureFlags.filter(flag => !flag.enabled)
     : featureFlags;
 
-  if (authLoading || !user) {
+  // Enhanced loading and error states
+  if (authLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <Loader className="h-8 w-8 animate-spin text-primary" />
+        <div className="text-center">
+          <Loader className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <p className="text-muted-foreground">Redirecting to login...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (user.email !== 'jamiegray2234@gmail.com') {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <p className="text-muted-foreground">Access denied. Redirecting...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={`py-6 px-4 ${activeTab === 'users' ? 'w-full' : 'container mx-auto max-w-5xl'}`}>
+      <div className={`py-6 px-4 ${activeTab === 'users' ? 'w-full' : 'container mx-auto max-w-5xl'}`}>
       <div className="mb-8">
         <Link href="/settings" className="inline-flex items-center text-blue-500 hover:text-blue-600">
           <ChevronLeft className="h-4 w-4 mr-2" />
@@ -478,6 +544,8 @@ export default function AdminPage() {
         <p className="text-muted-foreground">
           Manage feature flags and admin settings
         </p>
+
+
       </div>
 
       <SwipeableTabs
@@ -566,7 +634,6 @@ export default function AdminPage() {
                     onPersonalToggle={(flagId, checked) => {
                       // Personal toggle doesn't need to update the global state
                       // The component handles its own personal state
-                      console.log(`Personal toggle for ${flagId}: ${checked}`);
                     }}
                     isLoading={isLoading}
                   />
@@ -793,171 +860,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Groups Debug Tool */}
-            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">Groups Feature Debug</h3>
-              </div>
-              <span className="text-sm text-muted-foreground mb-3">
-                Debug tools for the Groups feature.
-              </span>
-              <div className="mt-2 space-y-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={async () => {
-                    try {
-                      // Import RTDB
-                      const { rtdb } = await import('../firebase/rtdb');
-                      const { ref, get } = await import('firebase/database');
 
-                      // Check if RTDB is initialized
-                      console.log('[DEBUG] RTDB Debug - RTDB instance:', rtdb);
-
-                      // Check if groups node exists
-                      const groupsRef = ref(rtdb, 'groups');
-                      const groupsSnapshot = await get(groupsRef);
-
-                      console.log('[DEBUG] RTDB Debug - Groups node exists:', groupsSnapshot.exists());
-                      console.log('[DEBUG] RTDB Debug - Groups data:', groupsSnapshot.val());
-
-                      toast({
-                        title: 'Groups Debug',
-                        description: `Groups node exists: ${groupsSnapshot.exists()}. Check console for details.`,
-                        variant: 'default'
-                      });
-                    } catch (error) {
-                      console.error('[DEBUG] RTDB Debug - Error:', error);
-
-                      toast({
-                        title: 'Error',
-                        description: `Error debugging groups: ${error.message}`,
-                        variant: 'destructive'
-                      });
-                    }
-                  }}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Check RTDB Groups
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={async () => {
-                    try {
-                      // Check feature flag in Firestore
-                      const { doc, getDoc } = await import('firebase/firestore');
-                      const { db } = await import('../firebase/database');
-
-                      const featureFlagsRef = doc(db, 'config', 'featureFlags');
-                      const featureFlagsDoc = await getDoc(featureFlagsRef);
-
-                      if (featureFlagsDoc.exists()) {
-                        const flagsData = featureFlagsDoc.data();
-                        console.log('[DEBUG] Feature Flags Debug - Flags data:', flagsData);
-                        console.log('[DEBUG] Feature Flags Debug - Groups flag:', flagsData['groups']);
-
-                        toast({
-                          title: 'Feature Flags Debug',
-                          description: `Groups flag: ${flagsData['groups'] ? 'Enabled' : 'Disabled'}. Check console for details.`,
-                          variant: 'default'
-                        });
-                      } else {
-                        console.log('[DEBUG] Feature Flags Debug - No feature flags document found');
-
-                        toast({
-                          title: 'Feature Flags Debug',
-                          description: 'No feature flags document found in Firestore.',
-                          variant: 'destructive'
-                        });
-                      }
-                    } catch (error) {
-                      console.error('[DEBUG] Feature Flags Debug - Error:', error);
-
-                      toast({
-                        title: 'Error',
-                        description: `Error debugging feature flags: ${error.message}`,
-                        variant: 'destructive'
-                      });
-                    }
-                  }}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Check Feature Flags
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={async () => {
-                    try {
-                      if (!user?.uid) {
-                        toast({
-                          title: 'Error',
-                          description: 'User not logged in',
-                          variant: 'destructive'
-                        });
-                        return;
-                      }
-
-                      // Import RTDB functions
-                      const { rtdb } = await import('../firebase/rtdb');
-                      const { ref, push, set } = await import('firebase/database');
-
-                      // Create a test group
-                      const groupsRef = ref(rtdb, 'groups');
-                      const newGroupRef = push(groupsRef);
-
-                      // Group data
-                      const groupData = {
-                        name: 'Test Group',
-                        description: 'A test group created for debugging',
-                        owner: user.uid,
-                        createdAt: new Date().toISOString(),
-                        members: {
-                          [user.uid]: {
-                            role: 'owner',
-                            joinedAt: new Date().toISOString()
-                          }
-                        }
-                      };
-
-                      // Save the group
-                      await set(newGroupRef, groupData);
-
-                      // Add the group to the user's groups
-                      const userGroupsRef = ref(rtdb, `users/${user.uid}/groups`);
-                      await set(userGroupsRef, {
-                        [newGroupRef.key]: true
-                      });
-
-                      console.log('[DEBUG] Created test group:', newGroupRef.key);
-
-                      toast({
-                        title: 'Success',
-                        description: `Created test group with ID: ${newGroupRef.key}`,
-                        variant: 'default'
-                      });
-                    } catch (error) {
-                      console.error('[DEBUG] Error creating test group:', error);
-
-                      toast({
-                        title: 'Error',
-                        description: `Error creating test group: ${error.message}`,
-                        variant: 'destructive'
-                      });
-                    }
-                  }}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Create Test Group
-                </Button>
-              </div>
-            </div>
           </div>
 
 

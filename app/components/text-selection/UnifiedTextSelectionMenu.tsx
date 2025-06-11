@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../ui/button';
-import { Plus, FileText, Type, Copy, Link, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, FileText, Type, Copy, Link, X, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from '../ui/use-toast';
 import {
@@ -48,13 +48,16 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, isOpen, o
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        aria-describedby="add-to-page-modal-description"
+      >
         <DialogHeader>
           <DialogTitle>Add to New Page</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="p-3 bg-muted rounded-lg">
-            <p className="text-sm text-muted-foreground mb-2">Selected text:</p>
+            <p id="add-to-page-modal-description" className="text-sm text-muted-foreground mb-2">Selected text:</p>
             <p className="text-sm font-medium line-clamp-3">"{selectedText}"</p>
           </div>
           
@@ -297,7 +300,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
                 onClick={handleAddToPage}
                 className="gap-2 text-sm whitespace-nowrap flex-shrink-0"
               >
-                <Plus className="h-3 w-3" />
+                <Quote className="h-3 w-3" />
                 Add to Page
               </Button>
             )}

@@ -1,4 +1,6 @@
-"use client";
+// Mixed client/server subscription functions
+// For server-side only functions, use subscription-server.ts
+// For client-side only functions, use optimizedSubscription.ts
 
 import {
   getFirestore,
@@ -83,6 +85,8 @@ export const updateSubscription = async (userId: string, subscriptionData: Parti
 };
 
 // Get a user's current subscription
+// WARNING: This function should ONLY be used in API routes (server-side)
+// For client-side code, use getOptimizedUserSubscription() or listenToUserSubscription()
 export const getUserSubscription = async (userId: string, options: SubscriptionOptions = {}): Promise<SubscriptionData | null> => {
   // Control verbose logging with an option
   const verbose = options.verbose || false;

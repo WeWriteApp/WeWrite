@@ -3,12 +3,13 @@
 import { useContext, useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
-import { Bell, Link as LinkIcon, FilePlus, MoreVertical, Check, X, Mail, RefreshCw, Users } from 'lucide-react';
+import { MoreVertical, Check, X, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { NotificationContext } from '../../providers/NotificationProvider';
 import UserBadge from './UserBadge';
 import { Button } from '../ui/button';
 import { dismissEmailVerificationNotifications } from '../../services/emailVerificationNotifications';
+import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 
 /**
  * NotificationItem Component
@@ -24,13 +25,10 @@ export default function NotificationItem({ notification }) {
   const [showMenu, setShowMenu] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const menuRef = useRef(null);
-
-  // Debug: Log notification read status
-  console.log('NotificationItem - notification.read:', notification.read, 'type:', typeof notification.read, 'id:', notification.id);
+  const { trackNotificationInteraction } = useWeWriteAnalytics();
 
   // Check if notification.read is actually unread
   const isUnread = notification.read === false || notification.read === 'false' || !notification.read;
-  console.log('NotificationItem - isUnread:', isUnread);
 
   // Detect mobile screen size
   useEffect(() => {
@@ -91,6 +89,11 @@ export default function NotificationItem({ notification }) {
     e.stopPropagation();
     try {
       await markAsRead(notification.id);
+      trackNotificationInteraction('read', notification.id, {
+        notification_type: notification.type,
+        source_user_id: notification.sourceUserId,
+        target_page_id: notification.targetPageId
+      });
       setShowMenu(false);
     } catch (error) {
       console.error(`Failed to mark notification as read:`, error);
@@ -101,6 +104,11 @@ export default function NotificationItem({ notification }) {
     e.stopPropagation();
     try {
       await markAsUnread(notification.id);
+      trackNotificationInteraction('unread', notification.id, {
+        notification_type: notification.type,
+        source_user_id: notification.sourceUserId,
+        target_page_id: notification.targetPageId
+      });
       setShowMenu(false);
     } catch (error) {
       console.error(`Failed to mark notification as unread:`, error);
@@ -109,6 +117,12 @@ export default function NotificationItem({ notification }) {
 
   const toggleMenu = (e) => {
     e.stopPropagation();
+    if (!showMenu) {
+      trackNotificationInteraction('menu_opened', notification.id, {
+        notification_type: notification.type,
+        is_unread: isUnread
+      });
+    }
     setShowMenu(!showMenu);
   };
 
@@ -117,150 +131,122 @@ export default function NotificationItem({ notification }) {
     switch (notification.type) {
       case 'follow':
         return (
-          <div className="flex items-start">
-            <div className="flex-shrink-0 mr-3 mt-1">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <Bell className="h-4 w-4 text-primary" />
-              </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center mb-1">
+              <UserBadge uid={notification.sourceUserId} showUsername={true} />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center mb-1">
-                <UserBadge uid={notification.sourceUserId} showUsername={true} />
-              </div>
-              <p className="text-sm text-foreground">
-                followed your page{' '}
-                <span className="font-medium">
-                  {notification.targetPageTitle || 'Untitled Page'}
-                </span>
-              </p>
-            </div>
+            <p className="text-sm text-foreground">
+              followed your page{' '}
+              <span className="font-medium">
+                {notification.targetPageTitle || 'Untitled Page'}
+              </span>
+            </p>
           </div>
         );
 
       case 'link':
         return (
-          <div className="flex items-start">
-            <div className="flex-shrink-0 mr-3 mt-1">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <LinkIcon className="h-4 w-4 text-primary" />
-              </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center mb-1">
+              <UserBadge uid={notification.sourceUserId} showUsername={true} />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center mb-1">
-                <UserBadge uid={notification.sourceUserId} showUsername={true} />
-              </div>
-              <p className="text-sm text-foreground">
-                linked to your page{' '}
-                <span className="font-medium">
-                  {notification.targetPageTitle || 'Untitled Page'}
-                </span>
-                {notification.sourcePageTitle && (
-                  <>
-                    {' '}from{' '}
-                    <span className="font-medium">
-                      {notification.sourcePageTitle}
-                    </span>
-                  </>
-                )}
-              </p>
-            </div>
+            <p className="text-sm text-foreground">
+              linked to your page{' '}
+              <span className="font-medium">
+                {notification.targetPageTitle || 'Untitled Page'}
+              </span>
+              {notification.sourcePageTitle && (
+                <>
+                  {' '}from{' '}
+                  <span className="font-medium">
+                    {notification.sourcePageTitle}
+                  </span>
+                </>
+              )}
+            </p>
           </div>
         );
 
       case 'append':
         return (
-          <div className="flex items-start">
-            <div className="flex-shrink-0 mr-3 mt-1">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <FilePlus className="h-4 w-4 text-primary" />
-              </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center mb-1">
+              <UserBadge uid={notification.sourceUserId} showUsername={true} />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center mb-1">
-                <UserBadge uid={notification.sourceUserId} showUsername={true} />
-              </div>
-              <p className="text-sm text-foreground">
-                added your page{' '}
-                <span className="font-medium">
-                  {notification.sourcePageTitle || 'Untitled Page'}
-                </span>
-                {' '}to{' '}
-                <span className="font-medium">
-                  {notification.targetPageTitle || 'their page'}
-                </span>
-              </p>
-            </div>
+            <p className="text-sm text-foreground">
+              added your page{' '}
+              <span className="font-medium">
+                {notification.sourcePageTitle || 'Untitled Page'}
+              </span>
+              {' '}to{' '}
+              <span className="font-medium">
+                {notification.targetPageTitle || 'their page'}
+              </span>
+            </p>
           </div>
         );
 
       case 'email_verification':
         return (
-          <div className="flex items-start">
-            <div className="flex-shrink-0 mr-3 mt-1">
-              <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center">
-                <Mail className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-foreground font-medium mb-1">
-                Verify your email address
-              </p>
-              <p className="text-sm text-muted-foreground mb-2">
-                Please verify your email to access all features and ensure your account is secure.
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    try {
-                      // Import and call resend verification email function
-                      const { sendEmailVerification } = await import('firebase/auth');
-                      const { auth } = await import('../../firebase/auth');
-                      if (auth.currentUser) {
-                        await sendEmailVerification(auth.currentUser);
-                        // You could add a toast notification here
-                        console.log('Verification email resent');
-                      }
-                    } catch (error) {
-                      console.error('Error resending verification email:', error);
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-foreground font-medium mb-1">
+              Verify your email address
+            </p>
+            <p className="text-sm text-muted-foreground mb-2">
+              Please verify your email to access all features and ensure your account is secure.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  try {
+                    // Import and call resend verification email function
+                    const { sendEmailVerification } = await import('firebase/auth');
+                    const { auth } = await import('../../firebase/auth');
+                    if (auth.currentUser) {
+                      await sendEmailVerification(auth.currentUser);
+                      // You could add a toast notification here
+                      console.log('Verification email resent');
                     }
-                  }}
-                  className="inline-flex items-center px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Resend Email
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    router.push('/settings');
-                  }}
-                  className="inline-flex items-center px-2 py-1 text-xs border border-border rounded hover:bg-muted transition-colors"
-                >
-                  Go to Settings
-                </button>
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    try {
-                      // Dismiss future email verification notifications
-                      dismissEmailVerificationNotifications();
-                      // Mark this notification as read
-                      await markAsRead(notification.id);
-                      console.log('Email verification notifications dismissed');
-                    } catch (error) {
-                      console.error('Error dismissing email verification notifications:', error);
-                    }
-                  }}
-                  className="inline-flex items-center px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Dismiss
-                </button>
-              </div>
+                  } catch (error) {
+                    console.error('Error resending verification email:', error);
+                  }
+                }}
+                className="inline-flex items-center px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Resend Email
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  router.push('/settings');
+                }}
+                className="inline-flex items-center px-2 py-1 text-xs border border-border rounded hover:bg-muted transition-colors"
+              >
+                Go to Settings
+              </button>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  try {
+                    // Dismiss future email verification notifications
+                    dismissEmailVerificationNotifications();
+                    // Mark this notification as read
+                    await markAsRead(notification.id);
+                    console.log('Email verification notifications dismissed');
+                  } catch (error) {
+                    console.error('Error dismissing email verification notifications:', error);
+                  }
+                }}
+                className="inline-flex items-center px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Dismiss
+              </button>
             </div>
           </div>
         );
@@ -290,65 +276,58 @@ export default function NotificationItem({ notification }) {
        */
       case 'group_invite':
         return (
-          <div className="flex items-start">
-            <div className="flex-shrink-0 mr-3 mt-1">
-              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
-                <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center mb-1">
+              <UserBadge uid={notification.sourceUserId} showUsername={true} />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center mb-1">
-                <UserBadge uid={notification.sourceUserId} showUsername={true} />
-              </div>
-              <p className="text-sm text-foreground font-medium mb-1">
-                You've been invited to join{' '}
-                <span className="font-semibold">
-                  {notification.groupName || 'a group'}
-                </span>
-              </p>
-              <p className="text-sm text-muted-foreground mb-3">
-                Join this group to collaborate and share content with other members.
-              </p>
-              <div className="flex gap-2">
-                {/* Accept Invitation Button */}
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    try {
-                      // Import the accept function dynamically to reduce bundle size
-                      const { acceptGroupInvitation } = await import('../../firebase/notifications');
-                      await acceptGroupInvitation(notification.userId, notification.id, notification.groupId);
-                      // Navigate to the group page after successful acceptance
-                      router.push(`/group/${notification.groupId}`);
-                    } catch (error) {
-                      console.error('Error accepting group invitation:', error);
-                      // TODO: Add user-friendly error toast notification
-                    }
-                  }}
-                  className="inline-flex items-center px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
-                >
-                  Join Group
-                </button>
-                {/* Reject Invitation Button */}
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    try {
-                      // Import the reject function dynamically
-                      const { rejectGroupInvitation } = await import('../../firebase/notifications');
-                      await rejectGroupInvitation(notification.userId, notification.id);
-                    } catch (error) {
-                      console.error('Error rejecting group invitation:', error);
-                      // TODO: Add user-friendly error toast notification
-                    }
-                  }}
-                  className="inline-flex items-center px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors"
-                >
-                  Ignore Invite
-                </button>
-              </div>
+            <p className="text-sm text-foreground font-medium mb-1">
+              You've been invited to join{' '}
+              <span className="font-semibold">
+                {notification.groupName || 'a group'}
+              </span>
+            </p>
+            <p className="text-sm text-muted-foreground mb-3">
+              Join this group to collaborate and share content with other members.
+            </p>
+            <div className="flex gap-2">
+              {/* Accept Invitation Button */}
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  try {
+                    // Import the accept function dynamically to reduce bundle size
+                    const { acceptGroupInvitation } = await import('../../firebase/notifications');
+                    await acceptGroupInvitation(notification.userId, notification.id, notification.groupId);
+                    // Navigate to the group page after successful acceptance
+                    router.push(`/group/${notification.groupId}`);
+                  } catch (error) {
+                    console.error('Error accepting group invitation:', error);
+                    // TODO: Add user-friendly error toast notification
+                  }
+                }}
+                className="inline-flex items-center px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+              >
+                Join Group
+              </button>
+              {/* Reject Invitation Button */}
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  try {
+                    // Import the reject function dynamically
+                    const { rejectGroupInvitation } = await import('../../firebase/notifications');
+                    await rejectGroupInvitation(notification.userId, notification.id);
+                  } catch (error) {
+                    console.error('Error rejecting group invitation:', error);
+                    // TODO: Add user-friendly error toast notification
+                  }
+                }}
+                className="inline-flex items-center px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors"
+              >
+                Ignore Invite
+              </button>
             </div>
           </div>
         );
@@ -356,34 +335,27 @@ export default function NotificationItem({ notification }) {
       default:
         // For unknown notification types, provide more context based on available data
         return (
-          <div className="flex items-start">
-            <div className="flex-shrink-0 mr-3 mt-1">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <Bell className="h-4 w-4 text-primary" />
-              </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center mb-1">
+              {notification.sourceUserId && (
+                <UserBadge uid={notification.sourceUserId} showUsername={true} />
+              )}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center mb-1">
-                {notification.sourceUserId && (
-                  <UserBadge uid={notification.sourceUserId} showUsername={true} />
-                )}
-              </div>
-              <p className="text-sm text-foreground">
-                {notification.sourceUserId ? 'took an action on your page' : 'Activity on your account'}
-                {notification.targetPageTitle && (
-                  <>
-                    {' '}<span className="font-medium">
-                      {notification.targetPageTitle}
-                    </span>
-                  </>
-                )}
-                {notification.type && (
-                  <span className="text-xs ml-1 text-muted-foreground">
-                    (Unknown notification type: {notification.type})
+            <p className="text-sm text-foreground">
+              {notification.sourceUserId ? 'took an action on your page' : 'Activity on your account'}
+              {notification.targetPageTitle && (
+                <>
+                  {' '}<span className="font-medium">
+                    {notification.targetPageTitle}
                   </span>
-                )}
-              </p>
-            </div>
+                </>
+              )}
+              {notification.type && (
+                <span className="text-xs ml-1 text-muted-foreground">
+                  (Unknown notification type: {notification.type})
+                </span>
+              )}
+            </p>
           </div>
         );
     }
@@ -453,23 +425,23 @@ export default function NotificationItem({ notification }) {
 
             {/* Dropdown Menu */}
             {showMenu && (
-              <div className="absolute right-0 top-full mt-1 w-48 bg-background border border-border rounded-md shadow-lg z-50">
-                <div className="py-1">
+              <div className="absolute right-0 top-full mt-2 w-44 bg-background border border-border rounded-lg shadow-lg z-50">
+                <div className="py-2">
                   {!isUnread ? (
                     <button
                       onClick={handleMarkAsUnread}
-                      className="flex items-center w-full px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors text-left"
                     >
-                      <X className="h-4 w-4 mr-2" />
-                      Mark as unread
+                      <X className="h-4 w-4 mr-3 flex-shrink-0" />
+                      <span>Mark as unread</span>
                     </button>
                   ) : (
                     <button
                       onClick={handleMarkAsRead}
-                      className="flex items-center w-full px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors text-left"
                     >
-                      <Check className="h-4 w-4 mr-2" />
-                      Mark as read
+                      <Check className="h-4 w-4 mr-3 flex-shrink-0" />
+                      <span>Mark as read</span>
                     </button>
                   )}
                 </div>

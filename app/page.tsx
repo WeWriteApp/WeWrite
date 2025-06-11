@@ -53,7 +53,7 @@ const HomeGroupsSection = dynamic(() => import("./components/groups/HomeGroupsSe
 
 
 
-const RandomPagesOptimized = dynamic(() => import("./components/features/RandomPagesOptimized"), {
+const RandomPages = dynamic(() => import("./components/features/RandomPages"), {
   loading: () => <RandomPagesSkeleton limit={10} />,
   ssr: false
 });
@@ -380,7 +380,7 @@ const Home = React.memo(function Home() {
               minHeight={250}
               fallback={<RandomPagesSkeleton limit={10} />}
             >
-              <RandomPagesOptimized limit={10} priority="low" />
+              <RandomPages limit={10} priority="low" />
             </LazySection>
           </StickySection>
 

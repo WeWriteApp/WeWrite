@@ -23,6 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import Link from 'next/link';
 import { listenToUserPledges } from '../../firebase/subscription';
 import { getDocById } from '../../firebase/database';
+import { PaymentMethodSetup } from './PaymentMethodSetup';
 
 interface Subscription {
   id: string;
@@ -72,19 +73,23 @@ export function CombinedSubscriptionSection() {
   const [pledgesLoading, setPledgesLoading] = useState(true);
   const [pledgesError, setPledgesError] = useState<string | null>(null);
 
+  // Payment method setup state
+  const [showPaymentMethodSetup, setShowPaymentMethodSetup] = useState(false);
+
+  // CRITICAL: All hooks must be called before any early returns
+  useEffect(() => {
+    if (user?.uid && isPaymentsEnabled) {
+      fetchSubscription();
+      fetchPaymentMethods();
+      fetchPledges();
+    }
+  }, [user, isPaymentsEnabled]);
+
   // If payments feature flag is disabled, don't render anything
   // But do this AFTER all hooks are declared
   if (!isPaymentsEnabled) {
     return null;
   }
-
-  useEffect(() => {
-    if (user?.uid) {
-      fetchSubscription();
-      fetchPaymentMethods();
-      fetchPledges();
-    }
-  }, [user]);
 
   const fetchSubscription = async () => {
     try {
@@ -193,6 +198,12 @@ export function CombinedSubscriptionSection() {
       setPledgesError('Failed to load pledges');
       setPledgesLoading(false);
     }
+  };
+
+  const handlePaymentMethodAdded = () => {
+    setShowPaymentMethodSetup(false);
+    // Refresh payment methods
+    fetchPaymentMethods();
   };
 
   const formatCurrency = (amount: number) => {
@@ -335,21 +346,48 @@ export function CombinedSubscriptionSection() {
                 <AlertDescription>{paymentMethodsError}</AlertDescription>
               </Alert>
             ) : paymentMethods.length === 0 ? (
-              <div className="text-center py-6">
-                <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">No payment methods</h3>
-                <p className="text-muted-foreground mb-4">
-                  Add a payment method to start subscribing and supporting pages.
-                </p>
-                <Button asChild>
-                  <Link href="/settings/subscription">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Payment Method
-                  </Link>
-                </Button>
-              </div>
+              showPaymentMethodSetup ? (
+                <div className="space-y-4">
+                  <PaymentMethodSetup
+                    showTitle={false}
+                    onSuccess={handlePaymentMethodAdded}
+                    onCancel={() => setShowPaymentMethodSetup(false)}
+                  />
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No payment methods</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Add a payment method to enable subscriptions and support pages.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Button onClick={() => setShowPaymentMethodSetup(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Payment Method
+                    </Button>
+                    {!subscription && (
+                      <Button variant="outline" asChild>
+                        <Link href="/settings/subscription">
+                          Start Subscription
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )
             ) : (
               <div className="space-y-3">
+                {showPaymentMethodSetup && (
+                  <div className="border rounded-lg p-4 bg-muted/20">
+                    <PaymentMethodSetup
+                      showTitle={false}
+                      onSuccess={handlePaymentMethodAdded}
+                      onCancel={() => setShowPaymentMethodSetup(false)}
+                    />
+                  </div>
+                )}
+
                 {/* Primary Payment Method */}
                 {primaryMethod && (
                   <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
@@ -393,11 +431,13 @@ export function CombinedSubscriptionSection() {
                   </div>
                 ))}
 
-                <Button variant="outline" className="w-full" asChild>
-                  <Link href="/settings/subscription/manage">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Payment Method
-                  </Link>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowPaymentMethodSetup(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Payment Method
                 </Button>
               </div>
             )}

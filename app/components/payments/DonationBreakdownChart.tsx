@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from "../../providers/AuthProvider";
-import { getUserSubscription, getUserPledges } from "../../firebase/subscription";
+import { getUserPledges } from "../../firebase/subscription";
+import { getOptimizedUserSubscription } from "../../firebase/optimizedSubscription";
 import { getCachedPageTitle } from "../../firebase/database";
 import { AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -40,8 +41,12 @@ const DonationBreakdownChart: React.FC<DonationBreakdownChartProps> = ({ classNa
       }
 
       try {
-        // Get user subscription
-        const userSubscription = await getUserSubscription(user.uid);
+        // Get user subscription using optimized version
+        const userSubscription = await getOptimizedUserSubscription(user.uid, {
+          useCache: true,
+          cacheTTL: 5 * 60 * 1000, // 5 minutes cache
+          verbose: false
+        });
         setSubscription(userSubscription);
 
         // Get all user pledges
