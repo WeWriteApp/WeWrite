@@ -12,6 +12,7 @@ import { usePillStyle } from "../../contexts/PillStyleContext";
 import { navigateToPage, canUserEditPage } from "../../utils/pagePermissions";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/config";
+import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 
 // Simple skeleton loader
 const PillLinkSkeleton = () => (
@@ -38,6 +39,7 @@ export const PillLink = forwardRef(({
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
   const [pageData, setPageData] = useState(null);
   const router = useRouter();
+  const { trackInteractionEvent, events } = useWeWriteAnalytics();
 
   // Show loading state if needed
   if (isLoading) return <PillLinkSkeleton />;
@@ -221,6 +223,16 @@ export const PillLink = forwardRef(({
         if (href && href !== '#') {
           e.preventDefault(); // Prevent default to handle navigation manually
           e.stopPropagation(); // CRITICAL: Stop event bubbling to prevent edit mode activation
+
+          // Track link click
+          trackInteractionEvent(events.INTERNAL_LINK_CLICKED, {
+            link_type: isPageLinkType ? 'page' : isUserLinkType ? 'user' : isGroupLinkType ? 'group' : 'unknown',
+            target_id: pageId,
+            target_title: children,
+            is_public: isPublic,
+            has_byline: !!byline,
+            source: 'pill_link'
+          });
 
           console.log('PillLink clicked:', {
             href,

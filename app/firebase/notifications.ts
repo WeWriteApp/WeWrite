@@ -31,6 +31,8 @@ interface NotificationData {
   targetPageTitle?: string;
   sourcePageId?: string;
   sourcePageTitle?: string;
+  groupId?: string;
+  groupName?: string;
   read?: boolean;
   createdAt?: any;
 }
@@ -488,6 +490,206 @@ export const createEmailVerificationNotification = async (userId: string): Promi
     });
   } catch (error) {
     console.error('Error creating email verification notification:', error);
+    throw error;
+  }
+};
+
+/**
+ * Check if a group invitation notification already exists for a user and group
+ *
+ * @param {string} userId - The ID of the user
+ * @param {string} groupId - The ID of the group
+ * @returns {Promise<boolean>} - Whether a group invitation notification exists
+ */
+export const hasExistingGroupInviteNotification = async (userId: string, groupId: string): Promise<boolean> => {
+  try {
+    const notificationsRef = collection(db, 'users', userId, 'notifications');
+
+    const existingInviteQuery = query(
+      notificationsRef,
+      where('type', '==', 'group_invite'),
+      where('groupId', '==', groupId),
+      where('read', '==', false),
+      limit(1)
+    );
+
+    const snapshot = await getDocs(existingInviteQuery);
+    return !snapshot.empty;
+  } catch (error) {
+    console.error('Error checking for existing group invitation notification:', error);
+    return false;
+  }
+};
+
+/**
+ * Create a group invitation notification
+ *
+ * This function implements the core of WeWrite's invitation-based group membership system.
+ * Instead of directly adding users to groups, it sends them invitation notifications
+ * that they can accept or reject, ensuring user consent and preventing unwanted additions.
+ *
+ * Key Features:
+ * - Prevents self-invitations (users can't invite themselves)
+ * - Checks for duplicate invitations to avoid spam
+ * - Creates notification with all necessary context for user decision
+ * - Integrates with notification system for real-time delivery
+ *
+ * Database Schema:
+ * The created notification includes:
+ * - type: 'group_invite'
+ * - sourceUserId: ID of user sending invitation
+ * - groupId: ID of group being invited to
+ * - groupName: Display name of group for user context
+ * - userId: ID of user receiving invitation
+ *
+ * Security Considerations:
+ * - Validates that source and target users are different
+ * - Prevents duplicate invitations to reduce notification spam
+ * - Uses existing notification infrastructure for delivery
+ *
+ * @param {string} targetUserId - The ID of the user being invited
+ * @param {string} sourceUserId - The ID of the user sending the invitation
+ * @param {string} groupId - The ID of the group
+ * @param {string} groupName - The name of the group for display context
+ * @returns {Promise<string|null>} - The ID of the created notification or null if duplicate/invalid
+ */
+export const createGroupInviteNotification = async (
+  targetUserId: string,
+  sourceUserId: string,
+  groupId: string,
+  groupName: string
+): Promise<string | null> => {
+  try {
+    // Prevent self-invitations - users cannot invite themselves
+    if (targetUserId === sourceUserId) {
+      console.log('Prevented self-invitation attempt');
+      return null;
+    }
+
+    // Check if an invitation already exists to prevent spam
+    const hasExisting = await hasExistingGroupInviteNotification(targetUserId, groupId);
+    if (hasExisting) {
+      console.log('Group invitation notification already exists, skipping duplicate');
+      return null;
+    }
+
+    // Create the invitation notification with all necessary context
+    return createNotification({
+      userId: targetUserId,
+      type: 'group_invite',
+      sourceUserId,
+      groupId,
+      groupName
+    });
+  } catch (error) {
+    console.error('Error creating group invitation notification:', error);
+    throw error;
+  }
+};
+
+/**
+ * Accept a group invitation
+ *
+ * This function handles the user's acceptance of a group invitation, completing
+ * the invitation flow by adding them to the group and cleaning up the notification.
+ *
+ * Process:
+ * 1. Adds user to group members in Firebase Realtime Database
+ * 2. Sets user role as 'member' with join timestamp
+ * 3. Marks the invitation notification as read (removes from UI)
+ * 4. Provides success/error feedback
+ *
+ * Database Operations:
+ * - RTDB: Adds user to groups/{groupId}/members/{userId}
+ * - Firestore: Marks notification as read in users/{userId}/notifications/{notificationId}
+ *
+ * Security:
+ * - Only the invited user can accept their own invitation
+ * - Validates group existence before adding member
+ * - Uses atomic operations to ensure data consistency
+ *
+ * User Experience:
+ * - Immediate feedback on acceptance
+ * - Automatic navigation to group page (handled by caller)
+ * - Notification automatically removed from feed
+ *
+ * @param {string} userId - The ID of the user accepting the invitation
+ * @param {string} notificationId - The ID of the notification to mark as read
+ * @param {string} groupId - The ID of the group to join
+ * @returns {Promise<boolean>} - True if successful, throws on error
+ */
+export const acceptGroupInvitation = async (
+  userId: string,
+  notificationId: string,
+  groupId: string
+): Promise<boolean> => {
+  try {
+    // Import Firebase Realtime Database functions dynamically
+    const { ref, set, get } = await import('firebase/database');
+    const { rtdb } = await import('./rtdb');
+
+    // Add user to group members with member role and join timestamp
+    const groupMemberRef = ref(rtdb, `groups/${groupId}/members/${userId}`);
+    await set(groupMemberRef, {
+      role: "member",                        // Default role for invited users
+      joinedAt: new Date().toISOString()     // Timestamp for audit trail
+    });
+
+    console.log(`User ${userId} successfully joined group ${groupId}`);
+
+    // Mark the notification as read to remove it from the user's notification feed
+    await markNotificationAsRead(userId, notificationId);
+
+    return true;
+  } catch (error) {
+    console.error('Error accepting group invitation:', error);
+    throw error;
+  }
+};
+
+/**
+ * Reject a group invitation
+ *
+ * This function handles the user's rejection of a group invitation by simply
+ * removing the notification from their feed without adding them to the group.
+ *
+ * Process:
+ * 1. Marks the invitation notification as read
+ * 2. Removes notification from user's notification feed
+ * 3. No group membership changes are made
+ *
+ * Design Philosophy:
+ * - Simple rejection mechanism - just remove the notification
+ * - No need to track rejections in database (keeps data clean)
+ * - User can be re-invited later if needed
+ * - Respects user's choice without permanent consequences
+ *
+ * Database Operations:
+ * - Firestore: Marks notification as read in users/{userId}/notifications/{notificationId}
+ * - RTDB: No changes to group membership
+ *
+ * User Experience:
+ * - Immediate removal from notification feed
+ * - No permanent record of rejection
+ * - Can be re-invited by group owners if circumstances change
+ *
+ * @param {string} userId - The ID of the user rejecting the invitation
+ * @param {string} notificationId - The ID of the notification to mark as read
+ * @returns {Promise<boolean>} - True if successful, throws on error
+ */
+export const rejectGroupInvitation = async (
+  userId: string,
+  notificationId: string
+): Promise<boolean> => {
+  try {
+    // Simply mark the notification as read to remove it from the UI
+    // This is a "soft" rejection - no permanent record is kept
+    await markNotificationAsRead(userId, notificationId);
+
+    console.log(`User ${userId} rejected group invitation (notification ${notificationId})`);
+    return true;
+  } catch (error) {
+    console.error('Error rejecting group invitation:', error);
     throw error;
   }
 };

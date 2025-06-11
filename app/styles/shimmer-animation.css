@@ -39,7 +39,7 @@
 
 /* Green-blue gradient animation */
 .gradient-button {
-  background: linear-gradient(90deg, #2563eb 0%, #10b981 100%);
+  background: linear-gradient(90deg, #2563eb 0%, #1DB954 100%);
   background-size: 200% 100%;
   animation: gradient-x 3s ease infinite;
   color: white;

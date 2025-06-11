@@ -15,6 +15,7 @@ import EmptyContentState from './EmptyContentState';
 import { UserBioSkeleton } from "../ui/page-skeleton";
 
 import TextView from "../editor/TextView";
+import HoverEditContent from './HoverEditContent';
 import type { UserBioTabProps } from "../../types/components";
 import type { SlateContent, User } from "../../types/database";
 import { PageProvider } from "../../contexts/PageContext";
@@ -198,20 +199,9 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
 
   return (
     <div className="space-y-4">
-      {/* Header with edit button */}
+      {/* Header - no standalone edit icon */}
       <div className="flex justify-end items-center">
-        {/* Only show Edit button when there is content and not in edit mode */}
-        {isProfileOwner && !isEditing && bioContent && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleSetIsEditing(true)}
-            className="gap-1"
-          >
-            <Edit className="h-4 w-4" />
-            Edit
-          </Button>
-        )}
+        {/* Edit icon removed - now handled by hover-reveal in content area */}
         {isEditing && (
           <div className="flex gap-2">
             <Button
@@ -267,15 +257,12 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
       ) : (
         <div className="prose dark:prose-invert max-w-none">
           {bioContent ? (
-            <div className="group">
-              {/* Use TextView with direct tap-to-edit functionality matching unified PageEditor experience */}
-              <TextView
-                content={bioContent}
-                canEdit={isProfileOwner}
-                setIsEditing={handleSetIsEditing}
-                showLineNumbers={false} // Bio doesn't need line numbers
-              />
-            </div>
+            <HoverEditContent
+              content={bioContent}
+              canEdit={isProfileOwner}
+              setIsEditing={handleSetIsEditing}
+              showLineNumbers={false} // Bio doesn't need line numbers
+            />
           ) : (
             <EmptyContentState
               onActivate={() => handleSetIsEditing(true)}

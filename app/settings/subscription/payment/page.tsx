@@ -203,16 +203,16 @@ export default function SubscriptionPaymentPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const { theme } = useTheme();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
 
   // If payments feature flag is disabled, show OpenCollective support instead
   if (!isPaymentsEnabled) {
     return (
       <div className="max-w-md mx-auto p-4">
         <div className="mb-4">
-          <Link href="/account" className="inline-flex items-center text-primary hover:text-primary/80 text-sm">
+          <Link href="/settings" className="inline-flex items-center text-primary hover:text-primary/80 text-sm">
             <ArrowLeft className="h-3 w-3 mr-1" />
-            Back to Account
+            Back to Settings
           </Link>
         </div>
         <OpenCollectiveSupport
@@ -231,7 +231,7 @@ export default function SubscriptionPaymentPage() {
 
     const amountParam = searchParams?.get('amount');
     if (!amountParam) {
-      router.push('/account/subscription');
+      router.push('/settings/subscription');
       return;
     }
 
@@ -307,7 +307,7 @@ export default function SubscriptionPaymentPage() {
           <h3 className="font-medium text-destructive mb-1 text-sm">Error</h3>
           <p className="text-destructive/80 text-xs">{error}</p>
           <button
-            onClick={() => router.push('/account/subscription')}
+            onClick={() => router.push('/settings/subscription')}
             className="mt-3 px-3 py-1 bg-background hover:bg-accent rounded text-xs"
           >
             Go Back

@@ -15,6 +15,7 @@ import EmptyContentState from '../utils/EmptyContentState';
 import { GroupAboutSkeleton } from "../ui/page-skeleton";
 
 import TextView from "../editor/TextView";
+import HoverEditContent from '../utils/HoverEditContent';
 import type { GroupAboutTabProps } from "../../types/components";
 import type { SlateContent, Group } from "../../types/database";
 import { PageProvider } from "../../contexts/PageContext";
@@ -220,21 +221,10 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
 
   return (
     <div className="space-y-4">
-      {/* Header with edit button */}
+      {/* Header - no standalone edit icon */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">About this group</h2>
-        {/* Only show Edit button when there is content and not in edit mode */}
-        {canEdit && !isEditing && aboutContent && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleSetIsEditing(true)}
-            className="gap-1"
-          >
-            <Edit className="h-4 w-4" />
-            Edit
-          </Button>
-        )}
+        {/* Edit icon removed - now handled by hover-reveal in content area */}
         {isEditing && (
           <div className="flex gap-2">
             <Button
@@ -293,15 +283,12 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
       ) : (
         <div className="prose dark:prose-invert max-w-none">
           {aboutContent ? (
-            <div className="group">
-              {/* Use TextView for the same interactive experience as normal pages */}
-              <TextView
-                content={aboutContent}
-                canEdit={canEdit}
-                setIsEditing={handleSetIsEditing}
-                showLineNumbers={false} // Group about doesn't need line numbers
-              />
-            </div>
+            <HoverEditContent
+              content={aboutContent}
+              canEdit={canEdit}
+              setIsEditing={handleSetIsEditing}
+              showLineNumbers={false} // Group about doesn't need line numbers
+            />
           ) : (
             <EmptyContentState
               onActivate={() => handleSetIsEditing(true)}

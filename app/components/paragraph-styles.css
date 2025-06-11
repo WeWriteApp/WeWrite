@@ -12,12 +12,8 @@
   display: inline-block;
   min-width: 0.75rem; /* Match edit mode width */
   text-align: right;
-  vertical-align: baseline; /* Align with the baseline of the text */
   opacity: 0.8; /* Slightly increased opacity for better visibility */
-  position: relative;
-  top: 0; /* Remove vertical offset for proper alignment */
   margin-right: 0.25rem; /* Match edit mode margin */
-  float: none; /* Ensure it flows with text */
   line-height: 1.5; /* Match the line height of paragraph text */
   font-size: 0.75rem; /* Match edit mode font size */
 }

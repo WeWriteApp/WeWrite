@@ -1,5 +1,35 @@
 "use client"
 
+/**
+ * WeWrite Authentication Improvements - Modern Login Form
+ *
+ * Enhanced login form component that supports flexible login options and
+ * improved user experience as part of the authentication improvements.
+ *
+ * Key Features Implemented:
+ * 1. **Flexible Login Options**: Users can log in using either username OR email
+ * 2. **Enhanced Error Handling**: Specific Firebase error code handling
+ * 3. **Improved UX**: Better form validation and user feedback
+ * 4. **Security**: Username lookup without exposing user emails
+ *
+ * Authentication Flow:
+ * - Accepts both email format and username format in single input
+ * - Modified loginUser function queries usernames collection for lookup
+ * - Enhanced form validation for both input types
+ * - Improved error messaging for better user guidance
+ *
+ * Technical Implementation:
+ * - Single input field labeled "Email or Username"
+ * - Backend logic handles username-to-email conversion
+ * - Maintains security by not exposing user emails
+ * - Compatible with existing user data and authentication flow
+ *
+ * Performance Impact:
+ * - Minimal performance impact from username lookup (single Firestore query)
+ * - Improved user experience reduces failed login attempts
+ * - Simplified form reduces cognitive load for users
+ */
+
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"

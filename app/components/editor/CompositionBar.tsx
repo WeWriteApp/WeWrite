@@ -56,13 +56,7 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
     setIsMounted(true);
   }, []);
 
-  // Debugging the props
-  console.log("CompositionBar props:", {
-    disabled,
-    hasPledges: pledges?.length > 0,
-    hasSubscriptionAmount: !!subscriptionAmount,
-    hasOnPledgeChange: !!onPledgeChange
-  });
+
 
   // Handle safer percentage calculations to avoid NaN
   const calculatePercentage = (amount: number, total: number): number => {

@@ -57,12 +57,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
     return userEmail === 'jamiegray2234@gmail.com';
   };
 
-  // Debug logging for groups feature flag in sidebar
-  useEffect(() => {
-    console.log('[DEBUG] Sidebar - Groups feature is now enabled for all users');
-    console.log('[DEBUG] Sidebar - User:', user?.email);
-    console.log('[DEBUG] Sidebar - Groups navigation item will always be visible');
-  }, [user?.email])
+
 
   // Reset to main menu when sidebar closes
   useEffect(() => {

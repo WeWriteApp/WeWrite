@@ -59,6 +59,7 @@ interface PageEditorProps {
   location?: { lat: number; lng: number } | null;
   setLocation?: (location: { lat: number; lng: number } | null) => void;
   onSave: () => void;
+  onKeyboardSave?: () => void; // Optional keyboard save handler
   onCancel: () => void;
   onDelete?: (() => void) | null;
   isSaving: boolean;
@@ -91,6 +92,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
   location,
   setLocation,
   onSave,
+  onKeyboardSave,
   onCancel,
   onDelete = null,
   isSaving,
@@ -139,7 +141,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
     isEditing: true,
     setIsEditing: () => {},
     canEdit: false, // Disable "Enter to edit" in edit mode
-    handleSave: onSave, // Enable Cmd+Enter / Ctrl+Enter to save
+    handleSave: onKeyboardSave || onSave, // Use keyboard save handler if provided, fallback to regular save
     isSaving
   });
 

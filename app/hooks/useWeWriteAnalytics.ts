@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { getAnalyticsService, AnalyticsEventParams } from "../utils/analytics-service";
-import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
+import { ANALYTICS_EVENTS, EVENT_CATEGORIES, CONTENT_EVENTS, INTERACTION_EVENTS, NAVIGATION_EVENTS, FEATURE_EVENTS } from '../constants/analytics-events';
 import { getAnalyticsPageTitle } from "../utils/analytics-page-titles";
 
 /**
@@ -66,9 +66,65 @@ export const useWeWriteAnalytics = () => {
     analytics.trackSessionEvent(action, params);
   };
 
+  const trackNavigationEvent = (action: string, params: Partial<AnalyticsEventParams> = {}) => {
+    analytics.trackNavigationEvent(action, params);
+  };
+
   // General event tracking
   const trackEvent = (params: AnalyticsEventParams) => {
     analytics.trackEvent(params);
+  };
+
+  // Specialized tracking functions for common patterns
+  const trackPageCreationFlow = {
+    started: (params: Partial<AnalyticsEventParams> = {}) => {
+      trackContentEvent(CONTENT_EVENTS.PAGE_CREATION_STARTED, params);
+    },
+    saved: (method: 'keyboard' | 'button', params: Partial<AnalyticsEventParams> = {}) => {
+      const event = method === 'keyboard' ? CONTENT_EVENTS.PAGE_SAVE_KEYBOARD : CONTENT_EVENTS.PAGE_SAVE_BUTTON;
+      trackContentEvent(event, { save_method: method, ...params });
+    },
+    completed: (pageId: string, params: Partial<AnalyticsEventParams> = {}) => {
+      trackContentEvent(CONTENT_EVENTS.PAGE_CREATED, { page_id: pageId, ...params });
+    },
+    abandoned: (params: Partial<AnalyticsEventParams> = {}) => {
+      trackContentEvent(CONTENT_EVENTS.PAGE_CREATION_ABANDONED, params);
+    }
+  };
+
+  const trackEditingFlow = {
+    started: (pageId: string, params: Partial<AnalyticsEventParams> = {}) => {
+      trackContentEvent(CONTENT_EVENTS.PAGE_EDIT_STARTED, { page_id: pageId, ...params });
+    },
+    saved: (pageId: string, method: 'keyboard' | 'button', params: Partial<AnalyticsEventParams> = {}) => {
+      const event = method === 'keyboard' ? CONTENT_EVENTS.PAGE_SAVE_KEYBOARD : CONTENT_EVENTS.PAGE_SAVE_BUTTON;
+      trackContentEvent(event, { page_id: pageId, save_method: method, ...params });
+    },
+    cancelled: (pageId: string, params: Partial<AnalyticsEventParams> = {}) => {
+      trackContentEvent(CONTENT_EVENTS.PAGE_EDIT_CANCELLED, { page_id: pageId, ...params });
+    }
+  };
+
+  const trackSortingInteraction = (sortType: string, direction: string, location: string, params: Partial<AnalyticsEventParams> = {}) => {
+    trackInteractionEvent(INTERACTION_EVENTS.SORT_CHANGED, {
+      sort_type: sortType,
+      sort_direction: direction,
+      location: location,
+      ...params
+    });
+  };
+
+  const trackNotificationInteraction = (action: 'read' | 'unread' | 'menu_opened', notificationId?: string, params: Partial<AnalyticsEventParams> = {}) => {
+    const eventMap = {
+      read: INTERACTION_EVENTS.NOTIFICATION_MARKED_READ,
+      unread: INTERACTION_EVENTS.NOTIFICATION_MARKED_UNREAD,
+      menu_opened: INTERACTION_EVENTS.NOTIFICATION_MENU_OPENED
+    };
+
+    trackInteractionEvent(eventMap[action], {
+      notification_id: notificationId,
+      ...params
+    });
   };
 
   return {
@@ -76,9 +132,15 @@ export const useWeWriteAnalytics = () => {
     trackAuthEvent,
     trackContentEvent,
     trackInteractionEvent,
+    trackNavigationEvent,
     trackGroupEvent,
     trackFeatureEvent,
     trackSessionEvent,
+    // Specialized tracking functions
+    trackPageCreationFlow,
+    trackEditingFlow,
+    trackSortingInteraction,
+    trackNotificationInteraction,
     events: ANALYTICS_EVENTS,
     categories: EVENT_CATEGORIES,
   };

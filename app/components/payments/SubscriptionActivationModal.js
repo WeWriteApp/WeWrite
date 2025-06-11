@@ -68,15 +68,40 @@ const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customConten
     if (!user || !selectedTier) return;
     setLoading(true);
     setError(null);
-    const amount = selectedTier === 1 ? 10 : selectedTier === 2 ? 20 : customAmount;
+
+    // Determine tier and amount based on selection
+    let tier, amount;
+    if (selectedTier === 1) {
+      tier = 'tier1';
+      amount = 1000; // $10.00 in cents
+    } else if (selectedTier === 2) {
+      tier = 'tier2';
+      amount = 2000; // $20.00 in cents
+    } else if (selectedTier === 3) {
+      tier = 'custom';
+      amount = customAmount * 100; // Convert to cents
+    }
+
     try {
       const res = await fetch('/api/activate-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, userId: user.uid }),
+        body: JSON.stringify({
+          tier,
+          customAmount: amount,
+          userId: user.uid
+        }),
       });
+
       if (res.ok) {
-        router.push(`/settings/subscription/payment?amount=${amount}`);
+        const data = await res.json();
+        if (data.url) {
+          // Redirect to Stripe checkout
+          window.location.href = data.url;
+        } else {
+          // Subscription was updated, redirect to manage page
+          router.push('/settings/subscription/manage');
+        }
       } else {
         const data = await res.json();
         setError(data.error || 'Failed to start subscription.');

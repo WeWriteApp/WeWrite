@@ -29,7 +29,7 @@ export default function SubscriptionSuccessPage() {
     }
 
     if (!user) {
-      router.push('/auth/login?redirect=/account');
+      router.push('/auth/login?redirect=/settings');
       return;
     }
 
@@ -103,10 +103,10 @@ export default function SubscriptionSuccessPage() {
           <p className="text-sm">{error}</p>
         </div>
         <button
-          onClick={() => router.push('/account')}
+          onClick={() => router.push('/settings')}
           className="text-primary hover:underline"
         >
-          Go to Account Settings
+          Go to Settings
         </button>
       </div>
     );

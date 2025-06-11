@@ -70,12 +70,8 @@ export const navigateToPage = (pageId, user, page = null, userGroups = null, rou
     userGroups: userGroups || user?.groups
   });
 
-  // Scroll to top before navigation
-  if (typeof window !== 'undefined') {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-  }
-
-  // Use router if available, otherwise use window.location
+  // Navigate without scrolling the current page
+  // Scroll restoration will be handled by the destination page
   if (router && typeof router.push === 'function') {
     router.push(url);
   } else if (typeof window !== 'undefined') {

@@ -646,7 +646,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
       cell: ({ row }) => (
         <div className="flex items-center">
           {row.original.enabled ? (
-            <Badge className="bg-green-500">Enabled</Badge>
+            <Badge className="bg-success text-success-foreground">Enabled</Badge>
           ) : (
             <Badge variant="outline">Disabled</Badge>
           )}

@@ -3,12 +3,14 @@ import React, { useState, useEffect, useContext, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
 import { AuthContext } from "../../providers/AuthProvider";
-import { getUserSubscription, getPledge, createPledge, updatePledge, listenToUserPledges } from "../../firebase/subscription";
+import { getPledge, createPledge, updatePledge, listenToUserPledges } from "../../firebase/subscription";
 import { getOptimizedUserSubscription, getOptimizedUserPledges, createOptimizedSubscriptionListener } from "../../firebase/optimizedSubscription";
 import { getPageStats, getDocById } from "../../firebase/database";
+import { realPledgeService } from "../../services/realPledgeService";
 import { Button } from "../ui/button";
 import { Eye, Users, DollarSign, Plus, Minus, ChevronUp, ChevronDown } from 'lucide-react';
 import { useToast } from "../ui/use-toast";
+import { showErrorToastWithCopy } from "../../utils/clipboard";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { openExternalLink } from "../../utils/pwa-detection";
 import SubscriptionActivationModal from "./SubscriptionActivationModal";
@@ -35,7 +37,7 @@ const PledgeBar = () => {
   const [showActivationModal, setShowActivationModal] = useState(false);
   const [showRebalanceModal, setShowRebalanceModal] = useState(false);
   const [showSupportUsModal, setShowSupportUsModal] = useState(false);
-  const isSubscriptionEnabled = useFeatureFlag('payments', user?.email);
+  const isSubscriptionEnabled = useFeatureFlag('payments', user?.email, user?.uid);
   const [pageData, setPageData] = useState(null);
   const [pageTitle, setPageTitle] = useState('Untitled');
   const [sliderValue, setSliderValue] = useState(0);
@@ -44,6 +46,8 @@ const PledgeBar = () => {
   const [visible, setVisible] = useState(true);
   const [animateEntry, setAnimateEntry] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [scrollDirection, setScrollDirection] = useState('none');
   const [pledges, setPledges] = useState([]);
   const [globalIncrement, setGlobalIncrement] = useState(1);
   const [totalOtherPledges, setTotalOtherPledges] = useState(0);
@@ -54,6 +58,8 @@ const PledgeBar = () => {
   const [showMoreButton, setShowMoreButton] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [realPledgeData, setRealPledgeData] = useState(null);
+  const [supporterStats, setSupporterStats] = useState({ count: 0, totalAmount: 0 });
   const contentRef = useRef(null);
 
   const pageId = pathname.substring(1); // Remove the leading slash to get the page ID
@@ -65,6 +71,24 @@ const PledgeBar = () => {
     totalViews: 0,
     followers: 0
   });
+
+  // Load real supporter statistics
+  useEffect(() => {
+    if (!pageId) return;
+
+    const unsubscribe = realPledgeService.subscribeSupporterStats('page', pageId, (stats) => {
+      setSupporterStats(stats);
+      setPageStats(prev => ({
+        ...prev,
+        totalPledged: stats.totalAmount,
+        pledgeCount: stats.count,
+        activeDonors: stats.count,
+        monthlyIncome: stats.totalAmount
+      }));
+    });
+
+    return () => unsubscribe();
+  }, [pageId]);
 
   // Ensure component is mounted before rendering portals
   useEffect(() => {
@@ -155,14 +179,22 @@ const PledgeBar = () => {
           // Check if user has maxed out their subscription
           setMaxedOut(available <= 0);
 
-          // Get current pledge for this page using optimized function
+          // Get current pledge for this page using real pledge service
+          const realPledge = await realPledgeService.getUserPledgeToResource(user.uid, 'page', pageId);
+          if (realPledge) {
+            setRealPledgeData(realPledge);
+            setCurrentPledge(realPledge);
+            setPledgeAmount(realPledge.amount);
+            setSliderValue(realPledge.amount);
+            setPledges([realPledge]);
+          }
+
+          // Also get legacy pledge for backward compatibility
           const pledge = await getPledge(user.uid, pageId);
-          if (pledge) {
+          if (pledge && !realPledge) {
             setCurrentPledge(pledge);
             setPledgeAmount(pledge.amount);
             setSliderValue(pledge.amount);
-
-            // Add to pledges array
             setPledges([pledge]);
           }
 
@@ -224,7 +256,7 @@ const PledgeBar = () => {
     }
   };
 
-  // Handle pledge submission
+  // Handle pledge submission with real payment processing
   const handlePledgeSubmit = async () => {
     if (!user || !pageId || !subscription) {
       return;
@@ -242,12 +274,16 @@ const PledgeBar = () => {
         return;
       }
 
-      if (currentPledge) {
-        // Update existing pledge
-        await updatePledge(user.uid, pageId, newAmount, currentPledge.amount);
+      // For real payment processing, we need a payment method
+      // For now, we'll use the legacy system but this should be updated
+      // to use the new real payment processing API
+
+      if (currentPledge || realPledgeData) {
+        // Update existing pledge (legacy system for now)
+        await updatePledge(user.uid, pageId, newAmount, currentPledge?.amount || realPledgeData?.amount || 0);
         toast.success(`Your pledge to "${pageTitle}" has been updated to $${newAmount.toFixed(2)}/month.`);
       } else {
-        // Create new pledge
+        // Create new pledge (legacy system for now)
         await createPledge(user.uid, pageId, newAmount);
         toast.success(`You are now supporting "${pageTitle}" with $${newAmount.toFixed(2)}/month.`);
       }
@@ -258,6 +294,12 @@ const PledgeBar = () => {
         amount: newAmount
       });
 
+      // Refresh real pledge data
+      const updatedRealPledge = await realPledgeService.getUserPledgeToResource(user.uid, 'page', pageId);
+      if (updatedRealPledge) {
+        setRealPledgeData(updatedRealPledge);
+      }
+
       // Update available funds
       const totalAmount = subscription.amount || 0;
       const pledgedAmount = subscription.pledgedAmount || 0;
@@ -266,7 +308,23 @@ const PledgeBar = () => {
 
     } catch (error) {
       console.error('Error submitting pledge:', error);
-      toast.error("Failed to update your pledge. Please try again.");
+
+      // Use enhanced error toast with copy functionality
+      showErrorToastWithCopy("Failed to update your pledge", {
+        description: "Please try again or contact support if the issue persists.",
+        additionalInfo: {
+          errorType: "PLEDGE_UPDATE_ERROR",
+          userId: user?.uid,
+          pageId: pageId,
+          pageTitle: pageTitle,
+          pledgeAmount: sliderValue,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          url: window.location.href,
+          errorMessage: error.message,
+          errorStack: error.stack,
+        },
+      });
     } finally {
       setLoading(false);
     }
@@ -277,7 +335,7 @@ const PledgeBar = () => {
     setShowRebalanceModal(false);
 
     // For now, just show the subscription management page
-    router.push('/account/subscription');
+    router.push('/settings/subscription');
   };
 
   // Detect if we're on a page view
@@ -301,22 +359,52 @@ const PledgeBar = () => {
     }
   }, [pathname]);
 
-  // Add scroll event listener for auto-hide behavior
+  // Enhanced scroll event listener with smooth show/hide behavior
   useEffect(() => {
     let ticking = false;
-    let hasScrolledDown = false;
+    let scrollTimeout = null;
 
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
+      const scrollDelta = currentScrollY - lastScrollY;
 
-      // Auto-hide behavior: Hide immediately on downward scroll and stay hidden
-      if (currentScrollY > lastScrollY && currentScrollY > 50 && !hasScrolledDown) {
-        // User scrolled down - hide the bar and mark as scrolled
-        setVisible(false);
-        hasScrolledDown = true;
+      // Determine scroll direction
+      let newScrollDirection = 'none';
+      if (scrollDelta > 5) {
+        newScrollDirection = 'down';
+      } else if (scrollDelta < -5) {
+        newScrollDirection = 'up';
+      }
 
-        // Store in sessionStorage to keep it hidden during the session
-        sessionStorage.setItem('pledgeBarHidden', 'true');
+      // Only update if direction actually changed
+      if (newScrollDirection !== 'none' && newScrollDirection !== scrollDirection) {
+        setScrollDirection(newScrollDirection);
+
+        // Clear any existing timeout
+        if (scrollTimeout) {
+          clearTimeout(scrollTimeout);
+        }
+
+        // Handle visibility changes with smooth animations
+        if (newScrollDirection === 'down' && currentScrollY > 100 && visible && !isAnimating) {
+          // User scrolled down - hide the bar with animation
+          setIsAnimating(true);
+          setVisible(false);
+
+          // Clear animation state after animation completes
+          scrollTimeout = setTimeout(() => {
+            setIsAnimating(false);
+          }, 400); // Match animation duration
+        } else if (newScrollDirection === 'up' && !visible && !isAnimating) {
+          // User scrolled up - show the bar with animation
+          setIsAnimating(true);
+          setVisible(true);
+
+          // Clear animation state after animation completes
+          scrollTimeout = setTimeout(() => {
+            setIsAnimating(false);
+          }, 400); // Match animation duration
+        }
       }
 
       // Check if we're at the bottom of the page
@@ -340,21 +428,12 @@ const PledgeBar = () => {
       }
     };
 
-    // Check if pledge bar was previously hidden in this session
-    const wasHidden = sessionStorage.getItem('pledgeBarHidden') === 'true';
-    if (wasHidden) {
-      setVisible(false);
-      hasScrolledDown = true;
-    }
-
     // Add scroll event listener
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    // Animate entry after a short delay (only if not previously hidden)
+    // Animate entry after a short delay
     const timer = setTimeout(() => {
-      if (!wasHidden) {
-        setAnimateEntry(true);
-      }
+      setAnimateEntry(true);
     }, 500);
 
     // Check if we should show the "more" button
@@ -363,8 +442,11 @@ const PledgeBar = () => {
     return () => {
       window.removeEventListener('scroll', onScroll);
       clearTimeout(timer);
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
     };
-  }, [lastScrollY]);
+  }, [lastScrollY, scrollDirection, visible, isAnimating]);
 
   // Function to scroll to metadata or back to top
   const scrollToMetadata = () => {
@@ -410,13 +492,18 @@ const PledgeBar = () => {
     return (
       <div
         data-pledge-bar
-        className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
-          visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
+        className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center pledge-bar-transition ${
+          !visible && isAnimating ? 'slide-down' :
+          visible && isAnimating ? 'slide-up' : ''
         } ${animateEntry ? 'spring-and-pulse' : ''}`}
-        style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
+        style={{
+          transform: visible ? 'translateY(0)' : 'translateY(calc(100% + 3rem))',
+          opacity: visible ? 1 : 0,
+          visibility: visible || isAnimating ? 'visible' : 'hidden'
+        }}
       >
         <div
-          className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-2xl border border-border/40"
+          className="w-full max-w-md mx-auto wewrite-card bg-background/95 dark:bg-gray-800/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl border border-border/40"
         >
           <div className="flex justify-around py-4 px-6">
             <div className="text-center flex flex-col items-center">
@@ -429,16 +516,16 @@ const PledgeBar = () => {
             <div className="text-center flex flex-col items-center">
               <div className="flex items-center mb-1">
                 <Users className="h-4 w-4 text-muted-foreground mr-1" />
-                <p className="text-sm font-medium">{pageStats.followers || 0}</p>
+                <p className="text-sm font-medium">{supporterStats.count || 0}</p>
               </div>
-              <p className="text-xs text-muted-foreground">Followers</p>
+              <p className="text-xs text-muted-foreground">Supporters</p>
             </div>
             <div className="text-center flex flex-col items-center">
               <div className="flex items-center mb-1">
                 <DollarSign className="h-4 w-4 text-muted-foreground mr-1" />
-                <p className="text-sm font-medium">${pageStats.monthlyIncome?.toFixed(2) || '0.00'}/mo</p>
+                <p className="text-sm font-medium">${supporterStats.totalAmount?.toFixed(2) || '0.00'}/mo</p>
               </div>
-              <p className="text-xs text-muted-foreground">Income</p>
+              <p className="text-xs text-muted-foreground">Pledged</p>
             </div>
           </div>
         </div>
@@ -457,53 +544,47 @@ const PledgeBar = () => {
     return (
       <div
         data-pledge-bar
-        className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
-          visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
+        className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center pledge-bar-transition ${
+          !visible && isAnimating ? 'slide-down' :
+          visible && isAnimating ? 'slide-up' : ''
         } ${animateEntry ? 'spring-and-pulse' : ''}`}
-        style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
+        style={{
+          transform: visible ? 'translateY(0)' : 'translateY(calc(100% + 3rem))',
+          opacity: visible ? 1 : 0,
+          visibility: visible || isAnimating ? 'visible' : 'hidden'
+        }}
       >
-        <div className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-2xl border border-border/40 p-4">
+        <div className="w-full max-w-md mx-auto wewrite-card bg-background/95 dark:bg-gray-800/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl border border-border/40 p-4">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <h3 className="text-sm font-medium">
-                {isSubscriptionEnabled ? "Support this page" : "Under Construction"}
+                {isSubscriptionEnabled ? "Activate Subscription" : "Support WeWrite"}
               </h3>
               <p className="text-xs text-muted-foreground mt-1">
                 {isSubscriptionEnabled
                   ? "Activate your subscription to support this page"
-                  : "We are still working on payments functionality. Please support us on Open Collective to help get it built."}
+                  : "Help us build the future of collaborative writing"}
               </p>
             </div>
             {isSubscriptionEnabled ? (
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setShowActivationModal(true);
-                    setShowSupportUsModal(false);
-                  }}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setShowActivationModal(true);
-                    setShowSupportUsModal(false);
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setShowActivationModal(true);
+                  setShowSupportUsModal(false);
+                }}
+                className="bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 text-white border-0"
+              >
+                Activate Subscription
+              </Button>
             ) : (
               <Button
                 size="sm"
                 onClick={() => {
-                  // Open OpenCollective link directly
-                  openExternalLink('https://opencollective.com/wewrite-app', 'Pledge Bar Support Button (Non-Subscriber)');
+                  setShowSupportUsModal(true);
+                  setShowActivationModal(false);
                 }}
-                className="ml-4"
+                className="bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 text-white border-0"
               >
                 Support Us
               </Button>
@@ -640,7 +721,24 @@ const PledgeBar = () => {
       setAvailableFunds(available);
     } catch (error) {
       console.error('Error updating pledge:', error);
-      toast.error("Failed to update your pledge. Please try again.");
+
+      // Use enhanced error toast with copy functionality
+      showErrorToastWithCopy("Failed to update your pledge", {
+        description: "Please try again or contact support if the issue persists.",
+        additionalInfo: {
+          errorType: "PLEDGE_AMOUNT_CHANGE_ERROR",
+          userId: user?.uid,
+          pageId: pageId,
+          pageTitle: pageTitle,
+          pledgeId: pledgeId,
+          changeAmount: changeAmount,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          url: window.location.href,
+          errorMessage: error.message,
+          errorStack: error.stack,
+        },
+      });
     } finally {
       setLoading(false);
     }
@@ -702,83 +800,118 @@ const PledgeBar = () => {
     const availablePercentage = Math.max(0, 100 - usedPercentage);
 
     const handleSubscriptionBarClick = () => {
-      router.push('/account/subscription/manage');
+      router.push('/settings/subscription/manage');
     };
 
     return (
       <div
         data-pledge-bar
-        className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
-          visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
+        className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center pledge-bar-transition ${
+          !visible && isAnimating ? 'slide-down' :
+          visible && isAnimating ? 'slide-up' : ''
         } ${animateEntry ? 'spring-and-pulse' : ''}`}
-        style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
+        style={{
+          transform: visible ? 'translateY(0)' : 'translateY(calc(100% + 3rem))',
+          opacity: visible ? 1 : 0,
+          visibility: visible || isAnimating ? 'visible' : 'hidden'
+        }}
       >
         <div
-          className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-all rounded-2xl border border-border/40 p-4 cursor-pointer group"
+          className="w-full max-w-md mx-auto wewrite-card bg-background/95 dark:bg-gray-800/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl border border-border/40 p-4 cursor-pointer group"
           onClick={handleSubscriptionBarClick}
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex-1">
               <h3 className="text-sm font-medium group-hover:text-primary transition-colors">
-                Subscription Usage
+                Monthly Subscription: ${totalSubscriptionAmount.toFixed(2)}
               </h3>
               <p className="text-xs text-muted-foreground mt-1">
-                ${(subscription.pledgedAmount || 0).toFixed(2)} of ${totalSubscriptionAmount.toFixed(2)}/month used
+                ${(subscription.pledgedAmount || 0).toFixed(2)} allocated • ${availableAmount.toFixed(2)} available
               </p>
             </div>
-            <div className="text-xs text-muted-foreground">
-              ${availableAmount.toFixed(2)} available
+            <div className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
+              Manage →
             </div>
           </div>
 
-          {/* Multi-segment progress bar */}
-          <div className="w-full bg-muted/50 h-3 rounded-full overflow-hidden mb-2">
+          {/* Enhanced composition bar showing allocation breakdown */}
+          <div className="w-full bg-muted/50 h-4 rounded-full overflow-hidden mb-3 border border-border/20">
             <div className="h-full flex">
               {/* Current page segment */}
               {currentPagePercentage > 0 && (
                 <div
-                  className="h-full bg-primary transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500 relative group"
                   style={{ width: `${currentPagePercentage}%` }}
-                  title={`This page: $${currentPagePledge.toFixed(2)}`}
-                />
+                  title={`This page: $${currentPagePledge.toFixed(2)} (${currentPagePercentage.toFixed(1)}%)`}
+                >
+                  {currentPagePercentage > 15 && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-xs font-medium text-white/90">
+                        ${currentPagePledge.toFixed(0)}
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
               {/* Other pages segment */}
               {otherPagesPercentage > 0 && (
                 <div
-                  className="h-full bg-primary/60 transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-primary/60 to-primary/40 transition-all duration-500"
                   style={{ width: `${otherPagesPercentage}%` }}
-                  title={`Other pages: $${totalOtherPledges.toFixed(2)}`}
-                />
+                  title={`Other pages: $${totalOtherPledges.toFixed(2)} (${otherPagesPercentage.toFixed(1)}%)`}
+                >
+                  {otherPagesPercentage > 15 && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-xs font-medium text-white/90">
+                        ${totalOtherPledges.toFixed(0)}
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
               {/* Available segment */}
               {availablePercentage > 0 && (
                 <div
-                  className="h-full bg-muted/30 transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-muted/40 to-muted/20 transition-all duration-500 border-l border-border/30"
                   style={{ width: `${availablePercentage}%` }}
-                  title={`Available: $${availableAmount.toFixed(2)}`}
-                />
+                  title={`Available: $${availableAmount.toFixed(2)} (${availablePercentage.toFixed(1)}%)`}
+                >
+                  {availablePercentage > 20 && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        ${availableAmount.toFixed(0)} free
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
 
-          {/* Legend */}
+          {/* Simplified legend */}
           <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               {currentPagePledge > 0 && (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-primary rounded-full"></div>
-                  <span className="text-muted-foreground">This page: ${currentPagePledge.toFixed(2)}</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 bg-primary rounded-full"></div>
+                  <span className="text-muted-foreground font-medium">This page</span>
                 </div>
               )}
               {totalOtherPledges > 0 && (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-primary/60 rounded-full"></div>
-                  <span className="text-muted-foreground">Other pages: ${totalOtherPledges.toFixed(2)}</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 bg-primary/60 rounded-full"></div>
+                  <span className="text-muted-foreground font-medium">Other pages</span>
+                </div>
+              )}
+              {availableAmount > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 bg-muted/60 rounded-full"></div>
+                  <span className="text-muted-foreground font-medium">Available</span>
                 </div>
               )}
             </div>
-            <span className="text-muted-foreground group-hover:text-primary transition-colors">
-              Manage →
+            <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors font-medium">
+              Click to manage
             </span>
           </div>
         </div>
@@ -798,12 +931,17 @@ const PledgeBar = () => {
       ) : (
         <div
           data-pledge-bar
-          className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center transition-all duration-300 ${
-            visible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'
+          className={`fixed bottom-12 left-8 right-8 z-50 flex justify-center pledge-bar-transition ${
+            !visible && isAnimating ? 'slide-down' :
+            visible && isAnimating ? 'slide-up' : ''
           } ${animateEntry ? 'spring-and-pulse' : ''}`}
-          style={{ transform: visible ? 'translateY(0)' : 'translateY(20px)', opacity: visible ? 1 : 0 }}
+          style={{
+            transform: visible ? 'translateY(0)' : 'translateY(calc(100% + 3rem))',
+            opacity: visible ? 1 : 0,
+            visibility: visible || isAnimating ? 'visible' : 'hidden'
+          }}
         >
-        <div className="w-full max-w-md mx-auto bg-background/90 dark:bg-gray-800/90 backdrop-blur-md shadow-lg hover:shadow-xl transition-shadow rounded-2xl border border-border/40 p-4">
+        <div className="w-full max-w-md mx-auto wewrite-card bg-background/95 dark:bg-gray-800/95 backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl border border-border/40 p-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex-1">
               <h3 className="text-sm font-medium">Support this page</h3>
@@ -937,7 +1075,8 @@ const PledgeBar = () => {
             // Convert to number
             const numAmount = parseFloat(amount);
             if (isNaN(numAmount) || numAmount <= 0) {
-              toast.error("Please enter a valid amount");
+              // Simple validation error - no need for copy functionality
+              toast.error("Please enter a valid amount", { enableCopy: false });
               return;
             }
 

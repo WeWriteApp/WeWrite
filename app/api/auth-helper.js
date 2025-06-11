@@ -48,33 +48,25 @@ export async function getUserIdFromRequest(request) {
 
   if (sessionCookie) {
     try {
-      // Verify the session cookie
+      // Try to verify as session cookie first
       const decodedClaims = await auth.verifySessionCookie(sessionCookie);
       userId = decodedClaims.uid;
       console.log('Using userId from session cookie:', userId);
       return userId;
-    } catch (error) {
-      console.error('Error verifying session cookie:', error);
+    } catch (sessionError) {
+      console.log('Session cookie verification failed, trying as ID token:', sessionError.message);
 
-      // SECURITY FIX: Remove unverified session cookie acceptance in development
-      // This was a security vulnerability that could allow session forgery
-      // if (isDevelopment && sessionCookie) {
-      //   try {
-      //     // Try to extract a user ID from the token without verification
-      //     const parts = sessionCookie.split('.');
-      //     if (parts.length === 3) {
-      //       const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-      //       if (payload && payload.uid) {
-      //         console.log('Development mode: Using unverified session cookie:', payload.uid);
-      //         return payload.uid;
-      //       }
-      //     }
-      //   } catch (e) {
-      //     console.error('Error parsing session cookie in development mode:', e);
-      //   }
-      // }
+      try {
+        // If session cookie fails, try as ID token
+        const decodedToken = await auth.verifyIdToken(sessionCookie);
+        userId = decodedToken.uid;
+        console.log('Using userId from session cookie (as ID token):', userId);
+        return userId;
+      } catch (tokenError) {
+        console.error('Error verifying session cookie as ID token:', tokenError);
 
-      // Fall back to other methods
+        // Fall back to other methods
+      }
     }
   }
 

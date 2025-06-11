@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
   const currentDate = new Date().toISOString()
 
   const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>

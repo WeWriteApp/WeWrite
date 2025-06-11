@@ -30,7 +30,7 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
   const limit = 50;
 
   // Use the reactive feature flag hook instead of manual Firestore check
-  const subscriptionEnabled = useFeatureFlag('payments', user?.email);
+  const subscriptionEnabled = useFeatureFlag('payments', user?.email, user?.uid);
 
   useEffect(() => {
     if (!userId) return;

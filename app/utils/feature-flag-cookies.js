@@ -11,7 +11,6 @@ import { useFeatureFlag } from './feature-flags';
  */
 export const setFeatureFlagCookie = (flag, enabled) => {
   Cookies.set(`feature_${flag}`, enabled ? 'true' : 'false', { expires: 1 }); // 1 day expiry
-  console.log(`[DEBUG] Set feature flag cookie for ${flag}: ${enabled}`);
 };
 
 /**

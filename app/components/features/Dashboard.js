@@ -1,9 +1,8 @@
 "use client";
 import { useContext, useEffect } from "react";
-import DashboardLayout from "../DashboardLayout";
 import Link from "next/link";
 import AllPages from "../components/AllPages";
-import TopUsers from "../components/TopUsers";
+
 import HomeGroupsSection from "../components/HomeGroupsSection";
 import AddUsername from "../components/AddUsername";
 import SearchResults from "../search/SearchResults";
@@ -26,7 +25,7 @@ const Dashboard = () => {
   }
 
   return (
-    <DashboardLayout>
+    <>
       <Header />
       <div className="space-y-2">
         <AddUsername />
@@ -54,9 +53,9 @@ const Dashboard = () => {
         <HomeGroupsSection />
         */}
 
-        <TopUsers />
+
       </div>
-    </DashboardLayout>
+    </>
   );
 };
 

@@ -3,7 +3,6 @@
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPageVersions, getPageById } from '../../firebase/database';
-import DashboardLayout from '../../DashboardLayout';
 import { Button } from '../../components/ui/button';
 import { ChevronLeft, Clock } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -60,7 +59,7 @@ export default function PageHistoryPage({ params }) {
             },
             {
               id: 'fallback-2',
-              createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+              createdAt: new Date(Date.now() - (24 * 60 * 60 * 1000)), // 1 day ago
               action: 'Updated',
               username: 'System',
               content: ''
@@ -92,12 +91,12 @@ export default function PageHistoryPage({ params }) {
           // First try to use the stored previousContent from the version itself
           if (version.previousContent) {
             previousContent = version.previousContent;
-            console.log(`Using stored previousContent for version ${version.id}`);
+            console.log('Using stored previousContent for version ' + version.id);
           }
           // Then try to use the previous version's content
           else if (prevVersion && prevVersion.content) {
             previousContent = prevVersion.content;
-            console.log(`Using previous version content for version ${version.id}`);
+            console.log('Using previous version content for version ' + version.id);
           }
 
           return {
@@ -109,8 +108,10 @@ export default function PageHistoryPage({ params }) {
             timestamp: version.timestamp,
             currentContent: version.content || '',
             previousContent: previousContent,
-            isNewPage: index === sortedVersions.length - 1, // Last item is the oldest/first version
-            versionId: version.id // Include the version ID for linking to version view
+            isNewPage: index === sortedVersions.length - 1, // Last item is the oldest or first version
+            versionId: version.id, // Include the version ID for linking to version view
+            isHistoryContext: true, // Flag to indicate this is from history page
+            hasPreviousVersion: !!prevVersion // Flag to indicate if there's a previous version for diff
           };
         });
 
@@ -128,7 +129,7 @@ export default function PageHistoryPage({ params }) {
   }, [id]);
 
   const handleBackToPage = () => {
-    router.push(`/${id}`);
+    router.push('/' + id);
   };
 
   // Helper function to validate timestamp
@@ -140,43 +141,38 @@ export default function PageHistoryPage({ params }) {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="p-4 max-w-4xl mx-auto">
-          <PageHeader
-            title="Page History"
-            username="Loading..."
-            isLoading={true}
-          />
-          <div className="flex justify-center items-center min-h-[50vh]">
-            <Loader />
-          </div>
+      <div className="p-4 max-w-4xl mx-auto">
+        <PageHeader
+          title="Page History"
+          username="Loading..."
+          isLoading={true}
+        />
+        <div className="flex justify-center items-center min-h-[50vh]">
+          <Loader />
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <DashboardLayout>
-        <div className="p-4 max-w-4xl mx-auto">
-          <PageHeader
-            title="Page History"
-            username="Error"
-            isLoading={false}
-          />
-          {/* Back button removed - using PageHeader back button instead */}
-          <div className="text-destructive text-center p-8 border border-destructive/20 rounded-lg bg-destructive/5">
-            <p className="font-medium">{error}</p>
-            <p className="text-sm mt-2 text-muted-foreground">Unable to load page history. Please try again later.</p>
-          </div>
+      <div className="p-4 max-w-4xl mx-auto">
+        <PageHeader
+          title="Page History"
+          username="Error"
+          isLoading={false}
+        />
+        {/* Back button removed - using PageHeader back button instead */}
+        <div className="text-destructive text-center p-8 border border-destructive/20 rounded-lg bg-destructive/5">
+          <p className="font-medium">{error}</p>
+          <p className="text-sm mt-2 text-muted-foreground">Unable to load page history. Please try again later.</p>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="p-4 max-w-4xl mx-auto">
+    <div className="p-4 max-w-4xl mx-auto">
         <PageHeader
           title="Page History"
           username={page?.username || "Anonymous"}
@@ -204,7 +200,6 @@ export default function PageHistoryPage({ params }) {
             </div>
           )}
         </div>
-      </div>
-    </DashboardLayout>
+    </div>
   );
 }

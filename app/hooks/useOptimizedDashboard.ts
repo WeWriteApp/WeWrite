@@ -6,7 +6,6 @@ import { getCacheItem, setCacheItem, generateCacheKey } from '../utils/cacheUtil
 
 interface DashboardData {
   recentPages: any[];
-  topUsers: any[];
   userGroups: any[];
   trendingPages: any[];
   userStats?: any;

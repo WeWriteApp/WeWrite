@@ -17,18 +17,15 @@ import { use } from "react";
 export default function GlobalIDPage({ params }) {
   // Extract the ID from params and handle potential slashes
   // Check if params is a Promise or already an object
+  // Note: use() hook cannot be called inside try/catch blocks
   let unwrappedParams;
-  try {
-    // If params is a Promise, use React.use() to unwrap it
-    if (params && typeof params.then === 'function') {
-      unwrappedParams = use(params);
-    } else {
-      // If params is already an object, use it directly
-      unwrappedParams = params || {};
-    }
-  } catch (error) {
-    console.error("Error unwrapping params:", error);
-    unwrappedParams = {};
+
+  // If params is a Promise, use React.use() to unwrap it
+  if (params && typeof params.then === 'function') {
+    unwrappedParams = use(params);
+  } else {
+    // If params is already an object, use it directly
+    unwrappedParams = params || {};
   }
 
   let { id } = unwrappedParams;

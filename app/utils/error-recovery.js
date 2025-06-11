@@ -241,21 +241,56 @@ ${errorDetails.stack}
 };
 
 /**
- * Copies error details to clipboard
+ * Copies text to clipboard with comprehensive fallback support
+ *
+ * @param {string} text Text to copy
+ * @returns {Promise<boolean>} Whether the copy was successful
+ */
+export const copyToClipboard = async (text) => {
+  if (typeof navigator === 'undefined') {
+    return false;
+  }
+
+  try {
+    // Try modern Clipboard API first
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+
+    // Fallback to document.execCommand for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+
+    // Make the textarea invisible and out of viewport
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    textArea.style.opacity = '0';
+    textArea.style.pointerEvents = 'none';
+
+    document.body.appendChild(textArea);
+
+    // Select and copy
+    textArea.focus();
+    textArea.select();
+
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textArea);
+
+    return successful;
+  } catch (err) {
+    console.error("Failed to copy to clipboard:", err);
+    return false;
+  }
+};
+
+/**
+ * Copies error details to clipboard (legacy function for backward compatibility)
  *
  * @param {string} text Text to copy
  * @returns {Promise<boolean>} Whether the copy was successful
  */
 export const copyErrorToClipboard = async (text) => {
-  if (typeof navigator === 'undefined' || !navigator.clipboard) {
-    return false;
-  }
-
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch (err) {
-    console.error("Failed to copy error details:", err);
-    return false;
-  }
+  return copyToClipboard(text);
 };

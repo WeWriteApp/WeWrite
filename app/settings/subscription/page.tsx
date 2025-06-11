@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from "../../providers/AuthProvider";
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
-import { getUserSubscription } from "../../firebase/subscription";
+import { getOptimizedUserSubscription } from "../../firebase/optimizedSubscription";
 import { Button } from '../../components/ui/button';
 import { PaymentFeatureGuard } from '../../components/PaymentFeatureGuard';
 
@@ -47,7 +47,11 @@ export default function SubscriptionPage() {
 
     async function fetchSubscription() {
       try {
-        const subscriptionData = await getUserSubscription(user?.uid || '');
+        const subscriptionData = await getOptimizedUserSubscription(user?.uid || '', {
+          useCache: true,
+          cacheTTL: 5 * 60 * 1000, // 5 minutes cache
+          verbose: false
+        });
 
         if (subscriptionData) {
           const subscription = subscriptionData as Subscription;
@@ -101,7 +105,7 @@ export default function SubscriptionPage() {
       return;
     }
 
-    router.push(`/account/subscription/payment?amount=${amount}`);
+    router.push(`/settings/subscription/payment?amount=${amount}`);
   };
 
   return (

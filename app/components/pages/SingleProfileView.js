@@ -20,7 +20,7 @@ import { db } from "../../firebase/database";
 
 import UserProfileTabs from '../utils/UserProfileTabs';
 import { getUserFollowerCount, getUserPageCount, getUserTotalViewCount } from "../../firebase/counters";
-import { getUserSubscription } from "../../firebase/subscription";
+// getUserSubscription removed - using optimized listener instead
 import SimpleSparkline from "../utils/SimpleSparkline";
 import { getUserActivityLast24Hours } from "../../firebase/userActivity";
 
@@ -194,7 +194,8 @@ const SingleProfileView = ({ profile }) => {
 
   return (
     <ProfilePagesProvider userId={profile.uid}>
-      <div>
+      {/* Apply WeWrite standardized padding for consistent layout */}
+      <div className="p-5 md:p-4">
         {/* Navigation bar */}
         <div className="flex items-center mb-6">
           <div className="flex-1">
@@ -252,18 +253,8 @@ const SingleProfileView = ({ profile }) => {
               <span>Share</span>
             </Button>
 
-            {/* Settings button - only visible for current user */}
-            {isCurrentUser && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1"
-                onClick={() => router.push('/settings')}
-              >
-                <Settings className="h-4 w-4" />
-                <span>Settings</span>
-              </Button>
-            )}
+            {/* Settings button removed for current user - now accessible via navigation menu */}
+            {/* This eliminates UI redundancy as settings are available in the main navigation */}
           </div>
         </div>
 

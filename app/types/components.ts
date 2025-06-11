@@ -89,12 +89,7 @@ export interface GroupAboutTabProps extends BaseProps {
   canEdit: boolean;
 }
 
-// TopUsers component props
-export interface TopUsersProps extends BaseProps {
-  limit?: number;
-  showViewAll?: boolean;
-  timeframe?: 'all' | '24h' | '7d' | '30d';
-}
+
 
 // Activity component props
 export interface ActivityProps extends BaseProps {

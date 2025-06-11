@@ -305,9 +305,9 @@ export default function AdminToolsPage() {
             </CardHeader>
             <CardContent>
               {activityBackfillResult && (
-                <Alert className={`mb-4 ${activityBackfillResult.success ? 'bg-green-500/10' : 'bg-destructive/10'}`}>
+                <Alert className={`mb-4 ${activityBackfillResult.success ? 'bg-success/10' : 'bg-destructive/10'}`}>
                   {activityBackfillResult.success ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-success" />
                   ) : (
                     <AlertCircle className="h-4 w-4 text-destructive" />
                   )}

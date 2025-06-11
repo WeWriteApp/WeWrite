@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from "../providers/AuthProvider";
-import { getUserSubscription } from "../firebase/subscription";
 import { doc, getDoc } from "firebase/firestore";
 import { addUsername, updateEmail as updateFirebaseEmail, checkUsernameAvailability } from "../firebase/auth";
 import { db } from "../firebase/database";
@@ -14,13 +13,11 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { PayoutsManager } from '../components/payments/PayoutsManager';
-import { PaymentMethodsOverview } from '../components/payments/PaymentMethodsOverview';
-import { PledgesOverview } from '../components/payments/PledgesOverview';
-import { SubscriptionOverview } from '../components/payments/SubscriptionOverview';
+import { CombinedSubscriptionSection } from '../components/payments/CombinedSubscriptionSection';
 import PWAInstallationCard from '../components/utils/PWAInstallationCard';
 import { SyncQueueSettings } from '../components/utils/SyncQueueSettings';
 import { EmailVerificationStatus } from '../components/utils/EmailVerificationStatus';
-import { useFeatureFlag } from "../utils/feature-flags";
+
 import { ChevronLeft, Edit3, Save, X, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 
 // Define admin check locally to avoid import issues
@@ -46,8 +43,10 @@ export default function AccountPage() {
   const [tempUsername, setTempUsername] = useState('');
   const [tempEmail, setTempEmail] = useState('');
 
-  // Check payments feature flag
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  // Feature flag state
+  const [isPaymentsEnabled, setIsPaymentsEnabled] = useState(false);
+
+
 
   useEffect(() => {
     if (!user) {
@@ -56,6 +55,20 @@ export default function AccountPage() {
     }
 
     loadUserData();
+
+    // Check payments feature flag when user is available
+    const checkFeatureFlag = async () => {
+      try {
+        const { isFeatureEnabledForUser } = await import('../utils/feature-flags');
+        const enabled = await isFeatureEnabledForUser('payments', user.uid);
+        setIsPaymentsEnabled(enabled);
+      } catch (error) {
+        console.error('Error checking payments feature flag:', error);
+        setIsPaymentsEnabled(false);
+      }
+    };
+
+    checkFeatureFlag();
   }, [user, router]);
 
   const handleEditUsername = () => {
@@ -127,10 +140,17 @@ export default function AccountPage() {
         setTempEmail(currentEmail);
       }
 
-      // Load subscription data
-      const userSubscription = await getUserSubscription(user.uid);
-      if (userSubscription && typeof userSubscription === 'object' && 'status' in userSubscription && userSubscription.status === 'active') {
-        fetchPaymentHistory(user.uid);
+      // Load subscription data via API
+      try {
+        const response = await fetch('/api/account-subscription');
+        if (response.ok) {
+          const userSubscription = await response.json();
+          if (userSubscription && typeof userSubscription === 'object' && 'status' in userSubscription && userSubscription.status === 'active') {
+            fetchPaymentHistory(user.uid);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching subscription data:', error);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -252,7 +272,7 @@ export default function AccountPage() {
           <div className="space-y-8">
           {/* Profile Section */}
           <section>
-            <Card className="shadow-sm border-border/50">
+            <Card className="wewrite-card">
               <CardHeader className="pb-6">
                 <CardTitle className="text-xl font-semibold">Profile</CardTitle>
                 <CardDescription className="text-muted-foreground">
@@ -436,52 +456,28 @@ export default function AccountPage() {
             </Card>
           </section>
 
+
+
           {/* Payment-related sections - Only visible when payments feature flag is enabled */}
           {user && user.email && isPaymentsEnabled && (
             <div className="space-y-8">
-              {/* Payment Sections Header */}
-              <div className="border-b border-border/50 pb-4">
-                <h2 className="text-xl font-semibold text-foreground">Payment & Billing</h2>
-                <p className="text-muted-foreground mt-1">Manage your subscription, payment methods, and earnings</p>
-              </div>
+              {/* Combined Subscription Section (includes Payment Methods, Subscription, and Pledges) */}
+              <CombinedSubscriptionSection />
 
-              {/* Subscription Section */}
-              <section className="space-y-1">
-                <SubscriptionOverview />
-              </section>
-
-              {/* Payment Methods Section */}
-              <section className="space-y-1">
-                <PaymentMethodsOverview />
-              </section>
-
-              {/* Pledges Section */}
-              <section className="space-y-1">
-                <PledgesOverview />
-              </section>
-
-              {/* Payouts Section */}
-              <section className="space-y-1">
-                <PayoutsManager />
-              </section>
+              {/* Standalone Payouts Section */}
+              <PayoutsManager />
             </div>
           )}
 
+
+
           {/* Account Settings - Always visible */}
           <div className="space-y-8">
-            {/* Account Settings Header */}
-            <div className="border-b border-border/50 pb-4">
-              <h2 className="text-xl font-semibold text-foreground">Account Settings</h2>
-              <p className="text-muted-foreground mt-1">Configure your app preferences and installation options</p>
-            </div>
+            {/* Sync Queue Settings */}
+            <SyncQueueSettings />
 
-            <section className="space-y-6">
-              {/* Sync Queue Settings */}
-              <SyncQueueSettings />
-
-              {/* PWA Installation */}
-              <PWAInstallationCard />
-            </section>
+            {/* PWA Installation */}
+            <PWAInstallationCard />
           </div>
           </div>
         )}

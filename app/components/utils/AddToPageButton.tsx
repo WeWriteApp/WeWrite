@@ -2,7 +2,7 @@
 
 import React, { useState, useContext } from 'react';
 import { Button } from '../ui/button';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Quote } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '../ui/dialog';
 import SearchResults from '../search/SearchResults';
 import { AuthContext } from '../../providers/AuthProvider';
@@ -84,6 +84,34 @@ const logAppendOperation = (
   // In a production environment, you would send this to your logging service:
   // await fetch('/api/audit-log', { method: 'POST', body: JSON.stringify(logEntry) });
 };
+
+/**
+ * WeWrite Page Button Consistency Fix - Enhanced AddToPageButton Component
+ *
+ * Enhanced AddToPageButton component that supports external state management
+ * to enable consistent functionality between top navigation and bottom page buttons.
+ *
+ * Key Enhancements:
+ * - External State Management: Supports isOpen and setIsOpen props for external control
+ * - Conditional Rendering: hideButton prop allows modal-only usage
+ * - Consistent Behavior: Same modal functionality regardless of trigger location
+ * - Proper State Handling: Uses external state when provided, internal state otherwise
+ *
+ * Usage Patterns:
+ * 1. Standalone Button (original behavior):
+ *    <AddToPageButton page={page} />
+ *
+ * 2. External State Management (for top navigation):
+ *    <AddToPageButton
+ *      page={page}
+ *      isOpen={isAddToPageOpen}
+ *      setIsOpen={setIsAddToPageOpen}
+ *      hideButton={true}
+ *    />
+ *
+ * This enhancement enables the PageHeader component to use the same modal
+ * functionality as the bottom page buttons, ensuring consistent user experience.
+ */
 
 // TypeScript interfaces
 interface AddToPageButtonProps {
@@ -253,7 +281,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
             </>
           ) : (
             <>
-              <Plus className="h-5 w-5" />
+              <Quote className="h-5 w-5" />
               <span>Add this page to another page</span>
             </>
           )}
@@ -264,6 +292,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
         <DialogContent
           className="sm:max-w-md max-h-[80vh] w-[95vw] sm:w-full overflow-hidden flex flex-col rounded-lg border border-border dark:border-neutral-700 bg-white dark:bg-neutral-900 animate-in fade-in-0 zoom-in-95 duration-300 px-4 sm:px-6 py-4 sm:py-6"
           onKeyDown={handleKeyDown}
+          aria-describedby="add-to-page-description"
         >
           <DialogClose asChild>
             <Button variant="outline" size="icon" className="absolute right-4 top-4">

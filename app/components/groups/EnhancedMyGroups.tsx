@@ -44,91 +44,126 @@ export default function EnhancedMyGroups({ profileUserId, hideHeader = false }: 
     if (!user?.uid) return;
 
     // Function to fetch groups where user is a member or owner
-    const fetchGroups = () => {
-      const groupsRef = ref(rtdb, 'groups');
+    const fetchGroups = async () => {
+      try {
+        console.log('[DEBUG] EnhancedMyGroups - Starting to fetch groups for user:', user.uid);
+        setLoading(true);
 
-      return onValue(groupsRef, async (snapshot) => {
-        if (!snapshot.exists()) {
+        // First, get the user's group memberships
+        const userGroupsRef = ref(rtdb, `users/${user.uid}/groups`);
+        const userGroupsSnapshot = await get(userGroupsRef);
+
+        if (!userGroupsSnapshot.exists()) {
+          console.log('[DEBUG] EnhancedMyGroups - No groups found for user');
           setGroups([]);
           setLoading(false);
           return;
         }
 
-        const allGroups = snapshot.val();
-        const userGroups: Group[] = [];
+        const userGroupMemberships = userGroupsSnapshot.val();
+        const groupIds = Object.keys(userGroupMemberships);
+
+        if (groupIds.length === 0) {
+          console.log('[DEBUG] EnhancedMyGroups - User has no group memberships');
+          setGroups([]);
+          setLoading(false);
+          return;
+        }
+
+        console.log('[DEBUG] EnhancedMyGroups - User is member of groups:', groupIds);
 
         // Get all users to find owner usernames
         const usersRef = ref(rtdb, 'users');
         const usersSnapshot = await get(usersRef);
         const usersData = usersSnapshot.exists() ? usersSnapshot.val() : {};
 
-        Object.keys(allGroups).forEach(groupId => {
-          const group = allGroups[groupId];
+        const userGroups: Group[] = [];
 
-          // Check if user is a member or owner
-          const isMember = group.members && Object.keys(group.members).some(
-            memberId => memberId === user.uid && group.members[memberId].role === 'member'
-          );
-          const isOwner = group.owner === user.uid;
+        // Fetch each group individually
+        for (const groupId of groupIds) {
+          try {
+            console.log('[DEBUG] EnhancedMyGroups - Fetching group:', groupId);
+            const groupRef = ref(rtdb, `groups/${groupId}`);
+            const groupSnapshot = await get(groupRef);
 
-          // Determine user's role in this group
-          let userRole = null;
-          if (isOwner) {
-            userRole = "owner";
-          } else if (isMember) {
-            userRole = "member";
-          }
+            if (groupSnapshot.exists()) {
+              const group = groupSnapshot.val();
+              console.log('[DEBUG] EnhancedMyGroups - Group data for', groupId, ':', group);
 
-          if (profileUserId) {
-            if (group.isPublic) {
-              // Create activity data for the group
-              let activity = generateActivityData(group);
+              // Check if user is a member or owner
+              const isMember = group.members && Object.keys(group.members).some(
+                memberId => memberId === user.uid && group.members[memberId].role === 'member'
+              );
+              const isOwner = group.owner === user.uid;
 
-              userGroups.push({
-                id: groupId,
-                name: group.name,
-                description: group.description,
-                members: group.members,
-                pages: group.pages,
-                owner: group.owner,
-                ownerUsername: group.owner && usersData[group.owner]
-                  ? usersData[group.owner].username
-                  : 'Unknown',
-                isPublic: group.isPublic || false,
-                activity: activity,
-                userRole: userRole
-              });
+              // Determine user's role in this group
+              let userRole = null;
+              if (isOwner) {
+                userRole = "owner";
+              } else if (isMember) {
+                userRole = "member";
+              }
+
+              if (profileUserId) {
+                if (group.isPublic) {
+                  // Create activity data for the group
+                  let activity = generateActivityData(group);
+
+                  userGroups.push({
+                    id: groupId,
+                    name: group.name,
+                    description: group.description,
+                    members: group.members,
+                    pages: group.pages,
+                    owner: group.owner,
+                    ownerUsername: group.owner && usersData[group.owner]
+                      ? usersData[group.owner].username
+                      : 'Unknown',
+                    isPublic: group.isPublic || false,
+                    activity: activity,
+                    userRole: userRole
+                  });
+                }
+              } else {
+                if (isMember || isOwner) {
+                  // Create activity data for the group
+                  let activity = generateActivityData(group);
+
+                  userGroups.push({
+                    id: groupId,
+                    name: group.name,
+                    description: group.description,
+                    members: group.members,
+                    pages: group.pages,
+                    owner: group.owner,
+                    ownerUsername: group.owner && usersData[group.owner]
+                      ? usersData[group.owner].username
+                      : 'Unknown',
+                    isPublic: group.isPublic || false,
+                    activity: activity,
+                    userRole: userRole
+                  });
+                }
+              }
+            } else {
+              console.log('[DEBUG] EnhancedMyGroups - Group', groupId, 'does not exist or no permission');
             }
-          } else {
-            if (isMember || isOwner) {
-              // Create activity data for the group
-              let activity = generateActivityData(group);
-
-              userGroups.push({
-                id: groupId,
-                name: group.name,
-                description: group.description,
-                members: group.members,
-                pages: group.pages,
-                owner: group.owner,
-                ownerUsername: group.owner && usersData[group.owner]
-                  ? usersData[group.owner].username
-                  : 'Unknown',
-                isPublic: group.isPublic || false,
-                activity: activity,
-                userRole: userRole
-              });
-            }
+          } catch (groupErr: any) {
+            console.error('[DEBUG] EnhancedMyGroups - Error fetching group', groupId, ':', groupErr);
           }
-        });
+        }
 
+        console.log('[DEBUG] EnhancedMyGroups - Final groups data:', userGroups);
         setGroups(userGroups);
         setLoading(false);
-      });
+      } catch (err: any) {
+        console.error('[DEBUG] EnhancedMyGroups - Error fetching groups:', err);
+        setGroups([]);
+        setLoading(false);
+      }
     };
 
-    const unsubscribe = fetchGroups();
-    return () => unsubscribe();
+    fetchGroups();
   }, [user?.uid, profileUserId]);
 
   // Function to generate edit activity data for a group

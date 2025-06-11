@@ -267,6 +267,17 @@ class AnalyticsService {
       ...params
     });
   }
+
+  /**
+   * Helper method to track navigation events
+   */
+  public trackNavigationEvent(action: string, params: Partial<AnalyticsEventParams> = {}): void {
+    this.trackEvent({
+      category: EVENT_CATEGORIES.NAVIGATION,
+      action,
+      ...params
+    });
+  }
 }
 
 /**

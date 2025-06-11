@@ -442,7 +442,7 @@ const LandingPage = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'done':
-        return <Badge variant="default" className="bg-green-500">Available Now</Badge>;
+        return <Badge variant="default" className="bg-success text-success-foreground">Available Now</Badge>;
       case 'in-progress':
         return <Badge variant="secondary" className="bg-amber-500 text-white">In Progress</Badge>;
       case 'coming-soon':

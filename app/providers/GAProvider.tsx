@@ -84,6 +84,14 @@ export default function GAProvider({ children }: GAProviderProps) {
     // Get a standardized page title for analytics
     const pageTitle = getAnalyticsPageTitle(pathname, searchParams, document.title);
 
+    // Skip tracking if we have a loading placeholder
+    if (pageTitle === '__LOADING_PLACEHOLDER__') {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Skipping analytics tracking for loading placeholder');
+      }
+      return;
+    }
+
     // Track with ReactGA (legacy approach)
     ReactGA.send({
       hitType: "pageview",

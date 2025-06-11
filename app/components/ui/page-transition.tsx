@@ -14,12 +14,36 @@ interface PageTransitionProps {
 }
 
 /**
- * PageTransition component
+ * WeWrite Search Performance Optimization - PageTransition Component
  *
- * Provides smooth transitions between pages by:
+ * Provides smooth transitions between pages with critical optimizations to prevent
+ * visual flashing issues on the search page. This component was the primary cause
+ * of search page performance problems and has been optimized accordingly.
+ *
+ * Critical Fix Implemented:
+ * The PageTransition component was causing visual flashing/blank screen during
+ * search input typing because it was monitoring searchParams changes and triggering
+ * loading overlays for search parameter updates.
+ *
+ * Search Page Optimization:
+ * - Detects search page parameter changes vs actual navigation
+ * - Skips loading overlay for search parameter updates (?q=searchterm)
+ * - Prevents visual flashing during typing in search input
+ * - Maintains smooth transitions for actual page navigation
+ * - Modified motion.div key to prevent re-animation on search page
+ *
+ * Performance Benefits:
  * 1. Maintaining a consistent loading state during navigation
- * 2. Animating content in and out
- * 3. Preventing content flickering
+ * 2. Animating content in and out smoothly
+ * 3. Preventing content flickering and visual interruptions
+ * 4. Eliminating search page visual flashing (CRITICAL FIX)
+ * 5. Immediate content updates for search parameter changes
+ *
+ * Implementation Details:
+ * - isSearchPageParamChange detection prevents unnecessary transitions
+ * - Search page gets special handling to maintain input stability
+ * - Scroll restoration for actual page navigation
+ * - Optimized animation keys for different page types
  *
  * @param children The page content to render
  * @param className Optional additional classes
@@ -91,11 +115,14 @@ export function PageTransition({
     // Skip transitions for search parameter changes on the search page to prevent flashing
     const isSearchPageParamChange = pathname === '/search' && !isPathChange && isSearchParamsChange;
 
-    // SCROLL RESTORATION FIX: Reset scroll position to top when navigating to a new page
+    // SCROLL RESTORATION: Use a small delay to ensure the new page has loaded
+    // This prevents scrolling the current page before navigation
     if (isPathChange && enableTransitions && typeof window !== 'undefined') {
-      // Scroll to top immediately when path changes
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-      console.log('Page transition: Scrolled to top for new page:', pathname);
+      // Small delay to ensure we're scrolling the destination page, not the current one
+      setTimeout(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        console.log('Page transition: Scrolled to top for new page:', pathname);
+      }, 50);
     }
 
     if ((isPathChange || isSearchParamsChange) && !isSearchPageParamChange) {

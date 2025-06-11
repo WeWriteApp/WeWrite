@@ -214,17 +214,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       recoveryAttempted
     };
 
-    console.log("DataProvider state:", debugInfo);
 
-    // Enhanced logging for user "surya" to help debug the infinite refresh issue
-    if (user?.username === 'surya' || user?.email?.includes('surya')) {
-      console.log("SURYA DEBUG: DataProvider state", {
-        ...debugInfo,
-        timestamp: new Date().toISOString(),
-        loadingStartTime,
-        pagesError: error
-      });
-    }
 
     // REMOVED: Automatic refresh logic that was causing infinite reload loops
     // Having zero pages is a valid state for users and should not trigger automatic refreshes

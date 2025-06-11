@@ -45,7 +45,7 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
         activeElement.contentEditable === 'true' ||
         activeElement.getAttribute('role') === 'textbox'
       )) {
-        console.log('[FeatureFlagListener] User is actively editing, not safe to refresh');
+
         return false;
       }
 
@@ -55,7 +55,7 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
                                document.querySelector('[aria-label*="unsaved"]');
 
       if (hasUnsavedChanges) {
-        console.log('[FeatureFlagListener] Detected unsaved changes, not safe to refresh');
+
         return false;
       }
 
@@ -65,7 +65,7 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
                           document.querySelector('button[disabled][type="submit"]');
 
       if (isSubmitting) {
-        console.log('[FeatureFlagListener] Form submission in progress, not safe to refresh');
+
         return false;
       }
 
@@ -75,7 +75,7 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
                           document.querySelector('[data-modal-open="true"]');
 
       if (hasOpenModal) {
-        console.log('[FeatureFlagListener] Modal dialog open, not safe to refresh');
+
         return false;
       }
 
@@ -93,17 +93,16 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
     const MIN_REFRESH_INTERVAL = 10000; // 10 seconds minimum between refreshes
 
     if (isRefreshingRef.current) {
-      console.log('[FeatureFlagListener] Refresh already in progress, ignoring duplicate request');
+
       return;
     }
 
     if (now - lastRefreshTimeRef.current < MIN_REFRESH_INTERVAL) {
-      console.log('[FeatureFlagListener] Too soon since last refresh, ignoring request');
+
       return;
     }
 
     if (!isUserInSafeState()) {
-      console.log('[FeatureFlagListener] User not in safe state, scheduling retry');
 
       // Show notification about pending refresh
       toast({
@@ -144,7 +143,6 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
 
     // Refresh after a short delay to show the notification
     setTimeout(() => {
-      console.log('[FeatureFlagListener] Executing page reload for flags:', changedFlags);
       window.location.reload();
     }, 2000);
   };
@@ -152,33 +150,27 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
   // Listen for feature flag changes with robust infinite reload prevention
   useEffect(() => {
     if (!user) {
-      console.log('[FeatureFlagListener] No user, skipping listener setup');
       return;
     }
 
     // CRITICAL FIX: Prevent multiple listener setups
     if (listenerSetupRef.current) {
-      console.log('[FeatureFlagListener] Listener already set up, skipping');
       return;
     }
 
     listenerSetupRef.current = true;
-    console.log('[FeatureFlagListener] Setting up feature flag listener for user:', user.email);
 
     const featureFlagsRef = doc(db, 'config', 'featureFlags');
 
     const unsubscribe = onSnapshot(featureFlagsRef, (doc) => {
-      console.log('[FeatureFlagListener] Snapshot received, doc exists:', doc.exists());
 
       if (doc.exists()) {
         const newFlags = doc.data() as Record<string, boolean>;
-        console.log('[FeatureFlagListener] Feature flags from database:', newFlags);
-        console.log('[FeatureFlagListener] Current lastFeatureFlagsRef:', lastFeatureFlagsRef.current);
-        console.log('[FeatureFlagListener] hasInitializedRef:', hasInitializedRef.current);
+
 
         // CRITICAL FIX: Use a separate initialization flag instead of checking empty object
         if (!hasInitializedRef.current) {
-          console.log('[FeatureFlagListener] First time initialization, setting flags without reload');
+
           lastFeatureFlagsRef.current = { ...newFlags };
           hasInitializedRef.current = true;
           return;
@@ -192,7 +184,7 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
           if (lastFeatureFlagsRef.current[flagId] !== newFlags[flagId]) {
             changedFlags.push(flagId);
             hasActualChanges = true;
-            console.log(`[FeatureFlagListener] Flag ${flagId} changed: ${lastFeatureFlagsRef.current[flagId]} -> ${newFlags[flagId]}`);
+
           }
         });
 
@@ -201,45 +193,44 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
           if (!(flagId in newFlags)) {
             changedFlags.push(flagId);
             hasActualChanges = true;
-            console.log(`[FeatureFlagListener] Flag ${flagId} was removed`);
+
           }
         });
 
-        console.log('[FeatureFlagListener] Changed flags:', changedFlags);
-        console.log('[FeatureFlagListener] Has actual changes:', hasActualChanges);
+
 
         // Update the reference
         lastFeatureFlagsRef.current = { ...newFlags };
 
         // Only trigger refresh if there are actual changes
         if (hasActualChanges && changedFlags.length > 0) {
-          console.log(`[FeatureFlagListener] ${changedFlags.length} flag(s) actually changed, scheduling debounced refresh`);
+
 
           // CRITICAL FIX: Debounce multiple rapid changes to prevent reload loops
           if (debounceTimeoutRef.current) {
-            console.log('[FeatureFlagListener] Clearing existing debounce timeout');
+
             clearTimeout(debounceTimeoutRef.current);
           }
 
           debounceTimeoutRef.current = setTimeout(() => {
-            console.log(`[FeatureFlagListener] Debounce timeout completed, triggering safe refresh for flags:`, changedFlags);
+
             safeRefresh(changedFlags);
           }, 3000); // 3 second debounce for extra safety
         } else {
-          console.log('[FeatureFlagListener] No actual changes detected, not triggering refresh');
+
         }
       } else {
-        console.log('[FeatureFlagListener] Feature flags document does not exist');
+
         if (!hasInitializedRef.current) {
           hasInitializedRef.current = true;
         }
       }
     }, (error) => {
-      console.error('[FeatureFlagListener] Error listening to feature flags:', error);
+      console.error('Error listening to feature flags:', error);
     });
 
     return () => {
-      console.log('[FeatureFlagListener] Cleaning up feature flag listener');
+
       unsubscribe();
 
       // Reset setup flag to allow re-initialization
@@ -259,7 +250,7 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
   useEffect(() => {
     const handleFeatureFlagChange = (event: CustomEvent) => {
       const { flagId, newValue } = event.detail;
-      console.log(`[FeatureFlagListener] Manual feature flag change detected: ${flagId} = ${newValue}`);
+
 
       // Update our local reference to prevent double-refresh
       lastFeatureFlagsRef.current = {

@@ -31,7 +31,7 @@ const SubscriptionStatusCard: React.FC<SubscriptionStatusCardProps> = ({
       {isActive ? (
         <>
           <div className="flex items-center mb-3">
-            <CheckCircle className="text-green-500 mr-2 h-5 w-5" />
+            <CheckCircle className="text-success mr-2 h-5 w-5" />
             <h3 className="text-base font-medium">Your subscription is active</h3>
           </div>
           <div className="border-t-only border-b-only py-3 mb-3">

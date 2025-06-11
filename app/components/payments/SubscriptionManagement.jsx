@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 import { useAuth } from '../../providers/AuthProvider';
-import { getUserSubscription, cancelSubscription, listenToUserSubscription, updateSubscription } from '../../firebase/subscription';
+import { cancelSubscription, listenToUserSubscription, updateSubscription } from '../../firebase/subscription';
 import { getOptimizedUserSubscription, createOptimizedSubscriptionListener } from '../../firebase/optimizedSubscription';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
@@ -25,7 +25,7 @@ export default function SubscriptionManagement() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const { isEnabled: isSubscriptionEnabled, showComingSoonModal, setShowComingSoonModal } =
-    useSubscriptionFeature(user?.email);
+    useSubscriptionFeature(user?.email, user?.uid);
 
   // Use confirmation modal hook
   const { confirmationState, confirmCancelSubscription, closeConfirmation } = useConfirmation();
@@ -430,7 +430,7 @@ export default function SubscriptionManagement() {
 
         {isCanceled && (
           <div className="space-y-4">
-            <Link href="/account/subscription/manage" className="block w-full">
+            <Link href="/settings/subscription/manage" className="block w-full">
               <div className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg hover:border-primary hover:shadow-sm transition-all cursor-pointer group">
                 <div className="flex-shrink-0">
                   <SupporterIcon tier={null} status="canceled" size="lg" />
@@ -499,7 +499,7 @@ export default function SubscriptionManagement() {
 
         {isPending && (
           <div className="space-y-4">
-            <Link href="/account/subscription/manage" className="block w-full">
+            <Link href="/settings/subscription/manage" className="block w-full">
               <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:shadow-sm transition-all cursor-pointer group">
                 <div className="flex-shrink-0">
                   <Clock className="h-6 w-6 text-blue-500" />

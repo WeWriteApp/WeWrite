@@ -40,30 +40,7 @@ export function TrendingPagesSkeleton({ limit = 5 }: { limit?: number }) {
   );
 }
 
-/**
- * Skeleton loader for top users section
- */
-export function TopUsersSkeleton({ limit = 10 }: { limit?: number }) {
-  return (
-    <div className="space-y-3">
-      {Array.from({ length: limit }).map((_, index) => (
-        <div key={index} className="flex items-center justify-between p-3 border border-theme-medium rounded-lg">
-          <div className="flex items-center space-x-3">
-            <Skeleton className="h-8 w-8 rounded-full" />
-            <div className="space-y-1">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-3 w-16" />
-            </div>
-          </div>
-          <div className="text-right space-y-1">
-            <Skeleton className="h-4 w-12" />
-            <Skeleton className="h-3 w-8" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+
 
 /**
  * Skeleton loader for activity section
@@ -230,11 +207,7 @@ export function DashboardSkeleton() {
         <TrendingPagesSkeleton limit={3} />
       </div>
 
-      {/* Top users skeleton */}
-      <div style={{ minHeight: '300px' }}>
-        <SectionTitleSkeleton />
-        <TopUsersSkeleton limit={5} />
-      </div>
+
     </div>
   );
 }

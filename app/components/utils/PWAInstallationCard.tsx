@@ -17,7 +17,7 @@ export default function PWAInstallationCard() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <Card>
+    <Card className="wewrite-card">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">

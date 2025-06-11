@@ -1,7 +1,41 @@
+/**
+ * WeWrite SEO Implementation - Main Sitemap Generator
+ *
+ * This file generates the main XML sitemap for WeWrite's static pages and navigation.
+ * Part of the comprehensive SEO optimization system that includes:
+ *
+ * Sitemap Structure:
+ * - Main Sitemap (/sitemap.xml): Static pages and navigation (this file)
+ * - Pages Sitemap (/sitemap-pages.xml): All public user pages
+ * - Users Sitemap (/sitemap-users.xml): Active user profiles
+ * - Groups Sitemap (/sitemap-groups.xml): Public groups
+ *
+ * SEO Benefits:
+ * - Helps search engines discover and index content efficiently
+ * - Provides priority and update frequency hints
+ * - Supports large-scale content indexing
+ * - Improves crawl budget optimization
+ *
+ * Priority Guidelines:
+ * - Homepage: 1.0 (highest priority)
+ * - Main navigation: 0.8-0.9 (high priority)
+ * - Feature pages: 0.6-0.7 (medium-high priority)
+ * - Static pages: 0.3-0.5 (medium priority)
+ *
+ * Update Frequencies:
+ * - Homepage: daily (dynamic content)
+ * - Trending/Leaderboard: hourly/daily (frequently updated)
+ * - Static pages: monthly (rarely updated)
+ * - Legal pages: monthly (infrequent updates)
+ *
+ * The sitemap is automatically generated and submitted to search engines
+ * for optimal content discovery and indexing.
+ */
+
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
 
   return [
     // Homepage - highest priority

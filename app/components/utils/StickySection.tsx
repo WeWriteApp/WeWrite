@@ -273,7 +273,10 @@ function unregisterSectionFromObserver(element: HTMLElement): void {
 }
 
 /**
+ * WeWrite Section Header Padding Improvements - StickySection Component
+ *
  * StickySection component that makes section headers stick to the top when scrolling
+ * with optimized padding that coordinates with SectionTitle for improved visual hierarchy.
  *
  * Features:
  * - Only one section header is sticky at a time (replaces main header)
@@ -282,6 +285,25 @@ function unregisterSectionFromObserver(element: HTMLElement): void {
  * - Smart click behavior: scroll to section top or page top
  * - Smooth transitions between section headers
  * - Mobile responsive behavior
+ *
+ * Padding Improvements Implemented:
+ * - Adjusted wrapper padding to coordinate with SectionTitle's new padding
+ * - Normal state: pt-4 pb-1 (coordinated with SectionTitle's pt-2)
+ * - Sticky state: pt-2 pb-1 (maintains compact appearance when sticky)
+ * - Combined effect creates optimal visual spacing without layout conflicts
+ *
+ * Visual Hierarchy Benefits:
+ * - Better separation from content above section headers
+ * - Closer relationship between headers and their content below
+ * - Consistent spacing across all section headers
+ * - Maintained functionality in both normal and sticky states
+ * - Responsive behavior on all screen sizes
+ *
+ * Implementation Details:
+ * The padding improvements use a coordinated approach:
+ * - SectionTitle: Handles internal element spacing with pt-2 mb-2
+ * - StickySection: Provides wrapper padding that works harmoniously with SectionTitle
+ * - Combined Effect: Creates optimal visual spacing without layout conflicts
  */
 export default function StickySection({
   children,

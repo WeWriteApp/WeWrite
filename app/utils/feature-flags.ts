@@ -95,12 +95,10 @@ const initializeFeatureFlags = async (): Promise<void> => {
 export const isFeatureEnabled = (flag: FeatureFlag, userEmail?: string | null): boolean => {
   // If not initialized, return false (will be updated when initialization completes)
   if (!isInitialized) {
-    console.log(`[FeatureFlags] Flag ${flag} checked before initialization, returning false`);
     return false;
   }
 
   const isEnabled = globalFeatureFlags[flag] === true;
-  console.log(`[FeatureFlags] Global flag ${flag} for user ${userEmail || 'unknown'}: ${isEnabled}`);
   return isEnabled;
 };
 

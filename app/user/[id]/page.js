@@ -3,7 +3,6 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getDatabase, ref, get, query, orderByChild, equalTo } from 'firebase/database';
-import { getUserSubscription } from '../../firebase/subscription';
 import { app } from '../../firebase/config';
 import { Loader } from '../../components/utils/Loader';
 import SingleProfileView from '../../components/pages/SingleProfileView';
@@ -15,27 +14,38 @@ import { LineSettingsProvider } from '../../contexts/LineSettingsContext';
 
 export default function UserPage({ params }) {
   // Handle both Promise and object params
+  // Note: use() hook cannot be called inside try/catch blocks
   let unwrappedParams;
-  try {
-    // If params is a Promise, use React.use() to unwrap it
-    if (params && typeof params.then === 'function') {
-      unwrappedParams = use(params);
-    } else {
-      // If params is already an object, use it directly
-      unwrappedParams = params || {};
-    }
-  } catch (error) {
-    console.error("Error unwrapping params in UserPage:", error);
-    unwrappedParams = {};
+
+  // If params is a Promise, use React.use() to unwrap it
+  if (params && typeof params.then === 'function') {
+    unwrappedParams = use(params);
+  } else {
+    // If params is already an object, use it directly
+    unwrappedParams = params || {};
   }
 
   const { id } = unwrappedParams;
   const router = useRouter();
   const { user } = useAuth();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Helper function to fetch subscription data via API
+  const fetchUserSubscription = async (userId) => {
+    try {
+      const response = await fetch(`/api/user-subscription?userId=${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.status === null ? null : data;
+      }
+    } catch (error) {
+      console.error('Error fetching user subscription:', error);
+    }
+    return null;
+  };
 
   useEffect(() => {
     async function fetchUser() {
@@ -53,7 +63,7 @@ export default function UserPage({ params }) {
           // Get user's subscription to check for supporter tier (only if payments enabled)
           let subscription = null;
           if (isPaymentsEnabled) {
-            subscription = await getUserSubscription(id);
+            subscription = await fetchUserSubscription(id);
           }
 
           setProfile({
@@ -80,7 +90,7 @@ export default function UserPage({ params }) {
           // Get user's subscription to check for supporter tier (only if payments enabled)
           let subscription = null;
           if (isPaymentsEnabled) {
-            subscription = await getUserSubscription(userId);
+            subscription = await fetchUserSubscription(userId);
           }
 
           setProfile({

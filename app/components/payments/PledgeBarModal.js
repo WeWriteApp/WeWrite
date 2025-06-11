@@ -12,7 +12,7 @@ import { useAuth } from "../../providers/AuthProvider";
 
 const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customContent }) => {
   const { user } = useAuth();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
   // Use customContent if provided, otherwise use default content based on sign-in status and payments feature flag
   const content = customContent || (isPaymentsEnabled ? (isSignedIn ? {
     title: "This feature is coming soon!",

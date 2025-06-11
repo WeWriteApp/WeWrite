@@ -6,7 +6,38 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Standardized interactive card style for consistent card styling across the app
+ * WeWrite Border Styling System - Interactive Card Utility
+ *
+ * Standardized interactive card style for consistent card styling across the app.
+ * Part of the comprehensive border styling system that ensures consistent appearance.
+ *
+ * Features:
+ * - Uses theme-based border classes for consistent styling
+ * - Automatic light/dark mode adaptation
+ * - Hover effects with border transitions
+ * - Mobile-first responsive padding
+ * - Proper spacing for grid layouts
+ *
+ * Border System Integration:
+ * - Uses .border-theme-strong for consistent border appearance
+ * - Includes .hover-border-strong for interactive hover effects
+ * - Integrates with .wewrite-card standardized styling
+ *
+ * Usage Examples:
+ * ```jsx
+ * // Basic interactive card
+ * <div className={interactiveCard()}>Card content</div>
+ *
+ * // With additional classes
+ * <div className={interactiveCard("h-full", "custom-class")}>Card content</div>
+ *
+ * // In grid layouts (spacing handled automatically)
+ * <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+ *   <div className={interactiveCard()}>Card 1</div>
+ *   <div className={interactiveCard()}>Card 2</div>
+ * </div>
+ * ```
+ *
  * @param additionalClasses - Additional classes to merge with the standard card styles
  * @returns A string of CSS classes for an interactive card
  */

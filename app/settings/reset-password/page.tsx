@@ -116,7 +116,7 @@ export default function ResetPasswordPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push("/account")}
+                onClick={() => router.push("/settings")}
               >
                 Cancel
               </Button>

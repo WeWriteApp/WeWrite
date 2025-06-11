@@ -990,6 +990,17 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
       return false;
     }
 
+    // Track link editor opening
+    try {
+      const { trackInteractionEvent, events } = useWeWriteAnalytics();
+      trackInteractionEvent(events.LINK_EDITOR_OPENED, {
+        initial_tab: initialTab,
+        source: 'editor'
+      });
+    } catch (error) {
+      console.error('Analytics tracking failed (non-fatal):', error);
+    }
+
     try {
       console.log('[DEBUG] openLinkEditor called with initialTab:', initialTab);
 
@@ -2564,6 +2575,9 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
   // Get accent color for button styling
   const { accentColor, customColors } = useAccentColor();
 
+  // Analytics tracking
+  const { trackInteractionEvent, events } = useWeWriteAnalytics();
+
   // Determine if we're editing an existing link
   const isEditing = !!initialPageId || !!initialText;
 
@@ -2603,6 +2617,13 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
       setDisplayText('');
     }
     setFormTouched(true);
+
+    // Track custom text toggle
+    trackInteractionEvent(events.CUSTOM_TEXT_TOGGLED, {
+      enabled: enabled,
+      link_type: activeTab,
+      is_editing: isEditing
+    });
   };
 
   const handleCustomLinkTextToggle = (enabled) => {
@@ -2847,6 +2868,13 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
 
   // Handle close
   const handleClose = () => {
+    // Track link editor closing
+    trackInteractionEvent(events.LINK_EDITOR_CLOSED, {
+      tab_when_closed: activeTab,
+      had_changes: hasChanged,
+      was_editing: isEditing
+    });
+
     // CRITICAL FIX: Use the parent component's state setter if available
     if (typeof window !== 'undefined' && window.currentLinkEditorRef && window.currentLinkEditorRef.setShowLinkEditor) {
       console.log('[DEBUG] Using parent component setShowLinkEditor in handleClose');
@@ -3152,7 +3180,16 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
                   <div className="flex items-center gap-3 mt-4 mb-4">
                     <Switch
                       checked={showAuthor}
-                      onCheckedChange={setShowAuthor}
+                      onCheckedChange={(checked) => {
+                        setShowAuthor(checked);
+                        // Track author toggle change
+                        trackInteractionEvent(events.AUTHOR_TOGGLE_CHANGED, {
+                          enabled: checked,
+                          page_id: selectedPageId,
+                          page_title: pageTitle,
+                          is_editing: isEditing
+                        });
+                      }}
                       id="show-author-switch"
                     />
                     <label htmlFor="show-author-switch" className="text-sm font-medium select-none">Show author</label>

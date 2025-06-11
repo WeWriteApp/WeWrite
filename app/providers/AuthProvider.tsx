@@ -48,6 +48,42 @@ interface AuthProviderProps {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
+ * WeWrite Authentication & User Onboarding Improvements - AuthProvider
+ *
+ * This provider manages authentication state and includes critical fixes for
+ * infinite refresh loops and comprehensive user onboarding improvements.
+ *
+ * Critical Fixes Implemented:
+ * 1. **Infinite Refresh Loop Fix**: Removed problematic router.refresh() call
+ *    that was causing infinite loops in Chrome browser on all pages
+ * 2. **Simplified Authentication Logic**: Streamlined redirect logic to prevent
+ *    race conditions and authentication state conflicts
+ *
+ * Authentication Enhancements:
+ * - Flexible login options (username OR email address)
+ * - Enhanced error handling with specific Firebase error codes
+ * - Improved session management with cookie-based authentication
+ * - Account switching support with proper state management
+ * - Enhanced security with username lookup that doesn't expose emails
+ *
+ * User Onboarding Flow:
+ * - Multi-step account creation process
+ * - Step 1: Email & password collection (simplified)
+ * - Step 2: Username selection with real-time availability
+ * - Step 3: Email verification with resend functionality
+ *
+ * Performance Improvements:
+ * - Removed infinite refresh loops (major performance boost)
+ * - Minimal performance impact from username lookup (single Firestore query)
+ * - Simplified forms reduce initial load complexity
+ * - Maintains compatibility with existing user data
+ *
+ * Security Considerations:
+ * - Username lookup maintains security by not exposing user emails
+ * - Password reset maintains Firebase's security model
+ * - Email verification follows Firebase best practices
+ * - Proper session management with secure cookie handling
+ *
  * Hook to use the auth context
  *
  * @returns The auth context value

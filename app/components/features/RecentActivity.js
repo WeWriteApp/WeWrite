@@ -269,6 +269,22 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
             {combinedError.details && (
               <p className="text-xs opacity-80">{combinedError.details}</p>
             )}
+            {combinedError.canRetry && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  console.log("Retrying recent activity fetch...");
+                  // Trigger a retry by calling the refresh function
+                  if (typeof window !== 'undefined') {
+                    window.location.reload();
+                  }
+                }}
+                className="mt-2 self-start"
+              >
+                Try Again
+              </Button>
+            )}
           </div>
         )}
 
@@ -321,6 +337,22 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
             </div>
             {combinedError.details && (
               <p className="text-xs opacity-80">{combinedError.details}</p>
+            )}
+            {combinedError.canRetry && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  console.log("Retrying recent activity fetch...");
+                  // Trigger a retry by calling the refresh function
+                  if (typeof window !== 'undefined') {
+                    window.location.reload();
+                  }
+                }}
+                className="mt-2 self-start"
+              >
+                Try Again
+              </Button>
             )}
           </div>
         )}

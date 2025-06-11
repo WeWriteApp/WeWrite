@@ -1,3 +1,51 @@
+/**
+ * WeWrite Click-to-Edit Implementation - TextView Component
+ *
+ * Enhanced TextView component with comprehensive click-to-edit functionality
+ * that provides intuitive editing experience with smart click detection.
+ *
+ * Click-to-Edit Features Implemented:
+ * 1. **Smart Click Detection**
+ *    - Content Area Only: Click-to-edit only activates on main page content area
+ *    - Interactive Element Exclusion: Clicks on links, buttons ignored
+ *    - Visual Feedback: Hover effects and cursor changes indicate editable content
+ *
+ * 2. **Enhanced User Experience**
+ *    - Visual Indicators: Subtle hover effect with background color change
+ *    - Cursor changes to text cursor when hovering over editable content
+ *    - "Click to edit" tooltip appears on hover
+ *    - Small edit indicator (✏️) in top-right corner when hovering
+ *
+ * 3. **Position Tracking**
+ *    - Captures exact click coordinates for cursor positioning
+ *    - Passes position data to editor for smart cursor placement
+ *    - Handles both absolute and relative positioning
+ *
+ * 4. **Permission Integration**
+ *    - Respects canEdit prop for permission enforcement
+ *    - Only shows edit indicators for authorized users
+ *    - Maintains read-only view for unauthorized users
+ *
+ * Interactive Elements Excluded:
+ * - Links (<a> tags)
+ * - Buttons (<button> tags)
+ * - Elements with role="button"
+ * - Elements with .no-edit-trigger class
+ *
+ * Visual Feedback System:
+ * - Hover state: bg-muted/20 background with smooth transition
+ * - Edit indicator: Positioned top-right with opacity transitions
+ * - Cursor changes: Text cursor for editable areas
+ * - Tooltip guidance: "Click to edit" messaging
+ *
+ * State Management Flow:
+ * 1. User clicks on content area
+ * 2. Position captured and validated
+ * 3. setIsEditing called with position data
+ * 4. Editor receives position for cursor placement
+ * 5. Smooth transition to edit mode
+ */
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { usePage } from "../../contexts/PageContext";
 import { useLineSettings } from "../../contexts/LineSettingsContext";
@@ -1007,7 +1055,7 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
       title={canEdit ? "Click to edit" : ""}
     >
       {/* Paragraph with inline number at beginning */}
-      <div className="paragraph-with-number py-1.5 flex">
+      <div className="paragraph-with-number py-1.5 flex items-baseline">
         {/* Paragraph number - fixed width for consistent alignment */}
         <span
           className="paragraph-number-inline select-none flex-shrink-0"
@@ -1018,10 +1066,7 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
             textAlign: 'right',
             marginRight: '0.25rem',
             fontSize: '0.75rem',
-            lineHeight: '1.5',
-            verticalAlign: 'baseline',
-            position: 'relative',
-            top: '0'
+            lineHeight: '1.5'
           }}
         >{index + 1}</span>
 

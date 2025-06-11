@@ -1,5 +1,36 @@
 "use client";
 
+/**
+ * WeWrite Authentication Improvements - Forgot Password Form
+ *
+ * Enhanced password reset form component with improved error handling and
+ * user experience as part of the authentication improvements.
+ *
+ * Improvements Implemented:
+ * 1. **Enhanced Error Handling**: Specific Firebase error code handling
+ * 2. **Improved Success Messaging**: Clear messaging with expiration info
+ * 3. **Better UX**: "Return to Login" button and clearer instructions
+ * 4. **Debugging Support**: Console logging for troubleshooting
+ *
+ * Error Handling Features:
+ * - Specific error messages for different Firebase error codes
+ * - User-friendly error descriptions instead of technical messages
+ * - Proper handling of rate limiting and invalid email scenarios
+ * - Console logging for debugging password reset issues
+ *
+ * Success Flow Enhancements:
+ * - Clear success message with instructions
+ * - Information about 1-hour expiration time
+ * - Direct "Return to Login" button for better flow
+ * - Improved visual feedback with color-coded alerts
+ *
+ * Integration with Custom Reset Page:
+ * - Works with custom password reset page at /auth/reset-password
+ * - Handles Firebase oobCode parameter from email links
+ * - Custom branded experience instead of Firebase default UI
+ * - Maintains Firebase security model while improving UX
+ */
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { LoadingButton } from "../ui/loading-button";
@@ -75,7 +106,7 @@ export function ForgotPasswordForm({
 
       {success ? (
         <div className="space-y-2 sm:space-y-3">
-          <div className="bg-green-500/20 p-2 sm:p-4 rounded-md text-green-600 dark:text-green-200 text-xs sm:text-sm">
+          <div className="bg-success/10 p-2 sm:p-4 rounded-md text-success text-xs sm:text-sm">
             Reset link sent! Check your email for instructions to reset your password.
           </div>
           <Button

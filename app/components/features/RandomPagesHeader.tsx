@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Shuffle, MoreHorizontal, Lock, Grid3X3 } from 'lucide-react';
+import { Shuffle, MoreHorizontal, Lock, Grid3X3, UserX } from 'lucide-react';
 import { SectionTitle } from '../ui/section-title';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
@@ -25,6 +25,7 @@ import {
 const RandomPagesHeader = () => {
   const [includePrivatePages, setIncludePrivatePages] = useState(false);
   const [denseMode, setDenseMode] = useState(false);
+  const [excludeOwnPages, setExcludeOwnPages] = useState(false);
 
   // Load preferences from localStorage on mount
   useEffect(() => {
@@ -37,6 +38,11 @@ const RandomPagesHeader = () => {
       const savedDenseModePreference = localStorage.getItem('randomPages_denseMode');
       if (savedDenseModePreference === 'true') {
         setDenseMode(true);
+      }
+
+      const savedExcludeOwnPreference = localStorage.getItem('randomPages_excludeOwnPages');
+      if (savedExcludeOwnPreference === 'true') {
+        setExcludeOwnPages(true);
       }
     }
   }, []);
@@ -53,7 +59,10 @@ const RandomPagesHeader = () => {
 
     // Trigger shuffle with new privacy setting
     const shuffleEvent = new CustomEvent('shuffleRandomPages', {
-      detail: { includePrivate: newValue }
+      detail: {
+        includePrivate: newValue,
+        excludeOwnPages: excludeOwnPages
+      }
     });
     window.dispatchEvent(shuffleEvent);
   };
@@ -75,11 +84,34 @@ const RandomPagesHeader = () => {
     window.dispatchEvent(denseModeEvent);
   };
 
+  // Handle "Not mine" toggle change
+  const handleExcludeOwnToggle = () => {
+    const newValue = !excludeOwnPages;
+    setExcludeOwnPages(newValue);
+
+    // Persist to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('randomPages_excludeOwnPages', String(newValue));
+    }
+
+    // Trigger shuffle with new filter setting
+    const shuffleEvent = new CustomEvent('shuffleRandomPages', {
+      detail: {
+        includePrivate: includePrivatePages,
+        excludeOwnPages: newValue
+      }
+    });
+    window.dispatchEvent(shuffleEvent);
+  };
+
   // Handle shuffle button click
   const handleShuffle = (e: React.MouseEvent) => {
     e.stopPropagation();
     const shuffleEvent = new CustomEvent('shuffleRandomPages', {
-      detail: { includePrivate: includePrivatePages }
+      detail: {
+        includePrivate: includePrivatePages,
+        excludeOwnPages: excludeOwnPages
+      }
     });
     window.dispatchEvent(shuffleEvent);
   };
@@ -122,6 +154,35 @@ const RandomPagesHeader = () => {
                 }
               }}
               aria-label="Toggle private pages inclusion"
+            />
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              handleExcludeOwnToggle();
+            }}
+            className="flex items-center justify-between cursor-pointer py-3"
+          >
+            <div className="flex items-center gap-3">
+              <UserX className="h-4 w-4 text-muted-foreground" />
+              <div className="flex flex-col">
+                <span className="font-medium">Not mine</span>
+                <span className="text-xs text-muted-foreground">
+                  Exclude pages you authored
+                </span>
+              </div>
+            </div>
+            <Switch
+              checked={excludeOwnPages}
+              onCheckedChange={(checked) => {
+                if (checked !== excludeOwnPages) {
+                  handleExcludeOwnToggle();
+                }
+              }}
+              aria-label="Toggle exclude own pages"
             />
           </DropdownMenuItem>
 

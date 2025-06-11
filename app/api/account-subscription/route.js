@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../auth-helper';
-import { getUserSubscription } from '../../firebase/subscription';
+import { getUserSubscriptionServer } from '../../firebase/subscription-server';
 
 export async function GET(request) {
   try {
@@ -12,7 +12,7 @@ export async function GET(request) {
     }
 
     // Get the user's subscription from Firestore with verbose: false to reduce logging
-    const subscription = await getUserSubscription(userId, { verbose: false });
+    const subscription = await getUserSubscriptionServer(userId, { verbose: false });
 
     if (!subscription) {
       return NextResponse.json({ status: null });

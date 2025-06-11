@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../ui/button';
-import { Plus, FileText, Type, Copy, Link, X } from 'lucide-react';
+import { Plus, FileText, Type, Copy, Link, X, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from '../ui/use-toast';
 import {
@@ -48,13 +48,16 @@ const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, isOpen, o
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        aria-describedby="add-to-page-modal-description"
+      >
         <DialogHeader>
           <DialogTitle>Add to New Page</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="p-3 bg-muted rounded-lg">
-            <p className="text-sm text-muted-foreground mb-2">Selected text:</p>
+            <p id="add-to-page-modal-description" className="text-sm text-muted-foreground mb-2">Selected text:</p>
             <p className="text-sm font-medium line-clamp-3">"{selectedText}"</p>
           </div>
           
@@ -118,6 +121,40 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
 }) => {
   const [showModal, setShowModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showLeftChevron, setShowLeftChevron] = useState(false);
+  const [showRightChevron, setShowRightChevron] = useState(false);
+
+  // Check for overflow and update chevron visibility
+  const checkOverflow = () => {
+    if (scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const scrollLeft = container.scrollLeft;
+      const scrollWidth = container.scrollWidth;
+      const clientWidth = container.clientWidth;
+
+      setShowLeftChevron(scrollLeft > 0);
+      setShowRightChevron(scrollLeft < scrollWidth - clientWidth);
+    }
+  };
+
+  // Handle scroll events
+  const handleScroll = () => {
+    checkOverflow();
+  };
+
+  // Scroll left/right functions
+  const scrollLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: -100, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: 100, behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -140,6 +177,14 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
       document.removeEventListener('keydown', handleEscape);
     };
   }, [onClose]);
+
+  // Check overflow on mount and when content changes
+  useEffect(() => {
+    checkOverflow();
+    // Add a small delay to ensure DOM is fully rendered
+    const timer = setTimeout(checkOverflow, 10);
+    return () => clearTimeout(timer);
+  }, [enableCopy, enableShare, enableAddToPage]);
 
   const handleCopy = async () => {
     if (onCopy) {
@@ -197,44 +242,81 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
     <>
       <div
         ref={menuRef}
-        className="fixed z-50 bg-background border border-border rounded-lg shadow-lg p-1 flex gap-1"
+        className="fixed z-50 bg-background border border-border rounded-lg shadow-lg overflow-hidden"
         style={menuStyle}
       >
-        {enableCopy && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCopy}
-            className="gap-2 text-sm whitespace-nowrap"
+        <div className="relative flex items-center">
+          {/* Left chevron */}
+          {showLeftChevron && (
+            <button
+              onClick={scrollLeft}
+              className="absolute left-0 z-10 h-full px-1 bg-gradient-to-r from-background to-transparent hover:from-muted/50 to-transparent transition-colors"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className="h-3 w-3 text-muted-foreground" />
+            </button>
+          )}
+
+          {/* Scrollable content container */}
+          <div
+            ref={scrollContainerRef}
+            className="flex gap-1 p-1 overflow-x-auto scrollbar-hide"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              paddingLeft: showLeftChevron ? '20px' : '4px',
+              paddingRight: showRightChevron ? '20px' : '4px'
+            }}
+            onScroll={handleScroll}
           >
-            <Copy className="h-3 w-3" />
-            Copy
-          </Button>
-        )}
-        
-        {enableShare && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCreateLink}
-            className="gap-2 text-sm whitespace-nowrap"
-          >
-            <Link className="h-3 w-3" />
-            Share
-          </Button>
-        )}
-        
-        {enableAddToPage && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleAddToPage}
-            className="gap-2 text-sm whitespace-nowrap"
-          >
-            <Plus className="h-3 w-3" />
-            Add to Page
-          </Button>
-        )}
+            {enableCopy && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCopy}
+                className="gap-2 text-sm whitespace-nowrap flex-shrink-0"
+              >
+                <Copy className="h-3 w-3" />
+                Copy
+              </Button>
+            )}
+
+            {enableShare && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCreateLink}
+                className="gap-2 text-sm whitespace-nowrap flex-shrink-0"
+              >
+                <Link className="h-3 w-3" />
+                Share
+              </Button>
+            )}
+
+            {enableAddToPage && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleAddToPage}
+                className="gap-2 text-sm whitespace-nowrap flex-shrink-0"
+              >
+                <Quote className="h-3 w-3" />
+                Add to Page
+              </Button>
+            )}
+          </div>
+
+          {/* Right chevron */}
+          {showRightChevron && (
+            <button
+              onClick={scrollRight}
+              className="absolute right-0 z-10 h-full px-1 bg-gradient-to-l from-background to-transparent hover:from-muted/50 to-transparent transition-colors"
+              aria-label="Scroll right"
+            >
+              <ChevronRight className="h-3 w-3 text-muted-foreground" />
+            </button>
+          )}
+        </div>
       </div>
 
       <AddToPageModal

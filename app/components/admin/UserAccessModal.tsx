@@ -308,8 +308,8 @@ export default function UserAccessModal({
         <div className="flex-1 overflow-hidden flex flex-col space-y-4">
           {/* Global Status Banner */}
           <div className={`p-3 rounded-lg border ${
-            featureFlag.enabled 
-              ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' 
+            featureFlag.enabled
+              ? 'bg-success/10 border-success/30 dark:bg-success/20 dark:border-success/40'
               : 'bg-gray-50 border-gray-200 dark:bg-gray-950 dark:border-gray-800'
           }`}>
             <div className="flex items-center gap-2">
@@ -367,9 +367,9 @@ export default function UserAccessModal({
                             </Badge>
                           )}
                           {user.enabled ? (
-                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <CheckCircle className="h-4 w-4 text-success" />
                           ) : (
-                            <AlertCircle className="h-4 w-4 text-red-600" />
+                            <AlertCircle className="h-4 w-4 text-destructive" />
                           )}
                         </div>
                         <div className="text-sm text-muted-foreground">{user.email}</div>

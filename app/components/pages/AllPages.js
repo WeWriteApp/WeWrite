@@ -13,7 +13,7 @@ const AllPages = () => {
   const { user } = useContext(AuthContext);
   const router = useRouter();
 
-  // Add enhanced debugging
+  // Force refresh if user is authenticated but no pages loaded
   useEffect(() => {
     console.log("AllPages component state:", {
       dataLoading: loading,

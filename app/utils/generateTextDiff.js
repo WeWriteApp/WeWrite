@@ -155,8 +155,30 @@ function generateDiffOperations(oldText, newText) {
 }
 
 /**
+ * WeWrite Activity Diff Standardization - Enhanced Text Diff Generator
+ *
  * Generates a detailed text diff between two content strings with enhanced preview
- * This extracts actual text content and provides context around changes, showing both additions and deletions
+ * that provides context around changes, showing both additions and deletions.
+ *
+ * This function is part of the comprehensive diff standardization system that ensures
+ * consistent diff display across all ActivityCard implementations in WeWrite.
+ *
+ * Enhanced Diff Algorithm Features:
+ * - Provides up to 3 lines of context (120 characters ≈ 3 lines)
+ * - Accurately calculates character-level diffs using Longest Common Subsequence (LCS)
+ * - Returns structured diff data with beforeContext, addedText, removedText, afterContext
+ * - Handles edge cases like empty content, minimal changes, and parsing errors
+ *
+ * Integration with Standardized Components:
+ * - Used by DiffPreview component for consistent visual display
+ * - Used by DiffStats component for accurate statistics
+ * - Integrated with all ActivityCard implementations across the application
+ *
+ * Diff Algorithm Implementation:
+ * - Uses Myers' algorithm (simplified) for character-level diff calculation
+ * - Tracks additions and deletions separately with detailed operations
+ * - Provides context around changes for better user understanding
+ * - Optimized for performance with large text content
  *
  * @param {string} currentContent - Current content JSON string
  * @param {string} previousContent - Previous content JSON string

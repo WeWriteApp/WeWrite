@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Search, X, Pin } from 'lucide-react';
+import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 
 
 /**
@@ -42,6 +43,7 @@ const SearchInput = ({
   const debounceTimeoutRef = useRef(null);
   const lastSearchValue = useRef('');
   const isInitialized = useRef(false);
+  const { trackInteractionEvent, events } = useWeWriteAnalytics();
 
   // Focus the search input when the component mounts
   useEffect(() => {
@@ -79,10 +81,20 @@ const SearchInput = ({
       // Only call onSearch if the value has actually changed
       if (value !== lastSearchValue.current && onSearch) {
         lastSearchValue.current = value;
+
+        // Track search performed
+        if (value.trim()) {
+          trackInteractionEvent(events.SEARCH_PERFORMED, {
+            query: value.trim(),
+            query_length: value.trim().length,
+            source: 'search_input'
+          });
+        }
+
         onSearch(value);
       }
     }, 300);
-  }, [onSearch]);
+  }, [onSearch, trackInteractionEvent, events]);
 
   // Handle input changes - optimized to prevent re-renders
   const handleInputChange = useCallback((e) => {

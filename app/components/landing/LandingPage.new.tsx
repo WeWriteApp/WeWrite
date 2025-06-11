@@ -230,8 +230,8 @@ const LandingPage = () => {
 
                     {/* Available Now Column */}
                     <div className="flex-1 min-w-[250px] md:min-w-[300px] scroll-snap-align-start">
-                      <div className="bg-green-300 dark:bg-green-600 rounded-lg p-4 mb-4 shadow-sm">
-                        <h3 className="text-xl font-bold mb-0 text-center text-green-800 dark:text-white flex items-center justify-center gap-2">
+                      <div className="bg-success/30 dark:bg-success/40 rounded-lg p-4 mb-4 shadow-sm">
+                        <h3 className="text-xl font-bold mb-0 text-center text-success dark:text-success-foreground flex items-center justify-center gap-2">
                           Available Now
                         </h3>
                       </div>
