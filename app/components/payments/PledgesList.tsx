@@ -37,7 +37,7 @@ interface Pledge {
 export function PledgesList() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
   const [pledges, setPledges] = useState<Pledge[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,12 +46,12 @@ export function PledgesList() {
   const [deletingPledge, setDeletingPledge] = useState<Pledge | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // If payments feature flag is disabled, don't render anything
-  if (!isPaymentsEnabled) {
-    return null;
-  }
-
   useEffect(() => {
+    // If payments feature flag is disabled, don't load data
+    if (!isPaymentsEnabled) {
+      setLoading(false);
+      return;
+    }
     if (!user) {
       setLoading(false);
       return;
@@ -127,7 +127,12 @@ export function PledgesList() {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, isPaymentsEnabled]);
+
+  // If payments feature flag is disabled, don't render anything
+  if (!isPaymentsEnabled) {
+    return null;
+  }
 
   const handleEditPledge = (pledge: Pledge) => {
     setEditingPledge(pledge);

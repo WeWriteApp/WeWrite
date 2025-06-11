@@ -3,11 +3,68 @@
 import * as React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "../ui/dialog";
 import { Button } from "../ui/button";
-import { X, Heart, ArrowRight } from "lucide-react";
+import { X, Heart, ArrowRight, DollarSign } from "lucide-react";
 import { openExternalLink } from "../../utils/pwa-detection";
+import { useAuth } from "../../providers/AuthProvider";
+import { useFeatureFlag } from "../../utils/feature-flags";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 const SupportUsModal = ({ isOpen, onClose }) => {
+  const { user } = useAuth();
+  const router = useRouter();
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+
+  // If payments are enabled, show subscription activation flow
+  if (isPaymentsEnabled) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border border-border dark:border-neutral-700 bg-white dark:bg-neutral-900 animate-in fade-in-0 zoom-in-95 duration-300">
+          <DialogClose asChild>
+            <Button variant="outline" size="icon" className="absolute right-4 top-4">
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </Button>
+          </DialogClose>
+
+          <DialogHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full">
+                <DollarSign className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+            <DialogTitle className="text-xl text-center w-full">Activate Subscription</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-4">
+            <p className="text-center text-muted-foreground mb-8">
+              Support WeWrite development and unlock the ability to pledge to your favorite pages by activating your subscription.
+            </p>
+
+            <div className="px-6 mx-auto w-full">
+              <Button
+                variant="default"
+                size="lg"
+                className="w-full group relative overflow-hidden bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 border-0 text-white"
+                onClick={() => {
+                  onClose();
+                  router.push('/settings/subscription');
+                }}
+              >
+                <span className="relative z-10 flex items-center justify-center">
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Activate Subscription
+                  <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+                </span>
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // If payments are disabled, show OpenCollective support flow
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border border-border dark:border-neutral-700 bg-white dark:bg-neutral-900 animate-in fade-in-0 zoom-in-95 duration-300">

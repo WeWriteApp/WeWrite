@@ -15,24 +15,21 @@ import { LineSettingsProvider } from '../../contexts/LineSettingsContext';
 
 export default function UserPage({ params }) {
   // Handle both Promise and object params
+  // Note: use() hook cannot be called inside try/catch blocks
   let unwrappedParams;
-  try {
-    // If params is a Promise, use React.use() to unwrap it
-    if (params && typeof params.then === 'function') {
-      unwrappedParams = use(params);
-    } else {
-      // If params is already an object, use it directly
-      unwrappedParams = params || {};
-    }
-  } catch (error) {
-    console.error("Error unwrapping params in UserPage:", error);
-    unwrappedParams = {};
+
+  // If params is a Promise, use React.use() to unwrap it
+  if (params && typeof params.then === 'function') {
+    unwrappedParams = use(params);
+  } else {
+    // If params is already an object, use it directly
+    unwrappedParams = params || {};
   }
 
   const { id } = unwrappedParams;
   const router = useRouter();
   const { user } = useAuth();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);

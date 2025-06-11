@@ -465,11 +465,11 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 max-w-5xl">
+    <div className={`py-6 px-4 ${activeTab === 'users' ? 'w-full' : 'container mx-auto max-w-5xl'}`}>
       <div className="mb-8">
-        <Link href="/account" className="inline-flex items-center text-blue-500 hover:text-blue-600">
+        <Link href="/settings" className="inline-flex items-center text-blue-500 hover:text-blue-600">
           <ChevronLeft className="h-4 w-4 mr-2" />
-          Back to Account
+          Back to Settings
         </Link>
         <h1 className="text-3xl font-bold mt-4 mb-2 flex items-center gap-2">
           <Shield className="h-6 w-6" />

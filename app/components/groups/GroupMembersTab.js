@@ -223,16 +223,18 @@ export default function GroupMembersTab({ group, isOwner }) {
     try {
       setIsAddingMember(true);
 
-      // Update the group members
-      const groupRef = ref(rtdb, `groups/${group.id}/members/${selectedUser.id}`);
-      await set(groupRef, {
-        role: "member",
-        joinedAt: new Date().toISOString()
-      });
+      // Send group invitation instead of directly adding member
+      const { createGroupInviteNotification } = await import('../../firebase/notifications');
+      await createGroupInviteNotification(
+        selectedUser.id,
+        user.uid,
+        group.id,
+        group.name || "Unknown Group"
+      );
 
       toast({
         title: "Success",
-        description: `${selectedUser.username || "User"} has been added to the group.`
+        description: `Group invitation sent to ${selectedUser.username || "User"}.`
       });
 
       // Reset state

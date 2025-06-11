@@ -23,17 +23,17 @@ interface Pledge {
 
 export function PledgesOverview() {
   const { user } = useAuth();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
   const [pledges, setPledges] = useState<Pledge[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // If payments feature flag is disabled, don't render anything
-  if (!isPaymentsEnabled) {
-    return null;
-  }
-
   useEffect(() => {
+    // If payments feature flag is disabled, don't load data
+    if (!isPaymentsEnabled) {
+      setLoading(false);
+      return;
+    }
     if (!user) {
       setLoading(false);
       return;
@@ -88,7 +88,12 @@ export function PledgesOverview() {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [user]);
+  }, [user, isPaymentsEnabled]);
+
+  // If payments feature flag is disabled, don't render anything
+  if (!isPaymentsEnabled) {
+    return null;
+  }
 
   const totalPledgedAmount = pledges.reduce((sum, pledge) => sum + pledge.amount, 0);
   const activePledgesCount = pledges.length;
@@ -102,7 +107,7 @@ export function PledgesOverview() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="wewrite-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Heart className="h-5 w-5" />
@@ -120,7 +125,7 @@ export function PledgesOverview() {
   }
 
   return (
-    <Card>
+    <Card className="wewrite-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Heart className="h-5 w-5" />

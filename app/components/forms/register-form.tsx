@@ -287,7 +287,7 @@ export function RegisterForm({
                 (validationError || isAvailable === false) ?
                   "border-destructive focus-visible:ring-destructive dark:border-red-400 dark:focus-visible:ring-red-400" :
                   isAvailable === true ?
-                    "border-green-500 focus-visible:ring-green-500" :
+                    "border-success focus-visible:ring-success" :
                     "border-input"
               )}
             />

@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useContext } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Head from "next/head";
-import DashboardLayout from "../DashboardLayout";
 import PublicLayout from "../components/layout/PublicLayout";
 import { createPage } from "../firebase/database";
 import ReactGA from 'react-ga4';
@@ -462,7 +461,7 @@ export default function NewPage() {
   };
 
   // Determine the layout to use (same as SinglePageView)
-  const Layout = user ? DashboardLayout : PublicLayout;
+  const Layout = user ? React.Fragment : PublicLayout;
 
   // Get username for display
   const username = user?.username || user?.displayName || 'Anonymous';

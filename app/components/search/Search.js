@@ -271,8 +271,8 @@ const Search = () => {
   // Function to directly navigate to search page
   const navigateToSearchPage = () => {
     console.log('Directly navigating to search page');
-    // Use router.push with options to ensure proper navigation
-    router.push('/search', undefined, { scroll: true });
+    // Use router.push without scroll options - let scroll restoration handle it
+    router.push('/search');
   };
 
   return (

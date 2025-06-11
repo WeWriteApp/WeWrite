@@ -3,14 +3,34 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
- * useLoadingTimeout - A hook to handle loading states with timeout
+ * WeWrite Infinite Refresh Loop Fix - useLoadingTimeout Hook
+ *
+ * A hook to handle loading states with timeout that has been optimized to prevent
+ * infinite refresh loops, particularly on iOS Safari devices.
+ *
+ * Infinite Refresh Loop Fix:
+ * This hook was part of the infinite refresh loop problem on iPhone 14 Pro Max Safari.
+ * It has been modified to force completion instead of reloading when possible.
+ *
+ * Key Changes Made:
+ * - Reduced reload attempts to maximum of 1 on iOS Safari
+ * - Increased timeout delays for more conservative behavior
+ * - Force completion instead of page reloads when possible
+ * - Removed complex iOS-specific logic that was causing issues
+ * - More conservative recovery thresholds to prevent loops
  *
  * This hook helps prevent infinite loading states by:
  * 1. Setting a timeout after which loading is considered "stalled"
  * 2. Providing a fallback state when loading takes too long
- * 3. Offering error recovery options
- * 4. Automatically recovering from stalled states
- * 5. Detecting and handling initial page loads more aggressively
+ * 3. Offering error recovery options (with conservative limits)
+ * 4. Automatically recovering from stalled states (force completion preferred)
+ * 5. Detecting and handling initial page loads more conservatively
+ *
+ * iOS Safari Considerations:
+ * - Uses more conservative timeouts to prevent aggressive reloading
+ * - Limits reload attempts to prevent infinite loops
+ * - Prefers force completion over page reloads
+ * - Accounts for iOS Safari's different timing characteristics
  *
  * @param {boolean} isLoading - The current loading state
  * @param {number} timeoutMs - Timeout in milliseconds before considering loading as stalled

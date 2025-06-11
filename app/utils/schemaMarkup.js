@@ -1,9 +1,52 @@
 "use client";
 
 /**
- * Generates schema.org markup for different content types
- * 
- * @param {string} type - The type of content (article, person, group)
+ * WeWrite SEO Implementation - Schema.org Markup Generator
+ *
+ * This module generates comprehensive Schema.org structured data markup
+ * for WeWrite's user-generated content to improve search engine understanding.
+ *
+ * Supported Schema Types:
+ * - Article: For user pages and content
+ * - Person: For user profiles and author information
+ * - Organization: For groups and communities
+ * - WebPage: For general pages and navigation
+ * - CollectionPage: For user profiles and group pages
+ *
+ * Schema.org Benefits:
+ * - Enhanced search result appearance with rich snippets
+ * - Better search engine understanding of content structure
+ * - Improved click-through rates from search results
+ * - Support for voice search and AI assistants
+ *
+ * Implementation Features:
+ * - Comprehensive schema markup for all content types
+ * - Proper linking between related entities
+ * - Publisher and organization information
+ * - Breadcrumb navigation support
+ * - Image and media optimization
+ *
+ * Usage Examples:
+ * ```javascript
+ * // Generate article schema
+ * const articleSchema = generateSchemaMarkup('article', {
+ *   title: 'Article Title',
+ *   description: 'Article description',
+ *   url: 'https://wewrite.app/article',
+ *   authorName: 'Author Name',
+ *   datePublished: '2024-01-01',
+ *   dateModified: '2024-01-02'
+ * });
+ *
+ * // Generate person schema
+ * const personSchema = generateSchemaMarkup('person', {
+ *   name: 'User Name',
+ *   url: 'https://wewrite.app/user/username',
+ *   description: 'User bio'
+ * });
+ * ```
+ *
+ * @param {string} type - The type of content (article, person, group, webpage, collection)
  * @param {object} data - The data to use for the schema markup
  * @returns {object} - The schema markup object
  */
@@ -63,9 +106,9 @@ function generateArticleSchema(data) {
       name: publisherName || 'WeWrite',
       logo: {
         '@type': 'ImageObject',
-        url: publisherLogo || 'https://wewrite.app/logo.png'
+        url: publisherLogo || `${process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'}/logo.png`
       },
-      url: publisherUrl || 'https://wewrite.app'
+      url: publisherUrl || (process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app')
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
@@ -174,7 +217,7 @@ function generateWebPageSchema(data) {
     isPartOf: {
       '@type': 'WebSite',
       name: 'WeWrite',
-      url: 'https://wewrite.app'
+      url: process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
     }
   };
 }
@@ -205,7 +248,7 @@ function generateCollectionPageSchema(data) {
     isPartOf: {
       '@type': 'WebSite',
       name: 'WeWrite',
-      url: 'https://wewrite.app'
+      url: process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
     }
   };
 }

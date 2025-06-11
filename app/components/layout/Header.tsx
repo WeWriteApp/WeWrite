@@ -5,17 +5,25 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AuthNav from "../auth/AuthNav";
 import { Button } from "../ui/button";
-import { Heart } from "lucide-react";
+import { Heart, DollarSign } from "lucide-react";
 import SupportUsModal from "../payments/SupportUsModal";
 import { useSidebarContext } from "./UnifiedSidebar";
+import { useAuth } from "../../providers/AuthProvider";
+import { useFeatureFlag } from "../../utils/feature-flags";
+import { listenToUserSubscription } from "../../firebase/subscription";
 
 export default function Header() {
   const router = useRouter();
+  const { user } = useAuth();
   const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const [showSupportModal, setShowSupportModal] = React.useState(false);
+  const [subscription, setSubscription] = React.useState(null);
   const headerRef = React.useRef<HTMLDivElement>(null);
+
+  // Check if payments feature is enabled
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
 
   // Calculate header positioning width - only respond to persistent expanded state, not hover
   // Hover state should overlay without affecting header positioning
@@ -31,6 +39,22 @@ export default function Header() {
       return 0; // No sidebar (user not authenticated)
     }
   }, [isExpanded, sidebarWidth]);
+
+  // Listen to user subscription changes
+  React.useEffect(() => {
+    if (!user || !isPaymentsEnabled) {
+      setSubscription(null);
+      return;
+    }
+
+    const unsubscribe = listenToUserSubscription(user.uid, (subscriptionData) => {
+      setSubscription(subscriptionData);
+    }, { verbose: false });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [user, isPaymentsEnabled]);
 
   // Calculate and update header height
   React.useEffect(() => {
@@ -107,17 +131,39 @@ export default function Header() {
               </Link>
             </div>
 
-            {/* Support Us button (right side) */}
+            {/* Support Us / Manage Subscription button (right side) */}
             <div className="flex-1 flex justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1 bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 text-white border-0 animate-gradient-x"
-                onClick={() => setShowSupportModal(true)}
-              >
-                <Heart className="h-4 w-4 text-white fill-white" />
-                <span className="hidden sm:inline">Support Us</span>
-              </Button>
+              {isPaymentsEnabled && subscription && subscription.status === 'active' ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 bg-primary hover:bg-primary/90 text-white border-0"
+                  onClick={() => router.push('/settings/subscription/manage')}
+                >
+                  <DollarSign className="h-4 w-4 text-white" />
+                  <span className="hidden sm:inline">Manage Subscription</span>
+                </Button>
+              ) : isPaymentsEnabled ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 bg-primary hover:bg-primary/90 text-white border-0"
+                  onClick={() => router.push('/settings/subscription')}
+                >
+                  <DollarSign className="h-4 w-4 text-white" />
+                  <span className="hidden sm:inline">Activate Subscription</span>
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 bg-primary hover:bg-primary/90 text-white border-0"
+                  onClick={() => setShowSupportModal(true)}
+                >
+                  <Heart className="h-4 w-4 text-white fill-white" />
+                  <span className="hidden sm:inline">Support Us</span>
+                </Button>
+              )}
             </div>
           </div>
           {/* Scroll Progress Bar */}

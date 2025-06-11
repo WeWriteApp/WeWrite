@@ -15,7 +15,7 @@ interface SupporterIconProps {
 
 export function SupporterIcon({ tier, status, size = 'sm', className = '' }: SupporterIconProps) {
   const { user } = useAuth();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
 
   // If payments feature flag is disabled, don't render anything
   if (!isPaymentsEnabled) {

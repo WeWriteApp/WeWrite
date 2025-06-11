@@ -418,13 +418,13 @@ export function getAnalyticsPageTitle(
       // Start the delayed tracking process
       trackPageViewWhenReady(pageId, `Page: ${pageId}`);
 
-      // Return a temporary title that won't be used for analytics
-      // The trackPageViewWhenReady function will handle the actual tracking
-      return `Page: Loading Content`;
+      // Return a temporary title that indicates content is loading
+      // This will be filtered out from analytics tracking
+      return `__LOADING_PLACEHOLDER__`;
     }
 
-    // Fallback to a better generic title instead of showing the ID
-    return `Page: Loading Content`;
+    // Fallback to indicate content is still loading
+    return `__LOADING_PLACEHOLDER__`;
   }
 
   // 3. Use document title if available and meaningful
@@ -772,7 +772,7 @@ export function isContentReadyForAnalytics(pageId: string, currentTitle?: string
   // Check if we have a loading placeholder title
   const isLoadingTitle = !currentTitle ||
     currentTitle === `Page: ${pageId}` ||
-    currentTitle === 'Page: Loading Content';
+    currentTitle === '__LOADING_PLACEHOLDER__';
 
   // If we already have a good title (not a loading placeholder), we're ready
   if (!isLoadingTitle) {

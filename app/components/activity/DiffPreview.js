@@ -3,15 +3,38 @@
 import React from 'react';
 
 /**
- * DiffPreview Component
+ * WeWrite Activity Diff Standardization - DiffPreview Component
  *
  * A reusable component for displaying diff previews with consistent styling
- * across all ActivityCard implementations. This ensures standardized diff
- * display with:
- * - Green background for text additions
- * - Red background with strikethrough for text deletions
- * - Up to 3 lines of context around changes
- * - Both added and deleted text shown simultaneously in previews
+ * across all ActivityCard implementations. This component is part of the
+ * comprehensive diff standardization that ensures consistent diff display
+ * throughout the WeWrite application.
+ *
+ * Standardization Requirements Met:
+ * ✅ Green background for text additions
+ * ✅ Red background with strikethrough for text deletions
+ * ✅ Display up to 3 lines of context around changes
+ * ✅ Show both added and deleted text simultaneously in previews
+ * ✅ All diff logic consolidated into a single utility file
+ *
+ * Styling Standards Applied:
+ * - Addition Styling: bg-green-50 dark:bg-green-900/40, text-green-600 dark:text-green-400
+ * - Deletion Styling: bg-red-50 dark:bg-red-900/40, text-red-600 dark:text-red-400, line-through
+ * - Context Styling: text-muted-foreground dark:text-slate-300
+ *
+ * Activity Card Locations Using This Component:
+ * 1. Main Activity Page (/activity) - ActivityPageClient.tsx → ActivityCard.js
+ * 2. User Profile Pages (/user/[id]) - UserProfileTabs.js → RecentActivity.js → ActivityCard.js
+ * 3. Home Page Activity Section - ActivitySection.js → RecentActivity.js → ActivityCard.js
+ * 4. Landing Page Carousels - ActivityCarousel.tsx → ActivityCard.js
+ * 5. Page History Views (/[id]/history) - history/page.js → ActivityCard.js
+ *
+ * Benefits of Standardization:
+ * - Consistency: All activity cards display diffs identically
+ * - Maintainability: Single source of truth for diff display logic
+ * - Reusability: Components can be easily reused in new contexts
+ * - Accessibility: Consistent color coding and styling across the app
+ * - Performance: Optimized diff algorithm with proper context handling
  *
  * @param {Object} props
  * @param {Object} props.textDiff - The diff object from generateTextDiff

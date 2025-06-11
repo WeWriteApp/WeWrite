@@ -47,21 +47,21 @@ export function useScrollRestoration(options = {}) {
 
     // Function to perform the scroll
     const scrollToTop = () => {
-      window.scrollTo({
-        top: 0,
-        left: 0,
-        behavior: behavior
-      });
-      
-      console.log(`Scroll restoration: Scrolled to top for ${isPageChange ? 'new page' : 'same page'}:`, pathname);
+      // Only scroll if we're actually on a new page and the page has loaded
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: behavior
+        });
+
+        console.log(`Scroll restoration: Scrolled to top for ${isPageChange ? 'new page' : 'same page'}:`, pathname);
+      }
     };
 
-    // Execute scroll with optional delay
-    if (delay > 0) {
-      timeoutRef.current = setTimeout(scrollToTop, delay);
-    } else {
-      scrollToTop();
-    }
+    // Execute scroll with delay to ensure page has loaded
+    const scrollDelay = Math.max(delay, 100); // Minimum 100ms delay to ensure page transition
+    timeoutRef.current = setTimeout(scrollToTop, scrollDelay);
 
     // Update the previous pathname
     previousPathnameRef.current = pathname;
@@ -90,13 +90,14 @@ export function useScrollRestoration(options = {}) {
 
 /**
  * Simplified version of the hook that just scrolls to top on every page change
+ * Uses a longer delay to ensure the destination page has loaded before scrolling
  */
 export function useScrollToTop() {
   return useScrollRestoration({
     enabled: true,
     behavior: 'instant',
     preserveWithinPage: true,
-    delay: 0
+    delay: 150 // Longer delay to ensure page transition is complete
   });
 }
 

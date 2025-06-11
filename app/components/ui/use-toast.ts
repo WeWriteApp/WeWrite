@@ -1,4 +1,5 @@
 import * as React from "react"
+import { copyToClipboard } from "../../utils/clipboard"
 
 import type {
   ToastActionElement,
@@ -137,6 +138,66 @@ function addToRemoveQueue(toastId: string) {
   toastTimeouts.set(toastId, timeout)
 }
 
+/**
+ * Creates a copy action element for toasts
+ */
+const createCopyAction = (textToCopy: string): ToastActionElement => {
+  // Validate input
+  if (!textToCopy || typeof textToCopy !== 'string' || !textToCopy.trim()) {
+    console.warn('createCopyAction: Invalid textToCopy provided:', textToCopy);
+    // Return null instead of a disabled button to avoid rendering issues
+    return null as any;
+  }
+
+  const handleCopy = async (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    try {
+      const success = await copyToClipboard(textToCopy);
+      if (success) {
+        // Show a brief success toast (use base toast function to avoid copy button)
+        toast({
+          title: "Copied to clipboard",
+          variant: "success",
+          duration: 2000,
+        });
+      } else {
+        // Show error toast if copy fails (use base toast function to avoid copy button)
+        toast({
+          title: "Failed to copy",
+          description: "Please try selecting and copying the text manually",
+          variant: "destructive",
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      console.error('Error in copy action:', error);
+      // Use base toast function to avoid copy button recursion
+      toast({
+        title: "Copy failed",
+        description: "An error occurred while copying",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+  };
+
+  // Create a simple button element that matches ToastAction structure
+  const copyButton = React.createElement(
+    'button',
+    {
+      onClick: handleCopy,
+      className: "inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive gap-1.5",
+      type: "button",
+    },
+    React.createElement(Copy, { className: "h-3.5 w-3.5" }),
+    "Copy"
+  );
+
+  return copyButton as ToastActionElement;
+};
+
 export function toast({
   ...props
 }: Omit<ToasterToast, "id">) {
@@ -173,8 +234,88 @@ toast.success = (title: string, options?: Omit<ToasterToast, "id" | "title" | "v
   return toast({ title, variant: "success", ...options });
 };
 
-toast.error = (title: string, options?: Omit<ToasterToast, "id" | "title" | "variant">) => {
-  return toast({ title, variant: "destructive", ...options });
+toast.error = (
+  title: string,
+  options?: Omit<ToasterToast, "id" | "title" | "variant"> & {
+    enableCopy?: boolean;
+    copyText?: string;
+  }
+) => {
+  const { enableCopy = true, copyText, ...toastOptions } = options || {};
+
+  // Validate title
+  if (!title || typeof title !== 'string') {
+    console.warn('toast.error: Invalid title provided:', title);
+    title = 'An error occurred';
+  }
+
+  const finalOptions: Omit<ToasterToast, "id" | "title" | "variant"> = {
+    ...toastOptions,
+    variant: "destructive",
+  };
+
+  // Add copy functionality through description if enabled
+  if (enableCopy && copyText && typeof copyText === 'string' && copyText.trim()) {
+    const originalDescription = finalOptions.description || '';
+
+    // Create description with copy button using React elements
+    finalOptions.description = React.createElement(
+      'div',
+      { className: 'flex items-start justify-between gap-2' },
+      React.createElement(
+        'span',
+        { className: 'flex-1' },
+        originalDescription
+      ),
+      React.createElement(
+        'button',
+        {
+          onClick: async (e: React.MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+              const success = await copyToClipboard(copyText);
+              if (success) {
+                toast({
+                  title: "Copied to clipboard",
+                  variant: "success",
+                  duration: 2000,
+                });
+              } else {
+                toast({
+                  title: "Failed to copy",
+                  variant: "destructive",
+                  duration: 3000,
+                });
+              }
+            } catch (error) {
+              console.error('Copy error:', error);
+            }
+          },
+          className: 'ml-2 p-1 rounded hover:bg-destructive-foreground/10 transition-colors',
+          title: 'Copy error details',
+          type: 'button'
+        },
+        React.createElement(
+          'svg',
+          {
+            className: 'h-3 w-3',
+            fill: 'none',
+            stroke: 'currentColor',
+            viewBox: '0 0 24 24'
+          },
+          React.createElement('path', {
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+            strokeWidth: 2,
+            d: 'M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z'
+          })
+        )
+      )
+    );
+  }
+
+  return toast({ title, ...finalOptions });
 };
 
 toast.info = (title: string, options?: Omit<ToasterToast, "id" | "title" | "variant">) => {

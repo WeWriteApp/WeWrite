@@ -16,10 +16,10 @@ export function EmailVerificationStatus({ className = "" }: EmailVerificationSta
       return {
         icon: <CheckCircle className="h-4 w-4" />,
         text: "Email verified",
-        bgColor: "bg-green-50 dark:bg-green-950/20",
-        borderColor: "border-green-200 dark:border-green-800",
-        textColor: "text-green-700 dark:text-green-300",
-        iconColor: "text-green-600 dark:text-green-400"
+        bgColor: "bg-success/10 dark:bg-success/20",
+        borderColor: "border-success/30 dark:border-success/40",
+        textColor: "text-success dark:text-success-foreground",
+        iconColor: "text-success dark:text-success-foreground"
       };
     }
 

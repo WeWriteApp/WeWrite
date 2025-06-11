@@ -14,9 +14,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { PayoutsManager } from '../components/payments/PayoutsManager';
-import { PaymentMethodsOverview } from '../components/payments/PaymentMethodsOverview';
-import { PledgesOverview } from '../components/payments/PledgesOverview';
-import { SubscriptionOverview } from '../components/payments/SubscriptionOverview';
+import { CombinedSubscriptionSection } from '../components/payments/CombinedSubscriptionSection';
 import PWAInstallationCard from '../components/utils/PWAInstallationCard';
 import { SyncQueueSettings } from '../components/utils/SyncQueueSettings';
 import { EmailVerificationStatus } from '../components/utils/EmailVerificationStatus';
@@ -48,6 +46,8 @@ export default function AccountPage() {
 
   // Check payments feature flag
   const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+
+
 
   useEffect(() => {
     if (!user) {
@@ -252,7 +252,7 @@ export default function AccountPage() {
           <div className="space-y-8">
           {/* Profile Section */}
           <section>
-            <Card className="shadow-sm border-border/50">
+            <Card className="wewrite-card">
               <CardHeader className="pb-6">
                 <CardTitle className="text-xl font-semibold">Profile</CardTitle>
                 <CardDescription className="text-muted-foreground">
@@ -436,52 +436,28 @@ export default function AccountPage() {
             </Card>
           </section>
 
+
+
           {/* Payment-related sections - Only visible when payments feature flag is enabled */}
           {user && user.email && isPaymentsEnabled && (
             <div className="space-y-8">
-              {/* Payment Sections Header */}
-              <div className="border-b border-border/50 pb-4">
-                <h2 className="text-xl font-semibold text-foreground">Payment & Billing</h2>
-                <p className="text-muted-foreground mt-1">Manage your subscription, payment methods, and earnings</p>
-              </div>
+              {/* Combined Subscription Section (includes Payment Methods, Subscription, and Pledges) */}
+              <CombinedSubscriptionSection />
 
-              {/* Subscription Section */}
-              <section className="space-y-1">
-                <SubscriptionOverview />
-              </section>
-
-              {/* Payment Methods Section */}
-              <section className="space-y-1">
-                <PaymentMethodsOverview />
-              </section>
-
-              {/* Pledges Section */}
-              <section className="space-y-1">
-                <PledgesOverview />
-              </section>
-
-              {/* Payouts Section */}
-              <section className="space-y-1">
-                <PayoutsManager />
-              </section>
+              {/* Standalone Payouts Section */}
+              <PayoutsManager />
             </div>
           )}
 
+
+
           {/* Account Settings - Always visible */}
           <div className="space-y-8">
-            {/* Account Settings Header */}
-            <div className="border-b border-border/50 pb-4">
-              <h2 className="text-xl font-semibold text-foreground">Account Settings</h2>
-              <p className="text-muted-foreground mt-1">Configure your app preferences and installation options</p>
-            </div>
+            {/* Sync Queue Settings */}
+            <SyncQueueSettings />
 
-            <section className="space-y-6">
-              {/* Sync Queue Settings */}
-              <SyncQueueSettings />
-
-              {/* PWA Installation */}
-              <PWAInstallationCard />
-            </section>
+            {/* PWA Installation */}
+            <PWAInstallationCard />
           </div>
           </div>
         )}

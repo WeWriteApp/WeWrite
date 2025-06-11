@@ -65,20 +65,12 @@ export default function Page() {
   const handleSave = async () => {
     console.log("Saving group", newGroup);
 
-    // Add current user as owner
+    // Add current user as owner (only the owner is added directly)
     let members = {};
     members[user.uid] = {
       role: "owner",
       joinedAt: new Date().toISOString()
     };
-
-    // Add selected members
-    selectedMembers.forEach(member => {
-      members[member.id] = {
-        role: "member",
-        joinedAt: new Date().toISOString()
-      };
-    });
 
     let data = {
       ...newGroup,
@@ -90,8 +82,32 @@ export default function Page() {
     console.log("Saving group", data);
 
     const newGroupRef = push(ref(rtdb, 'groups'), data);
+    const groupId = newGroupRef.key;
 
-    router.push(`/group/${newGroupRef.key}`);
+    // Send invitations to selected members instead of adding them directly
+    if (selectedMembers.length > 0) {
+      try {
+        const { createGroupInviteNotification } = await import('../../firebase/notifications');
+
+        // Send invitation to each selected member
+        const invitationPromises = selectedMembers.map(member =>
+          createGroupInviteNotification(
+            member.id,
+            user.uid,
+            groupId,
+            newGroup.name || "New Group"
+          )
+        );
+
+        await Promise.all(invitationPromises);
+        console.log(`Sent ${selectedMembers.length} group invitations`);
+      } catch (error) {
+        console.error("Error sending group invitations:", error);
+        // Continue to group page even if invitations fail
+      }
+    }
+
+    router.push(`/group/${groupId}`);
   };
 
   return (

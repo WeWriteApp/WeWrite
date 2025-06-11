@@ -15,20 +15,67 @@ import { useDateFormat } from "../../contexts/DateFormatContext";
 import { isExactDateFormat as isDailyNoteFormat } from "../../utils/dailyNoteNavigation";
 
 /**
- * ENHANCED RELATED PAGES ALGORITHM
+ * WeWrite Enhanced Related Pages Algorithm
  *
- * This algorithm has been redesigned to match the effectiveness of the main search functionality.
- * It uses sophisticated word matching, content analysis, and relevance scoring to find related pages.
+ * This algorithm has been completely redesigned to match the effectiveness of the main search
+ * functionality, providing sophisticated content analysis and relevance scoring.
  *
- * Key improvements over the previous algorithm:
- * 1. Comprehensive content analysis (both title and full content)
- * 2. Advanced word processing with better stemming and stop word filtering
- * 3. Partial word matching capabilities similar to search API
- * 4. Sophisticated relevance scoring system
- * 5. Better performance with optimized queries
- * 6. Enhanced ranking algorithm that considers multiple factors
- * 7. Increased query limit to match search functionality
- * 8. Content extraction from both current page title AND content
+ * Algorithm Overview:
+ * The Related Pages algorithm analyzes both title and content from the current page to find
+ * related content using advanced word processing, partial matching, and multi-factor scoring.
+ *
+ * Key Improvements Over Previous Algorithm:
+ * 1. **Comprehensive Content Analysis**
+ *    - Before: Only analyzed words from the current page title
+ *    - After: Analyzes both title AND content from the current page
+ *    - Impact: Much richer source material for finding related content
+ *
+ * 2. **Advanced Word Processing**
+ *    - Before: Basic stemming with limited stop words (30 words)
+ *    - After: Advanced stemming with comprehensive stop words (50+ words)
+ *    - Features: Porter Stemmer-based algorithm, handles plurals, verb forms, adjectives
+ *    - Filters: Articles, prepositions, pronouns, auxiliary verbs
+ *
+ * 3. **Partial Word Matching**
+ *    - Before: Only exact word matches
+ *    - After: Supports partial matches like the search API
+ *    - Example: "research" matches "researcher", "researching"
+ *
+ * 4. **Sophisticated Scoring System**
+ *    - Before: Simple word count
+ *    - After: Multi-factor relevance scoring
+ *    - Factors: Exact matches (10 points), Partial matches (5 points), Match ratio bonuses,
+ *              Title length similarity, Content vs title match penalties
+ *
+ * 5. **Increased Coverage**
+ *    - Before: Limited to 100 pages
+ *    - After: Analyzes 500 pages for better coverage
+ *    - Performance: Optimized with 2000-character content limits
+ *
+ * Ranking Criteria (in order):
+ * 1. Match Type: Title matches before content matches
+ * 2. Relevance Score: Higher scores first
+ * 3. Exact Matches: More exact matches first
+ * 4. Match Ratio: Higher percentage of matched words
+ * 5. Recency: More recently modified pages first
+ *
+ * Performance Considerations:
+ * - Content Limit: Only analyzes first 2000 characters of content
+ * - Query Limit: Increased to 500 pages but with efficient processing
+ * - Caching: Results cached per page to avoid re-computation
+ * - Error Handling: Graceful fallbacks for parsing errors
+ *
+ * Expected Results:
+ * - Show significantly more relevant results
+ * - Find pages that the previous algorithm missed
+ * - Rank results more accurately by relevance
+ * - Match the effectiveness of the main search functionality
+ * - Provide better user experience with more useful recommendations
+ *
+ * Debugging and Monitoring:
+ * The algorithm includes comprehensive logging for source word analysis,
+ * candidate evaluation details, top match summaries with scores, and performance metrics.
+ * Check browser console for detailed logs when viewing pages with Related Pages sections.
  */
 
 /**

@@ -193,6 +193,41 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
         }
 
         try {
+          // Debug authentication state
+          console.log('useStaticRecentActivity: Authentication state check', {
+            hasUser: !!user,
+            userId: user?.uid,
+            isSessionUser: user?.isSessionUser,
+            timestamp: new Date().toISOString()
+          });
+
+          // Check if we have a valid authentication token
+          if (user && typeof window !== 'undefined') {
+            try {
+              const { auth } = await import('../firebase/config');
+              const currentUser = auth.currentUser;
+              console.log('useStaticRecentActivity: Firebase auth state', {
+                hasCurrentUser: !!currentUser,
+                currentUserUid: currentUser?.uid,
+                userMatches: currentUser?.uid === user.uid
+              });
+
+              // If there's a mismatch, try to refresh the token
+              if (!currentUser && user.uid) {
+                console.log('useStaticRecentActivity: Auth state mismatch detected, attempting token refresh');
+                // Try to get a fresh token
+                try {
+                  const token = await currentUser?.getIdToken(true);
+                  console.log('useStaticRecentActivity: Token refresh successful', !!token);
+                } catch (tokenError) {
+                  console.error('useStaticRecentActivity: Token refresh failed', tokenError);
+                }
+              }
+            } catch (authError) {
+              console.error('useStaticRecentActivity: Auth state check failed', authError);
+            }
+          }
+
           // Use getRecentActivity to get activities including bio and about edits
           // Fetch more activities if pagination is enabled
           const fetchLimit = enablePagination ? limitCount * 10 : limitCount * 2;
@@ -261,16 +296,41 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
         } catch (err) {
           console.error("Error with Firestore query:", err);
 
-          // For logged-out users, provide empty array instead of showing error
-          if (!user) {
-            setActivities([]);
-            setError(null); // Don't show error for logged-out users
-          } else {
-            setError({
-              message: "Failed to fetch recent activity",
-              details: err.message || "Unknown database error",
-              code: err.code || "unknown"
+          // Enhanced error handling for permission issues
+          if (err.code === 'permission-denied') {
+            console.error('useStaticRecentActivity: Permission denied error details', {
+              errorCode: err.code,
+              errorMessage: err.message,
+              hasUser: !!user,
+              userId: user?.uid,
+              isSessionUser: user?.isSessionUser
             });
+
+            // For authenticated users with permission errors, provide specific guidance
+            if (user) {
+              setError({
+                message: "Missing or insufficient permissions",
+                details: "Please try refreshing the page or signing in again",
+                code: err.code || "permission-denied",
+                canRetry: true
+              });
+            } else {
+              setActivities([]);
+              setError(null); // Don't show error for logged-out users
+            }
+          } else {
+            // For logged-out users, provide empty array instead of showing error
+            if (!user) {
+              setActivities([]);
+              setError(null); // Don't show error for logged-out users
+            } else {
+              setError({
+                message: "Failed to fetch recent activity",
+                details: err.message || "Unknown database error",
+                code: err.code || "unknown",
+                canRetry: true
+              });
+            }
           }
         }
       } catch (err) {
@@ -278,7 +338,8 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
         setError({
           message: "Failed to process recent activity data",
           details: err.message || "Unknown error",
-          code: err.code || "unknown"
+          code: err.code || "unknown",
+          canRetry: true
         });
       } finally {
         setLoading(false);

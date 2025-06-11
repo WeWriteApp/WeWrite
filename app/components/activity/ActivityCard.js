@@ -79,7 +79,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
   }, [activity?.pageId, user, activity?.activityType]);
 
   // Use the reactive feature flag hook instead of manual Firestore check
-  const subscriptionEnabled = useFeatureFlag('payments', user?.email);
+  const subscriptionEnabled = useFeatureFlag('payments', user?.email, user?.uid);
 
   // Ensure we have valid content before generating diffs
   const hasValidContent = activity.currentContent &&
@@ -141,12 +141,17 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
       return;
     }
 
-    // For regular page activities, determine navigation based on version status
-    if (activity.versionId && !activity.isCurrentVersion) {
+    // For regular page activities, determine navigation based on context and version status
+    if (activity.isHistoryContext && activity.versionId && activity.hasPreviousVersion) {
+      // From history page with previous version available - go to diff view
+      const url = `/${activity.pageId}/diff/${activity.versionId}`;
+      console.log('ActivityCard: History context with previous version, navigating to diff view:', url);
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      window.location.href = url;
+    } else if (activity.versionId && !activity.isCurrentVersion) {
       // Past version links should go to the version page
       const url = `/${activity.pageId}/version/${activity.versionId}`;
       console.log('ActivityCard: Past version clicked, navigating to version page:', url);
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       window.location.href = url;
     } else {
       // Current version or no version ID should use click-to-edit functionality for main page
@@ -166,10 +171,17 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
     const groupId = activity.pageId.replace("group-about-", "");
     activityUrl = `/group/${groupId}`;
   } else {
-    // Regular page edits - current version goes to main page, past versions go to version page
-    activityUrl = (activity.versionId && !activity.isCurrentVersion)
-      ? `/${activity.pageId}/version/${activity.versionId}`
-      : `/${activity.pageId}`;
+    // Regular page edits - determine URL based on context
+    if (activity.isHistoryContext && activity.versionId && activity.hasPreviousVersion) {
+      // From history page with previous version available - link to diff view
+      activityUrl = `/${activity.pageId}/diff/${activity.versionId}`;
+    } else if (activity.versionId && !activity.isCurrentVersion) {
+      // Past version links go to version page
+      activityUrl = `/${activity.pageId}/version/${activity.versionId}`;
+    } else {
+      // Current version or no version ID goes to main page
+      activityUrl = `/${activity.pageId}`;
+    }
   }
 
   // Determine if this card has diff content (for dynamic height on mobile)

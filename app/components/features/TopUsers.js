@@ -1,4 +1,50 @@
 "use client";
+
+/**
+ * WeWrite TopUsers Infinite Recursion Fix - TopUsers Component
+ *
+ * This component displays the top users leaderboard and has been fixed to resolve
+ * a critical infinite recursion error that was causing "Maximum call stack size exceeded"
+ * errors on the logged-in home page.
+ *
+ * Critical Bug Fixed:
+ * The component was experiencing infinite recursion due to circular dependencies
+ * in useCallback hooks that created this chain:
+ * checkCache() → refreshDataInBackground() → fetchFreshData() → fetchUsersAndPages() → checkCache()
+ *
+ * Solution Implemented:
+ * 1. **Function Reordering**: Moved fetchUsersAndPages before checkCache to fix temporal dead zone
+ * 2. **Eliminate Circular Dependencies**: Removed intermediate functions (refreshDataInBackground, fetchFreshData)
+ * 3. **Simplified Background Refresh**: Implemented direct background refresh logic in checkCache
+ * 4. **Direct Cache Check**: Added direct cache checking in fetchUsersAndPages to prevent recursion
+ * 5. **Clean Dependencies**: Updated useCallback dependencies to be minimal and non-circular
+ *
+ * Key Improvements:
+ * - fetchUsersAndPages: [user, pageSize, subscriptionEnabled] (non-circular)
+ * - checkCache: [user?.uid, isBackgroundRefreshing, fetchUsersAndPages] (controlled)
+ * - Background refresh uses setTimeout to break call stacks
+ * - isBackgroundFetch flag prevents recursive cache checks
+ *
+ * Performance Features:
+ * - Intelligent caching with TTL (Time-To-Live) support
+ * - Background refresh for stale data without blocking UI
+ * - Batch user data fetching for efficiency
+ * - Query performance monitoring and tracking
+ * - Pagination support for large user lists
+ *
+ * Prevention Measures:
+ * - Avoid circular dependencies in useCallback hooks
+ * - Use setTimeout(fn, 0) to break call stacks when needed
+ * - Be careful with cache checking in functions called by cache refresh logic
+ * - Use explicit flags (isBackgroundFetch) to control function behavior
+ * - Review dependency arrays carefully in useCallback and useEffect hooks
+ *
+ * Impact:
+ * This fix resolves the critical error that was preventing the home page from loading
+ * properly for logged-in users. The component now loads cached data immediately,
+ * refreshes stale data in background, and avoids infinite recursion loops.
+ */
+
 import { useState, useEffect, useContext, useCallback, useRef, useMemo } from "react";
 import { AuthContext } from "../../providers/AuthProvider";
 import { collection, getDocs, query, limit, getDoc, doc, where } from "firebase/firestore";

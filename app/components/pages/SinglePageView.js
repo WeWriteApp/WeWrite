@@ -14,11 +14,10 @@ import PageViewCounter from "./PageViewCounter";
 import { initializeNavigationTracking } from "../../utils/navigationTracking";
 import { AuthContext } from "../../providers/AuthProvider";
 import { DataContext } from "../../providers/DataProvider";
-import { setupSaveSuccessFlash } from "../../utils/flashAnimation";
+
 import { createEditor } from "slate";
 import { withHistory } from "slate-history";
 import { Slate, Editable, withReact } from "slate-react";
-import DashboardLayout from "../../DashboardLayout";
 import PublicLayout from "../layout/PublicLayout";
 import PageHeader from "./PageHeader.tsx";
 import PageFooter from "./PageFooter";
@@ -99,7 +98,7 @@ import { GroupsContext } from "../../providers/GroupsProvider";
  * the PageActions component for all page interactions, replacing the previous
  * PageInteractionButtons and ActionRow components.
  */
-function SinglePageView({ params }) {
+function SinglePageView({ params, initialEditMode = false }) {
   const [page, setPage] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editorState, setEditorState] = useState([]);
@@ -119,6 +118,7 @@ function SinglePageView({ params }) {
   const [title, setTitle] = useState(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [clickPosition, setClickPosition] = useState(null);
+  const [shouldAnimateToEdit, setShouldAnimateToEdit] = useState(false);
 
   // Additional state for editing functionality (moved from EditPage)
   const [isSaving, setIsSaving] = useState(false);
@@ -282,11 +282,8 @@ function SinglePageView({ params }) {
       setIsSaving(false);
       setError(null);
 
-      // Trigger success animations and events
+      // Trigger page updated event
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('page-save-success', {
-          detail: { pageId: page.id }
-        }));
         window.dispatchEvent(new CustomEvent('page-updated', {
           detail: { pageId: page.id }
         }));
@@ -318,13 +315,22 @@ function SinglePageView({ params }) {
     setClickPosition(null);
   };
 
-  // Enhanced setIsEditing function that captures click position
+  // Enhanced setIsEditing function that captures click position and handles URL changes
   const handleSetIsEditing = (editing, position = null) => {
     setIsEditing(editing);
     if (editing && position) {
       setClickPosition(position);
     } else if (!editing) {
       setClickPosition(null); // Clear position when exiting edit mode
+    }
+
+    // Handle URL changes for edit mode
+    if (editing) {
+      // Enter edit mode - update URL to /[id]/edit
+      router.push(`/${params.id}/edit`, { scroll: false });
+    } else {
+      // Exit edit mode - return to normal page view
+      router.push(`/${params.id}`, { scroll: false });
     }
   };
 
@@ -514,12 +520,8 @@ function SinglePageView({ params }) {
       setIsLoading(true);
       setLoadingTimedOut(false);
 
-      // SCROLL RESTORATION FIX: Scroll to top when loading a new page
-      // This ensures that when navigating to a new page, we always start at the top
-      if (typeof window !== 'undefined') {
-        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-        console.log('SinglePageView: Scrolled to top for page:', params.id);
-      }
+      // SCROLL RESTORATION: Let the scroll restoration hooks handle this
+      // Removed immediate scroll to prevent scrolling current page before navigation
 
       // CRITICAL FIX: Initialize navigation tracking for "What Links Here"
       // This tracks when users navigate from one page to another
@@ -792,29 +794,59 @@ function SinglePageView({ params }) {
     }
   }, [params.id, user?.uid, loadAttempts]); // Added loadAttempts to dependencies to trigger retries
 
-  // Check for edit=true URL parameter and set isEditing state
+  // Handle initial edit mode from URL or initialEditMode prop
   useEffect(() => {
-    if (searchParams && searchParams.get('edit') === 'true' && !isLoading && page) {
-      // Set editing mode if the user is the owner of the page or a member of the group
-      if (user && (
-        // User is the page owner
-        user.uid === page.userId ||
-        // OR page belongs to a group and user is a member of that group
-        (page.groupId && hasGroupAccess)
-      )) {
-        console.log('Setting edit mode from URL parameter');
-        setIsEditing(true);
+    if (!isLoading && page && user) {
+      // Check if user has edit permissions
+      const canEdit = user.uid === page.userId || (page.groupId && hasGroupAccess);
+
+      if (canEdit) {
+        // Check for edit=true URL parameter (legacy support)
+        if (searchParams && searchParams.get('edit') === 'true') {
+          console.log('Setting edit mode from URL parameter');
+          setIsEditing(true);
+        }
+        // Check for initialEditMode prop (from /[id]/edit route)
+        else if (initialEditMode) {
+          console.log('Setting edit mode from initialEditMode prop');
+          // Use animation for smooth transition from normal view to edit mode
+          setShouldAnimateToEdit(true);
+          setTimeout(() => {
+            setIsEditing(true);
+            setShouldAnimateToEdit(false);
+          }, 100); // Small delay to ensure page is rendered first
+        }
       } else {
         console.log('User does not have edit permissions for this page');
+        // If user doesn't have permissions and they're on edit URL, redirect to normal view
+        if (initialEditMode) {
+          router.replace(`/${params.id}`);
+        }
       }
     }
-  }, [searchParams, isLoading, page, user, hasGroupAccess]);
+  }, [searchParams, isLoading, page, user, hasGroupAccess, initialEditMode, params.id, router]);
 
-  // Set up flash animation for save success
+  // Handle browser back button navigation
   useEffect(() => {
-    const cleanup = setupSaveSuccessFlash();
-    return cleanup;
-  }, []);
+    const handlePopState = (event) => {
+      // Check if we're navigating away from edit mode
+      if (isEditing && !window.location.pathname.includes('/edit')) {
+        setIsEditing(false);
+        setClickPosition(null);
+      }
+      // Check if we're navigating to edit mode
+      else if (!isEditing && window.location.pathname.includes('/edit')) {
+        if (user && page && (user.uid === page.userId || (page.groupId && hasGroupAccess))) {
+          setIsEditing(true);
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isEditing, user, page, hasGroupAccess]);
+
+
 
   // Listen for page-updated events to refresh the page data
   useEffect(() => {
@@ -994,11 +1026,7 @@ function SinglePageView({ params }) {
     }
   }, [page, user]);
 
-  // Set up flash animation for save success
-  useEffect(() => {
-    const cleanup = setupSaveSuccessFlash();
-    return cleanup;
-  }, []);
+
 
   // Function to extract linked page IDs from content
   // Memoize this function to prevent recalculation on every render
@@ -1045,7 +1073,7 @@ function SinglePageView({ params }) {
     [pageFullyRendered, editorState]
   );
 
-  const Layout = user ? DashboardLayout : PublicLayout;
+  const Layout = user ? React.Fragment : PublicLayout;
 
   // If the page is deleted, use NotFoundWrapper
   if (isDeleted) {

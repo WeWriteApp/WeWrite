@@ -185,7 +185,7 @@ export default function FeatureFlagCard({
           <div className="flex items-center gap-2">
             <span className="font-medium">{flag.name}</span>
             {flag.enabled ? (
-              <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
+              <span className="px-2 py-1 text-xs bg-success/10 text-success border border-success/20 rounded-full">
                 GLOBALLY ENABLED
               </span>
             ) : (

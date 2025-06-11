@@ -353,7 +353,7 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 76% 45%;
+    --success: 142 73% 42%;
     --success-foreground: 0 0% 100%;
 
     --border: 217 33% 25%;
@@ -504,14 +504,22 @@
   border-color: hsl(var(--border-theme-strong));
 }
 
-/* Hover state for cards */
+/* Hover state for cards - shadow extension effect instead of background change */
 .wewrite-card:hover {
-  background-color: hsl(var(--muted) / 0.3); /* hover:bg-muted/30 */
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.1), 0 2px 4px 0 rgba(0, 0, 0, 0.06); /* Enhanced shadow on hover */
+  transform: translateY(-1px); /* Subtle lift effect */
+  transition: all 0.2s ease-in-out;
 }
 
-/* Dark mode hover state for cards */
+/* Dark mode hover state for cards - enhanced shadow for dark mode */
 .dark .wewrite-card:hover {
-  background-color: hsl(var(--card)); /* dark:hover:bg-card/100 */
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.3), 0 2px 4px 0 rgba(0, 0, 0, 0.2); /* Stronger shadow for dark mode */
+  transform: translateY(-1px); /* Subtle lift effect */
+}
+
+/* Base transition for smooth hover effects */
+.wewrite-card {
+  transition: all 0.2s ease-in-out;
 }
 
 /* High contrast mode card styling - maximum contrast borders for all card components */
@@ -818,6 +826,39 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
 }
+
+/**
+ * WeWrite Border Styling System
+ *
+ * Standardized approach to border styling that ensures consistent border styling
+ * across the WeWrite application. These classes automatically adapt to light and
+ * dark modes, and support additional theme modes including high contrast.
+ *
+ * Theme-Based Border Classes:
+ * - .border-theme-light: Light border (20% opacity)
+ * - .border-theme-medium: Medium border (40% opacity)
+ * - .border-theme-strong: Strong border (60% opacity)
+ * - .border-theme-solid: Solid border (100% opacity)
+ *
+ * Interactive Border Classes (hover states):
+ * - .hover-border-light: Light hover state (30% opacity)
+ * - .hover-border-medium: Medium hover state (50% opacity)
+ * - .hover-border-strong: Strong hover state (70% opacity)
+ * - .hover-border-solid: Solid hover state (100% opacity)
+ *
+ * Usage Examples:
+ * Basic card: border-theme-strong rounded-xl shadow-sm p-4
+ * Interactive card: border-theme-strong hover-border-strong rounded-xl shadow-sm p-4 transition-all duration-200
+ *
+ * Glass Effects:
+ * - .glass-card: Card with subtle glass effect
+ * - .glass-panel: Panel with more pronounced glass effect
+ *
+ * The border colors are defined using CSS variables in the theme:
+ * --border: 215 20% 85% (light mode) / 217.2 32.6% 25% (dark mode)
+ *
+ * High contrast mode automatically applies stronger borders for accessibility.
+ */
 
 /* Centralized border utilities for consistent styling */
 .border-theme-light {

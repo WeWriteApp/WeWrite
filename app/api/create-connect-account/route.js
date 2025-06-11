@@ -1,0 +1,72 @@
+import { NextResponse } from 'next/server';
+import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
+import Stripe from 'stripe';
+import { getStripeSecretKey } from '../../utils/stripeConfig';
+import { getUserIdFromRequest } from '../auth-helper';
+
+// Initialize Firebase Admin
+const admin = getFirebaseAdmin();
+
+export async function POST(request) {
+  try {
+    // Get user ID from request using our helper
+    const userId = await getUserIdFromRequest(request);
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Initialize Stripe
+    const stripe = new Stripe(getStripeSecretKey());
+
+    // Get the user's data from Firestore
+    const db = admin.firestore();
+    const userDocRef = db.collection('users').doc(userId);
+    const userDoc = await userDocRef.get();
+    
+    let userData = {};
+    if (userDoc.exists) {
+      userData = userDoc.data();
+    }
+
+    // Get user email from Firebase Auth
+    const userRecord = await admin.auth().getUser(userId);
+    const userEmail = userRecord.email;
+
+    let accountId = userData.stripeConnectedAccountId;
+
+    // If the user doesn't have a connected account, create one
+    if (!accountId) {
+      const account = await stripe.accounts.create({
+        type: 'express',
+        email: userEmail,
+        metadata: {
+          firebaseUID: userId,
+        },
+      });
+
+      accountId = account.id;
+
+      // Save the account ID to Firestore
+      await userDocRef.set({
+        stripeConnectedAccountId: accountId,
+      }, { merge: true });
+    }
+
+    // Create an account link for onboarding
+    const accountLink = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?setup=failed`,
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?setup=success`,
+      type: 'account_onboarding',
+    });
+
+    return NextResponse.json({ url: accountLink.url });
+  } catch (error) {
+    console.error('Error creating connect account:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to create connect account' },
+      { status: 500 }
+    );
+  }
+}

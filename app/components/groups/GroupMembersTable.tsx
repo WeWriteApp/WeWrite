@@ -1,3 +1,44 @@
+/**
+ * WeWrite Group Members Management Component
+ *
+ * This component provides comprehensive group member management functionality with
+ * an invitation-based system that replaces direct member addition. It implements
+ * user consent requirements and proper role-based access controls.
+ *
+ * Key Features:
+ * - Invitation-based member addition (replaces direct addition)
+ * - Role-based permissions (owner, admin, member)
+ * - Member search and filtering capabilities
+ * - Leave group functionality for non-owners
+ * - Responsive design with desktop table and mobile card views
+ *
+ * Group Invitation System:
+ * - Sends invitation notifications instead of directly adding members
+ * - Users must accept invitations to join groups
+ * - Prevents duplicate invitations to the same user
+ * - Provides clear feedback on invitation status
+ *
+ * Database Integration:
+ * - Uses Firebase Realtime Database for group member data
+ * - Uses Firestore for user search and profile information
+ * - Implements proper error handling and data validation
+ *
+ * Security Features:
+ * - Only group owners can invite new members
+ * - Members can leave groups (except owners)
+ * - Proper authentication checks before operations
+ *
+ * UI/UX Features:
+ * - Responsive design with separate desktop/mobile layouts
+ * - Real-time member list updates
+ * - Interactive search with live filtering
+ * - Toast notifications for user feedback
+ * - Confirmation dialogs for destructive actions
+ *
+ * @author WeWrite Development Team
+ * @version 2.0.0 - Invitation System Implementation
+ */
+
 "use client";
 
 import React, { useState, useEffect, useContext } from "react";
@@ -21,22 +62,31 @@ import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from ".
 import { toast } from "../ui/use-toast";
 import { useRouter } from "next/navigation";
 
+/**
+ * Member data interface for group member display
+ */
 interface Member {
   id: string;
   username: string;
-  role: string;
-  joinedAt: string;
+  role: string;        // 'owner', 'admin', or 'member'
+  joinedAt: string;    // ISO date string
 }
 
+/**
+ * User data interface for search and invitation functionality
+ */
 interface User {
   id: string;
   username: string;
 }
 
+/**
+ * Props interface for GroupMembersTable component
+ */
 interface GroupMembersTableProps {
-  groupId: string;
-  members: Record<string, { role: string; joinedAt: string }>;
-  isOwner: boolean;
+  groupId: string;                                              // Unique group identifier
+  members: Record<string, { role: string; joinedAt: string }>; // Current group members
+  isOwner: boolean;                                             // Whether current user is group owner
 }
 
 export default function GroupMembersTable({ groupId, members, isOwner }: GroupMembersTableProps) {
@@ -143,29 +193,70 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
     }
   };
 
+  /**
+   * Handle adding a new member to the group via invitation system
+   *
+   * This function implements the invitation-based member addition system that
+   * replaces direct member addition. Instead of immediately adding users to
+   * the group, it sends them an invitation notification that they must accept.
+   *
+   * Process:
+   * 1. Validates selected user and authentication
+   * 2. Fetches group information for invitation context
+   * 3. Creates group invitation notification
+   * 4. Provides user feedback and resets form state
+   *
+   * Benefits of invitation system:
+   * - Requires user consent before joining groups
+   * - Prevents unwanted group additions
+   * - Provides clear audit trail of invitations
+   * - Allows users to reject unwanted invitations
+   *
+   * Error Handling:
+   * - Validates user authentication
+   * - Checks group existence
+   * - Handles notification creation failures
+   * - Provides user-friendly error messages
+   */
   const handleAddMember = async () => {
     if (!selectedUser) return;
 
     setIsLoading(true);
     try {
-      const updatedMembers = {
-        ...members,
-        [selectedUser.id]: {
-          role: "member",
-          joinedAt: new Date().toISOString()
-        }
-      };
+      // Get group information for invitation context
+      const groupRef = ref(rtdb, `groups/${groupId}`);
+      const groupSnapshot = await get(groupRef);
 
-      const membersRef = ref(rtdb, `groups/${groupId}/members`);
-      await set(membersRef, updatedMembers);
+      if (!groupSnapshot.exists()) {
+        throw new Error("Group not found");
+      }
 
+      const groupData = groupSnapshot.val();
+      const groupName = groupData.name || "Unknown Group";
+
+      // Validate user authentication
+      if (!user?.uid) {
+        throw new Error("User not authenticated");
+      }
+
+      // Send group invitation instead of directly adding member
+      // This implements the consent-based invitation system
+      const { createGroupInviteNotification } = await import('../../firebase/notifications');
+      await createGroupInviteNotification(
+        selectedUser.id,    // Target user to invite
+        user.uid,           // Current user sending invitation
+        groupId,            // Group to invite to
+        groupName           // Group name for notification context
+      );
+
+      // Reset form state and provide success feedback
       setIsDialogOpen(false);
       setSearchTerm('');
       setSelectedUser(null);
-      toast.success("Member added successfully");
+      toast.success("Group invitation sent successfully");
     } catch (error) {
-      console.error("Error adding member:", error);
-      toast.error("Failed to add member. Please try again.");
+      console.error("Error sending group invitation:", error);
+      toast.error("Failed to send invitation. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -192,14 +283,14 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
               <DialogTrigger asChild>
                 <Button size="sm" className="flex items-center gap-1">
                   <UserPlus className="h-4 w-4" />
-                  <span>Add Member</span>
+                  <span>Invite Member</span>
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Add Member to Group</DialogTitle>
+                  <DialogTitle>Invite Member to Group</DialogTitle>
                   <DialogDescription>
-                    Search for a user by username to add them to this group.
+                    Search for a user by username to send them a group invitation.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -246,7 +337,7 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
                     onClick={handleAddMember}
                     disabled={!selectedUser || isLoading}
                   >
-                    {isLoading ? 'Adding...' : 'Add Member'}
+                    {isLoading ? 'Sending...' : 'Send Invitation'}
                   </Button>
                 </DialogFooter>
               </DialogContent>

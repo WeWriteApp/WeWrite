@@ -23,6 +23,7 @@ import CacheInitializer from "./components/utils/CacheInitializer"
 import { SyncQueueProvider } from "./contexts/SyncQueueContext"
 
 
+
 // Import polyfills for browser compatibility
 import "intl-segmenter-polyfill"
 
@@ -54,12 +55,12 @@ export const metadata = {
   openGraph: {
     title: "WeWrite - The Social Wiki Where Every Page is a Fundraiser",
     description: "Create, collaborate, and share your writing with others in real-time. Join the social wiki where every page is a fundraiser and writers can earn from their content.",
-    url: process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app',
+    url: process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app',
     siteName: 'WeWrite',
     type: 'website',
     images: [
       {
-        url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'}/images/og-image.png`,
+        url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'}/images/og-image.png`,
         width: 1200,
         height: 630,
         alt: 'WeWrite - Collaborative Writing Platform',
@@ -70,7 +71,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: "WeWrite - The Social Wiki Where Every Page is a Fundraiser",
     description: "Create, collaborate, and share your writing with others in real-time. Join the social wiki where every page is a fundraiser and writers can earn from their content.",
-    images: [`${process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'}/images/og-image.png`],
+    images: [`${process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'}/images/og-image.png`],
   },
   icons: {
     icon: [
@@ -92,7 +93,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="canonical" href={process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'} />
+        <link rel="canonical" href={process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'} />
         <SlateEarlyPatch />
 
         {/* Enhanced Website Schema Markup */}
@@ -105,28 +106,28 @@ export default function RootLayout({
               name: 'WeWrite',
               alternateName: 'WeWrite App',
               description: 'The social wiki where every page is a fundraiser. Create, collaborate, and share your writing with others in real-time.',
-              url: process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app',
+              url: process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app',
               potentialAction: {
                 '@type': 'SearchAction',
                 target: {
                   '@type': 'EntryPoint',
-                  urlTemplate: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'}/search?q={search_term_string}`
+                  urlTemplate: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'}/search?q={search_term_string}`
                 },
                 'query-input': 'required name=search_term_string'
               },
               publisher: {
                 '@type': 'Organization',
                 name: 'WeWrite',
-                url: process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app',
+                url: process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app',
                 logo: {
                   '@type': 'ImageObject',
-                  url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'}/images/og-image.png`,
+                  url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'}/images/og-image.png`,
                   width: 1200,
                   height: 630
                 },
                 sameAs: [
-                  `${process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'}/about`,
-                  `${process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'}/features`
+                  `${process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'}/about`,
+                  `${process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'}/features`
                 ]
               },
               mainEntity: {

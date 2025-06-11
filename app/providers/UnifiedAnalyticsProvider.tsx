@@ -105,7 +105,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
                 // For content pages, use our improved tracking
                 const { isReady, title } = isContentReadyForAnalytics(pageId, newTitle);
 
-                if (isReady && title !== 'Page: Loading Content') {
+                if (isReady && title !== '__LOADING_PLACEHOLDER__') {
                   // Content is ready, track with the verified title
                   analytics.pageView(url, title, pageId);
                   if (isDev) console.log('Re-tracked page view with verified title:', title);
@@ -162,7 +162,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
         // Check if content is ready for tracking
         const { isReady, title } = isContentReadyForAnalytics(pageId, pageTitle);
 
-        if (isReady && title !== 'Page: Loading Content') {
+        if (isReady && title !== '__LOADING_PLACEHOLDER__') {
           // Content is ready, track immediately with the verified title
           analytics.pageView(url, title, pageId);
           if (isDev) console.log('Page view tracked with verified content:', title);
@@ -173,7 +173,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
           // Start the delayed tracking process
           trackPageViewWhenReady(pageId, pageTitle);
 
-          // Don't track with placeholder title to avoid "Page: Loading Content" in analytics
+          // Don't track with placeholder title to avoid loading placeholders in analytics
           // The trackPageViewWhenReady function will handle the actual tracking when content is ready
         }
       } else {

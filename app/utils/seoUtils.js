@@ -1,5 +1,48 @@
 "use client";
 
+/**
+ * WeWrite SEO Implementation - SEO Utility Functions
+ *
+ * This module provides comprehensive SEO utility functions for WeWrite's
+ * user-generated content platform to optimize search engine visibility.
+ *
+ * Key Functions:
+ * - extractDescription(): Clean description extraction from Slate content
+ * - generateKeywords(): Intelligent keyword generation from content and metadata
+ * - generateSlug(): URL-friendly slug generation from text
+ * - extractWordsFromText(): Meaningful word extraction with stop word filtering
+ *
+ * SEO Best Practices Implemented:
+ * - Titles: Descriptive, unique titles (50-60 characters)
+ * - Descriptions: Compelling meta descriptions (150-160 characters)
+ * - Keywords: Relevant keyword extraction from content and context
+ * - URLs: Clean, descriptive URL slug generation
+ *
+ * Content Optimization Features:
+ * - Automatic description generation from page content
+ * - Context-aware keyword extraction (title, content, tags, author, group)
+ * - Stop word filtering for meaningful keyword extraction
+ * - Default WeWrite keywords for brand consistency
+ *
+ * Usage Examples:
+ * ```javascript
+ * // Extract description from content
+ * const description = extractDescription(pageContent, 160);
+ *
+ * // Generate keywords from page data
+ * const keywords = generateKeywords({
+ *   title: 'Page Title',
+ *   content: 'Page content...',
+ *   tags: ['tag1', 'tag2'],
+ *   username: 'author',
+ *   groupName: 'group'
+ * });
+ *
+ * // Create URL slug
+ * const slug = generateSlug('My Page Title');
+ * ```
+ */
+
 import { extractDescription as extractDescriptionFromText } from './textExtraction';
 
 /**
@@ -146,7 +189,7 @@ export function generateBreadcrumbs({
   groupName,
   groupUrl
 }) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app';
   const breadcrumbs = [
     {
       name: 'WeWrite',

@@ -111,10 +111,34 @@ const SearchResultsSection = React.memo(({
 SearchResultsSection.displayName = 'SearchResultsSection';
 
 /**
- * SearchPageContent Component
+ * WeWrite Search Performance Optimization - SearchPageContent Component
  *
- * This component provides complete isolation between input and results.
- * The input section never re-renders due to search state changes.
+ * This component provides complete isolation between input and results to eliminate
+ * performance issues and visual flashing during search input typing.
+ *
+ * Performance Architecture:
+ * - Complete isolation between input and results components
+ * - Input section never re-renders due to search state changes
+ * - Results section only re-renders when search results actually change
+ * - Custom React.memo comparison functions prevent unnecessary re-renders
+ *
+ * Component Isolation Benefits:
+ * - Input typing only affects the input component, not the entire page
+ * - Search results update independently without affecting input stability
+ * - Eliminated visual flashing and blank screen issues
+ * - Maintains perfect typing performance with zero interruptions
+ *
+ * State Management Optimization:
+ * - Replaced currentQuery with lastSearchQuery (only updates after search completion)
+ * - Functional state updates eliminate callback dependencies
+ * - Stable callback references prevent unnecessary re-renders
+ * - Feature flag optimization to avoid real-time listeners
+ *
+ * Architecture:
+ * SearchPageContent (isolated)
+ * ├── IsolatedSearchInput (isolated input)
+ * ├── EmptySearchState (when no query)
+ * └── SearchResultsDisplay (isolated results)
  */
 const SearchPageContent = ({
   initialQuery,

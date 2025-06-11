@@ -68,7 +68,7 @@ export function PaymentMethodsOverview() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="wewrite-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
@@ -86,7 +86,7 @@ export function PaymentMethodsOverview() {
   }
 
   return (
-    <Card>
+    <Card className="wewrite-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CreditCard className="h-5 w-5" />

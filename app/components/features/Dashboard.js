@@ -1,6 +1,5 @@
 "use client";
 import { useContext, useEffect } from "react";
-import DashboardLayout from "../DashboardLayout";
 import Link from "next/link";
 import AllPages from "../components/AllPages";
 import TopUsers from "../components/TopUsers";
@@ -26,7 +25,7 @@ const Dashboard = () => {
   }
 
   return (
-    <DashboardLayout>
+    <>
       <Header />
       <div className="space-y-2">
         <AddUsername />
@@ -56,7 +55,7 @@ const Dashboard = () => {
 
         <TopUsers />
       </div>
-    </DashboardLayout>
+    </>
   );
 };
 

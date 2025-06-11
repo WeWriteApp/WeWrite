@@ -85,6 +85,34 @@ const logAppendOperation = (
   // await fetch('/api/audit-log', { method: 'POST', body: JSON.stringify(logEntry) });
 };
 
+/**
+ * WeWrite Page Button Consistency Fix - Enhanced AddToPageButton Component
+ *
+ * Enhanced AddToPageButton component that supports external state management
+ * to enable consistent functionality between top navigation and bottom page buttons.
+ *
+ * Key Enhancements:
+ * - External State Management: Supports isOpen and setIsOpen props for external control
+ * - Conditional Rendering: hideButton prop allows modal-only usage
+ * - Consistent Behavior: Same modal functionality regardless of trigger location
+ * - Proper State Handling: Uses external state when provided, internal state otherwise
+ *
+ * Usage Patterns:
+ * 1. Standalone Button (original behavior):
+ *    <AddToPageButton page={page} />
+ *
+ * 2. External State Management (for top navigation):
+ *    <AddToPageButton
+ *      page={page}
+ *      isOpen={isAddToPageOpen}
+ *      setIsOpen={setIsAddToPageOpen}
+ *      hideButton={true}
+ *    />
+ *
+ * This enhancement enables the PageHeader component to use the same modal
+ * functionality as the bottom page buttons, ensuring consistent user experience.
+ */
+
 // TypeScript interfaces
 interface AddToPageButtonProps {
   page: Page;

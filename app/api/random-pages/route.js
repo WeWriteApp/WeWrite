@@ -22,9 +22,9 @@ export async function GET(request) {
 
     // Import Firebase modules
     const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
-    const { db } = await import('../../firebase/database');
+    const { db } = await import('../../firebase/database.ts');
     const { ref, get } = await import('firebase/database');
-    const { rtdb } = await import('../../firebase/rtdb');
+    const { rtdb } = await import('../../firebase/rtdb.ts');
 
     if (!db) {
       console.log('Firebase database not available - returning empty array');

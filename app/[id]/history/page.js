@@ -3,7 +3,6 @@
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPageVersions, getPageById } from '../../firebase/database';
-import DashboardLayout from '../../DashboardLayout';
 import { Button } from '../../components/ui/button';
 import { ChevronLeft, Clock } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -110,7 +109,9 @@ export default function PageHistoryPage({ params }) {
             currentContent: version.content || '',
             previousContent: previousContent,
             isNewPage: index === sortedVersions.length - 1, // Last item is the oldest/first version
-            versionId: version.id // Include the version ID for linking to version view
+            versionId: version.id, // Include the version ID for linking to version view
+            isHistoryContext: true, // Flag to indicate this is from history page
+            hasPreviousVersion: !!prevVersion // Flag to indicate if there's a previous version for diff
           };
         });
 
@@ -140,43 +141,38 @@ export default function PageHistoryPage({ params }) {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="p-4 max-w-4xl mx-auto">
-          <PageHeader
-            title="Page History"
-            username="Loading..."
-            isLoading={true}
-          />
-          <div className="flex justify-center items-center min-h-[50vh]">
-            <Loader />
-          </div>
+      <div className="p-4 max-w-4xl mx-auto">
+        <PageHeader
+          title="Page History"
+          username="Loading..."
+          isLoading={true}
+        />
+        <div className="flex justify-center items-center min-h-[50vh]">
+          <Loader />
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <DashboardLayout>
-        <div className="p-4 max-w-4xl mx-auto">
-          <PageHeader
-            title="Page History"
-            username="Error"
-            isLoading={false}
-          />
-          {/* Back button removed - using PageHeader back button instead */}
-          <div className="text-destructive text-center p-8 border border-destructive/20 rounded-lg bg-destructive/5">
-            <p className="font-medium">{error}</p>
-            <p className="text-sm mt-2 text-muted-foreground">Unable to load page history. Please try again later.</p>
-          </div>
+      <div className="p-4 max-w-4xl mx-auto">
+        <PageHeader
+          title="Page History"
+          username="Error"
+          isLoading={false}
+        />
+        {/* Back button removed - using PageHeader back button instead */}
+        <div className="text-destructive text-center p-8 border border-destructive/20 rounded-lg bg-destructive/5">
+          <p className="font-medium">{error}</p>
+          <p className="text-sm mt-2 text-muted-foreground">Unable to load page history. Please try again later.</p>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="p-4 max-w-4xl mx-auto">
+    <div className="p-4 max-w-4xl mx-auto">
         <PageHeader
           title="Page History"
           username={page?.username || "Anonymous"}
@@ -205,6 +201,6 @@ export default function PageHistoryPage({ params }) {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }

@@ -5,7 +5,43 @@ import { ReactEditor } from 'slate-react';
 import { Transforms, Editor, Range, Point } from 'slate';
 
 /**
- * Hook to handle click-to-edit functionality with cursor positioning
+ * WeWrite Click-to-Edit Implementation - useClickToEdit Hook
+ *
+ * Custom hook for handling cursor positioning in edit mode as part of the
+ * comprehensive click-to-edit functionality implementation.
+ *
+ * Core Features:
+ * - Smart cursor positioning based on click coordinates
+ * - Safe focus and positioning utilities with error handling
+ * - Fallback handling for editor state management
+ * - Position tracking and validation
+ *
+ * Click-to-Edit System Overview:
+ * This hook is part of a complete click-to-edit system that includes:
+ * 1. Smart Click Detection (content area only, excludes interactive elements)
+ * 2. Visual Feedback (hover effects, edit indicators, cursor changes)
+ * 3. Cursor Positioning (this hook - positions cursor near click location)
+ * 4. Permission System (owner access, group member access, read-only protection)
+ *
+ * Technical Implementation:
+ * - Captures exact click coordinates for cursor positioning
+ * - Automatically focuses the editor and positions cursor near click location
+ * - Graceful fallback to end of document if positioning fails
+ * - Error handling for editor state management
+ * - Safe focus utilities with timeout handling
+ *
+ * Position Calculation:
+ * - Uses click coordinates relative to content area
+ * - Estimates paragraph position based on typical heights
+ * - Clamps to valid content range
+ * - Provides fallback positioning for edge cases
+ *
+ * Integration:
+ * - Used by PageEditor component for edit mode entry
+ * - Triggered by TextView click handlers
+ * - Coordinated with SinglePageView state management
+ * - Works with Slate editor instances
+ *
  * @param {Object} editor - Slate editor instance
  * @param {Object} clickPosition - Position where user clicked to enter edit mode
  * @param {boolean} isEditing - Whether currently in edit mode

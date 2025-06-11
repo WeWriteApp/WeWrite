@@ -1,5 +1,36 @@
 "use client";
 
+/**
+ * Firebase Read Operation Monitoring Dashboard
+ *
+ * This component provides real-time monitoring and analytics for Firebase Firestore
+ * read operations to track optimization effectiveness and cost savings.
+ *
+ * Features:
+ * - Real-time read statistics tracking
+ * - Cache performance metrics and hit rates
+ * - Query performance analysis and monitoring
+ * - Optimization recommendations based on usage patterns
+ * - Operation breakdown by type and source
+ *
+ * Key Metrics Monitored:
+ * - Total Firestore reads (24-hour window)
+ * - Cached reads and cache hit rate (target: >80%)
+ * - Average query duration and performance
+ * - Error rates and optimization effectiveness
+ * - Operation-specific statistics and breakdowns
+ *
+ * Usage:
+ * Access the monitoring dashboard at `/admin/firebase-reads` to view:
+ * - Real-time read statistics and trends
+ * - Cache performance metrics and analysis
+ * - Query performance analysis and optimization suggestions
+ * - Cost optimization recommendations and insights
+ *
+ * The dashboard auto-refreshes every 30 seconds to provide up-to-date metrics
+ * and helps ensure the Firebase optimization strategies are working effectively.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Button } from '../ui/button';

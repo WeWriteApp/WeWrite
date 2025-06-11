@@ -100,7 +100,7 @@ export default function SubscriptionPage() {
       return;
     }
 
-    router.push(`/account/subscription/payment?amount=${amount}`);
+    router.push(`/settings/subscription/payment?amount=${amount}`);
   };
 
   return (

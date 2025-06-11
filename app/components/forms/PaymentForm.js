@@ -204,7 +204,7 @@ const CheckoutForm = ({ onSuccess }) => {
       </button>
       
       {succeeded && (
-        <div className="p-3 bg-green-900 bg-opacity-20 border border-green-500 rounded text-green-400 text-sm md:text-base">
+        <div className="p-3 bg-success/10 border border-success/20 rounded text-success text-sm md:text-base">
           Payment successful! Your card is now on file.
         </div>
       )}

@@ -64,30 +64,30 @@ export function SubscriptionOverview() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      active: { 
-        variant: 'default' as const, 
-        color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
-        icon: CheckCircle 
+      active: {
+        variant: 'default' as const,
+        color: 'bg-success/10 text-success dark:bg-success/20 dark:text-success-foreground',
+        icon: CheckCircle
       },
-      trialing: { 
-        variant: 'secondary' as const, 
+      trialing: {
+        variant: 'secondary' as const,
         color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100',
-        icon: Clock 
+        icon: Clock
       },
-      past_due: { 
-        variant: 'destructive' as const, 
+      past_due: {
+        variant: 'destructive' as const,
         color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100',
-        icon: AlertTriangle 
+        icon: AlertTriangle
       },
-      canceled: { 
-        variant: 'secondary' as const, 
+      canceled: {
+        variant: 'secondary' as const,
         color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100',
-        icon: AlertTriangle 
+        icon: AlertTriangle
       },
-      incomplete: { 
-        variant: 'destructive' as const, 
+      incomplete: {
+        variant: 'destructive' as const,
         color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100',
-        icon: AlertTriangle 
+        icon: AlertTriangle
       },
     };
 
@@ -109,7 +109,7 @@ export function SubscriptionOverview() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="wewrite-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
@@ -127,7 +127,7 @@ export function SubscriptionOverview() {
   }
 
   return (
-    <Card>
+    <Card className="wewrite-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CreditCard className="h-5 w-5" />

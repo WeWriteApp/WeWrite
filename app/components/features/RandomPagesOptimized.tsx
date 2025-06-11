@@ -103,7 +103,20 @@ const RandomPagesOptimized = React.memo(function RandomPagesOptimized({
 
     } catch (err) {
       console.error('Error fetching random pages:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch random pages');
+
+      // Enhanced error handling with specific messages
+      let errorMessage = 'Failed to fetch random pages';
+      if (err instanceof Error) {
+        if (err.message.includes('500')) {
+          errorMessage = 'Server error - please try again';
+        } else if (err.message.includes('permission')) {
+          errorMessage = 'Permission error - please refresh the page';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+
+      setError(errorMessage);
       setRandomPages([]);
     } finally {
       setLoading(false);

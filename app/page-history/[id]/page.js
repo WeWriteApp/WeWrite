@@ -3,7 +3,6 @@
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPageVersions, getPageById } from '../../firebase/database';
-import DashboardLayout from '../../DashboardLayout';
 import { Button } from '../../components/ui/button';
 import { ChevronLeft, Clock } from 'lucide-react';
 import NavHeader from '../../components/layout/NavHeader';
@@ -12,18 +11,15 @@ import { Loader } from '../../components/utils/Loader';
 
 export default function PageHistoryPage({ params }) {
   // Handle both Promise and object params
+  // Note: use() hook cannot be called inside try/catch blocks
   let unwrappedParams;
-  try {
-    // If params is a Promise, use React.use() to unwrap it
-    if (params && typeof params.then === 'function') {
-      unwrappedParams = use(params);
-    } else {
-      // If params is already an object, use it directly
-      unwrappedParams = params || {};
-    }
-  } catch (error) {
-    console.error("Error unwrapping params in PageHistoryPage:", error);
-    unwrappedParams = {};
+
+  // If params is a Promise, use React.use() to unwrap it
+  if (params && typeof params.then === 'function') {
+    unwrappedParams = use(params);
+  } else {
+    // If params is already an object, use it directly
+    unwrappedParams = params || {};
   }
 
   const { id } = unwrappedParams;
@@ -110,34 +106,29 @@ export default function PageHistoryPage({ params }) {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="flex justify-center items-center min-h-screen">
-          <Loader />
-        </div>
-      </DashboardLayout>
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader />
+      </div>
     );
   }
 
   if (error) {
     return (
-      <DashboardLayout>
-        <div className="p-4">
-          <NavHeader
-            title="Error"
-            backUrl={`/${id}`}
-            backLabel="Back to page"
-          />
-          <div className="text-destructive text-center p-8">
-            <p>{error}</p>
-          </div>
+      <div className="p-4">
+        <NavHeader
+          title="Error"
+          backUrl={`/${id}`}
+          backLabel="Back to page"
+        />
+        <div className="text-destructive text-center p-8">
+          <p>{error}</p>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="p-4 max-w-4xl mx-auto">
+    <div className="p-4 max-w-4xl mx-auto">
         <NavHeader
           title="Page History"
           backUrl={`/${id}`}
@@ -179,6 +170,6 @@ export default function PageHistoryPage({ params }) {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }

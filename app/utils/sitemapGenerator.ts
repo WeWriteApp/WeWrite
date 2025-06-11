@@ -16,7 +16,7 @@ interface SitemapEntry {
 
 export async function generatePagesSitemap(options: SitemapOptions = {}): Promise<string> {
   const { limit: maxPages = 50000, includePrivate = false } = options
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
   
   try {
     // Query public pages from Firestore
@@ -94,7 +94,7 @@ export async function generatePagesSitemap(options: SitemapOptions = {}): Promis
 
 export async function generateUsersSitemap(options: SitemapOptions = {}): Promise<string> {
   const { limit: maxUsers = 10000 } = options
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
   
   try {
     // Query active users from Firestore
@@ -160,7 +160,7 @@ export async function generateUsersSitemap(options: SitemapOptions = {}): Promis
 
 export async function generateGroupsSitemap(options: SitemapOptions = {}): Promise<string> {
   const { limit: maxGroups = 5000 } = options
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
   
   try {
     // Query public groups from Firestore
@@ -216,7 +216,7 @@ export async function generateGroupsSitemap(options: SitemapOptions = {}): Promi
 }
 
 export async function generateSitemapIndex(): Promise<string> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
 
   const sitemaps = [
     { url: `${baseUrl}/sitemap-pages.xml`, lastmod: new Date().toISOString() },

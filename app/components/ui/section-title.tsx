@@ -15,11 +15,38 @@ interface SectionTitleProps {
 }
 
 /**
- * Standardized SectionTitle component for use across the application
+ * WeWrite Section Header Padding Improvements - SectionTitle Component
+ *
+ * Standardized SectionTitle component for use across the application with
+ * optimized padding for improved visual hierarchy and content relationships.
  *
  * This is the unified section title component that replaces all other variants.
  * It supports both the new `children` prop and legacy `rightContent` prop for
  * backward compatibility during the migration.
+ *
+ * Padding Improvements Implemented:
+ * - Added top padding (pt-2): Creates better separation from content above
+ * - Reduced bottom margin (mb-4 → mb-2): Brings headers closer to their content below
+ * - Coordinated with StickySection wrapper padding for optimal visual balance
+ *
+ * Visual Impact:
+ * Before: Large gaps both above and below section headers
+ * After: Increased separation from preceding content, reduced gap to section content
+ *
+ * Affected Section Headers:
+ * - Recent Activity: Better visual separation and content proximity
+ * - Your Groups: Improved spacing around "New Group" button
+ * - Trending Pages: Enhanced visual hierarchy
+ * - Random Pages: Better spacing around shuffle and privacy controls
+ * - Top Users: Consistent spacing with other sections
+ *
+ * Technical Benefits:
+ * - Improved Visual Hierarchy: Better separation from preceding content
+ * - Enhanced Content Relationship: Headers closer to their associated content
+ * - Consistent Spacing: Uniform padding across all section headers
+ * - Maintained Functionality: All existing features preserved
+ * - Responsive Behavior: Padding adjustments work across all screen sizes
+ * - Sticky Compatibility: Optimized for both normal and sticky states
  *
  * @param icon - Optional Lucide icon component
  * @param title - The section title text

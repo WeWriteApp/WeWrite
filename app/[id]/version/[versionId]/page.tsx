@@ -3,7 +3,6 @@
 import React, { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPageById, getPageVersionById, setCurrentVersion } from '../../../firebase/database';
-import DashboardLayout from '../../../DashboardLayout';
 import { Button } from '../../../components/ui/button';
 import { ChevronLeft, ChevronRight, Clock, RotateCcw, Eye } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -23,18 +22,15 @@ import { LineSettingsProvider } from '../../../contexts/LineSettingsContext';
 
 export default function PageVersionView({ params }: { params: Promise<{ id: string, versionId: string }> | { id: string, versionId: string } }) {
   // Handle both Promise and object params
+  // Note: use() hook cannot be called inside try/catch blocks
   let unwrappedParams;
-  try {
-    // If params is a Promise, use React.use() to unwrap it
-    if (params && typeof params.then === 'function') {
-      unwrappedParams = use(params);
-    } else {
-      // If params is already an object, use it directly
-      unwrappedParams = params || {};
-    }
-  } catch (error) {
-    console.error("Error unwrapping params in PageVersionView:", error);
-    unwrappedParams = {};
+
+  // If params is a Promise, use React.use() to unwrap it
+  if (params && typeof params.then === 'function') {
+    unwrappedParams = use(params);
+  } else {
+    // If params is already an object, use it directly
+    unwrappedParams = params || {};
   }
 
   const { id, versionId } = unwrappedParams;
@@ -196,34 +192,29 @@ export default function PageVersionView({ params }: { params: Promise<{ id: stri
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="flex justify-center items-center min-h-screen">
-          <Loader show={true} message="Loading..." id="version-loader">
-            <div />
-          </Loader>
-        </div>
-      </DashboardLayout>
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader show={true} message="Loading..." id="version-loader">
+          <div />
+        </Loader>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <DashboardLayout>
-        <div className="p-4">
-          <PageHeader
-            title="Error"
-          />
-          <div className="text-destructive text-center p-8">
-            <p>{error}</p>
-          </div>
+      <div className="p-4">
+        <PageHeader
+          title="Error"
+        />
+        <div className="text-destructive text-center p-8">
+          <p>{error}</p>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="p-4 max-w-4xl mx-auto">
+    <div className="p-4 max-w-4xl mx-auto">
         <PageHeader
           title={page?.title || "Untitled"}
           username={page?.username || "Anonymous"}
@@ -327,6 +318,6 @@ export default function PageVersionView({ params }: { params: Promise<{ id: stri
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }

@@ -15,7 +15,7 @@ interface SupporterBadgeProps {
 
 export default function SupporterBadge({ tier, className = '', showLabel = false, status = 'active' }: SupporterBadgeProps) {
   const { user } = useAuth();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
 
   // If payments feature flag is disabled, don't render anything
   if (!isPaymentsEnabled) {

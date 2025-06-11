@@ -73,7 +73,7 @@ export default function BackfillActivityButton({ userId = null }) {
         </Button>
         
         {result && (
-          <div className="p-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-md text-sm">
+          <div className="p-3 bg-success/10 dark:bg-success/20 text-success dark:text-success-foreground rounded-md text-sm">
             {result}
           </div>
         )}

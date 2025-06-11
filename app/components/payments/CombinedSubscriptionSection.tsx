@@ -1,0 +1,513 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../providers/AuthProvider';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/card';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { useFeatureFlag } from '../../utils/feature-flags';
+import { 
+  CreditCard, 
+  Plus, 
+  Settings, 
+  Heart, 
+  ExternalLink, 
+  DollarSign,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle,
+  Clock
+} from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import Link from 'next/link';
+import { listenToUserPledges } from '../../firebase/subscription';
+import { getDocById } from '../../firebase/database';
+
+interface Subscription {
+  id: string;
+  amount: number;
+  status: string;
+  currentPeriodEnd: any;
+  pledgedAmount?: number;
+  stripeSubscriptionId?: string;
+}
+
+interface PaymentMethod {
+  id: string;
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  isPrimary: boolean;
+}
+
+interface Pledge {
+  id: string;
+  pageId: string;
+  amount: number;
+  createdAt: any;
+  pageTitle?: string;
+  authorUsername?: string;
+  authorDisplayName?: string;
+}
+
+export function CombinedSubscriptionSection() {
+  const { user } = useAuth();
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+
+  // Always declare all hooks - this prevents the hooks order from changing
+  // Subscription state
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
+
+  // Payment methods state
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
+  const [paymentMethodsError, setPaymentMethodsError] = useState<string | null>(null);
+
+  // Pledges state
+  const [pledges, setPledges] = useState<Pledge[]>([]);
+  const [pledgesLoading, setPledgesLoading] = useState(true);
+  const [pledgesError, setPledgesError] = useState<string | null>(null);
+
+  // If payments feature flag is disabled, don't render anything
+  // But do this AFTER all hooks are declared
+  if (!isPaymentsEnabled) {
+    return null;
+  }
+
+  useEffect(() => {
+    if (user?.uid) {
+      fetchSubscription();
+      fetchPaymentMethods();
+      fetchPledges();
+    }
+  }, [user]);
+
+  const fetchSubscription = async () => {
+    try {
+      setSubscriptionLoading(true);
+      setSubscriptionError(null);
+
+      const response = await fetch('/api/account-subscription');
+      if (response.ok) {
+        const data = await response.json();
+
+
+        // API returns { status: null } when no subscription, or subscription object when exists
+        if (data.status === null) {
+          setSubscription(null);
+        } else if (data.status && data.amount !== undefined) {
+          setSubscription(data);
+        } else {
+          setSubscription(null);
+        }
+      } else {
+        const errorData = await response.json();
+        setSubscriptionError(errorData.error || 'Failed to load subscription');
+      }
+    } catch (error) {
+      console.error('Error fetching subscription:', error);
+      setSubscriptionError('Failed to load subscription');
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  };
+
+  const fetchPaymentMethods = async () => {
+    try {
+      setPaymentMethodsLoading(true);
+      setPaymentMethodsError(null);
+
+      const response = await fetch('/api/payment-methods');
+
+      if (response.ok) {
+        const data = await response.json();
+        setPaymentMethods(data.paymentMethods || []);
+      } else {
+        const errorData = await response.json();
+        setPaymentMethodsError(errorData.error || 'Failed to load payment methods');
+      }
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
+      setPaymentMethodsError('Failed to load payment methods');
+    } finally {
+      setPaymentMethodsLoading(false);
+    }
+  };
+
+  const fetchPledges = async () => {
+    try {
+      setPledgesLoading(true);
+      setPledgesError(null);
+
+      const unsubscribe = listenToUserPledges(user.uid, async (pledgesData) => {
+        try {
+          if (!pledgesData || pledgesData.length === 0) {
+            setPledges([]);
+            setPledgesLoading(false);
+            return;
+          }
+
+          // Fetch page details for each pledge
+          const pledgesWithDetails = await Promise.all(
+            pledgesData.map(async (pledge) => {
+              try {
+                const pageDoc = await getDocById('pages', pledge.pageId);
+                if (pageDoc) {
+                  return {
+                    ...pledge,
+                    pageTitle: pageDoc.title || 'Untitled Page',
+                    authorUsername: pageDoc.username,
+                    authorDisplayName: pageDoc.displayName,
+                  };
+                }
+                return {
+                  ...pledge,
+                  pageTitle: 'Unknown Page',
+                };
+              } catch (error) {
+                console.error('Error fetching page details for pledge:', error);
+                return {
+                  ...pledge,
+                  pageTitle: 'Unknown Page',
+                };
+              }
+            })
+          );
+
+          setPledges(pledgesWithDetails);
+        } catch (error) {
+          console.error('Error processing pledges:', error);
+          setPledgesError('Failed to load pledge details');
+        } finally {
+          setPledgesLoading(false);
+        }
+      });
+
+      return () => unsubscribe();
+    } catch (error) {
+      console.error('Error setting up pledges listener:', error);
+      setPledgesError('Failed to load pledges');
+      setPledgesLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      active: 'default',
+      inactive: 'secondary',
+      past_due: 'destructive',
+      canceled: 'secondary',
+      unpaid: 'destructive'
+    } as const;
+    
+    const colors = {
+      active: 'text-green-600',
+      inactive: 'text-gray-600',
+      past_due: 'text-red-600',
+      canceled: 'text-gray-600',
+      unpaid: 'text-red-600'
+    } as const;
+
+    return (
+      <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>
+        <span className={colors[status as keyof typeof colors] || 'text-gray-600'}>
+          {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+        </span>
+      </Badge>
+    );
+  };
+
+  const getCardBrandIcon = (brand: string) => {
+    return <CreditCard className="h-4 w-4" />;
+  };
+
+  const primaryMethod = paymentMethods.find(method => method.isPrimary);
+  const totalPledged = pledges.reduce((sum, pledge) => sum + pledge.amount, 0);
+  const availableAmount = subscription ? Math.max(0, subscription.amount - (subscription.pledgedAmount || 0)) : 0;
+
+  return (
+    <Card className="wewrite-card">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CreditCard className="h-5 w-5" />
+          Subscription
+        </CardTitle>
+        <CardDescription>
+          Manage your subscription, payment methods, and active pledges
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="payment-methods">Payment Methods</TabsTrigger>
+            <TabsTrigger value="pledges">Active Pledges</TabsTrigger>
+            <TabsTrigger value="manage">Manage</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-4">
+            {subscriptionLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            ) : subscriptionError ? (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{subscriptionError}</AlertDescription>
+              </Alert>
+            ) : !subscription ? (
+              <div className="text-center py-6">
+                <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No active subscription</h3>
+                <p className="text-muted-foreground mb-4">
+                  Start a subscription to support pages and access premium features.
+                </p>
+                <Button asChild>
+                  <Link href="/settings/subscription">
+                    Start Subscription
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Subscription Status */}
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-medium">Monthly Subscription</h4>
+                      {getStatusBadge(subscription.status)}
+                    </div>
+                    <p className="text-2xl font-bold">{formatCurrency(subscription.amount)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatCurrency(subscription.pledgedAmount || 0)} pledged • {formatCurrency(availableAmount)} available
+                    </p>
+                  </div>
+                  <Button variant="outline" asChild>
+                    <Link href="/settings/subscription/manage">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Manage
+                    </Link>
+                  </Button>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Heart className="h-4 w-4 text-red-500" />
+                      <span className="text-sm font-medium">Active Pledges</span>
+                    </div>
+                    <p className="text-xl font-bold">{pledges.length}</p>
+                  </div>
+                  <div className="p-3 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-1">
+                      <DollarSign className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium">Total Pledged</span>
+                    </div>
+                    <p className="text-xl font-bold">{formatCurrency(totalPledged)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="payment-methods" className="space-y-4">
+            {paymentMethodsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            ) : paymentMethodsError ? (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{paymentMethodsError}</AlertDescription>
+              </Alert>
+            ) : paymentMethods.length === 0 ? (
+              <div className="text-center py-6">
+                <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No payment methods</h3>
+                <p className="text-muted-foreground mb-4">
+                  Add a payment method to start subscribing and supporting pages.
+                </p>
+                <Button asChild>
+                  <Link href="/settings/subscription">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Payment Method
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Primary Payment Method */}
+                {primaryMethod && (
+                  <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-3">
+                      {getCardBrandIcon(primaryMethod.brand)}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">•••• {primaryMethod.last4}</span>
+                          <Badge variant="secondary" className="text-xs">Primary</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {primaryMethod.brand.toUpperCase()} • Expires {primaryMethod.expMonth}/{primaryMethod.expYear}
+                        </p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href="/settings/subscription/manage">
+                        Update
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+
+                {/* Other Payment Methods */}
+                {paymentMethods.filter(method => !method.isPrimary).map((method) => (
+                  <div key={method.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      {getCardBrandIcon(method.brand)}
+                      <div>
+                        <span className="font-medium">•••• {method.last4}</span>
+                        <p className="text-sm text-muted-foreground">
+                          {method.brand.toUpperCase()} • Expires {method.expMonth}/{method.expYear}
+                        </p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href="/settings/subscription/manage">
+                        Manage
+                      </Link>
+                    </Button>
+                  </div>
+                ))}
+
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/settings/subscription/manage">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Payment Method
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="pledges" className="space-y-4">
+            {pledgesLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            ) : pledgesError ? (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{pledgesError}</AlertDescription>
+              </Alert>
+            ) : pledges.length === 0 ? (
+              <div className="text-center py-6">
+                <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No active pledges</h3>
+                <p className="text-muted-foreground mb-4">
+                  Start supporting your favorite pages and writers.
+                </p>
+                <Button asChild>
+                  <Link href="/">
+                    Explore Pages
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Summary */}
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+                  <div>
+                    <h4 className="font-medium">Total Monthly Pledges</h4>
+                    <p className="text-sm text-muted-foreground">{pledges.length} active pledges</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold">{formatCurrency(totalPledged)}</p>
+                    <p className="text-sm text-muted-foreground">per month</p>
+                  </div>
+                </div>
+
+                {/* Individual Pledges */}
+                {pledges.map((pledge) => (
+                  <div
+                    key={pledge.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/${pledge.pageId}`}
+                          className="font-medium text-sm hover:text-primary truncate"
+                        >
+                          {pledge.pageTitle}
+                        </Link>
+                        <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      </div>
+                      {pledge.authorUsername && (
+                        <p className="text-xs text-muted-foreground">
+                          by @{pledge.authorUsername}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{formatCurrency(pledge.amount)}</p>
+                      <p className="text-xs text-muted-foreground">per month</p>
+                    </div>
+                  </div>
+                ))}
+
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/settings/subscription/manage">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Manage All Pledges
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="manage" className="space-y-4">
+            <div className="space-y-3">
+              <Button className="w-full" asChild>
+                <Link href="/settings/subscription/manage">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Full Subscription Management
+                </Link>
+              </Button>
+              
+              {subscription && (
+                <>
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/settings/subscription">
+                      Upgrade/Downgrade Subscription
+                    </Link>
+                  </Button>
+                  
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/settings/subscription/manage">
+                      View Payment History
+                    </Link>
+                  </Button>
+                </>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
+}

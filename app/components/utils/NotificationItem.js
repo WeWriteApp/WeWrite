@@ -3,7 +3,7 @@
 import { useContext, useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
-import { Bell, Link as LinkIcon, FilePlus, MoreVertical, Check, X, Mail, RefreshCw } from 'lucide-react';
+import { Bell, Link as LinkIcon, FilePlus, MoreVertical, Check, X, Mail, RefreshCw, Users } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { NotificationContext } from '../../providers/NotificationProvider';
 import UserBadge from './UserBadge';
@@ -79,6 +79,11 @@ export default function NotificationItem({ notification }) {
     } else if (notification.type === 'email_verification') {
       // For email verification notifications, navigate to settings
       router.push('/settings');
+    } else if (notification.type === 'group_invite') {
+      // For group invitations, navigate to the group page
+      if (notification.groupId) {
+        router.push(`/group/${notification.groupId}`);
+      }
     }
   };
 
@@ -230,7 +235,7 @@ export default function NotificationItem({ notification }) {
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    router.push('/account');
+                    router.push('/settings');
                   }}
                   className="inline-flex items-center px-2 py-1 text-xs border border-border rounded hover:bg-muted transition-colors"
                 >
@@ -254,6 +259,94 @@ export default function NotificationItem({ notification }) {
                 >
                   <X className="h-3 w-3 mr-1" />
                   Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+
+      /**
+       * Group Invitation Notification Component
+       *
+       * Displays group invitation notifications with interactive accept/reject buttons.
+       * This replaces the previous direct member addition system with a consent-based
+       * invitation flow that requires user approval.
+       *
+       * Features:
+       * - Shows inviting user's information via UserBadge
+       * - Displays group name prominently
+       * - Two action buttons: "Join Group" (accept) and "Ignore Invite" (reject)
+       * - Prevents event bubbling to avoid triggering parent click handlers
+       * - Automatic navigation to group page on acceptance
+       * - Uses WeWrite's standardized card styling and responsive design
+       *
+       * Database Operations:
+       * - Accept: Adds user to group members in RTDB and marks notification as read
+       * - Reject: Simply marks notification as read to remove from UI
+       *
+       * Error Handling:
+       * - Graceful error handling with console logging
+       * - Continues operation even if individual actions fail
+       */
+      case 'group_invite':
+        return (
+          <div className="flex items-start">
+            <div className="flex-shrink-0 mr-3 mt-1">
+              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
+                <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center mb-1">
+                <UserBadge uid={notification.sourceUserId} showUsername={true} />
+              </div>
+              <p className="text-sm text-foreground font-medium mb-1">
+                You've been invited to join{' '}
+                <span className="font-semibold">
+                  {notification.groupName || 'a group'}
+                </span>
+              </p>
+              <p className="text-sm text-muted-foreground mb-3">
+                Join this group to collaborate and share content with other members.
+              </p>
+              <div className="flex gap-2">
+                {/* Accept Invitation Button */}
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    try {
+                      // Import the accept function dynamically to reduce bundle size
+                      const { acceptGroupInvitation } = await import('../../firebase/notifications');
+                      await acceptGroupInvitation(notification.userId, notification.id, notification.groupId);
+                      // Navigate to the group page after successful acceptance
+                      router.push(`/group/${notification.groupId}`);
+                    } catch (error) {
+                      console.error('Error accepting group invitation:', error);
+                      // TODO: Add user-friendly error toast notification
+                    }
+                  }}
+                  className="inline-flex items-center px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+                >
+                  Join Group
+                </button>
+                {/* Reject Invitation Button */}
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    try {
+                      // Import the reject function dynamically
+                      const { rejectGroupInvitation } = await import('../../firebase/notifications');
+                      await rejectGroupInvitation(notification.userId, notification.id);
+                    } catch (error) {
+                      console.error('Error rejecting group invitation:', error);
+                      // TODO: Add user-friendly error toast notification
+                    }
+                  }}
+                  className="inline-flex items-center px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors"
+                >
+                  Ignore Invite
                 </button>
               </div>
             </div>

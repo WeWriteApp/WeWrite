@@ -1,11 +1,52 @@
 "use client";
 
+/**
+ * WeWrite SEO Implementation - SEO Head Component
+ *
+ * Comprehensive SEO head component for dynamic meta tags and structured data
+ * that optimizes WeWrite's user-generated content for search engines.
+ *
+ * Features:
+ * - Dynamic meta tags for all content types (pages, users, groups)
+ * - Open Graph optimization for social media sharing
+ * - Twitter Cards implementation for rich previews
+ * - Canonical URLs to prevent duplicate content
+ * - Structured Data (Schema.org) markup generation
+ * - Author and publisher information
+ * - Breadcrumb navigation support
+ *
+ * Content Type Optimizations:
+ * - Pages: Dynamic titles with author/group context, auto-generated descriptions
+ * - User Profiles: Profile-specific titles, social media integration
+ * - Groups: Group-specific metadata, member count and activity data
+ *
+ * Schema.org Support:
+ * - Article schema for user pages
+ * - Person schema for user profiles
+ * - Organization schema for groups
+ * - WebSite schema for the main site
+ * - BreadcrumbList for navigation
+ *
+ * Usage:
+ * ```jsx
+ * <SEOHead
+ *   title="Page Title"
+ *   description="Page description"
+ *   canonicalUrl="https://wewrite.app/page"
+ *   imageUrl="https://wewrite.app/image.jpg"
+ *   type="article"
+ *   author="Author Name"
+ *   keywords={['keyword1', 'keyword2']}
+ * />
+ * ```
+ */
+
 import Head from 'next/head';
 import { generateSchemaMarkup } from '../../utils/schemaMarkup';
 
 /**
  * Comprehensive SEO Head component for user-generated content
- * 
+ *
  * @param {Object} props - SEO configuration
  * @param {string} props.title - Page title
  * @param {string} props.description - Page description

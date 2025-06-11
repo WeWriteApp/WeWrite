@@ -177,10 +177,15 @@ export function implementMobileOptimizations() {
   // Add touch-friendly classes
   document.body.classList.add('touch-optimized');
   
-  // Optimize scroll behavior
-  if ('scrollBehavior' in document.documentElement.style) {
-    document.documentElement.style.scrollBehavior = 'smooth';
-  }
+  // Optimize scroll behavior - only for specific elements, not global navigation
+  // Global smooth scrolling can interfere with page navigation scroll restoration
+  // Instead, apply smooth scrolling only to specific scroll containers
+  const scrollContainers = document.querySelectorAll('.smooth-scroll, .carousel, .scroll-container');
+  scrollContainers.forEach(container => {
+    if ('scrollBehavior' in container.style) {
+      container.style.scrollBehavior = 'smooth';
+    }
+  });
   
   // Add mobile-specific event listeners
   let touchStartY = 0;

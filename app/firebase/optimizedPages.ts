@@ -1,6 +1,40 @@
 /**
- * Optimized Firebase page operations to minimize read costs
- * This module provides cached, field-selective, and efficient page operations
+ * Firebase Firestore Read Optimization - Optimized Page Operations
+ *
+ * This module provides cached, field-selective, and batched page operations
+ * to minimize Firebase Firestore read costs and improve performance.
+ *
+ * Key Optimizations:
+ * - Separate metadata and content fetching: Avoid loading large content when only metadata is needed
+ * - Paginated queries: Use limit() and startAfter() for large result sets
+ * - Metadata-only reads: Fetch only essential page information
+ * - Content caching: Separate cache for page content with 10-minute TTL
+ * - Batch metadata fetching: Efficient multi-page information retrieval
+ *
+ * Functions:
+ * - getOptimizedPageMetadata(): Lightweight page information
+ * - getOptimizedPageContent(): Separate content fetching
+ * - getOptimizedPageList(): Paginated page listings
+ * - getBatchPageMetadata(): Efficient multi-page fetching
+ * - createOptimizedPageListener(): Throttled page updates
+ *
+ * Performance Impact:
+ * - Significant reduction in page-related Firestore reads
+ * - Improved cache hit rates for page metadata
+ * - Reduced query response times through content separation
+ * - Efficient batch operations minimize individual requests
+ *
+ * Usage Example:
+ * ```typescript
+ * // Get page metadata without content
+ * const metadata = await getOptimizedPageMetadata(pageId, {
+ *   useCache: true,
+ *   fieldsOnly: ['title', 'userId', 'updatedAt']
+ * });
+ *
+ * // Get content separately when needed
+ * const content = await getOptimizedPageContent(pageId);
+ * ```
  */
 
 import {

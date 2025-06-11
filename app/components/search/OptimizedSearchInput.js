@@ -6,18 +6,39 @@ import { Button } from "../ui/button";
 import { Search, X, Pin } from 'lucide-react';
 
 /**
- * OptimizedSearchInput Component
+ * WeWrite Search Performance Optimization - OptimizedSearchInput Component
  *
- * A highly optimized search input component that prevents all unnecessary re-renders.
- * This component is completely isolated from parent state changes and only re-renders
- * when its own internal state changes.
+ * A highly optimized search input component that prevents all unnecessary re-renders
+ * and eliminates visual flashing issues during typing. This component is the result
+ * of comprehensive performance optimization to fix critical search page issues.
  *
- * Key optimizations:
- * - Isolated internal state management
+ * Performance Problems Solved:
+ * - Visual flashing/blank screen during typing
+ * - Input field temporarily disappearing from view
+ * - Brief white/blank viewport flashes on each keystroke
+ * - Difficult typing experience due to visual interruptions
+ * - Component re-rendering performance issues
+ *
+ * Key Optimizations Implemented:
+ * - Isolated internal state management (prevents parent re-renders)
  * - Stable callback references with useCallback
  * - React.memo with custom comparison function
- * - Debounced search to prevent excessive API calls
+ * - Debounced search to prevent excessive API calls (300ms)
  * - No external dependencies that could cause re-renders
+ * - Complete isolation from search results state changes
+ * - Functional state updates to eliminate dependencies
+ *
+ * Architecture Benefits:
+ * - Input component completely isolated from results
+ * - Only re-renders when its own internal state changes
+ * - Maintains focus throughout typing with no cursor jumps
+ * - Zero visual interruptions during search input
+ * - Perfect typing performance with smooth user experience
+ *
+ * Performance Monitoring:
+ * - Development-only performance tracking included
+ * - Real-time monitoring of re-render causes
+ * - Detailed logging of component state changes
  *
  * @param {string} initialValue - Initial search value
  * @param {Function} onSearch - Callback for search with debouncing

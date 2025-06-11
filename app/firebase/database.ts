@@ -1544,12 +1544,12 @@ export async function findBacklinks(targetPageId, limit = 10) {
     const { collection, query, where, orderBy, limit: firestoreLimit, getDocs } = await import('firebase/firestore');
 
     // Get all pages from Firestore, ordered by last modified date
-    // CRITICAL FIX: Increase limit significantly to catch recent navigation links
+    // ENHANCED: Use pagination to handle large result sets efficiently
     const pagesRef = collection(db, 'pages');
     const pagesQuery = query(
       pagesRef,
       orderBy('lastModified', 'desc'),
-      firestoreLimit(500) // Significantly increased limit for real-time backlink detection
+      firestoreLimit(1000) // Increased limit for comprehensive backlink detection
     );
 
     const pagesSnapshot = await getDocs(pagesQuery);
@@ -1561,6 +1561,16 @@ export async function findBacklinks(targetPageId, limit = 10) {
 
       // Skip the target page itself
       if (pageData.id === normalizedTargetId) continue;
+
+      // ENHANCED: Check if this is a reply page that links to the target page
+      if ((pageData as any).isReply && (pageData as any).replyTo === normalizedTargetId) {
+        console.log(`Found reply page ${pageData.id} (${(pageData as any).title || 'Untitled'}) that replies to ${normalizedTargetId}`);
+        backlinkPages.push(pageData);
+
+        // Break early if we've found enough backlinks
+        if (backlinkPages.length >= limit) break;
+        continue; // Skip content parsing for reply pages since we already know they link
+      }
 
       // Skip if the page doesn't have content
       if (!(pageData as any).content) continue;
@@ -1620,8 +1630,9 @@ function pageContainsLinkTo(content, targetPageId) {
       // First check if pageId property is directly available
       if (node.pageId) {
         const normalizedNodePageId = node.pageId.trim();
+        console.log(`Checking direct pageId "${normalizedNodePageId}" against target "${normalizedTargetId}"`);
         if (normalizedNodePageId === normalizedTargetId) {
-          console.log(`Found direct pageId match: ${normalizedNodePageId}`);
+          console.log(`✅ Found direct pageId match: ${normalizedNodePageId}`);
           foundLinks.add(normalizedNodePageId);
           return true;
         }
@@ -1639,8 +1650,10 @@ function pageContainsLinkTo(content, targetPageId) {
           pageId = pageId.replace(/^pages\//, ''); // Remove 'pages/' prefix if present
           pageId = pageId.trim(); // Trim any whitespace
 
+          console.log(`Extracted pageId "${pageId}" from URL "${node.url}", comparing to target "${normalizedTargetId}"`);
+
           if (pageId === normalizedTargetId) {
-            console.log(`Found URL match: ${pageId} from URL ${node.url}`);
+            console.log(`✅ Found URL match: ${pageId} from URL ${node.url}`);
             foundLinks.add(pageId);
             return true;
           }

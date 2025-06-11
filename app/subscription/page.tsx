@@ -82,12 +82,12 @@ export default function SubscriptionPage() {
   const minAmount = 2.0;
   const statusColors = {
     "incomplete": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-    "incomplete_expired": "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400", 
-    "trialing": "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400", 
-    "active": "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400", 
-    "past_due": "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400", 
-    "canceled": "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400", 
-    "unpaid": "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400", 
+    "incomplete_expired": "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    "trialing": "bg-success/10 text-success dark:bg-success/20 dark:text-success-foreground",
+    "active": "bg-success/10 text-success dark:bg-success/20 dark:text-success-foreground",
+    "past_due": "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    "canceled": "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    "unpaid": "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
     "paused": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
   };
 
