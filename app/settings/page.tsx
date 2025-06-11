@@ -18,7 +18,7 @@ import { CombinedSubscriptionSection } from '../components/payments/CombinedSubs
 import PWAInstallationCard from '../components/utils/PWAInstallationCard';
 import { SyncQueueSettings } from '../components/utils/SyncQueueSettings';
 import { EmailVerificationStatus } from '../components/utils/EmailVerificationStatus';
-import { useFeatureFlag } from "../utils/feature-flags";
+
 import { ChevronLeft, Edit3, Save, X, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 
 // Define admin check locally to avoid import issues
@@ -44,8 +44,8 @@ export default function AccountPage() {
   const [tempUsername, setTempUsername] = useState('');
   const [tempEmail, setTempEmail] = useState('');
 
-  // Check payments feature flag
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  // Feature flag state
+  const [isPaymentsEnabled, setIsPaymentsEnabled] = useState(false);
 
 
 
@@ -56,6 +56,20 @@ export default function AccountPage() {
     }
 
     loadUserData();
+
+    // Check payments feature flag when user is available
+    const checkFeatureFlag = async () => {
+      try {
+        const { isFeatureEnabledForUser } = await import('../utils/feature-flags');
+        const enabled = await isFeatureEnabledForUser('payments', user.uid);
+        setIsPaymentsEnabled(enabled);
+      } catch (error) {
+        console.error('Error checking payments feature flag:', error);
+        setIsPaymentsEnabled(false);
+      }
+    };
+
+    checkFeatureFlag();
   }, [user, router]);
 
   const handleEditUsername = () => {
