@@ -11,7 +11,7 @@ import Link from "next/link";
 import Header from "./components/layout/Header";
 import AddUsername from "./components/auth/AddUsername";
 import SearchButton from "./components/search/SearchButton";
-import { DashboardSkeleton, ActivitySkeleton, TrendingPagesSkeleton, TopUsersSkeleton, GroupsSkeleton, RandomPagesSkeleton } from "./components/ui/skeleton-loaders";
+import { DashboardSkeleton, ActivitySkeleton, TrendingPagesSkeleton, GroupsSkeleton, RandomPagesSkeleton } from "./components/ui/skeleton-loaders";
 import LazySection from "./components/ui/lazy-section";
 import { Button } from "./components/ui/button";
 import LandingPage from "./components/landing/LandingPage";
@@ -44,10 +44,7 @@ const TrendingPagesOptimized = dynamic(() => import("./components/features/Trend
   ssr: false
 });
 
-const TopUsersOptimized = dynamic(() => import("./components/features/TopUsersOptimized"), {
-  loading: () => <TopUsersSkeleton limit={10} />,
-  ssr: false
-});
+
 
 const HomeGroupsSection = dynamic(() => import("./components/groups/HomeGroupsSection"), {
   loading: () => <GroupsSkeleton limit={3} />,
@@ -118,7 +115,7 @@ const DailyNotesSection = dynamic(() => import("./components/daily-notes/DailyNo
  * ├── LazySection[Activity] (High Priority)
  * ├── LazySection[Groups] (Medium Priority)
  * ├── LazySection[Trending] (Low Priority)
- * └── LazySection[TopUsers] (Low Priority)
+
  *
  * Prevention Measures:
  * - No recursive timers in useEffect
@@ -387,25 +384,7 @@ const Home = React.memo(function Home() {
             </LazySection>
           </StickySection>
 
-          {/* 5. Top Users - Lowest priority, lazy loaded */}
-          <StickySection
-            sectionId="top_users"
-            headerContent={
-              <SectionTitle
-                icon={Trophy}
-                title="Top Users"
-              />
-            }
-          >
-            <LazySection
-              name="top_users"
-              priority="low"
-              minHeight={300}
-              fallback={<TopUsersSkeleton limit={10} />}
-            >
-              <TopUsersOptimized limit={10} priority="low" />
-            </LazySection>
-          </StickySection>
+
         </main>
         <SiteFooter className="" />
       </Suspense>

@@ -13,22 +13,7 @@ const CACHE_TTL = 5 * 60 * 1000;
 const pageCountMemoryCache = new Map<string, MemoryCacheEntry<number>>();
 const MEMORY_CACHE_TTL = 2 * 60 * 1000; // 2 minutes in memory cache
 
-/**
- * Invalidate TopUsers cache to ensure fresh data after page count changes
- */
-const invalidateTopUsersCache = (): void => {
-  try {
-    // Clear TopUsers cache for all users (anonymous and authenticated)
-    const anonymousCacheKey = generateCacheKey('topUsers', 'anonymous');
-    setCacheItem(anonymousCacheKey, null, 0);
 
-    // Clear cache for any authenticated users (we can't know all user IDs, but this covers the most common case)
-    // The cache will naturally refresh when users visit the page
-    console.log('TopUsers cache invalidated due to page count change');
-  } catch (error) {
-    console.error('Error invalidating TopUsers cache:', error);
-  }
-};
 
 /**
  * Get the page count for a user with caching
@@ -237,8 +222,7 @@ export const incrementUserPageCount = async (userId: string, isPublic: boolean =
     pageCountMemoryCache.delete(`user_page_count_${userId}_owner`);
     pageCountMemoryCache.delete(`user_page_count_${userId}_public`);
 
-    // Invalidate TopUsers cache since page counts changed
-    invalidateTopUsersCache();
+
   } catch (error: any) {
     // If the document doesn't exist, create it
     if (error.code === 'not-found') {
@@ -257,8 +241,7 @@ export const incrementUserPageCount = async (userId: string, isPublic: boolean =
         });
       }
 
-      // Invalidate TopUsers cache since page counts changed
-      invalidateTopUsersCache();
+
     } else {
       console.error('Error incrementing user page count:', error);
     }
@@ -297,8 +280,7 @@ export const decrementUserPageCount = async (userId: string, wasPublic: boolean 
     pageCountMemoryCache.delete(`user_page_count_${userId}_owner`);
     pageCountMemoryCache.delete(`user_page_count_${userId}_public`);
 
-    // Invalidate TopUsers cache since page counts changed
-    invalidateTopUsersCache();
+
   } catch (error) {
     console.error('Error decrementing user page count:', error);
   }
@@ -341,8 +323,7 @@ export const updateUserPageCountForVisibilityChange = async (
     pageCountMemoryCache.delete(`user_page_count_${userId}_owner`);
     pageCountMemoryCache.delete(`user_page_count_${userId}_public`);
 
-    // Invalidate TopUsers cache since page counts changed
-    invalidateTopUsersCache();
+
   } catch (error: any) {
     // If the document doesn't exist, create it with the appropriate count
     if (error.code === 'not-found' && isNowPublic) {

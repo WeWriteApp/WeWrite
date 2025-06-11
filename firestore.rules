@@ -85,11 +85,25 @@ service cloud.firestore {
       // Writing rules: Only page owner can modify, with data validation
       allow create: if isAuthenticated() &&
         request.resource.data.userId == request.auth.uid &&
-        request.resource.data.keys().hasAll(['title', 'content', 'isPublic', 'userId', 'createdAt']) &&
+        request.resource.data.keys().hasAll(['title', 'isPublic', 'userId', 'createdAt']) &&
         request.resource.data.title is string &&
-        request.resource.data.content is string &&
         request.resource.data.isPublic is bool &&
-        request.resource.data.userId is string;
+        request.resource.data.userId is string &&
+        request.resource.data.createdAt is string &&
+        // Allow optional fields that the application uses
+        (!request.resource.data.keys().hasAny(['username']) || request.resource.data.username is string) &&
+        (!request.resource.data.keys().hasAny(['lastModified']) || request.resource.data.lastModified is string) &&
+        (!request.resource.data.keys().hasAny(['groupId']) || request.resource.data.groupId == null || request.resource.data.groupId is string) &&
+        (!request.resource.data.keys().hasAny(['groupName']) || request.resource.data.groupName == null || request.resource.data.groupName is string) &&
+        (!request.resource.data.keys().hasAny(['location']) || request.resource.data.location == null || request.resource.data.location is string) &&
+        (!request.resource.data.keys().hasAny(['totalPledged']) || request.resource.data.totalPledged is number) &&
+        (!request.resource.data.keys().hasAny(['pledgeCount']) || request.resource.data.pledgeCount is number) &&
+        (!request.resource.data.keys().hasAny(['fundraisingEnabled']) || request.resource.data.fundraisingEnabled is bool) &&
+        (!request.resource.data.keys().hasAny(['fundraisingGoal']) || request.resource.data.fundraisingGoal is number) &&
+        (!request.resource.data.keys().hasAny(['isReply']) || request.resource.data.isReply is bool) &&
+        (!request.resource.data.keys().hasAny(['replyTo']) || request.resource.data.replyTo == null || request.resource.data.replyTo is string) &&
+        (!request.resource.data.keys().hasAny(['replyToTitle']) || request.resource.data.replyToTitle == null || request.resource.data.replyToTitle is string) &&
+        (!request.resource.data.keys().hasAny(['replyToUsername']) || request.resource.data.replyToUsername == null || request.resource.data.replyToUsername is string);
 
       allow update: if isAuthenticated() &&
         resource.data.userId == request.auth.uid &&

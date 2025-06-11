@@ -2,7 +2,7 @@
 import { useContext, useEffect } from "react";
 import Link from "next/link";
 import AllPages from "../components/AllPages";
-import TopUsers from "../components/TopUsers";
+
 import HomeGroupsSection from "../components/HomeGroupsSection";
 import AddUsername from "../components/AddUsername";
 import SearchResults from "../search/SearchResults";
@@ -53,7 +53,7 @@ const Dashboard = () => {
         <HomeGroupsSection />
         */}
 
-        <TopUsers />
+
       </div>
     </>
   );

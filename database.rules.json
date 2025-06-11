@@ -25,6 +25,9 @@
 
     // User profiles - Allow public read access for basic profile info
     "users": {
+      // Allow reading the users collection for TopUsers functionality
+      ".read": true,
+
       "$uid": {
         // Allow everyone to read basic user profiles (needed for public pages)
         ".read": true,
@@ -51,7 +54,7 @@
           ".write": "auth !== null && auth.uid === $uid"
         },
 
-        // User groups - only the user can see their group memberships
+        // User groups - allow authenticated users to read their own groups
         "groups": {
           ".read": "auth !== null && auth.uid === $uid",
           ".write": "auth !== null && auth.uid === $uid"

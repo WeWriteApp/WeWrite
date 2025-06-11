@@ -41,6 +41,11 @@ export const GroupsProvider = ({ children }: GroupsProviderProps) => {
   const fetchGroups = useCallback(async () => {
     try {
       console.log('[DEBUG] GroupsProvider - Starting to fetch groups');
+      console.log('[DEBUG] GroupsProvider - Auth state:', {
+        user: user ? { uid: user.uid, email: user.email } : null,
+        authLoading: auth?.loading
+      });
+
       setLoading(true);
       setError(null);
 
@@ -49,6 +54,13 @@ export const GroupsProvider = ({ children }: GroupsProviderProps) => {
         console.log('[DEBUG] GroupsProvider - No user, skipping groups fetch');
         setGroups([]);
         setLoading(false);
+        return;
+      }
+
+      // Wait a bit to ensure auth is fully established
+      if (auth?.loading) {
+        console.log('[DEBUG] GroupsProvider - Auth still loading, waiting...');
+        setTimeout(() => fetchGroups(), 500);
         return;
       }
 
@@ -83,26 +95,40 @@ export const GroupsProvider = ({ children }: GroupsProviderProps) => {
       // Fetch only the groups the user is a member of
       const groupsData: Group[] = [];
       for (const groupId of groupIds) {
-        const groupRef = ref(rtdb, `groups/${groupId}`);
-        const groupSnapshot = await get(groupRef);
+        try {
+          console.log('[DEBUG] GroupsProvider - Fetching group:', groupId);
+          const groupRef = ref(rtdb, `groups/${groupId}`);
+          const groupSnapshot = await get(groupRef);
 
-        if (groupSnapshot.exists()) {
-          const groupData = groupSnapshot.val();
-          groupsData.push({
-            id: groupId,
-            ...groupData
-          });
+          if (groupSnapshot.exists()) {
+            const groupData = groupSnapshot.val();
+            console.log('[DEBUG] GroupsProvider - Group data for', groupId, ':', groupData);
+            groupsData.push({
+              id: groupId,
+              ...groupData
+            });
+          } else {
+            console.log('[DEBUG] GroupsProvider - Group', groupId, 'does not exist or no permission');
+          }
+        } catch (groupErr: any) {
+          console.error('[DEBUG] GroupsProvider - Error fetching group', groupId, ':', groupErr);
         }
       }
 
+      console.log('[DEBUG] GroupsProvider - Final groups data:', groupsData);
       setGroups(groupsData);
     } catch (err: any) {
       console.error("Error fetching groups:", err);
+      console.error("Error details:", {
+        code: err.code,
+        message: err.message,
+        stack: err.stack
+      });
       setError(err.message || 'Failed to fetch groups');
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, auth?.loading]);
 
   // Fetch groups when user changes
   useEffect(() => {

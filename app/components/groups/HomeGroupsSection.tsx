@@ -65,114 +65,140 @@ export default function HomeGroupsSection({ hideHeader = false }: HomeGroupsSect
     console.log('HomeGroupsSection - Attempting to fetch groups for user:', user.uid);
 
     // Function to fetch groups where user is a member or owner
-    const fetchGroups = () => {
-      const groupsRef = ref(rtdb, 'groups');
+    const fetchGroups = async () => {
+      try {
+        console.log('[DEBUG] HomeGroupsSection - Starting to fetch groups for user:', user.uid);
+        setLoading(true);
 
-      return onValue(groupsRef, async (snapshot) => {
-        if (!snapshot.exists()) {
+        // First, get the user's group memberships
+        const userGroupsRef = ref(rtdb, `users/${user.uid}/groups`);
+        const userGroupsSnapshot = await get(userGroupsRef);
+
+        if (!userGroupsSnapshot.exists()) {
+          console.log('[DEBUG] HomeGroupsSection - No groups found for user');
           setGroups([]);
           setLoading(false);
           return;
         }
 
-        const allGroups = snapshot.val();
-        const userGroups: Group[] = [];
+        const userGroupMemberships = userGroupsSnapshot.val();
+        const groupIds = Object.keys(userGroupMemberships);
+
+        if (groupIds.length === 0) {
+          console.log('[DEBUG] HomeGroupsSection - User has no group memberships');
+          setGroups([]);
+          setLoading(false);
+          return;
+        }
+
+        console.log('[DEBUG] HomeGroupsSection - User is member of groups:', groupIds);
 
         // Get all users to find owner usernames
         const usersRef = ref(rtdb, 'users');
         const usersSnapshot = await get(usersRef);
         const usersData = usersSnapshot.exists() ? usersSnapshot.val() : {};
 
-        Object.keys(allGroups).forEach(groupId => {
-          const group = allGroups[groupId];
+        const userGroups: Group[] = [];
 
-          // Check if user is a member or owner
-          const isMember = group.members && Object.keys(group.members).some(
-            memberId => memberId === user.uid && group.members[memberId].role === 'member'
-          );
-          const isOwner = group.owner === user.uid;
+        // Fetch each group individually
+        for (const groupId of groupIds) {
+          try {
+            console.log('[DEBUG] HomeGroupsSection - Fetching group:', groupId);
+            const groupRef = ref(rtdb, `groups/${groupId}`);
+            const groupSnapshot = await get(groupRef);
 
-          if (isMember || isOwner) {
-            // Generate edit activity data for the group
-            // This calculates the actual edit activity in the last 24 hours
-            // based on page modifications, not view counts
-            let activity = [];
+            if (groupSnapshot.exists()) {
+              const group = groupSnapshot.val();
+              console.log('[DEBUG] HomeGroupsSection - Group data for', groupId, ':', group);
+              // Generate edit activity data for the group
+              // This calculates the actual edit activity in the last 24 hours
+              // based on page modifications, not view counts
+              let activity = [];
 
-            // If the group has pages, get edit activity data for each page
-            if (group.pages && Object.keys(group.pages).length > 0) {
-              // Create an array of 24 zeros (for 24 hours)
-              activity = Array(24).fill(0);
+              // If the group has pages, get edit activity data for each page
+              if (group.pages && Object.keys(group.pages).length > 0) {
+                // Create an array of 24 zeros (for 24 hours)
+                activity = Array(24).fill(0);
 
-              // Get current date and time
-              const now = new Date();
+                // Get current date and time
+                const now = new Date();
 
-              // Calculate 24 hours ago
-              const twentyFourHoursAgo = new Date(now);
-              twentyFourHoursAgo.setHours(now.getHours() - 24);
+                // Calculate 24 hours ago
+                const twentyFourHoursAgo = new Date(now);
+                twentyFourHoursAgo.setHours(now.getHours() - 24);
 
-              // For each page in the group, check for edits in the last 24 hours
-              const pageIds = Object.keys(group.pages);
+                // For each page in the group, check for edits in the last 24 hours
+                const pageIds = Object.keys(group.pages);
 
-              // For each page, check if it was modified in the last 24 hours
-              pageIds.forEach(pageId => {
-                const page = group.pages[pageId];
-                if (page && page.lastModified) {
-                  // Convert to Date if it's a string or timestamp
-                  const lastModified = typeof page.lastModified === 'string'
-                    ? new Date(page.lastModified)
-                    : page.lastModified instanceof Date
-                      ? page.lastModified
-                      : page.lastModified.toDate ? page.lastModified.toDate() : null;
+                // For each page, check if it was modified in the last 24 hours
+                pageIds.forEach(pageId => {
+                  const page = group.pages[pageId];
+                  if (page && page.lastModified) {
+                    // Convert to Date if it's a string or timestamp
+                    const lastModified = typeof page.lastModified === 'string'
+                      ? new Date(page.lastModified)
+                      : page.lastModified instanceof Date
+                        ? page.lastModified
+                        : page.lastModified.toDate ? page.lastModified.toDate() : null;
 
-                  if (lastModified && lastModified >= twentyFourHoursAgo) {
-                    // Calculate hours ago (0-23, where 0 is the most recent hour)
-                    const hoursAgo = Math.floor((now - lastModified) / (1000 * 60 * 60));
+                    if (lastModified && lastModified >= twentyFourHoursAgo) {
+                      // Calculate hours ago (0-23, where 0 is the most recent hour)
+                      const hoursAgo = Math.floor((now - lastModified) / (1000 * 60 * 60));
 
-                    // Make sure the index is within bounds (0-23)
-                    if (hoursAgo >= 0 && hoursAgo < 24) {
-                      activity[23 - hoursAgo]++;
+                      // Make sure the index is within bounds (0-23)
+                      if (hoursAgo >= 0 && hoursAgo < 24) {
+                        activity[23 - hoursAgo]++;
+                      }
                     }
                   }
-                }
+                });
+              } else {
+                // If no pages or no activity data, create a sparse array with a few non-zero values
+                // This ensures the sparkline shows something even for new groups
+                activity = Array(24).fill(0);
+                // Add a few random non-zero values
+                const randomHours = [
+                  Math.floor(Math.random() * 8),
+                  Math.floor(Math.random() * 8) + 8,
+                  Math.floor(Math.random() * 8) + 16
+                ];
+                randomHours.forEach(hour => {
+                  activity[hour] = Math.floor(Math.random() * 3) + 1;
+                });
+              }
+
+              userGroups.push({
+                id: groupId,
+                name: group.name,
+                description: group.description,
+                members: group.members,
+                pages: group.pages,
+                owner: group.owner,
+                ownerUsername: group.owner && usersData[group.owner]
+                  ? usersData[group.owner].username
+                  : 'Unknown',
+                isPublic: group.isPublic || false,
+                activity: activity
               });
             } else {
-              // If no pages or no activity data, create a sparse array with a few non-zero values
-              // This ensures the sparkline shows something even for new groups
-              activity = Array(24).fill(0);
-              // Add a few random non-zero values
-              const randomHours = [
-                Math.floor(Math.random() * 8),
-                Math.floor(Math.random() * 8) + 8,
-                Math.floor(Math.random() * 8) + 16
-              ];
-              randomHours.forEach(hour => {
-                activity[hour] = Math.floor(Math.random() * 3) + 1;
-              });
+              console.log('[DEBUG] HomeGroupsSection - Group', groupId, 'does not exist or no permission');
             }
-
-            userGroups.push({
-              id: groupId,
-              name: group.name,
-              description: group.description,
-              members: group.members,
-              pages: group.pages,
-              owner: group.owner,
-              ownerUsername: group.owner && usersData[group.owner]
-                ? usersData[group.owner].username
-                : 'Unknown',
-              isPublic: group.isPublic || false,
-              activity: activity
-            });
+          } catch (groupErr: any) {
+            console.error('[DEBUG] HomeGroupsSection - Error fetching group', groupId, ':', groupErr);
           }
-        });
+        }
 
+        console.log('[DEBUG] HomeGroupsSection - Final groups data:', userGroups);
         setGroups(userGroups);
         setLoading(false);
-      });
+      } catch (err: any) {
+        console.error('[DEBUG] HomeGroupsSection - Error fetching groups:', err);
+        setGroups([]);
+        setLoading(false);
+      }
     };
 
-    const unsubscribe = fetchGroups();
-    return () => unsubscribe();
+    fetchGroups();
   }, [user?.uid, groupsEnabled]);
 
   // Function to get member count

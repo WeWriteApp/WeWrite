@@ -12,7 +12,6 @@ const DASHBOARD_CACHE_TTL = 3 * 60 * 1000; // 3 minutes
 
 interface DashboardData {
   recentPages: any[];
-  topUsers: any[];
   userGroups: any[];
   trendingPages: any[];
   userStats?: any;
@@ -53,13 +52,11 @@ export async function GET(request: NextRequest) {
     // Fetch all data in parallel for maximum performance
     const [
       recentPages,
-      topUsers,
       userGroups,
       trendingPages,
       userStats
     ] = await Promise.all([
       getRecentPagesOptimized(20, userId),
-      getTopUsersOptimized(10, userId),
       getUserGroupsOptimized(userId),
       getTrendingPagesOptimized(5, userId),
       userId ? getUserStatsOptimized(userId) : Promise.resolve(null)
@@ -70,7 +67,6 @@ export async function GET(request: NextRequest) {
     
     const dashboardData: DashboardData = {
       recentPages,
-      topUsers,
       userGroups,
       trendingPages,
       userStats,
@@ -158,66 +154,7 @@ async function getRecentPagesOptimized(limitCount: number, userId?: string | nul
   }
 }
 
-/**
- * Get top users with optimized queries
- */
-async function getTopUsersOptimized(limitCount: number, currentUserId?: string | null): Promise<any[]> {
-  try {
-    // Fetch users from RTDB
-    const usersSnapshot = await get(ref(rtdb, 'users'));
-    
-    if (!usersSnapshot.exists()) {
-      return [];
-    }
-    
-    const userData = usersSnapshot.val();
-    const userEntries = Object.entries(userData);
-    
-    // Get all user IDs for batch fetching
-    const userIds = userEntries.map(([id]) => id);
-    const batchUserData = await getBatchUserData(userIds);
-    
-    // Process users with page counts
-    const usersWithStats = await Promise.all(
-      userEntries.slice(0, 50).map(async ([id, rtdbData]: [string, any]) => {
-        const batchedUser = batchUserData[id];
-        
-        // Get page count (this could be optimized further with pre-computed values)
-        let pageCount = 0;
-        try {
-          const userPagesQuery = query(
-            collection(db, 'pages'),
-            where('userId', '==', id),
-            where('isPublic', '==', true)
-          );
-          const pagesSnapshot = await getDocs(userPagesQuery);
-          pageCount = pagesSnapshot.size;
-        } catch (error) {
-          console.warn(`Error getting page count for user ${id}:`, error);
-        }
-        
-        return {
-          id,
-          username: batchedUser?.username || rtdbData.username || 'Unknown User',
-          pageCount,
-          tier: batchedUser?.tier,
-          subscriptionStatus: batchedUser?.subscriptionStatus,
-          photoURL: rtdbData.photoURL
-        };
-      })
-    );
-    
-    // Sort by page count and limit
-    return usersWithStats
-      .filter(user => user.pageCount > 0)
-      .sort((a, b) => b.pageCount - a.pageCount)
-      .slice(0, limitCount);
-    
-  } catch (error) {
-    console.error('Error fetching top users:', error);
-    return [];
-  }
-}
+
 
 /**
  * Get user groups with optimized queries
