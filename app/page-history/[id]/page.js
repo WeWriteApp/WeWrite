@@ -11,7 +11,7 @@ import { Loader } from '../../components/utils/Loader';
 
 export default function PageHistoryPage({ params }) {
   // Handle both Promise and object params
-  // Note: use() hook cannot be called inside try/catch blocks
+  // Note: use() hook cannot be called inside try-catch blocks
   let unwrappedParams;
 
   // If params is a Promise, use React.use() to unwrap it
@@ -169,7 +169,6 @@ export default function PageHistoryPage({ params }) {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }

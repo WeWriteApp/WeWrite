@@ -108,7 +108,7 @@ export default function PageHistoryPage({ params }) {
             timestamp: version.timestamp,
             currentContent: version.content || '',
             previousContent: previousContent,
-            isNewPage: index === sortedVersions.length - 1, // Last item is the oldest/first version
+            isNewPage: index === sortedVersions.length - 1, // Last item is the oldest or first version
             versionId: version.id, // Include the version ID for linking to version view
             isHistoryContext: true, // Flag to indicate this is from history page
             hasPreviousVersion: !!prevVersion // Flag to indicate if there's a previous version for diff
@@ -200,7 +200,6 @@ export default function PageHistoryPage({ params }) {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }
