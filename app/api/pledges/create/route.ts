@@ -291,7 +291,7 @@ export async function PATCH(request: NextRequest) {
       status: 'active',
       updatedAt: serverTimestamp(),
       lastPaymentAt: serverTimestamp(),
-      nextPaymentAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+      nextPaymentAt: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)) // 30 days from now
     });
 
     // Update resource statistics

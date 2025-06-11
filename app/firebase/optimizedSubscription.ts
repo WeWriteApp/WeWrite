@@ -115,7 +115,7 @@ const logReadOperation = (operation: string, cached: boolean = false) => {
  * Get read operation statistics
  */
 export const getReadStats = () => {
-  const last24h = readOperations.filter(op => Date.now() - op.timestamp < 24 * 60 * 60 * 1000);
+  const last24h = readOperations.filter(op => Date.now() - op.timestamp < (24 * 60 * 60 * 1000));
   const cachedReads = last24h.filter(op => op.cached).length;
   const firestoreReads = last24h.filter(op => !op.cached).length;
   

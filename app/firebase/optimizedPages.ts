@@ -471,7 +471,7 @@ export const createOptimizedPageListener = (
  * Get page read statistics
  */
 export const getPageReadStats = () => {
-  const last24h = pageReadOperations.filter(op => Date.now() - op.timestamp < 24 * 60 * 60 * 1000);
+  const last24h = pageReadOperations.filter(op => Date.now() - op.timestamp < (24 * 60 * 60 * 1000));
   const cachedReads = last24h.filter(op => op.cached).length;
   const firestoreReads = last24h.filter(op => !op.cached).length;
   

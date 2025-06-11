@@ -59,7 +59,7 @@ export default function PageHistoryPage({ params }) {
             },
             {
               id: 'fallback-2',
-              createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+              createdAt: new Date(Date.now() - (24 * 60 * 60 * 1000)), // 1 day ago
               action: 'Updated',
               username: 'System',
               content: ''

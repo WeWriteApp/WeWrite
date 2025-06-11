@@ -67,7 +67,7 @@ interface LegacyCacheItem<T = any> {
 
 // Default TTL (time-to-live) in milliseconds (15 minutes)
 // Increased from 5 minutes to reduce Firestore reads and improve cost efficiency
-const DEFAULT_TTL = 15 * 60 * 1000;
+const DEFAULT_TTL = (15 * 60 * 1000);
 
 /**
  * Generate a consistent cache key

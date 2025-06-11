@@ -531,7 +531,7 @@ const getCachedActivityData = (key: string): Record<string, ActivityData> | null
     const { data, timestamp } = JSON.parse(cachedItem);
 
     // CRITICAL FIX: Reduce cache time to 2 minutes for more real-time activity data
-    if (Date.now() - timestamp > 2 * 60 * 1000) {
+    if (Date.now() - timestamp > (2 * 60 * 1000)) {
       localStorage.removeItem(key);
       return null;
     }

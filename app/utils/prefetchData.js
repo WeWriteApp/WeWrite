@@ -125,7 +125,7 @@ const prefetchRecentActivity = async (userId) => {
     
     // Cache the results
     const cacheKey = `home_activity_${userId || 'anonymous'}_all_10`;
-    setCacheItem(cacheKey, activities, 5 * 60 * 1000); // Cache for 5 minutes
+    setCacheItem(cacheKey, activities, (5 * 60 * 1000)); // Cache for 5 minutes
     
     console.log(`Prefetched ${activities.length} recent activities`);
   } catch (error) {

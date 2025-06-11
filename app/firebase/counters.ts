@@ -7,11 +7,11 @@ import { getCacheItem, setCacheItem, generateCacheKey } from "../utils/cacheUtil
 import type { Counter, MemoryCacheEntry } from '../types/database';
 
 // Cache TTL in milliseconds (5 minutes)
-const CACHE_TTL = 5 * 60 * 1000;
+const CACHE_TTL = (5 * 60 * 1000);
 
 // OPTIMIZATION: Add in-memory cache for frequently accessed page counts
 const pageCountMemoryCache = new Map<string, MemoryCacheEntry<number>>();
-const MEMORY_CACHE_TTL = 2 * 60 * 1000; // 2 minutes in memory cache
+const MEMORY_CACHE_TTL = (2 * 60 * 1000); // 2 minutes in memory cache
 
 
 

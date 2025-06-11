@@ -56,7 +56,7 @@ export async function POST(request) {
         amount: amount,
         status: 'pending',
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        estimatedArrival: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
+        estimatedArrival: new Date(Date.now() + (2 * 24 * 60 * 60 * 1000)), // 2 days from now
         bankAccount: userDoc.data().bankAccountLast4 || '****'
       };
 
