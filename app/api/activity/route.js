@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { initAdmin, admin } from '../../firebase/admin';
-import { getUsernameById } from '../../utils/userUtils';
 
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
@@ -45,6 +44,49 @@ const corsHeaders = {
 
 // Default limit for activity items
 const DEFAULT_LIMIT = 30;
+
+// Server-safe function to get username by ID using Firebase Admin
+async function getServerUsername(userId) {
+  if (!userId || !db) return "Missing username";
+
+  try {
+    // Try to get user from Firestore users collection
+    const userDoc = await db.collection("users").doc(userId).get();
+
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+
+      // Check for valid username
+      if (userData.username &&
+          userData.username !== "Anonymous" &&
+          userData.username !== "Missing username" &&
+          userData.username.trim() !== "") {
+        return userData.username.trim();
+      }
+
+      // Fallback to displayName
+      if (userData.displayName &&
+          userData.displayName !== "Anonymous" &&
+          userData.displayName !== "Missing username" &&
+          userData.displayName.trim() !== "") {
+        return userData.displayName.trim();
+      }
+
+      // Fallback to email prefix
+      if (userData.email && userData.email.includes('@')) {
+        const emailPrefix = userData.email.split('@')[0];
+        if (emailPrefix && emailPrefix.trim() !== "") {
+          return emailPrefix.trim();
+        }
+      }
+    }
+
+    return "Missing username";
+  } catch (error) {
+    console.error("Error fetching username by ID:", error);
+    return "Missing username";
+  }
+}
 
 export async function GET(request) {
   try {
@@ -118,7 +160,7 @@ export async function GET(request) {
             pageId,
             pageName: pageData.title || "Untitled",
             userId: pageData.userId,
-            username: await getUsernameById(pageData.userId),
+            username: await getServerUsername(pageData.userId),
             timestamp: pageData.lastModified?.toDate() || new Date(),
             currentContent: pageData.content,
             previousContent: "",
@@ -133,7 +175,7 @@ export async function GET(request) {
           pageId,
           pageName: pageData.title || "Untitled",
           userId: pageData.userId,
-          username: await getUsernameById(pageData.userId),
+          username: await getServerUsername(pageData.userId),
           timestamp: historyData.timestamp?.toDate() || new Date(),
           currentContent: pageData.content,
           previousContent: historyData.content || "",
@@ -199,4 +241,4 @@ export async function GET(request) {
   }
 }
 
-// Note: getUsernameById is now imported from ../../utils/userUtils for consistency
+// Note: Using server-safe getServerUsername function to avoid client-side imports
