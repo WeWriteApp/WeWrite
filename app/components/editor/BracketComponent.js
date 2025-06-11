@@ -132,24 +132,24 @@ function BracketComponent() {
   };
 
   return (
-    <div ref={containerRef} className="relative bg-white shadow-md rounded-md p-4 w-64">
+    <div ref={containerRef} className="relative bg-card shadow-md rounded-md p-4 w-64 border border-border">
       <input
         type="text"
         value={inputValue}
         onChange={handleInputChange}
         placeholder="Search for a page..."
-        className="w-full p-2 border border-gray-300 rounded-md"
+        className="w-full p-2 border border-input rounded-md bg-background text-foreground"
         autoComplete="off"
       />
       {isSearching ? (
-        <div className="mt-2 text-center text-gray-500 flex justify-center"><div className="loader"></div></div>
+        <div className="mt-2 text-center text-muted-foreground flex justify-center"><div className="loader"></div></div>
       ) : (
         allPages.length > 0 && (
-          <ul className="mt-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md">
+          <ul className="mt-2 max-h-40 overflow-y-auto border border-border rounded-md bg-card">
             {allPages.map((page) => (
               <li
                 key={page.id}
-                className="p-2 hover:bg-gray-200 cursor-pointer"
+                className="p-2 hover:bg-muted cursor-pointer text-foreground"
                 onClick={() => handlePageClick(page)}
               >
                 <div className="flex items-center justify-between gap-2">

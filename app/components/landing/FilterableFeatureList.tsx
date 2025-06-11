@@ -139,7 +139,7 @@ export function FilterableFeatureList({
             className={`filter-chip px-3 py-1.5 h-auto rounded-full transition-all duration-300 ease-in-out flex-shrink-0 text-xs ${
               filters.inProgress
                 ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-md'
-                : 'text-amber-600 border-amber-300 hover:bg-amber-100 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-900/30'
+                : 'text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-950/30'
             }`}
             onClick={() => toggleFilter('inProgress')}
           >
@@ -152,7 +152,7 @@ export function FilterableFeatureList({
             className={`filter-chip px-3 py-1.5 h-auto rounded-full transition-all duration-300 ease-in-out flex-shrink-0 text-xs ${
               filters.comingSoon
                 ? 'bg-gray-500 hover:bg-gray-600 text-white shadow-md'
-                : 'text-gray-600 border-gray-300 hover:bg-gray-100 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-gray-900/30'
+                : 'text-muted-foreground border-border hover:bg-muted/50'
             }`}
             onClick={() => toggleFilter('comingSoon')}
           >

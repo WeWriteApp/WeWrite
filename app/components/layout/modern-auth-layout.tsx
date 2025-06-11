@@ -30,12 +30,12 @@ export function ModernAuthLayout({
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row">
       {/* Left side - Form */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 bg-white dark:bg-gray-950">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 bg-background">
         <div className="w-full max-w-md mx-auto">
           {/* Header removed as requested */}
 
           <motion.div
-            className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 md:p-8"
+            className="bg-card rounded-xl shadow-sm border border-border p-6 md:p-8"
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{

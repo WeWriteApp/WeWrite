@@ -39,9 +39,9 @@ export function PagePreviewCard({
       case 'done':
         return "bg-success/10 dark:bg-success/20 border-success/30 dark:border-success/40 text-success dark:text-success-foreground";
       case 'in-progress':
-        return "bg-amber-100 dark:bg-amber-800/40 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-100";
+        return "bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100";
       case 'coming-soon':
-        return "bg-gray-100 dark:bg-gray-800/40 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100";
+        return "bg-muted border-border text-muted-foreground";
       default:
         return "";
     }
@@ -72,7 +72,7 @@ export function PagePreviewCard({
       case 'in-progress':
         return <Badge variant="default" className="bg-amber-500 text-white">In Progress</Badge>;
       case 'coming-soon':
-        return <Badge variant="outline" className="text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-700">Coming Soon</Badge>;
+        return <Badge variant="outline" className="text-muted-foreground border-border">Coming Soon</Badge>;
       default:
         return null;
     }

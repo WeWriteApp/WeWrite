@@ -163,7 +163,7 @@ const AddMembersForm = ({ groupId,initialMembers }) => {
       {
         members && (
           <button
-            className="bg-background w-auto inline-block text-button-text px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-500 hover:text-white mt-4"
+            className="bg-background w-auto inline-block text-foreground px-4 py-2 rounded-lg border border-border hover:bg-muted hover:text-foreground mt-4"
             type="button"
             onClick={handleSave}
           >Add Members</button>
