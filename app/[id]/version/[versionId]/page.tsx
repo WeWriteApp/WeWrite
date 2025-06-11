@@ -150,11 +150,11 @@ export default function PageVersionView({ params }: { params: Promise<{ id: stri
   }, [showDiff, version, currentVersion]);
 
   const handleBackToPage = () => {
-    router.push(`/${id}`);
+    router.push('/' + id);
   };
 
   const handleBackToHistory = () => {
-    router.push(`/${id}/history`);
+    router.push('/' + id + '/history');
   };
 
   const handleRevertToVersion = async () => {
@@ -164,7 +164,7 @@ export default function PageVersionView({ params }: { params: Promise<{ id: stri
       const result = await setCurrentVersion(id, versionId);
       if (result) {
         toast.success('Page reverted to this version');
-        router.push(`/${id}`);
+        router.push('/' + id);
       } else {
         toast.error('Failed to revert page');
       }
@@ -187,7 +187,7 @@ export default function PageVersionView({ params }: { params: Promise<{ id: stri
     }
 
     const newVersionId = versions[newIndex].id;
-    router.push(`/${id}/version/${newVersionId}`);
+    router.push('/' + id + '/version/' + newVersionId);
   };
 
   if (loading) {

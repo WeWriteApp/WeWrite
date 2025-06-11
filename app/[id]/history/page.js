@@ -91,12 +91,12 @@ export default function PageHistoryPage({ params }) {
           // First try to use the stored previousContent from the version itself
           if (version.previousContent) {
             previousContent = version.previousContent;
-            console.log(`Using stored previousContent for version ${version.id}`);
+            console.log('Using stored previousContent for version ' + version.id);
           }
           // Then try to use the previous version's content
           else if (prevVersion && prevVersion.content) {
             previousContent = prevVersion.content;
-            console.log(`Using previous version content for version ${version.id}`);
+            console.log('Using previous version content for version ' + version.id);
           }
 
           return {
@@ -129,7 +129,7 @@ export default function PageHistoryPage({ params }) {
   }, [id]);
 
   const handleBackToPage = () => {
-    router.push(`/${id}`);
+    router.push('/' + id);
   };
 
   // Helper function to validate timestamp

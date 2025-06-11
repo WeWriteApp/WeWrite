@@ -101,7 +101,7 @@ export default function PageHistoryPage({ params }) {
   };
 
   const handleBackToPage = () => {
-    router.push(`/${id}`);
+    router.push('/' + id);
   };
 
   if (loading) {
@@ -117,7 +117,7 @@ export default function PageHistoryPage({ params }) {
       <div className="p-4">
         <NavHeader
           title="Error"
-          backUrl={`/${id}`}
+          backUrl={'/' + id}
           backLabel="Back to page"
         />
         <div className="text-destructive text-center p-8">
@@ -131,7 +131,7 @@ export default function PageHistoryPage({ params }) {
     <div className="p-4 max-w-4xl mx-auto">
         <NavHeader
           title="Page History"
-          backUrl={`/${id}`}
+          backUrl={'/' + id}
           backLabel="Back to page"
         />
 

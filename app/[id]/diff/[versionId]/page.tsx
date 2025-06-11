@@ -120,11 +120,11 @@ export default function PageDiff({ params }: PageDiffProps) {
   }, [params.id, params.versionId]);
 
   const handleBackToHistory = () => {
-    router.push(`/${params.id}/history`);
+    router.push('/' + params.id + '/history');
   };
 
   const handleBackToPage = () => {
-    router.push(`/${params.id}`);
+    router.push('/' + params.id);
   };
 
   if (loading) {
@@ -142,8 +142,6 @@ export default function PageDiff({ params }: PageDiffProps) {
       <div className="container mx-auto px-4 py-8">
         <PageHeader
           title="Version Comparison"
-          showBackButton={true}
-          onBack={handleBackToHistory}
         />
         <Alert className="mt-6">
           <AlertDescription>{error}</AlertDescription>
@@ -154,10 +152,8 @@ export default function PageDiff({ params }: PageDiffProps) {
 
   return (
     <div className="container mx-auto px-4 py-8">
-        <PageHeader 
+        <PageHeader
           title={page?.title || 'Untitled'}
-          showBackButton={true}
-          onBack={handleBackToHistory}
         />
 
         {/* Comparison header */}
