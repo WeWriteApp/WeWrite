@@ -3,12 +3,7 @@ import { collection, query, orderBy, limit, getDocs, where } from 'firebase/fire
 import { db } from '../../firebase/config';
 import { rtdb } from '../../firebase/rtdb';
 import { ref, get } from 'firebase/database';
-import { getBatchUserData } from '../../firebase/batchUserData';
 import { cachedStatsService } from '../../services/CachedStatsService';
-import { getCacheItem, setCacheItem, generateCacheKey } from '../../utils/cacheUtils';
-
-// Cache TTL for dashboard data
-const DASHBOARD_CACHE_TTL = 3 * 60 * 1000; // 3 minutes
 
 interface DashboardData {
   recentPages: any[];
@@ -29,23 +24,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
-    const forceRefresh = searchParams.get('forceRefresh') === 'true';
-    
-    // Generate cache key based on user ID
-    const cacheKey = generateCacheKey('homeDashboard', userId || 'anonymous');
-    
-    // Check cache first (unless force refresh)
-    if (!forceRefresh) {
-      const cachedData = getCacheItem<DashboardData>(cacheKey);
-      if (cachedData) {
-        console.log('Home dashboard: Using cached data');
-        return NextResponse.json({
-          ...cachedData,
-          cached: true,
-          cacheAge: Date.now() - cachedData.timestamp
-        });
-      }
-    }
     
     console.log('Home dashboard: Fetching fresh data');
     
@@ -73,16 +51,10 @@ export async function GET(request: NextRequest) {
       timestamp: Date.now(),
       loadTime
     };
-    
-    // Cache the result
-    setCacheItem(cacheKey, dashboardData, DASHBOARD_CACHE_TTL);
-    
+
     console.log(`Home dashboard: Data fetched in ${loadTime.toFixed(2)}ms`);
-    
-    return NextResponse.json({
-      ...dashboardData,
-      cached: false
-    });
+
+    return NextResponse.json(dashboardData);
     
   } catch (error) {
     console.error('Error fetching home dashboard data:', error);
@@ -127,25 +99,14 @@ async function getRecentPagesOptimized(limitCount: number, userId?: string | nul
       ...doc.data()
     }));
     
-    // Get unique user IDs for batch fetching
-    const userIds = [...new Set(pages.map(page => page.userId).filter(Boolean))];
-    const batchUserData = await getBatchUserData(userIds);
-    
-    // Enhance pages with user data
-    const enhancedPages = pages.map(page => ({
-      ...page,
-      username: batchUserData[page.userId]?.username,
-      userTier: batchUserData[page.userId]?.tier
-    }));
-    
     // Filter and limit results
-    const filteredPages = enhancedPages
+    const filteredPages = pages
       .filter(page => {
         if (!userId) return page.isPublic;
         return page.isPublic || page.userId === userId;
       })
       .slice(0, limitCount);
-    
+
     return filteredPages;
     
   } catch (error) {
