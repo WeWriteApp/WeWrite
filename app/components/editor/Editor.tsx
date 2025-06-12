@@ -22,6 +22,7 @@ import { usePillStyle } from '../../contexts/PillStyleContext';
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { useAuth } from '../../providers/AuthProvider';
 import { useAccentColor } from '../../contexts/AccentColorContext';
+import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import Modal from '../ui/modal';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
@@ -286,6 +287,19 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
   // Get user context for feature flags
   const { user } = useAuth();
+
+  // Analytics hook - must be called at top level with error handling
+  let trackInteractionEvent, events;
+  try {
+    const analytics = useWeWriteAnalytics();
+    trackInteractionEvent = analytics.trackInteractionEvent;
+    events = analytics.events;
+  } catch (error) {
+    console.error('Analytics hook failed (non-fatal):', error);
+    // Provide fallback functions
+    trackInteractionEvent = () => {};
+    events = {};
+  }
 
   // Check if link functionality is enabled
   const linkFunctionalityEnabled = useFeatureFlag('link_functionality', user?.email);
@@ -992,7 +1006,6 @@ const EditorComponent = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
     // Track link editor opening
     try {
-      const { trackInteractionEvent, events } = useWeWriteAnalytics();
       trackInteractionEvent(events.LINK_EDITOR_OPENED, {
         initial_tab: initialTab,
         source: 'editor'
@@ -2575,8 +2588,18 @@ const LinkEditor = ({ position, onSelect, setShowLinkEditor, initialText = "", i
   // Get accent color for button styling
   const { accentColor, customColors } = useAccentColor();
 
-  // Analytics tracking
-  const { trackInteractionEvent, events } = useWeWriteAnalytics();
+  // Analytics tracking with error handling
+  let trackInteractionEvent, events;
+  try {
+    const analytics = useWeWriteAnalytics();
+    trackInteractionEvent = analytics.trackInteractionEvent;
+    events = analytics.events;
+  } catch (error) {
+    console.error('Analytics hook failed in LinkEditor (non-fatal):', error);
+    // Provide fallback functions
+    trackInteractionEvent = () => {};
+    events = {};
+  }
 
   // Determine if we're editing an existing link
   const isEditing = !!initialPageId || !!initialText;

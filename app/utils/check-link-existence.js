@@ -32,7 +32,29 @@ async function checkLinkExistence(links) {
 
 // Helper function to check if a Firestore document ID is valid
 function isValidDocumentId(id) {
-  return typeof id === "string" && id.trim() !== "";
+  if (typeof id !== "string" || id.trim() === "") {
+    return false;
+  }
+
+  // Firestore document IDs must be valid UTF-8 characters and cannot contain:
+  // forward slashes (/), backslashes (\), periods (.), or double periods (..)
+  const invalidChars = /[\/\\]/;
+  if (invalidChars.test(id)) {
+    return false;
+  }
+
+  // Cannot be just periods
+  if (id === "." || id === "..") {
+    return false;
+  }
+
+  // Must be 1-1500 bytes when UTF-8 encoded
+  const byteLength = new TextEncoder().encode(id).length;
+  if (byteLength < 1 || byteLength > 1500) {
+    return false;
+  }
+
+  return true;
 }
 
 export { checkLinkExistence };

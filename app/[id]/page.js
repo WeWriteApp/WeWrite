@@ -53,8 +53,25 @@ export default function GlobalIDPage({ params }) {
   useEffect(() => {
     async function determineContentType() {
       try {
+        // Validate the ID before making Firestore calls
+        if (!id || typeof id !== 'string' || id.trim() === '') {
+          console.error('Invalid ID provided:', id);
+          setContentType('not-found');
+          setIsLoading(false);
+          return;
+        }
+
+        // Clean the ID and validate it's a proper Firestore document ID
+        const cleanId = id.trim();
+        if (cleanId.includes('/') || cleanId.includes('\\') || cleanId === '.' || cleanId === '..') {
+          console.error('Invalid document ID format:', cleanId);
+          setContentType('not-found');
+          setIsLoading(false);
+          return;
+        }
+
         // First, check if it's a page
-        const pageDoc = await getDoc(doc(db, "pages", id));
+        const pageDoc = await getDoc(doc(db, "pages", cleanId));
         if (pageDoc.exists()) {
           setContentType('page');
           setIsLoading(false);
@@ -63,24 +80,24 @@ export default function GlobalIDPage({ params }) {
 
         // If not a page, check if it's a user ID
         const rtdb = getDatabase(app);
-        const userRef = ref(rtdb, `users/${id}`);
+        const userRef = ref(rtdb, `users/${cleanId}`);
         const userSnapshot = await get(userRef);
 
         if (userSnapshot.exists()) {
           // Redirect to the user page using direct navigation
-          window.location.href = `/user/${id}`;
+          window.location.href = `/user/${cleanId}`;
           return;
         }
 
         // If not a page or user, check if it's a group
-        const groupRef = ref(rtdb, `groups/${id}`);
+        const groupRef = ref(rtdb, `groups/${cleanId}`);
         const groupSnapshot = await get(groupRef);
 
         if (groupSnapshot.exists()) {
           // Redirect to the group page using direct navigation
           console.log('Group found, redirecting to group page');
           // Use direct navigation to avoid scroll issues with sticky headers
-          window.location.href = `/group/${id}`;
+          window.location.href = `/group/${cleanId}`;
           return;
         }
 
