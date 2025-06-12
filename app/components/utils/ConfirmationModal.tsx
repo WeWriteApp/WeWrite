@@ -25,7 +25,7 @@ interface ConfirmationModalProps {
  * and provides consistent styling and behavior across the application.
  *
  * This component uses our custom Modal implementation to ensure
- * no duplicate modals appear.
+ * no duplicate modals appear and maintains proper z-index layering.
  */
 export function ConfirmationModal({
   isOpen,

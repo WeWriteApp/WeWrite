@@ -6,6 +6,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui
 import { Button } from "../ui/button";
 import { usePWA } from '../../providers/PWAProvider';
 import { getPWAInstallInstructions } from '../../utils/pwa-detection';
+import { useAlert } from '../../hooks/useAlert';
+import AlertModal from './AlertModal';
 import {
   Collapsible,
   CollapsibleContent,
@@ -15,6 +17,9 @@ import {
 export default function PWAInstallationCard() {
   const { isPWA } = usePWA();
   const [isOpen, setIsOpen] = useState(false);
+
+  // Custom modal hooks
+  const { alertState, showInfo, closeAlert } = useAlert();
 
   return (
     <Card className="wewrite-card">
@@ -76,10 +81,10 @@ export default function PWAInstallationCard() {
                   variant="outline"
                   size="sm"
                   className="w-full flex items-center justify-center gap-2 text-foreground"
-                  onClick={() => {
+                  onClick={async () => {
                     // This is just for UI purposes - the actual installation
                     // is handled by the browser's built-in PWA installation prompt
-                    alert("Follow the instructions above to install WeWrite as an app.");
+                    await showInfo("Installation Instructions", "Follow the instructions above to install WeWrite as an app.");
                   }}
                 >
                   <Download className="h-4 w-4" />
@@ -90,6 +95,17 @@ export default function PWAInstallationCard() {
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        onClose={closeAlert}
+        title={alertState.title}
+        message={alertState.message}
+        buttonText={alertState.buttonText}
+        variant={alertState.variant}
+        icon={alertState.icon}
+      />
     </Card>
   );
 }

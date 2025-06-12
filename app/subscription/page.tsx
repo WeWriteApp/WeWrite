@@ -14,6 +14,10 @@ import { cancelSubscription, listenToUserSubscription, updateSubscription } from
 import { getOptimizedUserSubscription } from '../firebase/optimizedSubscription';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Separator } from '../components/ui/separator';
+import { useConfirmation } from '../hooks/useConfirmation';
+import { useAlert } from '../hooks/useAlert';
+import ConfirmationModal from '../components/utils/ConfirmationModal';
+import AlertModal from '../components/utils/AlertModal';
 import Stripe from 'stripe';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -65,6 +69,10 @@ const getRelativeTimeString = (date: Date): string => {
 export default function SubscriptionPage() {
   const { user } = useAuth();
   const router = useRouter();
+
+  // Custom modal hooks
+  const { confirmationState, confirm, closeConfirmation } = useConfirmation();
+  const { alertState, showSuccess, closeAlert } = useAlert();
   
   const [customAmount, setCustomAmount] = useState<string>('20');
   const [loading, setLoading] = useState<boolean>(false);
@@ -208,7 +216,16 @@ export default function SubscriptionPage() {
     if (!user || !subscription?.id) return;
 
     // Show confirmation dialog
-    if (!window.confirm('Are you sure you want to cancel your subscription? This will stop all future payments and remove your subscription badge.')) {
+    const confirmed = await confirm({
+      title: 'Cancel Subscription',
+      message: 'Are you sure you want to cancel your subscription? This will stop all future payments and remove your subscription badge.',
+      confirmText: 'Cancel Subscription',
+      cancelText: 'Keep Subscription',
+      variant: 'destructive',
+      icon: 'warning'
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -390,8 +407,8 @@ export default function SubscriptionPage() {
         throw new Error(data.error || 'Failed to reactivate subscription');
       }
 
-      // Redirect to success page or update UI
-      alert('Your subscription has been reactivated successfully!');
+      // Show success message
+      await showSuccess('Success', 'Your subscription has been reactivated successfully!');
 
     } catch (err: any) {
       console.error('Error reactivating subscription:', err);
@@ -619,6 +636,30 @@ export default function SubscriptionPage() {
           </span>
           <span className="text-muted-foreground">/month</span>
         </div>
+
+        {/* Custom Modals */}
+        <ConfirmationModal
+          isOpen={confirmationState.isOpen}
+          onClose={closeConfirmation}
+          onConfirm={confirmationState.onConfirm}
+          title={confirmationState.title}
+          message={confirmationState.message}
+          confirmText={confirmationState.confirmText}
+          cancelText={confirmationState.cancelText}
+          variant={confirmationState.variant}
+          icon={confirmationState.icon}
+          isLoading={confirmationState.isLoading}
+        />
+
+        <AlertModal
+          isOpen={alertState.isOpen}
+          onClose={closeAlert}
+          title={alertState.title}
+          message={alertState.message}
+          buttonText={alertState.buttonText}
+          variant={alertState.variant}
+          icon={alertState.icon}
+        />
     </div>
   );
 }

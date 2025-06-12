@@ -12,6 +12,8 @@ import Link from 'next/link';
 import { PillLink } from "./PillLink";
 import { SupporterIcon } from '../payments/SupporterIcon';
 import { useFeatureFlag } from "../../utils/feature-flags";
+import { useAlert } from '../../hooks/useAlert';
+import AlertModal from './AlertModal';
 
 interface FollowingListProps {
   userId: string;
@@ -31,6 +33,9 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
 
   // Use the reactive feature flag hook instead of manual Firestore check
   const subscriptionEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+
+  // Custom modal hooks
+  const { alertState, showError, closeAlert } = useAlert();
 
   useEffect(() => {
     if (!userId) return;
@@ -141,7 +146,7 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
       setFollowedUsers(prev => prev.filter(u => u.id !== followedId));
     } catch (err) {
       console.error('Error unfollowing user:', err);
-      alert('Failed to unfollow user. Please try again.');
+      await showError('Unfollow Failed', 'Failed to unfollow user. Please try again.');
     } finally {
       setUnfollowingId(null);
     }
@@ -247,6 +252,17 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
           </Button>
         </div>
       )}
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        onClose={closeAlert}
+        title={alertState.title}
+        message={alertState.message}
+        buttonText={alertState.buttonText}
+        variant={alertState.variant}
+        icon={alertState.icon}
+      />
     </div>
   );
 }

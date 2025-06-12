@@ -22,6 +22,8 @@ import { Alert, AlertDescription } from "../ui/alert";
 import { AlertTriangle, X, Link, Check } from "lucide-react";
 import type { SlateContent } from "../../types/database";
 import { PageEditorSkeleton } from "../skeletons/PageEditorSkeleton";
+import { useAlert } from "../../hooks/useAlert";
+import AlertModal from "../utils/AlertModal";
 
 // Safely check if ReactEditor methods exist before using them
 const safeReactEditor = {
@@ -128,6 +130,9 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
   // Check if link functionality is enabled
   const linkFunctionalityEnabled = useFeatureFlag('link_functionality', user?.email);
+
+  // Custom modal hooks
+  const { alertState, showError, closeAlert } = useAlert();
 
   // State for disabled link modal
   const [showDisabledLinkModal, setShowDisabledLinkModal] = useState(false);
@@ -483,9 +488,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
     } catch (error) {
       console.error("[DEBUG] Critical error in handleInsertLink:", error);
       // Provide user feedback
-      if (typeof window !== 'undefined' && window.alert) {
-        window.alert('Failed to open link editor. Please try again.');
-      }
+      showError('Link Editor Error', 'Failed to open link editor. Please try again.');
     }
   };
 
@@ -684,6 +687,17 @@ const PageEditor: React.FC<PageEditorProps> = ({
       </div>
 
       </div>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        onClose={closeAlert}
+        title={alertState.title}
+        message={alertState.message}
+        buttonText={alertState.buttonText}
+        variant={alertState.variant}
+        icon={alertState.icon}
+      />
     </EditorProvider>
   );
 };

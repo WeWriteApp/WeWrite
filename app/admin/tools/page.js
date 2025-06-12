@@ -11,11 +11,16 @@ import { calculatePastStreaks } from '../../scripts/calculatePastStreaks';
 import { backfillNotifications } from '../../scripts/backfillNotifications';
 import { backfillActivityCalendar } from '../../scripts/backfillActivityCalendar';
 import { useRouter } from 'next/navigation';
+import { useConfirmation } from '../../hooks/useConfirmation';
+import ConfirmationModal from '../../components/utils/ConfirmationModal';
 
 export default function AdminToolsPage() {
   const { user, loading: authLoading } = useContext(AuthContext);
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('streaks');
+
+  // Custom modal hooks
+  const { confirmationState, confirm, closeConfirmation } = useConfirmation();
 
   // State for streak calculation
   const [streakCalculationRunning, setStreakCalculationRunning] = useState(false);
@@ -102,7 +107,16 @@ export default function AdminToolsPage() {
       setActivityBackfillResult(null);
 
       // Confirm before running
-      if (!window.confirm('This will backfill activity calendar data for all users. This operation may take a long time. Continue?')) {
+      const confirmed = await confirm({
+        title: 'Backfill Activity Calendar',
+        message: 'This will backfill activity calendar data for all users. This operation may take a long time. Continue?',
+        confirmText: 'Continue',
+        cancelText: 'Cancel',
+        variant: 'warning',
+        icon: 'warning'
+      });
+
+      if (!confirmed) {
         setActivityBackfillRunning(false);
         return;
       }
@@ -368,6 +382,20 @@ export default function AdminToolsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Custom Modals */}
+      <ConfirmationModal
+        isOpen={confirmationState.isOpen}
+        onClose={closeConfirmation}
+        onConfirm={confirmationState.onConfirm}
+        title={confirmationState.title}
+        message={confirmationState.message}
+        confirmText={confirmationState.confirmText}
+        cancelText={confirmationState.cancelText}
+        variant={confirmationState.variant}
+        icon={confirmationState.icon}
+        isLoading={confirmationState.isLoading}
+      />
     </div>
   );
 }

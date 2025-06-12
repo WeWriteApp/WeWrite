@@ -6,6 +6,8 @@ import { UserCircle, CreditCard, Settings, Plus, Minus, Trash2, X } from 'lucide
 import { useRouter } from 'next/navigation';
 import CompositionBar from '../editor/CompositionBar';
 import { updateUsername } from "../../firebase/usernameHistory";
+import { useAlert } from '../../hooks/useAlert';
+import AlertModal from '../utils/AlertModal';
 
 interface Pledge {
   id: string;
@@ -80,11 +82,15 @@ const SpendingOverview = ({ total, max }: { total: number, max: number }) => {
   );
 };
 
-// Simple toast replacement functions
-const showErrorMessage = (message: string) => {
+// Simple toast replacement functions - will be replaced with modal
+const showErrorMessage = (message: string, showAlert?: (title: string, message: string) => void) => {
   console.error(message);
-  // You could add DOM-based notification here if needed
-  alert(message); // Simple fallback
+  if (showAlert) {
+    showAlert('Error', message);
+  } else {
+    // Fallback for backward compatibility
+    alert(message);
+  }
 };
 
 const showLoadingMessage = (message: string) => {
@@ -122,6 +128,9 @@ const AccountDrawer = ({
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const router = useRouter();
+
+  // Custom modal hooks
+  const { alertState, showError, closeAlert } = useAlert();
 
   useEffect(() => {
     if (subscription && subscription.amount) {
@@ -165,7 +174,7 @@ const AccountDrawer = ({
       setIsEditingUsername(false);
     } catch (error) {
       console.error("Error updating username:", error);
-      showErrorMessage('Failed to update username. Please try again.');
+      showErrorMessage('Failed to update username. Please try again.', showError);
     }
   };
 
@@ -173,7 +182,7 @@ const AccountDrawer = ({
     console.log("handleActivateSubscription called with selectedAmount:", selectedAmount);
 
     if (!selectedAmount) {
-      showErrorMessage('Please select a subscription amount');
+      showErrorMessage('Please select a subscription amount', showError);
       return;
     }
 
@@ -183,7 +192,7 @@ const AccountDrawer = ({
 
       if (selectedAmount === 'custom') {
         if (!customAmount || Number(customAmount) <= 0) {
-          showErrorMessage('Please enter a valid custom amount');
+          showErrorMessage('Please enter a valid custom amount', showError);
           return;
         }
         console.log("Activating custom subscription:", customAmount);
@@ -198,7 +207,7 @@ const AccountDrawer = ({
       }
     } catch (error) {
       console.error("Error starting subscription:", error);
-      showErrorMessage('Failed to start subscription. Please try again.');
+      showErrorMessage('Failed to start subscription. Please try again.', showError);
     }
   };
 
@@ -599,6 +608,17 @@ const AccountDrawer = ({
           </Drawer.Content>
         </Drawer.Portal>
       </Drawer.Root>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        onClose={closeAlert}
+        title={alertState.title}
+        message={alertState.message}
+        buttonText={alertState.buttonText}
+        variant={alertState.variant}
+        icon={alertState.icon}
+      />
     </>
   );
 };
