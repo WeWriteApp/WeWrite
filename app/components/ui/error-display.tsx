@@ -54,7 +54,7 @@ export function ErrorDisplay({
     error: {
       bg: 'bg-red-100 dark:bg-red-900/20',
       text: 'text-red-600 dark:text-red-400',
-      border: 'border-red-200 dark:border-red-800',
+      border: 'border-theme-medium',
       bgLight: 'bg-red-50 dark:bg-red-950/30'
     },
     warning: {
@@ -66,7 +66,7 @@ export function ErrorDisplay({
     info: {
       bg: 'bg-blue-100 dark:bg-blue-900/20',
       text: 'text-blue-600 dark:text-blue-400',
-      border: 'border-blue-200 dark:border-blue-800',
+      border: 'border-theme-medium',
       bgLight: 'bg-blue-50 dark:bg-blue-950/30'
     }
   };

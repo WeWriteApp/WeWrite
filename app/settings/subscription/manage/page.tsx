@@ -352,7 +352,7 @@ export default function ManageSubscriptionPage() {
       )}
 
       {success && (
-        <Alert className="mb-6 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800">
+        <Alert className="mb-6 bg-success/10 text-success-foreground border-theme-medium">
           <Check className="h-4 w-4" />
           <AlertTitle>Success</AlertTitle>
           <AlertDescription>{success}</AlertDescription>
@@ -372,7 +372,7 @@ export default function ManageSubscriptionPage() {
           <CardContent>
             {isActive && (
               <div className="space-y-4">
-                <div className="flex items-center gap-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <div className="flex items-center gap-4 p-4 bg-success/10 border-theme-medium rounded-lg">
                   <div className="flex-shrink-0">
                     <SupporterIcon tier={subscription.tier} status="active" size="lg" />
                   </div>
@@ -412,7 +412,7 @@ export default function ManageSubscriptionPage() {
 
             {isCanceled && (
               <div className="space-y-4">
-                <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex items-center gap-3 p-4 bg-destructive/10 border-theme-medium rounded-lg">
                   <div className="flex-shrink-0">
                     <SupporterIcon tier={null} status="canceled" size="lg" />
                   </div>

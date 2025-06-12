@@ -340,10 +340,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             lastLogin: new Date().toISOString(),
           });
 
-          // Set session cookie
-          const token = await user.getIdToken();
+          // Set session cookie with fresh token
+          const token = await user.getIdToken(true); // Force refresh
           Cookies.set('session', token, { expires: 7 }); // 7 days expiry
           Cookies.set('authenticated', 'true', { expires: 7 });
+          console.log('Set fresh session cookie for user:', user.uid);
         } catch (error) {
           console.error("Error loading user data:", error);
           setUser({

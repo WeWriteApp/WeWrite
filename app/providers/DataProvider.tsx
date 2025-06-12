@@ -350,7 +350,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
 
       {/* Error Toast - Only shown when errorVisible is true */}
       {errorVisible && error && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-50 dark:bg-red-900/50 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg shadow-lg border border-red-200 dark:border-red-800 max-w-md w-full">
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 bg-destructive/10 text-destructive-foreground px-4 py-3 rounded-lg shadow-lg border-theme-medium max-w-md w-full">
           <div className="flex items-start">
             <div className="flex-shrink-0">
               <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">

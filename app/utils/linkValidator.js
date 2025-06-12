@@ -36,6 +36,11 @@ export function validateLink(linkData) {
 
   // Add more robust error handling
   try {
+    // Additional safety check for circular references
+    if (linkData === linkData.children || linkData === linkData.link) {
+      console.warn('Circular reference detected in link data');
+      return null;
+    }
     // Create a deep copy to avoid modifying the original
     let link;
     try {

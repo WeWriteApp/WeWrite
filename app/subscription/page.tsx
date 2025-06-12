@@ -551,7 +551,7 @@ export default function SubscriptionPage() {
         )}
       </div>
 
-      <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+      <div className="mb-6 p-4 bg-primary/10 border-theme-medium rounded-lg">
         <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">About WeWrite Subscriptions</h3>
         <p className="text-sm text-blue-700 dark:text-blue-400">
           Currently, all subscription payments go directly to supporting WeWrite's development. In the future, we plan to enable subscriptions to support individual writers on the platform, allowing you to directly fund the creators you love.
@@ -584,7 +584,7 @@ export default function SubscriptionPage() {
                     pattern="[0-9]*"
                     value={customAmount}
                     onChange={handleCustomAmountChange}
-                    className={`w-full text-lg font-bold text-foreground bg-background ${customAmountError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                    className={`w-full text-lg font-bold text-foreground bg-background ${customAmountError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                     onClick={(e) => e.stopPropagation()}
                     disabled={selectedTier !== 'custom'}
                     ref={(input) => {

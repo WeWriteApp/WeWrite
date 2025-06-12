@@ -123,7 +123,7 @@ export function SEOAnalytics({ showDebugInfo = false, enableRealTimeTracking = t
         </div>
       )}
 
-      <div style={{ borderTop: '1px solid #333', paddingTop: '8px', marginTop: '8px' }}>
+      <div style={{ borderTop: '1px solid hsl(var(--border))', paddingTop: '8px', marginTop: '8px' }}>
         <div style={{ fontSize: '11px', opacity: 0.8 }}>
           <div>Page Views: {analytics.pageViews.toLocaleString()}</div>
           <div>Avg Time: {Math.floor(analytics.avgTimeOnPage / 60)}m {analytics.avgTimeOnPage % 60}s</div>

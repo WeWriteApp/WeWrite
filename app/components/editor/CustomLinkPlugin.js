@@ -1,10 +1,8 @@
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useEffect } from 'react';
-import { $getSelection, $isRangeSelection, $createTextNode, $getRoot, COMMAND_PRIORITY_EDITOR,$createParagraphNode, $createRangeSelection,$createNodeSelection, $setSelection
-
- } from 'lexical';
+import { $getSelection, $isRangeSelection, $createTextNode, $getRoot, COMMAND_PRIORITY_EDITOR, $createParagraphNode, $createRangeSelection, $createNodeSelection, $setSelection } from 'lexical';
 import { $createCustomLinkNode } from './CustomLinkNode';
-import { validateLink } from "../../utils/linkValidator';
+import { validateLink } from "../../utils/linkValidator";
 
 const INSERT_CUSTOM_LINK_COMMAND = 'INSERT_CUSTOM_LINK_COMMAND';
 
@@ -14,12 +12,14 @@ function insertCustomLink(editor, url, text) {
     return;
   }
 
+  try {
+
   // Determine if this is an external link
   const isExternal = url.startsWith('http://') || url.startsWith('https://');
 
   // Extract pageId from URL if it's a page link
   let pageId = null;
-  if (url.includes('/pages/")) {
+  if (url.includes('/pages/')) {
     const match = url.match(/\/pages\/([a-zA-Z0-9-_]+)/);
     if (match) {
       pageId = match[1];
@@ -39,6 +39,10 @@ function insertCustomLink(editor, url, text) {
   // CRITICAL FIX: Use validateLink to ensure all required properties are present
   // This ensures backward compatibility with both old and new link formats
   const validatedLink = validateLink(basicLink);
+  if (!validatedLink) {
+    console.error('Failed to validate link:', basicLink);
+    return;
+  }
   console.log('CustomLinkPlugin: Validated link:', JSON.stringify(validatedLink));
 
   editor.update(() => {
@@ -96,6 +100,13 @@ function insertCustomLink(editor, url, text) {
       root.append(paragraphNode);
     }
   });
+  } catch (error) {
+    console.error('Error in insertCustomLink:', error);
+    // Provide user feedback
+    if (typeof window !== 'undefined' && window.alert) {
+      window.alert('Failed to insert link. Please try again.');
+    }
+  }
 }
 
 function CustomLinkPlugin() {

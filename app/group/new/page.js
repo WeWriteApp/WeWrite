@@ -128,7 +128,7 @@ export default function Page() {
         <label className="flex flex-col gap-1">
           Name:
           <input
-            className="border border-gray-500 rounded-md p-2 bg-background text-text"
+            className="border-theme-medium rounded-md p-2 bg-background text-foreground"
             autoComplete="off"
             type="text"
             value={newGroup.name}
@@ -169,7 +169,7 @@ export default function Page() {
 
         <div className="flex flex-row gap-4 mt-2">
           <Button
-            className="bg-background text-button-text px-4 py-2 rounded-lg border border-gray-500 hover:bg-gray-500 hover:text-white"
+            className="bg-background text-foreground px-4 py-2 rounded-lg border-theme-medium hover:bg-muted hover:text-foreground"
             type="button"
             onClick={handleSave}
           >

@@ -239,7 +239,7 @@ export function TokenAllocationDashboard({ userId }: TokenAllocationDashboardPro
           </div>
 
           {deadlinePassed && (
-            <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
+            <div className="bg-yellow-500/10 border-theme-medium rounded-lg p-3">
               <div className="flex items-center gap-2 text-orange-800 dark:text-orange-200">
                 <Calendar className="h-4 w-4" />
                 <span className="text-sm font-medium">Allocation Deadline Passed</span>

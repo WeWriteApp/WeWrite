@@ -263,7 +263,7 @@ export default function FeatureFlagCard({
 
           <CollapsibleContent className="space-y-3 pt-3">
             {/* Global Toggle Section */}
-            <div className="p-4 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-200 dark:border-orange-800">
+            <div className="p-4 bg-yellow-500/10 rounded-lg border-theme-medium">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Globe className="h-4 w-4 text-orange-600 dark:text-orange-400" />

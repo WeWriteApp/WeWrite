@@ -141,7 +141,7 @@ const PaymentForm = ({ clientSecret, amount, onSuccess, onCancel }: PaymentFormP
       <div className="space-y-4 mb-6">
         <div>
           <label className="block text-base font-semibold mb-2 text-white">Card number</label>
-          <div style={containerStyle} className="w-full focus-within:border-[#0057FF] focus-within:ring-2 focus-within:ring-[#0057FF]/30">
+          <div style={containerStyle} className="w-full focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30">
             <CardNumberElement
               options={cardElementStyle}
               onChange={(e) => handleCardElementChange(e, 'cardNumber')}
@@ -153,7 +153,7 @@ const PaymentForm = ({ clientSecret, amount, onSuccess, onCancel }: PaymentFormP
         <div className="flex gap-4">
           <div className="flex-1">
             <label className="block text-base font-semibold mb-2 text-white">Expiry date</label>
-            <div style={containerStyle} className="w-full focus-within:border-[#0057FF] focus-within:ring-2 focus-within:ring-[#0057FF]/30">
+            <div style={containerStyle} className="w-full focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30">
               <CardExpiryElement
                 options={cardElementStyle}
                 onChange={(e) => handleCardElementChange(e, 'cardExpiry')}
@@ -164,7 +164,7 @@ const PaymentForm = ({ clientSecret, amount, onSuccess, onCancel }: PaymentFormP
 
           <div className="flex-1">
             <label className="block text-base font-semibold mb-2 text-white">CVC</label>
-            <div style={containerStyle} className="w-full focus-within:border-[#0057FF] focus-within:ring-2 focus-within:ring-[#0057FF]/30">
+            <div style={containerStyle} className="w-full focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30">
               <CardCvcElement
                 options={cardElementStyle}
                 onChange={(e) => handleCardElementChange(e, 'cardCvc')}

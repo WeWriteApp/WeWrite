@@ -75,7 +75,7 @@ export default function PaymentForm({ userId, amount = 10, onSuccess }) {
           },
         },
         '.Input:focus': {
-          border: '1px solid #0057FF',
+          border: '1px solid hsl(var(--primary))',
           boxShadow: '0 0 0 1px #0057FF',
         },
         '.Label': {
