@@ -310,7 +310,7 @@ export default function UserAccessModal({
           <div className={`p-3 rounded-lg border ${
             featureFlag.enabled
               ? 'bg-success/10 border-success/30 dark:bg-success/20 dark:border-success/40'
-              : 'bg-gray-50 border-gray-200 dark:bg-gray-950 dark:border-gray-800'
+              : 'bg-muted border-border'
           }`}>
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4" />

@@ -9,11 +9,21 @@ const admin = getFirebaseAdmin();
 
 export async function POST(request) {
   try {
+    // Add detailed logging for debugging
+    console.log('Create connect account request received');
+    console.log('Request cookies:', Object.fromEntries(request.cookies.entries()));
+    console.log('Request headers:', Object.fromEntries(request.headers.entries()));
+
     // Get user ID from request using our helper
     const userId = await getUserIdFromRequest(request);
+    console.log('Extracted userId:', userId);
 
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.error('No userId found in request');
+      return NextResponse.json({
+        error: 'PERMISSION_DENIED: Missing or insufficient permissions',
+        details: 'User authentication failed'
+      }, { status: 401 });
     }
 
     // Initialize Stripe
@@ -30,8 +40,10 @@ export async function POST(request) {
     }
 
     // Get user email from Firebase Auth
+    console.log('Getting user record for userId:', userId);
     const userRecord = await admin.auth().getUser(userId);
     const userEmail = userRecord.email;
+    console.log('User email:', userEmail);
 
     let accountId = userData.stripeConnectedAccountId;
 
@@ -64,6 +76,16 @@ export async function POST(request) {
     return NextResponse.json({ url: accountLink.url });
   } catch (error) {
     console.error('Error creating connect account:', error);
+    console.error('Error stack:', error.stack);
+
+    // Return more specific error messages
+    if (error.message?.includes('permission')) {
+      return NextResponse.json(
+        { error: 'PERMISSION_DENIED: Missing or insufficient permissions' },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json(
       { error: error.message || 'Failed to create connect account' },
       { status: 500 }

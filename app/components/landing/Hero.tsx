@@ -126,7 +126,7 @@ export const Hero = () => {
                 {HERO_IMAGES.map((img, idx) => (
                   <button
                     key={img}
-                    className={`rounded border-2 ${idx === current ? 'border-blue-500' : 'border-transparent'} focus:outline-none`}
+                    className={`rounded border-2 ${idx === current ? 'border-primary' : 'border-transparent'} focus:outline-none`}
                     style={{ padding: 0 }}
                     onClick={() => setCurrent(idx)}
                     aria-label={`Show image ${idx + 1}`}
@@ -181,7 +181,7 @@ export const Hero = () => {
             {HERO_IMAGES.map((img, idx) => (
               <button
                 key={img}
-                className={`rounded border-2 ${idx === current ? 'border-blue-500' : 'border-transparent'} focus:outline-none`}
+                className={`rounded border-2 ${idx === current ? 'border-primary' : 'border-transparent'} focus:outline-none`}
                 style={{ padding: 0 }}
                 onClick={() => setCurrent(idx)}
                 aria-label={`Show image ${idx + 1}`}

@@ -21,14 +21,7 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlag[] = [
     createdAt: new Date().toISOString(),
     lastModified: new Date().toISOString()
   },
-  {
-    id: 'notifications',
-    name: 'Notifications',
-    description: 'Enable in-app notifications for follows, page links, and other activities.',
-    enabled: false,
-    createdAt: new Date().toISOString(),
-    lastModified: new Date().toISOString()
-  },
+
   {
     id: 'payments',
     name: 'Payments',

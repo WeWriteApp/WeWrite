@@ -404,7 +404,7 @@ export default function AccountPage() {
 
                   {/* Email Error */}
                   {emailError && (
-                    <div className="flex items-center gap-2 mt-2 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
+                    <div className="flex items-center gap-2 mt-2 p-3 bg-destructive/10 border-theme-medium rounded-md">
                       <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
                       <p className="text-sm text-red-700 dark:text-red-300">{emailError}</p>
                     </div>

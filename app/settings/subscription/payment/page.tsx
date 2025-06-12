@@ -314,7 +314,7 @@ export default function SubscriptionPaymentPage() {
           </button>
         </div>
       ) : success ? (
-        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 mb-4">
+        <div className="bg-success/10 border-theme-medium rounded-lg p-3 mb-4">
           <h3 className="font-medium text-green-400 mb-1 text-sm">Payment Successful!</h3>
           <p className="text-green-300 text-xs">Your subscription has been activated.</p>
           <p className="mt-1 text-xs text-muted-foreground">Redirecting to your account...</p>

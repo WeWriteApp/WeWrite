@@ -75,7 +75,7 @@ export default function PaymentForm({ userId, amount = 10, onSuccess }) {
           },
         },
         '.Input:focus': {
-          border: '1px solid #0057FF',
+          border: '1px solid hsl(var(--primary))',
           boxShadow: '0 0 0 1px #0057FF',
         },
         '.Label': {
@@ -190,7 +190,7 @@ const CheckoutForm = ({ onSuccess }) => {
       </div>
       
       {error && (
-        <div className="p-3 bg-red-900 bg-opacity-20 border border-red-500 rounded text-red-400 text-sm md:text-base">
+        <div className="p-3 bg-destructive/10 border border-destructive/50 rounded text-destructive text-sm md:text-base">
           {error}
         </div>
       )}

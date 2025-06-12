@@ -160,7 +160,7 @@ export function DateFormatPicker({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
           <div className="p-2 space-y-1">
             {Object.values(DATE_FORMATS).map((format) => {
               const isSelected = dateFormat === format;
@@ -174,15 +174,15 @@ export function DateFormatPicker({
                   className={cn(
                     "w-full flex items-center justify-between p-3 rounded-md transition-colors text-left",
                     isSelected
-                      ? "bg-blue-50 text-blue-900"
-                      : "hover:bg-gray-50"
+                      ? "bg-primary/10 text-primary"
+                      : "hover:bg-muted/50 text-foreground"
                   )}
                 >
                   <div className="font-medium text-sm">
                     {previewText}
                   </div>
                   {isSelected && (
-                    <Check className="h-4 w-4 text-blue-600" />
+                    <Check className="h-4 w-4 text-primary" />
                   )}
                 </button>
               );

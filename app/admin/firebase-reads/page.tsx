@@ -97,7 +97,7 @@ export default function FirebaseReadsAdminPage() {
         </div>
 
         {/* Admin Notice */}
-        <Card className="mb-6 border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800">
+        <Card className="mb-6 border-theme-medium bg-primary/10">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />

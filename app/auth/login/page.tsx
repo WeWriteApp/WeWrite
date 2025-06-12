@@ -17,7 +17,7 @@ export default function LoginPage() {
       <ReturnToPreviousAccount />
 
       {isPostingReply && (
-        <Alert className="mb-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+        <Alert className="mb-4 bg-primary/10 border-theme-medium">
           <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           <AlertDescription className="text-blue-600 dark:text-blue-400">
             Sign in to post your reply. Your draft has been saved and will be posted automatically after you sign in.

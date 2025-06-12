@@ -9,6 +9,7 @@ import { Wallet, DollarSign, TrendingUp, ExternalLink, Plus, AlertTriangle, Chec
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { useToast } from '../ui/use-toast';
 import { showErrorToastWithCopy } from '../../utils/clipboard';
+import Cookies from 'js-cookie';
 import {
   Dialog,
   DialogContent,
@@ -81,6 +82,22 @@ export function PayoutsManager() {
     }
   };
 
+  // Helper function to refresh session cookie
+  const refreshSessionCookie = async () => {
+    try {
+      const { auth } = await import('../../firebase/config');
+      if (auth.currentUser) {
+        const token = await auth.currentUser.getIdToken(true); // Force refresh
+        Cookies.set('session', token, { expires: 7 });
+        console.log('Refreshed session cookie');
+        return true;
+      }
+    } catch (error) {
+      console.warn('Could not refresh session cookie:', error);
+    }
+    return false;
+  };
+
   const checkBankAccountStatus = async () => {
     if (!user?.stripeConnectedAccountId) {
       setBankAccountConnected(false);
@@ -146,10 +163,57 @@ export function PayoutsManager() {
     try {
       setSetupLoading(true);
 
+      // Ensure we have a valid user
+      if (!user?.uid) {
+        throw new Error('User not authenticated');
+      }
+
+      // Get fresh ID token for authentication
+      let headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+      try {
+        // Try to get fresh Firebase ID token if available
+        const { auth } = await import('../../firebase/config');
+        if (auth.currentUser) {
+          const token = await auth.currentUser.getIdToken(true); // Force refresh
+          headers['Authorization'] = `Bearer ${token}`;
+          // Also update the session cookie
+          Cookies.set('session', token, { expires: 7 });
+          console.log('Using fresh Firebase ID token for bank account setup');
+        } else {
+          console.log('No Firebase user available, using session-based auth');
+          // Ensure we have session cookies set
+          if (user.uid) {
+            Cookies.set('wewrite_user_id', user.uid, { expires: 7 });
+            Cookies.set('wewrite_authenticated', 'true', { expires: 7 });
+            Cookies.set('userSession', JSON.stringify({
+              uid: user.uid,
+              email: user.email,
+              username: user.username
+            }), { expires: 7 });
+          }
+        }
+      } catch (tokenError) {
+        console.warn('Could not get Firebase ID token, using session-based auth:', tokenError);
+        // Ensure session cookies are set as fallback
+        if (user.uid) {
+          Cookies.set('wewrite_user_id', user.uid, { expires: 7 });
+          Cookies.set('wewrite_authenticated', 'true', { expires: 7 });
+        }
+      }
+
+      // Debug: Log current cookies
+      console.log('Current cookies before API call:', {
+        session: Cookies.get('session') ? 'exists' : 'missing',
+        wewrite_user_id: Cookies.get('wewrite_user_id'),
+        wewrite_authenticated: Cookies.get('wewrite_authenticated'),
+        userSession: Cookies.get('userSession') ? 'exists' : 'missing'
+      });
+
       // Always create/redirect to Stripe Connect account setup
       const connectResponse = await fetch('/api/create-connect-account', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ userId: user.uid }),
       });
 
@@ -159,7 +223,39 @@ export function PayoutsManager() {
         return;
       } else {
         const errorData = await connectResponse.json();
-        throw new Error(errorData.error || 'Failed to create Stripe account');
+        console.error('Connect account API error:', {
+          status: connectResponse.status,
+          statusText: connectResponse.statusText,
+          errorData
+        });
+
+        // If it's an authentication error, try refreshing the session and retry once
+        if (connectResponse.status === 401 || connectResponse.status === 403) {
+          console.log('Authentication error, trying to refresh session...');
+          const refreshed = await refreshSessionCookie();
+
+          if (refreshed) {
+            console.log('Session refreshed, retrying bank account setup...');
+            // Retry with fresh session
+            const retryResponse = await fetch('/api/create-connect-account', {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ userId: user.uid }),
+            });
+
+            if (retryResponse.ok) {
+              const retryResult = await retryResponse.json();
+              window.location.href = retryResult.url;
+              return;
+            } else {
+              const retryErrorData = await retryResponse.json();
+              console.error('Retry also failed:', retryErrorData);
+              throw new Error(retryErrorData.error || `Failed to create Stripe account after retry (${retryResponse.status})`);
+            }
+          }
+        }
+
+        throw new Error(errorData.error || `Failed to create Stripe account (${connectResponse.status})`);
       }
     } catch (error: any) {
       console.error('Error setting up bank account:', error);

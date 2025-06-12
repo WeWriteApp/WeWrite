@@ -115,7 +115,7 @@ export function SEOImage({
           justifyContent: 'center',
           color: '#666',
           fontSize: '14px',
-          border: '1px solid #ddd',
+          border: '1px solid hsl(var(--border))',
           borderRadius: '4px',
           ...style
         }}

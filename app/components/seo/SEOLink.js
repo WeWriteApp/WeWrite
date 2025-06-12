@@ -168,19 +168,19 @@ export function CTALink({
 }) {
   const variants = {
     primary: {
-      background: '#0066cc',
+      background: 'hsl(var(--primary))',
       color: 'white',
-      border: '2px solid #0066cc'
+      border: '2px solid hsl(var(--primary))'
     },
     secondary: {
       background: 'transparent',
-      color: '#0066cc',
-      border: '2px solid #0066cc'
+      color: 'hsl(var(--primary))',
+      border: '2px solid hsl(var(--primary))'
     },
     success: {
-      background: '#28a745',
+      background: 'hsl(var(--success))',
       color: 'white',
-      border: '2px solid #28a745'
+      border: '2px solid hsl(var(--success))'
     }
   };
 
@@ -373,7 +373,7 @@ export function RelatedLink({
       style={{
         display: 'block',
         padding: '16px',
-        border: '1px solid #e0e0e0',
+        border: '1px solid hsl(var(--border))',
         borderRadius: '8px',
         textDecoration: 'none',
         color: 'inherit',

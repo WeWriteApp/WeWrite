@@ -405,14 +405,15 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
   // Handle link insertion
   const handleInsertLink = () => {
-    console.log("[DEBUG] Insert link button clicked");
+    try {
+      console.log("[DEBUG] Insert link button clicked");
 
-    // Check if link functionality is enabled
-    if (!linkFunctionalityEnabled) {
-      console.log("[DEBUG] Link functionality is disabled, showing modal");
-      setShowDisabledLinkModal(true);
-      return;
-    }
+      // Check if link functionality is enabled
+      if (!linkFunctionalityEnabled) {
+        console.log("[DEBUG] Link functionality is disabled, showing modal");
+        setShowDisabledLinkModal(true);
+        return;
+      }
 
     if (editorRef.current) {
       console.log("[DEBUG] Editor ref exists, attempting to open link editor");
@@ -478,6 +479,13 @@ const PageEditor: React.FC<PageEditorProps> = ({
     } else {
       console.error("[DEBUG] Editor ref not available");
       toast.error("Editor is not ready. Please try again later.");
+    }
+    } catch (error) {
+      console.error("[DEBUG] Critical error in handleInsertLink:", error);
+      // Provide user feedback
+      if (typeof window !== 'undefined' && window.alert) {
+        window.alert('Failed to open link editor. Please try again.');
+      }
     }
   };
 

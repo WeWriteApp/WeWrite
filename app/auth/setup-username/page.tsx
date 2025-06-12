@@ -200,7 +200,7 @@ export default function SetupUsernamePage() {
               className={cn(
                 "h-10 bg-background pr-10",
                 validationError ? "border-destructive focus-visible:ring-destructive" : "",
-                isAvailable === true ? "border-green-500 focus-visible:ring-green-500" : ""
+                isAvailable === true ? "border-success focus-visible:ring-success" : ""
               )}
               autoComplete="username"
               autoFocus

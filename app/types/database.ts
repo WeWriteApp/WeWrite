@@ -126,8 +126,44 @@ export type ActivityType =
   | 'group_left';
 
 // Subscription types
-export type SubscriptionTier = 'free' | 'pro' | 'premium';
-export type SubscriptionStatus = 'active' | 'inactive' | 'cancelled' | 'past_due';
+export type SubscriptionTier = 'tier1' | 'tier2' | 'tier3' | 'custom';
+export type SubscriptionStatus = 'active' | 'inactive' | 'cancelled' | 'past_due' | 'pending';
+
+// Token Economy Types
+export interface TokenBalance {
+  userId: string;
+  totalTokens: number;
+  allocatedTokens: number;
+  availableTokens: number;
+  monthlyAllocation: number;
+  lastAllocationDate: string;
+  createdAt: string | Timestamp;
+  updatedAt: string | Timestamp;
+}
+
+export interface TokenAllocation {
+  id: string;
+  userId: string;
+  recipientUserId: string;
+  resourceType: 'page' | 'group' | 'wewrite';
+  resourceId: string;
+  tokens: number;
+  month: string; // YYYY-MM format
+  status: 'active' | 'cancelled';
+  createdAt: string | Timestamp;
+  updatedAt: string | Timestamp;
+}
+
+export interface MonthlyTokenDistribution {
+  id: string;
+  month: string; // YYYY-MM format
+  totalTokensDistributed: number;
+  totalUsersParticipating: number;
+  wewriteTokens: number; // Unallocated tokens that go to WeWrite
+  status: 'pending' | 'processing' | 'completed';
+  processedAt?: string | Timestamp;
+  createdAt: string | Timestamp;
+}
 
 // Counter types
 export interface Counter {
