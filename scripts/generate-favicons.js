@@ -2,32 +2,28 @@
 
 /**
  * Favicon Generation Script
- * 
+ *
  * Generates all required favicon formats from the source SVG
  * This script creates favicons for different browsers and devices
  */
 
+import sharp from 'sharp';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Favicon configurations
 const FAVICON_CONFIGS = [
   // Standard favicons
   { name: 'favicon-16x16.png', size: 16 },
   { name: 'favicon-32x32.png', size: 32 },
-  { name: 'favicon.ico', size: 32, format: 'ico' },
-  
+
   // Apple touch icons
   { name: 'apple-touch-icon.png', size: 180 },
-  
+
   // PWA icons
   { name: 'icon-192x192.png', size: 192 },
   { name: 'icon-512x512.png', size: 512 },
-  
+
   // Microsoft tiles
   { name: 'mstile-70x70.png', size: 70 },
   { name: 'mstile-144x144.png', size: 144 },
@@ -37,91 +33,88 @@ const FAVICON_CONFIGS = [
 ];
 
 /**
- * Generate SVG content for different sizes
- */
-function generateSVGContent(size, height = null) {
-  const actualHeight = height || size;
-  
-  return `<svg width="${size}" height="${actualHeight}" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background circle -->
-  <circle cx="16" cy="16" r="16" fill="#1a1a1a"/>
-  
-  <!-- WeWrite "W" logo -->
-  <path d="M6 8 L10 24 L13 24 L16 12 L19 24 L22 24 L26 8 L23 8 L20.5 20 L17.5 8 L14.5 8 L11.5 20 L9 8 Z" fill="white"/>
-  
-  <!-- Subtle accent dot -->
-  <circle cx="26" cy="10" r="1.5" fill="#4ade80"/>
-</svg>`;
-}
-
-/**
- * Generate ICO content (simplified - just use PNG data)
- */
-function generateICOContent() {
-  // For simplicity, we'll create a basic ICO structure
-  // In a real implementation, you'd use a proper ICO library
-  return generateSVGContent(32);
-}
-
-/**
  * Main function to generate all favicons
  */
-function generateFavicons() {
+async function generateFavicons() {
   console.log('🎨 Generating WeWrite favicons...\n');
-  
-  const iconsDir = path.join(__dirname, '..', 'public', 'icons');
-  const publicDir = path.join(__dirname, '..', 'public');
-  
+
+  const sourceFile = 'public/icons/source/Favicon.svg';
+  const iconsDir = 'public/icons';
+  const publicDir = 'public';
+
+  // Check if source file exists
+  if (!fs.existsSync(sourceFile)) {
+    console.error('❌ Source file not found:', sourceFile);
+    return;
+  }
+
   // Ensure icons directory exists
   if (!fs.existsSync(iconsDir)) {
     fs.mkdirSync(iconsDir, { recursive: true });
   }
-  
+
   let generated = 0;
-  
-  FAVICON_CONFIGS.forEach(config => {
-    try {
-      const { name, size, height, format } = config;
+
+  try {
+    // Read the source SVG
+    const svgBuffer = fs.readFileSync(sourceFile);
+
+    // Generate PNG files
+    for (const config of FAVICON_CONFIGS) {
+      const { name, size, height } = config;
       const outputPath = path.join(iconsDir, name);
-      
-      let content;
-      if (format === 'ico') {
-        // For ICO files, we'll save as SVG for now
-        // In production, you'd convert to actual ICO format
-        content = generateICOContent();
-        const icoPath = path.join(publicDir, 'favicon.ico');
-        fs.writeFileSync(icoPath, content);
-        console.log(`✅ Generated: favicon.ico`);
-      } else {
-        // Generate SVG content for PNG files
-        content = generateSVGContent(size, height);
-        fs.writeFileSync(outputPath, content);
-        console.log(`✅ Generated: ${name} (${size}x${height || size})`);
-      }
-      
+
+      const actualWidth = size;
+      const actualHeight = height || size;
+
+      await sharp(svgBuffer)
+        .resize(actualWidth, actualHeight, {
+          fit: 'contain',
+          background: { r: 0, g: 0, b: 0, alpha: 0 }
+        })
+        .png({
+          quality: 100,
+          compressionLevel: 6
+        })
+        .toFile(outputPath);
+
+      console.log(`✅ Generated: ${name} (${actualWidth}x${actualHeight})`);
       generated++;
-    } catch (error) {
-      console.error(`❌ Failed to generate ${config.name}:`, error.message);
     }
-  });
-  
-  console.log(`\n🎉 Successfully generated ${generated} favicon files!`);
-  console.log('\n📝 Next steps:');
-  console.log('   1. Convert SVG files to PNG using an image converter');
-  console.log('   2. Convert favicon.ico to proper ICO format');
-  console.log('   3. Test favicons in different browsers');
-  console.log('   4. Update manifest.json if needed');
+
+    // Generate favicon.ico (using 32x32 as base)
+    const icoPath = path.join(publicDir, 'favicon.ico');
+    await sharp(svgBuffer)
+      .resize(32, 32, {
+        fit: 'contain',
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      })
+      .png({
+        quality: 100,
+        compressionLevel: 6
+      })
+      .toFile(icoPath);
+
+    console.log('✅ Generated: favicon.ico');
+    generated++;
+
+    console.log(`\n🎉 Successfully generated ${generated} favicon files!`);
+
+  } catch (error) {
+    console.error('❌ Error generating favicons:', error);
+    console.error('Error details:', error.message);
+  }
 }
 
 /**
  * Update manifest.json with new icon references
  */
 function updateManifest() {
-  const manifestPath = path.join(__dirname, '..', 'app', 'manifest.json');
-  
+  const manifestPath = 'app/manifest.json';
+
   try {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-    
+
     // Update icons array
     manifest.icons = [
       {
@@ -137,11 +130,7 @@ function updateManifest() {
         "purpose": "any maskable"
       }
     ];
-    
-    // Update theme colors to match new branding
-    manifest.background_color = "#1a1a1a";
-    manifest.theme_color = "#1a1a1a";
-    
+
     fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
     console.log('✅ Updated manifest.json with new icon references');
   } catch (error) {
@@ -150,9 +139,9 @@ function updateManifest() {
 }
 
 // Run the script
-if (import.meta.url === `file://${process.argv[1]}`) {
-  generateFavicons();
+async function main() {
+  await generateFavicons();
   updateManifest();
 }
 
-export { generateFavicons, updateManifest };
+main().catch(console.error);

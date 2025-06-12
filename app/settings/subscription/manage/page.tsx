@@ -16,6 +16,8 @@ import { useFeatureFlag } from '../../../utils/feature-flags';
 import OpenCollectiveSupport from '../../../components/payments/OpenCollectiveSupport';
 import { ErrorCopyButton } from '../../../components/ui/copy-button';
 import { createPortalSession } from '../../../services/stripeService';
+import { useConfirmation } from '../../../hooks/useConfirmation';
+import ConfirmationModal from '../../../components/utils/ConfirmationModal';
 
 interface SubscriptionHistoryItem {
   id: string;
@@ -38,6 +40,9 @@ export default function ManageSubscriptionPage() {
   const { user } = useAuth();
   const router = useRouter();
   const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+
+  // Custom modal hooks
+  const { confirmationState, confirm, closeConfirmation } = useConfirmation();
   const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [cancelLoading, setCancelLoading] = useState(false);
@@ -207,7 +212,16 @@ export default function ManageSubscriptionPage() {
     if (!subscription || !subscription.stripeSubscriptionId) return;
 
     // Show confirmation dialog
-    if (!window.confirm('Are you sure you want to cancel your subscription? This will stop all future payments and remove your supporter badge.')) {
+    const confirmed = await confirm({
+      title: 'Cancel Subscription',
+      message: 'Are you sure you want to cancel your subscription? This will stop all future payments and remove your supporter badge.',
+      confirmText: 'Cancel Subscription',
+      cancelText: 'Keep Subscription',
+      variant: 'destructive',
+      icon: 'warning'
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -859,6 +873,20 @@ export default function ManageSubscriptionPage() {
         </Card>
 
       </div>{/* End single-page layout container */}
+
+      {/* Custom Modals */}
+      <ConfirmationModal
+        isOpen={confirmationState.isOpen}
+        onClose={closeConfirmation}
+        onConfirm={confirmationState.onConfirm}
+        title={confirmationState.title}
+        message={confirmationState.message}
+        confirmText={confirmationState.confirmText}
+        cancelText={confirmationState.cancelText}
+        variant={confirmationState.variant}
+        icon={confirmationState.icon}
+        isLoading={confirmationState.isLoading}
+      />
     </div>
   );
 }

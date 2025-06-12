@@ -5,6 +5,8 @@ import { auth } from "../firebase/config";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
+import PromptModal from "../components/utils/PromptModal";
+import AlertModal from "../components/utils/AlertModal";
 
 // Maximum number of accounts that can be stored
 const MAX_ACCOUNTS = 5;
@@ -49,6 +51,22 @@ export const MultiAccountProvider = ({ children }: MultiAccountProviderProps) =>
   const [accounts, setAccounts] = useState<AccountData[]>([]);
   const [currentAccount, setCurrentAccount] = useState<AccountData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Modal state
+  const [promptState, setPromptState] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: (value: string) => {},
+    onCancel: () => {}
+  });
+
+  const [alertState, setAlertState] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    variant: 'error' as 'error' | 'success' | 'warning' | 'info'
+  });
 
   // Load saved accounts from localStorage on mount
   useEffect(() => {
@@ -123,6 +141,41 @@ export const MultiAccountProvider = ({ children }: MultiAccountProviderProps) =>
     }
   }, [accounts]);
 
+  // Helper functions for modals
+  const showPrompt = (title: string, message: string): Promise<string | null> => {
+    return new Promise((resolve) => {
+      setPromptState({
+        isOpen: true,
+        title,
+        message,
+        onConfirm: (value: string) => {
+          setPromptState(prev => ({ ...prev, isOpen: false }));
+          resolve(value);
+        },
+        onCancel: () => {
+          setPromptState(prev => ({ ...prev, isOpen: false }));
+          resolve(null);
+        }
+      });
+    });
+  };
+
+  const showAlert = (title: string, message: string, variant: 'error' | 'success' | 'warning' | 'info' = 'error'): Promise<void> => {
+    return new Promise((resolve) => {
+      setAlertState({
+        isOpen: true,
+        title,
+        message,
+        variant
+      });
+      // Auto-resolve after showing the alert
+      setTimeout(() => {
+        setAlertState(prev => ({ ...prev, isOpen: false }));
+        resolve();
+      }, 100);
+    });
+  };
+
   // Update the accounts list with a new account
   const updateAccountsList = (userData: AccountData) => {
     setAccounts(prevAccounts => {
@@ -168,7 +221,10 @@ export const MultiAccountProvider = ({ children }: MultiAccountProviderProps) =>
     }
 
     // We need to prompt for password since we don't store passwords
-    const password = prompt(`Enter password for ${accountToSwitch.email}:`);
+    const password = await showPrompt(
+      'Enter Password',
+      `Enter password for ${accountToSwitch.email}:`
+    );
     if (!password) {
       return false; // User cancelled
     }
@@ -189,7 +245,7 @@ export const MultiAccountProvider = ({ children }: MultiAccountProviderProps) =>
       return true;
     } catch (error) {
       console.error("Error switching account:", error);
-      alert("Failed to sign in. Please check your password and try again.");
+      await showAlert("Sign In Failed", "Failed to sign in. Please check your password and try again.", 'error');
       return false;
     }
   };
@@ -216,6 +272,26 @@ export const MultiAccountProvider = ({ children }: MultiAccountProviderProps) =>
   return (
     <MultiAccountContext.Provider value={value}>
       {children}
+
+      {/* Custom Modals */}
+      <PromptModal
+        isOpen={promptState.isOpen}
+        onClose={promptState.onCancel}
+        onConfirm={promptState.onConfirm}
+        title={promptState.title}
+        message={promptState.message}
+        inputType="password"
+        placeholder="Enter your password..."
+      />
+
+      <AlertModal
+        isOpen={alertState.isOpen}
+        onClose={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
+        title={alertState.title}
+        message={alertState.message}
+        variant={alertState.variant}
+        icon={alertState.variant}
+      />
     </MultiAccountContext.Provider>
   );
 };

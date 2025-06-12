@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { 
-  initIOSSafariFixes, 
-  isIOSSafari, 
-  isMobileSafari, 
-  detectInfiniteLoop, 
-  emergencyReset 
-} from "../../utils/ios-safari-fixes';
+import {
+  initIOSSafariFixes,
+  isIOSSafari,
+  isMobileSafari,
+  detectInfiniteLoop,
+  emergencyReset
+} from "../../utils/ios-safari-fixes";
+import { useAlert } from '../../hooks/useAlert';
+import AlertModal from './AlertModal';
 
 /**
  * Component that initializes iOS Safari fixes and provides emergency recovery
@@ -15,6 +17,9 @@ import {
 export default function IOSSafariFixes() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [showEmergencyReset, setShowEmergencyReset] = useState(false);
+
+  // Custom modal hooks
+  const { alertState, showSuccess, closeAlert } = useAlert();
 
   useEffect(() => {
     // Only initialize on iOS Safari
@@ -55,14 +60,14 @@ export default function IOSSafariFixes() {
   }, []);
 
   // Handle emergency reset button click
-  const handleEmergencyReset = () => {
+  const handleEmergencyReset = async () => {
     console.log('IOSSafariFixes: User triggered emergency reset');
     emergencyReset();
     setShowEmergencyReset(false);
-    
+
     // Show success message briefly
-    alert('Emergency reset completed. The page will now reload normally.");
-    
+    await showSuccess('Reset Complete', 'Emergency reset completed. The page will now reload normally.');
+
     // Reload after a short delay
     setTimeout(() => {
       window.location.href = window.location.pathname;
@@ -71,7 +76,22 @@ export default function IOSSafariFixes() {
 
   // Only show emergency reset UI on iOS Safari when needed
   if (!isMobileSafari() || !showEmergencyReset) {
-    return null;
+    return (
+      <>
+        {/* Always render the alert modal for iOS Safari */}
+        {isMobileSafari() && (
+          <AlertModal
+            isOpen={alertState.isOpen}
+            onClose={closeAlert}
+            title={alertState.title}
+            message={alertState.message}
+            buttonText={alertState.buttonText}
+            variant={alertState.variant}
+            icon={alertState.icon}
+          />
+        )}
+      </>
+    );
   }
 
   return (
@@ -114,6 +134,17 @@ export default function IOSSafariFixes() {
           </p>
         </div>
       </div>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        onClose={closeAlert}
+        title={alertState.title}
+        message={alertState.message}
+        buttonText={alertState.buttonText}
+        variant={alertState.variant}
+        icon={alertState.icon}
+      />
     </div>
   );
 }

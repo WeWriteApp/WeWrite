@@ -1,9 +1,14 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { getVersionsByPageId, setCurrentVersion } from "../../firebase/database";
+import { useConfirmation } from "../../hooks/useConfirmation";
+import ConfirmationModal from "../utils/ConfirmationModal";
 
 const VersionsList = ({ pageId, currentVersion }) => {
   const [versions, setVersions] = useState([]);
+
+  // Custom modal hooks
+  const { confirmationState, confirm, closeConfirmation } = useConfirmation();
 
   useEffect(() => {
     getVersionsByPageId(pageId).then((versions) => {
@@ -26,19 +31,40 @@ const VersionsList = ({ pageId, currentVersion }) => {
             key={version.id}
             version={version}
             isCurrent={currentVersion === version.id}
+            confirm={confirm}
           />
         ))}
       </ul>
+
+      {/* Custom Modals */}
+      <ConfirmationModal
+        isOpen={confirmationState.isOpen}
+        onClose={closeConfirmation}
+        onConfirm={confirmationState.onConfirm}
+        title={confirmationState.title}
+        message={confirmationState.message}
+        confirmText={confirmationState.confirmText}
+        cancelText={confirmationState.cancelText}
+        variant={confirmationState.variant}
+        icon={confirmationState.icon}
+        isLoading={confirmationState.isLoading}
+      />
     </div>
   );
 };
 
-const VersionItem = ({ version, isCurrent }) => {
+const VersionItem = ({ version, isCurrent, confirm }) => {
   const handleSetCurrentVersion = async () => {
-    let confirm = window.confirm(
-      "Are you sure you want to set this version as the current version?"
-    );
-    if (!confirm) return;
+    const confirmed = await confirm({
+      title: 'Set Current Version',
+      message: 'Are you sure you want to set this version as the current version?',
+      confirmText: 'Set as Current',
+      cancelText: 'Cancel',
+      variant: 'default',
+      icon: 'check'
+    });
+
+    if (!confirmed) return;
     await setCurrentVersion(version.pageId, version.id);
   };
 

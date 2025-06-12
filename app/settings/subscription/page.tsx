@@ -7,6 +7,8 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { getOptimizedUserSubscription } from "../../firebase/optimizedSubscription";
 import { Button } from '../../components/ui/button';
+import { useAlert } from '../../hooks/useAlert';
+import AlertModal from '../../components/utils/AlertModal';
 
 // Define the Subscription interface
 interface Subscription {
@@ -37,6 +39,9 @@ export default function SubscriptionPage() {
   const [customAmount, setCustomAmount] = useState('');
   const [loading, setLoading] = useState(true);
   const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
+
+  // Custom modal hooks
+  const { alertState, showError, closeAlert } = useAlert();
 
   useEffect(() => {
     if (!user) {
@@ -96,11 +101,11 @@ export default function SubscriptionPage() {
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const amount = isCustomAmount ? parseFloat(customAmount) : selectedAmount;
 
     if (isCustomAmount && (!customAmount || parseFloat(customAmount) < 5)) {
-      alert('Please enter a valid amount (minimum $5)');
+      await showError('Invalid Amount', 'Please enter a valid amount (minimum $5)');
       return;
     }
 
@@ -231,6 +236,17 @@ export default function SubscriptionPage() {
           </div>
         </>
       )}
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        onClose={closeAlert}
+        title={alertState.title}
+        message={alertState.message}
+        buttonText={alertState.buttonText}
+        variant={alertState.variant}
+        icon={alertState.icon}
+      />
     </div>
   );
 }

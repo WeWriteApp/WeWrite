@@ -17,6 +17,10 @@ import { CombinedSubscriptionSection } from '../components/payments/CombinedSubs
 import PWAInstallationCard from '../components/utils/PWAInstallationCard';
 import { SyncQueueSettings } from '../components/utils/SyncQueueSettings';
 import { EmailVerificationStatus } from '../components/utils/EmailVerificationStatus';
+import { useAlert } from '../hooks/useAlert';
+import { useConfirmation } from '../hooks/useConfirmation';
+import AlertModal from '../components/utils/AlertModal';
+import ConfirmationModal from '../components/utils/ConfirmationModal';
 
 import { ChevronLeft, Edit3, Save, X, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 
@@ -30,6 +34,10 @@ const isAdmin = (userEmail?: string | null): boolean => {
 export default function AccountPage() {
   const { user } = useAuth();
   const router = useRouter();
+
+  // Custom modal hooks
+  const { alertState, showError, showSuccess, closeAlert } = useAlert();
+  const { confirmationState, confirm, closeConfirmation } = useConfirmation();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -191,7 +199,7 @@ export default function AccountPage() {
     // Validate username format first
     const formatValidation = validateUsernameFormat(newUsername);
     if (!formatValidation.isValid) {
-      alert(`Invalid username: ${formatValidation.message}`);
+      await showError('Invalid Username', formatValidation.message);
       return;
     }
 
@@ -202,10 +210,10 @@ export default function AccountPage() {
       const availabilityResult = await checkUsernameAvailability(newUsername);
 
       if (typeof availabilityResult === 'object' && !availabilityResult.isAvailable) {
-        alert(`Username not available: ${availabilityResult.message}`);
+        await showError('Username Not Available', availabilityResult.message);
         return;
       } else if (typeof availabilityResult === 'boolean' && !availabilityResult) {
-        alert('Username is already taken. Please choose a different username.');
+        await showError('Username Taken', 'Username is already taken. Please choose a different username.');
         return;
       }
 
@@ -216,10 +224,10 @@ export default function AccountPage() {
       setUsername(newUsername);
 
       // Show success message
-      alert('Username updated successfully!');
+      await showSuccess('Success', 'Username updated successfully!');
     } catch (error) {
       console.error('Error updating username:', error);
-      alert(`Failed to update username: ${error.message}`);
+      await showError('Update Failed', `Failed to update username: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -240,7 +248,7 @@ export default function AccountPage() {
       setEmail(newEmail);
 
       // Show success message
-      alert('Email updated successfully!');
+      await showSuccess('Success', 'Email updated successfully!');
     } catch (error) {
       console.error('Error updating email:', error);
       setEmailError(error.message || 'Failed to update email');
@@ -415,7 +423,7 @@ export default function AccountPage() {
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={() => {
+                  onClick={async () => {
                     // Check if there are multiple accounts to determine logout behavior
                     const savedAccountsJson = localStorage.getItem('savedAccounts');
                     let hasMultipleAccounts = false;
@@ -433,7 +441,16 @@ export default function AccountPage() {
                       ? "Are you sure you want to log out? You will be switched back to your previous account."
                       : "Are you sure you want to log out?";
 
-                    if (confirm(confirmMessage)) {
+                    const confirmed = await confirm({
+                      title: 'Log Out',
+                      message: confirmMessage,
+                      confirmText: 'Log Out',
+                      cancelText: 'Cancel',
+                      variant: 'default',
+                      icon: 'logout'
+                    });
+
+                    if (confirmed) {
                       // Import and call the logout function with appropriate parameters
                       import('../firebase/auth').then(({ logoutUser }) => {
                         // If multiple accounts, try to return to previous account
@@ -481,6 +498,30 @@ export default function AccountPage() {
           </div>
           </div>
         )}
+
+        {/* Custom Modals */}
+        <AlertModal
+          isOpen={alertState.isOpen}
+          onClose={closeAlert}
+          title={alertState.title}
+          message={alertState.message}
+          buttonText={alertState.buttonText}
+          variant={alertState.variant}
+          icon={alertState.icon}
+        />
+
+        <ConfirmationModal
+          isOpen={confirmationState.isOpen}
+          onClose={closeConfirmation}
+          onConfirm={confirmationState.onConfirm}
+          title={confirmationState.title}
+          message={confirmationState.message}
+          confirmText={confirmationState.confirmText}
+          cancelText={confirmationState.cancelText}
+          variant={confirmationState.variant}
+          icon={confirmationState.icon}
+          isLoading={confirmationState.isLoading}
+        />
       </div>
     </div>
   );

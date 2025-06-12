@@ -4,10 +4,15 @@ import React, { useState } from 'react';
 import { UsernameModal } from './UsernameModal';
 import { useAuth } from '../../providers/AuthProvider';
 import { updateUsername } from '../../firebase/usernameHistory';
+import { useAlert } from '../../hooks/useAlert';
+import AlertModal from '../utils/AlertModal';
 
 export default function UsernameWarningBanner() {
   const { user, setUser } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Custom modal hooks
+  const { alertState, showError, closeAlert } = useAlert();
 
   // Check if user exists and has no username or a generated username
   const needsUsername = user &&
@@ -30,7 +35,7 @@ export default function UsernameWarningBanner() {
       setIsModalOpen(false);
     } catch (error) {
       console.error('Error setting username:', error);
-      alert('Failed to set username. Please try again.');
+      await showError('Username Error', 'Failed to set username. Please try again.');
     }
   };
 
@@ -53,6 +58,17 @@ export default function UsernameWarningBanner() {
         onClose={() => setIsModalOpen(false)}
         email={user?.email || ''}
         onUsernameSet={handleUsernameSet}
+      />
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertState.isOpen}
+        onClose={closeAlert}
+        title={alertState.title}
+        message={alertState.message}
+        buttonText={alertState.buttonText}
+        variant={alertState.variant}
+        icon={alertState.icon}
       />
     </>
   );

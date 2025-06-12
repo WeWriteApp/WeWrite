@@ -6,7 +6,7 @@ import { validateLink } from "../../utils/linkValidator";
 
 const INSERT_CUSTOM_LINK_COMMAND = 'INSERT_CUSTOM_LINK_COMMAND';
 
-function insertCustomLink(editor, url, text) {
+function insertCustomLink(editor, url, text, onError = null) {
   if (!url || !text) {
     console.error('URL or text is undefined');
     return;
@@ -102,8 +102,11 @@ function insertCustomLink(editor, url, text) {
   });
   } catch (error) {
     console.error('Error in insertCustomLink:', error);
-    // Provide user feedback
-    if (typeof window !== 'undefined' && window.alert) {
+    // Provide user feedback via callback or fallback
+    if (onError && typeof onError === 'function') {
+      onError('Failed to insert link. Please try again.');
+    } else if (typeof window !== 'undefined' && window.alert) {
+      // Fallback to alert if no callback provided (for backward compatibility)
       window.alert('Failed to insert link. Please try again.');
     }
   }
