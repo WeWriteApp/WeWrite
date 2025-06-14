@@ -31,12 +31,7 @@ export const setAnalyticsUserInfo = (user) => {
       has_username: !!user.username
     });
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Analytics user info set:', {
-        user_id: user.uid,
-        username: user.username || 'Anonymous'
-      });
-    }
+
   } catch (error) {
     console.error('Error setting analytics user info:', error);
   }
@@ -63,9 +58,7 @@ export const trackUserEvent = (eventName, user, additionalParams = {}) => {
     // Track the event
     window.gtag('event', eventName, eventParams);
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`User event tracked: ${eventName}`, eventParams);
-    }
+
   } catch (error) {
     console.error(`Error tracking user event ${eventName}:`, error);
   }
@@ -91,13 +84,7 @@ export const trackPageViewWithUser = (pagePath, pageTitle, user) => {
       user_id: user.uid
     });
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Page view tracked with user info:', {
-        page_path: pagePath,
-        page_title: pageTitle || document.title,
-        username: user.username || 'Anonymous'
-      });
-    }
+
   } catch (error) {
     console.error('Error tracking page view with user info:', error);
   }

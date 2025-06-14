@@ -155,8 +155,7 @@ const DonationBreakdownChart: React.FC<DonationBreakdownChartProps> = ({ classNa
     document.removeEventListener('mouseup', handleMouseUp);
 
     // Here we would save the updated pledge amounts to the database
-    // For now, we'll just log the changes
-    console.log('Updated pledges:', pledges);
+    // TODO: Implement pledge amount updates
   };
 
   if (loading) {

@@ -1,17 +1,15 @@
 // Server-side only subscription functions
 // This file should ONLY be imported in API routes and server components
 
-import {
-  getFirestore,
-  doc,
-  setDoc,
-  getDoc,
-  serverTimestamp,
-  type DocumentData
-} from "firebase/firestore";
+import { initAdmin } from "./admin";
 
-import app from "./config";
-import { db } from "./database";
+// Initialize Firebase Admin
+const adminApp = initAdmin();
+const adminDb = adminApp.firestore();
+
+// Debug: Check if admin is properly initialized
+console.log('Firebase Admin initialized:', !!adminApp);
+console.log('Firebase Admin apps count:', adminApp.apps?.length || 'N/A');
 
 // Type definitions for subscription operations
 interface SubscriptionData {
@@ -40,10 +38,10 @@ interface SubscriptionOptions {
 // Update a user's subscription (server-side only)
 export const updateSubscriptionServer = async (userId: string, subscriptionData: Partial<SubscriptionData>): Promise<boolean> => {
   try {
-    const subscriptionRef = doc(db, "users", userId, "subscription", "current");
-    await setDoc(subscriptionRef, {
+    const subscriptionRef = adminDb.collection("users").doc(userId).collection("subscription").doc("current");
+    await subscriptionRef.set({
       ...subscriptionData,
-      updatedAt: serverTimestamp(),
+      updatedAt: new Date(),
     }, { merge: true });
     return true;
   } catch (error) {
@@ -64,11 +62,11 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
     }
 
     // Check the primary location (user path)
-    const subscriptionRef = doc(db, "users", userId, "subscription", "current");
-    const subscriptionSnap = await getDoc(subscriptionRef);
+    const subscriptionRef = adminDb.collection("users").doc(userId).collection("subscription").doc("current");
+    const subscriptionSnap = await subscriptionRef.get();
 
     // If no subscription found, return null
-    if (!subscriptionSnap.exists()) {
+    if (!subscriptionSnap.exists) {
       if (verbose) {
         console.log(`[getUserSubscriptionServer] No subscription found for user: ${userId}`);
       }
@@ -76,7 +74,7 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
     }
 
     // Get the subscription data
-    const rawData = subscriptionSnap.data() as DocumentData;
+    const rawData = subscriptionSnap.data();
     const subscriptionData: SubscriptionData = {
       id: subscriptionSnap.id,
       ...rawData,
@@ -86,17 +84,33 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
       stripeSubscriptionId: rawData.stripeSubscriptionId || null
     };
 
+    // Apply validation logic to ensure consistent subscription states
     // If status is active but no stripeSubscriptionId, set to canceled
     if (subscriptionData.status === 'active' && !subscriptionData.stripeSubscriptionId) {
       subscriptionData.status = 'canceled';
       subscriptionData.tier = null;
       subscriptionData.amount = 0;
-      
+
       // Update the subscription in Firestore
       await updateSubscriptionServer(userId, {
         status: 'canceled',
         tier: null,
         amount: 0,
+        canceledAt: new Date().toISOString()
+      });
+    }
+
+    // Remove any invalid statuses - only allow valid subscription states
+    const validStatuses = ['active', 'trialing', 'past_due', 'canceled', 'incomplete'];
+    if (!validStatuses.includes(subscriptionData.status)) {
+      if (verbose) {
+        console.log(`[getUserSubscriptionServer] Invalid status '${subscriptionData.status}' detected, setting to 'canceled'`);
+      }
+      subscriptionData.status = 'canceled';
+
+      // Update the subscription in Firestore to keep data consistent
+      await updateSubscriptionServer(userId, {
+        status: 'canceled',
         canceledAt: new Date().toISOString()
       });
     }

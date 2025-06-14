@@ -41,7 +41,7 @@ const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customConten
     title: "Start your subscription",
     description: "Support WeWrite development by activating your subscription. Choose a tier below to get started.",
     action: {
-      href: "/subscription",
+      href: "/settings/subscription",
       label: "View Subscription Tiers",
       external: false
     }
@@ -83,28 +83,24 @@ const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customConten
     }
 
     try {
-      const res = await fetch('/api/activate-subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tier,
-          customAmount: amount,
-          userId: user.uid
-        }),
+      // Use the new subscription service
+      const { SubscriptionService } = await import('../../services/subscriptionService');
+
+      const result = await SubscriptionService.createCheckoutSession({
+        userId: user.uid,
+        tier,
+        customAmount: amount,
+        successUrl: `${window.location.origin}/settings/subscription?success=true`,
+        cancelUrl: `${window.location.origin}/settings/subscription?cancelled=true`
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.url) {
-          // Redirect to Stripe checkout
-          window.location.href = data.url;
-        } else {
-          // Subscription was updated, redirect to manage page
-          router.push('/settings/subscription/manage');
-        }
+      if (result.error) {
+        setError(result.error);
+      } else if (result.url) {
+        // Redirect to Stripe checkout
+        window.location.href = result.url;
       } else {
-        const data = await res.json();
-        setError(data.error || 'Failed to start subscription.');
+        setError('Failed to create checkout session.');
       }
     } catch (e) {
       setError('Network error. Please try again.');

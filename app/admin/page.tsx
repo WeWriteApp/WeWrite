@@ -95,6 +95,12 @@ export default function AdminPage() {
       name: 'daily_notes',
       description: 'Enable daily notes section on home page with calendar day cards for quick note creation and access',
       enabled: false
+    },
+    {
+      id: 'simple-editor',
+      name: 'simple-editor',
+      description: 'Use the new lightweight editor instead of Slate.js for better performance and easier maintenance',
+      enabled: false
     }
   ]);
 
@@ -552,7 +558,7 @@ export default function AdminPage() {
         value={activeTab}
         onValueChange={setActiveTab}
         className="space-y-6"
-        tabsListClassName="flex w-full mb-6 overflow-x-auto scrollbar-hide"
+        tabsListClassName="flex w-full overflow-x-auto scrollbar-hide"
         preventScrollOnSwipe={false}
         swipeDistance={50}
         animationDuration={0.3}
@@ -780,6 +786,69 @@ export default function AdminPage() {
 
             <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Search Debug Tools</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Debug search functionality, test specific search terms, and analyze search performance issues.
+              </span>
+              <div className="mt-2 space-y-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => window.open('/search-debug', '_blank')}
+                >
+                  <Search className="h-4 w-4" />
+                  Search Debug Tool
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => window.open('/search', '_blank')}
+                >
+                  <Search className="h-4 w-4" />
+                  Test Search Page
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Development Tools</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Additional development and debugging tools for WeWrite functionality.
+              </span>
+              <div className="mt-2 space-y-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => window.open('/admin/tools', '_blank')}
+                >
+                  <Settings className="h-4 w-4" />
+                  Admin Tools
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => {
+                    // Clear all localStorage for debugging
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    window.location.reload();
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Clear Cache & Reload
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">PWA Testing</h3>
               </div>
               <span className="text-sm text-muted-foreground mb-3">
@@ -811,54 +880,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Sync Queue Demo Tool */}
-            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">Sync Queue Demo</h3>
-              </div>
-              <span className="text-sm text-muted-foreground mb-3">
-                Simulate unverified email state to test the sync queue functionality.
-              </span>
-              <div className="mt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={() => {
-                    // Temporarily override email verification status
-                    if (typeof window !== 'undefined') {
-                      const currentOverride = localStorage.getItem('demo_unverified_email');
-                      if (currentOverride === 'true') {
-                        localStorage.removeItem('demo_unverified_email');
-                        toast({
-                          title: 'Demo Mode Disabled',
-                          description: 'Email verification status restored to normal.',
-                          variant: 'default'
-                        });
-                      } else {
-                        localStorage.setItem('demo_unverified_email', 'true');
-                        toast({
-                          title: 'Demo Mode Enabled',
-                          description: 'Simulating unverified email state. Refresh the page to see the banner.',
-                          variant: 'default'
-                        });
-                      }
 
-                      // Trigger a page refresh to show the banner
-                      setTimeout(() => {
-                        window.location.reload();
-                      }, 1000);
-                    }
-                  }}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  {typeof window !== 'undefined' && localStorage.getItem('demo_unverified_email') === 'true'
-                    ? 'Disable Demo Mode'
-                    : 'Enable Demo Mode'
-                  }
-                </Button>
-              </div>
-            </div>
 
 
           </div>

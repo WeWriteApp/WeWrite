@@ -1,17 +1,29 @@
 "use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from "../../../providers/AuthProvider";
+import { SubscriptionSuccessModal } from '../../../components/payments/SubscriptionSuccessModal';
+import { useFeatureFlag } from "../../../utils/feature-flags";
 import Link from 'next/link';
-import { CheckCircle, ArrowLeft } from 'lucide-react';
-import { useAuth } from '../../../providers/AuthProvider';
-import { useFeatureFlag } from '../../../utils/feature-flags';
+import { ArrowLeft } from 'lucide-react';
 import OpenCollectiveSupport from '../../../components/payments/OpenCollectiveSupport';
 
 export default function SubscriptionSuccessPage() {
-  const router = useRouter();
   const { user } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [subscriptionData, setSubscriptionData] = useState<{
+    tier: string;
+    amount: number;
+  }>({
+    tier: 'Tier 1',
+    amount: 10,
+  });
 
   // If payments feature flag is disabled, show OpenCollective support instead
   if (!isPaymentsEnabled) {
@@ -32,39 +44,98 @@ export default function SubscriptionSuccessPage() {
   }
 
   useEffect(() => {
-    // Optional: Automatically redirect to settings after a delay
-    const timer = setTimeout(() => {
-      router.push('/settings?refresh=true');
-    }, 5000);
+    if (!user) {
+      router.push('/auth/login?redirect=/settings');
+      return;
+    }
 
-    return () => clearTimeout(timer);
-  }, [router]);
+    const sessionId = searchParams?.get('session_id');
+
+    if (!sessionId) {
+      setError('No session ID provided');
+      setIsLoading(false);
+      return;
+    }
+
+    // Call the API to handle subscription success
+    const handleSubscriptionSuccess = async () => {
+      try {
+        const response = await fetch('/api/subscription-success', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sessionId,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to process subscription');
+        }
+
+        // Set the subscription data for the modal
+        setSubscriptionData({
+          tier: data.subscription.tier === 'tier1' ? 'Tier 1' :
+                data.subscription.tier === 'tier2' ? 'Tier 2' : 'Tier 3',
+          amount: data.subscription.amount,
+        });
+
+        // Show the success modal
+        setShowModal(true);
+      } catch (err: any) {
+        console.error('Error handling subscription success:', err);
+        setError(err.message || 'Failed to process subscription');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    handleSubscriptionSuccess();
+  }, [user, router, searchParams]);
+
+  // If the modal is closed, redirect to the settings page
+  const handleModalClose = () => {
+    setShowModal(false);
+    router.push('/settings');
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+        <p className="text-muted-foreground">Processing your subscription...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-4">
+          <p className="font-medium">Error</p>
+          <p className="text-sm">{error}</p>
+        </div>
+        <button
+          onClick={() => router.push('/settings')}
+          className="text-primary hover:underline"
+        >
+          Go to Settings
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-md mx-auto p-4 text-center">
-      <div className="flex justify-center mb-6">
-        <div className="bg-success/20 p-4 rounded-full">
-          <CheckCircle className="h-12 w-12 text-success" />
-        </div>
-      </div>
-
-      <h1 className="text-2xl font-bold mb-2">Payment Successful!</h1>
-
-      <div className="bg-success/10 border border-success/20 rounded-lg p-4 mb-6">
-        <p className="text-foreground mb-2">Your subscription has been activated successfully.</p>
-        <p className="text-muted-foreground text-sm">You now have full access to all WeWrite features and content.</p>
-      </div>
-
-      <p className="text-sm text-white/50 mb-6">You will be automatically redirected to your settings in a few seconds.</p>
-
-      <div className="flex justify-center">
-        <Link
-          href="/settings?refresh=true"
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Go to Your Settings
-        </Link>
-      </div>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4">
+      <SubscriptionSuccessModal
+        open={showModal}
+        onOpenChange={handleModalClose}
+        tier={subscriptionData.tier}
+        amount={subscriptionData.amount}
+      />
     </div>
   );
 }

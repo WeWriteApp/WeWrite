@@ -218,6 +218,8 @@ export default function UserProfileTabs({ profile }) {
     visibleTabs.push("private");
   }
 
+
+
   // Function to scroll the selected tab into view
   const scrollTabIntoView = (tabValue) => {
     // Wait a tiny bit to ensure DOM is ready
@@ -455,6 +457,7 @@ export default function UserProfileTabs({ profile }) {
         defaultValue="bio"
         value={activeTab}
         onValueChange={handleTabChange}
+        urlNavigation="hash"
         className="w-full"
       >
         <div id="profile-tabs-header" className="relative border-b border-border/40 mb-4 bg-background z-10">

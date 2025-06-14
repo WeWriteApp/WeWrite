@@ -278,6 +278,33 @@ class AnalyticsService {
       ...params
     });
   }
+
+  /**
+   * Helper method to track subscription initiated events
+   */
+  public trackSubscriptionInitiated(tier: string, amount: number, tokens: number): void {
+    this.trackEvent({
+      category: EVENT_CATEGORIES.FEATURE,
+      action: 'subscription_initiated',
+      tier,
+      amount,
+      tokens,
+      value: amount
+    });
+  }
+
+  /**
+   * Helper method to track subscription cancelled events
+   */
+  public trackSubscriptionCancelled(tier: string, amount: number): void {
+    this.trackEvent({
+      category: EVENT_CATEGORIES.FEATURE,
+      action: 'subscription_cancelled',
+      tier,
+      amount,
+      value: amount
+    });
+  }
 }
 
 /**

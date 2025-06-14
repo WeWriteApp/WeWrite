@@ -174,13 +174,22 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
 
         console.log(`Found ${contentBacklinks.length} content backlinks and ${navigationBacklinks.length} navigation backlinks for page ${page.id}`);
 
-        // Filter out pages that are already linked in the content
-        const filteredBacklinks = linkedPageIds && linkedPageIds.length > 0
-          ? allBacklinks.filter(backlink => !linkedPageIds.includes(backlink.id))
-          : allBacklinks;
+        // Mark already linked pages instead of filtering them out
+        const processedBacklinks = allBacklinks.map(backlink => ({
+          ...backlink,
+          isAlreadyLinked: linkedPageIds && linkedPageIds.includes(backlink.id)
+        }));
 
-        // Limit to the requested number of pages after filtering
-        const limitedBacklinks = filteredBacklinks.slice(0, maxPages);
+        // Sort to prioritize non-linked pages, then limit results
+        const limitedBacklinks = processedBacklinks
+          .sort((a, b) => {
+            // Prioritize non-linked pages over already linked ones
+            if (a.isAlreadyLinked !== b.isAlreadyLinked) {
+              return a.isAlreadyLinked ? 1 : -1;
+            }
+            return 0;
+          })
+          .slice(0, maxPages);
 
         setBacklinks(limitedBacklinks);
 
@@ -253,7 +262,7 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
               <Info className="h-4 w-4 text-muted-foreground cursor-help" />
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-[300px]">
-              <p>Pages that contain links to this page, excluding links that are already mentioned in the page.</p>
+              <p>Pages that contain links to this page. Pages already linked in the content appear with reduced opacity.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -267,15 +276,28 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
         <div className="flex flex-wrap gap-2 py-4">
           {backlinks.map(page => (
             <div key={page.id} className="flex-none max-w-full">
-              <PillLink
-                key={page.id}
-                href={`/${page.id}`}
-                className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
-              >
-                {page.title && isExactDateFormat(page.title)
-                  ? formatDateString(page.title)
-                  : (page.title || "Untitled")}
-              </PillLink>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={page.isAlreadyLinked ? "opacity-60" : ""}>
+                      <PillLink
+                        key={page.id}
+                        href={`/${page.id}`}
+                        className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
+                      >
+                        {page.title && isExactDateFormat(page.title)
+                          ? formatDateString(page.title)
+                          : (page.title || "Untitled")}
+                      </PillLink>
+                    </div>
+                  </TooltipTrigger>
+                  {page.isAlreadyLinked && (
+                    <TooltipContent side="top" className="max-w-[200px]">
+                      Already linked in page content
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           ))}
         </div>

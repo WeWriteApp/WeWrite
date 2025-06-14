@@ -15,9 +15,7 @@ import { initializeNavigationTracking } from "../../utils/navigationTracking";
 import { AuthContext } from "../../providers/AuthProvider";
 import { DataContext } from "../../providers/DataProvider";
 
-import { createEditor } from "slate";
-import { withHistory } from "slate-history";
-import { Slate, Editable, withReact } from "slate-react";
+// Removed Slate imports - using simple text rendering now
 import PublicLayout from "../layout/PublicLayout";
 import PageHeader from "./PageHeader.tsx";
 import PageFooter from "./PageFooter";
@@ -29,7 +27,7 @@ const BacklinksSection = dynamic(() => import("../features/BacklinksSection"), {
 import Link from "next/link";
 import Head from "next/head";
 import { Button } from "../ui/button";
-import { EditorContent } from "../editor/ReplyEditor";
+// Removed EditorContent import - ReplyEditor was replaced with Editor
 import TextView from "../editor/TextView";
 import TextViewErrorBoundary from "../editor/TextViewErrorBoundary";
 import { PageLoader } from "../ui/page-loader";
@@ -375,10 +373,8 @@ function SinglePageView({ params, initialEditMode = false }) {
         // Set deleting state to prevent listener from processing "not found" errors
         setIsDeleted(true);
 
-        // Immediately redirect to home page to prevent showing error state
-        router.push('/');
-
-        // Delete the page in the background
+        // CRITICAL FIX: Delete the page first, then redirect
+        // This prevents 404 errors and ensures proper cleanup
         await deletePage(page.id);
 
         // Track successful deletion
@@ -398,6 +394,13 @@ function SinglePageView({ params, initialEditMode = false }) {
             detail: { pageId: page.id }
           }));
         }
+
+        // Redirect after successful deletion with a small delay
+        setTimeout(() => {
+          // Use replace to prevent back button issues
+          router.replace('/');
+        }, 500);
+
       } catch (error) {
         console.error("Error deleting page:", error);
         // Reset deleted state if deletion failed
@@ -406,7 +409,6 @@ function SinglePageView({ params, initialEditMode = false }) {
         setError(errorMessage);
         toast.error("Failed to delete page");
         logError(error, { context: 'SinglePageView.handleDelete', pageId: page.id });
-        // Don't redirect if deletion failed - user is already redirected above
       }
     }
   };
@@ -1383,13 +1385,15 @@ function SinglePageView({ params, initialEditMode = false }) {
           )
         }
       />
-      <div className="pb-24 px-2 md:px-4 w-full max-w-none min-h-screen">
-        <div className={`transition-all duration-300 ease-in-out ${isEditing ? 'opacity-100' : 'opacity-100'}`}>
+      <div className="pb-24 w-full max-w-none min-h-screen box-border">
+        {/* Unified container with compact layout for both modes */}
+        <div className="px-4 py-4 w-full max-w-none box-border">
           {isEditing ? (
             <div className="animate-in fade-in-0 duration-300">
               <PageProvider>
                 <LineSettingsProvider>
                   <PageEditor
+                    key={`editor-${page.id}-${isEditing}`} /* Force re-initialization when switching to edit mode */
                     title={title}
                     setTitle={handleTitleChange}
                     initialContent={editorState}
@@ -1435,25 +1439,24 @@ function SinglePageView({ params, initialEditMode = false }) {
             </div>
           ) : (
             <div className="animate-in fade-in-0 duration-300">
-              <div className="space-y-2 w-full transition-all duration-200 ease-in-out" data-page-content>
-              <div className="page-content w-full max-w-none break-words px-1">
-                <PageProvider>
-                  <LineSettingsProvider>
-                    <TextSelectionProvider
-                      contentRef={contentRef}
-                      enableCopy={true}
-                      enableShare={true}
-                      enableAddToPage={true}
-                      username={user?.displayName || user?.username}
-                    >
-                      <div ref={contentRef}>
-                        <TextViewErrorBoundary fallbackContent={
-                          <div className="p-4 text-muted-foreground">
-                            <p>Unable to display page content. The page may have formatting issues.</p>
-                            <p className="text-sm mt-2">Page ID: {page.id}</p>
-                          </div>
-                        }>
-                          <TextView
+              {/* Identical structure to edit mode */}
+              <PageProvider>
+                <LineSettingsProvider>
+                  <TextSelectionProvider
+                    contentRef={contentRef}
+                    enableCopy={true}
+                    enableShare={true}
+                    enableAddToPage={true}
+                    username={user?.displayName || user?.username}
+                  >
+                    <div ref={contentRef}>
+                      <TextViewErrorBoundary fallbackContent={
+                        <div className="p-4 text-muted-foreground">
+                          <p>Unable to display page content. The page may have formatting issues.</p>
+                          <p className="text-sm mt-2">Page ID: {page.id}</p>
+                        </div>
+                      }>
+                        <TextView
                             key={`content-${page.id}`} /* Use stable key based on page ID */
                             content={editorState}
                             viewMode={lineMode}
@@ -1469,35 +1472,33 @@ function SinglePageView({ params, initialEditMode = false }) {
                             }
                             isEditing={isEditing}
                           />
-                        </TextViewErrorBoundary>
+                      </TextViewErrorBoundary>
 
-                        {/* Unified text highlighting for URL-based highlights */}
-                        <UnifiedTextHighlighter
-                          contentRef={contentRef}
-                          showNotification={true}
-                          autoScroll={true}
-                        />
-                      </div>
-                    </TextSelectionProvider>
-                  </LineSettingsProvider>
-                </PageProvider>
-              </div>
-            </div>
+                      {/* Unified text highlighting for URL-based highlights */}
+                      <UnifiedTextHighlighter
+                        contentRef={contentRef}
+                        showNotification={true}
+                        autoScroll={true}
+                      />
+                    </div>
+                  </TextSelectionProvider>
 
-            {/* Backlinks and Related Pages - Always render with fixed height to prevent layout shifts */}
-            <div className="w-full px-4">
-              {/* What Links Here section */}
-              <BacklinksSection
-                page={page}
-                linkedPageIds={memoizedLinkedPageIds}
-              />
+                  {/* Backlinks and Related Pages - Always render with fixed height to prevent layout shifts */}
+                  <div className="mt-8">
+                    {/* What Links Here section */}
+                    <BacklinksSection
+                      page={page}
+                      linkedPageIds={memoizedLinkedPageIds}
+                    />
 
-              {/* Related Pages section - Using pre-computed memoized values */}
-              <RelatedPages
-                page={memoizedPage}
-                linkedPageIds={memoizedLinkedPageIds}
-              />
-            </div>
+                    {/* Related Pages section - Using pre-computed memoized values */}
+                    <RelatedPages
+                      page={memoizedPage}
+                      linkedPageIds={memoizedLinkedPageIds}
+                    />
+                  </div>
+                </LineSettingsProvider>
+              </PageProvider>
             </div>
           )}
         </div>

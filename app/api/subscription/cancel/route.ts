@@ -4,12 +4,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../../firebase/config';
+import { initAdmin } from '../../../firebase/admin';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../../../api/auth-helper';
 
-// Initialize Stripe
+// Initialize Firebase Admin and Stripe
+const adminApp = initAdmin();
+const adminDb = adminApp.firestore();
 const stripe = new Stripe(getStripeSecretKey() || '', {
   apiVersion: '2024-06-20',
 });
@@ -35,11 +36,11 @@ export async function POST(request: NextRequest) {
     });
 
     // Update subscription status in Firestore
-    const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
-    await updateDoc(subscriptionRef, {
+    const subscriptionRef = adminDb.collection('users').doc(userId).collection('subscription').doc('current');
+    await subscriptionRef.update({
       status: 'cancelled',
       cancelAtPeriodEnd: true,
-      updatedAt: serverTimestamp(),
+      updatedAt: new Date(),
     });
 
     console.log(`Subscription cancelled for user ${userId}: ${subscriptionId}`);

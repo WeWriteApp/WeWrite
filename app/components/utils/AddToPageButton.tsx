@@ -78,10 +78,7 @@ const logAppendOperation = (
     userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown'
   };
 
-  // Log to console for now (in production, this would go to a proper logging service)
-  console.log('AUDIT LOG:', logEntry);
-
-  // In a production environment, you would send this to your logging service:
+  // In a production environment, this would go to a proper logging service:
   // await fetch('/api/audit-log', { method: 'POST', body: JSON.stringify(logEntry) });
 };
 

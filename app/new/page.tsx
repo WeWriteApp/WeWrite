@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Head from "next/head";
 import PublicLayout from "../components/layout/PublicLayout";
 import { createPage } from "../firebase/database";
-import ReactGA from 'react-ga4';
+// ReactGA removed - analytics now handled by UnifiedAnalyticsProvider
 import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
 import { CONTENT_EVENTS } from "../constants/analytics-events";
 import { createReplyAttribution } from "../utils/linkUtils";
@@ -19,7 +19,7 @@ import { PageProvider } from "../contexts/PageContext";
 import { LineSettingsProvider } from "../contexts/LineSettingsContext";
 import SiteFooter from "../components/layout/SiteFooter";
 import PledgeBar from "../components/payments/PledgeBar";
-import { shouldUseQueue, addToQueue } from "../utils/syncQueue";
+import { shouldUseQueue, addToQueue, checkOperationAllowed } from "../utils/syncQueue";
 import { useSyncQueue } from "../contexts/SyncQueueContext";
 import SlideUpPage from "../components/ui/slide-up-page";
 import { NewPageSkeleton } from "../components/skeletons/PageEditorSkeleton";
@@ -367,16 +367,22 @@ export default function NewPage() {
         groupId: selectedGroupId,
       };
 
-      console.log('Creating page with data:', { ...data, content: '(content omitted)' });
+      // Check if operation is allowed
+      const operationError = checkOperationAllowed();
+      if (operationError) {
+        setIsSaving(false);
+        setError(operationError);
+        return false;
+      }
 
-      // Check if we should use the sync queue
-      if (shouldUseQueue()) {
-        console.log('Adding page creation to sync queue');
+      // Check if we should use the sync queue (only for unverified email users)
+      const useQueue = shouldUseQueue();
+
+      if (useQueue) {
         const operationId = addToQueue('create', data);
 
-        // Track analytics (non-blocking)
+        // Track analytics (non-blocking) - now handled by UnifiedAnalyticsProvider
         try {
-          ReactGA.event({ category: "Page", action: "Add new page (queued)", label: title });
           trackPageCreationFlow.completed(operationId, {
             label: title,
             is_reply: !!isReply,
@@ -394,7 +400,7 @@ export default function NewPage() {
 
         // Show success feedback for queued save
         toast.success("Page queued for creation!", {
-          description: "Your page will be created when you're back online.",
+          description: "Your page will be created when you verify your email.",
           duration: 3000
         });
 
@@ -420,15 +426,13 @@ export default function NewPage() {
 
         return true;
       } else {
-        // Normal page creation
+        // Normal page creation for verified users
         const res = await createPage(data);
 
         if (res) {
-          console.log('Page created successfully with ID:', res);
 
-          // Track analytics (non-blocking)
+          // Track analytics (non-blocking) - now handled by UnifiedAnalyticsProvider
           try {
-            ReactGA.event({ category: "Page", action: "Add new page", label: title });
             trackPageCreationFlow.completed(res, {
               label: title,
               is_reply: !!isReply,
@@ -449,10 +453,12 @@ export default function NewPage() {
 
           setIsSaving(false);
 
-          // Small delay to ensure user sees the success message before redirect
+          // CRITICAL FIX: Longer delay to ensure database consistency before redirect
+          // This prevents 404 errors when navigating to newly created pages
           setTimeout(() => {
-            router.push(`/${res}`);
-          }, 500);
+            // Use replace instead of push to prevent back button issues
+            router.replace(`/${res}`);
+          }, 1000);
 
           return true;
         } else {

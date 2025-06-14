@@ -104,9 +104,8 @@ const RecentPages = React.memo(function RecentPages() {
               key={page.id}
               href={`/${page.id}`}
               isPublic={page.isPublic}
-              className="w-full flex items-center gap-2"
+              className="w-full"
             >
-              <FileText className="h-4 w-4 text-muted-foreground" />
               <span className="truncate">{page.title}</span>
             </PillLink>
           ))

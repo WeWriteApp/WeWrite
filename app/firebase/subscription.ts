@@ -120,17 +120,20 @@ export const getUserSubscription = async (userId: string, options: SubscriptionO
       stripeSubscriptionId: rawData.stripeSubscriptionId || null
     };
 
-    // If status is active but no stripeSubscriptionId, set to canceled
-    if (subscriptionData.status === 'active' && !subscriptionData.stripeSubscriptionId) {
+    // Note: Removed automatic cancellation logic that was interfering with new subscriptions
+    // Webhooks will properly update subscription status when Stripe processes the payment
+
+    // Remove any invalid statuses - only allow valid subscription states
+    const validStatuses = ['active', 'trialing', 'past_due', 'canceled', 'incomplete'];
+    if (!validStatuses.includes(subscriptionData.status)) {
+      if (verbose) {
+        console.log(`[getUserSubscription] Invalid status '${subscriptionData.status}' detected, setting to 'canceled'`);
+      }
       subscriptionData.status = 'canceled';
-      subscriptionData.tier = null;
-      subscriptionData.amount = 0;
-      
-      // Update the subscription in Firestore
+
+      // Update the subscription in Firestore to keep data consistent
       await updateSubscription(userId, {
         status: 'canceled',
-        tier: null,
-        amount: 0,
         canceledAt: new Date().toISOString()
       });
     }
@@ -289,8 +292,8 @@ export const getPledge = async (userId: string, pageId: string): Promise<any | n
 // Cancel a subscription (for both demo and real subscriptions)
 export const cancelSubscription = async (subscriptionId: string, customerId: string | null = null): Promise<{ success: boolean; error?: string }> => {
   try {
-    // Call the cancel-subscription API route
-    const response = await fetch('/api/cancel-subscription', {
+    // Call the new cancel-subscription API route
+    const response = await fetch('/api/subscription/cancel', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -331,10 +334,10 @@ export const listenToUserSubscription = (userId: string, callback: (data: Subscr
   const userSubRef = doc(db, "users", userId, "subscription", "current");
 
   // Set up listener for the user path
-  const unsubscribe = onSnapshot(userSubRef, (doc) => {
+  const unsubscribe = onSnapshot(userSubRef, async (doc) => {
     if (doc.exists()) {
       const rawData = doc.data() as DocumentData;
-      const subscriptionData: SubscriptionData = {
+      let subscriptionData: SubscriptionData = {
         id: doc.id,
         ...rawData,
         status: rawData.status || 'canceled',
@@ -342,6 +345,18 @@ export const listenToUserSubscription = (userId: string, callback: (data: Subscr
         tier: rawData.tier || null,
         stripeSubscriptionId: rawData.stripeSubscriptionId || null
       };
+
+      // Note: Removed automatic cancellation logic that was interfering with new subscriptions
+      // Webhooks will properly update subscription status when Stripe processes the payment
+
+      // Remove any invalid statuses - only allow valid subscription states
+      const validStatuses = ['active', 'trialing', 'past_due', 'canceled', 'incomplete'];
+      if (!validStatuses.includes(subscriptionData.status)) {
+        if (verbose) {
+          console.log(`[listenToUserSubscription] Invalid status '${subscriptionData.status}' detected, setting to 'canceled'`);
+        }
+        subscriptionData.status = 'canceled';
+      }
 
       if (verbose) {
         console.log(`[listenToUserSubscription] Received subscription update:`,

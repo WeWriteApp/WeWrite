@@ -24,31 +24,19 @@ export function SEOAnalytics({ showDebugInfo = false, enableRealTimeTracking = t
   useEffect(() => {
     if (!enableRealTimeTracking) return;
 
-    // Track page view
-    if (window.gtag) {
-      window.gtag('event', 'page_view', {
-        event_category: 'SEO Analytics',
-        seo_score: seoState.score,
-        page_optimized: seoState.isOptimized
-      });
-    }
+    // SEO tracking is now handled by UnifiedAnalyticsProvider
+    // This component focuses on SEO analysis only
 
-    // Set up performance monitoring
+    // Set up performance monitoring (without duplicate analytics)
     const startTime = Date.now();
-    
+
     const handleBeforeUnload = () => {
       const timeOnPage = Date.now() - startTime;
-      if (window.gtag) {
-        window.gtag('event', 'time_on_page', {
-          event_category: 'SEO Analytics',
-          value: Math.round(timeOnPage / 1000), // Convert to seconds
-          seo_score: seoState.score
-        });
-      }
+      // Time on page tracking handled by UnifiedAnalyticsProvider
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    
+
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };

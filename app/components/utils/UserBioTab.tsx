@@ -199,81 +199,60 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
 
   return (
     <div className="space-y-4">
-      {/* Header - no standalone edit icon */}
+      {/* Header - no standalone edit icon or duplicate buttons */}
       <div className="flex justify-end items-center">
         {/* Edit icon removed - now handled by hover-reveal in content area */}
-        {isEditing && (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCancel}
-              className="gap-1"
-              disabled={isLoading}
-            >
-              <X className="h-4 w-4" />
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleSave}
-              className="gap-1"
-              disabled={isLoading}
-            >
-              <Save className="h-4 w-4" />
-              {isLoading ? "Saving..." : "Save"}
-            </Button>
+        {/* Save/Cancel buttons removed - handled by PageEditor at bottom */}
+      </div>
+
+      {/* Content display or editor - unified container structure */}
+      <div className="page-content unified-editor relative rounded-lg bg-background w-full max-w-none">
+        {isEditing ? (
+          <div className="animate-in fade-in-0 duration-300">
+            <PageProvider>
+              <LineSettingsProvider>
+                <PageEditor
+                  title="" // Bio doesn't have a title
+                  setTitle={() => {}} // Bio doesn't have a title
+                  initialContent={bioContent}
+                  onContentChange={handleContentChange}
+                  isPublic={true} // Bio is always public
+                  setIsPublic={() => {}} // Bio doesn't have privacy settings
+                  location={null} // Bio doesn't have location
+                  setLocation={() => {}} // Bio doesn't have location
+                  onSave={handleSave}
+                  onCancel={handleCancel}
+                  onDelete={null} // Bio doesn't have delete functionality
+                  isSaving={isLoading}
+                  error={error || ""}
+                  isNewPage={false}
+                  clickPosition={clickPosition}
+                  page={null} // Bio is not a page
+                />
+              </LineSettingsProvider>
+            </PageProvider>
+          </div>
+        ) : (
+          <div className="prose dark:prose-invert max-w-none">
+            {bioContent ? (
+              <HoverEditContent
+                content={bioContent}
+                canEdit={isProfileOwner}
+                setIsEditing={handleSetIsEditing}
+                showLineNumbers={false} // Bio doesn't need line numbers
+              />
+            ) : (
+              <EmptyContentState
+                onActivate={() => handleSetIsEditing(true)}
+                isOwner={isProfileOwner}
+                ownerMessage="You haven't added a bio yet."
+                visitorMessage={`${profile.username || "This user"} hasn't added a bio yet.`}
+                placeholder="Share information about yourself, your interests, or your background."
+              />
+            )}
           </div>
         )}
       </div>
-
-      {/* Content display or editor */}
-      {isEditing ? (
-        <div className="animate-in fade-in-0 duration-300">
-          <PageProvider>
-            <LineSettingsProvider>
-              <PageEditor
-                title="" // Bio doesn't have a title
-                setTitle={() => {}} // Bio doesn't have a title
-                initialContent={bioContent}
-                onContentChange={handleContentChange}
-                isPublic={true} // Bio is always public
-                setIsPublic={() => {}} // Bio doesn't have privacy settings
-                location={null} // Bio doesn't have location
-                setLocation={() => {}} // Bio doesn't have location
-                onSave={handleSave}
-                onCancel={handleCancel}
-                onDelete={null} // Bio doesn't have delete functionality
-                isSaving={isLoading}
-                error={error || ""}
-                isNewPage={false}
-                clickPosition={clickPosition}
-                page={null} // Bio is not a page
-              />
-            </LineSettingsProvider>
-          </PageProvider>
-        </div>
-      ) : (
-        <div className="prose dark:prose-invert max-w-none">
-          {bioContent ? (
-            <HoverEditContent
-              content={bioContent}
-              canEdit={isProfileOwner}
-              setIsEditing={handleSetIsEditing}
-              showLineNumbers={false} // Bio doesn't need line numbers
-            />
-          ) : (
-            <EmptyContentState
-              onActivate={() => handleSetIsEditing(true)}
-              isOwner={isProfileOwner}
-              ownerMessage="You haven't added a bio yet."
-              visitorMessage={`${profile.username || "This user"} hasn't added a bio yet.`}
-              placeholder="Share information about yourself, your interests, or your background."
-            />
-          )}
-        </div>
-      )}
 
       {/* Last edit info */}
       {lastEditor && lastEditTime && (

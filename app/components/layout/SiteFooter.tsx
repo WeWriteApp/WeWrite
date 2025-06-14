@@ -126,7 +126,7 @@ export default function SiteFooter({ className = "" }: SiteFooterProps) {
       external: true
     },
     {
-      href: "/subscription",
+      href: "/settings/subscription",
       label: "Support us",
       icon: <Heart className="h-3 w-3" />,
       external: false

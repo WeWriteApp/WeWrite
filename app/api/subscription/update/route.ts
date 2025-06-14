@@ -4,17 +4,18 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../../firebase/config';
+import { initAdmin } from '../../../firebase/admin';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../../../api/auth-helper';
-import { 
-  validateCustomAmount, 
+import {
+  validateCustomAmount,
   calculateTokensForAmount,
-  getTierById 
+  getTierById
 } from '../../../utils/subscriptionTiers';
 
-// Initialize Stripe
+// Initialize Firebase Admin and Stripe
+const adminApp = initAdmin();
+const adminDb = adminApp.firestore();
 const stripe = new Stripe(getStripeSecretKey() || '', {
   apiVersion: '2024-06-20',
 });
@@ -77,10 +78,6 @@ export async function POST(request: NextRequest) {
       product_data: {
         name: `WeWrite ${newTier === 'custom' ? 'Custom' : getTierById(newTier)?.name}`,
         description: `${finalTokens} tokens per month for supporting WeWrite creators`,
-        metadata: {
-          tier: newTier,
-          tokens: finalTokens.toString(),
-        },
       },
       metadata: {
         tier: newTier,
@@ -106,13 +103,13 @@ export async function POST(request: NextRequest) {
     });
 
     // Update subscription in Firestore
-    const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
-    await updateDoc(subscriptionRef, {
+    const subscriptionRef = adminDb.collection('users').doc(userId).collection('subscription').doc('current');
+    await subscriptionRef.update({
       stripePriceId: newPrice.id,
       tier: newTier,
       amount: finalAmount,
       tokens: finalTokens,
-      updatedAt: serverTimestamp(),
+      updatedAt: new Date(),
     });
 
     console.log(`Subscription updated for user ${userId}: ${newTier} - $${finalAmount}/mo - ${finalTokens} tokens`);

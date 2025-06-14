@@ -71,34 +71,76 @@ export function getFirebaseAdmin(): typeof admin | null {
       } else {
         // Production initialization with proper credentials
         try {
-          // Check if we have GOOGLE_CLOUD_KEY_JSON first
-          if (process.env.GOOGLE_CLOUD_KEY_JSON) {
+          // Check if we have service account JSON (try GOOGLE first, then LOGGING)
+          if (process.env.GOOGLE_CLOUD_KEY_JSON || process.env.LOGGING_CLOUD_KEY_JSON) {
             try {
-              let jsonString = process.env.GOOGLE_CLOUD_KEY_JSON;
+              // Try GOOGLE_CLOUD_KEY_JSON first (has working permissions), then LOGGING_CLOUD_KEY_JSON as fallback
+              let jsonString = process.env.GOOGLE_CLOUD_KEY_JSON || process.env.LOGGING_CLOUD_KEY_JSON;
+              let keySource = process.env.GOOGLE_CLOUD_KEY_JSON ? 'GOOGLE_CLOUD_KEY_JSON' : 'LOGGING_CLOUD_KEY_JSON';
+
+              // Handle different service account formats
+              if (keySource === 'LOGGING_CLOUD_KEY_JSON') {
+                // Remove actual newline characters that break JSON parsing
+                jsonString = jsonString.replace(/\n/g, '');
+                // Also remove carriage returns if present
+                jsonString = jsonString.replace(/\r/g, '');
+              }
 
               // Check if the string is base64 encoded (common in Vercel deployments)
               if (!jsonString.includes(' ') && !jsonString.startsWith('{')) {
                 try {
                   // Try to decode as base64
                   jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
-                  console.log('Decoded base64-encoded GOOGLE_CLOUD_KEY_JSON in firebaseAdmin');
+                  console.log(`Decoded base64-encoded ${keySource} in firebaseAdmin`);
                 } catch (decodeError) {
-                  console.warn('Failed to decode as base64, using original string:', decodeError.message);
+                  console.warn(`Failed to decode ${keySource} as base64, using original string:`, decodeError.message);
                 }
               }
 
               const serviceAccount = JSON.parse(jsonString);
+
+              // Validate that the service account has the required fields
+              if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
+                throw new Error(`Invalid service account in ${keySource}: missing required fields`);
+              }
 
               admin.initializeApp({
                 credential: admin.credential.cert(serviceAccount as ServiceAccount),
                 databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || 'https://wewrite-ccd82-default-rtdb.firebaseio.com'
               });
 
-              console.log('Firebase Admin initialized successfully with GOOGLE_CLOUD_KEY_JSON');
+              console.log(`Firebase Admin initialized successfully with ${keySource}: ${serviceAccount.client_email}`);
               firebaseAdmin = admin;
               return firebaseAdmin;
             } catch (parseError) {
-              console.error('Error parsing GOOGLE_CLOUD_KEY_JSON in firebaseAdmin:', parseError.message);
+              console.error('Error parsing service account JSON in firebaseAdmin:', parseError.message);
+
+              // If LOGGING_CLOUD_KEY_JSON failed, try GOOGLE_CLOUD_KEY_JSON as fallback
+              if (process.env.LOGGING_CLOUD_KEY_JSON && process.env.GOOGLE_CLOUD_KEY_JSON) {
+                console.log('Falling back to GOOGLE_CLOUD_KEY_JSON in firebaseAdmin...');
+                try {
+                  let jsonString = process.env.GOOGLE_CLOUD_KEY_JSON;
+
+                  if (!jsonString.includes(' ') && !jsonString.startsWith('{')) {
+                    jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
+                    console.log('Decoded base64-encoded GOOGLE_CLOUD_KEY_JSON in firebaseAdmin');
+                  }
+
+                  const serviceAccount = JSON.parse(jsonString);
+
+                  admin.initializeApp({
+                    credential: admin.credential.cert(serviceAccount as ServiceAccount),
+                    databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || 'https://wewrite-ccd82-default-rtdb.firebaseio.com'
+                  });
+
+                  console.log(`Firebase Admin initialized with fallback: ${serviceAccount.client_email}`);
+                  firebaseAdmin = admin;
+                  return firebaseAdmin;
+                } catch (fallbackError) {
+                  console.error('Fallback also failed in firebaseAdmin:', fallbackError.message);
+                  // Fall through to individual environment variables
+                }
+              }
               // Fall through to individual environment variables
             }
           }

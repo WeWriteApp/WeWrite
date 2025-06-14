@@ -7,7 +7,7 @@ export default function SupportRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/subscription');
+    router.replace('/settings/subscription');
   }, [router]);
 
   return (

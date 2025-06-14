@@ -1,7 +1,6 @@
 "use client";
 
-// Import Slate patches early to ensure they're applied before any Slate components load
-import "./utils/slate-patch";
+// Removed Slate patches - no longer needed with SimpleEditor
 import MobileBottomNav from "./components/layout/MobileBottomNav";
 import { SidebarProvider } from "./components/layout/UnifiedSidebar";
 import SidebarLayout from "./components/layout/SidebarLayout";

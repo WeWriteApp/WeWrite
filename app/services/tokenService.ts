@@ -40,14 +40,39 @@ export class TokenService {
     try {
       const balanceRef = doc(db, 'tokenBalances', userId);
       const balanceDoc = await getDoc(balanceRef);
-      
+
       if (!balanceDoc.exists()) {
         return null;
       }
-      
+
       return balanceDoc.data() as TokenBalance;
     } catch (error) {
       console.error('Error getting user token balance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user's token allocations
+   */
+  static async getUserTokenAllocations(userId: string): Promise<TokenAllocation[]> {
+    try {
+      const currentMonth = getCurrentMonth();
+      const allocationsRef = collection(db, 'tokenAllocations');
+      const q = query(
+        allocationsRef,
+        where('userId', '==', userId),
+        where('month', '==', currentMonth),
+        where('status', '==', 'active')
+      );
+
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as TokenAllocation));
+    } catch (error) {
+      console.error('Error getting user token allocations:', error);
       throw error;
     }
   }

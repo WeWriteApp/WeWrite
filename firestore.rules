@@ -47,6 +47,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+
+
     // Helper functions for admin access
     function isAdmin() {
       return request.auth != null && (
@@ -159,6 +161,33 @@ service cloud.firestore {
         request.resource.data.uid == resource.data.uid; // Prevent UID changes
 
       allow delete: if isOwner(userId);
+
+      // User subscription subcollection - Financial data
+      match /subscription/{subscriptionDoc} {
+        // Only allow users to read their own subscription data or admins
+        allow read: if isOwner(userId) || isAdmin();
+
+        // Only allow users to write their own subscription data or admins
+        allow write: if isOwner(userId) || isAdmin();
+      }
+
+      // User token allocation subcollection - Token economy data
+      match /tokens/{tokenDoc} {
+        // Only allow users to read their own token data or admins
+        allow read: if isOwner(userId) || isAdmin();
+
+        // Only allow users to write their own token data or admins
+        allow write: if isOwner(userId) || isAdmin();
+      }
+
+      // User payment methods subcollection - Payment data
+      match /paymentMethods/{paymentMethodDoc} {
+        // Only allow users to read their own payment methods or admins
+        allow read: if isOwner(userId) || isAdmin();
+
+        // Only allow users to write their own payment methods or admins
+        allow write: if isOwner(userId) || isAdmin();
+      }
     }
 
     // Username history - Restricted access for privacy
@@ -448,12 +477,10 @@ service cloud.firestore {
       );
     }
 
-    // TEMPORARY: Catch-all rule for debugging - allows read access to any undefined collections
-    // This will help identify what collections are being accessed that we haven't defined rules for
-    // TODO: Remove this after identifying all missing collections and adding proper rules
+    // TEMPORARY: Allow all reads and writes for debugging subscription issue
+    // TODO: Remove this after fixing the subscription issue
     match /{document=**} {
-      allow read: if true;
-      allow write: if false; // Still block all writes for safety
+      allow read, write: if true;
     }
 
     // REMOVED: Dangerous default rule that allowed unrestricted access

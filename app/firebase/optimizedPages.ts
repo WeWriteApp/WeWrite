@@ -86,10 +86,35 @@ interface PageListResult {
   totalFetched: number;
 }
 
-// Cache instances
-const pageMetadataCache = new BatchCache<OptimizedPageData>('pageMetadata', 15 * 60 * 1000); // 15 minutes
-const pageContentCache = new BatchCache<string>('pageContent', 10 * 60 * 1000); // 10 minutes
-const pageListCache = new BatchCache<PageListResult>('pageList', 5 * 60 * 1000); // 5 minutes
+// Cache instances (lazy initialization for client-side only)
+let pageMetadataCache: BatchCache<OptimizedPageData> | null = null;
+let pageContentCache: BatchCache<string> | null = null;
+let pageListCache: BatchCache<PageListResult> | null = null;
+
+// Initialize caches only on client side
+const getPageMetadataCache = () => {
+  if (typeof window === 'undefined') return null;
+  if (!pageMetadataCache) {
+    pageMetadataCache = new BatchCache<OptimizedPageData>('pageMetadata', 15 * 60 * 1000);
+  }
+  return pageMetadataCache;
+};
+
+const getPageContentCache = () => {
+  if (typeof window === 'undefined') return null;
+  if (!pageContentCache) {
+    pageContentCache = new BatchCache<string>('pageContent', 10 * 60 * 1000);
+  }
+  return pageContentCache;
+};
+
+const getPageListCache = () => {
+  if (typeof window === 'undefined') return null;
+  if (!pageListCache) {
+    pageListCache = new BatchCache<PageListResult>('pageList', 5 * 60 * 1000);
+  }
+  return pageListCache;
+};
 
 // Read operation tracking
 let pageReadCount = 0;
@@ -108,9 +133,7 @@ const logPageRead = (operation: string, cached: boolean = false, pageId?: string
     pageReadOperations.shift();
   }
   
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[Page Read] ${operation}${pageId ? ` (${pageId})` : ''} - ${cached ? 'CACHED' : 'FIRESTORE'}`);
-  }
+  // Page read tracking for optimization monitoring
 };
 
 /**
@@ -492,7 +515,11 @@ export const getPageReadStats = () => {
  * Clear all page-related caches
  */
 export const clearPageCaches = () => {
-  pageMetadataCache.clear();
-  pageContentCache.clear();
-  pageListCache.clear();
+  const metaCache = getPageMetadataCache();
+  const contentCache = getPageContentCache();
+  const listCache = getPageListCache();
+
+  if (metaCache) metaCache.clear();
+  if (contentCache) contentCache.clear();
+  if (listCache) listCache.clear();
 };

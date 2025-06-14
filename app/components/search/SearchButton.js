@@ -11,8 +11,6 @@ const SearchButton = ({ placeholder = "Search all pages...", className = "" }) =
   const router = useRouter();
 
   const navigateToSearchPage = () => {
-    console.log('Navigating to search page');
-    // Use router.push with the correct path
     router.push('/search');
   };
 

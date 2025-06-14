@@ -140,18 +140,7 @@ export default function SwitchAccountPage() {
           </div>
         )}
 
-        {/* Debug information - only shown when URL has ?debug=true */}
-        {typeof window !== 'undefined' &&
-         typeof window.location !== 'undefined' &&
-         typeof window.location.search === 'string' &&
-         window.location.search.includes('debug=true') && (
-          <div className="mt-8 text-left bg-gray-100 p-4 rounded-md overflow-auto max-h-96">
-            <h2 className="text-lg font-semibold mb-2">Debug Information</h2>
-            <pre className="text-xs whitespace-pre-wrap">
-              {JSON.stringify(debugInfo, null, 2)}
-            </pre>
-          </div>
-        )}
+
       </div>
     </div>
   );

@@ -82,43 +82,59 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Subscription not found in session' }, { status: 404 });
     }
 
-    // Get the subscription data from Firestore
-    const subscriptionDoc = await db.collection('users').doc(userId).collection('subscriptions').doc('current').get();
-
-    if (!subscriptionDoc.exists) {
-      return NextResponse.json({ error: 'Subscription not found in Firestore' }, { status: 404 });
-    }
-
-    const subscriptionData = subscriptionDoc.data();
+    // Use the correct Firestore path (singular 'subscription', not 'subscriptions')
+    const subscriptionRef = db.collection('users').doc(userId).collection('subscription').doc('current');
+    const subscriptionDoc = await subscriptionRef.get();
 
     // Get the subscription price from Stripe
     const price = subscription.items.data[0].price;
     const amount = price.unit_amount ? price.unit_amount / 100 : 0;
 
-    // Determine the tier based on the amount
-    let tier = 'tier1';
-    if (amount >= 50) {
-      tier = 'tier3';
-    } else if (amount >= 20) {
-      tier = 'tier2';
+    // Determine the tier based on the amount or metadata
+    let tier = subscription.metadata.tier || 'custom';
+    if (!tier || tier === 'undefined') {
+      // Fallback to determining tier by amount
+      if (amount === 10) tier = 'tier1';
+      else if (amount === 20) tier = 'tier2';
+      else if (amount === 50) tier = 'tier3';
+      else tier = 'custom';
     }
 
-    // Update the subscription data in Firestore
-    await db.collection('users').doc(userId).collection('subscriptions').doc('current').update({
+    console.log(`Processing subscription success for user ${userId}: ${tier} - $${amount}/mo - Status: ${subscription.status}`);
+
+    // Prepare subscription data update
+    const subscriptionUpdate = {
       stripeSubscriptionId: subscription.id,
       status: subscription.status,
       amount: amount,
       tier: tier,
-      billingCycleStart: new Date((subscription as any).current_period_start * 1000).toISOString(),
-      billingCycleEnd: new Date((subscription as any).current_period_end * 1000).toISOString(),
+      currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
+      currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
       updatedAt: new Date().toISOString(),
-    });
+    };
+
+    // Create or update the subscription document
+    if (subscriptionDoc.exists) {
+      await subscriptionRef.update(subscriptionUpdate);
+      console.log(`Updated existing subscription for user ${userId}`);
+    } else {
+      // Create new subscription document if it doesn't exist
+      await subscriptionRef.set({
+        id: 'current',
+        userId,
+        ...subscriptionUpdate,
+        createdAt: new Date().toISOString(),
+      });
+      console.log(`Created new subscription document for user ${userId}`);
+    }
 
     // Update the user's subscription tier in Firestore
     await db.collection('users').doc(userId).update({
       subscriptionTier: tier,
       subscriptionStatus: subscription.status,
     });
+
+    console.log(`Subscription success processing completed for user ${userId}`);
 
     return NextResponse.json({
       success: true,

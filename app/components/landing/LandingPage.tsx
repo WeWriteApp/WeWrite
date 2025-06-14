@@ -646,8 +646,8 @@ const LandingPage = () => {
         </div>
 
         {/* Mobile Navigation - Horizontally scrollable */}
-        <div className="w-full bg-background/90 backdrop-blur-xl border-b border-border/10 py-3 shadow-sm">
-          <div className="overflow-x-auto scrollbar-hide">
+        <div className="w-full bg-background/90 backdrop-blur-xl border-b border-border/10 pt-3 shadow-sm">
+          <div className="overflow-x-auto scrollbar-hide pb-3">
             <div className="flex items-center whitespace-nowrap px-4 min-w-min gap-x-6 justify-center mobile-nav-links">
               <a
                 href="#activity"

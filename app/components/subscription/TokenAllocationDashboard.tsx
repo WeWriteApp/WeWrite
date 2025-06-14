@@ -186,7 +186,7 @@ export function TokenAllocationDashboard({ userId }: TokenAllocationDashboardPro
             $1 = 10 tokens that you can allocate to pages and groups you love.
           </p>
           <Button asChild>
-            <a href="/subscription">Start Subscription</a>
+            <a href="/settings/subscription">Start Subscription</a>
           </Button>
         </CardContent>
       </Card>

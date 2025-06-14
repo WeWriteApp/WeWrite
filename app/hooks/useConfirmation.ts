@@ -140,15 +140,33 @@ export function useConfirmation() {
     });
   }, [confirm]);
 
+  /**
+   * Show confirmation modal (alias for confirm)
+   */
+  const showConfirmation = useCallback((
+    title: string,
+    message: string,
+    confirmText?: string,
+    variant?: 'default' | 'destructive' | 'warning'
+  ): Promise<boolean> => {
+    return confirm({
+      title,
+      message,
+      confirmText,
+      variant
+    });
+  }, [confirm]);
+
   return {
     // State for the confirmation modal
     confirmationState,
-    
+
     // Control functions
     confirm,
+    showConfirmation,
     closeConfirmation,
     setConfirmationLoading,
-    
+
     // Convenience methods
     confirmDelete,
     confirmLogout,

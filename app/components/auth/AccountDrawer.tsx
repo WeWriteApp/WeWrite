@@ -94,7 +94,6 @@ const showErrorMessage = (message: string, showAlert?: (title: string, message: 
 };
 
 const showLoadingMessage = (message: string) => {
-  console.log(message);
   // You could add DOM-based notification here if needed
 };
 

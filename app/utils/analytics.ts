@@ -68,9 +68,6 @@ class Analytics {
     // Check if Google Analytics is available
     if (this.gaId) {
       this.gaAvailable = true;
-      if (this.debug) console.log('Google Analytics ID available');
-    } else {
-      if (this.debug) console.log('Google Analytics ID not available');
     }
 
     // Check if Firebase Analytics is available
@@ -79,13 +76,10 @@ class Analytics {
         this.firebaseAnalytics = await initializeAnalytics();
         if (this.firebaseAnalytics) {
           this.fbAvailable = true;
-          if (this.debug) console.log('Firebase Analytics initialized');
         }
       } catch (e) {
         console.error('Error initializing Firebase Analytics:', e);
       }
-    } else {
-      if (this.debug) console.log('Firebase Analytics ID not available');
     }
   }
 
@@ -109,8 +103,6 @@ class Analytics {
           page_title: pageTitle,
           page_location: window.location.href
         });
-        
-        if (this.debug) console.log('Google Analytics page view tracked:', pageTitle);
       } catch (e) {
         console.error('Error tracking Google Analytics page view:', e);
       }
@@ -124,8 +116,6 @@ class Analytics {
           page_title: pageTitle,
           page_location: window.location.href
         });
-        
-        if (this.debug) console.log('Firebase Analytics page view tracked:', pageTitle);
       } catch (e) {
         console.error('Error tracking Firebase Analytics page view:', e);
       }
@@ -157,13 +147,11 @@ class Analytics {
               value: event.value,
               ...event
             });
-            
-            if (this.debug) console.log('Google Analytics event tracked with delay');
           } catch (e) {
             console.error('Error tracking delayed Google Analytics event:', e);
           }
         }, 500);
-        
+
         // Also try immediately in case GA is already ready
         window.gtag('event', event.action, {
           event_category: event.category,
@@ -171,8 +159,6 @@ class Analytics {
           value: event.value,
           ...event
         });
-        
-        if (this.debug) console.log('Google Analytics event tracked');
       } catch (e) {
         console.error('Error tracking Google Analytics event:', e);
       }
@@ -187,8 +173,6 @@ class Analytics {
           value: event.value,
           ...event
         });
-        
-        if (this.debug) console.log('Firebase Analytics event tracked');
       } catch (e) {
         console.error('Error tracking Firebase Analytics event:', e);
       }
@@ -227,6 +211,19 @@ class Analytics {
       ...params
     });
   }
+
+  /**
+   * Get debug status for analytics providers
+   * Used by UnifiedAnalyticsProvider for debugging
+   */
+  public debugStatus(): { gaAvailable: boolean; fbAvailable: boolean; gaId?: string; fbMeasurementId?: string } {
+    return {
+      gaAvailable: this.gaAvailable,
+      fbAvailable: this.fbAvailable,
+      gaId: this.gaId || undefined,
+      fbMeasurementId: this.fbMeasurementId || undefined
+    };
+  }
 }
 
 /**
@@ -248,6 +245,9 @@ export const getAnalyticsInstance = (): Analytics => {
 export const useAnalytics = () => {
   return getAnalyticsInstance();
 };
+
+// Export the analytics instance for direct use
+export const analytics = getAnalyticsInstance();
 
 // Export event constants for convenience
 export { ANALYTICS_EVENTS, EVENT_CATEGORIES };

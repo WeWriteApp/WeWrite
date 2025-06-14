@@ -147,6 +147,7 @@ export default function GroupProfileTabs({ group, isOwner, isMember, canEdit }) 
         defaultValue="about"
         value={activeTab}
         onValueChange={handleTabChange}
+        urlNavigation="hash"
         className="w-full"
       >
         <div

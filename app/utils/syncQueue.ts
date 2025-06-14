@@ -1,8 +1,8 @@
 /**
  * Sync Queue System for WeWrite
- * 
- * Handles offline changes, unverified user states, and logged-out user queues
- * Provides persistent storage and automatic sync when conditions are met
+ *
+ * Handles queuing operations for users with unverified emails only
+ * All other scenarios (offline, logged-out) are handled with error messages
  */
 
 import { auth } from '../firebase/config';
@@ -35,10 +35,8 @@ export interface SyncQueueState {
 
 // Storage keys
 const STORAGE_KEYS = {
-  QUEUE: 'wewrite_sync_queue',
   STATE: 'wewrite_sync_state',
-  USER_QUEUE: 'wewrite_user_queue_',
-  OFFLINE_QUEUE: 'wewrite_offline_queue'
+  USER_QUEUE: 'wewrite_user_queue_'
 };
 
 // Maximum queue size and retry limits
@@ -124,44 +122,50 @@ function loadSyncState(): SyncQueueState {
  * Check if user email is verified
  */
 export function isEmailVerified(): boolean {
-  // Check for demo mode override (admin testing)
-  if (typeof window !== 'undefined') {
-    const demoOverride = localStorage.getItem('demo_unverified_email');
-    if (demoOverride === 'true') {
-      return false; // Simulate unverified email
-    }
-  }
-
   const user = auth.currentUser;
   return user ? user.emailVerified : false;
 }
 
 /**
  * Check if user should use sync queue
+ * Only users with unverified emails should use the queue
  */
 export function shouldUseQueue(): boolean {
   const user = getCurrentUser();
-  
-  // Use queue if offline
-  if (!navigator.onLine) {
+  const emailVerified = isEmailVerified();
+
+  // Only queue operations for authenticated users with unverified emails
+  if (user && !emailVerified) {
     return true;
   }
-  
-  // Use queue if logged out
-  if (!user) {
-    return true;
-  }
-  
-  // Use queue if email not verified
-  if (user && !isEmailVerified()) {
-    return true;
-  }
-  
+
   return false;
 }
 
 /**
- * Add operation to appropriate queue
+ * Check if operation should be allowed
+ * Returns error message if operation should be blocked, null if allowed
+ */
+export function checkOperationAllowed(): string | null {
+  const user = getCurrentUser();
+  const isOnline = navigator.onLine;
+
+  // Block if user is not authenticated
+  if (!user) {
+    return "You must be logged in to create or edit pages.";
+  }
+
+  // Block if user is offline
+  if (!isOnline) {
+    return "You're offline. Please check your connection and try again.";
+  }
+
+  return null; // Operation is allowed
+}
+
+/**
+ * Add operation to unverified user queue
+ * Only for authenticated users with unverified emails
  */
 export function addToQueue(
   type: QueueOperation['type'],
@@ -169,68 +173,65 @@ export function addToQueue(
   pageId?: string
 ): string {
   const user = getCurrentUser();
+
+  if (!user) {
+    throw new Error('Cannot queue operation for unauthenticated user');
+  }
+
+  if (isEmailVerified()) {
+    throw new Error('Cannot queue operation for user with verified email');
+  }
+
   const operationId = generateOperationId();
-  
+
   const operation: QueueOperation = {
     id: operationId,
     type,
     timestamp: Date.now(),
     data,
     pageId,
-    userId: user?.uid,
+    userId: user.uid,
     retryCount: 0,
     maxRetries: DEFAULT_MAX_RETRIES,
     status: 'pending'
   };
-  
-  // Determine which queue to use
-  let queueKey = STORAGE_KEYS.QUEUE;
-  
-  if (!navigator.onLine) {
-    queueKey = STORAGE_KEYS.OFFLINE_QUEUE;
-  } else if (user && !isEmailVerified()) {
-    queueKey = getUserQueueKey(user.uid);
-  } else if (!user) {
-    queueKey = STORAGE_KEYS.QUEUE; // General queue for logged-out users
-  }
-  
-  // Load current queue and add operation
+
+  // Only use user-specific queue for unverified email users
+  const queueKey = getUserQueueKey(user.uid);
   const queue = loadQueue(queueKey);
-  
+
   // Prevent queue from growing too large
   if (queue.length >= MAX_QUEUE_SIZE) {
     // Remove oldest completed operations
     const filteredQueue = queue.filter(op => op.status !== 'completed').slice(-MAX_QUEUE_SIZE + 1);
     queue.splice(0, queue.length, ...filteredQueue);
   }
-  
+
   queue.push(operation);
   saveQueue(queue, queueKey);
-  
+
   // Update sync state
   const state = loadSyncState();
   state.totalOperations = queue.length;
   saveSyncState(state);
-  
-  console.log(`Added ${type} operation to queue:`, operationId);
+
   return operationId;
 }
 
 /**
  * Get current queue for user
+ * Only returns queue for authenticated users with unverified emails
  */
 export function getCurrentQueue(): QueueOperation[] {
   const user = getCurrentUser();
-  
-  let queueKey = STORAGE_KEYS.QUEUE;
-  
-  if (!navigator.onLine) {
-    queueKey = STORAGE_KEYS.OFFLINE_QUEUE;
-  } else if (user && !isEmailVerified()) {
-    queueKey = getUserQueueKey(user.uid);
+
+  // Only return queue for authenticated users with unverified emails
+  if (user && !isEmailVerified()) {
+    const queueKey = getUserQueueKey(user.uid);
+    return loadQueue(queueKey);
   }
-  
-  return loadQueue(queueKey);
+
+  return []; // No queue for other scenarios
 }
 
 /**
@@ -242,20 +243,18 @@ export function getQueueCount(): number {
 
 /**
  * Clear completed operations from queue
+ * Only for authenticated users with unverified emails
  */
 export function clearCompletedOperations(): void {
   const user = getCurrentUser();
-  let queueKey = STORAGE_KEYS.QUEUE;
 
-  if (!navigator.onLine) {
-    queueKey = STORAGE_KEYS.OFFLINE_QUEUE;
-  } else if (user && !isEmailVerified()) {
-    queueKey = getUserQueueKey(user.uid);
+  // Only clear queue for authenticated users with unverified emails
+  if (user && !isEmailVerified()) {
+    const queueKey = getUserQueueKey(user.uid);
+    const queue = loadQueue(queueKey);
+    const filteredQueue = queue.filter(op => op.status !== 'completed');
+    saveQueue(filteredQueue, queueKey);
   }
-
-  const queue = loadQueue(queueKey);
-  const filteredQueue = queue.filter(op => op.status !== 'completed');
-  saveQueue(filteredQueue, queueKey);
 }
 
 /**
@@ -263,21 +262,14 @@ export function clearCompletedOperations(): void {
  */
 async function executeOperation(operation: QueueOperation): Promise<boolean> {
   try {
-    console.log(`Executing ${operation.type} operation:`, operation.id);
-
     switch (operation.type) {
       case 'create':
         const pageId = await createPage(operation.data);
-        if (pageId) {
-          console.log(`Successfully created page: ${pageId}`);
-          return true;
-        }
-        break;
+        return !!pageId;
 
       case 'update':
         if (operation.pageId) {
           await updatePage(operation.pageId, operation.data);
-          console.log(`Successfully updated page: ${operation.pageId}`);
           return true;
         }
         break;
@@ -285,7 +277,6 @@ async function executeOperation(operation: QueueOperation): Promise<boolean> {
       case 'delete':
         if (operation.pageId) {
           await deletePage(operation.pageId);
-          console.log(`Successfully deleted page: ${operation.pageId}`);
           return true;
         }
         break;
@@ -303,27 +294,23 @@ async function executeOperation(operation: QueueOperation): Promise<boolean> {
 }
 
 /**
- * Process sync queue
+ * Process sync queue for users who just verified their email
  */
 export async function processSyncQueue(): Promise<void> {
   const user = getCurrentUser();
 
-  // Don't sync if conditions aren't met
-  if (!navigator.onLine || !user || !isEmailVerified()) {
-    console.log('Sync conditions not met, skipping queue processing');
+  // Only process queue for authenticated users who just verified their email
+  if (!user || !isEmailVerified()) {
     return;
   }
 
-  let queueKey = getUserQueueKey(user.uid);
+  const queueKey = getUserQueueKey(user.uid);
   const queue = loadQueue(queueKey);
   const pendingOperations = queue.filter(op => op.status === 'pending');
 
   if (pendingOperations.length === 0) {
-    console.log('No pending operations to sync');
     return;
   }
-
-  console.log(`Processing ${pendingOperations.length} pending operations`);
 
   // Update sync state
   saveSyncState({
@@ -368,8 +355,6 @@ export async function processSyncQueue(): Promise<void> {
     failedOperations: failureCount
   });
 
-  console.log(`Sync completed: ${successCount} successful, ${failureCount} failed`);
-
   // Dispatch custom event for UI updates
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('syncQueueUpdated', {
@@ -380,6 +365,7 @@ export async function processSyncQueue(): Promise<void> {
 
 /**
  * Get sync queue state
+ * Only returns meaningful data for users with unverified emails
  */
 export function getSyncQueueState(): SyncQueueState {
   const state = loadSyncState();
@@ -389,39 +375,28 @@ export function getSyncQueueState(): SyncQueueState {
     ...state,
     operations: queue,
     totalOperations: queue.length,
-    isOnline: navigator.onLine
+    isOnline: typeof window !== 'undefined' ? navigator.onLine : true
   };
 }
 
 /**
- * Manual sync trigger
+ * Manual sync trigger for unverified email users
  */
 export async function triggerManualSync(): Promise<void> {
-  console.log('Manual sync triggered');
   await processSyncQueue();
 }
 
+
+
 /**
  * Initialize sync queue system
+ * Only handles email verification state changes
  */
 export function initializeSyncQueue(): void {
-  // Listen for online/offline events
   if (typeof window !== 'undefined') {
-    window.addEventListener('online', () => {
-      console.log('Device came online, processing sync queue');
-      saveSyncState({ isOnline: true });
-      processSyncQueue();
-    });
-
-    window.addEventListener('offline', () => {
-      console.log('Device went offline');
-      saveSyncState({ isOnline: false });
-    });
-
-    // Listen for auth state changes
+    // Listen for auth state changes to process queue when email is verified
     auth.onAuthStateChanged((user) => {
       if (user && user.emailVerified) {
-        console.log('User email verified, processing sync queue');
         processSyncQueue();
       }
     });

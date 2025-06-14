@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { RefreshCw, Clock, Wifi, WifiOff } from 'lucide-react';
+import { RefreshCw, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
 import { useSyncQueue } from '../../contexts/SyncQueueContext';
@@ -44,16 +44,7 @@ export function SyncQueueSettings() {
 
 
 
-  const getConnectionStatusIcon = () => {
-    if (state.isOnline) {
-      return <Wifi className="h-5 w-5 text-green-600" />;
-    }
-    return <WifiOff className="h-5 w-5 text-red-600" />;
-  };
 
-  const getConnectionStatusText = () => {
-    return state.isOnline ? "Online" : "Offline";
-  };
 
   const pendingOperations = state.operations.filter(op => op.status === 'pending');
   const completedOperations = state.operations.filter(op => op.status === 'completed');
@@ -67,63 +58,66 @@ export function SyncQueueSettings() {
           <span>Sync Queue</span>
         </CardTitle>
         <CardDescription>
-          Manage your offline changes and sync status
+          Manage queued changes for unverified email users
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Status Overview */}
-        <div className="flex items-center space-x-2">
-          {getConnectionStatusIcon()}
-          <div>
-            <p className="text-sm font-medium">Connection Status</p>
-            <p className="text-sm text-muted-foreground">{getConnectionStatusText()}</p>
+        {/* Only show if user has unverified email */}
+        {!isEmailVerified && (
+          <div className="p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              Your email is not verified. Changes will be queued until you verify your email address.
+            </p>
           </div>
-        </div>
+        )}
 
-        {/* Queue Statistics */}
-        <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-amber-600">{pendingOperations.length}</p>
-            <p className="text-sm text-muted-foreground">Pending</p>
+        {/* Queue Statistics - only show if there are operations */}
+        {queueCount > 0 && (
+          <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-amber-600">{pendingOperations.length}</p>
+              <p className="text-sm text-muted-foreground">Pending</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-green-600">{completedOperations.length}</p>
+              <p className="text-sm text-muted-foreground">Completed</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-red-600">{failedOperations.length}</p>
+              <p className="text-sm text-muted-foreground">Failed</p>
+            </div>
           </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-green-600">{completedOperations.length}</p>
-            <p className="text-sm text-muted-foreground">Completed</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-red-600">{failedOperations.length}</p>
-            <p className="text-sm text-muted-foreground">Failed</p>
-          </div>
-        </div>
+        )}
 
-        {/* Queue Actions */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button
-            onClick={handleManualSync}
-            disabled={isManualSyncing || state.isSyncing || !state.isOnline || !isEmailVerified || pendingOperations.length === 0}
-            className="flex-1"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isManualSyncing || state.isSyncing ? 'animate-spin' : ''}`} />
-            {isManualSyncing || state.isSyncing ? 'Syncing...' : 'Sync Now'}
-          </Button>
-          
-          <Button
-            variant="outline"
-            onClick={handleClearCompleted}
-            disabled={completedOperations.length === 0}
-            className="flex-1"
-          >
-            Clear Completed
-          </Button>
-        </div>
+        {/* Queue Actions - only show if user has unverified email and operations */}
+        {!isEmailVerified && queueCount > 0 && (
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              onClick={handleManualSync}
+              disabled={isManualSyncing || state.isSyncing || isEmailVerified || pendingOperations.length === 0}
+              className="flex-1"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isManualSyncing || state.isSyncing ? 'animate-spin' : ''}`} />
+              {isManualSyncing || state.isSyncing ? 'Syncing...' : 'Verify Email to Sync'}
+            </Button>
 
-        {/* Sync Information */}
-        {shouldUseQueue && (
+            <Button
+              variant="outline"
+              onClick={handleClearCompleted}
+              disabled={completedOperations.length === 0}
+              className="flex-1"
+            >
+              Clear Completed
+            </Button>
+          </div>
+        )}
+
+        {/* Sync Information - only for unverified users with queued operations */}
+        {!isEmailVerified && queueCount > 0 && (
           <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <p className="text-sm text-blue-800 dark:text-blue-200">
-              {!isEmailVerified && "Your changes are being queued until email verification is complete. "}
-              {!state.isOnline && "You're offline. Changes will sync when connection is restored. "}
-              {queueCount > 0 && `You have ${queueCount} change${queueCount !== 1 ? 's' : ''} waiting to be synced.`}
+              You have {queueCount} change{queueCount !== 1 ? 's' : ''} waiting to be synced.
+              Verify your email address to sync these changes.
             </p>
           </div>
         )}

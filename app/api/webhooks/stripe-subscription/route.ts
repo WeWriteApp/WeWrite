@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
-import { doc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/stripeConfig';
 import { TokenService } from '../../../services/tokenService';
@@ -102,7 +102,10 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
     // Update subscription in Firestore
     const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
-    await updateDoc(subscriptionRef, {
+
+    // Check if subscription document exists
+    const subscriptionDoc = await getDoc(subscriptionRef);
+    const subscriptionData = {
       stripeSubscriptionId: subscription.id,
       stripePriceId: price.id,
       status: subscription.status,
@@ -113,7 +116,20 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
       updatedAt: serverTimestamp(),
-    });
+    };
+
+    if (subscriptionDoc.exists()) {
+      await updateDoc(subscriptionRef, subscriptionData);
+    } else {
+      // Create the subscription document if it doesn't exist
+      await setDoc(subscriptionRef, {
+        id: 'current',
+        userId,
+        ...subscriptionData,
+        createdAt: serverTimestamp(),
+      });
+      console.log(`Created subscription document for user ${userId} via webhook`);
+    }
 
     // Update user's token allocation
     if (subscription.status === 'active') {

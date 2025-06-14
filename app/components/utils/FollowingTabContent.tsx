@@ -17,8 +17,6 @@ interface FollowingTabContentProps {
  * Displays both followed users and followed pages in a tabbed interface
  */
 export default function FollowingTabContent({ userId, isCurrentUser }: FollowingTabContentProps) {
-  const [activeTab, setActiveTab] = useState<string>('users');
-
   // Privacy restriction: Only allow the current user to see their following list
   if (!isCurrentUser) {
     return (
@@ -47,7 +45,7 @@ export default function FollowingTabContent({ userId, isCurrentUser }: Following
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs defaultValue="users" urlNavigation="hash" className="w-full">
         <TabsList className="grid grid-cols-2 mb-4">
           <TabsTrigger value="users" className="flex items-center gap-1.5">
             <Users className="h-4 w-4" />

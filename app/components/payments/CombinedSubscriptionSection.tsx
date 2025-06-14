@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import Link from 'next/link';
-import { listenToUserPledges } from '../../firebase/subscription';
+import { listenToUserPledges, listenToUserSubscription } from '../../firebase/subscription';
 import { getDocById } from '../../firebase/database';
 import { PaymentMethodSetup } from './PaymentMethodSetup';
 
@@ -79,9 +79,16 @@ export function CombinedSubscriptionSection() {
   // CRITICAL: All hooks must be called before any early returns
   useEffect(() => {
     if (user?.uid && isPaymentsEnabled) {
-      fetchSubscription();
+      const unsubscribeSubscription = setupSubscriptionListener();
       fetchPaymentMethods();
       fetchPledges();
+
+      // Cleanup function
+      return () => {
+        if (unsubscribeSubscription) {
+          unsubscribeSubscription();
+        }
+      };
     }
   }, [user, isPaymentsEnabled]);
 
@@ -91,32 +98,31 @@ export function CombinedSubscriptionSection() {
     return null;
   }
 
-  const fetchSubscription = async () => {
+  const setupSubscriptionListener = () => {
     try {
       setSubscriptionLoading(true);
       setSubscriptionError(null);
 
-      const response = await fetch('/api/account-subscription');
-      if (response.ok) {
-        const data = await response.json();
-
-
-        // API returns { status: null } when no subscription, or subscription object when exists
-        if (data.status === null) {
-          setSubscription(null);
-        } else if (data.status && data.amount !== undefined) {
-          setSubscription(data);
-        } else {
-          setSubscription(null);
+      // Set up real-time listener for subscription changes
+      const unsubscribe = listenToUserSubscription(user.uid, (subscriptionData) => {
+        try {
+          setSubscriptionError(null);
+          setSubscription(subscriptionData);
+        } catch (error) {
+          console.error('Error processing subscription:', error);
+          setSubscriptionError('Failed to load subscription details');
+        } finally {
+          setSubscriptionLoading(false);
         }
-      } else {
-        const errorData = await response.json();
-        setSubscriptionError(errorData.error || 'Failed to load subscription');
-      }
+      }, { verbose: process.env.NODE_ENV === 'development' });
+
+      // Store unsubscribe function for cleanup
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
     } catch (error) {
-      console.error('Error fetching subscription:', error);
+      console.error('Error setting up subscription listener:', error);
       setSubscriptionError('Failed to load subscription');
-    } finally {
       setSubscriptionLoading(false);
     }
   };
@@ -259,7 +265,7 @@ export function CombinedSubscriptionSection() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="overview" className="space-y-4">
+        <Tabs defaultValue="overview" urlNavigation="hash" className="space-y-4">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="payment-methods">Payment Methods</TabsTrigger>

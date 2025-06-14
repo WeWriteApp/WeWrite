@@ -9,17 +9,18 @@
  */
 
 import { loadStripe } from '@stripe/stripe-js';
-import { 
-  doc, 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
-  collection, 
-  query, 
-  where, 
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  collection,
+  query,
+  where,
   getDocs,
-  serverTimestamp 
+  serverTimestamp
 } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { db } from '../firebase/config';
 import { TokenService } from './tokenService';
 import { 
@@ -29,7 +30,7 @@ import {
   validateCustomAmount,
   calculateTokensForAmount 
 } from '../utils/subscriptionTiers';
-import { useWeWriteAnalytics } from '../hooks/useWeWriteAnalytics';
+// import { getAnalyticsService } from '../utils/analytics-service';
 
 // Types
 export interface SubscriptionData {
@@ -111,11 +112,21 @@ export class SubscriptionService {
       // Calculate tokens
       const tokens = calculateTokensForAmount(amount);
 
+      // Get authentication token
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) {
+        return { error: 'User not authenticated' };
+      }
+
+      const token = await user.getIdToken();
+
       // Create checkout session via API
       const response = await fetch('/api/subscription/create-checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           userId,
@@ -136,10 +147,10 @@ export class SubscriptionService {
       const sessionData = await response.json();
       
       // Track analytics
-      if (typeof window !== 'undefined') {
-        const analytics = useWeWriteAnalytics();
-        analytics.trackSubscriptionInitiated(tier, amount, tokens);
-      }
+      // if (typeof window !== 'undefined') {
+      //   const analytics = getAnalyticsService();
+      //   analytics.trackSubscriptionInitiated(tier, amount, tokens);
+      // }
 
       return {
         sessionId: sessionData.sessionId,
@@ -251,11 +262,21 @@ export class SubscriptionService {
         return { success: false, error: 'No active subscription found' };
       }
 
+      // Get authentication token
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      const token = await user.getIdToken();
+
       // Cancel via API
       const response = await fetch('/api/subscription/cancel', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           userId,
@@ -276,10 +297,10 @@ export class SubscriptionService {
       });
 
       // Track analytics
-      if (typeof window !== 'undefined') {
-        const analytics = useWeWriteAnalytics();
-        analytics.trackSubscriptionCancelled(subscription.tier, subscription.amount);
-      }
+      // if (typeof window !== 'undefined') {
+      //   const analytics = getAnalyticsService();
+      //   analytics.trackSubscriptionCancelled(subscription.tier, subscription.amount);
+      // }
 
       return { success: true };
 
@@ -324,11 +345,21 @@ export class SubscriptionService {
         amount = tierData.amount;
       }
 
+      // Get authentication token
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      const token = await user.getIdToken();
+
       // Update via API
       const response = await fetch('/api/subscription/update', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           userId,
@@ -347,15 +378,15 @@ export class SubscriptionService {
       await TokenService.updateMonthlyTokenAllocation(userId, amount);
 
       // Track analytics
-      if (typeof window !== 'undefined') {
-        const analytics = useWeWriteAnalytics();
-        analytics.trackSubscriptionUpdated(
-          currentSubscription.tier,
-          newTier,
-          currentSubscription.amount,
-          amount
-        );
-      }
+      // if (typeof window !== 'undefined') {
+      //   const analytics = getAnalyticsService();
+      //   analytics.trackFeatureEvent('subscription_updated', {
+      //     previous_tier: currentSubscription.tier,
+      //     new_tier: newTier,
+      //     previous_amount: currentSubscription.amount,
+      //     new_amount: amount
+      //   });
+      // }
 
       return { success: true };
 
@@ -366,14 +397,61 @@ export class SubscriptionService {
   }
 
   /**
+   * Force sync subscription status from Stripe
+   */
+  static async syncSubscriptionStatus(userId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get authentication token
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      const token = await user.getIdToken();
+
+      const response = await fetch('/api/subscription/sync-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { success: false, error: errorData.error || 'Failed to sync subscription status' };
+      }
+
+      const result = await response.json();
+      return { success: true };
+
+    } catch (error) {
+      console.error('Error syncing subscription status:', error);
+      return { success: false, error: 'Failed to sync subscription status' };
+    }
+  }
+
+  /**
    * Create customer portal session
    */
   static async createPortalSession(userId: string): Promise<{ url?: string; error?: string }> {
     try {
+      // Get authentication token
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) {
+        return { error: 'User not authenticated' };
+      }
+
+      const token = await user.getIdToken();
+
       const response = await fetch('/api/subscription/portal', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ userId }),
       });

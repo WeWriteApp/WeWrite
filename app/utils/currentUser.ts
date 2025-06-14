@@ -36,7 +36,6 @@ export const getCurrentUser = (): UserData | null => {
   try {
     // First check if we have a Firebase auth user
     if (auth.currentUser) {
-      console.log('Using Firebase auth user:', auth.currentUser.email);
       return {
         uid: auth.currentUser.uid,
         email: auth.currentUser.email,
@@ -57,7 +56,6 @@ export const getCurrentUser = (): UserData | null => {
           const accounts = JSON.parse(accountsJson);
           const account = accounts.find(acc => acc.uid === wewriteUserId);
           if (account) {
-            console.log('Using wewrite_accounts sessionStorage data:', account.email);
             return account;
           }
         } catch (e) {
@@ -71,7 +69,6 @@ export const getCurrentUser = (): UserData | null => {
     if (userSessionCookie) {
       try {
         const userData = JSON.parse(userSessionCookie);
-        console.log('Using session cookie user:', userData.email);
         return userData;
       } catch (e) {
         console.error('Error parsing user session cookie:', e);
@@ -83,7 +80,6 @@ export const getCurrentUser = (): UserData | null => {
     if (switchToAccount) {
       try {
         const accountData = JSON.parse(switchToAccount);
-        console.log('Using switchToAccount data:', accountData.email);
         return accountData;
       } catch (e) {
         console.error('Error parsing switchToAccount data:', e);
@@ -95,7 +91,6 @@ export const getCurrentUser = (): UserData | null => {
     if (previousUserSession) {
       try {
         const sessionData = JSON.parse(previousUserSession);
-        console.log('Using previousUserSession data:', sessionData.email);
         return sessionData;
       } catch (e) {
         console.error('Error parsing previousUserSession data:', e);
@@ -105,14 +100,12 @@ export const getCurrentUser = (): UserData | null => {
     console.error('Error getting current user:', error);
   }
 
-  console.log('No user found in any source');
   return null;
 };
 
 // Set the current user in all storage mechanisms
 export const setCurrentUser = (user: UserData | null): void => {
   if (!user) {
-    console.log('Clearing all user data');
     Cookies.remove('userSession');
     Cookies.remove('authenticated');
     Cookies.remove('session'); // Remove Firebase auth token
@@ -120,8 +113,6 @@ export const setCurrentUser = (user: UserData | null): void => {
     localStorage.removeItem('accountSwitchInProgress');
     return;
   }
-
-  console.log('Setting current user:', user.email);
 
   // Set the authenticated cookie
   Cookies.set('authenticated', 'true', { expires: 7 });
@@ -150,7 +141,6 @@ export const setCurrentUser = (user: UserData | null): void => {
 
   // We'll no longer try to set the auth token directly to avoid browser extension issues
   // Instead, we'll just set the authenticated cookie
-  console.log('Setting authenticated cookie');
   Cookies.set('authenticated', 'true', { expires: 7 });
 
   // Update saved accounts to ensure only this one is current
@@ -207,15 +197,7 @@ export const isAuthenticated = (): boolean => {
   const wewriteUserIdCookie = !!Cookies.get('wewrite_user_id');
   const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
 
-  console.log('Auth check:', {
-    firebaseAuth,
-    sessionUser,
-    authenticatedCookie,
-    wewriteAuthenticatedCookie,
-    sessionCookie,
-    wewriteUserIdCookie,
-    hasWewriteAccounts: !!wewriteAccounts
-  });
+
 
   return firebaseAuth ||
          sessionUser ||
@@ -232,7 +214,6 @@ export const getCurrentUserToken = async (): Promise<string> => {
     if (auth.currentUser) {
       try {
         const token = await auth.currentUser.getIdToken(true);
-        console.log('Got token from Firebase auth');
         return token;
       } catch (e) {
         console.error('Error getting Firebase token:', e);
@@ -242,8 +223,6 @@ export const getCurrentUserToken = async (): Promise<string> => {
     } else {
       // If we don't have a Firebase auth user, we'll use session-based auth
       // This avoids trying to access tokens directly which can trigger browser extension security measures
-      console.log('No Firebase auth user, using session-based auth');
-
       // Return a placeholder token to indicate we're using session-based auth
       return 'session-auth';
     }
@@ -251,7 +230,6 @@ export const getCurrentUserToken = async (): Promise<string> => {
     console.error('Error getting current user token:', error);
   }
 
-  console.log('Using session-based auth as fallback');
   // Return a placeholder token to indicate we're using session-based auth
   return "session-auth";
 };

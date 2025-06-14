@@ -38,12 +38,12 @@ export function SubscriptionOverview() {
         setError(null);
         setSubscription(subscriptionData);
       } catch (error) {
-        console.error('Error processing subscription:', error);
+        console.error('SubscriptionOverview: Error processing subscription:', error);
         setError('Failed to load subscription details');
       } finally {
         setLoading(false);
       }
-    });
+    }, { verbose: process.env.NODE_ENV === 'development' });
 
     return () => {
       if (unsubscribe) unsubscribe();
@@ -103,9 +103,27 @@ export function SubscriptionOverview() {
   };
 
   const availableAmount = subscription ? (subscription.amount - (subscription.pledgedAmount || 0)) : 0;
-  const nextBillingDate = subscription?.currentPeriodEnd 
-    ? new Date(subscription.currentPeriodEnd.seconds * 1000).toLocaleDateString()
-    : null;
+
+  // Handle different date formats for currentPeriodEnd
+  const getNextBillingDate = () => {
+    if (!subscription?.currentPeriodEnd) return null;
+
+    let date: Date;
+    if (subscription.currentPeriodEnd.seconds) {
+      // Firestore Timestamp format
+      date = new Date(subscription.currentPeriodEnd.seconds * 1000);
+    } else if (typeof subscription.currentPeriodEnd === 'string') {
+      // ISO string format
+      date = new Date(subscription.currentPeriodEnd);
+    } else {
+      // Direct Date object
+      date = new Date(subscription.currentPeriodEnd);
+    }
+
+    return date.toLocaleDateString();
+  };
+
+  const nextBillingDate = getNextBillingDate();
 
   if (loading) {
     return (
@@ -152,7 +170,7 @@ export function SubscriptionOverview() {
               Start a subscription to support pages and access premium features.
             </p>
             <Button asChild>
-              <Link href="/subscription">
+              <Link href="/settings/subscription">
                 Start Subscription
               </Link>
             </Button>
@@ -169,7 +187,12 @@ export function SubscriptionOverview() {
                 <p className="text-2xl font-bold">{formatCurrency(subscription.amount)}</p>
                 {nextBillingDate && (
                   <p className="text-sm text-muted-foreground">
-                    Next billing: {nextBillingDate}
+                    {subscription.status === 'active' || subscription.status === 'trialing'
+                      ? `Next billing: ${nextBillingDate}`
+                      : subscription.status === 'canceled' || subscription.status === 'cancelled'
+                      ? `Ends: ${nextBillingDate}`
+                      : `Next billing: ${nextBillingDate}`
+                    }
                   </p>
                 )}
               </div>

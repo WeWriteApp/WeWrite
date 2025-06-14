@@ -109,10 +109,10 @@ export const getBatchUserData = async (userIds: string[]): Promise<Record<string
       
       const usersSnapshot = await getDocs(usersQuery);
       
-      // Fetch subscription data in parallel
+      // Fetch subscription data in parallel using correct path
       const subscriptionPromises = batch.map(async (userId) => {
         try {
-          const subDoc = await getDoc(doc(db, 'subscriptions', userId));
+          const subDoc = await getDoc(doc(db, 'users', userId, 'subscription', 'current'));
           return {
             userId,
             subscription: subDoc.exists() ? subDoc.data() : null

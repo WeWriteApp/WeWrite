@@ -38,7 +38,7 @@ export default function MobileBottomNav() {
     // Exclude known static routes like /user, /group, /new, etc.
     const staticRoutes = [
       '/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
-      '/login', '/signup', '/subscription', '/settings', '/privacy', '/terms'
+      '/login', '/signup', '/settings', '/privacy', '/terms'
     ];
 
     // Check if it's a static route

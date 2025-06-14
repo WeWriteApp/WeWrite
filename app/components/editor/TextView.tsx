@@ -59,6 +59,7 @@ import { useAuth } from "../../providers/AuthProvider";
 import { isExternalLink } from "../../utils/linkFormatters";
 import { validateLink, getLinkDisplayText, extractPageIdFromUrl } from '../../utils/linkValidator';
 import { Button } from "../ui/button";
+import { usePillStyle } from "../../contexts/PillStyleContext";
 import { ExternalLink, Edit2 } from "lucide-react";
 import Modal from "../ui/modal";
 import { useControlledAnimation } from "../../hooks/useControlledAnimation";
@@ -485,11 +486,12 @@ const TextView: React.FC<TextViewProps> = ({
   }, [parsedContents, isInitialLoad, onRenderComplete, handlePostRender, effectiveMode]);
 
   const getViewModeStyles = () => {
-    // Use the effective mode for styling
+    // Use unified styling for consistency with edit mode
+    // Remove space-y-* classes to let CSS handle spacing via margin-bottom
     if (effectiveMode === LINE_MODES.DENSE) {
-      return 'space-y-0 dense-mode'; // No spacing between paragraphs for dense mode
+      return 'dense-mode'; // No spacing between paragraphs for dense mode
     } else {
-      return 'space-y-0 normal-mode'; // Normal mode with inline paragraph numbers
+      return 'normal-mode'; // Normal mode with CSS-controlled spacing
     }
   };
 
@@ -594,15 +596,15 @@ const TextView: React.FC<TextViewProps> = ({
     }
 
     return (
-      <div className="relative">
+      <div className="page-content unified-editor relative rounded-lg bg-background w-full max-w-none">
         <div
           className={`flex flex-col ${getViewModeStyles()} w-full text-left ${
             isScrolled ? 'pb-16' : ''
           } ${
             canEdit ? 'relative cursor-text' : 'relative'
-          } min-h-screen ${
+          } min-h-[400px] ${
             canEdit && isHovering ? 'bg-muted/20' : ''
-          } transition-colors duration-150`}
+          } transition-colors duration-150 outline-none page-editor-stable box-border`}
           onClick={handleContentClick}
           onMouseEnter={(e) => {
             // Only show hover effects for users with edit permissions
@@ -731,9 +733,9 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
     // For array of nodes (multiple paragraphs)
     if (Array.isArray(contents)) {
       return (
-        <div className="relative min-h-screen">
+        <div className="relative min-h-[400px]">
           <div className="prose max-w-full">
-            <p className="text-foreground leading-normal text-base">
+            <p className="unified-text-content text-foreground">
               {contents.map((node, index) => {
                 if (!loadedParagraphs.includes(index)) return null;
 
@@ -858,7 +860,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
   // If it's an array, map through and render each node
   if (Array.isArray(contents)) {
     return (
-      <div className="w-full text-left min-h-screen">
+      <div className="w-full text-left">
         {contents.map((node, index) => (
           <React.Fragment key={index}>
             {loadedParagraphs.includes(index) && renderNode(node, mode, index, canEdit, activeLineIndex, onActiveLine, showDiff, isEditing)}
@@ -1037,44 +1039,37 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
     return null;
   };
 
-  // WYSIWYG mode - consistent with edit mode styling
+  // WYSIWYG mode - pixel-perfect match with edit mode styling
   return (
-    <motion.div
+    <div
       ref={paragraphRef}
       id={`paragraph-${index + 1}`}
-      className={`group relative ${canEdit ? 'cursor-text hover:bg-muted/30 active:bg-muted/50 transition-colors duration-150' : ''} ${isActive ? 'bg-[var(--active-line-highlight)]' : ''}`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{
-        duration: 0.2,
-        ease: "easeOut"
-      }}
+      className={`unified-paragraph group relative transition-all duration-150 ${
+        canEdit ? 'cursor-text hover:bg-muted/30 active:bg-muted/50' : ''
+      } ${
+        isActive ? 'bg-[var(--active-line-highlight)]' : ''
+      } ${
+        isEditing ? 'editing-mode' : ''
+      }`}
       onClick={handleClick}
       onMouseEnter={() => canEdit && setLineHovered(true)}
       onMouseLeave={() => setLineHovered(false)}
       title={canEdit ? "Click to edit" : ""}
     >
-      {/* Paragraph with inline number at beginning */}
-      <div className="paragraph-with-number py-1.5 flex items-baseline">
-        {/* Paragraph number - fixed width for consistent alignment */}
+      {/* Paragraph content with identical structure to edit mode */}
+      <div className="flex items-baseline w-full">
+        {/* Paragraph number - positioned identically to edit mode pseudo-element */}
         <span
-          className="paragraph-number-inline select-none flex-shrink-0"
+          className="unified-paragraph-number select-none flex-shrink-0"
           data-paragraph-index={index + 1}
           aria-hidden="true"
-          style={{
-            minWidth: '0.75rem',
-            textAlign: 'right',
-            marginRight: '0.25rem',
-            fontSize: '0.75rem',
-            lineHeight: '1.5'
-          }}
         >{index + 1}</span>
 
-        {/* Paragraph content with proper text wrapping */}
-        <p className="flex-grow text-left text-base leading-6 break-words">
+        {/* Paragraph content with unified styling - matches edit mode exactly */}
+        <div className="unified-text-content flex-grow">
           {node.children && node.children.map((child, i) => renderChild(child, i))}
           {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
-        </p>
+        </div>
 
         {/* Edit icon - positioned on the right side */}
         {canEdit && (
@@ -1096,7 +1091,7 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
           />
         )}
       </div>
-    </motion.div>
+    </div>
   );
 };
 
@@ -1237,7 +1232,6 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
       }
       // If we found custom text and it's not just the default "Link", use it
       if (customText.trim() && customText !== 'Link' && customText !== 'Page Link') {
-        console.log('CUSTOM_TEXT_DEBUG: Found custom text in children:', customText);
         return customText.trim();
       }
     }
@@ -1331,23 +1325,29 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
       // Ensure href is properly formatted for internal links
       const formattedHref = href.startsWith('/') ? href : `/pages/${pageId}`;
 
+      // Use PillStyleContext for consistent styling between edit and view modes
+      const { getPillStyleClasses } = usePillStyle();
+      const pillStyles = getPillStyleClasses();
+
       // Handle edit mode vs view mode click behavior
       if (canEdit && isEditing) {
         // In edit mode, clicking should open the link editor
+        // Use the same pill styling as view mode for consistency
         return (
           <span className="inline-flex items-center gap-1 compound-link-container">
             {/* Page title portion - clickable for editing */}
-            <span
-              className="inline-block cursor-pointer"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                // TODO: Open link editor for this link
-                console.log('Edit mode: Open link editor for compound link');
-              }}
-            >
-              <span className="inline-flex items-center px-2 py-1 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/80 transition-colors">
-                {pageTitleText}
+            <span className="inline-block">
+              <span
+                className={`${pillStyles} cursor-pointer page-link page-portion`}
+                data-page-id={pageId}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  // TODO: Open link editor for this link
+                  console.log('Edit mode: Open link editor for compound link');
+                }}
+              >
+                <span className="pill-text">{pageTitleText}</span>
               </span>
             </span>
 
@@ -1355,17 +1355,17 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
             <span className="text-muted-foreground text-sm">by</span>
 
             {/* Author username portion - clickable for editing */}
-            <span
-              className="inline-block cursor-pointer"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                // TODO: Open link editor for this link
-                console.log('Edit mode: Open link editor for compound link');
-              }}
-            >
-              <span className="inline-flex items-center px-2 py-1 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/80 transition-colors">
-                {cleanUsername}
+            <span className="inline-block">
+              <span
+                className={`${pillStyles} cursor-pointer user-link author-portion`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  // TODO: Open link editor for this link
+                  console.log('Edit mode: Open link editor for compound link');
+                }}
+              >
+                <span className="pill-text">{cleanUsername}</span>
               </span>
             </span>
           </span>
@@ -1537,21 +1537,26 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
     displayText = "Link";
   }
 
+  // Use PillStyleContext for consistent styling between edit and view modes
+  const { getPillStyleClasses } = usePillStyle();
+  const pillStyles = getPillStyleClasses();
+
   // Handle edit mode vs view mode click behavior for other links
   if (canEdit && isEditing) {
     // In edit mode, clicking should open the link editor
+    // Use the same pill styling as view mode for consistency
     return (
-      <span
-        className="inline-block cursor-pointer"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          // TODO: Open link editor for this link
-          console.log('Edit mode: Open link editor for special link');
-        }}
-      >
-        <span className="inline-flex items-center px-2 py-1 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/80 transition-colors">
-          {displayText}
+      <span className="inline-block">
+        <span
+          className={`${pillStyles} cursor-pointer special-link`}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // TODO: Open link editor for this link
+            console.log('Edit mode: Open link editor for special link');
+          }}
+        >
+          <span className="pill-text">{displayText}</span>
         </span>
       </span>
     );
@@ -1674,24 +1679,30 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle, s
     textToDisplay = fallbackText;
   }
 
+  // Use PillStyleContext for consistent styling between edit and view modes
+  const { getPillStyleClasses } = usePillStyle();
+  const pillStyles = getPillStyleClasses();
+
   // Handle edit mode vs view mode click behavior
   if (canEdit && isEditing) {
     // In edit mode, clicking should open the link editor
+    // Use the same pill styling as view mode for consistency
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <span
-              className="inline-block cursor-pointer"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                // TODO: Open link editor for this link
-                console.log('Edit mode: Open link editor for single link');
-              }}
-            >
-              <span className="inline-flex items-center px-2 py-1 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/80 transition-colors">
-                {textToDisplay}
+            <span className="inline-block">
+              <span
+                className={`${pillStyles} cursor-pointer page-link`}
+                data-page-id={pageId}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  // TODO: Open link editor for this link
+                  console.log('Edit mode: Open link editor for single link');
+                }}
+              >
+                <span className="pill-text">{textToDisplay}</span>
               </span>
             </span>
           </TooltipTrigger>

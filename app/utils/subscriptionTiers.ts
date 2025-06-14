@@ -27,7 +27,7 @@ export interface CustomTierConfig {
   tokensPerDollar: number;
 }
 
-// Standard subscription tiers
+// Standard subscription tiers - exactly 3 tiers as specified
 export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
   {
     id: 'tier1',
@@ -44,27 +44,27 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
   },
   {
     id: 'tier2',
-    name: 'Advocate',
-    description: 'Boost your support with 200 tokens monthly',
+    name: 'Enthusiast',
+    description: 'Double your support with 200 tokens monthly',
     amount: 20,
     tokens: 200,
     features: [
       '200 tokens per month',
       'Enhanced creator support',
-      'Priority allocation',
-      'Detailed analytics',
-      'Early access to features'
+      'Allocation dashboard',
+      'Monthly distribution reports',
+      'Priority support'
     ],
     popular: true
   },
   {
     id: 'tier3',
     name: 'Champion',
-    description: 'Maximum impact with 500 tokens monthly',
+    description: 'Maximum impact with 500+ tokens monthly',
     amount: 50,
     tokens: 500,
     features: [
-      '500 tokens per month',
+      '500+ tokens per month',
       'Maximum creator support',
       'Advanced allocation tools',
       'Premium analytics',
@@ -76,7 +76,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
 
 // Custom tier configuration
 export const CUSTOM_TIER_CONFIG: CustomTierConfig = {
-  minAmount: 60, // Minimum for custom tier (above tier3)
+  minAmount: 60, // Minimum for custom tier (starts at $60)
   maxAmount: 1000, // Maximum monthly subscription
   tokensPerDollar: 10 // Token conversion rate
 };
@@ -134,26 +134,13 @@ export const validateCustomAmount = (amount: number): { valid: boolean; error?: 
 };
 
 /**
- * Get all available tiers including custom option
+ * Get all available tiers
  */
 export const getAllTiers = (): (SubscriptionTier & { isCustom?: boolean })[] => {
-  return [
-    ...SUBSCRIPTION_TIERS,
-    {
-      id: 'custom',
-      name: 'Custom',
-      description: `Choose your own amount ($${CUSTOM_TIER_CONFIG.minAmount}+)`,
-      amount: CUSTOM_TIER_CONFIG.minAmount,
-      tokens: calculateTokensForAmount(CUSTOM_TIER_CONFIG.minAmount),
-      features: [
-        'Custom token allocation',
-        'Flexible monthly support',
-        'All premium features',
-        'Maximum creator impact'
-      ],
-      isCustom: true
-    }
-  ];
+  return SUBSCRIPTION_TIERS.map(tier => ({
+    ...tier,
+    isCustom: tier.id === 'custom'
+  }));
 };
 
 /**

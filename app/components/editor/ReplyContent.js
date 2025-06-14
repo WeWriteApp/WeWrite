@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import ReplyEditor from './ReplyEditor';
+import Editor from './Editor';
 import { prepareReplyContent, validateReplyContent } from "../../utils/replyManager';
-// Note: We"re using the centralized styles from editor-styles.css
-// which is imported by ReplyEditor
+// Note: We're using the centralized styles from editor-styles.css
+// which is imported by Editor
 
 /**
  * ReplyContent Component
@@ -138,11 +138,11 @@ export default function ReplyContent({
           white-space: nowrap !important;
         }
       ` }} />
-      <ReplyEditor
+      <Editor
         initialContent={content}
-        onContentChange={handleContentChange}
-        onSave={onSave}
-        onDiscard={onCancel}
+        onChange={handleContentChange}
+        placeholder="Continue your reply..."
+        contentType="wiki"
       />
     </div>
   );

@@ -87,6 +87,12 @@
   /* Internal padding reduced to p-2 (8px) for better visual balance */
 }
 
+/* Seamless view/edit mode transitions - now handled by unified styling in editor-styles.css */
+.page-editor-stable,
+[data-slate-editor] {
+  box-sizing: border-box;
+}
+
 /* Make sure the editor content is visible */
 .editable-container {
   min-height: 200px;
@@ -1094,15 +1100,7 @@ body {
   max-width: calc(100vw - 6rem); /* Account for paragraph number and margins with generous space */
 }
 
-/* Ensure proper text contrast in pill links */
-.bg-primary {
-  color: #ffffff !important; /* Force white text for all primary backgrounds */
-}
-
-/* Force white text for all pill links with primary background */
-a[class*="bg-primary"], button[class*="bg-primary"], div[class*="bg-primary"] {
-  color: #ffffff !important;
-}
+/* Text contrast is now handled by PillStyleContext - removed conflicting rules */
 
 /* Ensure outline pills use the accent color for text */
 a.bg-transparent, button.bg-transparent, div.bg-transparent {

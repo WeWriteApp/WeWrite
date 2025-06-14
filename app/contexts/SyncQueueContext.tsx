@@ -1,11 +1,11 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { 
-  SyncQueueState, 
-  getSyncQueueState, 
-  getQueueCount, 
-  triggerManualSync, 
+import {
+  SyncQueueState,
+  getSyncQueueState,
+  getQueueCount,
+  triggerManualSync,
   initializeSyncQueue,
   isEmailVerified,
   shouldUseQueue

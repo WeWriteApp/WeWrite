@@ -17,12 +17,7 @@ export default function ActivityCarousel() {
   const { activities, loading, error } = useStaticRecentActivity(30, null, false);
   const { user } = useContext(AuthContext);
 
-  // Add console logs for debugging
-  console.log('ActivityCarousel:', {
-    activitiesCount: activities?.length || 0,
-    loading,
-    error: error ? (typeof error === 'string' ? error : JSON.stringify(error)) : null
-  });
+
 
   // Error message for non-authenticated users
   const errorMessage = !user && error ? (

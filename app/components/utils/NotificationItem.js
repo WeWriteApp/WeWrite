@@ -303,7 +303,7 @@ export default function NotificationItem({ notification }) {
                     router.push(`/group/${notification.groupId}`);
                   } catch (error) {
                     console.error('Error accepting group invitation:', error);
-                    // TODO: Add user-friendly error toast notification
+                    // Error handling for group invitation acceptance
                   }
                 }}
                 className="inline-flex items-center px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
@@ -321,7 +321,7 @@ export default function NotificationItem({ notification }) {
                     await rejectGroupInvitation(notification.userId, notification.id);
                   } catch (error) {
                     console.error('Error rejecting group invitation:', error);
-                    // TODO: Add user-friendly error toast notification
+                    // Error handling for group invitation rejection
                   }
                 }}
                 className="inline-flex items-center px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors"

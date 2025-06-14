@@ -438,7 +438,6 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
 
             // Skip activities with missing or null usernames
             if (!activity.username || activity.username === "Missing username" || activity.username === "Anonymous") {
-              console.log(`Filtering out activity with missing username: ${activity.pageId}`);
               return false;
             }
 
@@ -492,13 +491,11 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
 
   useEffect(() => {
     // Fetch data
-    console.log(`useHomeRecentActivity effect triggered with followedOnly=${followedOnly}, mineOnly=${mineOnly}`);
     fetchRecentActivity();
 
     // Cleanup function
     return () => {
       // If component unmounts while fetching, mark as not fetching
-      console.log('useHomeRecentActivity cleanup - marking as not fetching');
       isFetchingRef.current = false;
     };
   }, [followedOnly, mineOnly]); // Re-run when followedOnly or mineOnly changes

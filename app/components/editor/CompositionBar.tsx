@@ -89,18 +89,7 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
     return acc;
   }, {} as Record<string, OtherPledge[]>);
 
-  // For debugging
-  console.log("CompositionBar rendering:", {
-    pledges: pledges.map(p => ({id: p.id, amount: p.amount})),
-    totalSpending,
-    subscriptionAmount,
-    isExceeded,
-    percentages: pledges.map(p => ({
-      pledgeId: p.id,
-      pledgeAmount: Number(p.amount || 0),
-      percentage: calculatePercentage(Number(p.amount || 0), max)
-    }))
-  });
+
 
   return (
     <div className={cn("w-full relative cursor-pointer", className)} onClick={() => onPledgeChange && onPledgeChange(pledges[0]?.id || '', 0)}>
