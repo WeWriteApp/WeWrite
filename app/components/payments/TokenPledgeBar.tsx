@@ -45,9 +45,14 @@ const TokenPledgeBar: React.FC<TokenPledgeBarProps> = ({
   const router = useRouter();
   const { toast } = useToast();
   
-  // Feature flags
-  const isSubscriptionEnabled = useFeatureFlag('payments');
-  
+  // Feature flags - pass user info for proper override checking
+  const isSubscriptionEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('TokenPledgeBar: payments feature flag =', isSubscriptionEnabled, 'for user:', user?.email);
+  }, [isSubscriptionEnabled, user?.email]);
+
   // State management
   const [loading, setLoading] = useState(false);
   const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null);
@@ -142,10 +147,15 @@ const TokenPledgeBar: React.FC<TokenPledgeBarProps> = ({
 
   // Handle subscription activation
   const handleActivateSubscription = () => {
+    console.log('TokenPledgeBar: handleActivateSubscription called, isSubscriptionEnabled =', isSubscriptionEnabled);
     if (isSubscriptionEnabled) {
+      console.log('TokenPledgeBar: Opening subscription activation modal');
       setShowActivationModal(true);
+      setShowSupportUsModal(false);
     } else {
+      console.log('TokenPledgeBar: Opening support us modal');
       setShowSupportUsModal(true);
+      setShowActivationModal(false);
     }
   };
 
@@ -339,7 +349,10 @@ const TokenPledgeBar: React.FC<TokenPledgeBarProps> = ({
       {isMounted && createPortal(
         <SubscriptionActivationModal
           isOpen={showActivationModal}
-          onClose={() => setShowActivationModal(false)}
+          onClose={() => {
+            console.log('TokenPledgeBar: Closing subscription activation modal');
+            setShowActivationModal(false);
+          }}
           isSignedIn={!!user}
         />,
         document.body
@@ -348,7 +361,10 @@ const TokenPledgeBar: React.FC<TokenPledgeBarProps> = ({
       {isMounted && createPortal(
         <SupportUsModal
           isOpen={showSupportUsModal}
-          onClose={() => setShowSupportUsModal(false)}
+          onClose={() => {
+            console.log('TokenPledgeBar: Closing support us modal');
+            setShowSupportUsModal(false);
+          }}
         />,
         document.body
       )}
