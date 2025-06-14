@@ -118,7 +118,7 @@ a[data-user-id]::before {
   /* Layout properties - NEVER change these between modes */
   margin-bottom: 0.75rem;
   padding: 0.5rem;
-  /* CRITICAL: NO padding-left here - let content handle its own spacing */
+  padding-left: 2.5rem; /* CRITICAL: Space for paragraph number (0.5rem margin + 1rem number + 1rem gap) */
   box-sizing: border-box;
   min-height: 2.5rem;
   width: 100%;
@@ -197,24 +197,16 @@ a[data-user-id]::before {
 }
 
 /* Text content styling - IDENTICAL between modes */
-.unified-text-content,
-.editor-content.normal-mode > div {
-  /* CRITICAL: Identical padding for paragraph number space */
-  padding-left: 2rem; /* Space for paragraph number - IDENTICAL in both modes */
+.unified-text-content {
+  /* CRITICAL: NO additional padding - parent already has padding-left: 2.5rem */
   line-height: 1.5;
   margin: 0;
-  padding-top: 0;
-  padding-right: 0;
-  padding-bottom: 0;
+  padding: 0;
   font-size: 1rem;
   font-family: inherit;
   letter-spacing: normal;
   word-spacing: normal;
   box-sizing: border-box;
-}
-
-/* View mode specific styling */
-.unified-text-content {
   flex-grow: 1;
 }
 
@@ -282,7 +274,7 @@ a[data-user-id]::before {
   position: relative;
   margin-bottom: 0.75rem;
   padding: 0.5rem;
-  /* CRITICAL: NO padding-left here - handled by shared rule above */
+  padding-left: 2.5rem; /* CRITICAL: Must match .unified-paragraph exactly */
   box-sizing: border-box;
   min-height: 2.5rem;
   width: 100%;
