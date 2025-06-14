@@ -18,7 +18,7 @@ import UnsavedChangesDialog from "../components/utils/UnsavedChangesDialog";
 import { PageProvider } from "../contexts/PageContext";
 import { LineSettingsProvider } from "../contexts/LineSettingsContext";
 import SiteFooter from "../components/layout/SiteFooter";
-import PledgeBar from "../components/payments/PledgeBar";
+import TokenPledgeBar from "../components/payments/TokenPledgeBar";
 import { shouldUseQueue, addToQueue, checkOperationAllowed } from "../utils/syncQueue";
 import { useSyncQueue } from "../contexts/SyncQueueContext";
 import SlideUpPage from "../components/ui/slide-up-page";
@@ -612,7 +612,14 @@ export default function NewPage() {
           </div>
         </div>
         <SiteFooter className="" />
-        {!isEditing && <PledgeBar />}
+        {!isEditing && (
+          <TokenPledgeBar
+            pageId="new-page"
+            pageTitle="New Page"
+            authorId={user?.uid}
+            visible={false} // Don't show on new page creation
+          />
+        )}
       </Layout>
     </SlideUpPage>
   );

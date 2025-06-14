@@ -20,7 +20,7 @@ import PublicLayout from "../layout/PublicLayout";
 import PageHeader from "./PageHeader.tsx";
 import PageFooter from "./PageFooter";
 import SiteFooter from "../layout/SiteFooter";
-import PledgeBar from "../payments/PledgeBar";
+import TokenPledgeBar from "../payments/TokenPledgeBar";
 import RelatedPages from "../features/RelatedPages";
 // Import BacklinksSection with dynamic import to avoid SSR issues
 const BacklinksSection = dynamic(() => import("../features/BacklinksSection"), { ssr: false });
@@ -1522,7 +1522,13 @@ function SinglePageView({ params, initialEditMode = false }) {
         </LineSettingsProvider>
       </PageProvider>
       <SiteFooter />
-      {!isEditing && <PledgeBar />}
+      {!isEditing && (
+        <TokenPledgeBar
+          pageId={page.id}
+          pageTitle={page.title}
+          authorId={page.userId}
+        />
+      )}
 
 
     </Layout>

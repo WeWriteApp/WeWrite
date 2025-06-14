@@ -77,7 +77,7 @@ async function makeRequest(url, data) {
 async function processMonthlyPayouts() {
   try {
     console.log('📊 Processing monthly earnings and payouts...');
-    
+
     const response = await makeRequest(`${BASE_URL}/api/payouts/process-monthly`, {
       period,
       dryRun
@@ -85,10 +85,10 @@ async function processMonthlyPayouts() {
 
     if (response.status === 200) {
       const result = response.data;
-      
-      console.log('✅ Monthly processing completed successfully!');
+
+      console.log('✅ Monthly payout processing completed successfully!');
       console.log('');
-      console.log('📈 Results:');
+      console.log('📈 Payout Results:');
       console.log(`   Period: ${result.data.period}`);
       console.log(`   Pledges processed: ${result.data.pledgesProcessed}`);
       console.log(`   Earnings created: ${result.data.earningsCreated}`);
@@ -96,19 +96,56 @@ async function processMonthlyPayouts() {
       console.log(`   Payouts created: ${result.data.payoutsCreated}`);
       console.log(`   Total payouts: $${result.data.totalPayoutAmount?.toFixed(2) || '0.00'}`);
       console.log(`   Payouts processed: ${result.data.payoutsProcessed}`);
-      
+
       if (dryRun) {
         console.log('');
         console.log('🧪 This was a dry run - no actual changes were made');
       }
-      
+
     } else {
-      console.error('❌ Processing failed:', response.data.error || 'Unknown error');
+      console.error('❌ Payout processing failed:', response.data.error || 'Unknown error');
       process.exit(1);
     }
-    
+
   } catch (error) {
     console.error('❌ Error processing monthly payouts:', error.message);
+    process.exit(1);
+  }
+}
+
+async function processMonthlyTokens() {
+  try {
+    console.log('🪙 Processing monthly token distribution...');
+
+    const response = await makeRequest(`${BASE_URL}/api/tokens/process-monthly`, {
+      period,
+      dryRun
+    });
+
+    if (response.status === 200) {
+      const result = response.data;
+
+      console.log('✅ Monthly token distribution completed successfully!');
+      console.log('');
+      console.log('🪙 Token Results:');
+      console.log(`   Period: ${result.data.period}`);
+      console.log(`   Total tokens distributed: ${result.data.totalTokensDistributed}`);
+      console.log(`   Users participating: ${result.data.totalUsersParticipating}`);
+      console.log(`   WeWrite tokens: ${result.data.wewriteTokens}`);
+      console.log(`   Status: ${result.data.status}`);
+
+      if (dryRun) {
+        console.log('');
+        console.log('🧪 This was a dry run - no actual changes were made');
+      }
+
+    } else {
+      console.error('❌ Token distribution failed:', response.data.error || 'Unknown error');
+      process.exit(1);
+    }
+
+  } catch (error) {
+    console.error('❌ Error processing monthly tokens:', error.message);
     process.exit(1);
   }
 }
@@ -144,19 +181,29 @@ async function checkProcessingStatus() {
 // Main execution
 async function main() {
   try {
+    console.log('🚀 Starting monthly processing...');
+    console.log('');
+
+    // Process monthly token distribution first
+    await processMonthlyTokens();
+
+    console.log('');
+    console.log('⏳ Waiting 2 seconds before processing payouts...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
     // Process monthly payouts
     await processMonthlyPayouts();
-    
+
     // Wait a moment then check status
     console.log('');
     console.log('⏳ Waiting 5 seconds before checking status...');
     await new Promise(resolve => setTimeout(resolve, 5000));
-    
+
     await checkProcessingStatus();
-    
+
     console.log('');
-    console.log('🎉 Monthly payout processing completed!');
-    
+    console.log('🎉 Monthly processing completed!');
+
   } catch (error) {
     console.error('❌ Fatal error:', error.message);
     process.exit(1);

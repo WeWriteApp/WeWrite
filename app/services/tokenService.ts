@@ -53,6 +53,72 @@ export class TokenService {
   }
 
   /**
+   * Alias for getUserTokenBalance for compatibility
+   */
+  static async getTokenBalance(userId: string): Promise<TokenBalance | null> {
+    return this.getUserTokenBalance(userId);
+  }
+
+  /**
+   * Get current page allocation for a user
+   */
+  static async getCurrentPageAllocation(userId: string, pageId: string): Promise<number> {
+    try {
+      const currentMonth = getCurrentMonth();
+      const allocationId = `${userId}_page_${pageId}_${currentMonth}`;
+
+      const allocationRef = doc(db, 'tokenAllocations', allocationId);
+      const allocationDoc = await getDoc(allocationRef);
+
+      if (!allocationDoc.exists()) {
+        return 0;
+      }
+
+      const allocation = allocationDoc.data() as TokenAllocation;
+      return allocation.status === 'active' ? allocation.tokens : 0;
+    } catch (error) {
+      console.error('Error getting current page allocation:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Simplified token allocation for pages (used by TokenPledgeBar)
+   */
+  static async allocateTokensToPage(userId: string, pageId: string, tokenChange: number): Promise<void> {
+    try {
+      // Get current allocation
+      const currentAllocation = await this.getCurrentPageAllocation(userId, pageId);
+      const newAllocation = Math.max(0, currentAllocation + tokenChange);
+
+      // Get page data to find the author
+      const pageRef = doc(db, 'pages', pageId);
+      const pageDoc = await getDoc(pageRef);
+
+      if (!pageDoc.exists()) {
+        throw new Error('Page not found');
+      }
+
+      const pageData = pageDoc.data();
+      const authorId = pageData.authorId || pageData.userId;
+
+      if (!authorId) {
+        throw new Error('Page author not found');
+      }
+
+      // Use the full allocation method
+      const result = await this.allocateTokens(userId, authorId, 'page', pageId, newAllocation);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to allocate tokens');
+      }
+    } catch (error) {
+      console.error('Error in simplified token allocation:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get user's token allocations
    */
   static async getUserTokenAllocations(userId: string): Promise<TokenAllocation[]> {
