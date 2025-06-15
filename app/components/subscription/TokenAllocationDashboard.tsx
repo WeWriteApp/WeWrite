@@ -186,7 +186,7 @@ export function TokenAllocationDashboard({ userId }: TokenAllocationDashboardPro
             $1 = 10 tokens that you can allocate to pages and groups you love.
           </p>
           <Button asChild>
-            <a href="/subscription">Start Subscription</a>
+            <a href="/settings/subscription">Start Subscription</a>
           </Button>
         </CardContent>
       </Card>
@@ -277,9 +277,9 @@ export function TokenAllocationDashboard({ userId }: TokenAllocationDashboardPro
           ) : (
             <div className="space-y-4">
               {allocations.map((allocation) => (
-                <div 
+                <div
                   key={allocation.id}
-                  className="flex items-center justify-between p-4 border border-border rounded-lg"
+                  className="flex items-center justify-between p-4 border-theme-strong rounded-lg"
                 >
                   <div className="flex items-center gap-3">
                     {allocation.resourceType === 'page' ? (

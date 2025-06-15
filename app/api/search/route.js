@@ -130,97 +130,107 @@ async function testBigQueryConnection() {
  * 3. Multi-word flexible matching (book lists matches pages with both book/books AND list/lists)
  */
 function checkSearchMatch(normalizedTitle, searchTermLower) {
-  console.log(`🔍 checkSearchMatch: title="${normalizedTitle}", search="${searchTermLower}"`);
+  // Reduce logging for better performance in production
+  const isDebug = process.env.NODE_ENV === 'development';
 
-  // First try exact substring match (fastest)
+  if (isDebug) {
+    console.log(`🔍 checkSearchMatch: title="${normalizedTitle}", search="${searchTermLower}"`);
+  }
+
+  // First try exact substring match (fastest and most accurate)
   if (normalizedTitle.includes(searchTermLower)) {
-    console.log(`✅ Exact substring match found`);
+    if (isDebug) console.log(`✅ Exact substring match found`);
     return true;
   }
 
-
-
   // For multi-word searches, check if all words are present (flexible matching)
   if (searchTermLower.includes(' ')) {
-    console.log(`🔍 Multi-word search detected`);
+    if (isDebug) console.log(`🔍 Multi-word search detected`);
     const searchWords = searchTermLower.split(/\s+/).filter(word => word.length > 0);
-    const titleWords = normalizedTitle.split(/\s+/);
-    console.log(`🔍 Search words: [${searchWords.join(', ')}]`);
-    console.log(`🔍 Title words: [${titleWords.join(', ')}]`);
 
     // Check if all search words have a match in the title
     const result = searchWords.every(searchWord => {
+      // Try exact substring match first for each word
+      if (normalizedTitle.includes(searchWord)) {
+        if (isDebug) console.log(`✅ Word substring match: title contains "${searchWord}"`);
+        return true;
+      }
+
+      // If no exact match, try word-by-word matching
+      const titleWords = normalizedTitle.split(/\s+/);
       const wordMatch = titleWords.some(titleWord => {
         // Exact word match
         if (titleWord === searchWord) {
-          console.log(`✅ Exact word match: "${titleWord}" === "${searchWord}"`);
+          if (isDebug) console.log(`✅ Exact word match: "${titleWord}" === "${searchWord}"`);
           return true;
         }
 
         // Partial word matching - only if one word contains the other AND they share significant overlap
         if (titleWord.includes(searchWord) && searchWord.length >= 3) {
-          console.log(`✅ Partial match: "${titleWord}" includes "${searchWord}"`);
+          if (isDebug) console.log(`✅ Partial match: "${titleWord}" includes "${searchWord}"`);
           return true;
         }
         if (searchWord.includes(titleWord) && titleWord.length >= 3) {
-          console.log(`✅ Partial match: "${searchWord}" includes "${titleWord}"`);
+          if (isDebug) console.log(`✅ Partial match: "${searchWord}" includes "${titleWord}"`);
           return true;
         }
 
         // Handle common plurals/singulars
         if (searchWord.endsWith('s') && titleWord === searchWord.slice(0, -1)) {
-          console.log(`✅ Plural match: "${searchWord}" matches singular "${titleWord}"`);
+          if (isDebug) console.log(`✅ Plural match: "${searchWord}" matches singular "${titleWord}"`);
           return true;
         }
         if (titleWord.endsWith('s') && searchWord === titleWord.slice(0, -1)) {
-          console.log(`✅ Singular match: "${titleWord}" matches plural "${searchWord}"`);
+          if (isDebug) console.log(`✅ Singular match: "${titleWord}" matches plural "${searchWord}"`);
           return true;
         }
 
         return false;
       });
-      console.log(`🎯 Word "${searchWord}" match result: ${wordMatch}`);
+
+      if (isDebug) console.log(`🎯 Word "${searchWord}" match result: ${wordMatch}`);
       return wordMatch;
     });
-    console.log(`🎯 Multi-word search result: ${result}`);
+
+    if (isDebug) console.log(`🎯 Multi-word search result: ${result}`);
     return result;
   }
 
   // For single words, check partial matching
-  console.log(`🔍 Single word search`);
+  if (isDebug) console.log(`🔍 Single word search`);
   const titleWords = normalizedTitle.split(/\s+/);
-  console.log(`🔍 Title words: [${titleWords.join(', ')}]`);
 
   const result = titleWords.some(titleWord => {
     // Exact word match
     if (titleWord === searchTermLower) {
-      console.log(`✅ Exact single word match: "${titleWord}" === "${searchTermLower}"`);
+      if (isDebug) console.log(`✅ Exact single word match: "${titleWord}" === "${searchTermLower}"`);
       return true;
     }
 
     // Partial word matching - only if one word contains the other AND they share significant overlap
     if (titleWord.includes(searchTermLower) && searchTermLower.length >= 3) {
-      console.log(`✅ Single partial match: "${titleWord}" includes "${searchTermLower}"`);
+      if (isDebug) console.log(`✅ Single partial match: "${titleWord}" includes "${searchTermLower}"`);
       return true;
     }
     if (searchTermLower.includes(titleWord) && titleWord.length >= 3) {
-      console.log(`✅ Single partial match: "${searchTermLower}" includes "${titleWord}"`);
+      if (isDebug) console.log(`✅ Single partial match: "${searchTermLower}" includes "${titleWord}"`);
       return true;
     }
 
     // Handle common plurals/singulars
     if (searchTermLower.endsWith('s') && titleWord === searchTermLower.slice(0, -1)) {
-      console.log(`✅ Single plural match: "${searchTermLower}" matches singular "${titleWord}"`);
+      if (isDebug) console.log(`✅ Single plural match: "${searchTermLower}" matches singular "${titleWord}"`);
       return true;
     }
     if (titleWord.endsWith('s') && searchTermLower === titleWord.slice(0, -1)) {
-      console.log(`✅ Single singular match: "${titleWord}" matches plural "${searchTermLower}"`);
+      if (isDebug) console.log(`✅ Single singular match: "${titleWord}" matches plural "${searchTermLower}"`);
       return true;
     }
 
     return false;
   });
-  console.log(`🎯 Single word search result: ${result}`);
+
+  if (isDebug) console.log(`🎯 Single word search result: ${result}`);
   return result;
 }
 
@@ -246,121 +256,162 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
 
     // STEP 1: Search user's own pages
     if (userId) {
-      const userPagesQuery = query(
-        collection(db, 'pages'),
-        where('userId', '==', filterByUserId || userId),
-        orderBy('lastModified', 'desc'),
-        limit(2000) // Search through 2000 most recent pages to include older content
-      );
+      // Use multiple queries to ensure comprehensive coverage of all pages
+      const userQueries = [
+        // Recent pages by lastModified
+        query(
+          collection(db, 'pages'),
+          where('userId', '==', filterByUserId || userId),
+          orderBy('lastModified', 'desc'),
+          limit(3000)
+        ),
+        // Older pages by createdAt to catch pages that might not have lastModified
+        query(
+          collection(db, 'pages'),
+          where('userId', '==', filterByUserId || userId),
+          orderBy('createdAt', 'desc'),
+          limit(1000)
+        )
+      ];
 
-      const userPagesSnapshot = await getDocs(userPagesQuery);
-      console.log(`📄 Found ${userPagesSnapshot.size} user pages to search`);
+      const allUserPages = new Map(); // Use Map to deduplicate
 
+      for (const userQuery of userQueries) {
+        try {
+          const userPagesSnapshot = await getDocs(userQuery);
+          console.log(`📄 Found ${userPagesSnapshot.size} user pages in query`);
 
+          userPagesSnapshot.forEach(doc => {
+            if (!allUserPages.has(doc.id)) {
+              const data = doc.data();
+              const pageTitle = data.title || 'Untitled';
+              const normalizedTitle = pageTitle.toLowerCase();
 
-      userPagesSnapshot.forEach(doc => {
-        const data = doc.data();
-        const pageTitle = data.title || 'Untitled';
-        const normalizedTitle = pageTitle.toLowerCase();
+              // Also search in page content if available
+              const pageContent = data.content || '';
+              const normalizedContent = pageContent.toLowerCase();
 
-        // Enhanced search logic
-        const isMatch = checkSearchMatch(normalizedTitle, searchTermLower);
+              // Enhanced search logic - check both title and content
+              const titleMatch = checkSearchMatch(normalizedTitle, searchTermLower);
+              const contentMatch = pageContent && checkSearchMatch(normalizedContent, searchTermLower);
+              const isMatch = titleMatch || contentMatch;
 
-        if (isMatch) {
-          console.log(`✅ User page match: "${pageTitle}" matches "${searchTermLower}"`);
-          allResults.push({
-            id: doc.id,
-            title: pageTitle,
-            isOwned: true,
-            isEditable: true,
-            userId: data.userId,
-            username: data.username || null, // Include username from page data
-            isPublic: data.isPublic,
-            lastModified: data.lastModified,
-            type: 'user'
+              if (isMatch) {
+                console.log(`✅ User page match: "${pageTitle}" matches "${searchTermLower}" (title: ${titleMatch}, content: ${contentMatch})`);
+                allUserPages.set(doc.id, {
+                  id: doc.id,
+                  title: pageTitle,
+                  isOwned: true,
+                  isEditable: true,
+                  userId: data.userId,
+                  username: data.username || null,
+                  isPublic: data.isPublic,
+                  lastModified: data.lastModified,
+                  createdAt: data.createdAt,
+                  type: 'user',
+                  isContentMatch: contentMatch && !titleMatch
+                });
+              }
+            }
           });
+        } catch (queryError) {
+          console.warn('Error in user pages query:', queryError);
         }
-      });
+      }
+
+      // Add all user pages to results
+      allResults.push(...Array.from(allUserPages.values()));
+      console.log(`📄 Total unique user pages found: ${allUserPages.size}`);
     }
 
     // STEP 2: Search public pages (if not filtering by specific user)
     if (!filterByUserId) {
-      // Try multiple queries to ensure we find all relevant pages
-      const queries = [
-        // Recent pages first
+      // Use multiple comprehensive queries to ensure we find ALL relevant pages
+      const publicQueries = [
+        // Recent pages by lastModified
         query(
           collection(db, 'pages'),
           where('isPublic', '==', true),
           orderBy('lastModified', 'desc'),
-          limit(1000)
+          limit(2000)
         ),
-        // Also search by creation date to catch older pages
+        // Older pages by createdAt to catch pages that might not have lastModified
         query(
           collection(db, 'pages'),
           where('isPublic', '==', true),
           orderBy('createdAt', 'desc'),
-          limit(500)
+          limit(1500)
         )
       ];
 
       const allPublicPages = new Map(); // Use Map to deduplicate
 
-      for (const publicPagesQuery of queries) {
+      for (const publicQuery of publicQueries) {
         try {
-          const publicPagesSnapshot = await getDocs(publicPagesQuery);
-          console.log(`🌐 Found ${publicPagesSnapshot.size} public pages in this query`);
+          const publicPagesSnapshot = await getDocs(publicQuery);
+          console.log(`🌐 Found ${publicPagesSnapshot.size} public pages in query`);
 
           publicPagesSnapshot.forEach(doc => {
             if (!allPublicPages.has(doc.id)) {
-              allPublicPages.set(doc.id, doc);
+              const data = doc.data();
 
+              // Skip user's own pages (already included above)
+              if (data.userId === userId) {
+                return;
+              }
 
+              const pageTitle = data.title || 'Untitled';
+              const normalizedTitle = pageTitle.toLowerCase();
+
+              // Also search in page content if available
+              const pageContent = data.content || '';
+              const normalizedContent = pageContent.toLowerCase();
+
+              // Enhanced search logic - check both title and content
+              const titleMatch = checkSearchMatch(normalizedTitle, searchTermLower);
+              const contentMatch = pageContent && checkSearchMatch(normalizedContent, searchTermLower);
+              const isMatch = titleMatch || contentMatch;
+
+              if (isMatch) {
+                console.log(`✅ Public page match: "${pageTitle}" matches "${searchTermLower}" (title: ${titleMatch}, content: ${contentMatch})`);
+                allPublicPages.set(doc.id, {
+                  id: doc.id,
+                  title: pageTitle,
+                  isOwned: false,
+                  isEditable: false,
+                  userId: data.userId,
+                  username: data.username || null,
+                  isPublic: data.isPublic,
+                  lastModified: data.lastModified,
+                  createdAt: data.createdAt,
+                  type: 'public',
+                  isContentMatch: contentMatch && !titleMatch
+                });
+              }
             }
           });
         } catch (queryError) {
-          console.error('Error in public pages query:', queryError);
-          // Continue with other queries
+          console.warn('Error in public pages query:', queryError);
         }
       }
 
-      console.log(`🌐 Total unique public pages to search: ${allPublicPages.size}`);
-
-      allPublicPages.forEach(doc => {
-        const data = doc.data();
-
-        // Skip user's own pages (already included above)
-        if (data.userId === userId) {
-          return;
-        }
-
-        const pageTitle = data.title || 'Untitled';
-        const normalizedTitle = pageTitle.toLowerCase();
-
-
-
-        // Enhanced search logic
-        const isMatch = checkSearchMatch(normalizedTitle, searchTermLower);
-
-
-
-        if (isMatch) {
-          console.log(`✅ Public page match: "${pageTitle}" matches "${searchTermLower}"`);
-          allResults.push({
-            id: doc.id,
-            title: pageTitle,
-            isOwned: false,
-            isEditable: false,
-            userId: data.userId,
-            username: data.username || null, // Include username from page data
-            isPublic: data.isPublic,
-            lastModified: data.lastModified,
-            type: 'public'
-          });
-        }
-      });
+      // Add all public pages to results
+      allResults.push(...Array.from(allPublicPages.values()));
+      console.log(`🌐 Total unique public pages found: ${allPublicPages.size}`);
     }
 
     console.log(`🎯 Total matches found: ${allResults.length}`);
+
+    // Debug: Log sample of found pages for troubleshooting
+    if (allResults.length > 0) {
+      console.log('📋 Sample of found pages:', allResults.slice(0, 5).map(r => ({
+        title: r.title,
+        type: r.type,
+        isContentMatch: r.isContentMatch
+      })));
+    } else {
+      console.log('❌ No pages found for search term:', searchTermLower);
+    }
 
     // Fetch usernames for pages that don't have them
     const resultsWithUsernames = await Promise.all(allResults.map(async (result) => {

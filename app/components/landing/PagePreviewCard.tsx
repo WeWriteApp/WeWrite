@@ -37,11 +37,11 @@ export function PagePreviewCard({
   const getCardStyleByStatus = (status: string) => {
     switch (status) {
       case 'done':
-        return "bg-success/10 dark:bg-success/20 border-success/30 dark:border-success/40 text-success dark:text-success-foreground";
+        return "bg-success/10 dark:bg-success/20 border-theme-medium text-success dark:text-success-foreground";
       case 'in-progress':
-        return "bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100";
+        return "bg-amber-50 dark:bg-amber-950/50 border-theme-medium text-amber-900 dark:text-amber-100";
       case 'coming-soon':
-        return "bg-muted border-border text-muted-foreground";
+        return "bg-muted border-theme-medium text-muted-foreground";
       default:
         return "";
     }

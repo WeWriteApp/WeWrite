@@ -134,7 +134,6 @@ class PerformanceMonitor {
     // Track Largest Contentful Paint (LCP)
     this.observePerformanceEntry('largest-contentful-paint', (entries) => {
       const lastEntry = entries[entries.length - 1] as any;
-      console.log('🎯 LCP:', lastEntry.startTime.toFixed(2) + 'ms');
       this.metrics.set('lcp', { value: lastEntry.startTime, timestamp: Date.now() });
     });
 
@@ -142,7 +141,6 @@ class PerformanceMonitor {
     this.observePerformanceEntry('first-input', (entries) => {
       const firstEntry = entries[0] as any;
       const fid = firstEntry.processingStart - firstEntry.startTime;
-      console.log('👆 FID:', fid.toFixed(2) + 'ms');
       this.metrics.set('fid', { value: fid, timestamp: Date.now() });
     });
 

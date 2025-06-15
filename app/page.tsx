@@ -39,7 +39,7 @@ import performanceMonitor from "./utils/performance-monitor";
 import { Plus, FileText, Loader, Clock, Flame, Users, Trophy, RefreshCw, Shuffle } from "lucide-react";
 
 // Lazy load non-critical components
-const TrendingPagesOptimized = dynamic(() => import("./components/features/TrendingPagesOptimized"), {
+const TrendingPages = dynamic(() => import("./components/features/TrendingPages"), {
   loading: () => <TrendingPagesSkeleton limit={5} />,
   ssr: false
 });
@@ -363,7 +363,7 @@ const Home = React.memo(function Home() {
               minHeight={300}
               fallback={<TrendingPagesSkeleton limit={5} />}
             >
-              <TrendingPagesOptimized limit={5} priority="low" />
+              <TrendingPages limit={5} priority="low" />
             </LazySection>
           </StickySection>
 

@@ -21,9 +21,11 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import Link from 'next/link';
-import { listenToUserPledges } from '../../firebase/subscription';
+import { listenToUserPledges, listenToUserSubscription } from '../../firebase/subscription';
 import { getDocById } from '../../firebase/database';
 import { PaymentMethodSetup } from './PaymentMethodSetup';
+import { FailedPaymentRecovery } from './FailedPaymentRecovery';
+import { SubscriptionModification } from './SubscriptionModification';
 
 interface Subscription {
   id: string;
@@ -79,9 +81,16 @@ export function CombinedSubscriptionSection() {
   // CRITICAL: All hooks must be called before any early returns
   useEffect(() => {
     if (user?.uid && isPaymentsEnabled) {
-      fetchSubscription();
+      const unsubscribeSubscription = setupSubscriptionListener();
       fetchPaymentMethods();
       fetchPledges();
+
+      // Cleanup function
+      return () => {
+        if (unsubscribeSubscription) {
+          unsubscribeSubscription();
+        }
+      };
     }
   }, [user, isPaymentsEnabled]);
 
@@ -91,32 +100,31 @@ export function CombinedSubscriptionSection() {
     return null;
   }
 
-  const fetchSubscription = async () => {
+  const setupSubscriptionListener = () => {
     try {
       setSubscriptionLoading(true);
       setSubscriptionError(null);
 
-      const response = await fetch('/api/account-subscription');
-      if (response.ok) {
-        const data = await response.json();
-
-
-        // API returns { status: null } when no subscription, or subscription object when exists
-        if (data.status === null) {
-          setSubscription(null);
-        } else if (data.status && data.amount !== undefined) {
-          setSubscription(data);
-        } else {
-          setSubscription(null);
+      // Set up real-time listener for subscription changes
+      const unsubscribe = listenToUserSubscription(user.uid, (subscriptionData) => {
+        try {
+          setSubscriptionError(null);
+          setSubscription(subscriptionData);
+        } catch (error) {
+          console.error('Error processing subscription:', error);
+          setSubscriptionError('Failed to load subscription details');
+        } finally {
+          setSubscriptionLoading(false);
         }
-      } else {
-        const errorData = await response.json();
-        setSubscriptionError(errorData.error || 'Failed to load subscription');
-      }
+      }, { verbose: process.env.NODE_ENV === 'development' });
+
+      // Store unsubscribe function for cleanup
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
     } catch (error) {
-      console.error('Error fetching subscription:', error);
+      console.error('Error setting up subscription listener:', error);
       setSubscriptionError('Failed to load subscription');
-    } finally {
       setSubscriptionLoading(false);
     }
   };
@@ -259,11 +267,12 @@ export function CombinedSubscriptionSection() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="overview" urlNavigation="hash" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="payment-methods">Payment Methods</TabsTrigger>
             <TabsTrigger value="pledges">Active Pledges</TabsTrigger>
+            <TabsTrigger value="modify">Modify Plan</TabsTrigger>
             <TabsTrigger value="manage">Manage</TabsTrigger>
           </TabsList>
 
@@ -293,8 +302,17 @@ export function CombinedSubscriptionSection() {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Failed Payment Recovery - Show first if payment failed */}
+                <FailedPaymentRecovery
+                  subscription={subscription}
+                  onPaymentSuccess={() => {
+                    // Refresh subscription data after successful payment
+                    setupSubscriptionListener();
+                  }}
+                />
+
                 {/* Subscription Status */}
-                <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center justify-between p-4 border-theme-strong rounded-lg">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-medium">Monthly Subscription</h4>
@@ -315,14 +333,14 @@ export function CombinedSubscriptionSection() {
 
                 {/* Quick Stats */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 border rounded-lg">
+                  <div className="p-3 border-theme-strong rounded-lg">
                     <div className="flex items-center gap-2 mb-1">
                       <Heart className="h-4 w-4 text-red-500" />
                       <span className="text-sm font-medium">Active Pledges</span>
                     </div>
                     <p className="text-xl font-bold">{pledges.length}</p>
                   </div>
-                  <div className="p-3 border rounded-lg">
+                  <div className="p-3 border-theme-strong rounded-lg">
                     <div className="flex items-center gap-2 mb-1">
                       <DollarSign className="h-4 w-4 text-green-600" />
                       <span className="text-sm font-medium">Total Pledged</span>
@@ -379,7 +397,7 @@ export function CombinedSubscriptionSection() {
             ) : (
               <div className="space-y-3">
                 {showPaymentMethodSetup && (
-                  <div className="border rounded-lg p-4 bg-muted/20">
+                  <div className="border-theme-strong rounded-lg p-4 bg-muted/20">
                     <PaymentMethodSetup
                       showTitle={false}
                       onSuccess={handlePaymentMethodAdded}
@@ -390,7 +408,7 @@ export function CombinedSubscriptionSection() {
 
                 {/* Primary Payment Method */}
                 {primaryMethod && (
-                  <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+                  <div className="flex items-center justify-between p-3 border-theme-strong rounded-lg bg-muted/50">
                     <div className="flex items-center gap-3">
                       {getCardBrandIcon(primaryMethod.brand)}
                       <div>
@@ -413,7 +431,7 @@ export function CombinedSubscriptionSection() {
 
                 {/* Other Payment Methods */}
                 {paymentMethods.filter(method => !method.isPrimary).map((method) => (
-                  <div key={method.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div key={method.id} className="flex items-center justify-between p-3 border-theme-strong rounded-lg">
                     <div className="flex items-center gap-3">
                       {getCardBrandIcon(method.brand)}
                       <div>
@@ -470,7 +488,7 @@ export function CombinedSubscriptionSection() {
             ) : (
               <div className="space-y-3">
                 {/* Summary */}
-                <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+                <div className="flex items-center justify-between p-3 border-theme-strong rounded-lg bg-muted/50">
                   <div>
                     <h4 className="font-medium">Total Monthly Pledges</h4>
                     <p className="text-sm text-muted-foreground">{pledges.length} active pledges</p>
@@ -485,7 +503,7 @@ export function CombinedSubscriptionSection() {
                 {pledges.map((pledge) => (
                   <div
                     key={pledge.id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                    className="flex items-center justify-between p-3 border-theme-strong rounded-lg hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -520,6 +538,31 @@ export function CombinedSubscriptionSection() {
             )}
           </TabsContent>
 
+          <TabsContent value="modify" className="space-y-4">
+            {subscription && subscription.status === 'active' ? (
+              <SubscriptionModification
+                subscription={subscription}
+                onModificationSuccess={() => {
+                  // Refresh subscription data after successful modification
+                  setupSubscriptionListener();
+                }}
+              />
+            ) : (
+              <div className="text-center py-8">
+                <Settings className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Active Subscription</h3>
+                <p className="text-muted-foreground mb-4">
+                  You need an active subscription to modify your plan.
+                </p>
+                <Button asChild>
+                  <Link href="/settings/subscription">
+                    Start Subscription
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+
           <TabsContent value="manage" className="space-y-4">
             <div className="space-y-3">
               <Button className="w-full" asChild>
@@ -530,19 +573,11 @@ export function CombinedSubscriptionSection() {
               </Button>
               
               {subscription && (
-                <>
-                  <Button variant="outline" className="w-full" asChild>
-                    <Link href="/settings/subscription">
-                      Upgrade/Downgrade Subscription
-                    </Link>
-                  </Button>
-                  
-                  <Button variant="outline" className="w-full" asChild>
-                    <Link href="/settings/subscription/manage">
-                      View Payment History
-                    </Link>
-                  </Button>
-                </>
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/settings/subscription/manage">
+                    View Payment History
+                  </Link>
+                </Button>
               )}
             </div>
           </TabsContent>

@@ -424,18 +424,18 @@ export function PayoutsManager() {
               <CheckCircle className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">Bank Account</span>
             </div>
-            <p className="text-sm font-medium">
+            <div className="text-sm font-medium">
               {bankAccountConnected ? (
                 <Badge variant="default" className="bg-green-100 text-green-800">Connected</Badge>
               ) : (
                 <Badge variant="secondary">Not Connected</Badge>
               )}
-            </p>
+            </div>
           </div>
         </div>
 
         {/* Bank Account Setup Section */}
-        <div className="border rounded-lg p-4">
+        <div className="border-theme-strong rounded-lg p-4">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-medium">Bank Account Setup</h3>
@@ -475,7 +475,7 @@ export function PayoutsManager() {
         </div>
 
         {/* Payout Request Section */}
-        <div className="border rounded-lg p-4">
+        <div className="border-theme-strong rounded-lg p-4">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-medium">Request Payout</h3>

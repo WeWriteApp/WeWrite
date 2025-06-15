@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '../ui/button';
 import { Plus, FileText, Type, Copy, Link, X, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { toast } from '../ui/use-toast';
 import {
   Dialog,
@@ -32,17 +32,23 @@ interface AddToPageModalProps {
 
 const AddToPageModal: React.FC<AddToPageModalProps> = ({ selectedText, isOpen, onClose }) => {
   const router = useRouter();
+  const params = useParams();
+  const currentPageId = params?.id;
   const wordCount = selectedText.trim().split(/\s+/).length;
 
   const handleAddAsTitle = () => {
     const encodedText = encodeURIComponent(selectedText);
-    router.push(`/new?title=${encodedText}`);
+    // Exclude current page from new page creation by adding context
+    const excludeParam = currentPageId ? `&exclude=${currentPageId}` : '';
+    router.push(`/new?title=${encodedText}${excludeParam}`);
     onClose();
   };
 
   const handleAddAsBody = () => {
     const encodedText = encodeURIComponent(selectedText);
-    router.push(`/new?content=${encodedText}`);
+    // Exclude current page from new page creation by adding context
+    const excludeParam = currentPageId ? `&exclude=${currentPageId}` : '';
+    router.push(`/new?content=${encodedText}${excludeParam}`);
     onClose();
   };
 

@@ -240,24 +240,26 @@ export default function SubscriptionPaymentPage() {
 
     async function createPaymentIntent() {
       try {
-        const response = await fetch('/api/activate-subscription', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            amount: parsedAmount,
-            userId: user?.uid || ''
-          }),
+        // Use the new subscription service to create checkout session
+        const { SubscriptionService } = await import('../../../services/subscriptionService');
+
+        const result = await SubscriptionService.createCheckoutSession({
+          userId: user?.uid || '',
+          tier: 'custom',
+          customAmount: parsedAmount,
+          successUrl: `${window.location.origin}/settings/subscription?success=true`,
+          cancelUrl: `${window.location.origin}/settings/subscription?cancelled=true`
         });
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to create subscription');
+        if (result.error) {
+          throw new Error(result.error);
+        } else if (result.url) {
+          // Redirect to Stripe checkout instead of using client secret
+          window.location.href = result.url;
+          return;
         }
 
-        setClientSecret(data.clientSecret);
+        throw new Error('Failed to create checkout session');
       } catch (err: any) {
         setError(err.message || 'An error occurred while setting up payment');
         console.error('Subscription setup error:', err);

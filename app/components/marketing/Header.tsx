@@ -10,17 +10,17 @@ const Header = () => {
         <nav className="space-x-6">
           <a
             href="#"
-            className="text-black hover:text-gray-800 border px-2 py-1 rounded-full border-gray-800"
+            className="text-foreground hover:text-muted-foreground border-theme-strong px-2 py-1 rounded-full"
           >
             Home
           </a>
-          <a href="#" className="text-black hover:text-gray-800">
+          <a href="#" className="text-foreground hover:text-muted-foreground">
             Features
           </a>
-          <a href="#" className="text-black hover:text-gray-800">
+          <a href="#" className="text-foreground hover:text-muted-foreground">
             How it works
           </a>
-          <a href="#" className="text-black hover:text-gray-800">
+          <a href="#" className="text-foreground hover:text-muted-foreground">
             Contributing
           </a>
         </nav>

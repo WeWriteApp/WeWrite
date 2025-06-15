@@ -45,12 +45,12 @@ const HoverEditContent: React.FC<HoverEditContentProps> = ({
   };
 
   return (
-    <div 
+    <div
       className={`group relative ${className}`}
       onMouseEnter={() => canEdit && setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
-      {/* Content area with hover effects */}
+      {/* Content area with hover effects - unified structure with edit mode */}
       <div className={`relative ${canEdit ? 'cursor-text hover:bg-muted/20 transition-colors duration-150' : ''}`}>
         <TextView
           content={content}
@@ -58,7 +58,7 @@ const HoverEditContent: React.FC<HoverEditContentProps> = ({
           setIsEditing={setIsEditing}
           showLineNumbers={showLineNumbers}
         />
-        
+
         {/* Hover-reveal edit icon - positioned similar to regular wiki pages */}
         {canEdit && isHovering && (
           <div className="absolute top-2 right-2 z-10">

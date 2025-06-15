@@ -4,11 +4,22 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { useAuth } from '../../providers/AuthProvider';
-import { CreditCard, Plus, Trash2, Check, AlertTriangle } from 'lucide-react';
+import { CreditCard, Plus, Trash2, Check, AlertTriangle, Copy } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Badge } from '../ui/badge';
+import { useTheme } from '../../providers/ThemeProvider';
+import { toast } from 'sonner';
+import { useFeatureFlag } from '../../utils/feature-flags';
+
+// Initialize Stripe
+const stripePromise = loadStripe(
+  process.env.NODE_ENV === 'development'
+    ? process.env.NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
+    : process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
+);
 
 interface PaymentMethod {
   id: string;
@@ -19,8 +30,144 @@ interface PaymentMethod {
   isPrimary: boolean;
 }
 
+interface PaymentMethodFormProps {
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCancel }) => {
+  const { user } = useAuth();
+  const stripe = useStripe();
+  const elements = useElements();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { theme } = useTheme();
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!stripe || !elements || !user) {
+      setError('Payment system not ready. Please try again.');
+      return;
+    }
+
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      setError('Card element not found. Please refresh and try again.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Create setup intent
+      const setupResponse = await fetch('/api/setup-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!setupResponse.ok) {
+        const errorData = await setupResponse.json();
+        throw new Error(errorData.error || 'Failed to create setup intent');
+      }
+
+      const { clientSecret } = await setupResponse.json();
+
+      // Confirm the setup intent with the card
+      const { error: confirmError, setupIntent } = await stripe.confirmCardSetup(clientSecret, {
+        payment_method: {
+          card: cardElement,
+        },
+      });
+
+      if (confirmError) {
+        throw new Error(confirmError.message || 'Failed to add payment method');
+      }
+
+      if (setupIntent.status === 'succeeded') {
+        toast.success('Payment method added successfully');
+        onSuccess();
+      } else {
+        throw new Error('Payment method setup failed');
+      }
+    } catch (err: any) {
+      console.error('Error adding payment method:', err);
+      setError(err.message || 'Failed to add payment method');
+      toast.error(err.message || 'Failed to add payment method');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Theme-aware card element styling
+  const cardElementOptions = {
+    style: {
+      base: {
+        fontSize: '16px',
+        color: theme === 'dark' ? '#ffffff' : '#424770',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontSmoothing: 'antialiased',
+        '::placeholder': {
+          color: theme === 'dark' ? 'rgba(255, 255, 255, 0.6)' : '#aab7c4',
+        },
+        iconColor: theme === 'dark' ? '#ffffff' : '#424770',
+      },
+      invalid: {
+        color: '#fa755a',
+        iconColor: '#fa755a',
+      },
+    },
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            {error}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-2 h-auto p-0 text-xs"
+              onClick={() => {
+                navigator.clipboard.writeText(error);
+                toast.success('Error message copied to clipboard');
+              }}
+            >
+              <Copy className="h-3 w-3 mr-1" />
+              Copy
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="space-y-3">
+        <label className="block text-sm font-medium text-foreground">Card Information</label>
+        <div className="p-3 border border-border rounded-md bg-background focus-within:ring-2 focus-within:ring-ring focus-within:border-ring transition-colors">
+          <CardElement options={cardElementOptions} />
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={loading || !stripe}>
+          {loading ? 'Adding...' : 'Add Payment Method'}
+        </Button>
+      </div>
+    </form>
+  );
+};
+
 export function PaymentMethodsManager() {
   const { user } = useAuth();
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,60 +218,17 @@ export function PaymentMethodsManager() {
     }
   };
 
-  // Add a new payment method
-  const handleAddPaymentMethod = async () => {
-    if (!user) return;
+  // Handle successful payment method addition
+  const handleAddPaymentMethodSuccess = async () => {
+    // Refresh payment methods and close dialog
+    await fetchPaymentMethods();
+    setIsAddingPaymentMethod(false);
+  };
 
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch('/api/setup-intent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create setup intent');
-      }
-
-      // Use the appropriate Stripe key based on environment
-      const publishableKey = process.env.NODE_ENV === 'development'
-        ? process.env.NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-        : process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-
-      console.log('Using Stripe publishable key:', publishableKey?.substring(0, 8) + '...');
-
-      const stripe = await loadStripe(publishableKey!);
-      if (!stripe) {
-        throw new Error('Failed to load Stripe');
-      }
-
-      const { error } = await stripe.confirmCardSetup(data.clientSecret, {
-        payment_method: {
-          card: {
-            token: 'tok_visa', // For testing only
-          },
-        },
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Failed to add payment method');
-      }
-
-      // Refresh payment methods
-      await fetchPaymentMethods();
-      setIsAddingPaymentMethod(false);
-    } catch (err: any) {
-      console.error('Error adding payment method:', err);
-      setError(err.message || 'Failed to add payment method');
-    } finally {
-      setLoading(false);
-    }
+  // Handle payment method addition cancellation
+  const handleAddPaymentMethodCancel = () => {
+    setIsAddingPaymentMethod(false);
+    setError(null);
   };
 
   // Delete a payment method
@@ -151,12 +255,16 @@ export function PaymentMethodsManager() {
         throw new Error(data.error || 'Failed to delete payment method');
       }
 
+      toast.success('Payment method deleted successfully');
+
       // Refresh payment methods
       await fetchPaymentMethods();
       setIsConfirmingDelete(null);
     } catch (err: any) {
       console.error('Error deleting payment method:', err);
-      setError(err.message || 'Failed to delete payment method');
+      const errorMessage = err.message || 'Failed to delete payment method';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -186,12 +294,16 @@ export function PaymentMethodsManager() {
         throw new Error(data.error || 'Failed to set primary payment method');
       }
 
+      toast.success('Primary payment method updated successfully');
+
       // Refresh payment methods
       await fetchPaymentMethods();
       setIsSettingPrimary(null);
     } catch (err: any) {
       console.error('Error setting primary payment method:', err);
-      setError(err.message || 'Failed to set primary payment method');
+      const errorMessage = err.message || 'Failed to set primary payment method';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -199,7 +311,7 @@ export function PaymentMethodsManager() {
 
   // Load payment methods on component mount
   useEffect(() => {
-    if (user) {
+    if (user && isPaymentsEnabled) {
       const controller = new AbortController();
       fetchPaymentMethods(controller.signal);
 
@@ -208,7 +320,12 @@ export function PaymentMethodsManager() {
         controller.abort();
       };
     }
-  }, [user]);
+  }, [user, isPaymentsEnabled]);
+
+  // Don't render if payments feature is disabled
+  if (!isPaymentsEnabled) {
+    return null;
+  }
 
   // Get card brand icon
   const getCardBrandIcon = (brand: string) => {
@@ -226,7 +343,21 @@ export function PaymentMethodsManager() {
           <Alert variant="destructive" className="mb-4">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>
+              {error}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-2 h-auto p-0 text-xs"
+                onClick={() => {
+                  navigator.clipboard.writeText(error);
+                  toast.success('Error message copied to clipboard');
+                }}
+              >
+                <Copy className="h-3 w-3 mr-1" />
+                Copy
+              </Button>
+            </AlertDescription>
           </Alert>
         )}
 
@@ -304,7 +435,7 @@ export function PaymentMethodsManager() {
 
       {/* Add Payment Method Dialog */}
       <Dialog open={isAddingPaymentMethod} onOpenChange={setIsAddingPaymentMethod}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add Payment Method</DialogTitle>
             <DialogDescription>
@@ -312,19 +443,13 @@ export function PaymentMethodsManager() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            {/* Stripe Elements would go here in a real implementation */}
-            <div className="border rounded-lg p-4 text-center">
-              <p className="text-muted-foreground">Stripe payment form would be here</p>
-            </div>
+            <Elements stripe={stripePromise}>
+              <PaymentMethodForm
+                onSuccess={handleAddPaymentMethodSuccess}
+                onCancel={handleAddPaymentMethodCancel}
+              />
+            </Elements>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddingPaymentMethod(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddPaymentMethod} disabled={loading}>
-              {loading ? 'Adding...' : 'Add Payment Method'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

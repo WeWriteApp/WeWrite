@@ -221,86 +221,62 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
 
   return (
     <div className="space-y-4">
-      {/* Header - no standalone edit icon */}
+      {/* Header - no standalone edit icon or duplicate buttons */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">About this group</h2>
         {/* Edit icon removed - now handled by hover-reveal in content area */}
-        {isEditing && (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCancel}
-              className="gap-1"
-            >
-              <X className="h-4 w-4" />
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleSave}
-              className="gap-1"
-              disabled={isLoading || isHandlingNavigation}
-            >
-              {isLoading || isHandlingNavigation ? (
-                <Loader className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Save
-            </Button>
+        {/* Save/Cancel buttons removed - handled by PageEditor at bottom */}
+      </div>
+
+      {/* Content display or editor - unified container structure */}
+      <div className="page-content unified-editor relative rounded-lg bg-background w-full max-w-none">
+        {isEditing ? (
+          <div className="animate-in fade-in-0 duration-300">
+            <PageProvider>
+              <LineSettingsProvider>
+                <PageEditor
+                  title="" // Group about doesn't have a title
+                  setTitle={() => {}} // Group about doesn't have a title
+                  initialContent={aboutContent}
+                  onContentChange={handleContentChange}
+                  isPublic={group.isPublic || false} // Use group's privacy setting
+                  setIsPublic={() => {}} // Group about doesn't have privacy settings
+                  location={null} // Group about doesn't have location
+                  setLocation={() => {}} // Group about doesn't have location
+                  onSave={handleSave}
+                  onCancel={handleCancel}
+                  onDelete={null} // Group about doesn't have delete functionality
+                  isSaving={isLoading}
+                  error={error || ""}
+                  isNewPage={false}
+                  clickPosition={clickPosition}
+                  page={null} // Group about is not a page
+                />
+              </LineSettingsProvider>
+            </PageProvider>
+          </div>
+        ) : (
+          <div className="prose dark:prose-invert max-w-none">
+            {aboutContent ? (
+              <HoverEditContent
+                content={aboutContent}
+                canEdit={canEdit}
+                setIsEditing={handleSetIsEditing}
+                showLineNumbers={false} // Group about doesn't need line numbers
+              />
+            ) : (
+              <EmptyContentState
+                onActivate={() => handleSetIsEditing(true)}
+                isOwner={canEdit}
+                ownerMessage="This group doesn't have a description yet."
+                visitorMessage="This group doesn't have a description yet."
+                message="to add a description"
+                placeholder="Describe the purpose of this group, its goals, or guidelines for members."
+              />
+            )}
           </div>
         )}
       </div>
-
-      {/* Content display or editor */}
-      {isEditing ? (
-        <div className="animate-in fade-in-0 duration-300">
-          <PageProvider>
-            <LineSettingsProvider>
-              <PageEditor
-                title="" // Group about doesn't have a title
-                setTitle={() => {}} // Group about doesn't have a title
-                initialContent={aboutContent}
-                onContentChange={handleContentChange}
-                isPublic={group.isPublic || false} // Use group's privacy setting
-                setIsPublic={() => {}} // Group about doesn't have privacy settings
-                location={null} // Group about doesn't have location
-                setLocation={() => {}} // Group about doesn't have location
-                onSave={handleSave}
-                onCancel={handleCancel}
-                onDelete={null} // Group about doesn't have delete functionality
-                isSaving={isLoading}
-                error={error || ""}
-                isNewPage={false}
-                clickPosition={clickPosition}
-                page={null} // Group about is not a page
-              />
-            </LineSettingsProvider>
-          </PageProvider>
-        </div>
-      ) : (
-        <div className="prose dark:prose-invert max-w-none">
-          {aboutContent ? (
-            <HoverEditContent
-              content={aboutContent}
-              canEdit={canEdit}
-              setIsEditing={handleSetIsEditing}
-              showLineNumbers={false} // Group about doesn't need line numbers
-            />
-          ) : (
-            <EmptyContentState
-              onActivate={() => handleSetIsEditing(true)}
-              isOwner={canEdit}
-              ownerMessage="This group doesn't have a description yet."
-              visitorMessage="This group doesn't have a description yet."
-              message="to add a description"
-              placeholder="Describe the purpose of this group, its goals, or guidelines for members."
-            />
-          )}
-        </div>
-      )}
 
       {/* Group info and last editor */}
       <div className="text-xs text-muted-foreground mt-4 space-y-1">

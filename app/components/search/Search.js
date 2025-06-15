@@ -89,12 +89,16 @@ const Search = () => {
       // Create a cache key based on the search term and user ID
       const cacheKey = `${searchTerm}:${user.uid}`;
 
-      // Check if we have cached results
+      // Check if we have cached results, but allow retry if cache is empty
       const cachedResults = searchCache.get(cacheKey);
-      if (cachedResults) {
+      if (cachedResults && cachedResults.length > 0) {
         console.log('Using cached search results for:', searchTerm);
         setSearchResults(cachedResults);
         return;
+      } else if (cachedResults && cachedResults.length === 0) {
+        console.log('Found empty cached results, will retry search for:', searchTerm);
+        // Clear the empty cache entry to allow fresh search
+        searchCache.cache.delete(cacheKey);
       }
 
       setIsSearching(true);

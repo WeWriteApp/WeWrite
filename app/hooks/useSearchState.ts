@@ -80,8 +80,9 @@ export const useSearchState = (userId: string | null, userGroups: string[] | nul
 
     const trimmedSearchTerm = searchTerm.trim();
 
-    // Prevent duplicate searches
-    if (trimmedSearchTerm === lastSearchRef.current) {
+    // Prevent duplicate searches, but allow retry if previous search failed
+    if (trimmedSearchTerm === lastSearchRef.current && results.pages.length > 0) {
+      console.log('Skipping duplicate search with existing results');
       return Promise.resolve(); // Return resolved promise for consistency
     }
 
@@ -102,8 +103,10 @@ export const useSearchState = (userId: string | null, userGroups: string[] | nul
 
       const response = await fetch(queryUrl, {
         signal: abortControllerRef.current.signal,
-        // Add timeout to prevent hanging requests
-        timeout: 10000
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
       });
 
       if (!response.ok) {

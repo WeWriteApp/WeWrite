@@ -81,10 +81,35 @@ interface OptimizedSubscriptionOptions {
   fieldsOnly?: string[];
 }
 
-// Cache instances for different data types
-const subscriptionCache = new BatchCache<SubscriptionData>('subscription', 10 * 60 * 1000); // 10 minutes
-const pledgeCache = new BatchCache<PledgeData[]>('pledges', 5 * 60 * 1000); // 5 minutes
-const pageCache = new BatchCache<any>('pageInfo', 15 * 60 * 1000); // 15 minutes
+// Cache instances for different data types (lazy initialization for client-side only)
+let subscriptionCache: BatchCache<SubscriptionData> | null = null;
+let pledgeCache: BatchCache<PledgeData[]> | null = null;
+let pageCache: BatchCache<any> | null = null;
+
+// Initialize caches only on client side
+const getSubscriptionCache = () => {
+  if (typeof window === 'undefined') return null;
+  if (!subscriptionCache) {
+    subscriptionCache = new BatchCache<SubscriptionData>('subscription', 10 * 60 * 1000);
+  }
+  return subscriptionCache;
+};
+
+const getPledgeCache = () => {
+  if (typeof window === 'undefined') return null;
+  if (!pledgeCache) {
+    pledgeCache = new BatchCache<PledgeData[]>('pledges', 5 * 60 * 1000);
+  }
+  return pledgeCache;
+};
+
+const getPageCache = () => {
+  if (typeof window === 'undefined') return null;
+  if (!pageCache) {
+    pageCache = new BatchCache<any>('pageInfo', 15 * 60 * 1000);
+  }
+  return pageCache;
+};
 
 // Read operation counters for monitoring
 let readOperationCount = 0;
@@ -389,9 +414,13 @@ export const createOptimizedSubscriptionListener = (
  * Clear all subscription-related caches
  */
 export const clearSubscriptionCaches = () => {
-  subscriptionCache.clear();
-  pledgeCache.clear();
-  pageCache.clear();
+  const subCache = getSubscriptionCache();
+  const plCache = getPledgeCache();
+  const pgCache = getPageCache();
+
+  if (subCache) subCache.clear();
+  if (plCache) plCache.clear();
+  if (pgCache) pgCache.clear();
 };
 
 /**

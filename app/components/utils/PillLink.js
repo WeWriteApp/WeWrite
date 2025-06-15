@@ -35,7 +35,7 @@ export const PillLink = forwardRef(({
 }, ref) => {
   // Hooks
   const { user } = useAuth();
-  const { getPillStyleClasses } = usePillStyle();
+  const { getPillStyleClasses, pillStyle } = usePillStyle();
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
   const [pageData, setPageData] = useState(null);
   const router = useRouter();
@@ -119,37 +119,8 @@ export const PillLink = forwardRef(({
     isExternalLink: isExternalLinkType
   });
 
-  // Get pill style
-  const { pillStyle } = usePillStyle();
-  // No inline style needed, we'll use CSS classes from getPillStyleClasses()
-
-  // Base styles for all pill links
-  // IMPORTANT: This must match the styles in ReplyEditor.js LinkComponent to ensure consistent appearance
-  // between view mode and edit mode. Any changes here should also be made in ReplyEditor.js.
-  const classicPadding = pillStyle === 'classic' ? '' : 'px-2 py-0.5';
-
-  // FIX: Allow text to display fully, only truncate when viewport would overflow
-  const textWrapStyle = 'whitespace-nowrap';
-
-  const baseStyles = `
-    inline-flex items-center
-    my-0.5
-    text-sm font-medium
-    rounded-lg
-    transition-colors
-    ${textWrapStyle}
-    ${classicPadding}
-    ${getPillStyleClasses()}
-    ${className}
-    text-indent-0
-    float-none
-    align-baseline
-    leading-tight
-    w-fit
-    min-w-fit
-    max-w-none
-    flex-none
-  `.trim().replace(/\s+/g, ' ');
+  // Use centralized styling with any additional custom classes
+  const baseStyles = `${getPillStyleClasses()} ${className}`.trim();
 
   // External link with confirmation modal
   if (isExternalLinkType) {

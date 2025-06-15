@@ -256,9 +256,6 @@ export const containsAllSearchWords = (title: string, searchTerm: string, isCont
   const searchWords = normalizedSearchTerm.split(/\s+/).filter(word => word.length > 0);
   const titleWords = normalizedTitle.split(/\s+/);
 
-  // Log for debugging
-  console.log(`Checking if "${title}" contains all words in "${searchTerm}". Search words: ${JSON.stringify(searchWords)}`);
-
   // Helper function to get match type with content prefix if needed
   const getMatchType = (baseType) => {
     return isContentMatch ? `content_${baseType}` : baseType;
@@ -268,10 +265,8 @@ export const containsAllSearchWords = (title: string, searchTerm: string, isCont
   if (normalizedTitle.includes(normalizedSearchTerm)) {
     // ENHANCED: Check if this is a word boundary match (higher priority)
     if (isCompleteWordMatch(normalizedTitle, normalizedSearchTerm)) {
-      console.log(`✅ WORD BOUNDARY SEQUENTIAL MATCH: "${title}" contains the exact phrase "${searchTerm}" as complete word(s)`);
       return { match: true, type: getMatchType('sequential_exact_word_boundary') };
     } else {
-      console.log(`✅ SEQUENTIAL MATCH: "${title}" contains the exact phrase "${searchTerm}"`);
       return { match: true, type: getMatchType('sequential_exact') };
     }
   }
@@ -280,14 +275,12 @@ export const containsAllSearchWords = (title: string, searchTerm: string, isCont
   if (searchWords.length === 1 && searchWords[0].length >= 2) {
     // ENHANCED: First check for exact word boundary matches (highest priority)
     if (isCompleteWordMatch(normalizedTitle, searchWords[0])) {
-      console.log(`✅ COMPLETE WORD MATCH: "${title}" contains "${searchWords[0]}" as a complete word`);
       return { match: true, type: getMatchType('complete_word_boundary') };
     }
 
     // Then check if any word in the title starts with the search term
     for (const titleWord of titleWords) {
       if (titleWord.startsWith(searchWords[0])) {
-        console.log(`✅ WORD START MATCH: "${titleWord}" in "${title}" starts with "${searchWords[0]}"`);
         return { match: true, type: getMatchType('word_start') };
       }
     }
@@ -299,7 +292,6 @@ export const containsAllSearchWords = (title: string, searchTerm: string, isCont
     // For single-word search terms, check if it's part of any word in the title
     for (const titleWord of titleWords) {
       if (titleWord.includes(searchWords[0])) {
-        console.log(`✅ PARTIAL WORD MATCH: "${titleWord}" in "${title}" contains "${searchWords[0]}"`);
         return { match: true, type: getMatchType('partial_word') };
       }
     }
@@ -308,7 +300,6 @@ export const containsAllSearchWords = (title: string, searchTerm: string, isCont
     // This helps with cases like "res" matching "research"
     for (const titleWord of titleWords) {
       if (titleWord.startsWith(searchWords[0])) {
-        console.log(`✅ PREFIX MATCH: "${titleWord}" in "${title}" starts with "${searchWords[0]}"`);
         return { match: true, type: getMatchType('prefix_match') };
       }
     }
@@ -329,7 +320,6 @@ export const containsAllSearchWords = (title: string, searchTerm: string, isCont
     }
 
     if (allWordsFoundInSequence) {
-      console.log(`✅ SEQUENTIAL TEXT MATCH: "${title}" contains all words in "${searchTerm}" in sequence`);
       return { match: true, type: getMatchType('sequential_text') };
     }
 
@@ -344,7 +334,6 @@ export const containsAllSearchWords = (title: string, searchTerm: string, isCont
         }
       }
       if (exactSequentialMatch) {
-        console.log(`✅ EXACT SEQUENTIAL WORD MATCH: "${title}" contains the exact words "${searchWords.join(' ')}" in sequence`);
         return { match: true, type: getMatchType('sequential_exact_words') };
       }
 
@@ -358,7 +347,6 @@ export const containsAllSearchWords = (title: string, searchTerm: string, isCont
         }
       }
       if (partialSequentialMatch) {
-        console.log(`✅ PARTIAL SEQUENTIAL WORD MATCH: "${title}" contains words starting with "${searchWords.join(' ')}" in sequence`);
         return { match: true, type: getMatchType('sequential_partial_words') };
       }
 
@@ -372,7 +360,6 @@ export const containsAllSearchWords = (title: string, searchTerm: string, isCont
         }
       }
       if (inclusiveSequentialMatch) {
-        console.log(`✅ INCLUSIVE SEQUENTIAL WORD MATCH: "${title}" contains the words "${searchWords.join(' ')}" in sequence`);
         return { match: true, type: getMatchType('sequential_words') };
       }
     }
@@ -382,47 +369,42 @@ export const containsAllSearchWords = (title: string, searchTerm: string, isCont
   const allWordsFound = searchWords.every(word => {
     // Check if the word is directly included in the title
     if (normalizedTitle.includes(word)) {
-      console.log(`Word "${word}" found directly in title`);
       return true;
     }
 
     // Check if the word is part of any word in the title
     const foundInWord = titleWords.some(titleWord => titleWord.includes(word));
     if (foundInWord) {
-      console.log(`Word "${word}" found as part of a word in title`);
       return true;
     }
 
     // If we get here, the word wasn't found in any form
-    console.log(`Word "${word}" NOT found in title`);
     return false;
   });
 
   if (allWordsFound) {
-    console.log(`✅ ALL WORDS MATCH: "${title}" contains all words in "${searchTerm}" but not in sequence`);
     return { match: true, type: getMatchType('all_words') };
   }
 
-  console.log(`❌ NO MATCH: "${title}" does not contain all words in "${searchTerm}"`);
   return { match: false, type: 'none' };
 };
 
 /**
- * Slate content node interface
+ * Editor content node interface
  */
-interface SlateNode {
+interface EditorNode {
   text?: string;
-  children?: SlateNode[];
+  children?: EditorNode[];
   [key: string]: any;
 }
 
 /**
- * Extract plain text from Slate content structure
+ * Extract plain text from editor content structure
  *
- * @param nodes - Slate content nodes
+ * @param nodes - Editor content nodes
  * @returns Plain text extracted from the content
  */
-export const extractTextFromSlateContent = (nodes: SlateNode[]): string => {
+export const extractTextFromEditorContent = (nodes: EditorNode[]): string => {
   let text = '';
   if (!nodes || !Array.isArray(nodes)) return text;
 
@@ -430,11 +412,14 @@ export const extractTextFromSlateContent = (nodes: SlateNode[]): string => {
     if (typeof node.text === 'string') {
       text += node.text + ' ';
     } else if (node.children && Array.isArray(node.children)) {
-      text += extractTextFromSlateContent(node.children) + ' ';
+      text += extractTextFromEditorContent(node.children) + ' ';
     }
   }
   return text;
 };
+
+// Compatibility alias for existing code
+export const extractTextFromSlateContent = extractTextFromEditorContent;
 
 /**
  * Search result interface
@@ -452,17 +437,12 @@ interface SearchResult {
 
 export const sortSearchResultsByScore = (results: SearchResult[], searchTerm: string): SearchResult[] => {
   if (!results || !Array.isArray(results)) {
-    console.warn('sortSearchResultsByScore called with invalid results:', results);
     return [];
   }
 
   if (!searchTerm) {
-    console.warn('sortSearchResultsByScore called with empty searchTerm');
     return [...results];
   }
-
-  // Log the original results for debugging
-  console.log(`Sorting ${results.length} results for search term: "${searchTerm}"`);
 
   // First, check if any results contain all search words
   const searchWords = searchTerm.toLowerCase().trim().split(/\s+/).filter(word => word.length > 0);
@@ -552,30 +532,6 @@ export const sortSearchResultsByScore = (results: SearchResult[], searchTerm: st
     // Then sort by match score
     return b.matchScore - a.matchScore;
   });
-
-  // Log the top 5 results with their scores for debugging
-  const topResults = sortedResults.slice(0, 5);
-  console.log('Top search results with scores:',
-    topResults.map(r => ({
-      title: r.title || r.name,
-      score: r.matchScore,
-      matchType: r.matchType,
-      containsAllWords: r.containsAllSearchWords
-    }))
-  );
-
-  // Log if we didn't find any high-scoring results
-  if (topResults.length > 0 && topResults[0].matchScore < 60) {
-    console.warn('No high-scoring matches found for:', searchTerm);
-  }
-
-  // Log match type statistics
-  const matchTypeCounts = sortedResults.reduce((counts, result) => {
-    counts[result.matchType] = (counts[result.matchType] || 0) + 1;
-    return counts;
-  }, {});
-
-  console.log('Match type statistics:', matchTypeCounts);
 
   return sortedResults;
 };

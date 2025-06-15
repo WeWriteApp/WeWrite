@@ -41,7 +41,7 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
     },
     {
       id: 'tier1',
-      name: 'Tier 1 Subscription',
+      name: 'Supporter',
       description: 'Subscribe to WeWrite for $10/month',
       amount: '$10/mo',
       status: 'active',
@@ -49,19 +49,19 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
     },
     {
       id: 'tier2',
-      name: 'Tier 2 Subscription',
-      description: 'Subscribe to WeWrite for $20/month',
-      amount: '$20/mo',
+      name: 'Champion',
+      description: 'Subscribe to WeWrite for $50/month',
+      amount: '$50/mo',
       status: 'active',
       tier: 'tier2'
     },
     {
-      id: 'tier3',
-      name: 'Tier 3 Subscription',
-      description: 'Subscribe to WeWrite for $50/month',
-      amount: '$50/mo',
+      id: 'custom',
+      name: 'Custom',
+      description: 'Subscribe to WeWrite for $60+/month',
+      amount: '$60+/mo',
       status: 'active',
-      tier: 'tier3'
+      tier: 'custom'
     }
   ];
 
@@ -88,9 +88,9 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
         <div className="py-4">
           <div className="space-y-4">
             {tiers.map((tier) => {
-              // Use white background for all tiers
-              const bgColorClass = 'bg-white dark:bg-gray-800';
-              const borderColorClass = currentTier === tier.tier ? 'border-primary border-2' : 'border-border dark:border-border';
+              // Use theme-aware background for all tiers
+              const bgColorClass = 'bg-card';
+              const borderColorClass = currentTier === tier.tier ? 'border-primary border-2' : 'border-theme-medium';
               return (
                 <div
                   key={tier.id}
@@ -118,9 +118,9 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
                                         currentTier === 'tier3' ? 'Tier 3' : 'Unknown'} subscription
               </div>
             ) : null}
-            {/* Only show the CTA button if this is for the current user (no username and no userId) and payments are enabled */}
-            {(!username && !userId) && paymentsEnabled && (
-              <Link href="/subscription">
+            {/* Only show the CTA button if this is for the current user (no username and no userId) */}
+            {(!username && !userId) && (
+              <Link href="/settings/subscription">
                 <Button>{currentTier && currentStatus === 'active' ? 'Manage Your Subscription' : 'Subscribe Now'}</Button>
               </Link>
             )}

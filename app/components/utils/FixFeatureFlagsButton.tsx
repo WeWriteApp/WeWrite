@@ -100,12 +100,10 @@ export default function FixFeatureFlagsButton() {
         });
 
         await setDoc(featureFlagsRef, initialFlags);
-        console.log('[DEBUG] Created feature flags document with all flags disabled:', initialFlags);
 
         // Verify the creation
         const createdDoc = await getDoc(featureFlagsRef);
         if (createdDoc.exists()) {
-          console.log('[DEBUG] Verified created feature flags:', createdDoc.data());
           toast({
             title: 'Success',
             description: 'Feature flags have been created successfully',
@@ -114,7 +112,7 @@ export default function FixFeatureFlagsButton() {
         }
       }
     } catch (error) {
-      console.error('[DEBUG] Error fixing feature flags:', error);
+      console.error('Error fixing feature flags:', error);
       toast({
         title: 'Error',
         description: `Failed to fix feature flags: ${error.message}`,

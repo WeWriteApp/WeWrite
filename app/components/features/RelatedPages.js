@@ -559,9 +559,17 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 8 })
           });
 
           // Sort candidates by relevance score and apply sophisticated ranking
+          // Mark already linked pages instead of filtering them out
           const sortedCandidates = candidatePages
-            .filter(page => !linkedPageIds.includes(page.id)) // Filter out already linked pages
+            .map(page => ({
+              ...page,
+              isAlreadyLinked: linkedPageIds.includes(page.id)
+            }))
             .sort((a, b) => {
+              // Prioritize non-linked pages over already linked ones
+              if (a.isAlreadyLinked !== b.isAlreadyLinked) {
+                return a.isAlreadyLinked ? 1 : -1;
+              }
               // Primary sort: by match type (title matches come first)
               if (a.matchType !== b.matchType) {
                 return a.matchType === 'title' ? -1 : 1;
@@ -640,15 +648,28 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 8 })
         <div className="flex flex-wrap gap-2 py-4 min-h-[100px] max-h-[200px] overflow-y-auto">
           {relatedPages.map(page => (
             <div key={page.id} className="flex-none max-w-full">
-              <PillLink
-                key={page.id}
-                href={`/${page.id}`}
-                className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
-              >
-                {page.title && isDailyNoteFormat(page.title)
-                  ? formatDateString(page.title)
-                  : (page.title || "Untitled")}
-              </PillLink>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={page.isAlreadyLinked ? "opacity-60" : ""}>
+                      <PillLink
+                        key={page.id}
+                        href={`/${page.id}`}
+                        className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
+                      >
+                        {page.title && isDailyNoteFormat(page.title)
+                          ? formatDateString(page.title)
+                          : (page.title || "Untitled")}
+                      </PillLink>
+                    </div>
+                  </TooltipTrigger>
+                  {page.isAlreadyLinked && (
+                    <TooltipContent side="top" className="max-w-[200px]">
+                      Already linked in page content
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           ))}
         </div>

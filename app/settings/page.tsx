@@ -148,14 +148,12 @@ export default function AccountPage() {
         setTempEmail(currentEmail);
       }
 
-      // Load subscription data via API
+      // Load subscription data using optimized Firebase function
       try {
-        const response = await fetch('/api/account-subscription');
-        if (response.ok) {
-          const userSubscription = await response.json();
-          if (userSubscription && typeof userSubscription === 'object' && 'status' in userSubscription && userSubscription.status === 'active') {
-            fetchPaymentHistory(user.uid);
-          }
+        const { getOptimizedUserSubscription } = await import('../firebase/optimizedSubscription');
+        const userSubscription = await getOptimizedUserSubscription(user.uid, { useCache: true });
+        if (userSubscription && userSubscription.status === 'active') {
+          fetchPaymentHistory(user.uid);
         }
       } catch (error) {
         console.error('Error fetching subscription data:', error);
@@ -419,7 +417,7 @@ export default function AccountPage() {
                   )}
                 </div>
               </CardContent>
-              <CardFooter className="pt-6 border-t border-border/50">
+              <CardFooter className="pt-6 border-t-only">
                 <Button
                   variant="destructive"
                   size="sm"

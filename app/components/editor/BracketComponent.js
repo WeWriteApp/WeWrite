@@ -3,6 +3,7 @@ import { useContext, useState, useEffect, useRef, useCallback } from "react";
 import { AuthContext } from "../../providers/AuthProvider";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { INSERT_CUSTOM_LINK_COMMAND } from "./CustomLinkPlugin";
+import { useParams } from "next/navigation";
 
 function debounce(func, delay) {
   let timeout;
@@ -21,6 +22,8 @@ function BracketComponent() {
   const containerRef = useRef(null);
   const [editor] = useLexicalComposerContext();
   const { user } = useContext(AuthContext);
+  const params = useParams();
+  const currentPageId = params?.id;
 
   const fetchResults = useCallback(
     debounce(async (search) => {
@@ -60,17 +63,21 @@ function BracketComponent() {
           ...(data.publicPages || [])
         ];
 
+        // Filter out the current page to prevent self-referential links
+        const filteredPages = combinedPages.filter(page => page.id !== currentPageId);
+
         console.log('BracketComponent processed results:', {
           total: combinedPages.length,
+          filtered: filteredPages.length,
+          currentPageId,
           bySection: {
             userPages: data.userPages?.length || 0,
             groupPages: data.groupPages?.length || 0,
             publicPages: data.publicPages?.length || 0
-          },
-          combinedPages
+          }
         });
 
-        setAllPages(combinedPages);
+        setAllPages(filteredPages);
       } catch (error) {
         console.error("Error fetching search results", error);
         setAllPages([]);
@@ -132,7 +139,7 @@ function BracketComponent() {
   };
 
   return (
-    <div ref={containerRef} className="relative bg-card shadow-md rounded-md p-4 w-64 border border-border">
+    <div ref={containerRef} className="relative bg-card shadow-md rounded-md p-4 w-64 border-theme-strong">
       <input
         type="text"
         value={inputValue}
@@ -145,7 +152,7 @@ function BracketComponent() {
         <div className="mt-2 text-center text-muted-foreground flex justify-center"><div className="loader"></div></div>
       ) : (
         allPages.length > 0 && (
-          <ul className="mt-2 max-h-40 overflow-y-auto border border-border rounded-md bg-card">
+          <ul className="mt-2 max-h-40 overflow-y-auto border-theme-strong rounded-md bg-card">
             {allPages.map((page) => (
               <li
                 key={page.id}

@@ -38,13 +38,6 @@ export function generateDiffContent(
   }
 
   try {
-    // Log the content for debugging
-    console.log('DIFF_DEBUG: Generating diff between contents:', {
-      currentType: typeof currentContent,
-      previousType: typeof previousContent,
-      currentLength: typeof currentContent === 'string' ? currentContent.length : Array.isArray(currentContent) ? currentContent.length : 'unknown',
-      previousLength: typeof previousContent === 'string' ? previousContent.length : Array.isArray(previousContent) ? previousContent.length : 'unknown'
-    });
 
     // Parse content if needed
     const current = typeof currentContent === 'string' ? JSON.parse(currentContent) : currentContent;
@@ -56,12 +49,7 @@ export function generateDiffContent(
     // Simple diff algorithm - compare paragraphs
     const minLength = Math.min(diffContent.length, previous.length);
 
-    // Log the parsed content structure
-    console.log('DIFF_DEBUG: Parsed content structures:', {
-      currentLength: Array.isArray(current) ? current.length : 'not array',
-      previousLength: Array.isArray(previous) ? previous.length : 'not array',
-      minLength
-    });
+
 
     // Compare each paragraph
     for (let i = 0; i < minLength; i++) {
@@ -75,11 +63,7 @@ export function generateDiffContent(
 
       // Compare children (text nodes and links)
       if (currentParagraph.children && previousParagraph.children) {
-        // Log paragraph children for debugging
-        console.log(`DIFF_DEBUG: Comparing paragraph ${i}:`, {
-          currentChildren: currentParagraph.children.length,
-          previousChildren: previousParagraph.children.length
-        });
+
 
         // FIXED: Special handling for links, especially external links
         // First, identify and process links in both paragraphs
@@ -92,23 +76,6 @@ export function generateDiffContent(
         );
 
         if (currentLinks.length > 0 || previousLinks.length > 0) {
-          console.log(`DIFF_DEBUG: Paragraph ${i} contains links:`, {
-            currentLinks: currentLinks.length,
-            previousLinks: previousLinks.length
-          });
-
-          // Log the links for debugging
-          if (currentLinks.length > 0) {
-            currentLinks.forEach((link, j) => {
-              console.log(`DIFF_DEBUG: Current link ${j}:`, JSON.stringify(link));
-            });
-          }
-
-          if (previousLinks.length > 0) {
-            previousLinks.forEach((link, j) => {
-              console.log(`DIFF_DEBUG: Previous link ${j}:`, JSON.stringify(link));
-            });
-          }
 
           // FIXED: Improved link comparison for external links
           currentLinks.forEach(currentLink => {
@@ -131,7 +98,6 @@ export function generateDiffContent(
             });
 
             if (!linkExists) {
-              console.log('DIFF_DEBUG: Marking link as added:', currentLink.url);
               currentLink.added = true;
               // Also mark the link's children as added
               if (currentLink.children) {
@@ -163,7 +129,6 @@ export function generateDiffContent(
             });
 
             if (!linkExists) {
-              console.log('DIFF_DEBUG: Adding removed link:', prevLink.url);
               // Create a copy of the link with removed flag
               const removedLink = {
                 ...prevLink,
@@ -190,8 +155,6 @@ export function generateDiffContent(
         const previousText = extractTextFromChildren(previousParagraph.children);
 
         if (currentText !== previousText) {
-          console.log(`DIFF_DEBUG: Text differs in paragraph ${i}`);
-
           // Mark text nodes as added or removed
           currentParagraph.children.forEach(child => {
             if (child.text && !child.added) {

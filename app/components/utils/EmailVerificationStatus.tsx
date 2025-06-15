@@ -17,7 +17,7 @@ export function EmailVerificationStatus({ className = "" }: EmailVerificationSta
         icon: <CheckCircle className="h-4 w-4" />,
         text: "Email verified",
         bgColor: "bg-success/10 dark:bg-success/20",
-        borderColor: "border-success/30 dark:border-success/40",
+        borderColor: "border-theme-medium",
         textColor: "text-success dark:text-success-foreground",
         iconColor: "text-success dark:text-success-foreground"
       };
@@ -27,7 +27,7 @@ export function EmailVerificationStatus({ className = "" }: EmailVerificationSta
       icon: <XCircle className="h-4 w-4" />,
       text: "Email not verified",
       bgColor: "bg-red-50 dark:bg-red-950/20",
-      borderColor: "border-red-200 dark:border-red-800",
+      borderColor: "border-theme-medium",
       textColor: "text-red-700 dark:text-red-300",
       iconColor: "text-red-600 dark:text-red-400"
     };

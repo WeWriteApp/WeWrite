@@ -249,31 +249,20 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
 
           // Only fetch subscription data if the feature is enabled
           if (subscriptionEnabled) {
-            const res = await fetch("/api/account-subscription", {
-              // Add error handling options
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              // Don't follow redirects to avoid issues with auth
-              redirect: 'error',
-            });
+            try {
+              // Use optimized Firebase function for subscription data
+              const { getOptimizedUserSubscription } = await import('../firebase/optimizedSubscription');
+              const subscriptionData = await getOptimizedUserSubscription(user.uid, { useCache: true });
 
-            if (res.ok) {
-              const data = await res.json();
-              if (data && data.status) {
-                setSubscriptions([{ ...data }]);
+              if (subscriptionData && subscriptionData.status) {
+                setSubscriptions([{ ...subscriptionData }]);
               } else {
                 setSubscriptions([]);
               }
               // Update the last check timestamp
               localStorage.setItem('lastSubscriptionCheck', now.toString());
-            } else if (res.status === 401) {
-              // Handle unauthorized error gracefully
-              console.log('User not authorized for subscription check');
-              setSubscriptions([]);
-            } else {
-              console.error('Error fetching subscription data:', res.status);
+            } catch (error) {
+              console.error('Error fetching subscription data:', error);
               setSubscriptions([]);
             }
           } else {

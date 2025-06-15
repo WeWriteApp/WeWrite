@@ -87,6 +87,12 @@
   /* Internal padding reduced to p-2 (8px) for better visual balance */
 }
 
+/* Seamless view/edit mode transitions - now handled by unified styling in editor-styles.css */
+.page-editor-stable,
+[data-slate-editor] {
+  box-sizing: border-box;
+}
+
 /* Make sure the editor content is visible */
 .editable-container {
   min-height: 200px;
@@ -216,9 +222,10 @@
 
 /* Prevent layout shift during edit mode transitions */
 .edit-mode-container {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
   transform: translateZ(0); /* Force hardware acceleration */
-  will-change: border, box-shadow, padding;
+  will-change: border-color, box-shadow;
+  /* Avoid transitioning layout properties to prevent flickering */
 }
 
 /* New page creation layout stability */
@@ -481,7 +488,7 @@
   background-color: hsl(var(--card));
   color: hsl(var(--card-foreground));
   border-radius: 0.75rem; /* rounded-xl */
-  border: 1px solid hsl(var(--border-theme-strong));
+  border: 1px solid hsl(var(--border) / 0.6); /* border-theme-strong equivalent */
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
   overflow: hidden;
   /* Mobile-first padding with better spacing */
@@ -501,7 +508,7 @@
 /* Dark mode adjustments for cards */
 .dark .wewrite-card {
   background-color: hsl(var(--card) / 0.9); /* dark:bg-card/90 */
-  border-color: hsl(var(--border-theme-strong));
+  border-color: hsl(var(--border) / 0.6); /* border-theme-strong equivalent */
 }
 
 /* Hover state for cards - shadow extension effect instead of background change */
@@ -672,9 +679,9 @@ html[data-high-contrast="true"] .border-border {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid hsl(var(--border) / 0.2);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  color: rgba(0, 0, 0, 0.7);
+  color: hsl(var(--foreground) / 0.7);
 }
 
 #roadmap-scroll-left:hover,
@@ -686,8 +693,8 @@ html[data-high-contrast="true"] .border-border {
 
 .dark #roadmap-scroll-left,
 .dark #roadmap-scroll-right {
-  border-color: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.9);
+  border-color: hsl(var(--border) / 0.2);
+  color: hsl(var(--foreground) / 0.9);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
@@ -812,12 +819,12 @@ input[type="number"] {
 
 /* Light mode - slightly darker inner border */
 .inner-border-neutral-alpha-3::after {
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid hsl(var(--border) / 0.3);
 }
 
 /* Dark mode - slightly lighter inner border */
 .dark .inner-border-neutral-alpha-3::after {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid hsl(var(--border) / 0.3);
 }
 
 /* Basic styling for html and body */
@@ -1042,8 +1049,8 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 1rem;
-  background-color: var(--background);
-  border-bottom: 1px solid var(--border);
+  background-color: hsl(var(--background));
+  border-bottom: 1px solid hsl(var(--border));
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -1094,15 +1101,7 @@ body {
   max-width: calc(100vw - 6rem); /* Account for paragraph number and margins with generous space */
 }
 
-/* Ensure proper text contrast in pill links */
-.bg-primary {
-  color: #ffffff !important; /* Force white text for all primary backgrounds */
-}
-
-/* Force white text for all pill links with primary background */
-a[class*="bg-primary"], button[class*="bg-primary"], div[class*="bg-primary"] {
-  color: #ffffff !important;
-}
+/* Text contrast is now handled by PillStyleContext - removed conflicting rules */
 
 /* Ensure outline pills use the accent color for text */
 a.bg-transparent, button.bg-transparent, div.bg-transparent {

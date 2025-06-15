@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useContext } from 'react';
-import { Clock, FileText, User, Calendar, Search, Filter } from 'lucide-react';
+import { Clock, FileText, User, Calendar, ChevronLeft } from 'lucide-react';
 import { AuthContext } from '../providers/AuthProvider';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -22,8 +22,7 @@ export default function RecentsPage() {
   const { user } = useContext(AuthContext);
   const { recentPages, loading } = useContext(RecentPagesContext);
   const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredPages, setFilteredPages] = useState([]);
+  // Remove search functionality - no longer needed
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -33,24 +32,7 @@ export default function RecentsPage() {
     }
   }, [user, router]);
 
-  // Filter pages based on search term
-  useEffect(() => {
-    if (!recentPages) {
-      setFilteredPages([]);
-      return;
-    }
-
-    if (!searchTerm.trim()) {
-      setFilteredPages(recentPages);
-      return;
-    }
-
-    const filtered = recentPages.filter(page =>
-      page.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      page.username?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredPages(filtered);
-  }, [recentPages, searchTerm]);
+  // No search functionality needed
 
   // Format timestamp for display
   const formatTimestamp = (timestamp: number) => {
@@ -80,35 +62,26 @@ export default function RecentsPage() {
       <main className="p-6 bg-background min-h-screen">
         <div className="max-w-4xl mx-auto">
           {/* Page Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <Clock className="h-8 w-8 text-primary" />
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">Recent Pages</h1>
-                <p className="text-muted-foreground">
-                  Pages you've visited recently
-                </p>
-              </div>
+          <div className="flex items-center gap-3 mb-8">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => router.push('/')}
+              className="text-foreground"
+              title="Back to Home"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Clock className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Recent Pages</h1>
+              <p className="text-muted-foreground">
+                Pages you've visited recently
+              </p>
             </div>
-            
-            <Link href="/">
-              <Button variant="outline" size="sm">
-                Back to Home
-              </Button>
-            </Link>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative mb-6">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search recent pages..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+          {/* Search functionality removed */}
 
           {/* Content */}
           {loading ? (
@@ -125,51 +98,44 @@ export default function RecentsPage() {
                 </div>
               ))}
             </div>
-          ) : filteredPages.length === 0 ? (
+          ) : recentPages.length === 0 ? (
             // Empty state
             <div className="text-center py-12">
               <Clock className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-foreground mb-2">
-                {searchTerm ? 'No matching pages found' : 'No recent pages yet'}
+                No recent pages yet
               </h3>
               <p className="text-muted-foreground mb-6">
-                {searchTerm 
-                  ? 'Try adjusting your search terms'
-                  : 'Start exploring pages to see them appear here'
-                }
+                Start exploring pages to see them appear here
               </p>
-              {!searchTerm && (
-                <Link href="/">
-                  <Button>
-                    Explore Pages
-                  </Button>
-                </Link>
-              )}
+              <Link href="/">
+                <Button>
+                  Explore Pages
+                </Button>
+              </Link>
             </div>
           ) : (
             // Recent pages list
             <div className="space-y-3">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-muted-foreground">
-                  {filteredPages.length} page{filteredPages.length !== 1 ? 's' : ''} found
+                  {recentPages.length} page{recentPages.length !== 1 ? 's' : ''} found
                 </p>
               </div>
-              
-              {filteredPages.map((page) => (
+
+              {recentPages.map((page) => (
                 <div
                   key={page.id}
                   className="group flex items-center gap-4 p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
                 >
-                  <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                  {/* Remove page icon */}
                   
                   <div className="flex-1 min-w-0">
                     <PillLink
                       href={`/${page.id}`}
                       className="block hover:no-underline"
                     >
-                      <h3 className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                        {page.title || 'Untitled'}
-                      </h3>
+                      {page.title || 'Untitled'}
                     </PillLink>
                     
                     {page.username && (

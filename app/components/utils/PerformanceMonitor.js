@@ -53,13 +53,7 @@ const PerformanceMonitor = React.memo(function PerformanceMonitor({
       }
     });
 
-    if (Object.keys(changedData).length > 0) {
-      console.log(`🔄 ${name} re-rendered (#${renderCount.current}) at ${timeSinceStart}ms - Changes:`, changedData);
-    } else if (renderCount.current > 1) {
-      console.log(`🔄 ${name} re-rendered (#${renderCount.current}) at ${timeSinceStart}ms - No data changes detected`);
-    } else {
-      console.log(`🆕 ${name} initial render at ${timeSinceStart}ms`);
-    }
+    // Performance monitoring data collected but not logged in production
 
     prevData.current = currentData;
   });

@@ -332,13 +332,18 @@ export default function PageHeader({
   React.useEffect(() => {
     const updateHeaderHeight = () => {
       if (headerRef.current) {
-        const height = headerRef.current.offsetHeight;
-        setHeaderHeight(height);
+        // Wait for any CSS transitions to complete before measuring
+        setTimeout(() => {
+          if (headerRef.current) {
+            const height = headerRef.current.offsetHeight;
+            setHeaderHeight(height);
 
-        // Also update spacer height directly to ensure immediate sync
-        if (spacerRef.current) {
-          spacerRef.current.style.height = `${height}px`;
-        }
+            // Also update spacer height directly to ensure immediate sync
+            if (spacerRef.current) {
+              spacerRef.current.style.height = `${height}px`;
+            }
+          }
+        }, 350); // Wait slightly longer than the 300ms transition duration
       }
     };
 
@@ -349,7 +354,10 @@ export default function PageHeader({
     window.addEventListener('resize', updateHeaderHeight);
 
     // Create a MutationObserver to watch for changes to the header
-    const observer = new MutationObserver(updateHeaderHeight);
+    const observer = new MutationObserver(() => {
+      // Debounce the mutation observer to avoid excessive updates
+      setTimeout(updateHeaderHeight, 50);
+    });
 
     if (headerRef.current) {
       observer.observe(headerRef.current, {
@@ -370,7 +378,25 @@ export default function PageHeader({
     let scrollTimeout: ReturnType<typeof setTimeout>;
     let lastScrollY = 0;
     let ticking = false;
-    let spacerUpdateTimeout: ReturnType<typeof setTimeout>;
+    let heightUpdateTimeout: ReturnType<typeof setTimeout>;
+
+    const updateSpacerHeight = () => {
+      if (headerRef.current && spacerRef.current) {
+        // Clear any pending height updates
+        if (heightUpdateTimeout) {
+          clearTimeout(heightUpdateTimeout);
+        }
+
+        // Wait for transitions to complete before measuring
+        heightUpdateTimeout = setTimeout(() => {
+          if (headerRef.current && spacerRef.current) {
+            const height = headerRef.current.offsetHeight;
+            spacerRef.current.style.height = `${height}px`;
+            setHeaderHeight(height);
+          }
+        }, 350); // Wait for CSS transitions to complete
+      }
+    };
 
     const handleScroll = () => {
       lastScrollY = window.scrollY;
@@ -382,6 +408,8 @@ export default function PageHeader({
           const shouldBeScrolled = lastScrollY > 0;
           if (shouldBeScrolled !== isScrolled) {
             setIsScrolled(shouldBeScrolled);
+            // Update spacer height when scroll state changes
+            updateSpacerHeight();
           }
 
           // Calculate scroll progress based on main content area only
@@ -403,12 +431,6 @@ export default function PageHeader({
           const progress = maxScroll > 0 ? (lastScrollY / maxScroll) * 100 : 0;
           setScrollProgress(Math.min(progress, 100));
 
-          // Update the spacer height immediately to ensure proper spacing
-          if (headerRef.current && spacerRef.current) {
-            const height = headerRef.current.offsetHeight;
-            spacerRef.current.style.height = `${height}px`;
-          }
-
           ticking = false;
         });
 
@@ -417,10 +439,7 @@ export default function PageHeader({
     };
 
     // Initial call to set up the spacer height
-    if (headerRef.current && spacerRef.current) {
-      const height = headerRef.current.offsetHeight;
-      spacerRef.current.style.height = `${height}px`;
-    }
+    updateSpacerHeight();
 
     // Use passive event listener for better performance
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -434,10 +453,7 @@ export default function PageHeader({
       }
 
       // Update spacer height after scrolling stops
-      if (headerRef.current && spacerRef.current) {
-        const height = headerRef.current.offsetHeight;
-        spacerRef.current.style.height = `${height}px`;
-      }
+      updateSpacerHeight();
     };
 
     if ('onscrollend' in window) {
@@ -449,8 +465,8 @@ export default function PageHeader({
       if (scrollTimeout) {
         clearTimeout(scrollTimeout);
       }
-      if (spacerUpdateTimeout) {
-        clearTimeout(spacerUpdateTimeout);
+      if (heightUpdateTimeout) {
+        clearTimeout(heightUpdateTimeout);
       }
       if ('onscrollend' in window) {
         window.removeEventListener('scrollend', handleScrollEnd);
@@ -525,7 +541,7 @@ export default function PageHeader({
     <>
       <header
         ref={headerRef}
-        className={`fixed top-0 z-50 transition-all duration-300 ease-out will-change-transform header-border-transition min-h-[64px] ${
+        className={`fixed top-0 z-50 transition-all duration-300 ease-out will-change-transform header-border-transition ${
           isScrolled
             ? "bg-background/80 backdrop-blur-sm shadow-sm"
             : "bg-background border-visible"
@@ -538,7 +554,7 @@ export default function PageHeader({
         }}
       >
         <div className="relative mx-auto px-2 md:px-4">
-          <div className={`flex items-center justify-between ${isScrolled ? 'py-0.5' : 'py-1'}`}>
+          <div className={`flex items-center justify-between ${isScrolled ? 'py-1' : 'py-2'}`}>
             {/* Left Side - Back Button */}
             <div className="flex items-center gap-2">
               <Button
@@ -855,12 +871,12 @@ export default function PageHeader({
               </DropdownMenu>
             </div>
           </div>
-          {/* Scroll Progress Bar */}
-          <div
-            className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-120"
-            style={{ width: `${scrollProgress}%` }}
-          />
         </div>
+        {/* Scroll Progress Bar - positioned outside padded container */}
+        <div
+          className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-120"
+          style={{ width: `${scrollProgress}%` }}
+        />
       </header>
       {/* Add spacer to prevent content from being hidden under the fixed header */}
       <div ref={spacerRef} style={{ height: headerHeight + 'px' }} />

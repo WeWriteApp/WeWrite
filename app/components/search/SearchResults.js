@@ -83,6 +83,7 @@ const SearchResults = ({
   // Refs
   const searchInputRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const lastSearchTerm = useRef('');
 
   // Determine if we're in link editor mode
   const isLinkEditor = !!setDisplayText;
@@ -111,8 +112,12 @@ const SearchResults = ({
 
       if (!searchTerm && !isLinkEditor) {
         resetSearchResults();
+        lastSearchTerm.current = '';
         return;
       }
+
+      // Update last search term
+      lastSearchTerm.current = searchTerm;
 
       if (!user && !userId) {
         return;
@@ -174,7 +179,14 @@ const SearchResults = ({
           return;
         }
         console.error("SearchResults - Error fetching search results", error);
-        resetSearchResults();
+
+        // Don't reset results immediately on error - keep previous results visible
+        // Only reset if this is a new search term
+        if (searchTerm !== lastSearchTerm.current) {
+          resetSearchResults();
+        } else {
+          console.log('Keeping previous results due to search error');
+        }
       } finally {
         setIsSearching(false);
       }

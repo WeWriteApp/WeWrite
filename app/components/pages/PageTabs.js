@@ -107,7 +107,7 @@ function AnimatedTabsContent({ children }) {
 }
 
 const PageTabs = () => {
-  const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } = useContext(DataContext);  
+  const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } = useContext(DataContext);
   const { user } = useContext(AuthContext);
   const router = useRouter();
   const [recentPages, setRecentPages] = useState([]);
@@ -179,14 +179,14 @@ const PageTabs = () => {
 
   return (
     <div className="w-full">
-      <Tabs defaultValue="all" className="w-full">
+      <Tabs defaultValue="all" urlNavigation="hash" className="w-full">
         <div className="relative">
-          <TabsList className="mb-4 relative overflow-x-auto flex w-full justify-start md:justify-center">
+          <TabsList className="relative overflow-x-auto flex w-full justify-start md:justify-center scrollbar-hide">
             <TabsTrigger value="all" className="relative flex-shrink-0">
               <FileText className="h-4 w-4 mr-2" />
               All Pages
-              <motion.div 
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" 
+              <motion.div
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
                 initial={false}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.2 }}
@@ -195,8 +195,8 @@ const PageTabs = () => {
             <TabsTrigger value="recent" className="relative flex-shrink-0">
               <Clock className="h-4 w-4 mr-2" />
               Recent
-              <motion.div 
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" 
+              <motion.div
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
                 initial={false}
                 animate={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
@@ -205,8 +205,8 @@ const PageTabs = () => {
             <TabsTrigger value="favorites" className="relative flex-shrink-0">
               <Star className="h-4 w-4 mr-2" />
               Favorites
-              <motion.div 
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" 
+              <motion.div
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
                 initial={false}
                 animate={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
@@ -246,17 +246,17 @@ const PageTabs = () => {
           </div>
         </div>
         
-        <TabsContent value="all" className="space-y-4">
-          <PageList 
-            pageList={pages} 
-            emptyMessage="You don't have any pages yet!" 
+        <TabsContent value="all" className="space-y-4 mt-4">
+          <PageList
+            pageList={pages}
+            emptyMessage="You don't have any pages yet!"
           />
-          
+
           {hasMorePages && (
             <div className="flex justify-center mt-4">
-              <Button 
-                variant="outline" 
-                onClick={loadMorePages} 
+              <Button
+                variant="outline"
+                onClick={loadMorePages}
                 disabled={isMoreLoading}
                 className="rounded-full"
               >
@@ -270,18 +270,18 @@ const PageTabs = () => {
             </div>
           )}
         </TabsContent>
-        
-        <TabsContent value="recent" className="space-y-4">
-          <PageList 
-            pageList={recentPages} 
-            emptyMessage="No recent pages found." 
+
+        <TabsContent value="recent" className="space-y-4 mt-4">
+          <PageList
+            pageList={recentPages}
+            emptyMessage="No recent pages found."
           />
         </TabsContent>
-        
-        <TabsContent value="favorites" className="space-y-4">
-          <PageList 
-            pageList={favoritePages} 
-            emptyMessage="You haven't favorited any pages yet." 
+
+        <TabsContent value="favorites" className="space-y-4 mt-4">
+          <PageList
+            pageList={favoritePages}
+            emptyMessage="You haven't favorited any pages yet."
           />
         </TabsContent>
       </Tabs>

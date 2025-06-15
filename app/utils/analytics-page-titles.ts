@@ -50,7 +50,7 @@ export const PAGE_TITLE_MAP: Record<string, string> = {
   '/activity': 'Activity Feed',
   '/search': 'Search Page',
   '/leaderboard': 'Leaderboard',
-  '/subscription': 'Subscription Page',
+  '/settings/subscription': 'Subscription Page',
 
   // Auth pages
   '/auth/login': 'Login Page',
@@ -878,24 +878,14 @@ export function trackPageViewWhenReady(
   // Check if content is ready
   const { isReady, title, hasUsername } = isContentReadyForAnalytics(pageId, currentTitle);
 
-  // If content is ready, track the page view
+  // If content is ready, mark as tracked but don't send analytics here
+  // Analytics tracking is now handled by UnifiedAnalyticsProvider
   if (isReady) {
-    // Only track if we haven't already tracked this page with this title
     const cacheKey = `${pageId}_${title}`;
     if (!trackedPages.has(cacheKey)) {
-      // Track the page view
-      if (typeof window !== 'undefined' && window.gtag) {
-        window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '', {
-          page_path: window.location.pathname,
-          page_title: title,
-          page_location: window.location.href
-        });
-
-        console.log('Analytics tracked with verified content:', title);
-
-        // Mark this page as tracked
-        trackedPages.add(cacheKey);
-      }
+      console.log('Content ready for analytics:', title);
+      // Mark this page as tracked to prevent duplicate processing
+      trackedPages.add(cacheKey);
     }
 
     // If we don't have username yet, continue trying to get it

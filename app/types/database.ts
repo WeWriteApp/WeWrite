@@ -11,7 +11,7 @@ export interface User {
   username?: string;
   displayName?: string;
   photoURL?: string;
-  bio?: string | SlateContent;
+  bio?: string | EditorContent;
   bioLastEditor?: string;
   bioLastEditTime?: string;
   createdAt?: string | Timestamp;
@@ -26,7 +26,7 @@ export interface User {
 export interface Page {
   id: string;
   title: string;
-  content: SlateContent | string;
+  content: EditorContent | string;
   userId: string;
   username?: string;
   isPublic: boolean;
@@ -66,34 +66,34 @@ export interface PageVersion {
   previousVersionId?: string;
 }
 
-// Slate editor content types
-export interface SlateNode {
+// Editor content types (simplified from Slate)
+export interface EditorNode {
   type: string;
-  children: SlateChild[];
+  children: EditorChild[];
 }
 
-export interface SlateChild {
+export interface EditorChild {
   text?: string;
   type?: string;
   url?: string;
   isExternal?: boolean;
   pageId?: string;
   showAuthor?: boolean;
-  children?: SlateChild[];
+  children?: EditorChild[];
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
   code?: boolean;
 }
 
-export type SlateContent = SlateNode[];
+export type EditorContent = EditorNode[];
 
 // Group types
 export interface Group {
   id: string;
   name: string;
   description?: string;
-  about?: string | SlateContent;
+  about?: string | EditorContent;
   aboutLastEditor?: string;
   aboutLastEditTime?: string;
   createdAt: string | Timestamp;
@@ -326,7 +326,7 @@ export interface BaseComponentProps {
 // Editor types
 export interface EditorRef {
   focus: () => boolean;
-  getContent: () => SlateContent;
+  getContent: () => EditorContent;
   insertText: (text: string) => boolean;
   insertLink: (url: any, text: any, options?: any) => boolean;
   openLinkEditor: (initialTab?: string) => boolean;

@@ -33,14 +33,12 @@ export default function UserPage({ params }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Helper function to fetch subscription data via API
+  // Helper function to fetch subscription data using optimized Firebase function
   const fetchUserSubscription = async (userId) => {
     try {
-      const response = await fetch(`/api/user-subscription?userId=${userId}`);
-      if (response.ok) {
-        const data = await response.json();
-        return data.status === null ? null : data;
-      }
+      const { getOptimizedUserSubscription } = await import('../../firebase/optimizedSubscription');
+      const subscription = await getOptimizedUserSubscription(userId, { useCache: true });
+      return subscription;
     } catch (error) {
       console.error('Error fetching user subscription:', error);
     }

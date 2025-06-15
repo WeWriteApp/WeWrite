@@ -57,16 +57,37 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
     }
   };
 
-  // Get the appropriate classes based on the current pill style
+  // Get the complete pill styling classes - single source of truth
   const getPillStyleClasses = (): string => {
+    // Base classes that apply to all pill styles
+    const baseClasses = `
+      inline-flex items-center
+      text-sm font-medium
+      rounded-lg
+      transition-colors
+      whitespace-nowrap
+      text-indent-0
+      float-none
+      align-baseline
+      leading-tight
+      w-fit
+      min-w-fit
+      max-w-none
+      flex-none
+      my-0.5
+    `.trim().replace(/\s+/g, ' ');
+
+    // Style-specific classes
+    let styleClasses = '';
     if (pillStyle === PILL_STYLES.OUTLINE) {
-      return `
+      styleClasses = `
         bg-transparent text-primary
         border-[1.5px] border-primary/40
         hover:bg-primary/10 hover:border-primary/60
+        px-2 py-0.5
       `;
     } else if (pillStyle === PILL_STYLES.CLASSIC) {
-      return `
+      styleClasses = `
         bg-transparent text-primary font-bold
         border-none
         hover:underline
@@ -74,14 +95,16 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
       `;
     } else {
       // Default filled style
-      // Force white text for better contrast regardless of background
-      return `
+      styleClasses = `
         bg-primary
         border-[1.5px] border-primary/20
         hover:bg-primary/90 hover:border-primary/30
-        text-primary-foreground
+        text-white
+        px-2 py-0.5
       `;
     }
+
+    return `${baseClasses} ${styleClasses}`.trim().replace(/\s+/g, ' ');
   };
 
   // Get the best text color for a pill based on its background

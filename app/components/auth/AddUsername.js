@@ -55,7 +55,6 @@ const AddUsername = () => {
         disabled={username !== confirmUsername}
         onClick={async() => {
           await addUsername(username);
-          console.log("username added");
           router.push("/");
         }}
       >

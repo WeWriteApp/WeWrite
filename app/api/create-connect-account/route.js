@@ -11,8 +11,21 @@ export async function POST(request) {
   try {
     // Add detailed logging for debugging
     console.log('Create connect account request received');
-    console.log('Request cookies:', Object.fromEntries(request.cookies.entries()));
-    console.log('Request headers:', Object.fromEntries(request.headers.entries()));
+
+    // Fix: Use request.cookies.getAll() instead of entries() for Next.js App Router
+    const cookies = request.cookies.getAll();
+    const cookieEntries = cookies.reduce((acc, cookie) => {
+      acc[cookie.name] = cookie.value;
+      return acc;
+    }, {});
+    console.log('Request cookies:', cookieEntries);
+
+    // Fix: Use request.headers.entries() safely
+    const headers = {};
+    request.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    console.log('Request headers:', headers);
 
     // Get user ID from request using our helper
     const userId = await getUserIdFromRequest(request);

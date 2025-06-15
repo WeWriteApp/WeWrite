@@ -49,7 +49,7 @@ export const createCheckoutSession = async ({ priceId, userId, amount, tierName 
     console.log('Creating checkout session with params:', { priceId, userId, amount, tierName });
 
     // Call your backend API to create a Stripe Checkout Session
-    const response = await fetch('/api/create-checkout-session', {
+    const response = await fetch('/api/subscription/create-checkout', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ export const createPortalSession = async (userId: string): Promise<PortalSession
     console.log('Creating portal session for user:', userId);
 
     // Call your backend API to create a Stripe Customer Portal session
-    const response = await fetch('/api/create-portal-session', {
+    const response = await fetch('/api/subscription/portal', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -201,7 +201,7 @@ export const updateSubscription = async (subscriptionId: string, newPriceId: str
 // Cancel subscription
 export const cancelSubscription = async (subscriptionId: string): Promise<ApiResponse> => {
   try {
-    const response = await fetch('/api/cancel-subscription', {
+    const response = await fetch('/api/subscription/cancel', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

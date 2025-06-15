@@ -55,9 +55,6 @@ export const trackQueryPerformance = async <T>(
     const endTime = performance.now();
     const duration = endTime - startTime;
 
-    // Log performance data
-    console.log(`Query ${queryName} took ${duration.toFixed(2)}ms`);
-
     // Store stats in memory
     queryStats.unshift({
       name: queryName,

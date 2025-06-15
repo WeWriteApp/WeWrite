@@ -39,21 +39,69 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
       return;
     }
 
-    // Check if selection is within the content area (if contentRef is provided)
-    if (options.contentRef?.current) {
-      const range = selection.getRangeAt(0);
-      const contentElement = options.contentRef.current;
+    const range = selection.getRangeAt(0);
 
-      // Check if the selection is within the content element
-      if (!contentElement.contains(range.commonAncestorContainer)) {
-        setSelectionState(prev => ({ ...prev, isVisible: false, selectionRange: null }));
-        return;
+    // Check if selection is within allowed content areas
+    const isInAllowedArea = () => {
+      // If contentRef is provided, only allow selections within that element
+      if (options.contentRef?.current) {
+        return options.contentRef.current.contains(range.commonAncestorContainer);
       }
+
+      // Otherwise, check if selection is in any allowed content area
+      const allowedSelectors = [
+        '[data-page-content]',           // Main page content
+        '.user-bio-content',             // User biography content
+        '.group-about-content',          // Group about page content
+        '[data-slate-editor]',           // Editor content
+        '.page-content',                 // Page content areas
+        '.content-area'                  // Generic content areas
+      ];
+
+      // Check if the selection is within any allowed area
+      for (const selector of allowedSelectors) {
+        const allowedElement = document.querySelector(selector);
+        if (allowedElement && allowedElement.contains(range.commonAncestorContainer)) {
+          return true;
+        }
+      }
+
+      // Prevent selection in navigation, headers, and UI elements
+      const forbiddenSelectors = [
+        'header',
+        'nav',
+        '.sidebar',
+        '.header',
+        '.navigation',
+        '.menu',
+        '.toolbar',
+        '.button',
+        '.pill-link',
+        '[role="button"]',
+        '[role="navigation"]',
+        '[role="menubar"]',
+        '[role="toolbar"]'
+      ];
+
+      // Check if selection is within any forbidden area
+      for (const selector of forbiddenSelectors) {
+        const forbiddenElement = document.querySelector(selector);
+        if (forbiddenElement && forbiddenElement.contains(range.commonAncestorContainer)) {
+          return false;
+        }
+      }
+
+      return false; // Default to not allowing selection
+    };
+
+    if (!isInAllowedArea()) {
+      setSelectionState(prev => ({ ...prev, isVisible: false, selectionRange: null }));
+      return;
     }
 
     // Get the position of the selection
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
+    const selectionRange = selection.getRangeAt(0);
+    const rect = selectionRange.getBoundingClientRect();
 
     // Calculate position for the menu (center of selection, above it)
     const position = {
@@ -65,7 +113,7 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
       selectedText,
       position,
       isVisible: true,
-      selectionRange: range.cloneRange(), // Store a copy of the range
+      selectionRange: selectionRange.cloneRange(), // Store a copy of the range
     });
   }, [options.contentRef]);
 

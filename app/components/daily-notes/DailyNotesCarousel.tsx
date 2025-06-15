@@ -369,7 +369,10 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
             />
             {/* Today chip positioned below today's card */}
             {isToday && (
-              <div className="mt-2 px-2 py-1 bg-primary text-primary-foreground text-xs font-medium rounded-full">
+              <div
+                className="mt-2 px-2 py-1 bg-primary text-xs font-medium rounded-full"
+                style={{ color: '#ffffff' }}
+              >
                 Today
               </div>
             )}

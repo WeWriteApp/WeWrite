@@ -3,11 +3,9 @@ import React, { useEffect, useState, useRef } from "react";
 import { useAuth } from "../../providers/AuthProvider";
 import dynamic from "next/dynamic";
 
-// Import the main editor dynamically to avoid SSR issues
+// Import the editor as the main editor
 const Editor = dynamic(() => import("./Editor"), { ssr: false });
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
-import { ReactEditor } from "slate-react";
-import { Transforms } from "slate";
 import { getUsernameById } from "../../utils/userUtils";
 import { createReplyAttribution } from "../../utils/linkUtils";
 
@@ -20,25 +18,12 @@ import ErrorBoundary from "../utils/ErrorBoundary";
 import { Button } from "../ui/button";
 import { Alert, AlertDescription } from "../ui/alert";
 import { AlertTriangle, X, Link, Check } from "lucide-react";
-import type { SlateContent } from "../../types/database";
+// Remove Slate-specific types - using simple text format now
 import { PageEditorSkeleton } from "../skeletons/PageEditorSkeleton";
 import { useAlert } from "../../hooks/useAlert";
 import AlertModal from "../utils/AlertModal";
 
-// Safely check if ReactEditor methods exist before using them
-const safeReactEditor = {
-  focus: (editor: any) => {
-    try {
-      if (ReactEditor && typeof ReactEditor.focus === 'function') {
-        ReactEditor.focus(editor);
-        return true;
-      }
-    } catch (error) {
-      console.error('Error in safeReactEditor.focus:', error);
-    }
-    return false;
-  }
-};
+// Remove Slate-specific ReactEditor utilities - no longer needed with SimpleEditor
 
 /**
  * Check if a title exactly matches the YYYY-MM-DD format for daily notes
@@ -54,8 +39,8 @@ const isExactDateFormat = (title: string): boolean => {
 interface PageEditorProps {
   title: string;
   setTitle: (title: string) => void;
-  initialContent?: SlateContent;
-  onContentChange: (content: SlateContent) => void;
+  initialContent?: any; // Changed from SlateContent to any for Editor compatibility
+  onContentChange: (content: any) => void; // Changed from SlateContent to any
   isPublic: boolean;
   setIsPublic: (isPublic: boolean) => void;
   location?: { lat: number; lng: number } | null;
@@ -108,6 +93,8 @@ const PageEditor: React.FC<PageEditorProps> = ({
   // Simplified hydration check
   const [isHydrated, setIsHydrated] = useState(false);
 
+  // Always use Editor - feature flag removed
+
   useEffect(() => {
     // Simple hydration check - just wait for the browser environment
     if (typeof window !== 'undefined') {
@@ -120,13 +107,12 @@ const PageEditor: React.FC<PageEditorProps> = ({
   }, []);
 
   // Initialize editor with initialContent
-  const [currentEditorValue, setCurrentEditorValue] = useState<SlateContent>(
+  const [currentEditorValue, setCurrentEditorValue] = useState<any>(
     initialContent || [{ type: 'paragraph', children: [{ text: '' }] }]
   );
 
   const { user } = useAuth();
   const editorRef = useRef<any>(null);
-  const cursorPositioned = useRef<boolean>(false);
 
   // Check if link functionality is enabled
   const linkFunctionalityEnabled = useFeatureFlag('link_functionality', user?.email);
@@ -298,82 +284,29 @@ const PageEditor: React.FC<PageEditorProps> = ({
     }
   }, [isReply, replyToId, onContentChange]);
 
-  // Focus the editor when entering edit mode
-  useEffect(() => {
-    // Auto-focus the editor for better user experience
-    if (editorRef.current && !isReply) {
-      editorRef.current.focus();
-    }
-  }, [isReply]);
+  // CRITICAL FIX: Disable auto-focus that interferes with cursor positioning
+  // The Editor component handles its own focus internally
+  // useEffect(() => {
+  //   // DISABLED: This was interfering with cursor positioning
+  //   if (editorRef.current && !isReply) {
+  //     editorRef.current.focus();
+  //   }
+  // }, [isReply]);
 
-  // Update currentEditorValue when the initialContent prop changes
-  useEffect(() => {
-    console.log("initialContent changed, updating editor value", {
-      initialContent: !!initialContent,
-      isReply
-    });
+  // CRITICAL FIX: Disable the useEffect that causes cursor jumping
+  // This was causing circular updates when user types → onChange → parent updates →
+  // initialContent changes → currentEditorValue updates → cursor jumps
+  //
+  // The editor should only be initialized once, not updated on every prop change
+  // useEffect(() => {
+  //   // DISABLED: This was causing cursor jumping during typing
+  //   if (initialContent) {
+  //     console.log("PageEditor: Updating editor with new content");
+  //     setCurrentEditorValue(initialContent);
+  //   }
+  // }, [initialContent, isReply]);
 
-    if (initialContent) {
-      // Always use the initialContent directly if it's provided
-      // This ensures the pre-filled attribution text is displayed
-      console.log("Setting editor value from initialContent", initialContent);
-      setCurrentEditorValue(initialContent);
-    }
-  }, [initialContent, isReply]);
-
-  // Position cursor for reply content - only on initial load
-  useEffect(() => {
-    // Only run this once when the component mounts and content is available
-    if (isReply && !cursorPositioned.current && editorRef.current && currentEditorValue?.length > 0) {
-      // Set cursor positioned flag to prevent any future positioning attempts
-      cursorPositioned.current = true;
-
-      // Use a timeout to ensure the editor is fully initialized
-      const timer = setTimeout(() => {
-        try {
-          const editor = editorRef.current;
-
-          // Check if the editor has the necessary methods
-          if (editor) {
-            // Determine the correct paragraph to position cursor at
-            // If there's only one paragraph (the attribution), add a new paragraph
-            if (currentEditorValue.length === 1) {
-              try {
-                // Add a new paragraph at the end
-                Transforms.insertNodes(
-                  editor,
-                  { type: 'paragraph', children: [{ text: '' }] },
-                  { at: [1] }
-                );
-              } catch (insertError) {
-                console.error('Error inserting new paragraph:', insertError);
-              }
-            }
-
-            // Now position cursor at the second paragraph (after attribution)
-            try {
-              // Use our safe wrapper for ReactEditor.focus
-              safeReactEditor.focus(editor);
-
-              // Create a point at the start of the second paragraph (index 1)
-              const point = { path: [1, 0], offset: 0 };
-
-              // Try to select the point
-              Transforms.select(editor, point);
-            } catch (selectError) {
-              console.error('Error selecting text:', selectError);
-            }
-          }
-        } catch (error) {
-          console.error('Error positioning cursor for reply:', error);
-        }
-      }, 300); // Reduced timeout for better responsiveness
-
-      return () => clearTimeout(timer);
-    }
-  // Empty dependency array ensures this only runs once on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Editor handles cursor positioning internally - no manual positioning needed
 
   // Handle content changes
   const handleContentChange = (value) => {
@@ -521,7 +454,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
       isSaving={isSaving}
       linkFunctionalityEnabled={linkFunctionalityEnabled}
     >
-      <div className="editor-container w-full max-w-none px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
+      <div className="editor-container w-full max-w-none">
 
       <div
         className="w-full max-w-none transition-all duration-200 border border-primary/30 rounded-lg p-4 md:p-6 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 hover:border-primary/40"
@@ -558,8 +491,8 @@ const PageEditor: React.FC<PageEditorProps> = ({
               </div>
             }
           >
-            {/* Simplified editor wrapper */}
-            <div className="slate-editor-wrapper page-editor-stable">
+            {/* Editor wrapper - using Editor */}
+            <div className="editor-wrapper page-editor-stable box-border">
               <Editor
                 ref={editorRef}
                 initialContent={currentEditorValue}

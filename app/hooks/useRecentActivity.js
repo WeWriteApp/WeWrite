@@ -203,7 +203,6 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
           validActivities = validActivities.filter(activity => {
             // Skip activities with missing or null usernames
             if (!activity.username || activity.username === "Missing username" || activity.username === "Anonymous") {
-              console.log(`Filtering out activity with missing username: ${activity.pageId}`);
               return false;
             }
             return true;

@@ -56,8 +56,13 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
         }
 
         // Get debug info from analytics instance
-        const analyticsStatus = analytics.debugStatus();
-        setStatus(analyticsStatus);
+        try {
+          const analyticsStatus = analytics.debugStatus();
+          setStatus(analyticsStatus);
+        } catch (debugErr) {
+          console.warn('Could not get analytics debug status:', debugErr);
+          // Continue without debug status
+        }
 
         // Mark as successfully initialized
         setInitialized(true);
@@ -289,7 +294,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
                   // Ensure we're collecting page titles for data science team
                   send_page_view: false, // We'll track manually to include titles
                 });
-                console.log(\`Google Analytics initialized with ID: \${GA_MEASUREMENT_ID}\`);
+                console.log('Google Analytics initialized with ID: ${GA_MEASUREMENT_ID}');
               `,
             }}
           />

@@ -2,6 +2,7 @@ import "./globals.css"
 import "./styles/scrollbar-hide.css"
 import "./styles/loader.css"
 import "./styles/responsive-table.css"
+import "./components/editor-styles.css"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "./providers/ThemeProvider"
 import { AuthProvider } from "./providers/AuthProvider"
@@ -9,8 +10,7 @@ import { AppProvider } from "./providers/AppProvider"
 import { DataProvider } from "./providers/DataProvider"
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
-import GAProvider from "./providers/GAProvider"
-import { AnalyticsProvider } from "./providers/AnalyticsProvider"
+import { UnifiedAnalyticsProvider } from "./providers/UnifiedAnalyticsProvider"
 import dynamic from "next/dynamic"
 import { ToastProvider } from "./providers/ToastProvider"
 import ErrorBoundary from "./components/utils/ErrorBoundary"
@@ -18,7 +18,7 @@ import { PillStyleProvider } from "./contexts/PillStyleContext"
 import { DateFormatProvider } from "./contexts/DateFormatContext"
 import { PWAProvider } from "./providers/PWAProvider"
 import FeatureFlagListener from "./components/utils/FeatureFlagListener"
-import SlateEarlyPatch from "./components/editor/SlateEarlyPatch"
+// Removed SlateEarlyPatch - no longer needed with SimpleEditor
 import CacheInitializer from "./components/utils/CacheInitializer"
 import { SyncQueueProvider } from "./contexts/SyncQueueContext"
 
@@ -94,7 +94,7 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="canonical" href={process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'} />
-        <SlateEarlyPatch />
+        {/* Removed SlateEarlyPatch - no longer needed with SimpleEditor */}
 
         {/* Enhanced Website Schema Markup */}
         <script
@@ -219,8 +219,7 @@ export default function RootLayout({
                     <ErrorBoundary name="data" resetOnPropsChange={true}>
                       <DataProvider>
                         <ErrorBoundary name="analytics" resetOnPropsChange={false}>
-                          <AnalyticsProvider>
-                            <GAProvider>
+                          <UnifiedAnalyticsProvider>
                               <ToastProvider>
                                 <PillStyleProvider>
                                   <DateFormatProvider>
@@ -245,8 +244,7 @@ export default function RootLayout({
                                   </DateFormatProvider>
                                 </PillStyleProvider>
                               </ToastProvider>
-                            </GAProvider>
-                          </AnalyticsProvider>
+                          </UnifiedAnalyticsProvider>
                         </ErrorBoundary>
                       </DataProvider>
                     </ErrorBoundary>

@@ -31,9 +31,7 @@ interface FirebaseConfig {
   measurementId: string | undefined;
 }
 
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-// Your web app's Firebase configuration
+// Firebase configuration
 const newConfig: FirebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_DOMAIN,
@@ -72,8 +70,9 @@ export const rtdb: Database = getDatabase(app);
 export const initializeAnalytics = async (): Promise<Analytics | null> => {
   if (typeof window !== 'undefined') {
     try {
-      // Firebase 11 changes: isSupported is now a property, not a function
-      if (isSupported) {
+      // Check if analytics is supported in this environment
+      const supported = await isSupported();
+      if (supported) {
         const analytics: Analytics = getAnalytics(app);
 
         if (process.env.NODE_ENV === 'development') {
@@ -104,7 +103,7 @@ export const testFirebaseAnalytics = async (): Promise<boolean> => {
   try {
     // Check if analytics is supported
     console.log('🔍 Checking if Firebase Analytics is supported...');
-    const supported = isSupported;
+    const supported = await isSupported();
     console.log('🔍 Firebase Analytics supported:', supported);
 
     if (!supported) {

@@ -147,10 +147,8 @@ export function PageActions({
     const confirmed = await confirmDelete("this page");
     if (confirmed) {
       try {
-        // Immediately redirect to home page to prevent showing error state
-        router.push("/");
-
-        // Delete the page in the background
+        // CRITICAL FIX: Delete the page first, then redirect
+        // This prevents 404 errors and ensures proper cleanup
         await deletePage(page.id);
 
         // Show success message
@@ -162,10 +160,16 @@ export function PageActions({
             detail: { pageId: page.id }
           }));
         }
+
+        // Redirect after successful deletion with a small delay
+        setTimeout(() => {
+          // Use replace to prevent back button issues
+          router.replace("/");
+        }, 500);
+
       } catch (error) {
         console.error("Error deleting page:", error);
         toast.error("Failed to delete page");
-        // Don't redirect if deletion failed - user is already redirected above
       }
     }
   };

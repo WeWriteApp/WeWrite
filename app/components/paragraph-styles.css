@@ -6,16 +6,10 @@
   opacity: 0.8; /* Slightly increased opacity for better visibility */
 }
 
-/* Inline paragraph number styling for normal mode */
+/* Inline paragraph number styling - now handled by unified styling */
 .paragraph-number-inline {
-  @apply text-muted-foreground text-xs select-none;
-  display: inline-block;
-  min-width: 0.75rem; /* Match edit mode width */
-  text-align: right;
-  opacity: 0.8; /* Slightly increased opacity for better visibility */
-  margin-right: 0.25rem; /* Match edit mode margin */
-  line-height: 1.5; /* Match the line height of paragraph text */
-  font-size: 0.75rem; /* Match edit mode font size */
+  /* Styling moved to unified-paragraph-number in editor-styles.css */
+  /* This prevents conflicts with the unified approach */
 }
 
 /* Dark mode specific styling for paragraph numbers */
@@ -49,16 +43,16 @@
   padding-left: 0;
 }
 
-/* Paragraph with inline number at beginning - standardized spacing */
+/* Legacy paragraph styles - now handled by unified styling in editor-styles.css */
+/* These styles are kept for backward compatibility but overridden by unified styles */
 .paragraph-with-number {
-  margin-bottom: 1.1rem; /* Averaged spacing between view mode (1.25rem) and edit mode (0.95rem) */
-  position: relative; /* Needed for proper positioning */
+  /* All styling now handled by .unified-paragraph class */
 }
 
 /* Consistent spacing for both normal mode and edit mode */
 .normal-mode .paragraph-with-number,
 .edit-mode .paragraph-with-number {
-  margin-bottom: 1.1rem; /* Same spacing for both modes */
+  /* All styling now handled by .unified-paragraph class */
 }
 
 /* Properly position paragraph numbers inline with text */

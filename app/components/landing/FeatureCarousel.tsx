@@ -229,7 +229,7 @@ export const FeatureCarousel = () => {
                         {(feature.status === 'coming-soon' || feature.status === 'in-progress') && (
                           <Button variant="outline" asChild>
                             <a
-                              href="/subscription"
+                              href="/settings/subscription"
                               className="text-sm"
                             >
                               Become a Supporter
