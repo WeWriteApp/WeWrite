@@ -149,7 +149,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Create pending subscription record in Firestore
+    // Create initial subscription record in Firestore with incomplete status
+    // This matches Stripe's initial subscription status before payment
     const subscriptionRef = adminDb.collection('users').doc(userId).collection('subscription').doc('current');
     await subscriptionRef.set({
       id: 'current',
@@ -157,7 +158,7 @@ export async function POST(request: NextRequest) {
       stripeCustomerId,
       stripePriceId: priceId,
       stripeSubscriptionId: null, // Will be updated by webhook
-      status: 'pending',
+      status: 'incomplete', // Match Stripe's initial status
       tier,
       amount: finalAmount,
       tokens: finalTokens,

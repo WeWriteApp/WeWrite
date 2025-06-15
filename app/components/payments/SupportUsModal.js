@@ -50,8 +50,14 @@ const SupportUsModal = ({ isOpen, onClose }) => {
                 size="lg"
                 className="w-full group relative overflow-hidden bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 border-0 text-white"
                 onClick={() => {
-                  onClose();
-                  router.push('/settings/subscription');
+                  try {
+                    onClose();
+                    router.push('/settings/subscription');
+                  } catch (error) {
+                    console.error('Navigation error:', error);
+                    // Fallback to window.location if router fails
+                    window.location.href = '/settings/subscription';
+                  }
                 }}
               >
                 <span className="relative z-10 flex items-center justify-center">

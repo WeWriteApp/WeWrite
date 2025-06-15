@@ -1,50 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { initAdmin } from '../../../firebase/admin';
 import Stripe from 'stripe';
+import { getUserIdFromRequest } from '../../auth-helper';
+import { checkPaymentsFeatureFlag } from '../../feature-flag-helper';
 
-// Initialize Firebase Admin
-initAdmin();
-const db = getFirestore();
-const auth = getAuth();
+// Initialize Firebase Admin lazily
+let db: any;
+let auth: any;
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+function initializeFirebase() {
+  if (db && auth) return { db, auth }; // Already initialized
+
+  try {
+    const app = initAdmin();
+    if (!app) {
+      console.warn('Firebase Admin initialization skipped during build time');
+      return { db: null, auth: null };
+    }
+
+    db = getFirestore();
+    auth = getAuth();
+  } catch (error) {
+    console.error('Error initializing Firebase Admin in sync-status route:', error);
+    return { db: null, auth: null };
+  }
+
+  return { db, auth };
+}
+
+// Initialize Stripe with proper config
+import { getStripeSecretKey } from '../../../utils/stripeConfig';
+const stripe = new Stripe(getStripeSecretKey(), {
+  apiVersion: '2025-04-30.basil' as any,
 });
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Initialize Firebase lazily
+    const { db: firestore, auth: firebaseAuth } = initializeFirebase();
+
+    if (!firestore || !firebaseAuth) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
+    // Update local references
+    db = firestore;
+    auth = firebaseAuth;
+
+    // Check if payments feature is enabled
+    const featureCheckResponse = await checkPaymentsFeatureFlag();
+    if (featureCheckResponse) {
+      return featureCheckResponse;
+    }
+
+    // Get user ID from request using our helper
+    const userId = await getUserIdFromRequest(request);
+
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.split('Bearer ')[1];
+    // Get the current subscription from Firestore using Admin SDK
+    const subscriptionRef = db.collection('users').doc(userId).collection('subscription').doc('current');
+    const subscriptionDoc = await subscriptionRef.get();
 
-    // Verify the Firebase token
-    let decodedToken;
-    try {
-      decodedToken = await auth.verifyIdToken(token);
-    } catch (error) {
-      console.error('Token verification failed:', error);
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    const { userId } = await request.json();
-
-    // Verify the user is authorized to sync this subscription
-    if (decodedToken.uid !== userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
-
-    // Get the current subscription from Firestore
-    const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
-    const subscriptionDoc = await getDoc(subscriptionRef);
-
-    if (!subscriptionDoc.exists()) {
+    if (!subscriptionDoc.exists) {
       return NextResponse.json({ error: 'No subscription found' }, { status: 404 });
     }
 
@@ -52,7 +74,9 @@ export async function POST(request: NextRequest) {
     const stripeSubscriptionId = subscriptionData?.stripeSubscriptionId;
 
     if (!stripeSubscriptionId) {
-      return NextResponse.json({ error: 'No Stripe subscription ID found' }, { status: 404 });
+      return NextResponse.json({
+        error: 'No Stripe subscription ID found'
+      }, { status: 404 });
     }
 
     // Fetch the latest subscription data from Stripe
@@ -64,12 +88,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch subscription from Stripe' }, { status: 500 });
     }
 
-    // Update the subscription status in Firestore
+    // Update the subscription status in Firestore using Admin SDK
     const updateData = {
       status: stripeSubscription.status,
       currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000).toISOString(),
       currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000).toISOString(),
-      updatedAt: serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     };
 
     // Add billing cycle end if available
@@ -77,9 +101,9 @@ export async function POST(request: NextRequest) {
       updateData.billingCycleEnd = new Date(stripeSubscription.current_period_end * 1000).toISOString();
     }
 
-    await updateDoc(subscriptionRef, updateData);
+    await subscriptionRef.update(updateData);
 
-    console.log(`Subscription status synced for user ${userId}: ${stripeSubscription.status}`);
+    console.log(`Subscription status synced successfully for user ${userId}: ${stripeSubscription.status}`);
 
     return NextResponse.json({ 
       success: true, 

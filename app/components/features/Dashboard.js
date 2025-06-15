@@ -44,7 +44,7 @@ const Dashboard = () => {
         <div className="flex items-start pb-4 mb-- md:mb-0 md:align-middle md:justify-between md:flex-row justify-between">
           <h1 className="text-2xl font-semibold text-text">Your Groups</h1>
           <Link
-            className="bg-background text-button-text border border-gray-500 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+            className="bg-background text-foreground border-theme-medium px-4 py-2 rounded-lg hover:bg-muted transition-colors"
             href="/group/new"
           >
             Create Group

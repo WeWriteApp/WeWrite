@@ -65,7 +65,20 @@ const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customConten
   const [error, setError] = React.useState(null);
 
   const handleActivate = async () => {
-    if (!user || !selectedTier) return;
+    // If user is not signed in, navigate to subscription page
+    if (!user) {
+      try {
+        router.push('/settings/subscription');
+        onClose();
+      } catch (error) {
+        console.error('Navigation error:', error);
+        // Fallback to window.location if router fails
+        window.location.href = '/settings/subscription';
+      }
+      return;
+    }
+
+    if (!selectedTier) return;
     setLoading(true);
     setError(null);
 

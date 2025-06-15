@@ -155,14 +155,14 @@ export function PledgesOverview() {
           <div className="space-y-4">
             {/* Summary Stats */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 border rounded-lg">
+              <div className="p-3 border-theme-strong rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <DollarSign className="h-4 w-4 text-green-600" />
                   <span className="text-sm font-medium">Total Monthly</span>
                 </div>
                 <p className="text-xl font-bold text-green-600">{formatCurrency(totalPledgedAmount)}</p>
               </div>
-              <div className="p-3 border rounded-lg">
+              <div className="p-3 border-theme-strong rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <TrendingUp className="h-4 w-4 text-blue-600" />
                   <span className="text-sm font-medium">Active Pledges</span>

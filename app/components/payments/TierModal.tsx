@@ -83,9 +83,9 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
         <div className="py-4">
           <div className="space-y-4">
             {tiers.map((tier) => {
-              // Use white background for all tiers
-              const bgColorClass = 'bg-white dark:bg-gray-800';
-              const borderColorClass = currentTier === tier.tier ? 'border-primary border-2' : 'border-border dark:border-border';
+              // Use theme-aware background for all tiers
+              const bgColorClass = 'bg-card';
+              const borderColorClass = currentTier === tier.tier ? 'border-primary border-2' : 'border-theme-medium';
               return (
                 <div
                   key={tier.id}

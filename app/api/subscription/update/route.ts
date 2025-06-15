@@ -7,6 +7,7 @@ import Stripe from 'stripe';
 import { initAdmin } from '../../../firebase/admin';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../../../api/auth-helper';
+import { checkPaymentsFeatureFlag } from '../../feature-flag-helper';
 import {
   validateCustomAmount,
   calculateTokensForAmount,
@@ -22,6 +23,12 @@ const stripe = new Stripe(getStripeSecretKey() || '', {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if payments feature is enabled
+    const featureCheckResponse = await checkPaymentsFeatureFlag();
+    if (featureCheckResponse) {
+      return featureCheckResponse;
+    }
+
     // Get authenticated user
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
@@ -125,10 +132,26 @@ export async function POST(request: NextRequest) {
       },
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating subscription:', error);
+
+    // Handle specific Stripe errors
+    if (error.type === 'StripeCardError') {
+      return NextResponse.json({
+        error: 'Payment method error: ' + error.message
+      }, { status: 402 });
+    } else if (error.type === 'StripeInvalidRequestError') {
+      return NextResponse.json({
+        error: 'Invalid request: ' + error.message
+      }, { status: 400 });
+    } else if (error.type === 'StripePermissionError') {
+      return NextResponse.json({
+        error: 'Permission denied: ' + error.message
+      }, { status: 403 });
+    }
+
     return NextResponse.json(
-      { error: 'Failed to update subscription' },
+      { error: error.message || 'Failed to update subscription' },
       { status: 500 }
     );
   }

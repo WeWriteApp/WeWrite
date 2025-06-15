@@ -139,7 +139,7 @@ function BracketComponent() {
   };
 
   return (
-    <div ref={containerRef} className="relative bg-card shadow-md rounded-md p-4 w-64 border border-border">
+    <div ref={containerRef} className="relative bg-card shadow-md rounded-md p-4 w-64 border-theme-strong">
       <input
         type="text"
         value={inputValue}
@@ -152,7 +152,7 @@ function BracketComponent() {
         <div className="mt-2 text-center text-muted-foreground flex justify-center"><div className="loader"></div></div>
       ) : (
         allPages.length > 0 && (
-          <ul className="mt-2 max-h-40 overflow-y-auto border border-border rounded-md bg-card">
+          <ul className="mt-2 max-h-40 overflow-y-auto border-theme-strong rounded-md bg-card">
             {allPages.map((page) => (
               <li
                 key={page.id}

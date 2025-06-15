@@ -100,19 +100,9 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
       });
     }
 
-    // Remove any invalid statuses - only allow valid subscription states
-    const validStatuses = ['active', 'trialing', 'past_due', 'canceled', 'incomplete'];
-    if (!validStatuses.includes(subscriptionData.status)) {
-      if (verbose) {
-        console.log(`[getUserSubscriptionServer] Invalid status '${subscriptionData.status}' detected, setting to 'canceled'`);
-      }
-      subscriptionData.status = 'canceled';
-
-      // Update the subscription in Firestore to keep data consistent
-      await updateSubscriptionServer(userId, {
-        status: 'canceled',
-        canceledAt: new Date().toISOString()
-      });
+    // Log subscription status for debugging but don't automatically change it
+    if (verbose) {
+      console.log(`[getUserSubscriptionServer] Current subscription status: '${subscriptionData.status}'`);
     }
 
     if (verbose) {

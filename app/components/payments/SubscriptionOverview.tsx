@@ -178,7 +178,7 @@ export function SubscriptionOverview() {
         ) : (
           <div className="space-y-4">
             {/* Subscription Status */}
-            <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center justify-between p-4 border-theme-strong rounded-lg">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <h4 className="font-medium">Monthly Subscription</h4>
@@ -200,7 +200,7 @@ export function SubscriptionOverview() {
 
             {/* Budget Allocation */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 border rounded-lg">
+              <div className="p-3 border-theme-strong rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <DollarSign className="h-4 w-4 text-blue-600" />
                   <span className="text-sm font-medium">Pledged</span>
@@ -209,7 +209,7 @@ export function SubscriptionOverview() {
                   {formatCurrency(subscription.pledgedAmount || 0)}
                 </p>
               </div>
-              <div className="p-3 border rounded-lg">
+              <div className="p-3 border-theme-strong rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <DollarSign className="h-4 w-4 text-green-600" />
                   <span className="text-sm font-medium">Available</span>

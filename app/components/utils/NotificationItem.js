@@ -77,6 +77,9 @@ export default function NotificationItem({ notification }) {
     } else if (notification.type === 'email_verification') {
       // For email verification notifications, navigate to settings
       router.push('/settings');
+    } else if (notification.type === 'payment_failed' || notification.type === 'payment_failed_warning' || notification.type === 'payment_failed_final') {
+      // For payment failure notifications, navigate to subscription settings
+      router.push('/settings#subscription');
     } else if (notification.type === 'group_invite') {
       // For group invitations, navigate to the group page
       if (notification.groupId) {
@@ -329,6 +332,78 @@ export default function NotificationItem({ notification }) {
                 Ignore Invite
               </button>
             </div>
+          </div>
+        );
+
+      case 'payment_failed':
+      case 'payment_failed_warning':
+      case 'payment_failed_final':
+        const amount = notification.metadata?.amount || 0;
+        const failureCount = notification.metadata?.failureCount || 1;
+        const isUrgent = notification.type === 'payment_failed_final';
+
+        return (
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-medium mb-1 ${isUrgent ? 'text-destructive' : 'text-foreground'}`}>
+              {notification.title || 'Payment Failed'}
+            </p>
+            <p className="text-sm text-muted-foreground mb-2">
+              {notification.message || `Your subscription payment of $${amount.toFixed(2)} failed.`}
+            </p>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
+              <span>Amount: ${amount.toFixed(2)}</span>
+              <span>Attempts: {failureCount}</span>
+              {notification.metadata?.dueDate && (
+                <span>Due: {new Date(notification.metadata.dueDate).toLocaleDateString()}</span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  try {
+                    const response = await fetch('/api/subscription/retry-payment', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                    });
+                    const data = await response.json();
+                    if (response.ok && data.success) {
+                      // Mark notification as read on success
+                      await markAsRead(notification.id);
+                      console.log('Payment retry successful');
+                    } else {
+                      console.error('Payment retry failed:', data.error);
+                    }
+                  } catch (error) {
+                    console.error('Error retrying payment:', error);
+                  }
+                }}
+                className={`inline-flex items-center px-3 py-1.5 text-sm rounded-md transition-colors font-medium ${
+                  isUrgent
+                    ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                }`}
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Retry Payment
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  router.push('/settings#subscription');
+                }}
+                className="inline-flex items-center px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors"
+              >
+                Update Payment
+              </button>
+            </div>
+            {isUrgent && (
+              <div className="text-xs text-destructive font-medium bg-destructive/10 p-2 rounded mt-2">
+                ⚠️ Your subscription may be cancelled if payment continues to fail.
+              </div>
+            )}
           </div>
         );
 

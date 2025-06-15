@@ -42,11 +42,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    console.log(`Processing webhook event: ${event.type}`);
-
     // Handle different event types
     switch (event.type) {
       case 'customer.subscription.created':
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        break;
+
       case 'customer.subscription.updated':
         await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
         break;
@@ -64,17 +65,24 @@ export async function POST(request: NextRequest) {
         break;
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        // Silently ignore unhandled event types
+        break;
     }
-
-    return NextResponse.json({ received: true });
+    return NextResponse.json({
+      received: true,
+      eventType: event.type,
+      eventId: event.id,
+      timestamp: new Date().toISOString()
+    });
 
   } catch (error) {
-    console.error('Webhook error:', error);
-    return NextResponse.json(
-      { error: 'Webhook processing failed' },
-      { status: 500 }
-    );
+    console.error(`[SUBSCRIPTION WEBHOOK] Error processing webhook event ${event?.type || 'unknown'}:`, error);
+    return NextResponse.json({
+      error: 'Webhook processing failed',
+      eventType: event?.type || 'unknown',
+      eventId: event?.id || 'unknown',
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
   }
 }
 
@@ -82,7 +90,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   try {
     const userId = subscription.metadata.firebaseUID;
     if (!userId) {
-      console.error('No Firebase UID in subscription metadata');
+      console.error('No Firebase UID in subscription metadata:', subscription.id);
       return;
     }
 
@@ -105,8 +113,11 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
     // Check if subscription document exists
     const subscriptionDoc = await getDoc(subscriptionRef);
+    const existingData = subscriptionDoc.exists() ? subscriptionDoc.data() : {};
+
+    // Prepare subscription data update
     const subscriptionData = {
-      stripeSubscriptionId: subscription.id,
+      stripeSubscriptionId: subscription.id, // This is the key field for sync
       stripePriceId: price.id,
       status: subscription.status,
       tier,
@@ -118,6 +129,17 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       updatedAt: serverTimestamp(),
     };
 
+    // Handle status transitions properly:
+    // 1. Always update from 'incomplete' to any Stripe status
+    // 2. Don't overwrite 'active' with 'incomplete' (race condition protection)
+    // 3. Allow other valid status transitions
+    if (existingData?.status === 'active' && subscription.status === 'incomplete') {
+      subscriptionData.status = 'active';
+    } else {
+      // Normal status update
+      subscriptionData.status = subscription.status;
+    }
+
     if (subscriptionDoc.exists()) {
       await updateDoc(subscriptionRef, subscriptionData);
     } else {
@@ -128,7 +150,6 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
         ...subscriptionData,
         createdAt: serverTimestamp(),
       });
-      console.log(`Created subscription document for user ${userId} via webhook`);
     }
 
     // Update user's token allocation
@@ -136,10 +157,9 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       await TokenService.updateMonthlyTokenAllocation(userId, amount);
     }
 
-    console.log(`Subscription updated for user ${userId}: ${tier} - $${amount}/mo - ${tokens} tokens`);
-
   } catch (error) {
     console.error('Error handling subscription updated:', error);
+    throw error; // Re-throw to ensure webhook returns error status
   }
 }
 
@@ -147,56 +167,72 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   try {
     const userId = subscription.metadata.firebaseUID;
     if (!userId) {
-      console.error('No Firebase UID in subscription metadata');
+      console.error('[SUBSCRIPTION WEBHOOK] No Firebase UID in subscription metadata for deletion');
       return;
     }
+
+    console.log(`[SUBSCRIPTION WEBHOOK] Processing subscription deletion for user ${userId}, subscription ${subscription.id}`);
 
     // Update subscription status in Firestore
     const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
     await updateDoc(subscriptionRef, {
       status: 'cancelled',
+      canceledAt: new Date().toISOString(),
       updatedAt: serverTimestamp(),
     });
 
     // Reset token allocation to 0
     await TokenService.updateMonthlyTokenAllocation(userId, 0);
 
-    console.log(`Subscription deleted for user ${userId}`);
+    console.log(`[SUBSCRIPTION WEBHOOK] Subscription deleted for user ${userId} - Status set to cancelled`);
 
   } catch (error) {
-    console.error('Error handling subscription deleted:', error);
+    console.error('[SUBSCRIPTION WEBHOOK] Error handling subscription deleted:', error);
+    throw error;
   }
 }
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   try {
-    if (!invoice.subscription) return;
-
-    const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
-    const userId = subscription.metadata.firebaseUID;
-    
-    if (!userId) {
-      console.error('No Firebase UID in subscription metadata');
+    if (!invoice.subscription) {
       return;
     }
 
-    // Update subscription status to active
+    const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+    const userId = subscription.metadata.firebaseUID;
+
+    if (!userId) {
+      console.error('No Firebase UID in subscription metadata for payment succeeded');
+      return;
+    }
+
+    // Update subscription status to active and reset failure tracking
     const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
-    await updateDoc(subscriptionRef, {
-      status: 'active',
+
+    // Get current subscription data to preserve existing fields
+    const currentDoc = await getDoc(subscriptionRef);
+    const currentData = currentDoc.exists() ? currentDoc.data() : {};
+
+    const updateData = {
+      ...currentData, // Preserve existing subscription data first
+      status: 'active', // Always set to active on successful payment
       lastPaymentAt: new Date(invoice.created * 1000).toISOString(),
+      failureCount: 0, // Reset failure count on successful payment
+      lastFailedPaymentAt: null, // Clear failed payment timestamp
+      lastFailedInvoiceId: null, // Clear failed invoice ID
       updatedAt: serverTimestamp(),
-    });
+    };
+
+    await updateDoc(subscriptionRef, updateData);
 
     // Ensure token allocation is up to date
     const price = subscription.items.data[0].price;
     const amount = price.unit_amount ? price.unit_amount / 100 : 0;
     await TokenService.updateMonthlyTokenAllocation(userId, amount);
 
-    console.log(`Payment succeeded for user ${userId}: $${amount}`);
-
   } catch (error) {
     console.error('Error handling payment succeeded:', error);
+    throw error; // Re-throw to ensure webhook returns error status
   }
 }
 
@@ -206,30 +242,84 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 
     const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
     const userId = subscription.metadata.firebaseUID;
-    
+
     if (!userId) {
       console.error('No Firebase UID in subscription metadata');
       return;
     }
 
-    // Update subscription status
+    // Get current failure count
     const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
+    const subscriptionDoc = await getDoc(subscriptionRef);
+    const currentData = subscriptionDoc.data();
+    const failureCount = (currentData?.failureCount || 0) + 1;
+
+    // Update subscription status with failure tracking
     await updateDoc(subscriptionRef, {
       status: 'past_due',
       lastFailedPaymentAt: new Date(invoice.created * 1000).toISOString(),
+      failureCount: failureCount,
+      lastFailedInvoiceId: invoice.id,
       updatedAt: serverTimestamp(),
     });
 
-    console.log(`Payment failed for user ${userId}`);
+    // Create notification for failed payment
+    await createFailedPaymentNotification(userId, failureCount, invoice);
+
+    console.log(`Payment failed for user ${userId}, failure count: ${failureCount}`);
 
   } catch (error) {
     console.error('Error handling payment failed:', error);
   }
 }
 
+async function createFailedPaymentNotification(userId: string, failureCount: number, invoice: Stripe.Invoice) {
+  try {
+    // Import notification function
+    const { createNotification } = await import('../../../firebase/notifications');
+
+    const amount = invoice.amount_due / 100; // Convert from cents
+
+    let notificationType = 'payment_failed';
+    let title = 'Payment Failed';
+    let message = `Your subscription payment of $${amount.toFixed(2)} failed. Please update your payment method.`;
+
+    // Escalate messaging based on failure count
+    if (failureCount >= 3) {
+      notificationType = 'payment_failed_final';
+      title = 'Final Payment Attempt Failed';
+      message = `Your subscription payment has failed ${failureCount} times. Your account may be suspended soon. Please update your payment method immediately.`;
+    } else if (failureCount >= 2) {
+      notificationType = 'payment_failed_warning';
+      title = 'Payment Failed - Action Required';
+      message = `Your subscription payment has failed ${failureCount} times. Please update your payment method to avoid service interruption.`;
+    }
+
+    await createNotification({
+      userId,
+      type: notificationType,
+      title,
+      message,
+      metadata: {
+        invoiceId: invoice.id,
+        amount: amount,
+        failureCount: failureCount,
+        dueDate: new Date(invoice.due_date * 1000).toISOString()
+      }
+    });
+
+    console.log(`Created ${notificationType} notification for user ${userId}`);
+  } catch (error) {
+    console.error('Error creating failed payment notification:', error);
+  }
+}
+
 export async function GET() {
-  return NextResponse.json(
-    { error: 'Method not allowed' },
-    { status: 405 }
-  );
+  return NextResponse.json({
+    status: 'ok',
+    service: 'stripe-subscription-webhook',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    webhookSecret: getStripeWebhookSecret() ? 'configured' : 'missing'
+  });
 }

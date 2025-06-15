@@ -99,7 +99,7 @@ const UserStreak: React.FC<UserStreakProps> = ({ userId }) => {
 
   return (
     <TooltipProvider>
-      <Card className="border border-border/40 bg-card">
+      <Card className="border-theme-strong bg-card">
         <CardContent className="p-4">
           <div className="space-y-3">
             {/* Current Streak */}

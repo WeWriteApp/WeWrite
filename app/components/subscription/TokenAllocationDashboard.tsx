@@ -277,9 +277,9 @@ export function TokenAllocationDashboard({ userId }: TokenAllocationDashboardPro
           ) : (
             <div className="space-y-4">
               {allocations.map((allocation) => (
-                <div 
+                <div
                   key={allocation.id}
-                  className="flex items-center justify-between p-4 border border-border rounded-lg"
+                  className="flex items-center justify-between p-4 border-theme-strong rounded-lg"
                 >
                   <div className="flex items-center gap-3">
                     {allocation.resourceType === 'page' ? (

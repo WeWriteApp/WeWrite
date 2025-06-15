@@ -149,9 +149,14 @@ const TokenPledgeBar: React.FC<TokenPledgeBarProps> = ({
   const handleActivateSubscription = () => {
     console.log('TokenPledgeBar: handleActivateSubscription called, isSubscriptionEnabled =', isSubscriptionEnabled);
     if (isSubscriptionEnabled) {
-      console.log('TokenPledgeBar: Opening subscription activation modal');
-      setShowActivationModal(true);
-      setShowSupportUsModal(false);
+      console.log('TokenPledgeBar: Navigating to subscription page');
+      try {
+        router.push('/settings/subscription');
+      } catch (error) {
+        console.error('Navigation error:', error);
+        // Fallback to window.location if router fails
+        window.location.href = '/settings/subscription';
+      }
     } else {
       console.log('TokenPledgeBar: Opening support us modal');
       setShowSupportUsModal(true);

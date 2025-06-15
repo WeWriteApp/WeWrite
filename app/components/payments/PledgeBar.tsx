@@ -19,6 +19,7 @@ import SupportUsModal from "../payments/SupportUsModal";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
 import { CustomAmountModal } from './CustomAmountModal';
 import RegistrationCallToAction from '../utils/RegistrationCallToAction';
+import { useRouter } from 'next/navigation';
 import '../../styles/pledge-bar-animations.css';
 
 // Type definitions for PledgeBar component
@@ -659,7 +660,21 @@ const PledgeBar: React.FC = () => {
               <Button
                 size="sm"
                 onClick={() => {
-                  window.location.href = '/settings/subscription';
+                  try {
+                    console.log('PledgeBar: Navigating to subscription page');
+                    router.push('/settings/subscription');
+                  } catch (error) {
+                    console.error('Navigation error:', error);
+                    toast({
+                      title: "Navigation Error",
+                      description: "Unable to navigate to subscription page. Redirecting...",
+                      variant: "destructive",
+                    });
+                    // Fallback to window.location if router fails
+                    setTimeout(() => {
+                      window.location.href = '/settings/subscription';
+                    }, 1000);
+                  }
                 }}
                 className="bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 text-white border-0"
               >

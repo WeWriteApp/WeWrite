@@ -417,7 +417,7 @@ export default function AccountPage() {
                   )}
                 </div>
               </CardContent>
-              <CardFooter className="pt-6 border-t border-border/50">
+              <CardFooter className="pt-6 border-t-only">
                 <Button
                   variant="destructive"
                   size="sm"

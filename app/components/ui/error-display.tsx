@@ -60,7 +60,7 @@ export function ErrorDisplay({
     warning: {
       bg: 'bg-amber-100 dark:bg-amber-900/20',
       text: 'text-amber-600 dark:text-amber-400',
-      border: 'border-amber-200 dark:border-amber-800',
+      border: 'border-theme-medium',
       bgLight: 'bg-amber-50 dark:bg-amber-950/30'
     },
     info: {

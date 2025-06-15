@@ -123,19 +123,9 @@ export const getUserSubscription = async (userId: string, options: SubscriptionO
     // Note: Removed automatic cancellation logic that was interfering with new subscriptions
     // Webhooks will properly update subscription status when Stripe processes the payment
 
-    // Remove any invalid statuses - only allow valid subscription states
-    const validStatuses = ['active', 'trialing', 'past_due', 'canceled', 'incomplete'];
-    if (!validStatuses.includes(subscriptionData.status)) {
-      if (verbose) {
-        console.log(`[getUserSubscription] Invalid status '${subscriptionData.status}' detected, setting to 'canceled'`);
-      }
-      subscriptionData.status = 'canceled';
-
-      // Update the subscription in Firestore to keep data consistent
-      await updateSubscription(userId, {
-        status: 'canceled',
-        canceledAt: new Date().toISOString()
-      });
+    // Log subscription status for debugging but don't automatically change it
+    if (verbose) {
+      console.log(`[getUserSubscription] Current subscription status: '${subscriptionData.status}'`);
     }
 
     if (verbose) {
@@ -349,13 +339,9 @@ export const listenToUserSubscription = (userId: string, callback: (data: Subscr
       // Note: Removed automatic cancellation logic that was interfering with new subscriptions
       // Webhooks will properly update subscription status when Stripe processes the payment
 
-      // Remove any invalid statuses - only allow valid subscription states
-      const validStatuses = ['active', 'trialing', 'past_due', 'canceled', 'incomplete'];
-      if (!validStatuses.includes(subscriptionData.status)) {
-        if (verbose) {
-          console.log(`[listenToUserSubscription] Invalid status '${subscriptionData.status}' detected, setting to 'canceled'`);
-        }
-        subscriptionData.status = 'canceled';
+      // Log subscription status for debugging but don't automatically change it
+      if (verbose) {
+        console.log(`[listenToUserSubscription] Current subscription status: '${subscriptionData.status}'`);
       }
 
       if (verbose) {

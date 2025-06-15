@@ -69,8 +69,6 @@ export default function SubscriptionPage() {
           setCurrentSubscription(subscription);
 
           console.log('DEBUG: Subscription status:', subscription.status);
-          console.log('DEBUG: Stripe subscription ID:', subscription.stripeSubscriptionId);
-
           // Set selected tier based on current subscription
           const tier = SUBSCRIPTION_TIERS.find(t => t.amount === subscription.amount);
           if (tier) {
@@ -85,9 +83,8 @@ export default function SubscriptionPage() {
               duration: 5000,
             });
           } else if (isSuccess && subscription.status !== 'active') {
-            // If returning from success but status isn't active yet, try to sync status first
-            console.log('DEBUG: Success return but status not active yet, syncing status...');
-            await syncSubscriptionStatus();
+            // If returning from success but status isn't active yet, start polling
+            startStatusPolling();
           }
         } else {
           setCurrentSubscription(null);
@@ -152,11 +149,9 @@ export default function SubscriptionPage() {
     if (!user) return;
 
     try {
-      console.log('DEBUG: Syncing subscription status from Stripe...');
       const result = await SubscriptionService.syncSubscriptionStatus(user.uid);
 
       if (result.success) {
-        console.log('DEBUG: Subscription status synced successfully');
         // Fetch fresh data after sync
         const { getOptimizedUserSubscription } = await import('../../firebase/optimizedSubscription');
         const subscriptionData = await getOptimizedUserSubscription(user.uid, {
@@ -177,12 +172,11 @@ export default function SubscriptionPage() {
           startStatusPolling();
         }
       } else {
-        console.error('DEBUG: Failed to sync subscription status:', result.error);
         // Fallback to polling if sync fails
         startStatusPolling();
       }
     } catch (error) {
-      console.error('DEBUG: Error syncing subscription status:', error);
+      console.error('Error syncing subscription status:', error);
       // Fallback to polling if sync fails
       startStatusPolling();
     }
@@ -191,7 +185,7 @@ export default function SubscriptionPage() {
   // Polling function to check subscription status after successful checkout
   const startStatusPolling = () => {
     let pollCount = 0;
-    const maxPolls = 12; // Poll for up to 60 seconds (5s intervals)
+    const maxPolls = 6; // Poll for up to 30 seconds (5s intervals) - reduced from 60s
 
     const pollInterval = setInterval(async () => {
       pollCount++;
@@ -202,8 +196,6 @@ export default function SubscriptionPage() {
           return;
         }
 
-        console.log(`DEBUG: Polling subscription status (attempt ${pollCount}/${maxPolls})`);
-
         // Fetch fresh subscription data without cache
         const { getOptimizedUserSubscription } = await import('../../firebase/optimizedSubscription');
         const subscriptionData = await getOptimizedUserSubscription(user.uid, {
@@ -212,7 +204,6 @@ export default function SubscriptionPage() {
         });
 
         if (subscriptionData?.status === 'active') {
-          console.log('DEBUG: Subscription status updated to active!');
           setCurrentSubscription(subscriptionData as Subscription);
 
           const tier = SUBSCRIPTION_TIERS.find(t => t.amount === subscriptionData.amount);
@@ -224,10 +215,9 @@ export default function SubscriptionPage() {
 
           clearInterval(pollInterval);
         } else if (pollCount >= maxPolls) {
-          console.log('DEBUG: Polling timeout reached, subscription may take longer to activate');
           toast({
             title: "Processing Subscription",
-            description: "Your subscription is being processed. It may take a few minutes to activate.",
+            description: "Your subscription is being processed. Please refresh the page in a moment.",
             duration: 8000,
           });
           clearInterval(pollInterval);

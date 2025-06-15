@@ -93,8 +93,8 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
           <div className="space-y-4">
             {tiers.map((tier) => {
               const isActive = currentTier === tier.tier;
-              const bgColorClass = 'bg-white dark:bg-gray-800';
-              const borderColorClass = isActive ? 'border-primary border-2' : 'border-border dark:border-border';
+              const bgColorClass = 'bg-card';
+              const borderColorClass = isActive ? 'border-primary border-2' : 'border-theme-medium';
               const activeTextClass = isActive ? 'text-primary font-bold' : '';
               return (
                 <div
