@@ -135,11 +135,15 @@ a[data-user-id]::before {
   border: 2px solid transparent;
   border-radius: 0.375rem;
 
-  /* Smooth transitions */
+  /* Smooth transitions - only for visual properties, not layout */
   transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
 
   /* Display properties */
   display: block;
+
+  /* Prevent any unexpected layout changes */
+  overflow: visible;
+  contain: style;
 }
 
 /* View mode - invisible borders maintain dimensions */
@@ -239,14 +243,18 @@ a[data-user-id]::before {
 .page-content,
 .unified-editor,
 .editor-content {
-  transition: all 0.15s ease-in-out;
+  transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
   transform: translateZ(0); /* Force hardware acceleration */
-  will-change: auto;
+  will-change: border-color, background-color;
+  /* Prevent layout shifts by avoiding transitions on layout properties */
 }
 
 /* Prevent any layout shifts during mode transitions */
 .page-editor-stable {
   contain: layout style;
+  /* Ensure consistent dimensions */
+  box-sizing: border-box;
+  width: 100%;
 }
 
 /* CRITICAL FIX: Editor paragraph numbering via CSS counters */
