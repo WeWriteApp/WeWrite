@@ -80,7 +80,7 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
             className={cn(
               // Base styling without wewrite-card to avoid unwanted shadows and padding
               "flex-shrink-0 cursor-pointer transition-all duration-200 hover:scale-105",
-              "flex flex-col items-center justify-center p-3 min-w-[80px] h-[90px]",
+              "flex flex-col items-center justify-center p-3 min-w-[80px] h-[110px]",
               "active:scale-95 select-none rounded-xl relative", // Added relative positioning for checkmark
               // Only add shadow for cards with notes
               hasNote && "shadow-sm"
@@ -112,12 +112,28 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
         </div>
       )}
 
+            {/* Month abbreviation - small, above date */}
+            <div
+              className="text-xs font-medium leading-none mb-1"
+              style={{ color: cardStyles.color }}
+            >
+              {monthAbbr}
+            </div>
+
             {/* Day number - large and prominent */}
             <div
               className="text-2xl font-bold leading-none"
               style={{ color: cardStyles.color }}
             >
               {dayNumber}
+            </div>
+
+            {/* Day of week abbreviation - small, below date */}
+            <div
+              className="text-xs font-medium leading-none mt-1"
+              style={{ color: cardStyles.color }}
+            >
+              {dayOfWeek}
             </div>
           </div>
         </TooltipTrigger>

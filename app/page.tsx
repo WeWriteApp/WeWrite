@@ -63,6 +63,8 @@ const DailyNotesSection = dynamic(() => import("./components/daily-notes/DailyNo
   ssr: false
 });
 
+
+
 /**
  * WeWrite Infinite Refresh Loop Fix - Home Component
  *
@@ -136,31 +138,19 @@ const Home = React.memo(function Home() {
   // Feature flag for daily notes - now includes user ID for user-specific overrides
   const dailyNotesEnabled = useFeatureFlag('daily_notes', user?.email, user?.uid);
 
-  // Debug logging for daily notes feature flag
-  useEffect(() => {
-    if (user) {
-      console.log('[HomePage] Daily notes feature flag check:', {
-        userEmail: user.email,
-        userId: user.uid,
-        dailyNotesEnabled,
-        timestamp: new Date().toISOString()
-      });
 
-      // Also log to help with debugging
-      console.log('[HomePage] User object:', user);
-      console.log('[HomePage] Feature flag result:', dailyNotesEnabled);
-    }
-  }, [user, dailyNotesEnabled]);
-
-  // Additional debug logging for when the component renders
-  useEffect(() => {
-    console.log('[HomePage] Component rendered with dailyNotesEnabled:', dailyNotesEnabled);
-  }, [dailyNotesEnabled]);
 
 
 
   // Memoized loading state to prevent unnecessary re-renders
-  const isLoading = useMemo(() => dataLoading || authLoading, [dataLoading, authLoading]);
+  // Only show loading if we're actually waiting for authentication or initial data
+  const isLoading = useMemo(() => {
+    // Don't show loading if user is already authenticated and we have basic data
+    if (user && !authLoading) {
+      return false;
+    }
+    return authLoading;
+  }, [authLoading, user]);
 
   // Track initial load time with performance monitoring
   useEffect(() => {
@@ -283,18 +273,12 @@ const Home = React.memo(function Home() {
               <ActivitySectionHeader />
             }
           >
-            <LazySection
-              name="activity"
-              priority="high"
-              minHeight={200}
-              fallback={<ActivitySkeleton limit={4} />}
-            >
-              <RecentActivity
-                limit={4}
-                renderFilterInHeader={true}
-                showViewAll={true}
-              />
-            </LazySection>
+
+            <RecentActivity
+              limit={4}
+              renderFilterInHeader={true}
+              showViewAll={true}
+            />
           </StickySection>
 
           {/* 2. Groups Section - Medium priority */}

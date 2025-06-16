@@ -116,30 +116,33 @@ export const fetchPages = async (userId, isPublic = null, currentUserId = null, 
 
   try {
     if (isPublic === null && isOwner) {
-      // Get all pages (public and private) for the owner
+      // Get all pages (public and private) for the owner, excluding deleted pages
       pagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
+        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
         ...(startAfterDoc ? [startAfter(startAfterDoc)] : []),
         limit(pageLimit)
       );
     } else if (isPublic === true || !isOwner) {
-      // Get only public pages
+      // Get only public pages, excluding deleted pages
       pagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
         where('isPublic', '==', true),
+        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
         ...(startAfterDoc ? [startAfter(startAfterDoc)] : []),
         limit(pageLimit)
       );
     } else {
-      // Get only private pages for the owner
+      // Get only private pages for the owner, excluding deleted pages
       pagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
         where('isPublic', '==', false),
+        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
         ...(startAfterDoc ? [startAfter(startAfterDoc)] : []),
         limit(pageLimit)

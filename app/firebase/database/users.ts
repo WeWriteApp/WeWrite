@@ -50,20 +50,22 @@ export async function getUserPages(
       // This significantly reduces the amount of data transferred from Firestore
       const requiredFields = ["title", "lastModified", "isPublic", "userId", "groupId", "createdAt"];
 
-      // Build the query with cursor-based pagination
+      // Build the query with cursor-based pagination (exclude deleted pages)
       if (includePrivate && userId === currentUserId) {
-        // If viewing own profile and includePrivate is true, get all pages
+        // If viewing own profile and includePrivate is true, get all non-deleted pages
         pageQuery = query(
           pagesRef,
           where("userId", "==", userId),
+          where("deleted", "!=", true),
           orderBy("lastModified", "desc")
         );
       } else {
-        // If viewing someone else's profile, only get public pages
+        // If viewing someone else's profile, only get public, non-deleted pages
         pageQuery = query(
           pagesRef,
           where("userId", "==", userId),
           where("isPublic", "==", true),
+          where("deleted", "!=", true),
           orderBy("lastModified", "desc")
         );
       }
@@ -146,10 +148,11 @@ export async function getUserPages(
 
             if (batch.length === 0) continue;
 
-            // Create a query for this batch
+            // Create a query for this batch (exclude deleted pages)
             const batchQuery = query(
               collection(db, 'pages'),
-              where('__name__', 'in', batch)
+              where('__name__', 'in', batch),
+              where('deleted', '!=', true)
             );
 
             const batchSnapshot = await getDocs(batchQuery);

@@ -136,6 +136,7 @@ export const getRecentActivity = async (
     // This will give us individual edit operations rather than just latest page states
 
     // First, get recent public pages to know which pages to include
+    // TEMPORARY: Remove deleted filter to avoid failed-precondition errors
     const pagesQuery = query(
       collection(db, "pages"),
       where("isPublic", "==", true),
@@ -168,6 +169,12 @@ export const getRecentActivity = async (
     const allVersionsPromises = pagesSnapshot.docs.map(async (pageDoc: QueryDocumentSnapshot<DocumentData>) => {
       const pageData = pageDoc.data() as Page;
       const pageId = pageDoc.id;
+
+      // TEMPORARY FIX: Filter out deleted pages on the client side
+      // since we removed the server-side filter to avoid failed-precondition errors
+      if (pageData.deleted === true) {
+        return [];
+      }
 
       try {
         // Get ALL versions for this page, not just the latest one

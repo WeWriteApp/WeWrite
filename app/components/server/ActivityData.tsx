@@ -13,6 +13,7 @@ export async function getServerActivityData(limitCount = 30) {
     console.log('Server Admin initialized with Firestore and RTDB instances');
 
     // Query to get recent pages (only public pages)
+    // TEMPORARY: Remove deleted filter to avoid failed-precondition errors
     const pagesQuery = db.collection("pages")
       .where("isPublic", "==", true)
       .orderBy("lastModified", "desc")
@@ -28,6 +29,10 @@ export async function getServerActivityData(limitCount = 30) {
     const activitiesPromises = pagesSnapshot.docs.map(async (pageDoc) => {
       const pageData = pageDoc.data();
       const pageId = pageDoc.id;
+
+      // TEMPORARY FIX: Filter out deleted pages on the client side
+      // since we removed the server-side filter to avoid failed-precondition errors
+      if (pageData.deleted === true) return null;
 
       // Skip pages without content
       if (!pageData.content) return null;

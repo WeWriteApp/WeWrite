@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Clock, AlertTriangle, ChevronRight, ChevronLeft, Plus, Info, Filter, Check } from "lucide-react";
 import useRecentActivity from "../../hooks/useRecentActivity";
-import useHomeRecentActivity from "../../hooks/useHomeRecentActivity";
+import useHomeRecentActivity from "../../hooks/useHomeRecentActivity.js";
 import ActivityCard from "../activity/ActivityCard";
 import ActivityEmptyState from "../activity/ActivityEmptyState";
 import { Button } from "../ui/button";
@@ -78,24 +78,15 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
   // Determine if we're on the homepage
   const isHomepage = !isInActivityPage && !isInUserProfile;
 
+
+
   // Use different hooks based on whether we're on the homepage or not
   // For homepage, use the static hook that only loads once
   // For activity page or user profile, use the regular hook with pagination
   const [localError, setLocalError] = useState(null);
 
-  // CRITICAL FIX: Wrap the hook usage in a try-catch to handle any errors gracefully
-  let activityData = { activities: [], loading: true, error: null, hasMore: false, loadingMore: false, loadMore: () => {} };
-  try {
-    activityData = isHomepage
-      ? useHomeRecentActivity(limit, userId, viewMode === 'following', viewMode === 'mine')
-      : useRecentActivity(limit, userId, viewMode === 'following', viewMode === 'mine');
-  } catch (err) {
-    console.error("Error using activity hook:", err);
-    setLocalError({
-      message: "There was a problem loading activity data",
-      details: err.message
-    });
-  }
+  // Call the hook at the top level (React hooks rule)
+  const activityData = useRecentActivity(limit, userId, viewMode === 'following', viewMode === 'mine');
 
   const { activities = [], loading = false, error = null, hasMore = false, loadingMore = false, loadMore = () => {} } = activityData;
   const { user } = useContext(AuthContext);
@@ -296,7 +287,7 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
 
         {!loading && !combinedError && activities.length > 0 && (
           <div className="grid grid-cols-1 gap-6 w-full">
-            {activities.slice(0, isHomepage ? 3 : activities.length).map((activity, index) => (
+            {activities.slice(0, isHomepage ? limit : activities.length).map((activity, index) => (
               <div key={`${activity.pageId}-${index}`}>
                 <ActivityCard
                   activity={activity}
@@ -368,7 +359,7 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
             {isHomepage ? (
               // For homepage, use a grid layout instead of carousel
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-                {activities.slice(0, isHomepage ? 4 : activities.length).map((activity, index) => (
+                {activities.slice(0, limit).map((activity, index) => (
                   <div key={`${activity.pageId}-${index}`} className="h-[200px]">
                     <ActivityCard
                       activity={activity}

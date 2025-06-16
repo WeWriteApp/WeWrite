@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
+    console.log('[recent-pages API] Starting recent pages fetch for user:', userId);
+
     // Get recent pages from Firebase Realtime Database
     const rtdb = getDatabase(app);
     const recentPagesRef = ref(rtdb, `users/${userId}/recentPages`);
@@ -60,9 +62,14 @@ export async function GET(request: NextRequest) {
       );
 
       const pagesSnapshot = await getDocs(pagesQuery);
-      
+
       pagesSnapshot.forEach(doc => {
         const pageData = { id: doc.id, ...doc.data() } as any;
+
+        // Filter out soft-deleted pages and apply search filter
+        if (pageData.deleted === true) {
+          return; // Skip deleted pages
+        }
 
         // Apply search filter if provided
         if (!searchTerm ||

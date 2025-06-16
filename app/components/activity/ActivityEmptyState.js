@@ -3,6 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
+import { Search } from 'lucide-react';
 
 
 /**
@@ -20,8 +21,9 @@ export default function ActivityEmptyState({ mode = 'all' }) {
     router.push('/search');
   };
 
-  // Different messages based on the mode
-  const isFollowingMode = mode === 'following';
+  // Different messages based on the mode - add safety check
+  const safeMode = mode || 'all';
+  const isFollowingMode = safeMode === 'following';
 
   return (
     <div className="flex flex-col items-center justify-center py-8 px-4 text-center bg-muted/30 rounded-lg border border-border/40">

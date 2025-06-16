@@ -39,11 +39,11 @@ export async function GET(request) {
     // We'll fetch more than needed and then randomize client-side for better distribution
     const poolSize = Math.max(limitCount * 5, 50); // Get at least 50 pages to choose from
 
+    // Query for public, non-deleted pages only
     const pagesQuery = query(
       collection(db, 'pages'),
       where('isPublic', '==', true),
       where('deleted', '!=', true),
-      orderBy('lastModified', 'desc'),
       limit(poolSize)
     );
 
@@ -58,9 +58,11 @@ export async function GET(request) {
     }
 
     // Convert to array and add page data
+    // Filtering is now done at the query level for better performance
     let pages = [];
     pagesSnapshot.forEach((doc) => {
       const pageData = doc.data();
+
       pages.push({
         id: doc.id,
         title: pageData.title || 'Untitled',
@@ -76,29 +78,28 @@ export async function GET(request) {
     // If user is authenticated and privacy toggle is enabled, include their private pages
     if (userId && includePrivate) {
       try {
-        // Fetch user's own private pages
-        const userPagesQuery = query(
-          collection(db, 'pages'),
-          where('userId', '==', userId),
-          where('isPublic', '==', false),
-          orderBy('lastModified', 'desc'),
-          limit(20) // Add some private pages to the mix
-        );
+        // TEMPORARY: Skip private pages to avoid indexing issues
+        // TODO: Re-enable once indexes are fixed
+        console.log('Skipping private pages due to indexing issues');
+        const userPagesQuery = null;
 
-        const userPagesSnapshot = await getDocs(userPagesQuery);
-        userPagesSnapshot.forEach((doc) => {
-          const pageData = doc.data();
-          pages.push({
-            id: doc.id,
-            title: pageData.title || 'Untitled',
-            userId: pageData.userId,
-            username: pageData.username || 'Anonymous',
-            lastModified: pageData.lastModified,
-            createdAt: pageData.createdAt,
-            isPublic: pageData.isPublic,
-            groupId: pageData.groupId || null
+        // Skip private pages for now
+        if (userPagesQuery) {
+          const userPagesSnapshot = await getDocs(userPagesQuery);
+          userPagesSnapshot.forEach((doc) => {
+            const pageData = doc.data();
+            pages.push({
+              id: doc.id,
+              title: pageData.title || 'Untitled',
+              userId: pageData.userId,
+              username: pageData.username || 'Anonymous',
+              lastModified: pageData.lastModified,
+              createdAt: pageData.createdAt,
+              isPublic: pageData.isPublic,
+              groupId: pageData.groupId || null
+            });
           });
-        });
+        }
 
         // TODO: Also fetch pages from private groups the user is a member of
         // This would require querying the user's group memberships first

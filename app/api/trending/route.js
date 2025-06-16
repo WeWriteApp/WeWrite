@@ -172,9 +172,10 @@ export async function GET(request) {
 
     // If we don't have enough trending pages from the last 24 hours, get the most viewed pages overall
     if (trendingPages.length < limitCount) {
-      // Query for pages with the most total views (only public pages)
+      // Query for pages with the most total views (only public, non-deleted pages)
       const pagesQuery = db.collection("pages")
         .where("isPublic", "==", true) // Only get public pages
+        .where("deleted", "!=", true) // Exclude soft-deleted pages
         .where("views", ">", 0) // Only get pages with views > 0
         .orderBy("views", "desc")
         .limit(limitCount - trendingPages.length);
@@ -210,8 +211,8 @@ export async function GET(request) {
         if (pageDoc.exists) {
           const pageData = pageDoc.data();
 
-          // Only include public pages
-          if (pageData.isPublic === false) {
+          // Only include public, non-deleted pages
+          if (pageData.isPublic === false || pageData.deleted === true) {
             return null;
           }
 

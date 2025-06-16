@@ -253,13 +253,15 @@ const FilteredSearchResults = forwardRef(({
 
   // Initialize search on mount and when filter changes
   useEffect(() => {
+    if (!user) return; // Wait for user to be available
+
     if (initialSearch) {
       debouncedSearch(initialSearch);
     } else if (isLinkEditor) {
       // In link editor mode, show initial results even without search
       fetchFilteredResults('', activeFilter);
     }
-  }, [initialSearch, debouncedSearch, isLinkEditor, fetchFilteredResults, activeFilter]);
+  }, [initialSearch, debouncedSearch, isLinkEditor, fetchFilteredResults, activeFilter, user]);
 
   // Auto-focus effect for link editor mode
   useEffect(() => {

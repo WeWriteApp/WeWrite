@@ -767,10 +767,20 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
                       style={{
                         verticalAlign: 'top',
                         position: 'relative',
-                        top: '0.5em'
+                        top: '0.5em',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        MozUserSelect: 'none',
+                        msUserSelect: 'none',
+                        pointerEvents: 'none',
+                        WebkitUserModify: 'read-only',
+                        WebkitTouchCallout: 'none',
+                        WebkitTapHighlightColor: 'transparent'
                       }}
                       aria-hidden="true"
                       data-paragraph-index={index + 1}
+                      contentEditable={false}
+                      suppressContentEditableWarning={true}
                     >
                       {index + 1}
                     </span>{'\u00A0'}
@@ -1063,6 +1073,18 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
           className="unified-paragraph-number select-none flex-shrink-0"
           data-paragraph-index={index + 1}
           aria-hidden="true"
+          style={{
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none',
+            pointerEvents: 'none',
+            WebkitUserModify: 'read-only',
+            WebkitTouchCallout: 'none',
+            WebkitTapHighlightColor: 'transparent'
+          }}
+          contentEditable={false}
+          suppressContentEditableWarning={true}
         >{index + 1}</span>
 
         {/* Paragraph content with unified styling - matches edit mode exactly */}

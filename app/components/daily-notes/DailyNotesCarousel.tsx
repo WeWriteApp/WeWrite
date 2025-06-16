@@ -140,19 +140,20 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
         chunks.push(dateStrings.slice(i, i + 10));
       }
 
-      // Query each chunk
+      // Query each chunk - use simple query without deleted filter to avoid index issues
       for (const chunk of chunks) {
         const chunkQuery = query(
           pagesRef,
           where('userId', '==', user?.uid || ''),
-          where('title', 'in', chunk),
-          where('deleted', '!=', true)
+          where('title', 'in', chunk)
         );
 
         const chunkSnapshot = await getDocs(chunkQuery);
+
         chunkSnapshot.forEach((doc) => {
           const pageData = doc.data();
-          // Only include pages with exact YYYY-MM-DD format titles and not deleted
+
+          // Client-side filtering: only include pages with exact YYYY-MM-DD format titles and not deleted
           if (pageData.title &&
               dateStrings.includes(pageData.title) &&
               isExactDateFormat(pageData.title) &&
@@ -184,7 +185,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     };
 
     loadNotes();
-  }, [user?.uid, daysBefore, daysAfter, checkExistingNotes]);
+  }, [user?.uid, daysBefore, daysAfter, dates, checkExistingNotes]);
 
   // Handle day card click with enhanced error handling
   const handleDayClick = (date: Date) => {
@@ -196,20 +197,17 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
         // Navigate to existing note using the page ID
         const pageId = notePageIds.get(dateString);
         if (pageId) {
-          console.log(`DailyNotes: Navigating to existing page ${pageId} for date ${dateString}`);
           router.push(`/pages/${pageId}`);
         } else {
-          console.warn(`DailyNotes: Page ID not found for date ${dateString}, falling back to search`);
           // Fallback to search if page ID not found
           router.push(`/search?q=${encodeURIComponent(dateString)}`);
         }
       } else {
-        console.log(`DailyNotes: Creating new page for date ${dateString}`);
         // Navigate to page creation with pre-filled title and daily note flag
         router.push(`/new?title=${encodeURIComponent(dateString)}&type=daily-note`);
       }
     } catch (error) {
-      console.error('DailyNotes: Error handling day click:', error);
+      console.error('Error handling day click:', error);
       // Fallback to home page if navigation fails
       router.push('/');
     }

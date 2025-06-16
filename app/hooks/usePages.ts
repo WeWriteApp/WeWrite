@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { db } from "../firebase/database";
 import { collection, query, where, orderBy, onSnapshot, limit, startAfter, getDocs, DocumentSnapshot, QueryDocumentSnapshot } from "firebase/firestore";
 
 // Types
@@ -139,6 +138,9 @@ const usePages = (
     }, 5000); // Increased to 5 seconds to give more time for query to complete
 
     try {
+      // TEMPORARY: Use dynamic import like the working API
+      const { db } = await import('../firebase/database');
+
       // Define the fields we need to reduce data transfer
       const requiredFields = ['title', 'lastModified', 'isPublic', 'userId', 'groupId', 'createdAt'];
 
@@ -147,25 +149,17 @@ const usePages = (
       let privatePagesQuery = null;
 
       // Query for public pages (exclude deleted)
+      // TEMPORARY: Ultra-simple query to test if Firestore is working at all
       publicPagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
-        where('isPublic', '==', true),
-        where('deleted', '!=', true),
-        orderBy('lastModified', 'desc'),
         limit(initialLimitCount)
       );
 
       // Only query for private pages if the current user is the owner (exclude deleted)
       if (includePrivate && isOwner) {
-        privatePagesQuery = query(
-          collection(db, 'pages'),
-          where('userId', '==', userId),
-          where('isPublic', '==', false),
-          where('deleted', '!=', true),
-          orderBy('lastModified', 'desc'),
-          limit(initialLimitCount)
-        );
+        // TEMPORARY: Skip private pages query to isolate the issue
+        privatePagesQuery = null;
       }
 
       // Execute the queries
@@ -262,10 +256,14 @@ const usePages = (
   // Function to refresh data in the background without showing loading state
   const refreshDataInBackground = async (): Promise<void> => {
     try {
+      // TEMPORARY: Use dynamic import like the working API
+      const { db } = await import('../firebase/database');
+
       // This is a simplified version of fetchInitialPages that doesn't update loading state
       const isOwner = currentUserId && userId === currentUserId;
 
       // Define queries similar to fetchInitialPages
+      // TEMPORARY: Try without deleted filter to test if indexes are the issue
       let publicPagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
@@ -276,6 +274,7 @@ const usePages = (
 
       let privatePagesQuery = null;
       if (includePrivate && isOwner) {
+        // TEMPORARY: Try without deleted filter to test if indexes are the issue
         privatePagesQuery = query(
           collection(db, 'pages'),
           where('userId', '==', userId),
@@ -362,6 +361,9 @@ const usePages = (
   // Function to fetch more pages
   const fetchMorePages = async (): Promise<PageData[]> => {
     try {
+      // TEMPORARY: Use dynamic import like the working API
+      const { db } = await import('../firebase/database');
+
       if (!lastPageKey) {
         setHasMorePages(false);
         throw new Error("No more pages to load");
@@ -374,6 +376,7 @@ const usePages = (
       const requiredFields = ['title', 'lastModified', 'isPublic', 'userId', 'groupId', 'createdAt'];
 
       // Query for more public pages
+      // TEMPORARY: Try without deleted filter to test if indexes are the issue
       const moreQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
@@ -453,6 +456,9 @@ const usePages = (
   // Function to fetch more private pages
   const fetchMorePrivatePages = async (): Promise<PageData[]> => {
     try {
+      // TEMPORARY: Use dynamic import like the working API
+      const { db } = await import('../firebase/database');
+
       // Check if the current user is the owner of the pages
       const isOwner = currentUserId && userId === currentUserId;
 
@@ -468,11 +474,12 @@ const usePages = (
       // Define the fields we need to reduce data transfer
       const requiredFields = ['title', 'lastModified', 'isPublic', 'userId', 'groupId', 'createdAt'];
 
-      // Query for more private pages
+      // Query for more private pages (exclude deleted pages)
       const moreQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
         where('isPublic', '==', false),
+        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
         startAfter(lastPrivatePageKey),
         limit(loadMoreLimitCount)
