@@ -42,6 +42,7 @@ export async function GET(request) {
     const pagesQuery = query(
       collection(db, 'pages'),
       where('isPublic', '==', true),
+      where('deleted', '!=', true),
       orderBy('lastModified', 'desc'),
       limit(poolSize)
     );

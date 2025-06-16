@@ -146,21 +146,23 @@ const usePages = (
       let publicPagesQuery;
       let privatePagesQuery = null;
 
-      // Query for public pages
+      // Query for public pages (exclude deleted)
       publicPagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
         where('isPublic', '==', true),
+        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
         limit(initialLimitCount)
       );
 
-      // Only query for private pages if the current user is the owner
+      // Only query for private pages if the current user is the owner (exclude deleted)
       if (includePrivate && isOwner) {
         privatePagesQuery = query(
           collection(db, 'pages'),
           where('userId', '==', userId),
           where('isPublic', '==', false),
+          where('deleted', '!=', true),
           orderBy('lastModified', 'desc'),
           limit(initialLimitCount)
         );

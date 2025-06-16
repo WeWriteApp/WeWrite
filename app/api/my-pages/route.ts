@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     let pagesQuery = query(
       collection(db, 'pages'),
       where('userId', '==', userId),
+      where('deleted', '!=', true),
       orderBy('lastModified', 'desc'),
       limit(limitCount * 2) // Get more to allow for search filtering
     );
@@ -43,10 +44,11 @@ export async function GET(request: NextRequest) {
       const pageData = { id: doc.id, ...doc.data() } as any;
       console.log('[my-pages API] Page data:', { id: doc.id, title: pageData.title, lastModified: pageData.lastModified, userId: pageData.userId });
 
-      // Apply search filter if provided
-      if (!searchTerm ||
-          pageData.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          pageData.content?.toLowerCase().includes(searchTerm.toLowerCase())) {
+      // Apply search filter if provided (and ensure not deleted)
+      if (!pageData.deleted &&
+          (!searchTerm ||
+           pageData.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           pageData.content?.toLowerCase().includes(searchTerm.toLowerCase()))) {
         pages.push(pageData);
       }
     });

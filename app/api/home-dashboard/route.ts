@@ -77,17 +77,19 @@ async function getRecentPagesOptimized(limitCount: number, userId?: string | nul
     let pagesQuery;
     
     if (userId) {
-      // For logged-in users, show their pages + public pages
+      // For logged-in users, show their pages + public pages (exclude deleted)
       pagesQuery = query(
         collection(db, 'pages'),
+        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
         limit(limitCount * 2) // Get more to filter later
       );
     } else {
-      // For anonymous users, only public pages
+      // For anonymous users, only public pages (exclude deleted)
       pagesQuery = query(
         collection(db, 'pages'),
         where('isPublic', '==', true),
+        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
         limit(limitCount)
       );

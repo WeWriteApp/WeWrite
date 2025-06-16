@@ -41,13 +41,46 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
 };
 
 /**
- * Delete a page and all its versions
+ * Delete a page using soft delete approach
+ * Marks the page as deleted but preserves data for recovery and audit trails
  */
 export const deletePage = async (pageId: string): Promise<boolean> => {
   try {
-    // This would need to be implemented to delete the page and all its versions
-    // For now, just delete the main page document
-    return await updateDoc('pages', pageId, { deleted: true, deletedAt: new Date().toISOString() });
+    console.log(`Starting soft delete for page ${pageId}`);
+
+    // Get the page data first to check if it exists
+    const pageRef = doc(db, 'pages', pageId);
+    const pageDoc = await getDoc(pageRef);
+
+    if (!pageDoc.exists()) {
+      console.warn(`Page ${pageId} not found for deletion`);
+      return false;
+    }
+
+    const pageData = pageDoc.data();
+
+    // Mark the main page document as deleted
+    const deleteResult = await updateDoc('pages', pageId, {
+      deleted: true,
+      deletedAt: new Date().toISOString(),
+      deletedBy: pageData.userId || 'unknown' // Track who deleted it
+    });
+
+    if (deleteResult) {
+      console.log(`Successfully soft deleted page ${pageId}`);
+
+      // TODO: In the future, we could also mark versions as deleted
+      // For now, we keep versions for potential recovery
+
+      // TODO: Consider cleanup of related data like:
+      // - Page followers (mark as deleted)
+      // - Pledges (handle separately)
+      // - Notifications (keep for audit trail)
+
+      return true;
+    }
+
+    return false;
   } catch (error) {
     console.error('Error deleting page:', error);
     return false;
