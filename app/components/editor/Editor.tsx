@@ -109,6 +109,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const isInternalUpdate = useRef(false);
   const changeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasInitialized = useRef(false);
   const { getPillStyleClasses } = usePillStyle();
   const { lineMode } = useLineSettings();
 
@@ -292,9 +293,9 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
 
 
-  // Initialize editor content on mount (client-side only)
+  // Initialize editor content ONLY on first mount (client-side only)
   useEffect(() => {
-    if (!isClient || !editorRef.current) return;
+    if (!isClient || !editorRef.current || hasInitialized.current) return;
 
     try {
       // Debug: Log content initialization
@@ -322,6 +323,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       }
 
       editorRef.current.innerHTML = htmlContent;
+      hasInitialized.current = true; // Mark as initialized to prevent future updates
 
       // Debug empty content
       if (htmlContent === "<div><br></div>") {
@@ -330,15 +332,15 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         console.log("Editor: Setting content with", htmlContent.length, "characters");
       }
 
-
     } catch (error) {
       console.error("Editor: Error during initialization:", error);
       // Set fallback content on error
       if (editorRef.current) {
         editorRef.current.innerHTML = "<div><br></div>";
+        hasInitialized.current = true;
       }
     }
-  }, [isClient, initialContent, lineMode]);
+  }, [isClient]); // CRITICAL: Remove initialContent and lineMode dependencies to prevent updates during editing
 
   // CRITICAL FIX: Disable the problematic useEffect that causes cursor jumping
   // This useEffect was causing circular updates: user types → onChange → parent updates →
@@ -378,24 +380,18 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   const handleContentChange = useCallback(() => {
     if (!isClient || !editorRef.current) return;
 
-    // CRITICAL FIX: Completely disable all callbacks during typing
-    // The issue is that ANY callback to the parent causes re-renders that reset cursor position
-    // We'll only notify the parent on blur or after a long delay
-
     const htmlContent = editorRef.current.innerHTML;
     const slateContent = convertHTMLToSlate(htmlContent);
-
-    // Mark this as an internal update to prevent external content updates
-    isInternalUpdate.current = true;
 
     // Clear any existing timeout
     if (changeTimeoutRef.current) {
       clearTimeout(changeTimeoutRef.current);
     }
 
-    // CRITICAL FIX: Only notify parent after user stops typing for 500ms
+    // CRITICAL FIX: Reduce delay to make content saving more responsive
+    // But still prevent excessive updates during rapid typing
     changeTimeoutRef.current = setTimeout(() => {
-      // Only call onChange after user has stopped typing
+      // Only call onChange after user has stopped typing briefly
       onChange?.(slateContent);
 
       // Count empty lines and notify parent
@@ -404,12 +400,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       ).join('\n');
       const emptyLines = textContent.split('\n').filter(line => line.trim() === '').length;
       onEmptyLinesChange?.(emptyLines);
-
-      // Reset the flag after parent updates complete
-      setTimeout(() => {
-        isInternalUpdate.current = false;
-      }, 100);
-    }, 500); // Much longer delay - only update after user stops typing
+    }, 150); // Much shorter delay - more responsive content saving
   }, [isClient, onChange, onEmptyLinesChange]);
 
   // Handle input events
@@ -460,14 +451,36 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     // Handle Enter key to create new paragraphs
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (typeof document !== 'undefined' && document.execCommand) {
-        // Create new paragraph with proper structure based on line mode
-        if (lineMode === LINE_MODES.DENSE) {
-          document.execCommand('insertHTML', false, '<div><br></div>');
-        } else {
-          // For normal mode, we'll let the content change handler add paragraph numbers
-          document.execCommand('insertHTML', false, '<div><br></div>');
-        }
+
+      // Get current selection
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+
+      const range = selection.getRangeAt(0);
+
+      // Create a new div element for the new paragraph
+      const newDiv = document.createElement('div');
+      newDiv.innerHTML = '<br>';
+
+      // Insert the new div after the current paragraph
+      const currentDiv = range.startContainer.nodeType === Node.TEXT_NODE
+        ? range.startContainer.parentElement?.closest('div')
+        : range.startContainer.nodeType === Node.ELEMENT_NODE
+          ? (range.startContainer as Element).closest('div')
+          : null;
+
+      if (currentDiv && currentDiv.parentNode) {
+        currentDiv.parentNode.insertBefore(newDiv, currentDiv.nextSibling);
+
+        // Move cursor to the new paragraph
+        const newRange = document.createRange();
+        newRange.setStart(newDiv, 0);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+
+        // Trigger content change to update parent
+        handleContentChange();
       }
     }
   }, [isClient, onKeyDown, saveSelection]);
