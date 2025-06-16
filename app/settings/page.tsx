@@ -21,6 +21,7 @@ import { useAlert } from '../hooks/useAlert';
 import { useConfirmation } from '../hooks/useConfirmation';
 import AlertModal from '../components/utils/AlertModal';
 import ConfirmationModal from '../components/utils/ConfirmationModal';
+import RecentlyDeletedPages from '../components/settings/RecentlyDeletedPages';
 
 import { ChevronLeft, Edit3, Save, X, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 
@@ -488,6 +489,9 @@ export default function AccountPage() {
 
           {/* Account Settings - Always visible */}
           <div className="space-y-8">
+            {/* Recently Deleted Pages */}
+            <RecentlyDeletedPages />
+
             {/* Sync Queue Settings */}
             <SyncQueueSettings />
 

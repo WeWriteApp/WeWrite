@@ -21,6 +21,7 @@ import FeatureFlagListener from "./components/utils/FeatureFlagListener"
 // Removed SlateEarlyPatch - no longer needed with SimpleEditor
 import CacheInitializer from "./components/utils/CacheInitializer"
 import { SyncQueueProvider } from "./contexts/SyncQueueContext"
+import ConsoleErrorLogger from "./components/utils/ConsoleErrorLogger"
 
 
 
@@ -198,8 +199,7 @@ export default function RootLayout({
               // CRITICAL FIX: Blank page detection DISABLED to prevent infinite refresh loops
               // This was the PRIMARY CAUSE of the infinite refresh issue affecting users
 
-                // NO AUTOMATIC RELOAD - this was causing the infinite refresh loop
-              }, 5000);
+              // NO AUTOMATIC RELOAD - this was causing the infinite refresh loop
             });
           `
         }} />
@@ -226,6 +226,7 @@ export default function RootLayout({
                                     <PWAProvider>
                                       <SyncQueueProvider>
                                         <CacheInitializer />
+                                        <ConsoleErrorLogger />
                                         <FeatureFlagListener>
                                           <ErrorBoundary name="layout" resetOnPropsChange={true}>
                                             <ClientLayout>

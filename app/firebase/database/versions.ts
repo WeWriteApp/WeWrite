@@ -237,10 +237,14 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
       ? data.content
       : JSON.stringify(data.content);
 
-    // Check for empty JSON structures
-    if (contentString === '[]' || contentString === '{}' || contentString === '') {
-      console.error("Cannot save empty content JSON");
-      return null;
+    // CRITICAL FIX: Allow empty content structures to be saved
+    // Users should be able to save pages with just a title
+    if (contentString === '{}' || contentString === '') {
+      console.log("Empty content detected, creating default structure");
+      contentString = JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]);
+    } else if (contentString === '[]') {
+      console.log("Empty array content detected, creating default structure");
+      contentString = JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]);
     }
 
     console.log('Content string to save:', contentString.substring(0, 100) + '...');
@@ -250,40 +254,17 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
     try {
       parsedContent = JSON.parse(contentString);
 
-      // Validate that content is not empty array
-      if (Array.isArray(parsedContent) && parsedContent.length === 0) {
-        console.error("Cannot save empty array content");
-        return null;
-      }
-
-      // CRITICAL FIX: Check if content has meaningful data (text or links)
-      // This fixes the bug where link-only content was being rejected
+      // CRITICAL FIX: Allow empty content to be saved
+      // Users should be able to save pages with just a title and no content
       if (Array.isArray(parsedContent)) {
-        const hasContent = parsedContent.some(node => {
-          // Check if node has text content
-          if (node.children && Array.isArray(node.children)) {
-            return node.children.some(child => {
-              // Check for text content
-              if (child.text && child.text.trim() !== '') {
-                return true;
-              }
-              // Check for link content (links are valid content even without text)
-              if (child.type === 'link' || child.url || child.pageId) {
-                return true;
-              }
-              return false;
-            });
-          }
-          // Check if the node itself is a link
-          if (node.type === 'link' || node.url || node.pageId) {
-            return true;
-          }
-          return false;
-        });
+        // Content is valid if it's an array (even if empty)
+        console.log("Content validation passed - array format is valid, length:", parsedContent.length);
 
-        if (!hasContent) {
-          console.error("Cannot save content with no meaningful data (no text or links)");
-          return null;
+        // If content is empty, create a default paragraph structure
+        if (parsedContent.length === 0) {
+          parsedContent = [{ type: "paragraph", children: [{ text: "" }] }];
+          contentString = JSON.stringify(parsedContent);
+          console.log("Created default content structure for empty page");
         }
       }
 

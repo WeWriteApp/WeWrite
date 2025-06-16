@@ -46,6 +46,7 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
           const genericQuery = query(
             collection(db, 'pages'),
             where('isPublic', '==', true),
+            where('deleted', '!=', true),
             orderBy('lastModified', 'desc'),
             limit(maxPages * 2)
           );
@@ -72,6 +73,7 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
           const titleQuery = query(
             collection(db, 'pages'),
             where('isPublic', '==', true),
+            where('deleted', '!=', true),
             orderBy('title'),
             limit(50)
           );

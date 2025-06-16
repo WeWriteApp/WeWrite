@@ -98,11 +98,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
   useEffect(() => {
     // Simple hydration check - just wait for the browser environment
     if (typeof window !== 'undefined') {
-      const timer = setTimeout(() => {
-        setIsHydrated(true);
-      }, 100); // Much shorter delay
-
-      return () => clearTimeout(timer);
+      setIsHydrated(true);
     }
   }, []);
 
@@ -464,7 +460,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
       <div
         className="w-full max-w-none transition-all duration-200 border border-primary/30 rounded-lg p-4 md:p-6 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 hover:border-primary/40"
       >
-        {isHydrated ? (
+        {typeof window !== 'undefined' ? (
           <ErrorBoundary
             name="slate-editor"
             fallback={
@@ -592,7 +588,55 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
         {/* Save Button */}
         <Button
-          onClick={onSave}
+          onClick={async () => {
+            // CRITICAL FIX: Enhanced content capture before saving
+            console.log("🔵 PageEditor: Save button clicked, capturing current content");
+
+            if (editorRef.current && editorRef.current.getContent) {
+              try {
+                // Force a blur event to ensure any pending changes are captured
+                if (document.activeElement === editorRef.current) {
+                  editorRef.current.blur();
+                  // Small delay to let blur event process
+                  await new Promise(resolve => setTimeout(resolve, 10));
+                }
+
+                const currentContent = editorRef.current.getContent();
+                console.log("🔵 PageEditor: Successfully captured content from editor:", {
+                  contentType: typeof currentContent,
+                  isArray: Array.isArray(currentContent),
+                  length: Array.isArray(currentContent) ? currentContent.length : 0,
+                  firstItem: Array.isArray(currentContent) && currentContent.length > 0 ? currentContent[0] : null,
+                  hasText: Array.isArray(currentContent) && currentContent.some(p =>
+                    p.children && p.children.some(c => c.text && c.text.trim())
+                  )
+                });
+
+                // Update the parent component with the current content
+                if (onContentChange) {
+                  console.log("🔵 PageEditor: Updating parent with captured content");
+                  onContentChange(currentContent);
+
+                  // Wait a bit longer to ensure the parent state is updated
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                } else {
+                  console.warn("🟡 PageEditor: onContentChange not available");
+                }
+
+                console.log("🔵 PageEditor: Calling onSave with updated content");
+                onSave();
+              } catch (error) {
+                console.error("🔴 PageEditor: Error capturing content before save:", error);
+                // Fallback to save without content update
+                onSave();
+              }
+            } else {
+              console.warn("🟡 PageEditor: Editor ref or getContent method not available");
+              console.log("🔵 PageEditor: editorRef.current:", !!editorRef.current);
+              console.log("🔵 PageEditor: getContent method:", !!(editorRef.current && editorRef.current.getContent));
+              onSave();
+            }
+          }}
           disabled={isSaving}
           size="lg"
           className="gap-2 w-full md:w-auto rounded-2xl font-medium bg-green-600 hover:bg-green-700 text-white"

@@ -160,7 +160,6 @@ a[data-user-id]::before {
 
 .unified-paragraph.editing-mode:hover,
 .editor-content.normal-mode > div:hover {
-  border-color: hsl(var(--primary) / 0.4);
   background-color: hsl(var(--muted) / 0.3);
 }
 
@@ -259,12 +258,11 @@ a[data-user-id]::before {
   width: 100%;
 }
 
-/* CRITICAL FIX: Editor paragraph numbering via CSS counters */
-/* This prevents cursor positioning issues by keeping paragraph numbers outside contentEditable */
+/* CRITICAL FIX: Editor paragraph numbering - COMPLETELY DISABLED CSS APPROACH */
+/* Using JavaScript overlay instead for bulletproof protection */
 
-/* Initialize counter for the editor */
+/* Initialize editor container */
 .editor-content.normal-mode {
-  counter-reset: paragraph-counter;
   position: relative;
   /* CRITICAL: Match container styling with view mode */
   box-sizing: border-box;
@@ -275,16 +273,18 @@ a[data-user-id]::before {
   font-size: 1rem;
   line-height: 1.5; /* Match view mode exactly */
   font-family: inherit;
+
+  /* ENHANCED: Create space for JavaScript overlay numbers */
+  padding-left: 2.5rem; /* Ensure content doesn't overlap with overlay */
 }
 
 /* Style each paragraph div in normal mode - IDENTICAL to unified-paragraph */
 .editor-content.normal-mode > div {
-  counter-increment: paragraph-counter;
   /* CRITICAL: These properties must match .unified-paragraph exactly */
   position: relative;
   margin-bottom: 0.75rem;
   padding: 0.5rem;
-  padding-left: 2.5rem; /* CRITICAL: Must match .unified-paragraph exactly */
+  padding-left: 0; /* No left padding - handled by container */
   box-sizing: border-box;
   min-height: 2.5rem;
   width: 100%;
@@ -299,33 +299,11 @@ a[data-user-id]::before {
   word-spacing: normal;
 }
 
-/* CRITICAL FIX: Ensure counter resets properly and increments for each div */
-.editor-content.normal-mode {
-  counter-reset: paragraph-counter 0;
-}
-
-.editor-content.normal-mode > div {
-  counter-increment: paragraph-counter 1;
-}
-
-/* CRITICAL FIX: Single paragraph number rule to prevent layout conflicts */
-.editor-content.normal-mode > div::before {
-  content: counter(paragraph-counter);
-  /* CRITICAL: Identical positioning to .unified-paragraph-number */
-  position: absolute;
-  left: 0.5rem;
-  top: 0.5rem;
-  width: 1rem;
-  text-align: right;
-  color: var(--muted-foreground);
-  font-size: 0.75rem;
-  opacity: 0.8;
-  user-select: none;
-  pointer-events: none;
-  line-height: 1.5;
-  /* Prevent layout shifts */
-  will-change: auto;
-  contain: style;
+/* CRITICAL: Completely disable all CSS pseudo-element numbering */
+.editor-content.normal-mode > div::before,
+.editor-content.normal-mode > div::after {
+  display: none !important;
+  content: none !important;
 }
 
 /* Dense mode - no paragraph numbers - IDENTICAL between view and edit modes */

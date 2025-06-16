@@ -126,9 +126,10 @@ export async function GET(request) {
 
     console.log('API: Requested limit:', limitCount);
 
-    // Query to get recent pages (only public pages)
+    // Query to get recent pages (only public pages, exclude deleted)
     const pagesQuery = db.collection("pages")
       .where("isPublic", "==", true)
+      .where("deleted", "!=", true) // Exclude soft-deleted pages
       .orderBy("lastModified", "desc")
       .limit(limitCount * 2);
 

@@ -330,17 +330,19 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
     if (!filterByUserId) {
       // Use multiple comprehensive queries to ensure we find ALL relevant pages
       const publicQueries = [
-        // Recent pages by lastModified
+        // Recent pages by lastModified (exclude deleted)
         query(
           collection(db, 'pages'),
           where('isPublic', '==', true),
+          where('deleted', '!=', true),
           orderBy('lastModified', 'desc'),
           limit(2000)
         ),
-        // Older pages by createdAt to catch pages that might not have lastModified
+        // Older pages by createdAt to catch pages that might not have lastModified (exclude deleted)
         query(
           collection(db, 'pages'),
           where('isPublic', '==', true),
+          where('deleted', '!=', true),
           orderBy('createdAt', 'desc'),
           limit(1500)
         )

@@ -469,9 +469,11 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 8 })
           }
 
           // Query for public pages with increased limit to match search functionality
+          // CRITICAL: Exclude soft-deleted pages from related pages suggestions
           const pagesQuery = query(
             collection(db, 'pages'),
             where('isPublic', '==', true),
+            where('deleted', '!=', true),
             limit(500) // Increased from 100 to 500 for better coverage
           );
 

@@ -40,8 +40,13 @@ const RecentPages = React.memo(function RecentPages() {
           const page = await getDocById('pages', id);
           if (!page) return null;
 
-          // Only include pages the user has access to
+          // Only include pages the user has access to and that are not deleted
           if (!page.isPublic && (!user || page.userId !== user.uid)) {
+            return null;
+          }
+
+          // Exclude soft-deleted pages from recent pages
+          if (page.deleted === true) {
             return null;
           }
 

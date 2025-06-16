@@ -202,17 +202,18 @@ export const getPageById = async (pageId: string, userId: string | null = null):
       if (docSnap.exists()) {
         const pageData = { id: docSnap.id, ...docSnap.data() } as PageData;
 
-        // Always allow access to private pages if the user is the owner
-        if (!pageData.isPublic && userId && pageData.userId === userId) {
-          // User is the owner, allow access to their private page
-          console.log(`Owner access granted to private page ${pageId} for user ${userId}`);
-        } else {
-          // Check access permissions for non-owners
-          const accessCheck = await checkPageAccess(pageData, userId);
-          if (!accessCheck.hasAccess) {
-            console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
-            return { pageData: null, error: accessCheck.error };
-          }
+        // CRITICAL: Check access permissions including soft delete status
+        const accessCheck = await checkPageAccess(pageData, userId);
+        if (!accessCheck.hasAccess) {
+          console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}: ${accessCheck.error}`);
+          return { pageData: null, error: accessCheck.error };
+        }
+
+        // If this is a deleted page and user is the owner, we allow access
+        // but the calling code should determine if this is the appropriate context
+        if (accessCheck.isDeleted && userId && pageData.userId === userId) {
+          console.log(`Owner access granted to deleted page ${pageId} for user ${userId}`);
+          // Continue with normal processing but mark as deleted
         }
 
         // Check if the page has content directly (from a save operation)
@@ -261,6 +262,12 @@ export const getPageById = async (pageId: string, userId: string | null = null):
         // Get the current version ID
         const currentVersionId = pageData.currentVersion;
 
+        // Validate that we have a current version ID
+        if (!currentVersionId) {
+          console.error(`Page ${pageId} has no currentVersion ID`);
+          return { pageData: null, error: "Page version not found" };
+        }
+
         // Get the version document
         const versionCollectionRef = collection(db, "pages", pageId, "versions");
         const versionRef = doc(versionCollectionRef, currentVersionId);
@@ -291,20 +298,26 @@ export const getPageById = async (pageId: string, userId: string | null = null):
       console.error("Fetch page error details:", {
         pageId,
         userId,
-        errorMessage: error.message,
-        errorCode: error.code
+        errorMessage: error?.message || 'Unknown error',
+        errorCode: error?.code || 'unknown',
+        errorType: typeof error,
+        errorString: String(error)
       });
 
       // Provide more specific error messages based on error type
       let errorMessage = "Error fetching page";
-      if (error.code === 'permission-denied') {
+      if (error?.code === 'permission-denied') {
         errorMessage = "You don't have permission to view this page";
-      } else if (error.code === 'not-found') {
+      } else if (error?.code === 'not-found') {
         errorMessage = "Page not found";
-      } else if (error.code === 'unavailable') {
+      } else if (error?.code === 'unavailable') {
         errorMessage = "Service temporarily unavailable. Please try again later.";
-      } else if (error.message?.includes('network')) {
+      } else if (error?.message?.includes('network')) {
         errorMessage = "Network error. Please check your connection and try again.";
+      } else if (error?.message?.includes('empty path')) {
+        errorMessage = "Page data is corrupted. Please try refreshing the page.";
+      } else if (error?.message) {
+        errorMessage = `Error loading page: ${error.message}`;
       }
 
       return { pageData: null, error: errorMessage };
@@ -349,29 +362,37 @@ export const listenToPageById = (
         currentUserId: userId
       });
 
-      // Always return the page data for private pages if the user is the owner
-      if (!pageData.isPublic && userId && pageData.userId === userId) {
-        // User is the owner, allow access to their private page
-        console.log(`Owner access granted to private page ${pageId} for user ${userId}`);
-      } else {
-        // Check access permissions for non-owners
-        try {
-          const accessCheck = await checkPageAccess(pageData, userId);
-          if (!accessCheck.hasAccess) {
-            console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}`);
-            onPageUpdate({ error: accessCheck.error });
-            return;
-          }
-        } catch (error) {
-          console.error(`Error checking access for page ${pageId}:`, error);
-          onPageUpdate({ error: "Error checking page access" });
+      // Check access permissions including soft delete status
+      try {
+        const accessCheck = await checkPageAccess(pageData, userId);
+        if (!accessCheck.hasAccess) {
+          console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}: ${accessCheck.error}`);
+          onPageUpdate({ error: accessCheck.error });
           return;
         }
+
+        // If this is a deleted page and user is the owner, we allow access
+        // but the calling code should determine if this is the appropriate context
+        if (accessCheck.isDeleted && userId && pageData.userId === userId) {
+          console.log(`Owner access granted to deleted page ${pageId} for user ${userId}`);
+          // Continue with normal processing but mark as deleted
+        }
+      } catch (error) {
+        console.error(`Error checking access for page ${pageId}:`, error);
+        onPageUpdate({ error: "Error checking page access" });
+        return;
       }
 
       try {
         // Get the current version ID
         const currentVersionId = pageData.currentVersion;
+
+        // Validate that we have a current version ID
+        if (!currentVersionId) {
+          console.error(`Page ${pageId} has no currentVersion ID`);
+          onPageUpdate({ error: "Page version not found" });
+          return;
+        }
 
         // Check if the page has content directly (from a save operation)
         if (pageData.content) {
@@ -476,20 +497,26 @@ export const listenToPageById = (
         console.error("Page access error details:", {
           pageId,
           userId,
-          errorMessage: error.message,
-          errorCode: error.code
+          errorMessage: error?.message || 'Unknown error',
+          errorCode: error?.code || 'unknown',
+          errorType: typeof error,
+          errorString: String(error)
         });
 
         // Provide more specific error messages based on error type
         let errorMessage = "Error checking page access";
-        if (error.code === 'permission-denied') {
+        if (error?.code === 'permission-denied') {
           errorMessage = "You don't have permission to view this page";
-        } else if (error.code === 'not-found') {
+        } else if (error?.code === 'not-found') {
           errorMessage = "Page not found";
-        } else if (error.code === 'unavailable') {
+        } else if (error?.code === 'unavailable') {
           errorMessage = "Service temporarily unavailable. Please try again later.";
-        } else if (error.message?.includes('network')) {
+        } else if (error?.message?.includes('network')) {
           errorMessage = "Network error. Please check your connection and try again.";
+        } else if (error?.message?.includes('empty path')) {
+          errorMessage = "Page data is corrupted. Please try refreshing the page.";
+        } else if (error?.message) {
+          errorMessage = `Error loading page: ${error.message}`;
         }
 
         onPageUpdate({ error: errorMessage });
@@ -507,4 +534,50 @@ export const listenToPageById = (
       unsubscribeVersion();
     }
   };
+};
+
+/**
+ * Get all pages that a user can edit (their own pages)
+ */
+export const getEditablePagesByUser = async (userId: string): Promise<any[]> => {
+  try {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
+    // Dynamic import to match the pattern used elsewhere
+    const { db } = await import('../database');
+    const { collection, query, where, orderBy, getDocs } = await import('firebase/firestore');
+
+    // Query for user's pages (exclude deleted pages)
+    const pagesQuery = query(
+      collection(db, 'pages'),
+      where('userId', '==', userId),
+      where('deleted', '!=', true),
+      orderBy('lastModified', 'desc')
+    );
+
+    const snapshot = await getDocs(pagesQuery);
+    const pages: any[] = [];
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      pages.push({
+        id: doc.id,
+        title: data.title || 'Untitled',
+        isPublic: data.isPublic || false,
+        userId: data.userId,
+        authorName: data.authorName || data.displayName,
+        lastModified: data.lastModified,
+        createdAt: data.createdAt,
+        groupId: data.groupId,
+        groupName: data.groupName
+      });
+    });
+
+    return pages;
+  } catch (error) {
+    console.error('Error fetching editable pages:', error);
+    return [];
+  }
 };

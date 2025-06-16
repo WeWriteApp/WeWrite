@@ -50,6 +50,7 @@ export interface PageAccessResult {
   hasAccess: boolean;
   error?: string;
   reason?: string;
+  isDeleted?: boolean;
 }
 
 /**

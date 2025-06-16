@@ -1,0 +1,83 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "pages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "deleted", "order": "ASCENDING" },
+        { "fieldPath": "lastModified", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isPublic", "order": "ASCENDING" },
+        { "fieldPath": "deleted", "order": "ASCENDING" },
+        { "fieldPath": "lastModified", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "isPublic", "order": "ASCENDING" },
+        { "fieldPath": "deleted", "order": "ASCENDING" },
+        { "fieldPath": "lastModified", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "lastModified", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isPublic", "order": "ASCENDING" },
+        { "fieldPath": "lastModified", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "isPublic", "order": "ASCENDING" },
+        { "fieldPath": "lastModified", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "activities",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isPublic", "order": "ASCENDING" },
+        { "fieldPath": "type", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "versions",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "usernameHistory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "changedAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

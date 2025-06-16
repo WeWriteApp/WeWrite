@@ -47,29 +47,56 @@ export async function findPreviousExistingDailyNote(userId: string, currentDate:
   try {
     if (!userId || !isExactDateFormat(currentDate)) return null;
 
-    // Query for daily notes before the current date (exclude deleted pages)
-    const pagesQuery = query(
-      collection(db, 'pages'),
-      where('userId', '==', userId),
-      where('title', '<', currentDate),
-      where('deleted', '!=', true),
-      orderBy('title', 'desc'),
-      limit(50) // Limit to avoid large queries
-    );
+    try {
+      // Try query with deleted filter first
+      const pagesQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('title', '<', currentDate),
+        where('deleted', '!=', true),
+        orderBy('title', 'desc'),
+        limit(50) // Limit to avoid large queries
+      );
 
-    const snapshot = await getDocs(pagesQuery);
-    
-    // Find the most recent daily note (double-check it's not deleted)
-    for (const doc of snapshot.docs) {
-      const pageData = doc.data();
-      if (pageData.title &&
-          isExactDateFormat(pageData.title) &&
-          !pageData.deleted) {
-        return pageData.title;
+      const snapshot = await getDocs(pagesQuery);
+
+      // Find the most recent daily note (double-check it's not deleted)
+      for (const doc of snapshot.docs) {
+        const pageData = doc.data();
+        if (pageData.title &&
+            isExactDateFormat(pageData.title) &&
+            !pageData.deleted) {
+          return pageData.title;
+        }
       }
-    }
 
-    return null;
+      return null;
+    } catch (queryError) {
+      console.warn('Previous daily note query with deleted filter failed, falling back to client-side filtering:', queryError);
+
+      // Fallback: query without deleted filter and filter client-side
+      const fallbackQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('title', '<', currentDate),
+        orderBy('title', 'desc'),
+        limit(50)
+      );
+
+      const fallbackSnapshot = await getDocs(fallbackQuery);
+
+      // Find the most recent daily note with client-side filtering
+      for (const doc of fallbackSnapshot.docs) {
+        const pageData = doc.data();
+        if (pageData.title &&
+            isExactDateFormat(pageData.title) &&
+            !pageData.deleted) {
+          return pageData.title;
+        }
+      }
+
+      return null;
+    }
   } catch (error) {
     console.error('Error finding previous daily note:', error);
     return null;
@@ -86,29 +113,56 @@ export async function findNextExistingDailyNote(userId: string, currentDate: str
   try {
     if (!userId || !isExactDateFormat(currentDate)) return null;
 
-    // Query for daily notes after the current date (exclude deleted pages)
-    const pagesQuery = query(
-      collection(db, 'pages'),
-      where('userId', '==', userId),
-      where('title', '>', currentDate),
-      where('deleted', '!=', true),
-      orderBy('title', 'asc'),
-      limit(50) // Limit to avoid large queries
-    );
+    try {
+      // Try query with deleted filter first
+      const pagesQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('title', '>', currentDate),
+        where('deleted', '!=', true),
+        orderBy('title', 'asc'),
+        limit(50) // Limit to avoid large queries
+      );
 
-    const snapshot = await getDocs(pagesQuery);
-    
-    // Find the earliest daily note after current date (double-check it's not deleted)
-    for (const doc of snapshot.docs) {
-      const pageData = doc.data();
-      if (pageData.title &&
-          isExactDateFormat(pageData.title) &&
-          !pageData.deleted) {
-        return pageData.title;
+      const snapshot = await getDocs(pagesQuery);
+
+      // Find the earliest daily note after current date (double-check it's not deleted)
+      for (const doc of snapshot.docs) {
+        const pageData = doc.data();
+        if (pageData.title &&
+            isExactDateFormat(pageData.title) &&
+            !pageData.deleted) {
+          return pageData.title;
+        }
       }
-    }
 
-    return null;
+      return null;
+    } catch (queryError) {
+      console.warn('Next daily note query with deleted filter failed, falling back to client-side filtering:', queryError);
+
+      // Fallback: query without deleted filter and filter client-side
+      const fallbackQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('title', '>', currentDate),
+        orderBy('title', 'asc'),
+        limit(50)
+      );
+
+      const fallbackSnapshot = await getDocs(fallbackQuery);
+
+      // Find the earliest daily note after current date with client-side filtering
+      for (const doc of fallbackSnapshot.docs) {
+        const pageData = doc.data();
+        if (pageData.title &&
+            isExactDateFormat(pageData.title) &&
+            !pageData.deleted) {
+          return pageData.title;
+        }
+      }
+
+      return null;
+    }
   } catch (error) {
     console.error('Error finding next daily note:', error);
     return null;
@@ -161,16 +215,41 @@ export async function checkDailyNoteExists(userId: string, dateString: string): 
   try {
     if (!userId || !isExactDateFormat(dateString)) return false;
 
-    const pagesQuery = query(
-      collection(db, 'pages'),
-      where('userId', '==', userId),
-      where('title', '==', dateString),
-      where('deleted', '!=', true),
-      limit(1)
-    );
+    try {
+      // Try query with deleted filter first
+      const pagesQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('title', '==', dateString),
+        where('deleted', '!=', true),
+        limit(1)
+      );
 
-    const snapshot = await getDocs(pagesQuery);
-    return !snapshot.empty;
+      const snapshot = await getDocs(pagesQuery);
+      return !snapshot.empty;
+    } catch (queryError) {
+      console.warn('Daily note exists query with deleted filter failed, falling back to client-side filtering:', queryError);
+
+      // Fallback: query without deleted filter and filter client-side
+      const fallbackQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('title', '==', dateString),
+        limit(1)
+      );
+
+      const fallbackSnapshot = await getDocs(fallbackQuery);
+
+      // Check if any non-deleted page exists
+      for (const doc of fallbackSnapshot.docs) {
+        const pageData = doc.data();
+        if (!pageData.deleted) {
+          return true;
+        }
+      }
+
+      return false;
+    }
   } catch (error) {
     console.error('Error checking if daily note exists:', error);
     return false;
@@ -187,21 +266,46 @@ export async function getDailyNotePageId(userId: string, dateString: string): Pr
   try {
     if (!userId || !isExactDateFormat(dateString)) return null;
 
-    const pagesQuery = query(
-      collection(db, 'pages'),
-      where('userId', '==', userId),
-      where('title', '==', dateString),
-      where('deleted', '!=', true),
-      limit(1)
-    );
+    try {
+      // Try query with deleted filter first
+      const pagesQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('title', '==', dateString),
+        where('deleted', '!=', true),
+        limit(1)
+      );
 
-    const snapshot = await getDocs(pagesQuery);
-    
-    if (!snapshot.empty) {
-      return snapshot.docs[0].id;
+      const snapshot = await getDocs(pagesQuery);
+
+      if (!snapshot.empty) {
+        return snapshot.docs[0].id;
+      }
+
+      return null;
+    } catch (queryError) {
+      console.warn('Daily note page ID query with deleted filter failed, falling back to client-side filtering:', queryError);
+
+      // Fallback: query without deleted filter and filter client-side
+      const fallbackQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('title', '==', dateString),
+        limit(1)
+      );
+
+      const fallbackSnapshot = await getDocs(fallbackQuery);
+
+      // Find the first non-deleted page
+      for (const doc of fallbackSnapshot.docs) {
+        const pageData = doc.data();
+        if (!pageData.deleted) {
+          return doc.id;
+        }
+      }
+
+      return null;
     }
-
-    return null;
   } catch (error) {
     console.error('Error getting daily note page ID:', error);
     return null;

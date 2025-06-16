@@ -42,10 +42,11 @@ export const prefetchUserData = async (userId) => {
  */
 const prefetchUserPages = async (userId) => {
   try {
-    // Query to get the user's pages
+    // Query to get the user's pages (exclude deleted pages)
     const pagesQuery = query(
       collection(db, 'pages'),
       where('userId', '==', userId),
+      where('deleted', '!=', true),
       orderBy('lastModified', 'desc'),
       limit(20)
     );
@@ -94,10 +95,11 @@ const prefetchUserPages = async (userId) => {
  */
 const prefetchRecentActivity = async (userId) => {
   try {
-    // Query to get recent public pages
+    // Query to get recent public pages (exclude deleted pages)
     const pagesQuery = query(
       collection(db, 'pages'),
       where('isPublic', '==', true),
+      where('deleted', '!=', true),
       orderBy('lastModified', 'desc'),
       limit(10)
     );
@@ -109,19 +111,26 @@ const prefetchRecentActivity = async (userId) => {
     }
     
     // Process the results (simplified version of what useHomeRecentActivity does)
-    const activities = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        pageId: doc.id,
-        title: data.title || 'Untitled',
-        content: data.content || '',
-        userId: data.userId,
-        authorName: data.authorName || 'Anonymous',
-        lastModified: data.lastModified,
-        isPublic: data.isPublic
-      };
-    });
+    const activities = snapshot.docs
+      .map(doc => {
+        const data = doc.data();
+
+        // TEMPORARY FIX: Filter out deleted pages on the client side
+        // since we removed the server-side filter to avoid failed-precondition errors
+        if (data.deleted === true) return null;
+
+        return {
+          id: doc.id,
+          pageId: doc.id,
+          title: data.title || 'Untitled',
+          content: data.content || '',
+          userId: data.userId,
+          authorName: data.authorName || 'Anonymous',
+          lastModified: data.lastModified,
+          isPublic: data.isPublic
+        };
+      })
+      .filter(activity => activity !== null); // Remove null entries
     
     // Cache the results
     const cacheKey = `home_activity_${userId || 'anonymous'}_all_10`;

@@ -44,11 +44,10 @@ export async function GET(request: NextRequest) {
       const pageData = { id: doc.id, ...doc.data() } as any;
       console.log('[my-pages API] Page data:', { id: doc.id, title: pageData.title, lastModified: pageData.lastModified, userId: pageData.userId });
 
-      // Apply search filter if provided (and ensure not deleted)
-      if (!pageData.deleted &&
-          (!searchTerm ||
-           pageData.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           pageData.content?.toLowerCase().includes(searchTerm.toLowerCase()))) {
+      // Apply search filter if provided (deleted pages already filtered at query level)
+      if (!searchTerm ||
+          pageData.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          pageData.content?.toLowerCase().includes(searchTerm.toLowerCase())) {
         pages.push(pageData);
       }
     });

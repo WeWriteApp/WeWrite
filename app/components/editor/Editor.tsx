@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, useCallback } from "react";
+import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from 'react-dom';
 import { usePillStyle } from '../../contexts/PillStyleContext';
 import { useLineSettings, LINE_MODES } from '../../contexts/LineSettingsContext';
 import { Lock, ExternalLink, X } from "lucide-react";
 import FilteredSearchResults from '../search/FilteredSearchResults';
+import ParagraphNumberOverlay from './ParagraphNumberOverlay';
 
 // Types
 interface EditorProps {
@@ -54,22 +56,28 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     onEmptyLinesChange
   } = props;
 
-  // Convert Slate content to simple text format on mount
-  const [content, setContent] = useState(() => {
-    // Only initialize content on client side to prevent hydration mismatch
-    if (typeof window === 'undefined') {
-      return '';
-    }
+  // Optimized state management - minimize re-renders
+  const [showLinkEditor, setShowLinkEditor] = useState(false);
+  const [linkSearchText, setLinkSearchText] = useState("");
+  const [linkDisplayText, setLinkDisplayText] = useState("");
+  const [selection, setSelection] = useState<Range | null>(null);
+  const [isClient, setIsClient] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
-    if (typeof initialContent === 'string') {
-      return initialContent;
-    }
-    // Convert Slate format to simple text format for state tracking
-    return convertSlateToSimpleText(initialContent || []);
-  });
+  // Refs for performance - avoid re-renders
+  const editorRef = useRef<HTMLDivElement>(null);
+  const changeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasInitialized = useRef(false);
+  const lastContentRef = useRef<string>('');
 
-  // Helper function to convert Slate to simple text (for backward compatibility)
-  function convertSlateToSimpleText(slateContent: any): string {
+  // Memoized style classes to prevent re-computation
+  const { getPillStyleClasses } = usePillStyle();
+  const { lineMode } = useLineSettings();
+  const pillStyleClasses = useMemo(() => getPillStyleClasses(), [getPillStyleClasses]);
+
+  // Helper function to convert Slate to simple text (memoized for performance)
+  const convertSlateToSimpleText = useCallback((slateContent: any): string => {
     if (!slateContent || !Array.isArray(slateContent)) return "";
 
     let result = "";
@@ -99,41 +107,24 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     }
 
     return result.trim();
-  }
+  }, []);
 
-  const [showLinkEditor, setShowLinkEditor] = useState(false);
-  const [linkSearchText, setLinkSearchText] = useState("");
-  const [linkDisplayText, setLinkDisplayText] = useState("");
-  const [selection, setSelection] = useState<Range | null>(null);
-  const [isClient, setIsClient] = useState(false);
-  const editorRef = useRef<HTMLDivElement>(null);
-  const isInternalUpdate = useRef(false);
-  const changeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const hasInitialized = useRef(false);
-  const { getPillStyleClasses } = usePillStyle();
-  const { lineMode } = useLineSettings();
-
-  // Convert Slate content to HTML for WYSIWYG display
-  function convertSlateToHTML(slateContent: any): string {
+  // Memoized Slate to HTML conversion for performance
+  const convertSlateToHTML = useCallback((slateContent: any): string => {
     if (!slateContent || !Array.isArray(slateContent)) {
       return "<div><br></div>";
     }
 
     let result = "";
-    const showParagraphNumbers = lineMode !== LINE_MODES.DENSE;
 
     for (let paragraphIndex = 0; paragraphIndex < slateContent.length; paragraphIndex++) {
       const node = slateContent[paragraphIndex];
       if (node.type === "paragraph" && node.children) {
-        // CRITICAL FIX: Paragraph numbers should NOT be inside contentEditable
-        // Create simple div structure without paragraph numbers for contentEditable
-        // Paragraph numbers will be handled by CSS pseudo-elements or external rendering
         result += "<div>";
         let hasContent = false;
 
         for (const child of node.children) {
           if (child.text !== undefined) {
-            // Handle empty text nodes properly
             if (child.text === "") {
               if (!hasContent) {
                 result += "<br>";
@@ -145,69 +136,65 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
             }
           } else if (child.type === "link") {
             const text = child.children?.[0]?.text || child.pageTitle || child.username || "Link";
-            const baseStyles = getPillStyleClasses();
 
             if (child.pageId) {
               if (child.showAuthor && child.authorUsername) {
                 result += `<span class="compound-link" data-page-id="${child.pageId}" data-author="${child.authorUsername}">`;
-                result += `<span class="${baseStyles} page-link" data-link-type="page" data-id="${child.pageId}">${text}</span>`;
+                result += `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${child.pageId}">${text}</span>`;
                 result += ` <span class="text-muted-foreground text-sm">by</span> `;
-                result += `<span class="${baseStyles} user-link" data-link-type="user" data-id="${child.authorUsername}">${child.authorUsername}</span>`;
+                result += `<span class="${pillStyleClasses} user-link" data-link-type="user" data-id="${child.authorUsername}">${child.authorUsername}</span>`;
                 result += `</span>`;
               } else {
-                result += `<span class="${baseStyles} page-link" data-link-type="page" data-id="${child.pageId}">${text}</span>`;
+                result += `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${child.pageId}">${text}</span>`;
               }
             } else if (child.userId) {
-              result += `<span class="${baseStyles} user-link" data-link-type="user" data-id="${child.userId}">${text}</span>`;
+              result += `<span class="${pillStyleClasses} user-link" data-link-type="user" data-id="${child.userId}">${text}</span>`;
             } else if (child.url) {
-              result += `<span class="${baseStyles} external-link" data-link-type="external" data-url="${child.url}">${text}</span>`;
+              result += `<span class="${pillStyleClasses} external-link" data-link-type="external" data-url="${child.url}">${text}</span>`;
             }
             hasContent = true;
           }
         }
 
-        // If no content was added to this paragraph, add a <br>
         if (!hasContent) {
           result += "<br>";
         }
 
-        // Close the paragraph structure
         result += "</div>";
       }
     }
 
     return result || "<div><br></div>";
-  }
+  }, [pillStyleClasses]);
 
-  // Convert HTML content back to Slate format for compatibility
-  function convertHTMLToSlate(html: string): any[] {
-    // Safety check for server-side rendering
+  // Memoized HTML to Slate conversion for performance
+  const convertHTMLToSlate = useCallback((html: string): any[] => {
     if (typeof document === 'undefined') {
       return [{ type: "paragraph", children: [{ text: "" }] }];
     }
+
+    // CRITICAL FIX: Remove the problematic content change check that was returning empty content
+    // This was causing the save to capture empty content when the HTML hadn't changed
+    // We need to always process the HTML to get the actual content, not return empty content
 
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
 
     const result = [];
-
-    // Get all direct child div elements (this should capture all paragraphs)
-    const divs = Array.from(tempDiv.children).filter(child =>
+    const children = Array.from(tempDiv.children);
+    const contentDivs = children.filter(child =>
       child.tagName === 'DIV' && !child.classList.contains('unified-paragraph-number')
     );
 
-    if (divs.length === 0) {
-      // Handle case where there are no divs - might be plain text
+    if (contentDivs.length === 0) {
       const textContent = tempDiv.textContent || "";
-      return [{ type: "paragraph", children: [{ text: textContent }] }];
+      if (textContent.trim()) {
+        return [{ type: "paragraph", children: [{ text: textContent }] }];
+      }
+      return [{ type: "paragraph", children: [{ text: "" }] }];
     }
 
-    divs.forEach((div, index) => {
-      // Skip paragraph number spans when processing content
-      if (div.classList.contains('unified-paragraph-number')) {
-        return;
-      }
-
+    contentDivs.forEach((div) => {
       const paragraph = {
         type: "paragraph",
         children: []
@@ -222,8 +209,14 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         } else if (node.nodeType === Node.ELEMENT_NODE) {
           const element = node as Element;
 
-          // Skip paragraph number elements
           if (element.classList.contains('unified-paragraph-number')) {
+            return;
+          }
+
+          if (element.tagName === 'BR') {
+            if (paragraph.children.length === 0) {
+              paragraph.children.push({ text: "" });
+            }
             return;
           }
 
@@ -264,10 +257,8 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
               });
             }
           } else if (element.classList.contains('compound-link')) {
-            // Handle compound links - process children
             element.childNodes.forEach(processNode);
           } else {
-            // Process other elements recursively
             element.childNodes.forEach(processNode);
           }
         }
@@ -275,7 +266,6 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
       div.childNodes.forEach(processNode);
 
-      // If no children were added, add empty text
       if (paragraph.children.length === 0) {
         paragraph.children.push({ text: "" });
       }
@@ -284,56 +274,48 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     });
 
     return result.length > 0 ? result : [{ type: "paragraph", children: [{ text: "" }] }];
-  }
-
-  // Handle client-side hydration
-  useEffect(() => {
-    // Add a small delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      setIsClient(true);
-    }, 50);
-
-    return () => clearTimeout(timer);
   }, []);
 
+  // Immediate initialization for browser environment
+  React.useLayoutEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsClient(true);
+      setIsInitialized(true);
+      setIsMounted(true);
+      hasInitialized.current = true;
+    }
+  }, []);
 
-
-  // Initialize editor content ONLY on first mount (client-side only)
+  // Content initialization effect - runs after DOM is ready
   useEffect(() => {
-    if (!isClient || !editorRef.current || hasInitialized.current) return;
+    if (!isClient || !editorRef.current) return;
 
     try {
-      let htmlContent = "";
+      let htmlContent = "<div><br></div>";
 
-      if (typeof initialContent === 'string') {
-        // Convert simple text to HTML
+      if (typeof initialContent === 'string' && initialContent.trim()) {
         const lines = initialContent.split('\n');
         htmlContent = lines.map(line => `<div>${line || '<br>'}</div>`).join('');
-      } else if (initialContent && Array.isArray(initialContent)) {
-        // Convert Slate content to HTML
-        htmlContent = convertSlateToHTML(initialContent);
+      } else if (initialContent && Array.isArray(initialContent) && initialContent.length > 0) {
+        const hasContent = initialContent.some(node =>
+          node.children && node.children.some(child => child.text && child.text.trim())
+        );
 
-        // If conversion resulted in empty content, use fallback
-        if (!htmlContent || htmlContent === "") {
-          htmlContent = "<div><br></div>";
+        if (hasContent) {
+          htmlContent = convertSlateToHTML(initialContent);
         }
-      } else {
-        // Empty content
-        htmlContent = "<div><br></div>";
       }
 
       editorRef.current.innerHTML = htmlContent;
-      hasInitialized.current = true; // Mark as initialized to prevent future updates
+      lastContentRef.current = htmlContent;
 
     } catch (error) {
-      console.error("Editor: Error during initialization:", error);
-      // Set fallback content on error
+      console.error("Editor: Error during content initialization:", error);
       if (editorRef.current) {
         editorRef.current.innerHTML = "<div><br></div>";
-        hasInitialized.current = true;
       }
     }
-  }, [isClient]); // CRITICAL: Remove initialContent and lineMode dependencies to prevent updates during editing
+  }, [isClient, convertSlateToHTML, initialContent]);
 
   // CRITICAL FIX: Disable the problematic useEffect that causes cursor jumping
   // This useEffect was causing circular updates: user types → onChange → parent updates →
@@ -348,7 +330,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   //   // Commenting out to prevent circular updates during typing
   // }, [initialContent, isClient, lineMode]);
 
-  // Save current selection
+  // Memoized selection handling
   const saveSelection = useCallback(() => {
     if (!isClient || typeof window === 'undefined') return;
 
@@ -358,7 +340,6 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     }
   }, [isClient]);
 
-  // Restore selection
   const restoreSelection = useCallback(() => {
     if (!isClient || typeof window === 'undefined' || !selection) return;
 
@@ -369,38 +350,75 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
 
 
-  // Handle content changes in the contenteditable div
+  // Optimized content change handling - prevent unnecessary updates
   const handleContentChange = useCallback(() => {
     if (!isClient || !editorRef.current) return;
 
+    // CRITICAL FIX: Ensure editor always has at least one paragraph
+    if (editorRef.current.children.length === 0 ||
+        (editorRef.current.children.length === 1 && editorRef.current.textContent?.trim() === '')) {
+      editorRef.current.innerHTML = '<div><br></div>';
+    }
+
     const htmlContent = editorRef.current.innerHTML;
-    const slateContent = convertHTMLToSlate(htmlContent);
+
+    // CRITICAL FIX: Always process content changes for save reliability
+    // The previous check was preventing content capture during save operations
+    // We need to ensure content is always properly converted and sent to parent
+    lastContentRef.current = htmlContent;
 
     // Clear any existing timeout
     if (changeTimeoutRef.current) {
       clearTimeout(changeTimeoutRef.current);
     }
 
-    // CRITICAL FIX: Reduce delay to make content saving more responsive
-    // But still prevent excessive updates during rapid typing
+    // Debounced update to prevent excessive re-renders
     changeTimeoutRef.current = setTimeout(() => {
-      // Only call onChange after user has stopped typing briefly
+      const slateContent = convertHTMLToSlate(htmlContent);
+      console.log("🔵 Editor.handleContentChange: Converting to Slate:", {
+        htmlLength: htmlContent.length,
+        slateLength: slateContent.length,
+        hasContent: slateContent.some(p => p.children && p.children.some(c => c.text && c.text.trim()))
+      });
+
       onChange?.(slateContent);
 
-      // Count empty lines and notify parent
-      const textContent = slateContent.map(node =>
-        node.children.map(child => child.text || '').join('')
-      ).join('\n');
-      const emptyLines = textContent.split('\n').filter(line => line.trim() === '').length;
-      onEmptyLinesChange?.(emptyLines);
-    }, 150); // Much shorter delay - more responsive content saving
-  }, [isClient, onChange, onEmptyLinesChange]);
+      // Count empty lines by checking actual DOM divs
+      if (onEmptyLinesChange && editorRef.current) {
+        const divs = editorRef.current.querySelectorAll('div:not(.unified-paragraph-number)');
+        let emptyLineCount = 0;
+
+        divs.forEach((div) => {
+          const textContent = div.textContent || '';
+          const hasOnlyBr = div.innerHTML === '<br>' || div.innerHTML === '<br/>';
+          const isEmpty = textContent.trim() === '' || hasOnlyBr;
+
+          if (isEmpty) {
+            emptyLineCount++;
+          }
+        });
+
+        onEmptyLinesChange(emptyLineCount);
+      }
+    }, 150);
+  }, [isClient, onChange, onEmptyLinesChange, convertHTMLToSlate]);
 
   // Handle input events
   const handleInput = useCallback(() => {
     if (!isClient) return;
     handleContentChange();
   }, [isClient, handleContentChange]);
+
+  // Simplified selection handling - just save selection for link insertion
+  const handleSelectionChange = useCallback(() => {
+    // Just save the selection for link insertion - no complex manipulation
+    if (!isClient || typeof window === 'undefined') return;
+
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      setSelection(selection.getRangeAt(0).cloneRange());
+    }
+  }, [isClient]);
 
   // Handle blur events - ensure parent gets final content
   const handleBlur = useCallback(() => {
@@ -417,20 +435,66 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     // Immediately notify parent on blur
     onChange?.(slateContent);
 
-    const textContent = slateContent.map(node =>
-      node.children.map(child => child.text || '').join('')
-    ).join('\n');
-    const emptyLines = textContent.split('\n').filter(line => line.trim() === '').length;
-    onEmptyLinesChange?.(emptyLines);
+    // Count empty lines by checking actual DOM divs
+    if (onEmptyLinesChange && editorRef.current) {
+      const divs = editorRef.current.querySelectorAll('div:not(.unified-paragraph-number)');
+      let emptyLineCount = 0;
+
+      divs.forEach((div) => {
+        const textContent = div.textContent || '';
+        const hasOnlyBr = div.innerHTML === '<br>' || div.innerHTML === '<br/>';
+        const isEmpty = textContent.trim() === '' || hasOnlyBr;
+
+        if (isEmpty) {
+          emptyLineCount++;
+        }
+      });
+
+      onEmptyLinesChange(emptyLineCount);
+    }
 
     saveSelection();
   }, [isClient, onChange, onEmptyLinesChange, saveSelection]);
+
+  // Simplified delete key handling - no complex manipulation
+  const handleDeleteKey = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Let the browser handle delete operations naturally
+    // This prevents conflicts with React's DOM management
+  }, []);
 
   // Handle key events
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!isClient) return;
 
     onKeyDown?.(e);
+
+    // CRITICAL FIX: Prevent deletion of the last paragraph
+    if ((e.key === 'Backspace' || e.key === 'Delete') && editorRef.current) {
+      const divs = editorRef.current.querySelectorAll('div');
+
+      // If there's only one div left, prevent deletion if it would empty the editor
+      if (divs.length === 1) {
+        const lastDiv = divs[0];
+        const textContent = lastDiv.textContent || '';
+        const selection = window.getSelection();
+
+        // If the selection would delete all content from the last paragraph, prevent it
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const isSelectingAll = range.startOffset === 0 &&
+                                range.endOffset === textContent.length;
+          const isAtStart = range.startOffset === 0 && range.collapsed;
+
+          if (isSelectingAll || (isAtStart && e.key === 'Backspace' && textContent.trim() === '')) {
+            e.preventDefault();
+            return;
+          }
+        }
+      }
+    }
+
+    // ENHANCED: Check for delete operations that might affect paragraph numbers
+    handleDeleteKey(e);
 
     // Handle Ctrl+K for link insertion
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -441,81 +505,26 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       setShowLinkEditor(true);
     }
 
-    // Handle Enter key to create new paragraphs (but NOT Cmd+Enter or Ctrl+Enter)
+    // Simplified Enter key handling - let browser handle most of it
     if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
-      e.preventDefault();
-
-      // Get current selection
-      const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) return;
-
-      const range = selection.getRangeAt(0);
-
-      // Create a new div element for the new paragraph
-      const newDiv = document.createElement('div');
-      newDiv.innerHTML = '<br>';
-
-      // Find the current paragraph container more reliably
-      let currentDiv = range.startContainer;
-
-      // If we're in a text node, get its parent element
-      if (currentDiv.nodeType === Node.TEXT_NODE) {
-        currentDiv = currentDiv.parentElement;
-      }
-
-      // Find the closest div that represents a paragraph
-      while (currentDiv && currentDiv !== editorRef.current) {
-        if (currentDiv.tagName === 'DIV' && currentDiv.parentElement === editorRef.current) {
-          break;
-        }
-        currentDiv = currentDiv.parentElement;
-      }
-
-      // If we found a valid paragraph div, insert the new one after it
-      if (currentDiv && currentDiv.tagName === 'DIV' && currentDiv.parentElement === editorRef.current) {
-        currentDiv.parentElement.insertBefore(newDiv, currentDiv.nextSibling);
-      } else {
-        // Fallback: append to the end of the editor
-        if (editorRef.current) {
-          editorRef.current.appendChild(newDiv);
-        }
-      }
-
-      // Move cursor to the new paragraph - improved positioning
-      try {
-        const newRange = document.createRange();
-        // Position cursor at the beginning of the new div, before the <br>
-        if (newDiv.firstChild) {
-          newRange.setStartBefore(newDiv.firstChild);
-        } else {
-          newRange.setStart(newDiv, 0);
-        }
-        newRange.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(newRange);
-      } catch (error) {
-        console.debug('Selection positioning failed:', error);
-        // Fallback: just focus the editor
-        editorRef.current?.focus();
-      }
-
-      // Trigger content change to update parent
-      handleContentChange();
+      // Let the browser handle Enter naturally, just trigger content change
+      setTimeout(() => {
+        handleContentChange();
+      }, 10);
     }
   }, [isClient, onKeyDown, saveSelection]);
 
-  // Handle link selection from search results
+  // Optimized link selection handling
   const handleLinkSelect = useCallback((item: any) => {
     if (!editorRef.current) return;
 
     const displayText = linkDisplayText.trim() || item.title || item.username;
-    const baseStyles = getPillStyleClasses();
     let linkHTML = "";
 
     if (item.type === 'page' || item.id) {
-      linkHTML = `<span class="${baseStyles} page-link" data-link-type="page" data-id="${item.id}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
+      linkHTML = `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${item.id}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
     } else if (item.type === 'user') {
-      linkHTML = `<span class="${baseStyles} user-link" data-link-type="user" data-id="${item.id}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
+      linkHTML = `<span class="${pillStyleClasses} user-link" data-link-type="user" data-id="${item.id}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
     }
 
     // Insert the link at the current selection
@@ -539,30 +548,29 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
     setShowLinkEditor(false);
     return true;
-  }, [linkDisplayText, getPillStyleClasses, selection, restoreSelection, handleContentChange]);
+  }, [linkDisplayText, pillStyleClasses, selection, restoreSelection, handleContentChange]);
 
-  // Insert link at cursor position (for external API compatibility)
+  // Optimized link insertion for external API
   const insertLink = useCallback((linkData: any) => {
     if (!editorRef.current) return false;
 
     const displayText = linkData.pageTitle || linkData.username || linkData.text || "Link";
-    const baseStyles = getPillStyleClasses();
     let linkHTML = "";
 
     if (linkData.pageId) {
       if (linkData.showAuthor && linkData.authorUsername) {
         linkHTML = `<span class="compound-link" data-page-id="${linkData.pageId}" data-author="${linkData.authorUsername}" contenteditable="false" style="user-select: none; cursor: pointer;">`;
-        linkHTML += `<span class="${baseStyles} page-link" data-link-type="page" data-id="${linkData.pageId}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
+        linkHTML += `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${linkData.pageId}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
         linkHTML += ` <span class="text-muted-foreground text-sm">by</span> `;
-        linkHTML += `<span class="${baseStyles} user-link" data-link-type="user" data-id="${linkData.authorUsername}" contenteditable="false" style="user-select: none; cursor: pointer;">${linkData.authorUsername}</span>`;
+        linkHTML += `<span class="${pillStyleClasses} user-link" data-link-type="user" data-id="${linkData.authorUsername}" contenteditable="false" style="user-select: none; cursor: pointer;">${linkData.authorUsername}</span>`;
         linkHTML += `</span>`;
       } else {
-        linkHTML = `<span class="${baseStyles} page-link" data-link-type="page" data-id="${linkData.pageId}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
+        linkHTML = `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${linkData.pageId}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
       }
     } else if (linkData.userId) {
-      linkHTML = `<span class="${baseStyles} user-link" data-link-type="user" data-id="${linkData.userId}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
+      linkHTML = `<span class="${pillStyleClasses} user-link" data-link-type="user" data-id="${linkData.userId}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
     } else if (linkData.url) {
-      linkHTML = `<span class="${baseStyles} external-link" data-link-type="external" data-url="${linkData.url}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
+      linkHTML = `<span class="${pillStyleClasses} external-link" data-link-type="external" data-url="${linkData.url}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
     }
 
     // Insert the link
@@ -573,21 +581,88 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
     setShowLinkEditor(false);
     return true;
-  }, [getPillStyleClasses, handleContentChange]);
+  }, [pillStyleClasses, handleContentChange]);
 
-  // Expose methods via ref
+  // Function to delete all empty lines
+  const deleteAllEmptyLines = useCallback(() => {
+    if (!editorRef.current) return false;
+
+    const divs = editorRef.current.querySelectorAll('div');
+    let hasChanges = false;
+
+    divs.forEach((div) => {
+      // Check if the div is empty or contains only whitespace/br tags
+      const textContent = div.textContent || '';
+      const hasOnlyBr = div.innerHTML === '<br>' || div.innerHTML === '<br/>';
+      const isEmpty = textContent.trim() === '' || hasOnlyBr;
+
+      if (isEmpty && div.parentNode) {
+        // Don't remove the last div if it would leave the editor completely empty
+        const allDivs = editorRef.current.querySelectorAll('div');
+        if (allDivs.length > 1) {
+          div.remove();
+          hasChanges = true;
+        }
+      }
+    });
+
+    // Ensure we always have at least one div
+    if (editorRef.current.children.length === 0) {
+      editorRef.current.innerHTML = '<div><br></div>';
+      hasChanges = true;
+    }
+
+    // Trigger content change if we made modifications
+    if (hasChanges) {
+      handleContentChange();
+    }
+
+    return hasChanges;
+  }, [handleContentChange]);
+
+  // Memoized imperative handle to prevent unnecessary re-creation
   useImperativeHandle(ref, () => ({
     focus: () => {
       editorRef.current?.focus();
       return true;
     },
     getContent: () => {
-      if (!editorRef.current) return [{ type: "paragraph", children: [{ text: "" }] }];
-      return convertHTMLToSlate(editorRef.current.innerHTML);
+      if (!editorRef.current) {
+        console.warn("🟡 Editor.getContent: editorRef.current is null");
+        return [{ type: "paragraph", children: [{ text: "" }] }];
+      }
+
+      // CRITICAL FIX: Ensure editor has content before capturing
+      if (editorRef.current.children.length === 0) {
+        console.warn("🟡 Editor.getContent: Editor is empty, adding default paragraph");
+        editorRef.current.innerHTML = '<div><br></div>';
+      }
+
+      const htmlContent = editorRef.current.innerHTML;
+      console.log("🔵 Editor.getContent: Capturing content:", {
+        htmlLength: htmlContent.length,
+        htmlPreview: htmlContent.substring(0, 200),
+        divCount: editorRef.current.querySelectorAll('div').length,
+        fullHTML: htmlContent
+      });
+
+      const slateContent = convertHTMLToSlate(htmlContent);
+      console.log("🔵 Editor.getContent: Converted to Slate:", {
+        paragraphCount: slateContent.length,
+        hasText: slateContent.some(p => p.children && p.children.some(c => c.text && c.text.trim())),
+        fullSlateContent: JSON.stringify(slateContent, null, 2)
+      });
+
+      // CRITICAL FIX: Ensure we always return valid content
+      if (!slateContent || slateContent.length === 0) {
+        console.warn("🟡 Editor.getContent: Slate conversion failed, returning default");
+        return [{ type: "paragraph", children: [{ text: "" }] }];
+      }
+
+      return slateContent;
     },
     insertText: (text: string) => {
       if (editorRef.current && typeof document !== 'undefined' && document.execCommand) {
-        // Save cursor position before inserting text
         const selection = window.getSelection();
         let savedRange = null;
         if (selection && selection.rangeCount > 0) {
@@ -597,7 +672,6 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         document.execCommand('insertText', false, text);
         handleContentChange();
 
-        // Restore cursor position if needed
         if (savedRange) {
           requestAnimationFrame(() => {
             try {
@@ -625,42 +699,62 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     setShowLinkEditor: (value: boolean) => {
       setShowLinkEditor(value);
       return true;
-    }
-  }), [handleContentChange, insertLink, saveSelection]);
+    },
+    deleteAllEmptyLines
+  }), [handleContentChange, insertLink, saveSelection, convertHTMLToSlate, deleteAllEmptyLines]);
+
+  // Memoized class names to prevent re-computation
+  const editorClassName = useMemo(() =>
+    `prose prose-lg max-w-none focus:outline-none editor-content page-editor-stable box-border ${lineMode === LINE_MODES.DENSE ? 'dense-mode' : 'normal-mode'}`,
+    [lineMode]
+  );
 
   return (
     <div className="editor w-full">
-      {/* WYSIWYG Editor - pixel-perfect match with view mode */}
+      {/* WYSIWYG Editor with consistent dimensions to prevent layout shifts */}
       <div className="page-content unified-editor relative rounded-lg bg-background w-full max-w-none">
-        {isClient ? (
-          <div
-            ref={editorRef}
-            contentEditable
-            onInput={handleInput}
-            onKeyDown={handleKeyDown}
-            onBlur={handleBlur}
-            onMouseUp={saveSelection}
-            onKeyUp={saveSelection}
-            className={`prose prose-lg max-w-none focus:outline-none editor-content page-editor-stable box-border ${lineMode === LINE_MODES.DENSE ? 'dense-mode' : 'normal-mode'}`}
-            data-placeholder={placeholder}
-            suppressContentEditableWarning={true}
-            style={{
-              minHeight: '400px', // Match view mode min-height
-              // Remove inline styles that conflict with CSS - let CSS handle all styling
-            }}
-          />
+        {typeof window !== 'undefined' ? (
+          <>
+            <div
+              ref={editorRef}
+              contentEditable
+              onInput={handleInput}
+              onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
+              onMouseUp={saveSelection}
+              onKeyUp={saveSelection}
+              onSelect={handleSelectionChange}
+              className={editorClassName}
+              data-placeholder={placeholder}
+              suppressContentEditableWarning={true}
+              style={{
+                minHeight: '400px',
+                opacity: isInitialized ? 1 : 0,
+                transition: 'opacity 0.15s ease-in-out'
+              }}
+            />
+            {/* Paragraph Number Overlay - Completely separate from contentEditable */}
+            <ParagraphNumberOverlay editorRef={editorRef} />
+          </>
         ) : (
-          <div className="prose prose-lg max-w-none page-editor-stable box-border" style={{ minHeight: '400px' }}>
-            {/* Server-side placeholder */}
-            <div><br /></div>
+          // Skeleton loader with exact same dimensions to prevent layout shifts
+          <div
+            className="prose prose-lg max-w-none page-editor-stable box-border animate-pulse"
+            style={{ minHeight: '400px' }}
+          >
+            <div className="space-y-3">
+              <div className="h-4 bg-muted rounded w-3/4"></div>
+              <div className="h-4 bg-muted rounded w-1/2"></div>
+              <div className="h-4 bg-muted rounded w-5/6"></div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Link Editor Modal */}
-      {showLinkEditor && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background p-6 rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
+      {/* Link Editor Modal - Rendered via portal at document body level */}
+      {isMounted && showLinkEditor && createPortal(
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" style={{ margin: 0 }}>
+          <div className="bg-background p-6 rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Insert Link</h3>
               <button
@@ -695,7 +789,8 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
               />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

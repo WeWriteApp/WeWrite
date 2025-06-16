@@ -692,7 +692,7 @@ export default function PageHeader({
                     </div>
                   )}
                 </h1>
-                <p
+                <div
                   className={`text-muted-foreground transition-all duration-200 ease-out will-change-transform ${
                     isScrolled
                       ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis inline-block"
@@ -787,7 +787,7 @@ export default function PageHeader({
                       </span>
                     )
                   )}
-                </p>
+                </div>
               </div>
 
               {/* Right navigation chevron for daily notes */}

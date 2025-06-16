@@ -158,6 +158,14 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   // Handle content changes from editor
   const handleContentChange = (content) => {
+    console.log("🔵 SinglePageView handleContentChange called with:", {
+      content,
+      contentType: typeof content,
+      isArray: Array.isArray(content),
+      length: Array.isArray(content) ? content.length : 0,
+      firstItem: Array.isArray(content) && content.length > 0 ? content[0] : null
+    });
+
     setEditorContent(content);
     setHasContentChanged(true);
   };
@@ -176,10 +184,12 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   // Handle save action - comprehensive save logic moved from EditPage
   const handleSave = useCallback(async (inputContent, saveMethod = 'button') => {
-    console.log("SinglePageView handleSave called with content:", {
+    console.log("🔵 SinglePageView handleSave called with:", {
+      inputContent,
       contentType: typeof inputContent,
       isArray: Array.isArray(inputContent),
-      length: Array.isArray(inputContent) ? inputContent.length : 0
+      length: Array.isArray(inputContent) ? inputContent.length : 0,
+      saveMethod
     });
 
     if (!user) {
@@ -216,10 +226,23 @@ function SinglePageView({ params, initialEditMode = false }) {
 
     try {
       // Use the provided content or fall back to current editor content
-      const finalContent = inputContent || editorContent || editorState;
+      let finalContent = inputContent || editorContent || editorState;
 
-      if (!finalContent || !Array.isArray(finalContent)) {
-        throw new Error("Invalid content format");
+      // CRITICAL FIX: Allow empty content to be saved
+      // Users should be able to save pages with just a title
+      if (!finalContent) {
+        // Create default empty content structure
+        finalContent = [{ type: "paragraph", children: [{ text: "" }] }];
+        console.log("No content provided, using default empty structure");
+      } else if (!Array.isArray(finalContent)) {
+        console.warn("Content is not an array, converting to default structure");
+        finalContent = [{ type: "paragraph", children: [{ text: "" }] }];
+      }
+
+      // Additional validation: ensure content has proper structure
+      if (Array.isArray(finalContent) && finalContent.length === 0) {
+        console.log("Empty array content detected, creating default structure");
+        finalContent = [{ type: "paragraph", children: [{ text: "" }] }];
       }
 
       // Convert content to JSON string for storage

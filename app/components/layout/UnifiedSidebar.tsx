@@ -382,28 +382,7 @@ function UnifiedSidebarContent({
                     {showContent && <span className="font-medium transition-opacity duration-200">Cancel</span>}
                   </Button>
 
-                  {/* Save button (primary action) */}
-                  <Button
-                    onClick={editorContext.onSave}
-                    disabled={editorContext.isSaving}
-                    variant="default"
-                    className={cn(
-                      "flex items-center gap-3 h-auto p-3 justify-start bg-green-600 hover:bg-green-700 text-white",
-                      !showContent && "justify-center w-12 h-12 p-0"
-                    )}
-                    title={showContent ? "" : (editorContext.isSaving ? "Saving..." : "Save")}
-                  >
-                    {editorContext.isSaving ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent flex-shrink-0" />
-                    ) : (
-                      <Check className="h-4 w-4 flex-shrink-0" />
-                    )}
-                    {showContent && (
-                      <span className="font-medium transition-opacity duration-200">
-                        {editorContext.isSaving ? "Saving..." : "Save"}
-                      </span>
-                    )}
-                  </Button>
+
                 </div>
               </div>
             </>

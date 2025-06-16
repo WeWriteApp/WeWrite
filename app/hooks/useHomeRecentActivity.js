@@ -6,6 +6,8 @@ import { getPageVersions } from "../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
 import { getBatchUserData } from "../firebase/batchUserData";
 
+
+
 /**
  * useHomeRecentActivity - A hook that loads recent activity data for the homepage
  * This is a modified version of useRecentActivity that maintains the same interface
@@ -18,6 +20,7 @@ import { getBatchUserData } from "../firebase/batchUserData";
  * @returns {Object} - Object containing activities, loading state, error, and dummy functions for compatibility
  */
 const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false, mineOnly = false) => {
+
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
@@ -31,6 +34,10 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
   const userRef = useRef(user);
 
   // Update refs when props change
+  useEffect(() => {
+    limitRef.current = limitCount;
+  }, [limitCount]);
+
   useEffect(() => {
     followedOnlyRef.current = followedOnly;
   }, [followedOnly]);
@@ -226,6 +233,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
             pagesQuery = query(
               collection(db, "pages"),
               where("userId", "==", userIdRef.current),
+              where("deleted", "!=", true), // Exclude soft-deleted pages
               orderBy("lastModified", "desc"),
               limit(limitRef.current * 2)
             );
@@ -235,6 +243,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
               collection(db, "pages"),
               where("userId", "==", userIdRef.current),
               where("isPublic", "==", true),
+              where("deleted", "!=", true), // Exclude soft-deleted pages
               orderBy("lastModified", "desc"),
               limit(limitRef.current * 2)
             );
@@ -249,12 +258,14 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
 
           // IMPORTANT FIX: We can't use orderBy with "in" queries on document ID
           // So we need to fetch the pages first, then sort them in memory
+          // TEMPORARY: Remove deleted filter to avoid failed-precondition errors
           pagesQuery = query(
             collection(db, "pages"),
             where("__name__", "in", pagesToQuery)
           );
         } else {
           // No user filter, only show public pages for everyone
+          // TEMPORARY: Remove deleted filter to avoid failed-precondition errors
           pagesQuery = query(
             collection(db, "pages"),
             where("isPublic", "==", true),
@@ -273,7 +284,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
           return;
         }
 
-        console.log(`Found ${pagesSnapshot.size} pages matching the query`);
+
 
         // For followed pages, we need to sort the results manually since we can't use orderBy with "in" queries
         let pageDocs = pagesSnapshot.docs;
@@ -299,6 +310,10 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
         // First pass: collect all user IDs and page versions
         for (const doc of pageDocs) {
           const pageData = { id: doc.id, ...doc.data() };
+
+          // TEMPORARY FIX: Filter out deleted pages on the client side
+          // since we removed the server-side filter to avoid failed-precondition errors
+          if (pageData.deleted === true) continue;
 
           // Check if the page belongs to a private group and if the user has access
           const hasAccess = await checkPageGroupAccess(pageData);
@@ -431,6 +446,8 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
         const activityResults = await Promise.all(activitiesPromises);
 
         // Filter out null results, private pages, and activities with missing usernames
+
+
         const validActivities = activityResults
           .filter(activity => {
             // Skip null activities
@@ -456,7 +473,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
           })
           .slice(0, limitRef.current);
 
-        console.log(`Found ${validActivities.length} valid activities after filtering`);
+
 
         if (validActivities.length === 0 && followedOnlyRef.current) {
           console.log('No activities found for followed pages');
@@ -490,6 +507,11 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
   };
 
   useEffect(() => {
+    // Reset state before fetching
+    setActivities([]);
+    setLoading(true);
+    setError(null);
+
     // Fetch data
     fetchRecentActivity();
 
@@ -498,7 +520,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
       // If component unmounts while fetching, mark as not fetching
       isFetchingRef.current = false;
     };
-  }, [followedOnly, mineOnly]); // Re-run when followedOnly or mineOnly changes
+  }, [followedOnly, mineOnly, limitCount]); // Re-run when followedOnly, mineOnly, or limitCount changes
 
   // Provide dummy values for hasMore and loadingMore to match the interface of useRecentActivity
   const hasMore = false;

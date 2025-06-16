@@ -52,7 +52,6 @@ import {
   type DocumentData,
   type QueryDocumentSnapshot
 } from 'firebase/firestore';
-import { db } from './database';
 import { generateCacheKey, getCacheItem, setCacheItem, BatchCache } from '../utils/cacheUtils';
 import { trackQueryPerformance } from '../utils/queryMonitor';
 
@@ -157,6 +156,9 @@ export const getOptimizedPageMetadata = async (
     }
     
     try {
+      // TEMPORARY: Use dynamic import like the working API
+      const { db } = await import('./database');
+
       const pageRef = doc(db, "pages", pageId);
       const docSnap = await getDoc(pageRef);
       
@@ -232,8 +234,11 @@ export const getOptimizedPageContent = async (
     }
     
     try {
+      // TEMPORARY: Use dynamic import like the working API
+      const { db } = await import('./database');
+
       let content: string | null = null;
-      
+
       if (versionId) {
         // Get specific version content
         const versionRef = doc(db, "pages", pageId, "versions", versionId);
@@ -311,6 +316,9 @@ export const getOptimizedPageList = async (
     }
     
     try {
+      // TEMPORARY: Use dynamic import like the working API
+      const { db } = await import('./database');
+
       // Build optimized query (exclude deleted pages)
       let pageQuery = query(
         collection(db, "pages"),
@@ -319,7 +327,7 @@ export const getOptimizedPageList = async (
         orderBy("lastModified", "desc"),
         limit(maxResults)
       );
-      
+
       // Add pagination if lastDoc is provided (exclude deleted pages)
       if (lastDoc) {
         pageQuery = query(
@@ -451,45 +459,62 @@ export const createOptimizedPageListener = (
   // Set up real-time listener with throttling
   let lastUpdate = 0;
   const throttleMs = 3000; // Throttle updates to max once per 3 seconds
-  
-  const pageRef = doc(db, "pages", pageId);
-  
-  const unsubscribe = onSnapshot(pageRef, (doc) => {
-    const now = Date.now();
-    if (now - lastUpdate < throttleMs) {
-      return; // Skip this update due to throttling
-    }
-    lastUpdate = now;
-    
-    logPageRead('pageListener-realtime', false, pageId);
-    
-    if (doc.exists()) {
-      const data = doc.data();
-      const pageData: OptimizedPageData = {
-        id: pageId,
-        title: data.title || 'Untitled Page',
-        username: data.username,
-        displayName: data.displayName,
-        isPublic: data.isPublic || false,
-        userId: data.userId,
-        lastModified: data.lastModified,
-        createdAt: data.createdAt,
-        totalPledged: data.totalPledged || 0,
-        pledgeCount: data.pledgeCount || 0,
-        currentVersion: data.currentVersion
-      };
-      
-      // Update cache
-      setCacheItem(cacheKey, pageData, 15 * 60 * 1000);
-      callback(pageData);
-    } else {
-      callback(null);
-    }
-  }, (error) => {
-    console.error('[OptimizedPageListener] Error:', error);
+
+  // TEMPORARY: Use dynamic import like the working API - but this needs to be synchronous
+  // For now, we'll need to handle this differently
+  let db: any = null;
+
+  // Get db instance asynchronously
+  import('./database').then(({ db: dbInstance }) => {
+    db = dbInstance;
+    setupListener();
   });
+
+  const setupListener = () => {
+    if (!db) return;
+
+    const pageRef = doc(db, "pages", pageId);
   
-  return unsubscribe;
+    const unsubscribe = onSnapshot(pageRef, (doc) => {
+      const now = Date.now();
+      if (now - lastUpdate < throttleMs) {
+        return; // Skip this update due to throttling
+      }
+      lastUpdate = now;
+
+      logPageRead('pageListener-realtime', false, pageId);
+
+      if (doc.exists()) {
+        const data = doc.data();
+        const pageData: OptimizedPageData = {
+          id: pageId,
+          title: data.title || 'Untitled Page',
+          username: data.username,
+          displayName: data.displayName,
+          isPublic: data.isPublic || false,
+          userId: data.userId,
+          lastModified: data.lastModified,
+          createdAt: data.createdAt,
+          totalPledged: data.totalPledged || 0,
+          pledgeCount: data.pledgeCount || 0,
+          currentVersion: data.currentVersion
+        };
+
+        // Update cache
+        setCacheItem(cacheKey, pageData, 15 * 60 * 1000);
+        callback(pageData);
+      } else {
+        callback(null);
+      }
+    }, (error) => {
+      console.error('[OptimizedPageListener] Error:', error);
+    });
+
+    return unsubscribe;
+  };
+
+  // Return a no-op unsubscribe function initially
+  return () => {};
 };
 
 /**
