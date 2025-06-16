@@ -310,8 +310,12 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
   // Handle content changes
   const handleContentChange = (value) => {
-    console.log("Content changed:", value);
-    setCurrentEditorValue(value);
+    // Remove debug logging to improve performance
+    // console.log("PageEditor: Content changed:", value?.length, "paragraphs");
+
+    // CRITICAL FIX: Don't update currentEditorValue during editing
+    // This was causing the Editor to re-render and lose multi-line content
+    // setCurrentEditorValue(value);
 
     if (onContentChange) {
       onContentChange(value);
@@ -344,22 +348,23 @@ const PageEditor: React.FC<PageEditorProps> = ({
   // Handle link insertion
   const handleInsertLink = () => {
     try {
-      console.log("[DEBUG] Insert link button clicked");
+      // Remove debug logging to improve performance
+      // console.log("[DEBUG] Insert link button clicked");
 
       // Check if link functionality is enabled
       if (!linkFunctionalityEnabled) {
-        console.log("[DEBUG] Link functionality is disabled, showing modal");
+        // console.log("[DEBUG] Link functionality is disabled, showing modal");
         setShowDisabledLinkModal(true);
         return;
       }
 
     if (editorRef.current) {
-      console.log("[DEBUG] Editor ref exists, attempting to open link editor");
+      // console.log("[DEBUG] Editor ref exists, attempting to open link editor");
 
       // Focus the editor first
       try {
         editorRef.current.focus();
-        console.log("[DEBUG] Editor focused successfully");
+        // console.log("[DEBUG] Editor focused successfully");
       } catch (focusError) {
         console.error("[DEBUG] Error focusing editor:", focusError);
       }
@@ -368,7 +373,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
       // 1. Try direct method call if available
       if (typeof editorRef.current.setShowLinkEditor === 'function') {
-        console.log("[DEBUG] Using direct setShowLinkEditor method");
+        // console.log("[DEBUG] Using direct setShowLinkEditor method");
         editorRef.current.setShowLinkEditor(true);
       }
 
@@ -386,7 +391,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
           }
         });
         document.dispatchEvent(event);
-        console.log("[DEBUG] Directly dispatched show-link-editor event from button");
+        // console.log("[DEBUG] Directly dispatched show-link-editor event from button");
 
         // 3. Force a global event as well
         window.dispatchEvent(new CustomEvent('linkEditorStateChange', {
@@ -399,12 +404,12 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
         // 4. Fallback to using the openLinkEditor method if available
         if (editorRef.current.openLinkEditor) {
-          console.log("[DEBUG] Falling back to openLinkEditor method");
+          // console.log("[DEBUG] Falling back to openLinkEditor method");
           try {
             // Open the link editor directly without creating a temporary link first
             // Pass "page" as the initial tab to show
             const result = editorRef.current.openLinkEditor("page");
-            console.log("[DEBUG] openLinkEditor result:", result);
+            // console.log("[DEBUG] openLinkEditor result:", result);
           } catch (error) {
             console.error("[DEBUG] Error opening link editor:", error);
             toast.error("Could not open link editor. Please try again.");
@@ -427,19 +432,19 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
 
 
-  // Debug logging for EditorProvider props
-  console.log('[PageEditor] EditorProvider props:', {
-    isPublic,
-    hasSetIsPublic: !!setIsPublic,
-    hasLocation: !!location,
-    hasSetLocation: !!setLocation,
-    hasOnInsertLink: !!handleInsertLink,
-    hasOnCancel: !!onCancel,
-    hasOnSave: !!onSave,
-    hasOnDelete: !!onDelete,
-    isSaving,
-    linkFunctionalityEnabled
-  });
+  // Remove debug logging to improve performance and reduce console noise
+  // console.log('[PageEditor] EditorProvider props:', {
+  //   isPublic,
+  //   hasSetIsPublic: !!setIsPublic,
+  //   hasLocation: !!location,
+  //   hasSetLocation: !!setLocation,
+  //   hasOnInsertLink: !!handleInsertLink,
+  //   hasOnCancel: !!onCancel,
+  //   hasOnSave: !!onSave,
+  //   hasOnDelete: !!onDelete,
+  //   isSaving,
+  //   linkFunctionalityEnabled
+  // });
 
   return (
     <EditorProvider
@@ -494,6 +499,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
             {/* Editor wrapper - using Editor */}
             <div className="editor-wrapper page-editor-stable box-border">
               <Editor
+                key="stable-editor" // CRITICAL: Stable key to prevent re-creation
                 ref={editorRef}
                 initialContent={currentEditorValue}
                 onChange={handleContentChange}

@@ -95,12 +95,6 @@ export default function AdminPage() {
       name: 'daily_notes',
       description: 'Enable daily notes section on home page with calendar day cards for quick note creation and access',
       enabled: false
-    },
-    {
-      id: 'simple-editor',
-      name: 'simple-editor',
-      description: 'Use the new lightweight editor instead of Slate.js for better performance and easier maintenance',
-      enabled: false
     }
   ]);
 

@@ -190,19 +190,24 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     tempDiv.innerHTML = html;
 
     const result = [];
-    // Look for both regular divs and unified-paragraph divs
-    const divs = tempDiv.querySelectorAll('div:not(.unified-text-content)');
+
+    // Get all direct child div elements (this should capture all paragraphs)
+    const divs = Array.from(tempDiv.children).filter(child =>
+      child.tagName === 'DIV' && !child.classList.contains('unified-paragraph-number')
+    );
 
     if (divs.length === 0) {
-      // Handle case where there are no divs
-      return [{ type: "paragraph", children: [{ text: tempDiv.textContent || "" }] }];
+      // Handle case where there are no divs - might be plain text
+      const textContent = tempDiv.textContent || "";
+      return [{ type: "paragraph", children: [{ text: textContent }] }];
     }
 
-    divs.forEach(div => {
+    divs.forEach((div, index) => {
       // Skip paragraph number spans when processing content
       if (div.classList.contains('unified-paragraph-number')) {
         return;
       }
+
       const paragraph = {
         type: "paragraph",
         children: []
@@ -298,11 +303,6 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     if (!isClient || !editorRef.current || hasInitialized.current) return;
 
     try {
-      // Debug: Log content initialization
-      if (Array.isArray(initialContent) && initialContent.length > 0) {
-        console.log("Editor: Initializing with content:", initialContent.length, "items");
-      }
-
       let htmlContent = "";
 
       if (typeof initialContent === 'string') {
@@ -324,13 +324,6 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
       editorRef.current.innerHTML = htmlContent;
       hasInitialized.current = true; // Mark as initialized to prevent future updates
-
-      // Debug empty content
-      if (htmlContent === "<div><br></div>") {
-        console.log("Editor: Setting empty content (this is normal for new pages)");
-      } else {
-        console.log("Editor: Setting content with", htmlContent.length, "characters");
-      }
 
     } catch (error) {
       console.error("Editor: Error during initialization:", error);
@@ -448,8 +441,8 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       setShowLinkEditor(true);
     }
 
-    // Handle Enter key to create new paragraphs
-    if (e.key === 'Enter') {
+    // Handle Enter key to create new paragraphs (but NOT Cmd+Enter or Ctrl+Enter)
+    if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
       e.preventDefault();
 
       // Get current selection
@@ -462,26 +455,52 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       const newDiv = document.createElement('div');
       newDiv.innerHTML = '<br>';
 
-      // Insert the new div after the current paragraph
-      const currentDiv = range.startContainer.nodeType === Node.TEXT_NODE
-        ? range.startContainer.parentElement?.closest('div')
-        : range.startContainer.nodeType === Node.ELEMENT_NODE
-          ? (range.startContainer as Element).closest('div')
-          : null;
+      // Find the current paragraph container more reliably
+      let currentDiv = range.startContainer;
 
-      if (currentDiv && currentDiv.parentNode) {
-        currentDiv.parentNode.insertBefore(newDiv, currentDiv.nextSibling);
+      // If we're in a text node, get its parent element
+      if (currentDiv.nodeType === Node.TEXT_NODE) {
+        currentDiv = currentDiv.parentElement;
+      }
 
-        // Move cursor to the new paragraph
+      // Find the closest div that represents a paragraph
+      while (currentDiv && currentDiv !== editorRef.current) {
+        if (currentDiv.tagName === 'DIV' && currentDiv.parentElement === editorRef.current) {
+          break;
+        }
+        currentDiv = currentDiv.parentElement;
+      }
+
+      // If we found a valid paragraph div, insert the new one after it
+      if (currentDiv && currentDiv.tagName === 'DIV' && currentDiv.parentElement === editorRef.current) {
+        currentDiv.parentElement.insertBefore(newDiv, currentDiv.nextSibling);
+      } else {
+        // Fallback: append to the end of the editor
+        if (editorRef.current) {
+          editorRef.current.appendChild(newDiv);
+        }
+      }
+
+      // Move cursor to the new paragraph - improved positioning
+      try {
         const newRange = document.createRange();
-        newRange.setStart(newDiv, 0);
+        // Position cursor at the beginning of the new div, before the <br>
+        if (newDiv.firstChild) {
+          newRange.setStartBefore(newDiv.firstChild);
+        } else {
+          newRange.setStart(newDiv, 0);
+        }
         newRange.collapse(true);
         selection.removeAllRanges();
         selection.addRange(newRange);
-
-        // Trigger content change to update parent
-        handleContentChange();
+      } catch (error) {
+        console.debug('Selection positioning failed:', error);
+        // Fallback: just focus the editor
+        editorRef.current?.focus();
       }
+
+      // Trigger content change to update parent
+      handleContentChange();
     }
   }, [isClient, onKeyDown, saveSelection]);
 
