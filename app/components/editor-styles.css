@@ -143,6 +143,7 @@ a[data-user-id]::before {
 
   /* Prevent any unexpected layout changes */
   overflow: visible;
+  /* Remove layout containment to prevent interference with dynamic content */
   contain: style;
 }
 
@@ -251,7 +252,8 @@ a[data-user-id]::before {
 
 /* Prevent any layout shifts during mode transitions */
 .page-editor-stable {
-  contain: layout style;
+  /* Reduce containment to prevent interference with dynamic content */
+  contain: style;
   /* Ensure consistent dimensions */
   box-sizing: border-box;
   width: 100%;
@@ -306,26 +308,7 @@ a[data-user-id]::before {
   counter-increment: paragraph-counter 1;
 }
 
-/* CRITICAL FIX: Ensure paragraph numbers display correctly in edit mode */
-.editor-content.normal-mode > div::before {
-  content: counter(paragraph-counter);
-  position: absolute;
-  left: 0.5rem;
-  top: 0.5rem;
-  width: 1rem;
-  height: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--muted-foreground);
-  pointer-events: none;
-  user-select: none;
-  z-index: 1;
-}
-
-/* Add paragraph numbers via pseudo-element - IDENTICAL positioning to view mode */
+/* CRITICAL FIX: Single paragraph number rule to prevent layout conflicts */
 .editor-content.normal-mode > div::before {
   content: counter(paragraph-counter);
   /* CRITICAL: Identical positioning to .unified-paragraph-number */
@@ -340,6 +323,9 @@ a[data-user-id]::before {
   user-select: none;
   pointer-events: none;
   line-height: 1.5;
+  /* Prevent layout shifts */
+  will-change: auto;
+  contain: style;
 }
 
 /* Dense mode - no paragraph numbers - IDENTICAL between view and edit modes */

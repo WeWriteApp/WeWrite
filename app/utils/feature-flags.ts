@@ -9,8 +9,7 @@ export type FeatureFlag =
   | 'calendar_view'
   | 'groups'
   | 'link_functionality'
-  | 'daily_notes'
-  | 'simple-editor';
+  | 'daily_notes';
 
 // Define admin user IDs
 const ADMIN_USER_IDS = [
@@ -64,8 +63,7 @@ const initializeFeatureFlags = async (): Promise<void> => {
         calendar_view: false,
         groups: true,
         link_functionality: true,
-        daily_notes: false,
-        'simple-editor': false
+        daily_notes: false
       };
       isInitialized = true;
     }

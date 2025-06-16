@@ -145,16 +145,18 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
         const chunkQuery = query(
           pagesRef,
           where('userId', '==', user?.uid || ''),
-          where('title', 'in', chunk)
+          where('title', 'in', chunk),
+          where('deleted', '!=', true)
         );
 
         const chunkSnapshot = await getDocs(chunkQuery);
         chunkSnapshot.forEach((doc) => {
           const pageData = doc.data();
-          // Only include pages with exact YYYY-MM-DD format titles
+          // Only include pages with exact YYYY-MM-DD format titles and not deleted
           if (pageData.title &&
               dateStrings.includes(pageData.title) &&
-              isExactDateFormat(pageData.title)) {
+              isExactDateFormat(pageData.title) &&
+              !pageData.deleted) {
             foundNotes.add(pageData.title);
             pageIdMap.set(pageData.title, doc.id);
           }

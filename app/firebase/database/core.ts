@@ -52,6 +52,40 @@ export interface PageAccessResult {
   reason?: string;
 }
 
+/**
+ * Helper function to create page queries that automatically exclude deleted pages
+ * This ensures consistent soft delete behavior across the entire application
+ */
+export const createPageQuery = (baseQuery: any[], includeDeleted: boolean = false) => {
+  if (!includeDeleted) {
+    // Add filter to exclude deleted pages
+    baseQuery.push(where('deleted', '!=', true));
+  }
+  return query(collection(db, 'pages'), ...baseQuery);
+};
+
+/**
+ * Helper function to create user page queries with soft delete filtering
+ */
+export const createUserPageQuery = (userId: string, includeDeleted: boolean = false, additionalFilters: any[] = []) => {
+  const baseQuery = [
+    where('userId', '==', userId),
+    ...additionalFilters
+  ];
+  return createPageQuery(baseQuery, includeDeleted);
+};
+
+/**
+ * Helper function to create public page queries with soft delete filtering
+ */
+export const createPublicPageQuery = (includeDeleted: boolean = false, additionalFilters: any[] = []) => {
+  const baseQuery = [
+    where('isPublic', '==', true),
+    ...additionalFilters
+  ];
+  return createPageQuery(baseQuery, includeDeleted);
+};
+
 export type PageData = Page;
 
 export interface VersionData {

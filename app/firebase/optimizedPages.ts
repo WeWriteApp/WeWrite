@@ -311,19 +311,21 @@ export const getOptimizedPageList = async (
     }
     
     try {
-      // Build optimized query
+      // Build optimized query (exclude deleted pages)
       let pageQuery = query(
         collection(db, "pages"),
         where("userId", "==", userId),
+        where("deleted", "!=", true),
         orderBy("lastModified", "desc"),
         limit(maxResults)
       );
       
-      // Add pagination if lastDoc is provided
+      // Add pagination if lastDoc is provided (exclude deleted pages)
       if (lastDoc) {
         pageQuery = query(
           collection(db, "pages"),
           where("userId", "==", userId),
+          where("deleted", "!=", true),
           orderBy("lastModified", "desc"),
           startAfter(lastDoc),
           limit(maxResults)

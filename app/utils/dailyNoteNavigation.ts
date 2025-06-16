@@ -47,21 +47,24 @@ export async function findPreviousExistingDailyNote(userId: string, currentDate:
   try {
     if (!userId || !isExactDateFormat(currentDate)) return null;
 
-    // Query for daily notes before the current date
+    // Query for daily notes before the current date (exclude deleted pages)
     const pagesQuery = query(
       collection(db, 'pages'),
       where('userId', '==', userId),
       where('title', '<', currentDate),
+      where('deleted', '!=', true),
       orderBy('title', 'desc'),
       limit(50) // Limit to avoid large queries
     );
 
     const snapshot = await getDocs(pagesQuery);
     
-    // Find the most recent daily note
+    // Find the most recent daily note (double-check it's not deleted)
     for (const doc of snapshot.docs) {
       const pageData = doc.data();
-      if (pageData.title && isExactDateFormat(pageData.title)) {
+      if (pageData.title &&
+          isExactDateFormat(pageData.title) &&
+          !pageData.deleted) {
         return pageData.title;
       }
     }
@@ -83,21 +86,24 @@ export async function findNextExistingDailyNote(userId: string, currentDate: str
   try {
     if (!userId || !isExactDateFormat(currentDate)) return null;
 
-    // Query for daily notes after the current date
+    // Query for daily notes after the current date (exclude deleted pages)
     const pagesQuery = query(
       collection(db, 'pages'),
       where('userId', '==', userId),
       where('title', '>', currentDate),
+      where('deleted', '!=', true),
       orderBy('title', 'asc'),
       limit(50) // Limit to avoid large queries
     );
 
     const snapshot = await getDocs(pagesQuery);
     
-    // Find the earliest daily note after current date
+    // Find the earliest daily note after current date (double-check it's not deleted)
     for (const doc of snapshot.docs) {
       const pageData = doc.data();
-      if (pageData.title && isExactDateFormat(pageData.title)) {
+      if (pageData.title &&
+          isExactDateFormat(pageData.title) &&
+          !pageData.deleted) {
         return pageData.title;
       }
     }
@@ -159,6 +165,7 @@ export async function checkDailyNoteExists(userId: string, dateString: string): 
       collection(db, 'pages'),
       where('userId', '==', userId),
       where('title', '==', dateString),
+      where('deleted', '!=', true),
       limit(1)
     );
 
@@ -184,6 +191,7 @@ export async function getDailyNotePageId(userId: string, dateString: string): Pr
       collection(db, 'pages'),
       where('userId', '==', userId),
       where('title', '==', dateString),
+      where('deleted', '!=', true),
       limit(1)
     );
 
