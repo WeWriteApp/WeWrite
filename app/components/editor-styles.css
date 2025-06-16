@@ -297,6 +297,34 @@ a[data-user-id]::before {
   word-spacing: normal;
 }
 
+/* CRITICAL FIX: Ensure counter resets properly and increments for each div */
+.editor-content.normal-mode {
+  counter-reset: paragraph-counter 0;
+}
+
+.editor-content.normal-mode > div {
+  counter-increment: paragraph-counter 1;
+}
+
+/* CRITICAL FIX: Ensure paragraph numbers display correctly in edit mode */
+.editor-content.normal-mode > div::before {
+  content: counter(paragraph-counter);
+  position: absolute;
+  left: 0.5rem;
+  top: 0.5rem;
+  width: 1rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+
 /* Add paragraph numbers via pseudo-element - IDENTICAL positioning to view mode */
 .editor-content.normal-mode > div::before {
   content: counter(paragraph-counter);
