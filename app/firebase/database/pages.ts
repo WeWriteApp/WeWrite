@@ -265,7 +265,42 @@ export const getPageById = async (pageId: string, userId: string | null = null):
         // Validate that we have a current version ID
         if (!currentVersionId) {
           console.error(`Page ${pageId} has no currentVersion ID`);
-          return { pageData: null, error: "Page version not found" };
+
+          // Try to recover by creating a version if the page has content
+          if (pageData.content) {
+            console.log(`Attempting to recover page ${pageId} by creating missing version`);
+            try {
+              // Create a recovery version with the existing content
+              const versionData = {
+                content: pageData.content,
+                createdAt: pageData.lastModified || new Date().toISOString(),
+                userId: pageData.userId,
+                username: pageData.username || "Anonymous",
+                groupId: pageData.groupId || null,
+                previousVersionId: null // This is a recovery version
+              };
+
+              // Create the version document
+              const versionCollectionRef = collection(db, "pages", pageId, "versions");
+              const versionRef = await addDoc(versionCollectionRef, versionData);
+              console.log(`Created recovery version ${versionRef.id} for page ${pageId}`);
+
+              // Update the page with the new currentVersion
+              await setDoc(doc(db, "pages", pageId), {
+                currentVersion: versionRef.id
+              }, { merge: true });
+
+              // Update pageData with the new currentVersion
+              pageData.currentVersion = versionRef.id;
+              console.log(`Successfully recovered page ${pageId} with version ${versionRef.id}`);
+            } catch (recoveryError) {
+              console.error(`Failed to recover page ${pageId}:`, recoveryError);
+              return { pageData: null, error: "Page version not found and recovery failed" };
+            }
+          } else {
+            // No content to recover from
+            return { pageData: null, error: "Page version not found" };
+          }
         }
 
         // Get the version document
@@ -390,8 +425,47 @@ export const listenToPageById = (
         // Validate that we have a current version ID
         if (!currentVersionId) {
           console.error(`Page ${pageId} has no currentVersion ID`);
-          onPageUpdate({ error: "Page version not found" });
-          return;
+
+          // Try to recover by creating a version if the page has content
+          if (pageData.content) {
+            console.log(`Attempting to recover page ${pageId} by creating missing version`);
+            try {
+              // Create a recovery version with the existing content
+              const versionData = {
+                content: pageData.content,
+                createdAt: pageData.lastModified || new Date().toISOString(),
+                userId: pageData.userId,
+                username: pageData.username || "Anonymous",
+                groupId: pageData.groupId || null,
+                previousVersionId: null // This is a recovery version
+              };
+
+              // Create the version document
+              const versionCollectionRef = collection(db, "pages", pageId, "versions");
+              const versionRef = await addDoc(versionCollectionRef, versionData);
+              console.log(`Created recovery version ${versionRef.id} for page ${pageId}`);
+
+              // Update the page with the new currentVersion
+              await setDoc(doc(db, "pages", pageId), {
+                currentVersion: versionRef.id
+              }, { merge: true });
+
+              // Update pageData with the new currentVersion and continue processing
+              pageData.currentVersion = versionRef.id;
+              console.log(`Successfully recovered page ${pageId} with version ${versionRef.id}`);
+
+              // Continue with the normal flow using the recovered version
+              // Don't return here, let the function continue
+            } catch (recoveryError) {
+              console.error(`Failed to recover page ${pageId}:`, recoveryError);
+              onPageUpdate({ error: "Page version not found and recovery failed" });
+              return;
+            }
+          } else {
+            // No content to recover from
+            onPageUpdate({ error: "Page version not found" });
+            return;
+          }
         }
 
         // Check if the page has content directly (from a save operation)
