@@ -232,10 +232,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     }
 
     try {
-      // CRITICAL FIX: Remove the problematic content change check that was returning empty content
-      // This was causing the save to capture empty content when the HTML hadn't changed
-      // We need to always process the HTML to get the actual content, not return empty content
-
+      // CRITICAL FIX: Declare variables outside try block to avoid scope issues
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = html;
 
@@ -252,12 +249,8 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         }
         return [{ type: "paragraph", children: [{ text: "" }] }];
       }
-    } catch (error) {
-      console.error("Editor: Error in HTML to Slate conversion setup:", error);
-      return [{ type: "paragraph", children: [{ text: "" }] }];
-    }
 
-    contentDivs.forEach((div) => {
+      contentDivs.forEach((div) => {
       const paragraph = {
         type: "paragraph",
         children: []
@@ -364,6 +357,10 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     });
 
     return result.length > 0 ? result : [{ type: "paragraph", children: [{ text: "" }] }];
+    } catch (error) {
+      console.error("Editor: Error in HTML to Slate conversion:", error);
+      return [{ type: "paragraph", children: [{ text: "" }] }];
+    }
   }, []);
 
   // Improved hydration-safe initialization
