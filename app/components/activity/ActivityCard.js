@@ -18,6 +18,10 @@ import { useFeatureFlag } from "../../utils/feature-flags";
 import { AuthContext } from "../../providers/AuthProvider";
 import { navigateToPage } from "../../utils/pagePermissions";
 import { useRouter } from "next/navigation";
+import { setCurrentVersion } from "../../firebase/database";
+import { useToast } from "../ui/use-toast";
+import { Button } from "../ui/button";
+import { RotateCcw } from "lucide-react";
 
 /**
  * ActivityCard component displays a single activity card
@@ -34,6 +38,50 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
   const router = useRouter();
   const [pageData, setPageData] = useState(null);
   const { formatDate, formatDateString } = useDateFormat();
+  const { toast } = useToast();
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  // Check if user can restore this version (is page owner and in history context)
+  const canRestore = activity.isHistoryContext &&
+                    !activity.isCurrentVersion &&
+                    user &&
+                    pageData &&
+                    user.uid === pageData.userId;
+
+  // Handle version restoration
+  const handleRestore = async (e) => {
+    e.stopPropagation(); // Prevent card click
+
+    if (!canRestore || isRestoring) return;
+
+    setIsRestoring(true);
+    try {
+      const result = await setCurrentVersion(activity.pageId, activity.versionId);
+      if (result) {
+        toast({
+          title: "Success",
+          description: "Page restored to this version",
+        });
+        // Refresh the page to show the restored content
+        window.location.reload();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to restore page",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error('Error restoring version:', err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to restore page",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRestoring(false);
+    }
+  };
 
   // Validate activity data
   useEffect(() => {
@@ -131,6 +179,19 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
       return;
     }
 
+    // DEBUG: Log navigation data in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('ActivityCard: Card clicked, navigation data:', {
+        pageId: activity.pageId,
+        versionId: activity.versionId,
+        isHistoryContext: activity.isHistoryContext,
+        isCurrentVersion: activity.isCurrentVersion,
+        willNavigateTo: activity.isHistoryContext && activity.versionId
+          ? `/${activity.pageId}/version/${activity.versionId}`
+          : `/${activity.pageId}` // Always go to current page for non-history contexts
+      });
+    }
+
     // Handle special activity types (bio_edit, group_about_edit) with direct navigation
     if (activity.activityType === "bio_edit") {
       const userId = activity.pageId.replace("user-bio-", "");
@@ -151,21 +212,24 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
     }
 
     // For regular page activities, determine navigation based on context and version status
-    if (activity.isHistoryContext && activity.versionId && activity.hasPreviousVersion) {
-      // From history page with previous version available - go to diff view
-      const url = `/${activity.pageId}/diff/${activity.versionId}`;
-      console.log('ActivityCard: History context with previous version, navigating to diff view:', url);
+    if (activity.isHistoryContext && activity.versionId) {
+      // From history page - always go to version page to view that specific version
+      const url = `/${activity.pageId}/version/${activity.versionId}`;
+      if (process.env.NODE_ENV === 'development') {
+        console.log('ActivityCard: History context detected, navigating to version page:', url);
+      }
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       window.location.href = url;
-    } else if (activity.versionId && !activity.isCurrentVersion) {
-      // Past version links should go to the version page
-      const url = `/${activity.pageId}/version/${activity.versionId}`;
-      console.log('ActivityCard: Past version clicked, navigating to version page:', url);
-      window.location.href = url;
     } else {
-      // Current version or no version ID should use click-to-edit functionality for main page
-      console.log('ActivityCard: Current version clicked, using click-to-edit navigation to main page');
-      navigateToPage(activity.pageId, user, pageData, user?.groups, router);
+      // For home page and other contexts - always go to current page
+      // This ensures home page activity cards always go to /id/ regardless of version data
+      // Use simple navigation to avoid permission checking issues
+      const url = `/${activity.pageId}`;
+      if (process.env.NODE_ENV === 'development') {
+        console.log('ActivityCard: Non-history context, navigating to main page:', url);
+      }
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      window.location.href = url;
     }
   };
 
@@ -181,14 +245,12 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
     activityUrl = `/group/${groupId}`;
   } else {
     // Regular page edits - determine URL based on context
-    if (activity.isHistoryContext && activity.versionId && activity.hasPreviousVersion) {
-      // From history page with previous version available - link to diff view
-      activityUrl = `/${activity.pageId}/diff/${activity.versionId}`;
-    } else if (activity.versionId && !activity.isCurrentVersion) {
-      // Past version links go to version page
+    if (activity.isHistoryContext && activity.versionId) {
+      // From history page - always link to version page
       activityUrl = `/${activity.pageId}/version/${activity.versionId}`;
     } else {
-      // Current version or no version ID goes to main page
+      // For home page and other contexts - always go to current page
+      // This ensures home page activity cards always go to /id/ regardless of version data
       activityUrl = `/${activity.pageId}`;
     }
   }
@@ -217,7 +279,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
       <div className="flex flex-col w-full flex-shrink-0">
         {/* Page title with fixed height and ellipsis */}
         <div className="flex-shrink-0 min-w-0 overflow-hidden h-[48px]">
-          <PillLink href={`/${activity.pageId}`}>
+          <PillLink href={activityUrl}>
             {activity.pageName && isExactDateFormat(activity.pageName)
               ? formatDateString(activity.pageName)
               : (activity.pageName || "Untitled page")}
@@ -302,12 +364,37 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
 
         {/* Character count stats positioned at the bottom of the card with proper padding */}
         <div className="flex-shrink-0 pb-2 pt-2 px-1 border-t border-border/20 mt-auto">
-          <DiffStats
-            added={added}
-            removed={removed}
-            isNewPage={isNewPage}
-            showTooltips={true}
-          />
+          <div className="flex justify-between items-center">
+            <DiffStats
+              added={added}
+              removed={removed}
+              isNewPage={isNewPage}
+              showTooltips={true}
+            />
+
+            {/* Restore button for history context */}
+            {canRestore && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRestore}
+                disabled={isRestoring}
+                className="ml-2 h-6 px-2 text-xs"
+              >
+                {isRestoring ? (
+                  <>
+                    <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-1" />
+                    Restoring...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    Restore
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

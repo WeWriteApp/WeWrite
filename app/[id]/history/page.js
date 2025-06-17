@@ -99,6 +99,20 @@ export default function PageHistoryPage({ params }) {
             console.log('Using previous version content for version ' + version.id);
           }
 
+          // Check if this version is the current version
+          const isCurrentVersion = version.id === pageResult.pageData?.currentVersion;
+
+          // Debug logging for version processing
+          if (process.env.NODE_ENV === 'development') {
+            console.log('History page - processing version:', {
+              versionId: version.id,
+              isCurrentVersion,
+              currentPageVersion: pageResult.pageData?.currentVersion,
+              hasContent: !!version.content,
+              contentPreview: version.content?.substring(0, 100)
+            });
+          }
+
           return {
             id: version.id || `version-${index}`,
             pageId: id,
@@ -111,10 +125,14 @@ export default function PageHistoryPage({ params }) {
             isNewPage: index === sortedVersions.length - 1, // Last item is the oldest or first version
             versionId: version.id, // Include the version ID for linking to version view
             isHistoryContext: true, // Flag to indicate this is from history page
+            isCurrentVersion: isCurrentVersion, // Flag to indicate if this is the current version
             hasPreviousVersion: !!prevVersion // Flag to indicate if there's a previous version for diff
           };
         });
 
+        if (process.env.NODE_ENV === 'development') {
+          console.log('History page - setting activities:', activityItems.length, 'items');
+        }
         setActivities(activityItems);
         setVersions(sortedVersions);
       } catch (err) {

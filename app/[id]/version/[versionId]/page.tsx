@@ -14,7 +14,7 @@ import { Label } from '../../../components/ui/label';
 import { Alert, AlertDescription } from '../../../components/ui/alert';
 import TextView from '../../../components/editor/TextView';
 import TextViewErrorBoundary from '../../../components/editor/TextViewErrorBoundary.js';
-import { toast } from '../../../components/ui/use-toast';
+import { useToast } from '../../../components/ui/use-toast';
 import { generateTextDiff } from '../../../utils/generateTextDiff';
 import { generateDiffContent } from '../../../utils/diffUtils';
 import { PageProvider } from '../../../contexts/PageContext';
@@ -45,6 +45,7 @@ export default function PageVersionView({ params }: { params: Promise<{ id: stri
   const [versionIndex, setVersionIndex] = useState(-1);
   const router = useRouter();
   const { user } = useAuth();
+  const { toast } = useToast();
   const isOwner = user && page && user.uid === page.userId;
 
   useEffect(() => {
@@ -74,6 +75,19 @@ export default function PageVersionView({ params }: { params: Promise<{ id: stri
           setLoading(false);
           return;
         }
+
+        // Debug logging for version data
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Version viewer - fetched version data:', {
+            versionId,
+            hasContent: !!versionData.content,
+            contentType: typeof versionData.content,
+            contentLength: versionData.content?.length,
+            contentPreview: versionData.content?.substring(0, 200),
+            fullVersionData: versionData
+          });
+        }
+
         setVersion(versionData);
 
         // Fetch current version for diff comparison
@@ -163,14 +177,25 @@ export default function PageVersionView({ params }: { params: Promise<{ id: stri
     try {
       const result = await setCurrentVersion(id, versionId);
       if (result) {
-        toast.success('Page reverted to this version');
+        toast({
+          title: "Success",
+          description: "Page reverted to this version",
+        });
         router.push('/' + id);
       } else {
-        toast.error('Failed to revert page');
+        toast({
+          title: "Error",
+          description: "Failed to revert page",
+          variant: "destructive",
+        });
       }
     } catch (err: any) {
       console.error('Error reverting page:', err);
-      toast.error(err.message || 'Failed to revert page');
+      toast({
+        title: "Error",
+        description: err.message || "Failed to revert page",
+        variant: "destructive",
+      });
     }
   };
 
@@ -277,11 +302,59 @@ export default function PageVersionView({ params }: { params: Promise<{ id: stri
                 <TextViewErrorBoundary fallbackContent={
                   <div className="p-4 text-muted-foreground">
                     <p>Unable to display version content. The version may have formatting issues.</p>
-                    <p className="text-sm mt-2">Version ID: {params.versionId}</p>
+                    <p className="text-sm mt-2">Version ID: {versionId}</p>
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-sm">Debug Info</summary>
+                      <pre className="text-xs mt-2 p-2 bg-muted rounded">
+                        {JSON.stringify({
+                          hasContent: !!version?.content,
+                          contentType: typeof version?.content,
+                          contentLength: version?.content?.length,
+                          contentPreview: version?.content?.substring(0, 100)
+                        }, null, 2)}
+                      </pre>
+                    </details>
                   </div>
                 }>
                   <TextView
-                    content={showDiff && diffContent ? diffContent : JSON.parse(version.content)}
+                    content={(() => {
+                      try {
+                        if (showDiff && diffContent) {
+                          console.log('Version viewer - showing diff content:', diffContent);
+                          return diffContent;
+                        }
+
+                        // Parse the version content
+                        console.log('Version viewer - parsing content:', {
+                          contentType: typeof version.content,
+                          contentLength: version.content?.length,
+                          rawContent: version.content
+                        });
+
+                        const parsedContent = typeof version.content === 'string'
+                          ? JSON.parse(version.content)
+                          : version.content;
+
+                        console.log('Version viewer - parsed content:', parsedContent);
+
+                        // Ensure it's an array
+                        if (!Array.isArray(parsedContent)) {
+                          console.warn('Version content is not an array:', parsedContent);
+                          return [{ type: "paragraph", children: [{ text: "Content format error" }] }];
+                        }
+
+                        // If empty array, show placeholder
+                        if (parsedContent.length === 0) {
+                          console.log('Version viewer - empty content array');
+                          return [{ type: "paragraph", children: [{ text: "This version has no content" }] }];
+                        }
+
+                        return parsedContent;
+                      } catch (parseError) {
+                        console.error('Error parsing version content:', parseError, version.content);
+                        return [{ type: "paragraph", children: [{ text: `Error parsing content: ${parseError.message}` }] }];
+                      }
+                    })()}
                     viewMode="normal"
                     showDiff={showDiff}
                   />

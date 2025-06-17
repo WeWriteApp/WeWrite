@@ -80,6 +80,18 @@ export const getPageVersionById = async (pageId: string, versionId: string): Pro
       }
     }
 
+    // Debug logging for version content
+    if (process.env.NODE_ENV === 'development') {
+      console.log('getPageVersionById - returning version data:', {
+        pageId,
+        versionId,
+        hasContent: !!versionData.content,
+        contentType: typeof versionData.content,
+        contentLength: versionData.content?.length,
+        contentPreview: versionData.content?.substring(0, 100)
+      });
+    }
+
     // Return version data with ID and previous version if available
     return {
       id: versionSnap.id,
@@ -216,6 +228,38 @@ export const getPageVersions = async (pageId: string, versionCount: number = 10)
   } catch (e) {
     console.error("Error fetching page versions:", e);
     return [];
+  }
+};
+
+/**
+ * Set a specific version as the current version (restore functionality)
+ */
+export const setCurrentVersion = async (pageId: string, versionId: string): Promise<boolean> => {
+  try {
+    if (!pageId || !versionId) {
+      console.error("setCurrentVersion called with invalid parameters:", { pageId, versionId });
+      return false;
+    }
+
+    // Get the version to restore
+    const versionData = await getPageVersionById(pageId, versionId);
+    if (!versionData) {
+      console.error(`Version ${versionId} not found for page ${pageId}`);
+      return false;
+    }
+
+    // Update the page document with the new current version and content
+    await setDoc(doc(db, "pages", pageId), {
+      currentVersion: versionId,
+      content: versionData.content, // Restore the content from this version
+      lastModified: new Date().toISOString()
+    }, { merge: true });
+
+    console.log(`Successfully set version ${versionId} as current for page ${pageId}`);
+    return true;
+  } catch (error) {
+    console.error("Error setting current version:", error);
+    return false;
   }
 };
 
