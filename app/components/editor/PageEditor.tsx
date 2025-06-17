@@ -502,6 +502,9 @@ const PageEditor: React.FC<PageEditorProps> = ({
                 onEmptyLinesChange={handleEmptyLinesChange}
                 placeholder="Start typing..."
                 contentType="wiki"
+                user={user}
+                currentPage={page}
+                isEditMode={true}
               />
             </div>
           </ErrorBoundary>

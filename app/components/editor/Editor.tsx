@@ -10,7 +10,14 @@ import ParagraphNumberOverlay from './ParagraphNumberOverlay';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Switch } from '../ui/switch';
 import { Modal } from '../ui/modal';
+import ExternalLinkPreviewModal from '../ui/ExternalLinkPreviewModal';
 import { ConfirmationModal } from '../utils/ConfirmationModal';
+import {
+  determineLinkModalType,
+  createLinkInteractionContext,
+  extractLinkDataFromElement,
+  canUserEditPage
+} from '../../utils/linkModalUtils';
 
 // Types
 interface EditorProps {
@@ -20,6 +27,9 @@ interface EditorProps {
   contentType?: 'wiki' | 'about' | 'bio';
   onKeyDown?: (event: React.KeyboardEvent) => void;
   onEmptyLinesChange?: (count: number) => void;
+  user?: any; // Current user for permission checking
+  currentPage?: any; // Current page for permission checking
+  isEditMode?: boolean; // Whether the editor is in edit mode
 }
 
 interface EditorRef {
@@ -57,7 +67,10 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     placeholder = "Start typing...",
     contentType = "wiki",
     onKeyDown,
-    onEmptyLinesChange
+    onEmptyLinesChange,
+    user = null,
+    currentPage = null,
+    isEditMode = true
   } = props;
 
   // Optimized state management - minimize re-renders
@@ -90,6 +103,11 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
   // State for show author toggle (compound links)
   const [showAuthorToggle, setShowAuthorToggle] = useState(false);
+
+  // State for external link preview modal
+  const [showExternalLinkPreview, setShowExternalLinkPreview] = useState(false);
+  const [previewLinkUrl, setPreviewLinkUrl] = useState("");
+  const [previewLinkDisplayText, setPreviewLinkDisplayText] = useState("");
 
   // Refs for performance - avoid re-renders
   const editorRef = useRef<HTMLDivElement>(null);
@@ -525,7 +543,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     }
   }, [isClient]);
 
-  // Handle click events for link editing
+  // Handle click events for link editing with modal type determination
   const handleEditorClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!isClient) return;
 
@@ -533,49 +551,43 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
     // Check if clicked element is a link or inside a link
     const linkElement = target.closest('[data-link-type]') as HTMLElement;
+    const compoundElement = target.closest('.compound-link') as HTMLElement;
+    const actualLinkElement = compoundElement || linkElement;
 
-    if (linkElement) {
+    if (actualLinkElement) {
       e.preventDefault();
       e.stopPropagation();
 
-      // Extract link data from the element
-      const linkType = linkElement.getAttribute('data-link-type');
-      const linkData: any = {
-        text: linkElement.textContent || ''
-      };
+      // Create interaction context
+      const context = createLinkInteractionContext(
+        user,
+        currentPage,
+        isEditMode,
+        actualLinkElement,
+        'edit' // In editor, clicks are edit actions
+      );
 
-      // Check for compound links first
-      const compoundParent = linkElement.closest('.compound-link') as HTMLElement;
-      if (compoundParent) {
-        linkData.element = compoundParent;
-        linkData.type = 'compound';
-        linkData.pageId = compoundParent.getAttribute('data-page-id');
-        linkData.authorUsername = compoundParent.getAttribute('data-author');
+      // Determine which modal to show
+      const modalType = determineLinkModalType(context);
 
-        // For compound links, get the page title from the page-link element
-        const pageLink = compoundParent.querySelector('.page-link');
-        if (pageLink) {
-          linkData.text = pageLink.textContent || '';
+      if (context.linkType === 'external' && modalType === 'preview') {
+        // Show preview modal for external links when user can't edit or is in view mode
+        const url = actualLinkElement.getAttribute('data-url') ||
+                   linkElement?.getAttribute('data-url');
+        const displayText = actualLinkElement.textContent || '';
+
+        if (url) {
+          setPreviewLinkUrl(url);
+          setPreviewLinkDisplayText(displayText);
+          setShowExternalLinkPreview(true);
         }
       } else {
-        linkData.element = linkElement;
-
-        if (linkType === 'page') {
-          linkData.pageId = linkElement.getAttribute('data-id');
-          linkData.type = 'page';
-        } else if (linkType === 'user') {
-          linkData.userId = linkElement.getAttribute('data-id');
-          linkData.type = 'user';
-        } else if (linkType === 'external') {
-          linkData.url = linkElement.getAttribute('data-url');
-          linkData.type = 'external';
-        }
+        // Show editor modal - extract link data for editing
+        const linkData = extractLinkDataFromElement(actualLinkElement);
+        openLinkEditorForEdit(linkData);
       }
-
-      // Open link editor with pre-populated data
-      openLinkEditorForEdit(linkData);
     }
-  }, [isClient]);
+  }, [isClient, user, currentPage, isEditMode]);
 
   // Handle blur events - ensure parent gets final content
   const handleBlur = useCallback(() => {
@@ -671,6 +683,23 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     }
   }, [isClient, onKeyDown, saveSelection]);
 
+  // Function to capture initial link editor state for change detection
+  const captureInitialLinkEditorState = useCallback(() => {
+    const state = {
+      linkSearchText,
+      linkDisplayText,
+      showCustomTextToggle,
+      showAuthorToggle,
+      externalUrl,
+      externalDisplayText,
+      showExternalCustomText,
+      activeTab,
+      editingLink
+    };
+    setInitialLinkEditorState(state);
+    setLinkEditorHasChanges(false);
+  }, [linkSearchText, linkDisplayText, showCustomTextToggle, showAuthorToggle, externalUrl, externalDisplayText, showExternalCustomText, activeTab, editingLink]);
+
   // Function to open link editor for editing existing links
   const openLinkEditorForEdit = useCallback((linkData: any) => {
     setEditingLink(linkData);
@@ -725,23 +754,6 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     setLinkEditorHasChanges(false);
     setInitialLinkEditorState(null);
   }, []);
-
-  // Function to capture initial link editor state for change detection
-  const captureInitialLinkEditorState = useCallback(() => {
-    const state = {
-      linkSearchText,
-      linkDisplayText,
-      showCustomTextToggle,
-      showAuthorToggle,
-      externalUrl,
-      externalDisplayText,
-      showExternalCustomText,
-      activeTab,
-      editingLink
-    };
-    setInitialLinkEditorState(state);
-    setLinkEditorHasChanges(false);
-  }, [linkSearchText, linkDisplayText, showCustomTextToggle, showAuthorToggle, externalUrl, externalDisplayText, showExternalCustomText, activeTab, editingLink]);
 
   // Function to check if link editor has unsaved changes
   const checkLinkEditorChanges = useCallback(() => {
@@ -1320,6 +1332,16 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
             </Tabs>
           </div>
         </Modal>
+      )}
+
+      {/* External Link Preview Modal */}
+      {isMounted && (
+        <ExternalLinkPreviewModal
+          isOpen={showExternalLinkPreview}
+          onClose={() => setShowExternalLinkPreview(false)}
+          url={previewLinkUrl}
+          displayText={previewLinkDisplayText}
+        />
       )}
 
       {/* Link Editor Unsaved Changes Confirmation Modal */}

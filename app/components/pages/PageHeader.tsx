@@ -501,7 +501,7 @@ export default function PageHeader({
 
   const handleShareClick = () => {
     if (pageObject) {
-      handleShare(pageObject, title);
+      handleShare(pageObject, title, user);
     }
   };
 

@@ -42,6 +42,8 @@ import { toast } from "../components/ui/use-toast";
 import { generateReplyTitle, createReplyContent, encodeReplyParams } from "./replyUtils";
 import { saveDraftReply, setPendingReplyAction } from "./draftReplyUtils";
 import { getCurrentUsername } from "./userUtils";
+import { getAnalyticsService } from "./analytics-service";
+import { INTERACTION_EVENTS } from "../constants/analytics-events";
 
 /**
  * Page interface for action handlers
@@ -222,8 +224,9 @@ export const handleReply = async (page: Page, user: User | null, router: Router)
  *
  * @param page - The page object
  * @param title - The page title
+ * @param user - The current user object (optional, for analytics)
  */
-export const handleShare = (page: Page, title?: string): void => {
+export const handleShare = (page: Page, title?: string, user?: User | null): void => {
   if (!page) {
     console.error("No page data provided to handleShare");
     return;
@@ -231,20 +234,54 @@ export const handleShare = (page: Page, title?: string): void => {
 
   const pageUrl = `${window.location.origin}/${page.id}`;
   const shareText = `"${title || page.title || "Untitled"}" by ${page.username || "Anonymous"}`;
+  const analytics = getAnalyticsService();
 
   if (navigator.share) {
     // Use native sharing if available
     navigator.share({
       title: shareText,
       url: pageUrl
+    }).then(() => {
+      // Track successful share via native Web Share API
+      analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_SUCCEEDED, {
+        page_id: page.id,
+        share_method: 'native_share',
+        user_id: user?.uid || null,
+        page_title: title || page.title || "Untitled",
+        page_author: page.username || "Anonymous"
+      });
     }).catch(err => {
       console.log('Error sharing:', err);
-      // Fallback to clipboard
-      fallbackShare(pageUrl, shareText);
+
+      // Check if user cancelled the share (AbortError)
+      if (err.name === 'AbortError') {
+        // Track aborted share
+        analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_ABORTED, {
+          page_id: page.id,
+          share_method: 'native_share',
+          user_id: user?.uid || null,
+          page_title: title || page.title || "Untitled",
+          page_author: page.username || "Anonymous",
+          abort_reason: 'user_cancelled'
+        });
+      } else {
+        // Track aborted share due to error
+        analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_ABORTED, {
+          page_id: page.id,
+          share_method: 'native_share',
+          user_id: user?.uid || null,
+          page_title: title || page.title || "Untitled",
+          page_author: page.username || "Anonymous",
+          abort_reason: 'share_error'
+        });
+
+        // Fallback to clipboard
+        fallbackShare(pageUrl, shareText, page, user, title);
+      }
     });
   } else {
     // Fallback to clipboard
-    fallbackShare(pageUrl, shareText);
+    fallbackShare(pageUrl, shareText, page, user, title);
   }
 };
 
@@ -253,13 +290,41 @@ export const handleShare = (page: Page, title?: string): void => {
  *
  * @param url - The URL to share
  * @param text - The share text
+ * @param page - The page object (for analytics)
+ * @param user - The current user object (for analytics)
+ * @param title - The page title (for analytics)
  */
-const fallbackShare = (url: string, text: string): void => {
+const fallbackShare = (url: string, text: string, page?: Page, user?: User | null, title?: string): void => {
+  const analytics = getAnalyticsService();
+
   if (navigator.clipboard) {
     navigator.clipboard.writeText(url).then(() => {
       toast.success("Link copied to clipboard!");
+
+      // Track successful share via clipboard
+      if (page) {
+        analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_SUCCEEDED, {
+          page_id: page.id,
+          share_method: 'copy_link',
+          user_id: user?.uid || null,
+          page_title: title || page.title || "Untitled",
+          page_author: page.username || "Anonymous"
+        });
+      }
     }).catch(err => {
       console.error('Failed to copy to clipboard:', err);
+
+      // Track aborted share due to clipboard error
+      if (page) {
+        analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_ABORTED, {
+          page_id: page.id,
+          share_method: 'copy_link',
+          user_id: user?.uid || null,
+          page_title: title || page.title || "Untitled",
+          page_author: page.username || "Anonymous",
+          abort_reason: 'clipboard_error'
+        });
+      }
       // Remove error toast - allow users to cancel share actions without showing error messages
     });
   } else {
@@ -272,8 +337,31 @@ const fallbackShare = (url: string, text: string): void => {
     try {
       document.execCommand('copy');
       toast.success("Link copied to clipboard!");
+
+      // Track successful share via legacy clipboard
+      if (page) {
+        analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_SUCCEEDED, {
+          page_id: page.id,
+          share_method: 'copy_link_legacy',
+          user_id: user?.uid || null,
+          page_title: title || page.title || "Untitled",
+          page_author: page.username || "Anonymous"
+        });
+      }
     } catch (err) {
       console.error('Fallback copy failed:', err);
+
+      // Track aborted share due to legacy clipboard error
+      if (page) {
+        analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_ABORTED, {
+          page_id: page.id,
+          share_method: 'copy_link_legacy',
+          user_id: user?.uid || null,
+          page_title: title || page.title || "Untitled",
+          page_author: page.username || "Anonymous",
+          abort_reason: 'legacy_clipboard_error'
+        });
+      }
       // Remove error toast - allow users to cancel share actions without showing error messages
     }
     document.body.removeChild(textArea);

@@ -62,6 +62,7 @@ import { Button } from "../ui/button";
 import { usePillStyle } from "../../contexts/PillStyleContext";
 import { ExternalLink, Edit2 } from "lucide-react";
 import Modal from "../ui/modal";
+import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
 import { useControlledAnimation } from "../../hooks/useControlledAnimation";
 import type { TextViewProps } from "../../types/components";
 import type { SlateContent, SlateNode, SlateChild, ViewMode } from "../../types/database";
@@ -1508,35 +1509,12 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
             </PillLink>
           </span>
 
-          <Modal
+          <ExternalLinkPreviewModal
             isOpen={showExternalLinkModal}
             onClose={() => setShowExternalLinkModal(false)}
-            title="External Link"
-            footer={
-              <div className="flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowExternalLinkModal(false)}
-                >
-                  Back
-                </Button>
-                <Button
-                  variant="default"
-                  onClick={() => {
-                    window.open(href, '_blank', 'noopener,noreferrer');
-                    setShowExternalLinkModal(false);
-                  }}
-                >
-                  Visit link
-                </Button>
-              </div>
-            }
-          >
-            <p className="mb-4">You're about to visit an external website:</p>
-            <div className="bg-muted p-3 rounded mb-2 break-all">
-              <code>{href}</code>
-            </div>
-          </Modal>
+            url={href}
+            displayText={finalDisplayText}
+          />
         </>
       );
     }

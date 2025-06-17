@@ -7,6 +7,7 @@ import { ShimmerEffect } from "../ui/skeleton";
 import { useAuth } from "../../providers/AuthProvider";
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink, isGroupLink } from "../../utils/linkFormatters";
 import Modal from "../ui/modal";
+import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
 import { Button } from "../ui/button";
 import { usePillStyle } from "../../contexts/PillStyleContext";
 import { navigateToPage, canUserEditPage } from "../../utils/pagePermissions";
@@ -164,36 +165,12 @@ export const PillLink = forwardRef(({
           {formattedByline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
         </a>
 
-        <Modal
+        <ExternalLinkPreviewModal
           isOpen={showExternalLinkModal}
           onClose={() => setShowExternalLinkModal(false)}
-          title="External Link"
-          footer={
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowExternalLinkModal(false)}>
-                Back
-              </Button>
-              <Button
-                variant="default"
-                onClick={() => {
-                  if (window.navigator.standalone) {
-                    window.location.href = href;
-                  } else {
-                    window.open(href, '_blank', 'noopener,noreferrer');
-                  }
-                  setShowExternalLinkModal(false);
-                }}
-              >
-                Visit link
-              </Button>
-            </div>
-          }
-        >
-          <p className="mb-4">You're about to visit an external website:</p>
-          <div className="bg-muted p-3 rounded mb-2 break-all">
-            <code>{href}</code>
-          </div>
-        </Modal>
+          url={href}
+          displayText={displayTitle}
+        />
       </>
     );
   }

@@ -126,18 +126,18 @@ export const validateLinkUrl = async (url: string): Promise<boolean> => {
  */
 export const extractPageReferences = (content: string | SlateContent[]): string[] => {
   const pageIds: string[] = [];
-  
+
   try {
     let nodes: SlateContent[] = [];
-    
+
     if (typeof content === 'string') {
       nodes = JSON.parse(content);
     } else if (Array.isArray(content)) {
       nodes = content;
     }
-    
+
     const links = extractLinksFromNodes(nodes);
-    
+
     links.forEach(link => {
       if (link.type === 'page' && link.pageId) {
         pageIds.push(link.pageId);
@@ -146,9 +146,86 @@ export const extractPageReferences = (content: string | SlateContent[]): string[
   } catch (error) {
     console.error("Error extracting page references:", error);
   }
-  
+
   // Remove duplicates
   return [...new Set(pageIds)];
+};
+
+/**
+ * Find pages that link to a specific external URL
+ */
+export const findPagesLinkingToExternalUrl = async (
+  externalUrl: string,
+  limitCount: number = 5
+): Promise<Array<{
+  id: string;
+  title: string;
+  username?: string;
+  lastModified: any;
+}>> => {
+  try {
+    const { db } = await import('../database');
+    const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
+
+    // Query for public pages that might contain the external URL
+    // Note: This is a simplified approach. For better performance, you might want to
+    // index external links separately or use full-text search
+    const pagesQuery = query(
+      collection(db, 'pages'),
+      where('isPublic', '==', true),
+      where('deleted', '!=', true),
+      orderBy('lastModified', 'desc'),
+      limit(50) // Get more pages to search through
+    );
+
+    const snapshot = await getDocs(pagesQuery);
+    const matchingPages: Array<{
+      id: string;
+      title: string;
+      username?: string;
+      lastModified: any;
+    }> = [];
+
+    // Search through page content for the external URL
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+
+      // Skip if no content
+      if (!data.content) continue;
+
+      try {
+        // Extract links from the page content
+        const links = extractLinksFromNodes(data.content);
+
+        // Check if any link matches our external URL
+        const hasMatchingLink = links.some(link =>
+          link.type === 'external' && link.url === externalUrl
+        );
+
+        if (hasMatchingLink) {
+          matchingPages.push({
+            id: doc.id,
+            title: data.title || 'Untitled',
+            username: data.username,
+            lastModified: data.lastModified
+          });
+
+          // Stop when we have enough results
+          if (matchingPages.length >= limitCount) {
+            break;
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing page ${doc.id}:`, error);
+        continue;
+      }
+    }
+
+    return matchingPages;
+  } catch (error) {
+    console.error("Error finding pages linking to external URL:", error);
+    return [];
+  }
 };
 
 /**

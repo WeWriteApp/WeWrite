@@ -149,28 +149,30 @@ const usePages = (
       let privatePagesQuery = null;
 
       // Query for public pages (exclude deleted)
+      // CRITICAL FIX: The compound query with multiple where clauses and orderBy
+      // requires a composite index that may not exist. Let's simplify the query.
       publicPagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
         where('isPublic', '==', true),
-        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
         limit(initialLimitCount)
       );
 
-      // Only query for private pages if the current user is the owner (exclude deleted)
+      // Only query for private pages if the current user is the owner
       if (includePrivate && isOwner) {
+        console.log('usePages: Building private pages query for owner');
         privatePagesQuery = query(
           collection(db, 'pages'),
           where('userId', '==', userId),
           where('isPublic', '==', false),
-          where('deleted', '!=', true),
           orderBy('lastModified', 'desc'),
           limit(initialLimitCount)
         );
       }
 
-      // Execute the queries
+      // Execute the queries with detailed logging
+      console.log('usePages: Executing public pages query...');
       const publicPagesPromise = getDocs(publicPagesQuery);
       const privatePagesPromise = privatePagesQuery ? getDocs(privatePagesQuery) : Promise.resolve(null);
 
@@ -180,32 +182,48 @@ const usePages = (
         privatePagesPromise
       ]);
 
+      console.log('usePages: Public pages query completed. Found', publicSnapshot.size, 'documents');
+
       // Clear the timeout since we got a response
       clearTimeout(queryTimeoutId);
 
-      // Process public pages
+      // Process public pages with filtering for deleted pages
       const pagesArray = [];
       publicSnapshot.forEach((doc) => {
         try {
           const pageData = { id: doc.id, ...doc.data() };
-          pagesArray.push(pageData);
+          // CRITICAL FIX: Filter out deleted pages client-side since the compound index might not exist
+          if (!pageData.deleted) {
+            pagesArray.push(pageData);
+          } else {
+            console.log('usePages: Filtered out deleted page:', pageData.id);
+          }
         } catch (docError) {
           console.error(`Error processing public document ${doc.id}:`, docError);
         }
       });
 
-      // Process private pages if available
+      console.log('usePages: Processed', pagesArray.length, 'public pages after filtering');
+
+      // Process private pages if available with filtering for deleted pages
       const privateArray = [];
       if (privateSnapshot) {
         privateSnapshot.forEach((doc) => {
           try {
             const pageData = { id: doc.id, ...doc.data() };
-            privateArray.push(pageData);
+            // Filter out deleted pages client-side
+            if (!pageData.deleted) {
+              privateArray.push(pageData);
+            } else {
+              console.log('usePages: Filtered out deleted private page:', pageData.id);
+            }
           } catch (docError) {
             console.error(`Error processing private document ${doc.id}:`, docError);
           }
         });
       }
+
+      console.log('usePages: Processed', privateArray.length, 'private pages after filtering');
 
       // Update state with the results
       setPages(pagesArray);
@@ -270,24 +288,22 @@ const usePages = (
       // This is a simplified version of fetchInitialPages that doesn't update loading state
       const isOwner = currentUserId && userId === currentUserId;
 
-      // Define queries similar to fetchInitialPages (exclude deleted pages)
+      // Define queries similar to fetchInitialPages (filter deleted pages client-side)
       let publicPagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
         where('isPublic', '==', true),
-        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
         limit(initialLimitCount)
       );
 
       let privatePagesQuery = null;
       if (includePrivate && isOwner) {
-        // Query for private pages (exclude deleted)
+        // Query for private pages (filter deleted pages client-side)
         privatePagesQuery = query(
           collection(db, 'pages'),
           where('userId', '==', userId),
           where('isPublic', '==', false),
-          where('deleted', '!=', true),
           orderBy('lastModified', 'desc'),
           limit(initialLimitCount)
         );
@@ -302,12 +318,15 @@ const usePages = (
         privatePagesPromise
       ]);
 
-      // Process results and update state
+      // Process results and update state with client-side filtering
       const pagesArray = [];
       publicSnapshot.forEach((doc) => {
         try {
           const pageData = { id: doc.id, ...doc.data() };
-          pagesArray.push(pageData);
+          // Filter out deleted pages client-side
+          if (!pageData.deleted) {
+            pagesArray.push(pageData);
+          }
         } catch (docError) {
           console.error(`Error processing public document ${doc.id}:`, docError);
         }
@@ -318,7 +337,10 @@ const usePages = (
         privateSnapshot.forEach((doc) => {
           try {
             const pageData = { id: doc.id, ...doc.data() };
-            privateArray.push(pageData);
+            // Filter out deleted pages client-side
+            if (!pageData.deleted) {
+              privateArray.push(pageData);
+            }
           } catch (docError) {
             console.error(`Error processing private document ${doc.id}:`, docError);
           }
@@ -384,8 +406,7 @@ const usePages = (
       // Define the fields we need to reduce data transfer
       const requiredFields = ['title', 'lastModified', 'isPublic', 'userId', 'groupId', 'createdAt'];
 
-      // Query for more public pages
-      // TEMPORARY: Try without deleted filter to test if indexes are the issue
+      // Query for more public pages (filter deleted pages client-side)
       const moreQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
@@ -412,7 +433,10 @@ const usePages = (
       snapshot.forEach((doc) => {
         try {
           const pageData = { id: doc.id, ...doc.data() };
-          newPagesArray.push(pageData);
+          // Filter out deleted pages client-side
+          if (!pageData.deleted) {
+            newPagesArray.push(pageData);
+          }
         } catch (docError) {
           console.error(`Error processing document ${doc.id}:`, docError);
         }
@@ -483,12 +507,11 @@ const usePages = (
       // Define the fields we need to reduce data transfer
       const requiredFields = ['title', 'lastModified', 'isPublic', 'userId', 'groupId', 'createdAt'];
 
-      // Query for more private pages (exclude deleted pages)
+      // Query for more private pages (filter deleted pages client-side)
       const moreQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
         where('isPublic', '==', false),
-        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
         startAfter(lastPrivatePageKey),
         limit(loadMoreLimitCount)
@@ -511,7 +534,10 @@ const usePages = (
       snapshot.forEach((doc) => {
         try {
           const pageData = { id: doc.id, ...doc.data() };
-          newPrivateArray.push(pageData);
+          // Filter out deleted pages client-side
+          if (!pageData.deleted) {
+            newPrivateArray.push(pageData);
+          }
         } catch (docError) {
           console.error(`Error processing private document ${doc.id}:`, docError);
         }

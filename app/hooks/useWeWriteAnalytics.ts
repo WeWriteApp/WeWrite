@@ -132,6 +132,20 @@ export const useWeWriteAnalytics = () => {
     });
   };
 
+  const trackShareInteraction = (action: 'aborted' | 'succeeded', pageId: string, shareMethod: string, userId?: string, params: Partial<AnalyticsEventParams> = {}) => {
+    const eventMap = {
+      aborted: INTERACTION_EVENTS.PAGE_SHARE_ABORTED,
+      succeeded: INTERACTION_EVENTS.PAGE_SHARE_SUCCEEDED
+    };
+
+    trackInteractionEvent(eventMap[action], {
+      page_id: pageId,
+      share_method: shareMethod,
+      user_id: userId,
+      ...params
+    });
+  };
+
   return {
     trackEvent,
     trackAuthEvent,
@@ -146,6 +160,7 @@ export const useWeWriteAnalytics = () => {
     trackEditingFlow,
     trackSortingInteraction,
     trackNotificationInteraction,
+    trackShareInteraction,
     events: ANALYTICS_EVENTS,
     categories: EVENT_CATEGORIES,
   };

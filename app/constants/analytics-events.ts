@@ -55,6 +55,8 @@ export const INTERACTION_EVENTS = {
   LINK_EDITOR_CLOSED: 'link_editor_closed',
   CUSTOM_TEXT_TOGGLED: 'custom_text_toggled',
   AUTHOR_TOGGLE_CHANGED: 'author_toggle_changed',
+  PAGE_SHARE_ABORTED: 'page_share_aborted',
+  PAGE_SHARE_SUCCEEDED: 'page_share_succeeded',
 };
 
 // Group Events
