@@ -20,7 +20,8 @@ export default function SimpleSparkline({
   title = "Edit activity in the last 24 hours"
 }) {
   // Use the accent color from CSS variables if no color is provided
-  const effectiveColor = color || "hsl(var(--primary))";
+  // If currentColor is passed, use the primary theme color instead for better consistency
+  const effectiveColor = color === "currentColor" ? "hsl(var(--primary))" : (color || "hsl(var(--primary))");
 
   // Validate and normalize data
   const normalizedData = useMemo(() => {

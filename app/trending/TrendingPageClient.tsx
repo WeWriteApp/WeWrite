@@ -264,7 +264,6 @@ export default function TrendingPageClient() {
                       <SimpleSparkline
                         data={page.hourlyViews}
                         height={48}
-                        color="#1768FF"
                         strokeWidth={2}
                       />
                     </div>

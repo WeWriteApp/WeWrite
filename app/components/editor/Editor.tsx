@@ -4,11 +4,12 @@ import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, us
 import { createPortal } from 'react-dom';
 import { usePillStyle } from '../../contexts/PillStyleContext';
 import { useLineSettings, LINE_MODES } from '../../contexts/LineSettingsContext';
-import { Lock, ExternalLink, X } from "lucide-react";
+import { Lock, ExternalLink, X, Grid3X3 } from "lucide-react";
 import FilteredSearchResults from '../search/FilteredSearchResults';
 import ParagraphNumberOverlay from './ParagraphNumberOverlay';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Switch } from '../ui/switch';
+import { cn } from '../../lib/utils';
 import { Modal } from '../ui/modal';
 import ExternalLinkPreviewModal from '../ui/ExternalLinkPreviewModal';
 import { ConfirmationModal } from '../utils/ConfirmationModal';
@@ -1162,6 +1163,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   // Render with error boundary protection
   try {
     return (
+      <>
       <div className="editor w-full">
         {/* WYSIWYG Editor with consistent dimensions to prevent layout shifts */}
         <div className="page-content unified-editor relative rounded-lg bg-background w-full max-w-none">
@@ -1203,6 +1205,35 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
             </div>
           )}
         </div>
+
+        {/* Dense Mode Toggle - Only show in edit mode */}
+        {isEditMode && (
+          <div className="mt-4">
+            <div
+              className={cn(
+                "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl font-medium transition-colors",
+                "border border-theme-medium bg-background text-foreground shadow-sm hover:bg-background hover:shadow-md hover:border-theme-medium",
+                "h-10 px-4 py-2",
+                "gap-2 w-full cursor-pointer"
+              )}
+              onClick={() => {
+                const newMode = lineMode === LINE_MODES.DENSE ? LINE_MODES.NORMAL : LINE_MODES.DENSE;
+                setLineMode(newMode);
+              }}
+            >
+              <Switch
+                checked={lineMode === LINE_MODES.DENSE}
+                onCheckedChange={(checked) => {
+                  const newMode = checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL;
+                  setLineMode(newMode);
+                }}
+              />
+              <Grid3X3 className="h-4 w-4 text-muted-foreground" />
+              <span>Dense mode</span>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Link Editor Modal - Using consistent Modal component */}
       {isMounted && (
@@ -1356,9 +1387,9 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         variant="warning"
         icon="warning"
       />
-    </div>
-  );
-  } catch (error) {
+      </>
+    );
+} catch (error) {
     console.error("Editor: Critical render error:", error);
     // Fallback UI for critical errors
     return (

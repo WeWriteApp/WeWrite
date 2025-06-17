@@ -17,7 +17,7 @@ interface SparklineProps {
 export function Sparkline({
   data = [],
   height = 40,
-  color = "#1768FF",
+  color = "hsl(var(--primary))",
   strokeWidth = 1.5,
   fillOpacity = 0.1,
   className = ""

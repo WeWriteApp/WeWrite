@@ -349,6 +349,26 @@ a[data-user-id]::before {
   margin-left: 0.5rem;
 }
 
+/* Dense mode paragraph numbering in edit mode */
+.editor-content.dense-mode > div::before {
+  content: counter(paragraph-counter) " ";
+  counter-increment: paragraph-counter;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-right: 0.25rem;
+  margin-left: 0.5rem;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.editor-content.dense-mode {
+  counter-reset: paragraph-counter;
+}
+
 /* CRITICAL FIX: Ensure links are completely non-editable in the editor */
 /* This prevents users from editing link content directly in the editor */
 [contenteditable] .page-link,

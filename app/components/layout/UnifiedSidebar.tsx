@@ -351,6 +351,46 @@ function UnifiedSidebarContent({
 
                 {/* Action buttons at bottom */}
                 <div className="flex flex-col gap-2">
+                  {/* Mobile: Save button first, Desktop: Save button last */}
+                  <div className={cn(
+                    "flex gap-2",
+                    showContent ? "md:flex-row-reverse md:justify-start" : "flex-col"
+                  )}>
+                    {/* Save button */}
+                    <Button
+                      onClick={editorContext.onSave}
+                      disabled={editorContext.isSaving}
+                      variant="default"
+                      className={cn(
+                        "flex items-center gap-3 h-auto p-3 justify-start",
+                        !showContent && "justify-center w-12 h-12 p-0",
+                        showContent && "md:order-last"
+                      )}
+                      title={showContent ? "" : "Save"}
+                    >
+                      <Check className="h-4 w-4 flex-shrink-0" />
+                      {showContent && (
+                        <span className="font-medium transition-opacity duration-200">
+                          {editorContext.isSaving ? "Saving..." : "Save"}
+                        </span>
+                      )}
+                    </Button>
+
+                    {/* Cancel button */}
+                    <Button
+                      onClick={editorContext.onCancel}
+                      variant="outline"
+                      className={cn(
+                        "flex items-center gap-3 h-auto p-3 justify-start",
+                        !showContent && "justify-center w-12 h-12 p-0"
+                      )}
+                      title={showContent ? "" : "Cancel"}
+                    >
+                      <X className="h-4 w-4 flex-shrink-0" />
+                      {showContent && <span className="font-medium transition-opacity duration-200">Cancel</span>}
+                    </Button>
+                  </div>
+
                   {/* Delete button (only show if onDelete is provided) */}
                   {editorContext.onDelete && (
                     <Button
@@ -367,22 +407,6 @@ function UnifiedSidebarContent({
                       {showContent && <span className="font-medium transition-opacity duration-200">Delete</span>}
                     </Button>
                   )}
-
-                  {/* Cancel button */}
-                  <Button
-                    onClick={editorContext.onCancel}
-                    variant="outline"
-                    className={cn(
-                      "flex items-center gap-3 h-auto p-3 justify-start",
-                      !showContent && "justify-center w-12 h-12 p-0"
-                    )}
-                    title={showContent ? "" : "Cancel"}
-                  >
-                    <X className="h-4 w-4 flex-shrink-0" />
-                    {showContent && <span className="font-medium transition-opacity duration-200">Cancel</span>}
-                  </Button>
-
-
                 </div>
               </div>
             </>

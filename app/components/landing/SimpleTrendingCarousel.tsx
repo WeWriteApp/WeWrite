@@ -133,7 +133,6 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
                     <Sparkline
                       data={page.hourlyViews}
                       height={44}
-                      color="#1768FF"
                       strokeWidth={0.8}
                       fillOpacity={0.08}
                     />

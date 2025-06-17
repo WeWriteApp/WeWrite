@@ -184,7 +184,6 @@ export default function TrendingPagesSection({ limit = 3 }) {
                         <Sparkline
                           data={page.hourlyViews}
                           height={40}
-                          color="#1768FF"
                           strokeWidth={1.5}
                           fillOpacity={0.1}
                         />

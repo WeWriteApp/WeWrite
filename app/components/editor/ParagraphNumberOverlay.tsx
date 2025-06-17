@@ -25,7 +25,7 @@ const ParagraphNumberOverlay: React.FC<ParagraphNumberOverlayProps> = ({ editorR
 
   // Update paragraph positions based on editor content
   const updateParagraphPositions = () => {
-    if (!editorRef.current || lineMode === LINE_MODES.DENSE) {
+    if (!editorRef.current) {
       setParagraphPositions([]);
       return;
     }
@@ -37,7 +37,7 @@ const ParagraphNumberOverlay: React.FC<ParagraphNumberOverlayProps> = ({ editorR
     paragraphs.forEach((paragraph, index) => {
       const paragraphRect = paragraph.getBoundingClientRect();
       const relativeTop = paragraphRect.top - editorRect.top;
-      
+
       positions.push({
         top: relativeTop,
         number: index + 1
@@ -120,7 +120,8 @@ const ParagraphNumberOverlay: React.FC<ParagraphNumberOverlayProps> = ({ editorR
     updateParagraphPositions();
   }, [lineMode]);
 
-  // Don't render in dense mode
+  // In dense mode, paragraph numbers are handled by CSS pseudo-elements
+  // In normal mode, we render absolute positioned numbers
   if (lineMode === LINE_MODES.DENSE) {
     return null;
   }

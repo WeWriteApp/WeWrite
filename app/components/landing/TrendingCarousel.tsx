@@ -161,7 +161,6 @@ export default function TrendingCarousel({ limit = 10 }) {
                   <Sparkline
                     data={page.hourlyViews}
                     height={40}
-                    color="#1768FF"
                     strokeWidth={0.8}
                     fillOpacity={0.08}
                   />
