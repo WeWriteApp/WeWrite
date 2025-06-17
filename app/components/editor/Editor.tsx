@@ -135,90 +135,106 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     return result.trim();
   }, []);
 
-  // Memoized Slate to HTML conversion for performance
+  // Memoized Slate to HTML conversion with improved error handling
   const convertSlateToHTML = useCallback((slateContent: any): string => {
-    if (!slateContent || !Array.isArray(slateContent)) {
-      return "<div><br></div>";
-    }
+    try {
+      if (!slateContent || !Array.isArray(slateContent)) {
+        return "<div><br></div>";
+      }
 
-    let result = "";
+      let result = "";
 
-    for (let paragraphIndex = 0; paragraphIndex < slateContent.length; paragraphIndex++) {
-      const node = slateContent[paragraphIndex];
-      if (node.type === "paragraph" && node.children) {
-        result += "<div>";
-        let hasContent = false;
+      for (let paragraphIndex = 0; paragraphIndex < slateContent.length; paragraphIndex++) {
+        const node = slateContent[paragraphIndex];
+        if (node.type === "paragraph" && node.children) {
+          result += "<div>";
+          let hasContent = false;
 
-        for (const child of node.children) {
-          if (child.text !== undefined) {
-            if (child.text === "") {
-              if (!hasContent) {
-                result += "<br>";
+          for (const child of node.children) {
+            try {
+              if (child.text !== undefined) {
+                if (child.text === "") {
+                  if (!hasContent) {
+                    result += "<br>";
+                    hasContent = true;
+                  }
+                } else {
+                  result += child.text.replace(/\n/g, '<br>');
+                  hasContent = true;
+                }
+              } else if (child.type === "link") {
+                const text = child.children?.[0]?.text || child.pageTitle || child.username || "Link";
+
+                if (child.pageId) {
+                  if (child.showAuthor && child.authorUsername) {
+                    // CRITICAL FIX: Improved compound link HTML structure with data attributes
+                    result += `<span class="compound-link" data-page-id="${child.pageId}" data-author="${child.authorUsername}">`;
+                    result += `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${child.pageId}" data-page-title="${text}">${text}</span>`;
+                    result += ` <span class="text-muted-foreground text-sm">by</span> `;
+                    result += `<span class="${pillStyleClasses} user-link" data-link-type="user" data-id="${child.authorUsername}">${child.authorUsername}</span>`;
+                    result += `</span>`;
+                  } else {
+                    // CRITICAL FIX: Add data-page-title for better conversion back to Slate
+                    result += `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${child.pageId}" data-page-title="${text}">${text}</span>`;
+                  }
+                } else if (child.userId) {
+                  result += `<span class="${pillStyleClasses} user-link" data-link-type="user" data-id="${child.userId}">${text}</span>`;
+                } else if (child.url) {
+                  result += `<span class="${pillStyleClasses} external-link" data-link-type="external" data-url="${child.url}">${text}</span>`;
+                }
                 hasContent = true;
               }
-            } else {
-              result += child.text.replace(/\n/g, '<br>');
-              hasContent = true;
+            } catch (childError) {
+              console.error("Editor: Error processing child node:", childError, child);
+              // Skip problematic child nodes but continue processing
+              continue;
             }
-          } else if (child.type === "link") {
-            const text = child.children?.[0]?.text || child.pageTitle || child.username || "Link";
-
-            if (child.pageId) {
-              if (child.showAuthor && child.authorUsername) {
-                // CRITICAL FIX: Improved compound link HTML structure with data attributes
-                result += `<span class="compound-link" data-page-id="${child.pageId}" data-author="${child.authorUsername}">`;
-                result += `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${child.pageId}" data-page-title="${text}">${text}</span>`;
-                result += ` <span class="text-muted-foreground text-sm">by</span> `;
-                result += `<span class="${pillStyleClasses} user-link" data-link-type="user" data-id="${child.authorUsername}">${child.authorUsername}</span>`;
-                result += `</span>`;
-              } else {
-                // CRITICAL FIX: Add data-page-title for better conversion back to Slate
-                result += `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${child.pageId}" data-page-title="${text}">${text}</span>`;
-              }
-            } else if (child.userId) {
-              result += `<span class="${pillStyleClasses} user-link" data-link-type="user" data-id="${child.userId}">${text}</span>`;
-            } else if (child.url) {
-              result += `<span class="${pillStyleClasses} external-link" data-link-type="external" data-url="${child.url}">${text}</span>`;
-            }
-            hasContent = true;
           }
-        }
 
-        if (!hasContent) {
-          result += "<br>";
-        }
+          if (!hasContent) {
+            result += "<br>";
+          }
 
-        result += "</div>";
+          result += "</div>";
+        }
       }
-    }
 
-    return result || "<div><br></div>";
+      return result || "<div><br></div>";
+    } catch (error) {
+      console.error("Editor: Error in Slate to HTML conversion:", error);
+      return "<div><br></div>";
+    }
   }, [pillStyleClasses]);
 
-  // Memoized HTML to Slate conversion for performance
+  // Memoized HTML to Slate conversion with improved error handling
   const convertHTMLToSlate = useCallback((html: string): any[] => {
     if (typeof document === 'undefined') {
       return [{ type: "paragraph", children: [{ text: "" }] }];
     }
 
-    // CRITICAL FIX: Remove the problematic content change check that was returning empty content
-    // This was causing the save to capture empty content when the HTML hadn't changed
-    // We need to always process the HTML to get the actual content, not return empty content
+    try {
+      // CRITICAL FIX: Remove the problematic content change check that was returning empty content
+      // This was causing the save to capture empty content when the HTML hadn't changed
+      // We need to always process the HTML to get the actual content, not return empty content
 
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
 
-    const result = [];
-    const children = Array.from(tempDiv.children);
-    const contentDivs = children.filter(child =>
-      child.tagName === 'DIV' && !child.classList.contains('unified-paragraph-number')
-    );
+      const result = [];
+      const children = Array.from(tempDiv.children);
+      const contentDivs = children.filter(child =>
+        child.tagName === 'DIV' && !child.classList.contains('unified-paragraph-number')
+      );
 
-    if (contentDivs.length === 0) {
-      const textContent = tempDiv.textContent || "";
-      if (textContent.trim()) {
-        return [{ type: "paragraph", children: [{ text: textContent }] }];
+      if (contentDivs.length === 0) {
+        const textContent = tempDiv.textContent || "";
+        if (textContent.trim()) {
+          return [{ type: "paragraph", children: [{ text: textContent }] }];
+        }
+        return [{ type: "paragraph", children: [{ text: "" }] }];
       }
+    } catch (error) {
+      console.error("Editor: Error in HTML to Slate conversion setup:", error);
       return [{ type: "paragraph", children: [{ text: "" }] }];
     }
 
@@ -331,21 +347,32 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     return result.length > 0 ? result : [{ type: "paragraph", children: [{ text: "" }] }];
   }, []);
 
-  // Immediate initialization for browser environment
+  // Improved hydration-safe initialization
   React.useLayoutEffect(() => {
     if (typeof window !== 'undefined') {
-      setIsClient(true);
-      setIsInitialized(true);
-      setIsMounted(true);
-      hasInitialized.current = true;
+      // Add a small delay to ensure DOM is fully ready
+      const timer = setTimeout(() => {
+        setIsClient(true);
+        setIsInitialized(true);
+        setIsMounted(true);
+        hasInitialized.current = true;
+      }, 0);
+
+      return () => clearTimeout(timer);
     }
   }, []);
 
-  // Content initialization effect - runs after DOM is ready
+  // Content initialization effect - runs after DOM is ready with better error handling
   useEffect(() => {
     if (!isClient || !editorRef.current) return;
 
     try {
+      // Ensure we have a valid DOM element before proceeding
+      if (!editorRef.current.isConnected) {
+        console.warn("Editor: DOM element not connected, skipping initialization");
+        return;
+      }
+
       let htmlContent = "<div><br></div>";
 
       if (typeof initialContent === 'string' && initialContent.trim()) {
@@ -361,14 +388,23 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         }
       }
 
-      editorRef.current.innerHTML = htmlContent;
-      lastContentRef.current = htmlContent;
+      // Use requestAnimationFrame to ensure DOM is ready for manipulation
+      requestAnimationFrame(() => {
+        if (editorRef.current && editorRef.current.isConnected) {
+          editorRef.current.innerHTML = htmlContent;
+          lastContentRef.current = htmlContent;
+        }
+      });
 
     } catch (error) {
       console.error("Editor: Error during content initialization:", error);
-      if (editorRef.current) {
-        editorRef.current.innerHTML = "<div><br></div>";
-      }
+      // More robust error recovery
+      requestAnimationFrame(() => {
+        if (editorRef.current && editorRef.current.isConnected) {
+          editorRef.current.innerHTML = "<div><br></div>";
+          lastContentRef.current = "<div><br></div>";
+        }
+      });
     }
   }, [isClient, convertSlateToHTML, initialContent]);
 
@@ -405,57 +441,71 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
 
 
-  // Optimized content change handling - prevent unnecessary updates
+  // Optimized content change handling with better error handling
   const handleContentChange = useCallback(() => {
     if (!isClient || !editorRef.current) return;
 
-    // CRITICAL FIX: Ensure editor always has at least one paragraph
-    if (editorRef.current.children.length === 0 ||
-        (editorRef.current.children.length === 1 && editorRef.current.textContent?.trim() === '')) {
-      editorRef.current.innerHTML = '<div><br></div>';
-    }
-
-    const htmlContent = editorRef.current.innerHTML;
-
-    // CRITICAL FIX: Always process content changes for save reliability
-    // The previous check was preventing content capture during save operations
-    // We need to ensure content is always properly converted and sent to parent
-    lastContentRef.current = htmlContent;
-
-    // Clear any existing timeout
-    if (changeTimeoutRef.current) {
-      clearTimeout(changeTimeoutRef.current);
-    }
-
-    // Debounced update to prevent excessive re-renders
-    changeTimeoutRef.current = setTimeout(() => {
-      const slateContent = convertHTMLToSlate(htmlContent);
-      console.log("🔵 Editor.handleContentChange: Converting to Slate:", {
-        htmlLength: htmlContent.length,
-        slateLength: slateContent.length,
-        hasContent: slateContent.some(p => p.children && p.children.some(c => c.text && c.text.trim()))
-      });
-
-      onChange?.(slateContent);
-
-      // Count empty lines by checking actual DOM divs
-      if (onEmptyLinesChange && editorRef.current) {
-        const divs = editorRef.current.querySelectorAll('div:not(.unified-paragraph-number)');
-        let emptyLineCount = 0;
-
-        divs.forEach((div) => {
-          const textContent = div.textContent || '';
-          const hasOnlyBr = div.innerHTML === '<br>' || div.innerHTML === '<br/>';
-          const isEmpty = textContent.trim() === '' || hasOnlyBr;
-
-          if (isEmpty) {
-            emptyLineCount++;
-          }
-        });
-
-        onEmptyLinesChange(emptyLineCount);
+    try {
+      // CRITICAL FIX: Ensure editor always has at least one paragraph
+      if (editorRef.current.children.length === 0 ||
+          (editorRef.current.children.length === 1 && editorRef.current.textContent?.trim() === '')) {
+        editorRef.current.innerHTML = '<div><br></div>';
       }
-    }, 150);
+
+      const htmlContent = editorRef.current.innerHTML;
+
+      // CRITICAL FIX: Always process content changes for save reliability
+      // The previous check was preventing content capture during save operations
+      // We need to ensure content is always properly converted and sent to parent
+      lastContentRef.current = htmlContent;
+
+      // Clear any existing timeout
+      if (changeTimeoutRef.current) {
+        clearTimeout(changeTimeoutRef.current);
+      }
+
+      // Debounced update to prevent excessive re-renders
+      changeTimeoutRef.current = setTimeout(() => {
+        try {
+          const slateContent = convertHTMLToSlate(htmlContent);
+          console.log("🔵 Editor.handleContentChange: Converting to Slate:", {
+            htmlLength: htmlContent.length,
+            slateLength: slateContent.length,
+            hasContent: slateContent.some(p => p.children && p.children.some(c => c.text && c.text.trim()))
+          });
+
+          onChange?.(slateContent);
+
+          // Count empty lines by checking actual DOM divs
+          if (onEmptyLinesChange && editorRef.current) {
+            const divs = editorRef.current.querySelectorAll('div:not(.unified-paragraph-number)');
+            let emptyLineCount = 0;
+
+            divs.forEach((div) => {
+              const textContent = div.textContent || '';
+              const hasOnlyBr = div.innerHTML === '<br>' || div.innerHTML === '<br/>';
+              const isEmpty = textContent.trim() === '' || hasOnlyBr;
+
+              if (isEmpty) {
+                emptyLineCount++;
+              }
+            });
+
+            onEmptyLinesChange(emptyLineCount);
+          }
+        } catch (error) {
+          console.error("Editor: Error in content change processing:", error);
+          // Fallback to basic content structure
+          onChange?.([{ type: "paragraph", children: [{ text: "" }] }]);
+        }
+      }, 150);
+    } catch (error) {
+      console.error("Editor: Error in handleContentChange:", error);
+      // Ensure editor has valid content even on error
+      if (editorRef.current) {
+        editorRef.current.innerHTML = '<div><br></div>';
+      }
+    }
   }, [isClient, onChange, onEmptyLinesChange, convertHTMLToSlate]);
 
   // Handle input events
@@ -1097,48 +1147,50 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     [lineMode]
   );
 
-  return (
-    <div className="editor w-full">
-      {/* WYSIWYG Editor with consistent dimensions to prevent layout shifts */}
-      <div className="page-content unified-editor relative rounded-lg bg-background w-full max-w-none">
-        {typeof window !== 'undefined' ? (
-          <>
+  // Render with error boundary protection
+  try {
+    return (
+      <div className="editor w-full">
+        {/* WYSIWYG Editor with consistent dimensions to prevent layout shifts */}
+        <div className="page-content unified-editor relative rounded-lg bg-background w-full max-w-none">
+          {typeof window !== 'undefined' && isClient && isMounted ? (
+            <>
+              <div
+                ref={editorRef}
+                contentEditable
+                onInput={handleInput}
+                onKeyDown={handleKeyDown}
+                onBlur={handleBlur}
+                onMouseUp={saveSelection}
+                onKeyUp={saveSelection}
+                onSelect={handleSelectionChange}
+                onClick={handleEditorClick}
+                className={editorClassName}
+                data-placeholder={placeholder}
+                suppressContentEditableWarning={true}
+                style={{
+                  minHeight: '400px',
+                  opacity: isInitialized ? 1 : 0,
+                  transition: 'opacity 0.15s ease-in-out'
+                }}
+              />
+              {/* Paragraph Number Overlay - Completely separate from contentEditable */}
+              {isInitialized && <ParagraphNumberOverlay editorRef={editorRef} />}
+            </>
+          ) : (
+            // Skeleton loader with exact same dimensions to prevent layout shifts
             <div
-              ref={editorRef}
-              contentEditable
-              onInput={handleInput}
-              onKeyDown={handleKeyDown}
-              onBlur={handleBlur}
-              onMouseUp={saveSelection}
-              onKeyUp={saveSelection}
-              onSelect={handleSelectionChange}
-              onClick={handleEditorClick}
-              className={editorClassName}
-              data-placeholder={placeholder}
-              suppressContentEditableWarning={true}
-              style={{
-                minHeight: '400px',
-                opacity: isInitialized ? 1 : 0,
-                transition: 'opacity 0.15s ease-in-out'
-              }}
-            />
-            {/* Paragraph Number Overlay - Completely separate from contentEditable */}
-            <ParagraphNumberOverlay editorRef={editorRef} />
-          </>
-        ) : (
-          // Skeleton loader with exact same dimensions to prevent layout shifts
-          <div
-            className="prose prose-lg max-w-none page-editor-stable box-border animate-pulse"
-            style={{ minHeight: '400px' }}
-          >
-            <div className="space-y-3">
-              <div className="h-4 bg-muted rounded w-3/4"></div>
-              <div className="h-4 bg-muted rounded w-1/2"></div>
-              <div className="h-4 bg-muted rounded w-5/6"></div>
+              className="prose prose-lg max-w-none page-editor-stable box-border animate-pulse"
+              style={{ minHeight: '400px' }}
+            >
+              <div className="space-y-3">
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="h-4 bg-muted rounded w-1/2"></div>
+                <div className="h-4 bg-muted rounded w-5/6"></div>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
       {/* Link Editor Modal - Using consistent Modal component */}
       {isMounted && (
@@ -1284,6 +1336,37 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       />
     </div>
   );
+  } catch (error) {
+    console.error("Editor: Critical render error:", error);
+    // Fallback UI for critical errors
+    return (
+      <div className="editor w-full">
+        <div className="page-content unified-editor relative rounded-lg bg-background w-full max-w-none">
+          <div
+            className="prose prose-lg max-w-none page-editor-stable box-border"
+            style={{ minHeight: '400px' }}
+          >
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center space-y-4">
+                <div className="text-muted-foreground">
+                  <p className="font-medium">Editor temporarily unavailable</p>
+                  <p className="text-sm mt-2">
+                    Please refresh the page to continue editing.
+                  </p>
+                </div>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90"
+                >
+                  Refresh Page
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 });
 
 Editor.displayName = "Editor";
