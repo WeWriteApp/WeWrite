@@ -56,11 +56,37 @@ This implementation provides comprehensive soft delete filtering across the enti
 
 ### 8. Recovery Interface (EXISTING)
 - **File**: `app/components/settings/RecentlyDeletedPages.tsx` ✅ (already implemented)
-- **Functionality**: 
+- **Functionality**:
   - Shows only user's own soft-deleted pages
   - Allows recovery within 30-day window
   - Provides permanent deletion option
   - Shows countdown to automatic deletion
+
+### 9. Individual Page Access API (NEWLY FIXED)
+- **File**: `app/api/pages/[id]/route.js` ✅ (updated)
+- **Functionality**:
+  - Checks for soft-deleted pages before returning page details
+  - Returns 404 for deleted pages (except for page owners in specific contexts)
+  - Includes deleted status in response for owner context
+  - Uses proper authentication to determine user access
+
+### 10. Page View Components (NEWLY FIXED)
+- **Files**:
+  - `app/[id]/page.js` ✅ (updated)
+  - `app/[id]/edit/page.js` ✅ (updated)
+- **Functionality**:
+  - Both components now check for soft-deleted pages during page existence validation
+  - Redirect to 404 for deleted pages accessed via direct URLs
+  - Edit mode is completely inaccessible for deleted pages
+  - Proper error handling and user feedback
+
+### 11. Firestore Indexes (NEWLY UPDATED)
+- **File**: `updated_indexes.json` ✅ (updated)
+- **Functionality**:
+  - Added `deleted` field to all relevant composite indexes
+  - Optimized performance for queries with `deleted != true` filters
+  - Added specific index for cleanup operations (`deleted` + `deletedAt`)
+  - Ensures efficient query execution across all soft delete filtering
 
 ## Database Schema Updates
 
@@ -111,11 +137,15 @@ This implementation provides comprehensive soft delete filtering across the enti
 - Database query helper functions
 - Type definitions updated
 - Recovery interface (already existed)
+- **Individual page access API filtering** - `/api/pages/[id]/route.js` now checks for soft-deleted pages
+- **Page view component filtering** - Both `app/[id]/page.js` and `app/[id]/edit/page.js` now check for soft-deleted pages
+- **Firestore indexes updated** - Added `deleted` field to all relevant indexes for optimal performance
 
 ### 📝 Notes
 - BigQuery schema should be updated to include `deleted` field for optimal performance
 - All Firestore queries now consistently exclude soft-deleted pages
 - The implementation maintains data integrity while providing recovery options
+- **CRITICAL GAPS FIXED**: Soft-deleted pages are now properly hidden from direct URL access and API endpoints
 
 ## Testing Recommendations
 1. Test soft delete functionality in user interface

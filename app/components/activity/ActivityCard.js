@@ -10,8 +10,7 @@ import { cn, interactiveCard } from "../../lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { SupporterIcon } from "../payments/SupporterIcon";
 import { format } from "date-fns";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../firebase/config";
+import { getPageById } from "../../firebase/database/pages";
 import { useDateFormat } from "../../contexts/DateFormatContext";
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import DiffPreview, { DiffStats } from "./DiffPreview";
@@ -58,11 +57,15 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
 
       const fetchPageData = async () => {
         try {
-          const pageRef = doc(db, 'pages', activity.pageId);
-          const pageDoc = await getDoc(pageRef);
-          if (pageDoc.exists()) {
-            setPageData({ id: activity.pageId, ...pageDoc.data() });
+          // Use proper page access function instead of direct Firestore access
+          const result = await getPageById(activity.pageId, user?.uid);
+          if (result.pageData && !result.error) {
+            setPageData(result.pageData);
             setLastError(null); // Clear error on success
+          } else if (result.error) {
+            // Handle access denied or page not found
+            console.log(`ActivityCard: Access denied or page not found for ${activity.pageId}: ${result.error}`);
+            setFetchAttempts(maxAttempts); // Stop further attempts
           }
         } catch (error) {
           console.error('Error fetching page data for permissions:', error);

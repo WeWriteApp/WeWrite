@@ -24,6 +24,52 @@ import type { Page, User } from "../types/database";
 // Keeping them for when the group membership filtering is re-enabled
 // import { getDatabase, ref, get } from "firebase/database";
 
+/**
+ * Deduplicates activities by pageId, keeping only the most recent activity for each page
+ * This ensures variety in the Recent Activity feed and prevents any single page from dominating
+ *
+ * @param activities - Array of activity objects
+ * @returns Deduplicated array with only the most recent activity per page
+ */
+function deduplicateActivitiesByPage(activities: ActivityData[]): ActivityData[] {
+  if (!activities || activities.length === 0) {
+    return [];
+  }
+
+  // Group activities by pageId
+  const pageActivityMap = new Map<string, ActivityData>();
+
+  activities.forEach(activity => {
+    if (!activity || !activity.pageId) {
+      return; // Skip invalid activities
+    }
+
+    const pageId = activity.pageId;
+    const activityTimestamp = activity.timestamp ? activity.timestamp.getTime() : 0;
+
+    // Check if we already have an activity for this page
+    if (pageActivityMap.has(pageId)) {
+      const existingActivity = pageActivityMap.get(pageId)!;
+      const existingTimestamp = existingActivity.timestamp ? existingActivity.timestamp.getTime() : 0;
+
+      // Keep the more recent activity
+      if (activityTimestamp > existingTimestamp) {
+        pageActivityMap.set(pageId, activity);
+      }
+    } else {
+      // First activity for this page
+      pageActivityMap.set(pageId, activity);
+    }
+  });
+
+  // Convert map values back to array
+  const deduplicatedActivities = Array.from(pageActivityMap.values());
+
+  console.log(`Firebase Activity: Deduplication - Input: ${activities.length} activities, Output: ${deduplicatedActivities.length} unique pages`);
+
+  return deduplicatedActivities;
+}
+
 const db: Firestore = getFirestore(app);
 
 // Type definitions for activity operations
@@ -244,14 +290,20 @@ export const getRecentActivity = async (
     const allVersionsResults = await Promise.all(allVersionsPromises);
 
     // Flatten the array of arrays and filter out invalid activities
-    const allActivities = allVersionsResults
+    const filteredActivities = allVersionsResults
       .flat()
       .filter(activity => {
         if (!activity || !activity.isPublic) {
           return false;
         }
         return true;
-      })
+      });
+
+    // DEDUPLICATION LOGIC: Ensure variety by showing only the most recent activity per page
+    const deduplicatedPageActivities = deduplicateActivitiesByPage(filteredActivities);
+
+    // Sort by timestamp (most recent first) and limit results
+    const allActivities = deduplicatedPageActivities
       .sort((a, b) => {
         // Sort by timestamp in descending order (newest first)
         const timeA = a.timestamp.getTime();
@@ -301,7 +353,13 @@ export const getRecentActivity = async (
     }
 
     // Combine version-based page activities with bio and about activities
-    const finalActivities = [...allActivities, ...bioAndAboutActivities]
+    const combinedActivities = [...allActivities, ...bioAndAboutActivities];
+
+    // Apply final deduplication to the combined activities (including bio/about activities)
+    const deduplicatedFinalActivities = deduplicateActivitiesByPage(combinedActivities);
+
+    // Sort by timestamp (most recent first) and limit results
+    const finalActivities = deduplicatedFinalActivities
       .sort((a, b) => {
         // Sort by timestamp in descending order (newest first)
         const timeA = a.timestamp.getTime();
@@ -310,7 +368,7 @@ export const getRecentActivity = async (
       })
       .slice(0, limitCount);
 
-    console.log(`getRecentActivity: Returning ${finalActivities.length} total activities (${allActivities.length} page versions + ${bioAndAboutActivities.length} bio/about edits)`);
+    console.log(`getRecentActivity: Returning ${finalActivities.length} total activities after deduplication (${allActivities.length} page versions + ${bioAndAboutActivities.length} bio/about edits, ${deduplicatedFinalActivities.length} unique pages)`);
     return { activities: finalActivities };
   } catch (err) {
     console.error("Error fetching recent activity:", err);

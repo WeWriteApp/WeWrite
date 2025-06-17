@@ -143,11 +143,18 @@ export function validateLink(linkData) {
       }
     }
 
-    // Extract pageId from URL if not provided
-    if (!link.pageId && link.url && link.url.includes('/pages/')) {
-      const match = link.url.match(/\/pages\/([a-zA-Z0-9-_]+)/);
+    // CRITICAL FIX: Extract pageId from URL if not provided - handle both formats
+    if (!link.pageId && link.url) {
+      // Handle /pages/{id} format
+      let match = link.url.match(/\/pages\/([a-zA-Z0-9-_]+)/);
       if (match) {
         link.pageId = match[1];
+      } else {
+        // Handle /{id} format (direct page ID) - FIXED: More flexible pattern
+        match = link.url.match(/^\/([a-zA-Z0-9-_]+)$/);
+        if (match) {
+          link.pageId = match[1];
+        }
       }
     }
 

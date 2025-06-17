@@ -88,6 +88,52 @@ async function getServerUsername(userId) {
   }
 }
 
+/**
+ * Deduplicates activities by pageId, keeping only the most recent activity for each page
+ * This ensures variety in the Recent Activity feed and prevents any single page from dominating
+ *
+ * @param {Array} activities - Array of activity objects
+ * @returns {Array} - Deduplicated array with only the most recent activity per page
+ */
+function deduplicateActivitiesByPage(activities) {
+  if (!activities || activities.length === 0) {
+    return [];
+  }
+
+  // Group activities by pageId
+  const pageActivityMap = new Map();
+
+  activities.forEach(activity => {
+    if (!activity || !activity.pageId) {
+      return; // Skip invalid activities
+    }
+
+    const pageId = activity.pageId;
+    const activityTimestamp = activity.timestamp ? new Date(activity.timestamp).getTime() : 0;
+
+    // Check if we already have an activity for this page
+    if (pageActivityMap.has(pageId)) {
+      const existingActivity = pageActivityMap.get(pageId);
+      const existingTimestamp = existingActivity.timestamp ? new Date(existingActivity.timestamp).getTime() : 0;
+
+      // Keep the more recent activity
+      if (activityTimestamp > existingTimestamp) {
+        pageActivityMap.set(pageId, activity);
+      }
+    } else {
+      // First activity for this page
+      pageActivityMap.set(pageId, activity);
+    }
+  });
+
+  // Convert map values back to array
+  const deduplicatedActivities = Array.from(pageActivityMap.values());
+
+  console.log(`API: Deduplication - Input: ${activities.length} activities, Output: ${deduplicatedActivities.length} unique pages`);
+
+  return deduplicatedActivities;
+}
+
 export async function GET(request) {
   try {
     console.log('API: /api/activity endpoint called');
@@ -127,11 +173,15 @@ export async function GET(request) {
     console.log('API: Requested limit:', limitCount);
 
     // Query to get recent pages (only public pages, exclude deleted)
+    // Fetch more pages than needed to account for deduplication
+    const fetchLimit = Math.max(limitCount * 3, 50); // Fetch 3x more to ensure variety after deduplication
     const pagesQuery = db.collection("pages")
       .where("isPublic", "==", true)
       .where("deleted", "!=", true) // Exclude soft-deleted pages
       .orderBy("lastModified", "desc")
-      .limit(limitCount * 2);
+      .limit(fetchLimit);
+
+    console.log(`API: Fetching ${fetchLimit} pages for deduplication (target: ${limitCount} activities)`);
 
     const pagesSnapshot = await pagesQuery.get();
 
@@ -192,23 +242,39 @@ export async function GET(request) {
     const activityResults = await Promise.all(activitiesPromises);
 
     // Filter out null results and private pages
-    const validActivities = activityResults
+    const filteredActivities = activityResults
       .filter(activity => {
         // Skip null activities
         if (activity === null) return false;
         // Only show public pages
         return activity.isPublic === true;
+      });
+
+    // DEDUPLICATION LOGIC: Ensure variety by showing only the most recent activity per page
+    const deduplicatedActivities = deduplicateActivitiesByPage(filteredActivities);
+
+    // Sort by timestamp (most recent first) and limit results
+    const validActivities = deduplicatedActivities
+      .sort((a, b) => {
+        const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return timeB - timeA; // Descending order (newest first)
       })
       .slice(0, limitCount);
 
-    console.log(`API: Returning ${validActivities.length} activities`);
+    console.log(`API: Returning ${validActivities.length} activities after deduplication and sorting`);
     if (validActivities.length > 0) {
       console.log('API: First activity sample:', {
         pageId: validActivities[0].pageId,
         pageName: validActivities[0].pageName,
         userId: validActivities[0].userId,
-        username: validActivities[0].username
+        username: validActivities[0].username,
+        timestamp: validActivities[0].timestamp
       });
+
+      // Log page variety for debugging
+      const uniquePages = new Set(validActivities.map(a => a.pageId));
+      console.log(`API: Activity variety - ${uniquePages.size} unique pages in ${validActivities.length} activities`);
     }
 
     return NextResponse.json({ activities: validActivities }, { headers: corsHeaders });

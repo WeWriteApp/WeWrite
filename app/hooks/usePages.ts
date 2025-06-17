@@ -149,17 +149,25 @@ const usePages = (
       let privatePagesQuery = null;
 
       // Query for public pages (exclude deleted)
-      // TEMPORARY: Ultra-simple query to test if Firestore is working at all
       publicPagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
+        where('isPublic', '==', true),
+        where('deleted', '!=', true),
+        orderBy('lastModified', 'desc'),
         limit(initialLimitCount)
       );
 
       // Only query for private pages if the current user is the owner (exclude deleted)
       if (includePrivate && isOwner) {
-        // TEMPORARY: Skip private pages query to isolate the issue
-        privatePagesQuery = null;
+        privatePagesQuery = query(
+          collection(db, 'pages'),
+          where('userId', '==', userId),
+          where('isPublic', '==', false),
+          where('deleted', '!=', true),
+          orderBy('lastModified', 'desc'),
+          limit(initialLimitCount)
+        );
       }
 
       // Execute the queries
@@ -262,23 +270,24 @@ const usePages = (
       // This is a simplified version of fetchInitialPages that doesn't update loading state
       const isOwner = currentUserId && userId === currentUserId;
 
-      // Define queries similar to fetchInitialPages
-      // TEMPORARY: Try without deleted filter to test if indexes are the issue
+      // Define queries similar to fetchInitialPages (exclude deleted pages)
       let publicPagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
         where('isPublic', '==', true),
+        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
         limit(initialLimitCount)
       );
 
       let privatePagesQuery = null;
       if (includePrivate && isOwner) {
-        // TEMPORARY: Try without deleted filter to test if indexes are the issue
+        // Query for private pages (exclude deleted)
         privatePagesQuery = query(
           collection(db, 'pages'),
           where('userId', '==', userId),
           where('isPublic', '==', false),
+          where('deleted', '!=', true),
           orderBy('lastModified', 'desc'),
           limit(initialLimitCount)
         );

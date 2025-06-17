@@ -43,25 +43,38 @@ export default function EditPage({ params }) {
   const [pageExists, setPageExists] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    async function checkPageExists() {
-      try {
-        // Check if the page exists
-        const pageDoc = await getDoc(doc(db, "pages", id));
-        if (pageDoc.exists()) {
-          setPageExists(true);
-        } else {
-          // Page doesn't exist, redirect to 404
+  const checkPageExists = async () => {
+    try {
+      // Check if the page exists
+      const pageDoc = await getDoc(doc(db, "pages", id));
+      if (pageDoc.exists()) {
+        const pageData = pageDoc.data();
+
+        // CRITICAL: Check if page is soft-deleted
+        // Only page owners can edit their own deleted pages through the "Recently Deleted Pages" section
+        if (pageData.deleted === true) {
+          // For deleted pages, redirect to 404 for all users
+          // Edit mode should not be accessible for deleted pages
+          console.log(`Edit access denied to deleted page ${id}`);
           router.replace('/404');
           return;
         }
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error checking page existence:", error);
-        // On error, redirect to the normal page view
-        router.replace(`/${id}`);
+
+        setPageExists(true);
+      } else {
+        // Page doesn't exist, redirect to 404
+        router.replace('/404');
+        return;
       }
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error checking page existence:", error);
+      // On error, redirect to the normal page view
+      router.replace(`/${id}`);
     }
+  };
+
+  useEffect(() => {
 
     if (id) {
       checkPageExists();

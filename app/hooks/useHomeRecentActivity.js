@@ -6,7 +6,51 @@ import { getPageVersions } from "../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
 import { getBatchUserData } from "../firebase/batchUserData";
 
+/**
+ * Deduplicates activities by pageId, keeping only the most recent activity for each page
+ * This ensures variety in the Recent Activity feed and prevents any single page from dominating
+ *
+ * @param {Array} activities - Array of activity objects
+ * @returns {Array} - Deduplicated array with only the most recent activity per page
+ */
+function deduplicateActivitiesByPage(activities) {
+  if (!activities || activities.length === 0) {
+    return [];
+  }
 
+  // Group activities by pageId
+  const pageActivityMap = new Map();
+
+  activities.forEach(activity => {
+    if (!activity || !activity.pageId) {
+      return; // Skip invalid activities
+    }
+
+    const pageId = activity.pageId;
+    const activityTimestamp = activity.timestamp ? new Date(activity.timestamp).getTime() : 0;
+
+    // Check if we already have an activity for this page
+    if (pageActivityMap.has(pageId)) {
+      const existingActivity = pageActivityMap.get(pageId);
+      const existingTimestamp = existingActivity.timestamp ? new Date(existingActivity.timestamp).getTime() : 0;
+
+      // Keep the more recent activity
+      if (activityTimestamp > existingTimestamp) {
+        pageActivityMap.set(pageId, activity);
+      }
+    } else {
+      // First activity for this page
+      pageActivityMap.set(pageId, activity);
+    }
+  });
+
+  // Convert map values back to array
+  const deduplicatedActivities = Array.from(pageActivityMap.values());
+
+  console.log(`Client: Deduplication - Input: ${activities.length} activities, Output: ${deduplicatedActivities.length} unique pages`);
+
+  return deduplicatedActivities;
+}
 
 /**
  * useHomeRecentActivity - A hook that loads recent activity data for the homepage
@@ -235,7 +279,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
               where("userId", "==", userIdRef.current),
               where("deleted", "!=", true), // Exclude soft-deleted pages
               orderBy("lastModified", "desc"),
-              limit(limitRef.current * 2)
+              limit(Math.max(limitRef.current * 3, 50)) // Fetch 3x more to account for deduplication
             );
           } else {
             // User is viewing someone else's profile, only show public pages
@@ -245,7 +289,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
               where("isPublic", "==", true),
               where("deleted", "!=", true), // Exclude soft-deleted pages
               orderBy("lastModified", "desc"),
-              limit(limitRef.current * 2)
+              limit(Math.max(limitRef.current * 3, 50)) // Fetch 3x more to account for deduplication
             );
           }
         } else if (followedOnlyRef.current && followedPageIds.length > 0) {
@@ -270,7 +314,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
             collection(db, "pages"),
             where("isPublic", "==", true),
             orderBy("lastModified", "desc"),
-            limit(limitRef.current * 2)
+            limit(Math.max(limitRef.current * 3, 50)) // Fetch 3x more to account for deduplication
           );
         }
 
@@ -299,7 +343,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
           });
 
           // Limit to the same number we would have gotten with the limit() query
-          pageDocs = pageDocs.slice(0, limitRef.current * 2);
+          pageDocs = pageDocs.slice(0, Math.max(limitRef.current * 3, 50)); // Fetch 3x more to account for deduplication
           console.log(`Sorted followed pages by lastModified, using ${pageDocs.length} pages`);
         }
 
@@ -446,9 +490,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
         const activityResults = await Promise.all(activitiesPromises);
 
         // Filter out null results, private pages, and activities with missing usernames
-
-
-        const validActivities = activityResults
+        const filteredActivities = activityResults
           .filter(activity => {
             // Skip null activities
             if (activity === null) return false;
@@ -463,8 +505,13 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
 
             // Otherwise only show public pages
             return activity.isPublic === true;
-          })
-          // Explicitly sort by timestamp in descending order (newest first)
+          });
+
+        // DEDUPLICATION LOGIC: Ensure variety by showing only the most recent activity per page
+        const deduplicatedActivities = deduplicateActivitiesByPage(filteredActivities);
+
+        // Sort by timestamp (most recent first) and limit results
+        const validActivities = deduplicatedActivities
           .sort((a, b) => {
             // Convert timestamps to numbers for comparison
             const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;

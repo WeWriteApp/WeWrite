@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from "../firebase/config";
+import { getPageById } from "../firebase/database/pages";
 import { getDatabase, ref, get } from "firebase/database";
 import { app } from "../firebase/config";
 import ClientPage from '../pages/[id]/client-page.tsx';
@@ -70,9 +69,16 @@ export default function GlobalIDPage({ params }) {
           return;
         }
 
-        // First, check if it's a page
-        const pageDoc = await getDoc(doc(db, "pages", cleanId));
-        if (pageDoc.exists()) {
+        // First, check if it's a page using proper access control
+        const pageResult = await getPageById(cleanId, null); // No user context for initial check
+        if (pageResult.pageData && !pageResult.error) {
+          // Page exists and is accessible
+          setContentType('page');
+          setIsLoading(false);
+          return;
+        } else if (pageResult.error && pageResult.error !== "Page not found") {
+          // Page exists but access is denied (e.g., private page)
+          // Still treat as a page but let the page component handle access control
           setContentType('page');
           setIsLoading(false);
           return;

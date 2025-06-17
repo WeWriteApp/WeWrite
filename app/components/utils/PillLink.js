@@ -10,8 +10,7 @@ import Modal from "../ui/modal";
 import { Button } from "../ui/button";
 import { usePillStyle } from "../../contexts/PillStyleContext";
 import { navigateToPage, canUserEditPage } from "../../utils/pagePermissions";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../firebase/config";
+import { getPageById } from "../../firebase/database/pages";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 
 // Simple skeleton loader
@@ -75,11 +74,15 @@ export const PillLink = forwardRef(({
     if (isPageLinkType && pageId && user && fetchAttempts < maxAttempts) {
       const fetchPageData = async () => {
         try {
-          const pageRef = doc(db, 'pages', pageId);
-          const pageDoc = await getDoc(pageRef);
-          if (pageDoc.exists()) {
-            setPageData({ id: pageId, ...pageDoc.data() });
+          // Use proper page access function instead of direct Firestore access
+          const result = await getPageById(pageId, user?.uid);
+          if (result.pageData && !result.error) {
+            setPageData(result.pageData);
             setLastError(null); // Clear error on success
+          } else if (result.error) {
+            // Handle access denied or page not found
+            console.log(`PillLink: Access denied or page not found for ${pageId}: ${result.error}`);
+            setFetchAttempts(maxAttempts); // Stop further attempts
           }
         } catch (error) {
           console.error('Error fetching page data for permissions:', error);

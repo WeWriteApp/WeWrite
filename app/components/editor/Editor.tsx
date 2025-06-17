@@ -159,13 +159,15 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
             if (child.pageId) {
               if (child.showAuthor && child.authorUsername) {
+                // CRITICAL FIX: Improved compound link HTML structure with data attributes
                 result += `<span class="compound-link" data-page-id="${child.pageId}" data-author="${child.authorUsername}">`;
-                result += `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${child.pageId}">${text}</span>`;
+                result += `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${child.pageId}" data-page-title="${text}">${text}</span>`;
                 result += ` <span class="text-muted-foreground text-sm">by</span> `;
                 result += `<span class="${pillStyleClasses} user-link" data-link-type="user" data-id="${child.authorUsername}">${child.authorUsername}</span>`;
                 result += `</span>`;
               } else {
-                result += `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${child.pageId}">${text}</span>`;
+                // CRITICAL FIX: Add data-page-title for better conversion back to Slate
+                result += `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${child.pageId}" data-page-title="${text}">${text}</span>`;
               }
             } else if (child.userId) {
               result += `<span class="${pillStyleClasses} user-link" data-link-type="user" data-id="${child.userId}">${text}</span>`;
@@ -246,20 +248,22 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
             if (linkType === 'page') {
               const pageId = element.getAttribute('data-id');
+              const pageTitle = element.getAttribute('data-page-title') || text; // CRITICAL FIX: Use data-page-title if available
               paragraph.children.push({
                 type: "link",
-                url: `/pages/${pageId}`,
+                url: `/${pageId}`, // FIXED: Use correct URL format for internal links
                 pageId,
-                pageTitle: text,
+                pageTitle,
+                originalPageTitle: pageTitle, // ADDED: Preserve original title for view mode
                 className: "page-link",
                 isPageLink: true,
-                children: [{ text }]
+                children: [{ text: pageTitle }] // FIXED: Use pageTitle for consistency
               });
             } else if (linkType === 'user') {
               const userId = element.getAttribute('data-id');
               paragraph.children.push({
                 type: "link",
-                url: `/users/${text}`,
+                url: `/user/${userId}`, // FIXED: Use correct URL format for user links
                 userId,
                 username: text,
                 className: "user-link",
@@ -277,7 +281,32 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
               });
             }
           } else if (element.classList.contains('compound-link')) {
-            element.childNodes.forEach(processNode);
+            // CRITICAL FIX: Handle compound links properly
+            const pageId = element.getAttribute('data-page-id');
+            const authorUsername = element.getAttribute('data-author');
+
+            // Find the page link element within the compound link
+            const pageLink = element.querySelector('.page-link');
+            const userLink = element.querySelector('.user-link');
+
+            if (pageLink && pageId) {
+              const pageTitle = pageLink.textContent || "";
+              paragraph.children.push({
+                type: "link",
+                url: `/${pageId}`,
+                pageId,
+                pageTitle,
+                originalPageTitle: pageTitle,
+                className: "page-link compound-link",
+                isPageLink: true,
+                showAuthor: true, // ADDED: Mark as compound link
+                authorUsername: authorUsername || (userLink ? userLink.textContent : ""),
+                children: [{ text: pageTitle }]
+              });
+            } else {
+              // Fallback: process child nodes normally
+              element.childNodes.forEach(processNode);
+            }
           } else {
             element.childNodes.forEach(processNode);
           }
@@ -666,19 +695,47 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     } else {
       // Create new link
       if (selection) {
-        restoreSelection();
-        const range = window.getSelection()?.getRangeAt(0);
-        if (range) {
-          range.deleteContents();
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = linkHTML;
-          const linkElement = tempDiv.firstChild;
-          if (linkElement) {
-            range.insertNode(linkElement);
-            range.collapse(false);
+        try {
+          // CRITICAL FIX: Improved selection restoration and link insertion for external links
+          restoreSelection();
+          const currentSelection = window.getSelection();
+          if (currentSelection && currentSelection.rangeCount > 0) {
+            const range = currentSelection.getRangeAt(0);
+
+            // Clear any selected content first
+            range.deleteContents();
+
+            // Create the link element properly
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = linkHTML;
+            const linkElement = tempDiv.firstChild;
+
+            if (linkElement) {
+              // Insert the link at the cursor position
+              range.insertNode(linkElement);
+
+              // Add a space after the link and position cursor after it
+              const spaceNode = document.createTextNode('\u00A0'); // Non-breaking space
+              range.setStartAfter(linkElement);
+              range.insertNode(spaceNode);
+              range.setStartAfter(spaceNode);
+              range.collapse(true);
+
+              // Update the selection to position cursor after the link
+              currentSelection.removeAllRanges();
+              currentSelection.addRange(range);
+            }
+          } else {
+            // Fallback to execCommand if range is not available
+            document.execCommand('insertHTML', false, linkHTML + '&nbsp;');
           }
+        } catch (error) {
+          console.error('Error inserting external link at cursor position:', error);
+          // Final fallback: use execCommand
+          document.execCommand('insertHTML', false, linkHTML + '&nbsp;');
         }
       } else {
+        // No saved selection - focus editor and insert at current position
         editorRef.current.focus();
         document.execCommand('insertHTML', false, linkHTML + '&nbsp;');
       }
@@ -724,13 +781,49 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     } else {
       // Create new link
       if (selection) {
-        restoreSelection();
-        if (typeof document !== 'undefined' && document.execCommand) {
+        try {
+          // CRITICAL FIX: Improved selection restoration and link insertion
+          restoreSelection();
+          const currentSelection = window.getSelection();
+          if (currentSelection && currentSelection.rangeCount > 0) {
+            const range = currentSelection.getRangeAt(0);
+
+            // Clear any selected content first
+            range.deleteContents();
+
+            // Create the link element properly
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = linkHTML;
+            const linkElement = tempDiv.firstChild;
+
+            if (linkElement) {
+              // Insert the link at the cursor position
+              range.insertNode(linkElement);
+
+              // Add a space after the link and position cursor after it
+              const spaceNode = document.createTextNode('\u00A0'); // Non-breaking space
+              range.setStartAfter(linkElement);
+              range.insertNode(spaceNode);
+              range.setStartAfter(spaceNode);
+              range.collapse(true);
+
+              // Update the selection to position cursor after the link
+              currentSelection.removeAllRanges();
+              currentSelection.addRange(range);
+            }
+          } else {
+            // Fallback to execCommand if range is not available
+            document.execCommand('insertHTML', false, linkHTML + '&nbsp;');
+          }
+        } catch (error) {
+          console.error('Error inserting link at cursor position:', error);
+          // Final fallback: use execCommand
           document.execCommand('insertHTML', false, linkHTML + '&nbsp;');
         }
       } else {
-        // Fallback: append to end
-        editorRef.current.innerHTML += linkHTML + '&nbsp;';
+        // No saved selection - focus editor and insert at current position
+        editorRef.current.focus();
+        document.execCommand('insertHTML', false, linkHTML + '&nbsp;');
       }
     }
 

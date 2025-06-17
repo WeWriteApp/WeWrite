@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { getFollowedPages, unfollowPage } from "../../firebase/follows";
 import { db } from "../../firebase/database";
-import { doc, getDoc } from 'firebase/firestore';
+import { getPageById } from '../../firebase/database/pages';
 import { PillLink } from "../utils/PillLink";
 import { Loader, Heart, X, Plus, RefreshCw } from 'lucide-react';
 import { Button } from "../ui/button";
@@ -100,17 +100,12 @@ export default function FollowedPages({
       // Check if there are more pages to load
       setHasMore(followedPageIds.length > endIndex);
 
-      // Fetch details for each page
+      // Fetch details for each page using proper access control
       const pagePromises = paginatedIds.map(async (pageId) => {
         try {
-          const pageRef = doc(db, 'pages', pageId);
-          const pageDoc = await getDoc(pageRef);
-
-          if (pageDoc.exists()) {
-            return {
-              id: pageId,
-              ...pageDoc.data()
-            };
+          const result = await getPageById(pageId, user?.uid);
+          if (result.pageData && !result.error) {
+            return result.pageData;
           }
           return null;
         } catch (err) {
