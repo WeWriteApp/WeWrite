@@ -10,6 +10,7 @@ import ParagraphNumberOverlay from './ParagraphNumberOverlay';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Switch } from '../ui/switch';
 import { Modal } from '../ui/modal';
+import { ConfirmationModal } from '../utils/ConfirmationModal';
 
 // Types
 interface EditorProps {
@@ -67,6 +68,11 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   const [isClient, setIsClient] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Link editor unsaved changes tracking
+  const [showLinkEditorConfirmation, setShowLinkEditorConfirmation] = useState(false);
+  const [linkEditorHasChanges, setLinkEditorHasChanges] = useState(false);
+  const [initialLinkEditorState, setInitialLinkEditorState] = useState<any>(null);
 
   // Tab and toggle state for link editor
   const [activeTab, setActiveTab] = useState("page");
@@ -649,7 +655,12 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     }
 
     setShowLinkEditor(true);
-  }, []);
+
+    // Capture initial state after setting up the form
+    setTimeout(() => {
+      captureInitialLinkEditorState();
+    }, 100);
+  }, [captureInitialLinkEditorState]);
 
   // Function to reset all link editor state
   const resetLinkEditorState = useCallback(() => {
@@ -661,6 +672,81 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     setExternalUrl("");
     setExternalDisplayText("");
     setShowExternalCustomText(false);
+    setLinkEditorHasChanges(false);
+    setInitialLinkEditorState(null);
+  }, []);
+
+  // Function to capture initial link editor state for change detection
+  const captureInitialLinkEditorState = useCallback(() => {
+    const state = {
+      linkSearchText,
+      linkDisplayText,
+      showCustomTextToggle,
+      showAuthorToggle,
+      externalUrl,
+      externalDisplayText,
+      showExternalCustomText,
+      activeTab,
+      editingLink
+    };
+    setInitialLinkEditorState(state);
+    setLinkEditorHasChanges(false);
+  }, [linkSearchText, linkDisplayText, showCustomTextToggle, showAuthorToggle, externalUrl, externalDisplayText, showExternalCustomText, activeTab, editingLink]);
+
+  // Function to check if link editor has unsaved changes
+  const checkLinkEditorChanges = useCallback(() => {
+    if (!initialLinkEditorState) return false;
+
+    const currentState = {
+      linkSearchText,
+      linkDisplayText,
+      showCustomTextToggle,
+      showAuthorToggle,
+      externalUrl,
+      externalDisplayText,
+      showExternalCustomText,
+      activeTab,
+      editingLink
+    };
+
+    // Compare current state with initial state
+    const hasChanges = JSON.stringify(currentState) !== JSON.stringify(initialLinkEditorState);
+    setLinkEditorHasChanges(hasChanges);
+    return hasChanges;
+  }, [initialLinkEditorState, linkSearchText, linkDisplayText, showCustomTextToggle, showAuthorToggle, externalUrl, externalDisplayText, showExternalCustomText, activeTab, editingLink]);
+
+  // Effect to track changes in link editor
+  useEffect(() => {
+    if (showLinkEditor && initialLinkEditorState) {
+      checkLinkEditorChanges();
+    }
+  }, [showLinkEditor, checkLinkEditorChanges, linkSearchText, linkDisplayText, showCustomTextToggle, showAuthorToggle, externalUrl, externalDisplayText, showExternalCustomText, activeTab]);
+
+  // Function to handle link editor close attempt
+  const handleLinkEditorClose = useCallback(() => {
+    const hasChanges = checkLinkEditorChanges();
+
+    if (hasChanges) {
+      // Show confirmation modal if there are unsaved changes
+      setShowLinkEditorConfirmation(true);
+    } else {
+      // Close immediately if no changes
+      setShowLinkEditor(false);
+      resetLinkEditorState();
+    }
+  }, [checkLinkEditorChanges, resetLinkEditorState]);
+
+  // Function to handle confirmation modal - discard changes
+  const handleDiscardLinkEditorChanges = useCallback(() => {
+    setShowLinkEditorConfirmation(false);
+    setShowLinkEditor(false);
+    resetLinkEditorState();
+  }, [resetLinkEditorState]);
+
+  // Function to handle confirmation modal - keep editing
+  const handleKeepEditingLink = useCallback(() => {
+    setShowLinkEditorConfirmation(false);
+    // Keep the link editor open, don't reset state
   }, []);
 
   // Handle external link creation
@@ -742,10 +828,8 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     }
 
     // Reset state and close modal
-    setExternalUrl("");
-    setExternalDisplayText("");
-    setShowExternalCustomText(false);
     setShowLinkEditor(false);
+    resetLinkEditorState();
     handleContentChange();
   }, [externalUrl, externalDisplayText, showExternalCustomText, pillStyleClasses, selection, restoreSelection, handleContentChange]);
 
@@ -835,7 +919,9 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       editorRef.current?.focus();
     }, 100);
 
+    // Reset link editor state and close modal
     setShowLinkEditor(false);
+    resetLinkEditorState();
     return true;
   }, [linkDisplayText, pillStyleClasses, selection, restoreSelection, handleContentChange, editingLink, showAuthorToggle]);
 
@@ -990,6 +1076,12 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       setShowExternalCustomText(false);
       // Keep the last selected tab for better UX
       setShowLinkEditor(true);
+
+      // Capture initial state for new link creation
+      setTimeout(() => {
+        captureInitialLinkEditorState();
+      }, 100);
+
       return true;
     },
     setShowLinkEditor: (value: boolean) => {
@@ -1052,10 +1144,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       {isMounted && (
         <Modal
           isOpen={showLinkEditor}
-          onClose={() => {
-            setShowLinkEditor(false);
-            resetLinkEditorState();
-          }}
+          onClose={handleLinkEditorClose}
           title={editingLink ? "Edit Link" : "Insert Link"}
           className="md:max-w-2xl md:h-[600px] h-full flex flex-col"
           showCloseButton={true}
@@ -1180,6 +1269,19 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
           </div>
         </Modal>
       )}
+
+      {/* Link Editor Unsaved Changes Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showLinkEditorConfirmation}
+        onClose={handleKeepEditingLink}
+        onConfirm={handleDiscardLinkEditorChanges}
+        title="Discard Link Changes?"
+        message="You have unsaved changes to this link. Are you sure you want to close the link editor without saving?"
+        confirmText="Discard Changes"
+        cancelText="Keep Editing"
+        variant="warning"
+        icon="warning"
+      />
     </div>
   );
 });

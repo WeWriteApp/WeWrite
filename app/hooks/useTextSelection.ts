@@ -55,7 +55,16 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
         '.group-about-content',          // Group about page content
         '[data-slate-editor]',           // Editor content
         '.page-content',                 // Page content areas
-        '.content-area'                  // Generic content areas
+        '.content-area',                 // Generic content areas
+        '.unified-text-content',         // Unified text content
+        '.prose',                        // Prose content
+        '.text-view-content',            // Text view content
+        '.editor-content',               // Editor content
+        '.paragraph-content',            // Paragraph content
+        'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', // Text elements
+        'span', 'div',                   // Generic text containers
+        '.slide-up-page',                // Slide-up page content
+        '.new-page-container'            // New page container
       ];
 
       // Check if the selection is within any allowed area
@@ -91,7 +100,7 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
         }
       }
 
-      return false; // Default to not allowing selection
+      return true; // Default to allowing selection if not in forbidden areas
     };
 
     if (!isInAllowedArea()) {

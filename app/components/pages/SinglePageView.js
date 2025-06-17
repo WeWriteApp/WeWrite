@@ -1417,25 +1417,32 @@ function SinglePageView({ params, initialEditMode = false }) {
             <div className="animate-in fade-in-0 duration-300">
               <PageProvider>
                 <LineSettingsProvider>
-                  <PageEditor
-                    key={`editor-${page.id}-${isEditing}`} /* Force re-initialization when switching to edit mode */
-                    title={title}
-                    setTitle={handleTitleChange}
-                    initialContent={editorState}
-                    onContentChange={handleContentChange}
-                    isPublic={isPublic}
-                    setIsPublic={handleVisibilityChange}
-                    location={location}
-                    setLocation={handleLocationChange}
-                    onSave={() => handleSave(editorContent || editorState)}
-                    onCancel={handleCancelWithCheck}
-                    onDelete={handleDelete}
-                    isSaving={isSaving}
-                    error={error}
-                    isNewPage={false}
-                    clickPosition={clickPosition}
-                    page={page}
-                  />
+                  <TextSelectionProvider
+                    contentRef={contentRef}
+                    enableCopy={true}
+                    enableShare={true}
+                    enableAddToPage={true}
+                    username={user?.displayName || user?.username}
+                  >
+                    <PageEditor
+                      key={`editor-${page.id}-${isEditing}`} /* Force re-initialization when switching to edit mode */
+                      title={title}
+                      setTitle={handleTitleChange}
+                      initialContent={editorState}
+                      onContentChange={handleContentChange}
+                      isPublic={isPublic}
+                      setIsPublic={handleVisibilityChange}
+                      location={location}
+                      setLocation={handleLocationChange}
+                      onSave={() => handleSave(editorContent || editorState)}
+                      onCancel={handleCancelWithCheck}
+                      onDelete={handleDelete}
+                      isSaving={isSaving}
+                      error={error}
+                      isNewPage={false}
+                      clickPosition={clickPosition}
+                      page={page}
+                    />
 
                 {/* Unsaved Changes Dialog */}
                 <UnsavedChangesDialog
@@ -1459,6 +1466,7 @@ function SinglePageView({ params, initialEditMode = false }) {
                   isLoading={confirmationState.isLoading}
                   icon={confirmationState.icon}
                 />
+                  </TextSelectionProvider>
                 </LineSettingsProvider>
               </PageProvider>
             </div>

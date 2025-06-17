@@ -197,14 +197,14 @@
 .slide-up-page {
   /* Ensure smooth rendering during animation */
   will-change: transform, opacity;
-  /* Prevent content from being selectable during animation */
-  user-select: none;
+  /* Allow text selection during animation - users should be able to select text immediately */
+  user-select: auto;
   /* Ensure proper layering */
   isolation: isolate;
 }
 
 .slide-up-page.animation-complete {
-  /* Re-enable text selection after animation */
+  /* Ensure text selection remains enabled after animation */
   user-select: auto;
   /* Reset will-change for performance */
   will-change: auto;
@@ -1060,6 +1060,33 @@ body {
   color: inherit; /* Keep the text color unchanged */
 }
 
+/* Ensure text selection is enabled for all content areas */
+[data-page-content],
+.user-bio-content,
+.group-about-content,
+.page-content,
+.content-area,
+.unified-text-content,
+.prose,
+.text-view-content,
+.editor-content,
+.paragraph-content,
+.slide-up-page,
+.new-page-container,
+p, h1, h2, h3, h4, h5, h6, span, div {
+  -webkit-user-select: text !important;
+  -khtml-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+}
+
+/* Ensure text selection works in both light and dark modes */
+.dark ::selection {
+  background-color: rgba(59, 130, 246, 0.25); /* Slightly more visible in dark mode */
+  color: inherit;
+}
+
 /* FIX: Allow pill links to display full text and only truncate when absolutely necessary */
 .pill-text {
   display: inline-block;
@@ -1419,24 +1446,40 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
   }
 }
 
-/* Disable native text selection menu on mobile devices */
+/* Enable text selection on mobile devices while disabling native context menu */
 @media (pointer: coarse) {
+  /* Disable native touch callout menu but keep text selection enabled */
   * {
     -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
   }
 
-  /* Allow selection in specific elements where needed */
+  /* Ensure text selection is enabled for content areas */
+  [data-page-content],
+  .user-bio-content,
+  .group-about-content,
+  .page-content,
+  .content-area,
+  .unified-text-content,
+  .prose,
+  p, h1, h2, h3, h4, h5, h6, span, div,
   input, textarea, [contenteditable="true"] {
     -webkit-user-select: text;
     -khtml-user-select: text;
     -moz-user-select: text;
     -ms-user-select: text;
     user-select: text;
+  }
+
+  /* Disable selection only for UI elements that shouldn't be selectable */
+  button, .button, [role="button"],
+  .sidebar, .navigation, .nav,
+  .modal-header, .modal-footer,
+  .toolbar, .menu, .dropdown {
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
   }
 }
 

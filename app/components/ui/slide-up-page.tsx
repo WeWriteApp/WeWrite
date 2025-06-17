@@ -94,10 +94,10 @@ export function SlideUpPage({
     setIsAnimationComplete(true);
   };
 
-  // If animation is disabled or not needed, render normally
+  // If animation is disabled or not needed, render normally with text selection enabled
   if (!enableAnimation || !shouldAnimate) {
     return (
-      <div className={cn("min-h-screen new-page-container", className)}>
+      <div className={cn("min-h-screen new-page-container slide-up-page animation-complete", className)}>
         {children}
       </div>
     );
@@ -115,6 +115,9 @@ export function SlideUpPage({
               "fixed inset-0 z-[100] bg-background",
               // Ensure smooth rendering
               "will-change-transform",
+              // Add slide-up-page class and animation-complete when done
+              "slide-up-page",
+              isAnimationComplete && "animation-complete",
               className
             )}
             variants={slideUpVariants}
@@ -140,7 +143,7 @@ export function SlideUpPage({
 
       {/* Fallback content when animation completes or doesn't trigger */}
       {(!shouldAnimate || isAnimationComplete) && (
-        <div className={cn("min-h-screen new-page-container", className)}>
+        <div className={cn("min-h-screen new-page-container slide-up-page animation-complete", className)}>
           {children}
         </div>
       )}
