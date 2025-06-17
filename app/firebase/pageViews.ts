@@ -371,11 +371,12 @@ export const getTrendingPages = async (limitCount: number = 5): Promise<Trending
       try {
         console.log(`Not enough trending pages (${trendingPages.length}), fetching additional pages`);
 
-        // Query for pages with the most 24-hour views (only public pages)
+        // Query for pages with the most 24-hour views (only public, non-deleted pages)
         // First try to query using views24h field
         const pagesQuery = query(
           collection(db, "pages"),
           where("isPublic", "==", true), // Only get public pages
+          where("deleted", "!=", true), // Exclude soft-deleted pages
           where("views24h", ">", 0), // Only get pages with 24h views > 0
           orderBy("views24h", "desc"),
           limit(limitCount - trendingPages.length)
@@ -504,10 +505,11 @@ async function getFallbackTrendingPages(limitCount: number = 5): Promise<Trendin
   try {
     console.log('Using fallback method to get trending pages');
 
-    // Query for pages with the most views (only public pages)
+    // Query for pages with the most views (only public, non-deleted pages)
     const pagesQuery = query(
       collection(db, "pages"),
       where("isPublic", "==", true), // Only get public pages
+      where("deleted", "!=", true), // Exclude soft-deleted pages
       orderBy("views", "desc"),
       limit(limitCount)
     );

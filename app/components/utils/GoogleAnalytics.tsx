@@ -105,8 +105,8 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
         }}
       />
 
-      {/* Development-only debugging indicator */}
-      {process.env.NODE_ENV === 'development' && (
+      {/* Analytics debugging indicator - hidden by default */}
+      {false && process.env.NODE_ENV === 'development' && (
         <div style={{
           position: 'fixed',
           bottom: '40px',

@@ -87,6 +87,12 @@ async function searchPagesInFirestoreUnlimited(userId, searchTerm, groupIds = []
 
         userPagesSnapshot.forEach(doc => {
           const data = doc.data();
+
+          // CRITICAL: Filter out soft-deleted pages
+          if (data.deleted === true) {
+            return; // Skip deleted pages
+          }
+
           const pageTitle = data.title || 'Untitled';
           const normalizedTitle = pageTitle.toLowerCase();
 
@@ -152,6 +158,11 @@ async function searchPagesInFirestoreUnlimited(userId, searchTerm, groupIds = []
 
         publicPagesSnapshot.forEach(doc => {
           const data = doc.data();
+
+          // CRITICAL: Filter out soft-deleted pages
+          if (data.deleted === true) {
+            return; // Skip deleted pages
+          }
 
           // Skip user's own pages (already included above)
           if (data.userId === userId) {

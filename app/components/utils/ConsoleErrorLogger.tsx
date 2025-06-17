@@ -33,8 +33,36 @@ export default function ConsoleErrorLogger() {
       }).join(' ')
     }
 
-    // Helper function to send to server
+    // THROTTLING: Prevent infinite loops and excessive logging
+    const errorCache = new Map<string, number>()
+    const maxErrorsPerMinute = 10
+    const errorCacheCleanupInterval = 60000 // 1 minute
+
+    // Helper function to send to server with throttling
     const sendToServer = (level: string, message: string, extra?: any) => {
+      // Create a hash of the error message for deduplication
+      const errorKey = `${level}:${message.substring(0, 100)}`
+      const now = Date.now()
+
+      // Check if we've seen this error recently
+      const lastSeen = errorCache.get(errorKey) || 0
+      if (now - lastSeen < 5000) { // Don't log same error within 5 seconds
+        return
+      }
+
+      // Count errors in the last minute
+      const recentErrors = Array.from(errorCache.values()).filter(time => now - time < errorCacheCleanupInterval)
+      if (recentErrors.length >= maxErrorsPerMinute) {
+        return // Stop logging if too many errors
+      }
+
+      // Skip Firebase unavailable errors to prevent cascade
+      if (message.includes('unavailable') && message.includes('Firebase')) {
+        return
+      }
+
+      errorCache.set(errorKey, now)
+
       fetch('/api/log-console-error', {
         method: 'POST',
         headers: {
@@ -52,6 +80,16 @@ export default function ConsoleErrorLogger() {
         // Silently fail if logging endpoint is not available
       })
     }
+
+    // Clean up error cache periodically
+    const cleanupInterval = setInterval(() => {
+      const now = Date.now()
+      for (const [key, time] of errorCache.entries()) {
+        if (now - time > errorCacheCleanupInterval) {
+          errorCache.delete(key)
+        }
+      }
+    }, errorCacheCleanupInterval)
 
     // Override console.error to capture ALL errors
     console.error = function(...args) {
@@ -188,6 +226,7 @@ export default function ConsoleErrorLogger() {
       window.fetch = originalFetch
       window.removeEventListener('error', handleUnhandledError)
       window.removeEventListener('unhandledrejection', handleUnhandledRejection)
+      clearInterval(cleanupInterval)
     }
   }, [])
 

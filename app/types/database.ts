@@ -53,6 +53,10 @@ export interface Page {
   totalPledged?: number;
   pledgeCount?: number;
   monthlyEarnings?: number;
+  // Soft delete fields
+  deleted?: boolean;
+  deletedAt?: string | Timestamp;
+  deletedBy?: string;
 }
 
 // Page version types

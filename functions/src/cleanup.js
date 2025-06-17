@@ -112,6 +112,89 @@ exports.computeDailyStats = functions.pubsub
   });
 
 /**
+ * Scheduled function to permanently delete soft-deleted pages after 30 days
+ * Runs daily to check for pages that have been soft-deleted for more than 30 days
+ */
+exports.permanentlyDeleteExpiredPages = functions.pubsub
+  .schedule('every 24 hours')
+  .onRun(async (context) => {
+    try {
+      console.log('Starting permanent deletion of expired soft-deleted pages');
+
+      // Calculate 30 days ago
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
+
+      console.log(`Looking for pages deleted before: ${thirtyDaysAgoISO}`);
+
+      // Find pages that have been soft-deleted for more than 30 days
+      const expiredPagesSnapshot = await db.collection('pages')
+        .where('deleted', '==', true)
+        .where('deletedAt', '<', thirtyDaysAgoISO)
+        .get();
+
+      if (expiredPagesSnapshot.empty) {
+        console.log('No expired soft-deleted pages found');
+        return null;
+      }
+
+      console.log(`Found ${expiredPagesSnapshot.size} expired pages to permanently delete`);
+
+      // Delete expired pages in batches
+      const batchSize = 500; // Firestore limit
+      const batches = [];
+      let batch = db.batch();
+      let operationCount = 0;
+      let deletedCount = 0;
+
+      for (const doc of expiredPagesSnapshot.docs) {
+        const pageData = doc.data();
+        console.log(`Permanently deleting page: ${doc.id} (${pageData.title || 'Untitled'}) deleted on ${pageData.deletedAt}`);
+
+        // Delete the main page document
+        batch.delete(doc.ref);
+        operationCount++;
+        deletedCount++;
+
+        // Also delete all versions subcollection documents
+        try {
+          const versionsSnapshot = await doc.ref.collection('versions').get();
+          versionsSnapshot.docs.forEach(versionDoc => {
+            if (operationCount < batchSize) {
+              batch.delete(versionDoc.ref);
+              operationCount++;
+            }
+          });
+        } catch (versionError) {
+          console.warn(`Error deleting versions for page ${doc.id}:`, versionError);
+        }
+
+        // If we reach the batch limit, commit and start a new batch
+        if (operationCount >= batchSize) {
+          batches.push(batch.commit());
+          batch = db.batch();
+          operationCount = 0;
+        }
+      }
+
+      // Commit any remaining operations
+      if (operationCount > 0) {
+        batches.push(batch.commit());
+      }
+
+      // Wait for all batches to complete
+      await Promise.all(batches);
+
+      console.log(`Successfully permanently deleted ${deletedCount} expired pages and their versions`);
+      return null;
+    } catch (error) {
+      console.error('Error permanently deleting expired pages:', error);
+      return null;
+    }
+  });
+
+/**
  * Scheduled function to optimize database usage
  * Runs every two weeks to identify and fix inefficient data structures
  * Reduced frequency from weekly to reduce function execution costs

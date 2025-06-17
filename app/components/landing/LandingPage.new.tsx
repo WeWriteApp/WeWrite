@@ -8,8 +8,9 @@ import { Badge } from '../../components/ui/badge';
 import { PagePreviewCard } from './PagePreviewCard';
 import { useTheme } from "next-themes";
 import { getPageById } from '../../firebase/database';
-import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
-import { ANALYTICS_EVENTS } from '../../constants/analytics-events';
+// Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
+// import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
+// import { ANALYTICS_EVENTS } from '../../constants/analytics-events';
 import { auth } from '../../firebase/config';
 import SimpleActivityCarousel from './SimpleActivityCarousel';
 import SimpleTrendingCarousel from './SimpleTrendingCarousel';

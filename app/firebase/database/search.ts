@@ -240,11 +240,12 @@ export const getTrendingPages = async (limitCount: number = 10) => {
   try {
     const pagesRef = collection(db, "pages");
     
-    // For now, just get recent public pages
+    // For now, just get recent public pages (exclude deleted)
     // In the future, this could be based on view counts, pledge amounts, etc.
     const trendingQuery = query(
       pagesRef,
       where("isPublic", "==", true),
+      where("deleted", "!=", true),
       orderBy("lastModified", "desc"),
       limit(limitCount)
     );
@@ -279,10 +280,11 @@ export const getRandomPages = async (limitCount: number = 10) => {
   try {
     const pagesRef = collection(db, "pages");
     
-    // Get a larger set and then randomly select from it
+    // Get a larger set and then randomly select from it (exclude deleted)
     const randomQuery = query(
       pagesRef,
       where("isPublic", "==", true),
+      where("deleted", "!=", true),
       limit(limitCount * 3) // Get 3x more to have better randomization
     );
 

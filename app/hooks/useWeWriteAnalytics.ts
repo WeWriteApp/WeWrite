@@ -19,8 +19,13 @@ export const useWeWriteAnalytics = () => {
   const searchParams = useSearchParams();
   const analytics = getAnalyticsService();
 
+  // DISABLED: Page view tracking is now handled by UnifiedAnalyticsProvider to prevent duplicates
   // Track page views automatically when the route changes
   useEffect(() => {
+    // Page view tracking disabled here to prevent duplicate tracking
+    // UnifiedAnalyticsProvider handles all page view tracking
+    return;
+
     if (!pathname) return;
 
     const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '');

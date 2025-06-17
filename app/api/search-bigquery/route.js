@@ -75,6 +75,7 @@ if (credentialsEnvVar && process.env.NODE_ENV !== 'development') {
 }
 
 // BigQuery search function with unlimited page coverage
+// NOTE: BigQuery schema needs to include 'deleted' field for proper soft delete filtering
 async function searchPagesInBigQuery(userId, searchTerm, filterByUserId = null) {
   try {
     if (!bigquery) {
@@ -85,7 +86,7 @@ async function searchPagesInBigQuery(userId, searchTerm, filterByUserId = null) 
 
     const searchTermFormatted = `%${searchTerm.toLowerCase().trim()}%`;
 
-    // Query for user's own pages (unlimited)
+    // Query for user's own pages (unlimited, exclude deleted)
     let userPages = [];
     if (userId) {
       const userQuery = `
@@ -93,6 +94,7 @@ async function searchPagesInBigQuery(userId, searchTerm, filterByUserId = null) 
         FROM \`wewrite-ccd82.pages_indexes.pages\`
         WHERE userId = @userId
           AND LOWER(title) LIKE @searchTerm
+          AND deleted != true
         ORDER BY lastModified DESC
       `;
 
@@ -123,7 +125,7 @@ async function searchPagesInBigQuery(userId, searchTerm, filterByUserId = null) 
       console.log(`📄 BigQuery found ${userPages.length} user page matches (unlimited)`);
     }
 
-    // Query for public pages (unlimited, excluding user's own pages)
+    // Query for public pages (unlimited, excluding user's own pages and deleted pages)
     let publicPages = [];
     if (!filterByUserId) {
       const publicQuery = `
@@ -132,6 +134,7 @@ async function searchPagesInBigQuery(userId, searchTerm, filterByUserId = null) 
         WHERE isPublic = true
           AND userId != @userId
           AND LOWER(title) LIKE @searchTerm
+          AND deleted != true
         ORDER BY lastModified DESC
       `;
 

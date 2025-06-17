@@ -50,7 +50,7 @@ class Analytics {
   private firebaseAnalytics: any | null = null;
   private gaAvailable: boolean = false;
   private fbAvailable: boolean = false;
-  private debug: boolean = process.env.NODE_ENV === 'development';
+  private debug: boolean = false; // Disabled analytics debugging
   private gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   private fbMeasurementId = process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID;
 

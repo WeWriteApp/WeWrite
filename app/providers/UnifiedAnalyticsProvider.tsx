@@ -42,7 +42,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
 
   const analytics = getAnalyticsInstance();
   const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '';
-  const isDev = process.env.NODE_ENV === 'development';
+  const isDev = false; // Disabled analytics debugging
 
   // Initial setup - runs once when component mounts
   useEffect(() => {
@@ -141,9 +141,19 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
     };
   }, [initialized, pathname, searchParams, analytics, isDev]);
 
-  // Track page views - runs whenever the route changes
+  // Track page views - runs whenever the route changes with throttling
   useEffect(() => {
     if (!initialized || !pathname) return;
+
+    // Throttle page view tracking to prevent excessive calls
+    const throttleKey = `${pathname}${searchParams?.toString() || ''}`;
+    const lastTracked = sessionStorage.getItem(`analytics_last_tracked_${throttleKey}`);
+    const now = Date.now();
+
+    // Only track if it's been more than 2 seconds since last tracking this URL
+    if (lastTracked && (now - parseInt(lastTracked)) < 2000) {
+      return;
+    }
 
     try {
       // Construct the full URL
@@ -158,6 +168,9 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
       if (typeof document !== 'undefined') {
         documentTitleRef.current = document.title;
       }
+
+      // Store the tracking timestamp
+      sessionStorage.setItem(`analytics_last_tracked_${throttleKey}`, now.toString());
 
       // Extract page ID from URL if present (for pages/[id] routes)
       const pageId = extractPageId(pathname);
@@ -304,8 +317,8 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
       {/* Children content */}
       {children}
 
-      {/* Development-only debug indicator */}
-      {isDev && (
+      {/* Analytics debug indicator - hidden by default */}
+      {false && isDev && (
         <div style={{
           position: 'fixed',
           bottom: '10px',

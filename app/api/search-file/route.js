@@ -64,12 +64,13 @@ export async function GET(request) {
         }
       });
       
-      // Full search query for user pages
+      // Full search query for user pages (exclude deleted)
       const userQuery = `
         SELECT DISTINCT document_id, title, userId, lastModified
         FROM \`wewrite-ccd82.pages_indexes.pages\`
         WHERE userId = @userId
           AND LOWER(title) LIKE @searchTerm
+          AND deleted != true
         ORDER BY lastModified DESC
         LIMIT 10
       `;
@@ -86,12 +87,13 @@ export async function GET(request) {
         }
       });
       
-      // Full search query for public pages
+      // Full search query for public pages (exclude deleted)
       const publicQuery = `
         SELECT DISTINCT document_id, title, userId, lastModified
         FROM \`wewrite-ccd82.pages_indexes.pages\`
         WHERE userId != @userId
           AND LOWER(title) LIKE @searchTerm
+          AND deleted != true
         ORDER BY lastModified DESC
         LIMIT 10
       `;

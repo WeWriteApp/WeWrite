@@ -1,10 +1,11 @@
 "use client"
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Button } from './button';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
 
 interface ModalProps {
   isOpen: boolean;
@@ -28,6 +29,19 @@ export function Modal({
   preventClickOutside = false,
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Ensure we're mounted on the client side and detect mobile
+  useEffect(() => {
+    setMounted(true);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Handle ESC key press
   useEffect(() => {
@@ -76,8 +90,16 @@ export function Modal({
     };
   }, [isOpen, onClose, preventClickOutside]);
 
-  // Add specific touch event handlers for better PWA support
+  // Touch handling for swipe-to-close on mobile
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    // Store touch start position for swipe detection
+    setTouchStart({
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    });
+
     // Store the touch target to check if the touch ends on the same element
     if (e.target === e.currentTarget) {
       e.currentTarget.dataset.touchTarget = 'backdrop';
@@ -89,6 +111,23 @@ export function Modal({
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
     if (preventClickOutside) return;
 
+    // Check for swipe down gesture on mobile
+    if (isMobile && touchStart) {
+      const touchEnd = {
+        x: e.changedTouches[0].clientX,
+        y: e.changedTouches[0].clientY,
+      };
+
+      const deltaY = touchEnd.y - touchStart.y;
+      const deltaX = Math.abs(touchEnd.x - touchStart.x);
+
+      // Swipe down to close (minimum 100px down, less than 50px horizontal)
+      if (deltaY > 100 && deltaX < 50) {
+        onClose();
+        return;
+      }
+    }
+
     // Only close if the touch started and ended on the backdrop
     if (e.currentTarget.dataset.touchTarget === 'backdrop' && e.target === e.currentTarget) {
       e.preventDefault();
@@ -98,11 +137,14 @@ export function Modal({
     }
   };
 
-  return (
+  // Don't render anything on server side or if not mounted
+  if (!mounted) return null;
+
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto"
+          className="fixed inset-0 z-[100] flex md:items-center md:justify-center items-end justify-center overflow-y-auto"
           onClick={handleBackdropInteraction}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -112,6 +154,14 @@ export function Modal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 100
+          }}
         >
           {/* Backdrop */}
           <motion.div
@@ -126,17 +176,34 @@ export function Modal({
           <motion.div
             ref={modalRef}
             className={cn(
-              "relative bg-background rounded-2xl shadow-lg border border-border dark:border-border w-[calc(100%-2rem)] max-w-md p-6 z-10 mx-4 my-4",
+              // Base styles
+              "relative bg-background shadow-lg border border-border dark:border-border z-10",
+              // Mobile: Full screen slide-up modal
+              "w-full h-full rounded-t-2xl md:rounded-2xl",
+              // Desktop: Centered modal with constraints
+              "md:w-[calc(100%-2rem)] md:max-w-md md:h-auto md:mx-4 md:my-4",
+              // Padding
+              "p-6",
               className
             )}
-            initial={{ opacity: 0, y: -10 }}
+            initial={{
+              opacity: 0,
+              y: typeof window !== 'undefined' && window.innerWidth < 768 ? 100 : -10
+            }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
+            exit={{
+              opacity: 0,
+              y: typeof window !== 'undefined' && window.innerWidth < 768 ? 100 : 10
+            }}
             transition={{
               type: "spring",
               damping: 25,
               stiffness: 300,
               duration: 0.3
+            }}
+            style={{
+              position: 'relative',
+              zIndex: 101
             }}
           >
             {showCloseButton && (
@@ -165,6 +232,9 @@ export function Modal({
       )}
     </AnimatePresence>
   );
+
+  // Use portal to render modal at document body level, outside any container constraints
+  return createPortal(modalContent, document.body);
 }
 
 export default Modal;

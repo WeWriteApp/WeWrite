@@ -224,7 +224,7 @@ const Search = () => {
       } finally {
         setIsSearching(false);
       }
-    }, 350), // Slightly longer debounce for better performance
+    }, 1000), // Increased debounce to 1 second to reduce API requests
     [user, searchCache]
   );
 

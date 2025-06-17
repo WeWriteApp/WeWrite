@@ -45,25 +45,44 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
   }, [activity]);
 
   // Fetch page data for permission checking (only for regular page activities)
+  // CIRCUIT BREAKER: Add error tracking to prevent infinite loops
+  const [fetchAttempts, setFetchAttempts] = useState(0);
+  const [lastError, setLastError] = useState(null);
+  const maxAttempts = 3;
+
   useEffect(() => {
     if (activity?.pageId && user &&
         activity.activityType !== "bio_edit" &&
-        activity.activityType !== "group_about_edit") {
+        activity.activityType !== "group_about_edit" &&
+        fetchAttempts < maxAttempts) {
+
       const fetchPageData = async () => {
         try {
           const pageRef = doc(db, 'pages', activity.pageId);
           const pageDoc = await getDoc(pageRef);
           if (pageDoc.exists()) {
             setPageData({ id: activity.pageId, ...pageDoc.data() });
+            setLastError(null); // Clear error on success
           }
         } catch (error) {
           console.error('Error fetching page data for permissions:', error);
+          setFetchAttempts(prev => prev + 1);
+          setLastError(error);
+
+          // Stop retrying on certain error types
+          if (error?.code === 'unavailable' || error?.code === 'permission-denied') {
+            console.warn(`ActivityCard: Stopping retries for page ${activity.pageId} due to ${error.code}`);
+            setFetchAttempts(maxAttempts); // Stop further attempts
+          }
         }
       };
 
-      fetchPageData();
+      // Only fetch if we haven't hit max attempts
+      if (fetchAttempts < maxAttempts) {
+        fetchPageData();
+      }
     }
-  }, [activity?.pageId, user, activity?.activityType]);
+  }, [activity?.pageId, user, activity?.activityType, fetchAttempts]);
 
   // Use the reactive feature flag hook instead of manual Firestore check
   const subscriptionEnabled = useFeatureFlag('payments', user?.email, user?.uid);

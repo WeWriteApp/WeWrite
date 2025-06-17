@@ -6,8 +6,9 @@ import Head from "next/head";
 import PublicLayout from "../components/layout/PublicLayout";
 import { createPage } from "../firebase/database";
 // ReactGA removed - analytics now handled by UnifiedAnalyticsProvider
-import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
-import { CONTENT_EVENTS } from "../constants/analytics-events";
+// Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
+// import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
+// import { CONTENT_EVENTS } from "../constants/analytics-events";
 import { createReplyAttribution } from "../utils/linkUtils";
 import { AuthContext } from "../providers/AuthProvider";
 import PageHeader from "../components/pages/PageHeader";
@@ -72,7 +73,8 @@ export default function NewPage() {
   const searchParams = useSearchParams();
   const authContext = useContext(AuthContext);
   const user = authContext?.user;
-  const { trackPageCreationFlow, trackEditingFlow } = useWeWriteAnalytics();
+  // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
+  // const { trackPageCreationFlow, trackEditingFlow } = useWeWriteAnalytics();
   const { refreshState } = useSyncQueue();
 
   // State that mimics SinglePageView
@@ -109,13 +111,14 @@ export default function NewPage() {
     const timer = setTimeout(() => {
       setIsInitializing(false);
 
+      // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
       // Track page creation started
-      trackPageCreationFlow.started({
-        is_reply: isReply,
-        is_daily_note: isDailyNote,
-        has_initial_content: !!(searchParams?.get('content') || searchParams?.get('initialContent')),
-        has_initial_title: !!searchParams?.get('title')
-      });
+      // trackPageCreationFlow.started({
+      //   is_reply: isReply,
+      //   is_daily_note: isDailyNote,
+      //   has_initial_content: !!(searchParams?.get('content') || searchParams?.get('initialContent')),
+      //   has_initial_title: !!searchParams?.get('title')
+      // });
     }, 150); // Brief delay to ensure smooth rendering
 
     return () => clearTimeout(timer);
@@ -333,13 +336,14 @@ export default function NewPage() {
         finalContent = [{ type: "paragraph", children: [{ text: "" }] }];
       }
 
+      // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
       // Track save attempt with content validation results
-      trackPageCreationFlow.saved(saveMethod, {
-        is_reply: isReply,
-        is_daily_note: isDailyNote,
-        has_title: !!(title && title.trim()),
-        has_content: hasActualContent
-      });
+      // trackPageCreationFlow.saved(saveMethod, {
+      //   is_reply: isReply,
+      //   is_daily_note: isDailyNote,
+      //   has_title: !!(title && title.trim()),
+      //   has_content: hasActualContent
+      // });
 
       // Get reply information from URL parameters if this is a reply
       let replyToId = null;
@@ -381,18 +385,19 @@ export default function NewPage() {
       if (useQueue) {
         const operationId = addToQueue('create', data);
 
+        // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
         // Track analytics (non-blocking) - now handled by UnifiedAnalyticsProvider
-        try {
-          trackPageCreationFlow.completed(operationId, {
-            label: title,
-            is_reply: !!isReply,
-            is_daily_note: isDailyNote,
-            queued: true,
-            save_method: saveMethod
-          });
-        } catch (analyticsError) {
-          console.error('Analytics tracking failed (non-fatal):', analyticsError);
-        }
+        // try {
+        //   trackPageCreationFlow.completed(operationId, {
+        //     label: title,
+        //     is_reply: !!isReply,
+        //     is_daily_note: isDailyNote,
+        //     queued: true,
+        //     save_method: saveMethod
+        //   });
+        // } catch (analyticsError) {
+        //   console.error('Analytics tracking failed (non-fatal):', analyticsError);
+        // }
 
         setHasContentChanged(false);
         setHasTitleChanged(false);
@@ -431,18 +436,19 @@ export default function NewPage() {
 
         if (res) {
 
+          // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
           // Track analytics (non-blocking) - now handled by UnifiedAnalyticsProvider
-          try {
-            trackPageCreationFlow.completed(res, {
-              label: title,
-              is_reply: !!isReply,
-              is_daily_note: isDailyNote,
-              queued: false,
-              save_method: saveMethod
-            });
-          } catch (analyticsError) {
-            console.error('Analytics tracking failed (non-fatal):', analyticsError);
-          }
+          // try {
+          //   trackPageCreationFlow.completed(res, {
+          //     label: title,
+          //     is_reply: !!isReply,
+          //     is_daily_note: isDailyNote,
+          //     queued: false,
+          //     save_method: saveMethod
+          //   });
+          // } catch (analyticsError) {
+          //   console.error('Analytics tracking failed (non-fatal):', analyticsError);
+          // }
 
           setHasContentChanged(false);
           setHasTitleChanged(false);
@@ -506,14 +512,15 @@ export default function NewPage() {
       }
     }
 
+    // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
     // Track abandonment if there are unsaved changes
     if (hasUnsavedChanges) {
-      trackPageCreationFlow.abandoned({
-        is_reply: isReply,
-        is_daily_note: isDailyNote,
-        has_title: !!(title && title.trim()),
-        has_content: hasContentChanged
-      });
+      // trackPageCreationFlow.abandoned({
+      //   is_reply: isReply,
+      //   is_daily_note: isDailyNote,
+      //   has_title: !!(title && title.trim()),
+      //   has_content: hasContentChanged
+      // });
       handleNavigation(backUrl);
     } else {
       router.push(backUrl);

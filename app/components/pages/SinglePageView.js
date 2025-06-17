@@ -135,7 +135,8 @@ function SinglePageView({ params, initialEditMode = false }) {
   const router = useRouter();
   const contentRef = useRef(null);
   const { logError } = useLogging();
-  const { trackEditingFlow, trackContentEvent, events } = useWeWriteAnalytics();
+  // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
+  // const { trackEditingFlow, trackContentEvent, events } = useWeWriteAnalytics();
 
   // Use confirmation modal hook for delete functionality
   const { confirmationState, confirmDelete, closeConfirmation } = useConfirmation();
@@ -211,14 +212,15 @@ function SinglePageView({ params, initialEditMode = false }) {
     setIsSaving(true);
     setError(null);
 
+    // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
     // Track save attempt
-    trackEditingFlow.saved(params.id, saveMethod, {
-      page_title: title,
-      has_content_changes: hasContentChanged,
-      has_title_changes: hasTitleChanged,
-      has_visibility_changes: hasVisibilityChanged,
-      has_location_changes: hasLocationChanged
-    });
+    // trackEditingFlow.saved(params.id, saveMethod, {
+    //   page_title: title,
+    //   has_content_changes: hasContentChanged,
+    //   has_title_changes: hasTitleChanged,
+    //   has_visibility_changes: hasVisibilityChanged,
+    //   has_location_changes: hasLocationChanged
+    // });
 
     try {
       // Use the provided content or fall back to current editor content
@@ -335,15 +337,16 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   // Handle cancel action
   const handleCancel = () => {
+    // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
     // Track cancellation if there were unsaved changes
     if (hasContentChanged || hasTitleChanged || hasVisibilityChanged || hasLocationChanged) {
-      trackEditingFlow.cancelled(params.id, {
-        page_title: title,
-        had_content_changes: hasContentChanged,
-        had_title_changes: hasTitleChanged,
-        had_visibility_changes: hasVisibilityChanged,
-        had_location_changes: hasLocationChanged
-      });
+      // trackEditingFlow.cancelled(params.id, {
+      //   page_title: title,
+      //   had_content_changes: hasContentChanged,
+      //   had_title_changes: hasTitleChanged,
+      //   had_visibility_changes: hasVisibilityChanged,
+      //   had_location_changes: hasLocationChanged
+      // });
     }
 
     handleSetIsEditing(false);
@@ -359,13 +362,14 @@ function SinglePageView({ params, initialEditMode = false }) {
     setIsEditing(editing);
     if (editing && position) {
       setClickPosition(position);
+      // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
       // Track edit mode entry
-      trackEditingFlow.started(params.id, {
-        page_title: page?.title,
-        is_public: page?.isPublic,
-        has_group: !!page?.groupId,
-        click_position: position ? 'click' : 'keyboard'
-      });
+      // trackEditingFlow.started(params.id, {
+      //   page_title: page?.title,
+      //   is_public: page?.isPublic,
+      //   has_group: !!page?.groupId,
+      //   click_position: position ? 'click' : 'keyboard'
+      // });
     } else if (!editing) {
       setClickPosition(null); // Clear position when exiting edit mode
     }
@@ -396,13 +400,14 @@ function SinglePageView({ params, initialEditMode = false }) {
         // This prevents 404 errors and ensures proper cleanup
         await deletePage(page.id);
 
+        // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
         // Track successful deletion
-        trackContentEvent(events.PAGE_DELETED, {
-          page_id: page.id,
-          page_title: page.title,
-          was_public: page.isPublic,
-          had_group: !!page.groupId
-        });
+        // trackContentEvent(events.PAGE_DELETED, {
+        //   page_id: page.id,
+        //   page_title: page.title,
+        //   was_public: page.isPublic,
+        //   had_group: !!page.groupId
+        // });
 
         // Show success message
         toast.success("Page deleted successfully");
@@ -550,26 +555,27 @@ function SinglePageView({ params, initialEditMode = false }) {
       recordPageView(params.id, user?.uid);
       console.log('Recording page view for', params.id);
 
+      // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
       // Track the page view in Google Analytics with our improved tracking
       // This will wait until the page title and username/group are fully loaded
-      if (page.title) {
-        // If we already have a title, use it as a starting point
-        let initialTitle;
+      // if (page.title) {
+      //   // If we already have a title, use it as a starting point
+      //   let initialTitle;
 
-        // Format title based on whether the page belongs to a group
-        if (page.groupId && page.groupName) {
-          initialTitle = `Page: ${page.title} in ${page.groupName}`;
-        } else if (page.username) {
-          initialTitle = `Page: ${page.title} by ${page.username}`;
-        } else {
-          initialTitle = `Page: ${page.title}`;
-        }
+      //   // Format title based on whether the page belongs to a group
+      //   if (page.groupId && page.groupName) {
+      //     initialTitle = `Page: ${page.title} in ${page.groupName}`;
+      //   } else if (page.username) {
+      //     initialTitle = `Page: ${page.title} by ${page.username}`;
+      //   } else {
+      //     initialTitle = `Page: ${page.title}`;
+      //   }
 
-        trackPageViewWhenReady(params.id, initialTitle);
-      } else {
-        // If we don't have a title yet, let the tracking function handle it
-        trackPageViewWhenReady(params.id);
-      }
+      //   trackPageViewWhenReady(params.id, initialTitle);
+      // } else {
+      //   // If we don't have a title yet, let the tracking function handle it
+      //   trackPageViewWhenReady(params.id);
+      // }
     }
   }, [params.id, isLoading, page, isPublic, user?.uid]);
 

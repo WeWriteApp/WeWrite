@@ -19,6 +19,7 @@ import { Search } from "lucide-react";
 import { Input } from "../ui/input";
 import { ClearableInput } from "../ui/clearable-input";
 import { PillLink } from "../utils/PillLink";
+import { shouldAllowRequest } from "../../utils/requestThrottle";
 
 // Simple Loader component
 const Loader = () => {
@@ -66,6 +67,7 @@ const FilteredSearchResults = forwardRef(({
   // Refs
   const searchInputRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const lastRequestRef = useRef(null); // Track last request to prevent duplicates
 
   // Determine if we're in link editor mode
   const isLinkEditor = !!setDisplayText;
@@ -79,14 +81,31 @@ const FilteredSearchResults = forwardRef(({
     setIsSearching(false);
   }, []);
 
-  // Fetch filtered results based on active filter
+  // Fetch comprehensive search results and apply filtering client-side
   const fetchFilteredResults = useCallback(async (searchTerm, filter, searchMode = false) => {
     if (!user) {
       console.log('[FilteredSearchResults] No user, skipping fetch');
       return;
     }
 
-    console.log('[FilteredSearchResults] Fetching results for filter:', filter, 'searchTerm:', searchTerm, 'searchMode:', searchMode, 'userId:', user.uid);
+    // Check request throttling to prevent excessive API calls
+    const requestType = `search:${filter}:${searchMode ? 'search' : 'filter'}`;
+    if (!shouldAllowRequest(requestType)) {
+      console.warn('[FilteredSearchResults] Request throttled:', requestType);
+      return;
+    }
+
+    // Create request signature for deduplication
+    const requestSignature = `${searchTerm}-${filter}-${searchMode}-${user.uid}`;
+
+    // Skip if this exact request is already in progress
+    if (lastRequestRef.current === requestSignature) {
+      console.log('[FilteredSearchResults] Skipping duplicate request:', requestSignature);
+      return;
+    }
+
+    lastRequestRef.current = requestSignature;
+    console.log('[FilteredSearchResults] Fetching comprehensive results for filter:', filter, 'searchTerm:', searchTerm, 'searchMode:', searchMode, 'userId:', user.uid);
 
     // Cancel any ongoing request
     if (abortControllerRef.current) {
@@ -100,18 +119,12 @@ const FilteredSearchResults = forwardRef(({
       abortControllerRef.current = new AbortController();
 
       const encodedSearch = encodeURIComponent(searchTerm.trim());
-      let queryUrl;
 
-      // In search mode, use general search API instead of filtered APIs
-      if (searchMode && searchTerm.trim()) {
-        queryUrl = `/api/search?searchTerm=${encodedSearch}&userId=${user.uid}`;
-      } else if (filter === 'recent') {
-        queryUrl = `/api/recent-pages?userId=${user.uid}&searchTerm=${encodedSearch}&limit=20`;
-      } else {
-        queryUrl = `/api/my-pages?userId=${user.uid}&searchTerm=${encodedSearch}&limit=20`;
-      }
+      // Always use the comprehensive search API to get all available pages
+      // This ensures we don't miss any pages due to artificial limits
+      const queryUrl = `/api/search?searchTerm=${encodedSearch}&userId=${user.uid}`;
 
-      console.log('[FilteredSearchResults] Making request to:', queryUrl);
+      console.log('[FilteredSearchResults] Making comprehensive search request to:', queryUrl);
 
       const response = await fetch(queryUrl, {
         signal: abortControllerRef.current.signal
@@ -128,10 +141,35 @@ const FilteredSearchResults = forwardRef(({
       const data = await response.json();
       console.log('[FilteredSearchResults] Response data:', data);
 
-      // Handle different response formats - general search API returns {pages, users}, filtered APIs return {pages}
-      const pages = data.pages || [];
-      setPages(pages);
-      console.log('[FilteredSearchResults] Set pages:', pages.length, 'pages');
+      // Get all pages from the comprehensive search
+      let allPages = data.pages || [];
+      console.log('[FilteredSearchResults] Total pages from search:', allPages.length);
+
+      // Apply client-side filtering based on the active filter
+      let filteredPages = allPages;
+
+      if (!searchMode && filter === 'my-pages') {
+        // Filter to only show user's own pages
+        filteredPages = allPages.filter(page => page.userId === user.uid);
+        console.log('[FilteredSearchResults] Filtered to my pages:', filteredPages.length);
+      } else if (!searchMode && filter === 'recent') {
+        // For recent filter, we could implement recent page logic here
+        // For now, show all pages but prioritize user's own pages
+        filteredPages = allPages.sort((a, b) => {
+          // Prioritize user's own pages
+          if (a.userId === user.uid && b.userId !== user.uid) return -1;
+          if (b.userId === user.uid && a.userId !== user.uid) return 1;
+
+          // Then sort by last modified
+          const aTime = new Date(a.lastModified || 0).getTime();
+          const bTime = new Date(b.lastModified || 0).getTime();
+          return bTime - aTime;
+        });
+        console.log('[FilteredSearchResults] Sorted for recent filter:', filteredPages.length);
+      }
+
+      setPages(filteredPages);
+      console.log('[FilteredSearchResults] Set filtered pages:', filteredPages.length, 'pages');
 
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -142,23 +180,29 @@ const FilteredSearchResults = forwardRef(({
       resetSearchResults();
     } finally {
       setIsSearching(false);
+      // Clear the request signature when request completes
+      if (lastRequestRef.current === requestSignature) {
+        lastRequestRef.current = null;
+      }
     }
   }, [user, resetSearchResults]);
 
-  // Debounced search function
+  // Debounced search function with increased delay to reduce API requests
   const debouncedSearch = useCallback(
     debounce(async (searchTerm, searchMode = false) => {
+      if (!user) {
+        return;
+      }
+
+      // In link editor mode, always show results (even with empty search)
+      // In regular mode, only search if there's a search term
       if (!searchTerm && !isLinkEditor) {
         resetSearchResults();
         return;
       }
 
-      if (!user) {
-        return;
-      }
-
       await fetchFilteredResults(searchTerm, activeFilter, searchMode);
-    }, 500),
+    }, 1200), // Increased from 800ms to 1200ms to further reduce API requests
     [user, isLinkEditor, resetSearchResults, fetchFilteredResults, activeFilter]
   );
 
@@ -207,12 +251,15 @@ const FilteredSearchResults = forwardRef(({
   const handleFilterChange = useCallback((filter) => {
     setActiveFilter(filter);
     setIsSearchMode(false); // Exit search mode when selecting a filter
-    // Re-run search with new filter
-    if (search.trim().length >= characterCount || isLinkEditor) {
+
+    // Always re-run comprehensive search with new filter
+    // This ensures we get all available pages and apply filtering client-side
+    if (isLinkEditor) {
+      // In link editor mode, always show comprehensive results
       fetchFilteredResults(search, filter, false);
-    } else if (isLinkEditor) {
-      // In link editor mode, always show results even without search
-      fetchFilteredResults('', filter, false);
+    } else if (search.trim().length >= characterCount) {
+      // In regular mode, only search if we have enough characters
+      fetchFilteredResults(search, filter, false);
     }
   }, [search, characterCount, isLinkEditor, fetchFilteredResults]);
 
@@ -258,8 +305,13 @@ const FilteredSearchResults = forwardRef(({
     if (initialSearch) {
       debouncedSearch(initialSearch);
     } else if (isLinkEditor) {
-      // In link editor mode, show initial results even without search
-      fetchFilteredResults('', activeFilter);
+      // In link editor mode, delay the initial search to prevent excessive API requests
+      // This prevents the search from firing immediately when the modal opens
+      const timer = setTimeout(() => {
+        fetchFilteredResults('', activeFilter, false);
+      }, 800); // Increased delay to prevent immediate API call and reduce server load
+
+      return () => clearTimeout(timer);
     }
   }, [initialSearch, debouncedSearch, isLinkEditor, fetchFilteredResults, activeFilter, user]);
 
@@ -352,7 +404,7 @@ const FilteredSearchResults = forwardRef(({
             onClick={() => handleFilterChange('recent')}
             className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
               activeFilter === 'recent' && !isSearchMode
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-primary text-white'
                 : 'bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -362,7 +414,7 @@ const FilteredSearchResults = forwardRef(({
             onClick={() => handleFilterChange('my-pages')}
             className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
               activeFilter === 'my-pages' && !isSearchMode
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-primary text-white'
                 : 'bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -372,7 +424,7 @@ const FilteredSearchResults = forwardRef(({
       )}
 
       {/* Search Results - fixed height for link editor to prevent layout shift */}
-      <div className={`space-y-1 transition-all ${isLinkEditor ? 'h-[280px]' : 'max-h-[40vh]'} overflow-y-auto ${
+      <div className={`space-y-1 transition-all ${isLinkEditor ? 'h-[320px]' : 'max-h-[40vh]'} overflow-y-auto ${
         (search.length >= characterCount || isLinkEditor) ? "opacity-100" : "opacity-0"
       }`}>
         {isSearching && (search.length >= characterCount || isLinkEditor) ? (

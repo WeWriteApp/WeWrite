@@ -7,6 +7,9 @@ import { useLineSettings, LINE_MODES } from '../../contexts/LineSettingsContext'
 import { Lock, ExternalLink, X } from "lucide-react";
 import FilteredSearchResults from '../search/FilteredSearchResults';
 import ParagraphNumberOverlay from './ParagraphNumberOverlay';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
+import { Switch } from '../ui/switch';
+import { Modal } from '../ui/modal';
 
 // Types
 interface EditorProps {
@@ -64,6 +67,23 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   const [isClient, setIsClient] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Tab and toggle state for link editor
+  const [activeTab, setActiveTab] = useState("page");
+  const [showCustomTextToggle, setShowCustomTextToggle] = useState(false);
+  const [externalUrl, setExternalUrl] = useState("");
+  const [showExternalCustomText, setShowExternalCustomText] = useState(false);
+  const [externalDisplayText, setExternalDisplayText] = useState("");
+
+  // State for editing existing links
+  const [editingLink, setEditingLink] = useState<{
+    element: HTMLElement;
+    type: 'page' | 'user' | 'external' | 'compound';
+    data: any;
+  } | null>(null);
+
+  // State for show author toggle (compound links)
+  const [showAuthorToggle, setShowAuthorToggle] = useState(false);
 
   // Refs for performance - avoid re-renders
   const editorRef = useRef<HTMLDivElement>(null);
@@ -420,6 +440,58 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     }
   }, [isClient]);
 
+  // Handle click events for link editing
+  const handleEditorClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isClient) return;
+
+    const target = e.target as HTMLElement;
+
+    // Check if clicked element is a link or inside a link
+    const linkElement = target.closest('[data-link-type]') as HTMLElement;
+
+    if (linkElement) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Extract link data from the element
+      const linkType = linkElement.getAttribute('data-link-type');
+      const linkData: any = {
+        text: linkElement.textContent || ''
+      };
+
+      // Check for compound links first
+      const compoundParent = linkElement.closest('.compound-link') as HTMLElement;
+      if (compoundParent) {
+        linkData.element = compoundParent;
+        linkData.type = 'compound';
+        linkData.pageId = compoundParent.getAttribute('data-page-id');
+        linkData.authorUsername = compoundParent.getAttribute('data-author');
+
+        // For compound links, get the page title from the page-link element
+        const pageLink = compoundParent.querySelector('.page-link');
+        if (pageLink) {
+          linkData.text = pageLink.textContent || '';
+        }
+      } else {
+        linkData.element = linkElement;
+
+        if (linkType === 'page') {
+          linkData.pageId = linkElement.getAttribute('data-id');
+          linkData.type = 'page';
+        } else if (linkType === 'user') {
+          linkData.userId = linkElement.getAttribute('data-id');
+          linkData.type = 'user';
+        } else if (linkType === 'external') {
+          linkData.url = linkElement.getAttribute('data-url');
+          linkData.type = 'external';
+        }
+      }
+
+      // Open link editor with pre-populated data
+      openLinkEditorForEdit(linkData);
+    }
+  }, [isClient]);
+
   // Handle blur events - ensure parent gets final content
   const handleBlur = useCallback(() => {
     if (!isClient || !editorRef.current) return;
@@ -514,28 +586,152 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     }
   }, [isClient, onKeyDown, saveSelection]);
 
+  // Function to open link editor for editing existing links
+  const openLinkEditorForEdit = useCallback((linkData: any) => {
+    setEditingLink(linkData);
+
+    // Pre-populate the form based on link type
+    if (linkData.type === 'external') {
+      setActiveTab('external');
+      setExternalUrl(linkData.url || '');
+      setExternalDisplayText(linkData.text || '');
+      setShowExternalCustomText(!!linkData.text && linkData.text !== linkData.url);
+      // Clear page-related fields
+      setLinkSearchText('');
+      setLinkDisplayText('');
+      setShowCustomTextToggle(false);
+    } else if (linkData.type === 'page' || linkData.type === 'user' || linkData.type === 'compound') {
+      setActiveTab('page');
+      setLinkDisplayText(linkData.text || '');
+      setShowCustomTextToggle(true); // Show custom text since we're editing
+
+      // Set show author toggle based on link type
+      setShowAuthorToggle(linkData.type === 'compound');
+
+      // For page links, try to pre-populate the search with the current page title
+      if (linkData.type === 'page' || linkData.type === 'compound') {
+        setLinkSearchText(linkData.text || '');
+      }
+
+      // Clear external fields
+      setExternalUrl('');
+      setExternalDisplayText('');
+      setShowExternalCustomText(false);
+    }
+
+    setShowLinkEditor(true);
+  }, []);
+
+  // Function to reset all link editor state
+  const resetLinkEditorState = useCallback(() => {
+    setEditingLink(null);
+    setLinkSearchText("");
+    setLinkDisplayText("");
+    setShowCustomTextToggle(false);
+    setShowAuthorToggle(false);
+    setExternalUrl("");
+    setExternalDisplayText("");
+    setShowExternalCustomText(false);
+  }, []);
+
+  // Handle external link creation
+  const handleExternalLinkCreate = useCallback(() => {
+    if (!editorRef.current || !externalUrl.trim()) return;
+
+    // Enhanced URL validation
+    let url = externalUrl.trim();
+
+    // Check if it's a valid URL pattern
+    const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+    if (!urlPattern.test(url)) {
+      // Basic validation failed, but still try to make it work
+      console.warn('URL validation failed for:', url);
+    }
+
+    // Add protocol if missing
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+
+    const displayText = showExternalCustomText && externalDisplayText.trim()
+      ? externalDisplayText.trim()
+      : url;
+
+    const linkHTML = `<span class="${pillStyleClasses} external-link" data-link-type="external" data-url="${url}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
+
+    if (editingLink) {
+      // Update existing link
+      editingLink.element.outerHTML = linkHTML;
+      setEditingLink(null);
+    } else {
+      // Create new link
+      if (selection) {
+        restoreSelection();
+        const range = window.getSelection()?.getRangeAt(0);
+        if (range) {
+          range.deleteContents();
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = linkHTML;
+          const linkElement = tempDiv.firstChild;
+          if (linkElement) {
+            range.insertNode(linkElement);
+            range.collapse(false);
+          }
+        }
+      } else {
+        editorRef.current.focus();
+        document.execCommand('insertHTML', false, linkHTML + '&nbsp;');
+      }
+    }
+
+    // Reset state and close modal
+    setExternalUrl("");
+    setExternalDisplayText("");
+    setShowExternalCustomText(false);
+    setShowLinkEditor(false);
+    handleContentChange();
+  }, [externalUrl, externalDisplayText, showExternalCustomText, pillStyleClasses, selection, restoreSelection, handleContentChange]);
+
   // Optimized link selection handling
   const handleLinkSelect = useCallback((item: any) => {
     if (!editorRef.current) return;
 
-    const displayText = linkDisplayText.trim() || item.title || item.username;
+    const displayText = (showCustomTextToggle && linkDisplayText.trim()) || item.title || item.username;
     let linkHTML = "";
 
     if (item.type === 'page' || item.id) {
-      linkHTML = `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${item.id}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
+      // Check if we should create a compound link (show author is enabled) or if we're editing a compound link
+      if (showAuthorToggle || (editingLink && editingLink.type === 'compound')) {
+        // Create compound link with author attribution
+        const authorUsername = item.username || item.authorUsername || 'Unknown Author';
+        linkHTML = `<span class="compound-link" data-page-id="${item.id}" data-author="${authorUsername}" contenteditable="false" style="user-select: none; cursor: pointer;">`;
+        linkHTML += `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${item.id}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
+        linkHTML += ` <span class="text-muted-foreground text-sm">by</span> `;
+        linkHTML += `<span class="${pillStyleClasses} user-link" data-link-type="user" data-id="${authorUsername}" contenteditable="false" style="user-select: none; cursor: pointer;">${authorUsername}</span>`;
+        linkHTML += `</span>`;
+      } else {
+        // Regular page link
+        linkHTML = `<span class="${pillStyleClasses} page-link" data-link-type="page" data-id="${item.id}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
+      }
     } else if (item.type === 'user') {
       linkHTML = `<span class="${pillStyleClasses} user-link" data-link-type="user" data-id="${item.id}" contenteditable="false" style="user-select: none; cursor: pointer;">${displayText}</span>`;
     }
 
-    // Insert the link at the current selection
-    if (selection) {
-      restoreSelection();
-      if (typeof document !== 'undefined' && document.execCommand) {
-        document.execCommand('insertHTML', false, linkHTML + '&nbsp;');
-      }
+    if (editingLink) {
+      // Update existing link
+      editingLink.element.outerHTML = linkHTML;
+      setEditingLink(null);
     } else {
-      // Fallback: append to end
-      editorRef.current.innerHTML += linkHTML + '&nbsp;';
+      // Create new link
+      if (selection) {
+        restoreSelection();
+        if (typeof document !== 'undefined' && document.execCommand) {
+          document.execCommand('insertHTML', false, linkHTML + '&nbsp;');
+        }
+      } else {
+        // Fallback: append to end
+        editorRef.current.innerHTML += linkHTML + '&nbsp;';
+      }
     }
 
     // Update content
@@ -548,7 +744,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
     setShowLinkEditor(false);
     return true;
-  }, [linkDisplayText, pillStyleClasses, selection, restoreSelection, handleContentChange]);
+  }, [linkDisplayText, pillStyleClasses, selection, restoreSelection, handleContentChange, editingLink, showAuthorToggle]);
 
   // Optimized link insertion for external API
   const insertLink = useCallback((linkData: any) => {
@@ -691,8 +887,15 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     insertLink,
     openLinkEditor: () => {
       saveSelection();
+      // Reset all link editor state
       setLinkSearchText("");
       setLinkDisplayText("");
+      setShowCustomTextToggle(false);
+      setShowAuthorToggle(false);
+      setExternalUrl("");
+      setExternalDisplayText("");
+      setShowExternalCustomText(false);
+      // Keep the last selected tab for better UX
       setShowLinkEditor(true);
       return true;
     },
@@ -724,6 +927,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
               onMouseUp={saveSelection}
               onKeyUp={saveSelection}
               onSelect={handleSelectionChange}
+              onClick={handleEditorClick}
               className={editorClassName}
               data-placeholder={placeholder}
               suppressContentEditableWarning={true}
@@ -751,46 +955,137 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         )}
       </div>
 
-      {/* Link Editor Modal - Rendered via portal at document body level */}
-      {isMounted && showLinkEditor && createPortal(
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" style={{ margin: 0 }}>
-          <div className="bg-background p-6 rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[85vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Insert Link</h3>
-              <button
-                onClick={() => setShowLinkEditor(false)}
-                className="p-1 hover:bg-muted rounded-md transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
+      {/* Link Editor Modal - Using consistent Modal component */}
+      {isMounted && (
+        <Modal
+          isOpen={showLinkEditor}
+          onClose={() => {
+            setShowLinkEditor(false);
+            resetLinkEditorState();
+          }}
+          title={editingLink ? "Edit Link" : "Insert Link"}
+          className="md:max-w-2xl md:h-[600px] h-full flex flex-col"
+          showCloseButton={true}
+        >
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Mobile: Add visual indicator for slide-up modal */}
+            <div className="md:hidden flex justify-center mb-4">
+              <div className="w-12 h-1 bg-muted-foreground/30 rounded-full"></div>
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">
-                Custom link text (optional)
-              </label>
-              <input
-                type="text"
-                value={linkDisplayText}
-                onChange={(e) => setLinkDisplayText(e.target.value)}
-                placeholder="Leave empty to use page title"
-                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+              <TabsList className="grid w-full grid-cols-2 mb-4 md:mb-4 mb-6">
+                <TabsTrigger value="page" className="py-3 md:py-2">WeWrite page</TabsTrigger>
+                <TabsTrigger value="external" className="py-3 md:py-2">External link</TabsTrigger>
+              </TabsList>
 
-            <div className="flex-1 overflow-hidden">
-              <FilteredSearchResults
-                onSelect={handleLinkSelect}
-                placeholder="Search for pages to link..."
-                setDisplayText={setLinkDisplayText}
-                displayText={linkDisplayText}
-                autoFocus={true}
-                className="h-full"
-              />
-            </div>
+              <TabsContent value="page" className="flex-1 flex flex-col mt-0 min-h-0">
+                {/* Show author toggle for compound links */}
+                <div className="flex items-center justify-between mb-6 md:mb-4">
+                  <label className="text-base md:text-sm font-medium">Show author</label>
+                  <Switch
+                    checked={showAuthorToggle}
+                    onCheckedChange={setShowAuthorToggle}
+                  />
+                </div>
+
+                {/* Custom text toggle for WeWrite pages */}
+                <div className="flex items-center justify-between mb-6 md:mb-4">
+                  <label className="text-base md:text-sm font-medium">Custom link text</label>
+                  <Switch
+                    checked={showCustomTextToggle}
+                    onCheckedChange={setShowCustomTextToggle}
+                  />
+                </div>
+
+                {/* Custom text input - only show when toggle is enabled */}
+                {showCustomTextToggle && (
+                  <div className="mb-6 md:mb-4">
+                    <input
+                      type="text"
+                      value={linkDisplayText}
+                      onChange={(e) => setLinkDisplayText(e.target.value)}
+                      placeholder="Enter custom link text"
+                      className="w-full px-4 py-3 md:px-3 md:py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base md:text-sm"
+                    />
+                  </div>
+                )}
+
+                {/* Search results with fixed height */}
+                <div className="flex-1 min-h-0">
+                  <FilteredSearchResults
+                    onSelect={handleLinkSelect}
+                    placeholder="Search for pages to link..."
+                    setDisplayText={setLinkDisplayText}
+                    displayText={linkDisplayText}
+                    autoFocus={activeTab === "page"}
+                    className="h-full"
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="external" className="flex-1 flex flex-col mt-0">
+                {/* URL input */}
+                <div className="mb-6 md:mb-4">
+                  <label className="block text-base md:text-sm font-medium mb-3 md:mb-2">URL</label>
+                  <input
+                    type="url"
+                    value={externalUrl}
+                    onChange={(e) => setExternalUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && externalUrl.trim()) {
+                        e.preventDefault();
+                        handleExternalLinkCreate();
+                      }
+                    }}
+                    placeholder="https://example.com"
+                    className="w-full px-4 py-3 md:px-3 md:py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base md:text-sm"
+                    autoFocus={activeTab === "external"}
+                  />
+                </div>
+
+                {/* Custom text toggle for external links */}
+                <div className="flex items-center justify-between mb-6 md:mb-4">
+                  <label className="text-base md:text-sm font-medium">Custom link text</label>
+                  <Switch
+                    checked={showExternalCustomText}
+                    onCheckedChange={setShowExternalCustomText}
+                  />
+                </div>
+
+                {/* Custom text input - only show when toggle is enabled */}
+                {showExternalCustomText && (
+                  <div className="mb-6 md:mb-4">
+                    <input
+                      type="text"
+                      value={externalDisplayText}
+                      onChange={(e) => setExternalDisplayText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && externalUrl.trim()) {
+                          e.preventDefault();
+                          handleExternalLinkCreate();
+                        }
+                      }}
+                      placeholder="Enter custom link text"
+                      className="w-full px-4 py-3 md:px-3 md:py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base md:text-sm"
+                    />
+                  </div>
+                )}
+
+                {/* Create button */}
+                <div className="mt-auto pt-6 md:pt-4">
+                  <button
+                    onClick={handleExternalLinkCreate}
+                    disabled={!externalUrl.trim()}
+                    className="w-full px-4 py-4 md:py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-base md:text-sm font-medium"
+                  >
+                    {editingLink ? "Update Link" : "Create Link"}
+                  </button>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
-        </div>,
-        document.body
+        </Modal>
       )}
     </div>
   );

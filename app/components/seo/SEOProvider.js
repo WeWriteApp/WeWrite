@@ -98,8 +98,9 @@ export function SEOProvider({ children, config = {} }) {
     // Run initialization
     initializeSEO();
 
-    // Set up intersection observer for performance monitoring
-    if (enablePerformanceMonitoring && 'IntersectionObserver' in window) {
+    // DISABLED: Performance monitoring analytics disabled to prevent duplicate tracking
+    // UnifiedAnalyticsProvider handles all analytics tracking
+    if (false && enablePerformanceMonitoring && 'IntersectionObserver' in window) {
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {

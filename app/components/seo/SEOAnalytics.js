@@ -62,7 +62,8 @@ export function SEOAnalytics({ showDebugInfo = false, enableRealTimeTracking = t
     fetchAnalytics();
   }, []);
 
-  if (!showDebugInfo && process.env.NODE_ENV === 'production') {
+  // Always hide the debugger - can be re-enabled by setting showDebugInfo to true
+  if (!showDebugInfo) {
     return null;
   }
 

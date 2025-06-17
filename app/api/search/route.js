@@ -239,10 +239,10 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
   try {
     console.log(`🔍 SIMPLIFIED SEARCH: "${searchTerm}" for user: ${userId}`);
 
-    // Handle empty search terms
-    if (!searchTerm || searchTerm.trim().length === 0) {
-      console.log('Empty search term, returning empty results');
-      return [];
+    // Handle empty search terms - return all available pages for browsing
+    const isEmptySearch = !searchTerm || searchTerm.trim().length === 0;
+    if (isEmptySearch) {
+      console.log('Empty search term, returning all available pages for browsing');
     }
 
     // Import Firestore modules
@@ -256,21 +256,19 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
 
     // STEP 1: Search user's own pages
     if (userId) {
-      // Use multiple queries to ensure comprehensive coverage of all pages
+      // Use simpler queries to avoid index requirements, filter deleted pages client-side
       const userQueries = [
-        // Recent pages by lastModified (exclude deleted)
+        // Recent pages by lastModified
         query(
           collection(db, 'pages'),
           where('userId', '==', filterByUserId || userId),
-          where('deleted', '!=', true),
           orderBy('lastModified', 'desc'),
           limit(3000)
         ),
-        // Older pages by createdAt to catch pages that might not have lastModified (exclude deleted)
+        // Older pages by createdAt to catch pages that might not have lastModified
         query(
           collection(db, 'pages'),
           where('userId', '==', filterByUserId || userId),
-          where('deleted', '!=', true),
           orderBy('createdAt', 'desc'),
           limit(1000)
         )
@@ -281,11 +279,17 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
       for (const userQuery of userQueries) {
         try {
           const userPagesSnapshot = await getDocs(userQuery);
-          console.log(`📄 Found ${userPagesSnapshot.size} user pages in query`);
+          console.log(`📄 Found ${userPagesSnapshot.size} user pages in query (before filtering deleted pages)`);
 
           userPagesSnapshot.forEach(doc => {
             if (!allUserPages.has(doc.id)) {
               const data = doc.data();
+
+              // Filter out soft-deleted pages client-side
+              if (data.deleted === true) {
+                return;
+              }
+
               const pageTitle = data.title || 'Untitled';
               const normalizedTitle = pageTitle.toLowerCase();
 
@@ -293,13 +297,25 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
               const pageContent = data.content || '';
               const normalizedContent = pageContent.toLowerCase();
 
-              // Enhanced search logic - check both title and content
-              const titleMatch = checkSearchMatch(normalizedTitle, searchTermLower);
-              const contentMatch = pageContent && checkSearchMatch(normalizedContent, searchTermLower);
-              const isMatch = titleMatch || contentMatch;
+              // Enhanced search logic - check both title and content, or include all if empty search
+              let isMatch = false;
+              if (isEmptySearch) {
+                // For empty search, include all pages
+                isMatch = true;
+              } else {
+                const titleMatch = checkSearchMatch(normalizedTitle, searchTermLower);
+                const contentMatch = pageContent && checkSearchMatch(normalizedContent, searchTermLower);
+                isMatch = titleMatch || contentMatch;
+              }
 
               if (isMatch) {
-                console.log(`✅ User page match: "${pageTitle}" matches "${searchTermLower}" (title: ${titleMatch}, content: ${contentMatch})`);
+                if (isEmptySearch) {
+                  console.log(`✅ User page included: "${pageTitle}" (empty search - showing all pages)`);
+                } else {
+                  const titleMatch = checkSearchMatch(normalizedTitle, searchTermLower);
+                  const contentMatch = pageContent && checkSearchMatch(normalizedContent, searchTermLower);
+                  console.log(`✅ User page match: "${pageTitle}" matches "${searchTermLower}" (title: ${titleMatch}, content: ${contentMatch})`);
+                }
                 allUserPages.set(doc.id, {
                   id: doc.id,
                   title: pageTitle,
@@ -311,7 +327,7 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
                   lastModified: data.lastModified,
                   createdAt: data.createdAt,
                   type: 'user',
-                  isContentMatch: contentMatch && !titleMatch
+                  isContentMatch: !isEmptySearch && pageContent && checkSearchMatch(normalizedContent, searchTermLower) && !checkSearchMatch(normalizedTitle, searchTermLower)
                 });
               }
             }
@@ -328,21 +344,19 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
 
     // STEP 2: Search public pages (if not filtering by specific user)
     if (!filterByUserId) {
-      // Use multiple comprehensive queries to ensure we find ALL relevant pages
+      // Use simpler queries to avoid index requirements, filter deleted pages client-side
       const publicQueries = [
-        // Recent pages by lastModified (exclude deleted)
+        // Recent pages by lastModified
         query(
           collection(db, 'pages'),
           where('isPublic', '==', true),
-          where('deleted', '!=', true),
           orderBy('lastModified', 'desc'),
           limit(2000)
         ),
-        // Older pages by createdAt to catch pages that might not have lastModified (exclude deleted)
+        // Older pages by createdAt to catch pages that might not have lastModified
         query(
           collection(db, 'pages'),
           where('isPublic', '==', true),
-          where('deleted', '!=', true),
           orderBy('createdAt', 'desc'),
           limit(1500)
         )
@@ -359,6 +373,11 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
             if (!allPublicPages.has(doc.id)) {
               const data = doc.data();
 
+              // Filter out soft-deleted pages client-side
+              if (data.deleted === true) {
+                return;
+              }
+
               // Skip user's own pages (already included above)
               if (data.userId === userId) {
                 return;
@@ -371,13 +390,25 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
               const pageContent = data.content || '';
               const normalizedContent = pageContent.toLowerCase();
 
-              // Enhanced search logic - check both title and content
-              const titleMatch = checkSearchMatch(normalizedTitle, searchTermLower);
-              const contentMatch = pageContent && checkSearchMatch(normalizedContent, searchTermLower);
-              const isMatch = titleMatch || contentMatch;
+              // Enhanced search logic - check both title and content, or include all if empty search
+              let isMatch = false;
+              if (isEmptySearch) {
+                // For empty search, include all pages
+                isMatch = true;
+              } else {
+                const titleMatch = checkSearchMatch(normalizedTitle, searchTermLower);
+                const contentMatch = pageContent && checkSearchMatch(normalizedContent, searchTermLower);
+                isMatch = titleMatch || contentMatch;
+              }
 
               if (isMatch) {
-                console.log(`✅ Public page match: "${pageTitle}" matches "${searchTermLower}" (title: ${titleMatch}, content: ${contentMatch})`);
+                if (isEmptySearch) {
+                  console.log(`✅ Public page included: "${pageTitle}" (empty search - showing all pages)`);
+                } else {
+                  const titleMatch = checkSearchMatch(normalizedTitle, searchTermLower);
+                  const contentMatch = pageContent && checkSearchMatch(normalizedContent, searchTermLower);
+                  console.log(`✅ Public page match: "${pageTitle}" matches "${searchTermLower}" (title: ${titleMatch}, content: ${contentMatch})`);
+                }
                 allPublicPages.set(doc.id, {
                   id: doc.id,
                   title: pageTitle,
@@ -389,7 +420,7 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
                   lastModified: data.lastModified,
                   createdAt: data.createdAt,
                   type: 'public',
-                  isContentMatch: contentMatch && !titleMatch
+                  isContentMatch: !isEmptySearch && pageContent && checkSearchMatch(normalizedContent, searchTermLower) && !checkSearchMatch(normalizedTitle, searchTermLower)
                 });
               }
             }
@@ -440,12 +471,23 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
       return result;
     }));
 
-    // Apply enhanced ranking to prioritize title matches
-    const { sortSearchResultsByScore } = await import('../../utils/searchUtils');
-    const rankedResults = sortSearchResultsByScore(resultsWithUsernames, searchTerm);
+    // Apply enhanced ranking to prioritize title matches (only for non-empty searches)
+    let finalResults;
+    if (isEmptySearch) {
+      // For empty searches, sort by lastModified (most recent first)
+      finalResults = resultsWithUsernames.sort((a, b) => {
+        const aTime = new Date(a.lastModified || 0).getTime();
+        const bTime = new Date(b.lastModified || 0).getTime();
+        return bTime - aTime;
+      });
+      console.log(`🎯 Results sorted by recency: ${finalResults.length}`);
+    } else {
+      const { sortSearchResultsByScore } = await import('../../utils/searchUtils');
+      finalResults = sortSearchResultsByScore(resultsWithUsernames, searchTerm);
+      console.log(`🎯 Results after ranking: ${finalResults.length}`);
+    }
 
-    console.log(`🎯 Results after ranking: ${rankedResults.length}`);
-    return rankedResults;
+    return finalResults;
 
   } catch (error) {
     console.error('❌ Error in simplified search:', error);
@@ -482,14 +524,45 @@ export async function GET(request) {
       timestamp: new Date().toISOString()
     });
 
-    // Additional validation
+    // Handle empty search terms - for link editor, we want to show all available pages
     if (!searchTerm || searchTerm.trim().length === 0) {
-      console.log('Empty search term provided, returning empty results');
-      return NextResponse.json({
-        pages: [],
-        users: [],
-        source: "empty_search_term"
-      }, { status: 200 });
+      console.log('Empty search term provided, returning all available pages for browsing');
+
+      // For unauthenticated users with empty search, return recent public pages
+      if (!userId) {
+        try {
+          const publicPages = await searchPagesInFirestore(null, '', [], null);
+          return NextResponse.json({
+            pages: publicPages || [],
+            users: [],
+            source: "empty_search_public_pages"
+          }, { status: 200 });
+        } catch (error) {
+          console.error('Error fetching public pages for empty search:', error);
+          return NextResponse.json({
+            pages: [],
+            users: [],
+            source: "empty_search_error"
+          }, { status: 200 });
+        }
+      }
+
+      // For authenticated users with empty search, return all their accessible pages
+      try {
+        const pages = await searchPagesInFirestore(userId, '', groupIds, filterByUserId);
+        return NextResponse.json({
+          pages: pages || [],
+          users: [],
+          source: "empty_search_all_pages"
+        }, { status: 200 });
+      } catch (error) {
+        console.error('Error fetching all pages for empty search:', error);
+        return NextResponse.json({
+          pages: [],
+          users: [],
+          source: "empty_search_error"
+        }, { status: 200 });
+      }
     }
 
     // CRITICAL FIX: Always use Firestore fallback for better reliability

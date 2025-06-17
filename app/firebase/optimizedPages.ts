@@ -458,7 +458,8 @@ export const createOptimizedPageListener = (
   
   // Set up real-time listener with throttling
   let lastUpdate = 0;
-  const throttleMs = 3000; // Throttle updates to max once per 3 seconds
+  const throttleMs = 5000; // Increased throttle to 5 seconds to reduce load
+  let unsubscribeFunction: (() => void) | null = null;
 
   // TEMPORARY: Use dynamic import like the working API - but this needs to be synchronous
   // For now, we'll need to handle this differently
@@ -467,14 +468,14 @@ export const createOptimizedPageListener = (
   // Get db instance asynchronously
   import('./database').then(({ db: dbInstance }) => {
     db = dbInstance;
-    setupListener();
+    unsubscribeFunction = setupListener();
   });
 
   const setupListener = () => {
-    if (!db) return;
+    if (!db) return null;
 
     const pageRef = doc(db, "pages", pageId);
-  
+
     const unsubscribe = onSnapshot(pageRef, (doc) => {
       const now = Date.now();
       if (now - lastUpdate < throttleMs) {
@@ -513,8 +514,13 @@ export const createOptimizedPageListener = (
     return unsubscribe;
   };
 
-  // Return a no-op unsubscribe function initially
-  return () => {};
+  // Return proper cleanup function
+  return () => {
+    if (unsubscribeFunction) {
+      unsubscribeFunction();
+      unsubscribeFunction = null;
+    }
+  };
 };
 
 /**

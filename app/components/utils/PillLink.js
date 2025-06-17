@@ -66,23 +66,40 @@ export const PillLink = forwardRef(({
   const pageId = href.split('/').pop();
 
   // Fetch page data for permission checking (only for page links)
+  // CIRCUIT BREAKER: Add error tracking to prevent infinite loops
+  const [fetchAttempts, setFetchAttempts] = useState(0);
+  const [lastError, setLastError] = useState(null);
+  const maxAttempts = 2; // Lower for PillLink since it's more frequent
+
   useEffect(() => {
-    if (isPageLinkType && pageId && user) {
+    if (isPageLinkType && pageId && user && fetchAttempts < maxAttempts) {
       const fetchPageData = async () => {
         try {
           const pageRef = doc(db, 'pages', pageId);
           const pageDoc = await getDoc(pageRef);
           if (pageDoc.exists()) {
             setPageData({ id: pageId, ...pageDoc.data() });
+            setLastError(null); // Clear error on success
           }
         } catch (error) {
           console.error('Error fetching page data for permissions:', error);
+          setFetchAttempts(prev => prev + 1);
+          setLastError(error);
+
+          // Stop retrying on certain error types
+          if (error?.code === 'unavailable' || error?.code === 'permission-denied') {
+            console.warn(`PillLink: Stopping retries for page ${pageId} due to ${error.code}`);
+            setFetchAttempts(maxAttempts); // Stop further attempts
+          }
         }
       };
 
-      fetchPageData();
+      // Only fetch if we haven't hit max attempts
+      if (fetchAttempts < maxAttempts) {
+        fetchPageData();
+      }
     }
-  }, [isPageLinkType, pageId, user]);
+  }, [isPageLinkType, pageId, user, fetchAttempts]);
 
   // Format byline based on whether the page belongs to a group or user
   let formattedByline = null;

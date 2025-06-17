@@ -367,7 +367,7 @@ export const createOptimizedSubscriptionListener = (
   
   // Set up real-time listener with throttling
   let lastUpdate = 0;
-  const throttleMs = 2000; // Throttle updates to max once per 2 seconds
+  const throttleMs = 5000; // Increased throttle to 5 seconds to reduce load
   
   const userSubRef = doc(db, "users", userId, "subscription", "current");
   
