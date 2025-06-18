@@ -39,6 +39,9 @@ export default function SubscriptionPage() {
   const [tokenBalance, setTokenBalance] = useState(null);
   const [processingCheckout, setProcessingCheckout] = useState(false);
   const [customAmount, setCustomAmount] = useState(CUSTOM_TIER_CONFIG.minAmount);
+  const [processingStartTime, setProcessingStartTime] = useState<number | null>(null);
+  const [showCancelOption, setShowCancelOption] = useState<boolean>(false);
+  const [processingTimeElapsed, setProcessingTimeElapsed] = useState<number>(0);
 
   // Custom modal hooks
   const { alertState, showError, closeAlert } = useAlert();
@@ -146,17 +149,96 @@ export default function SubscriptionPage() {
     };
   }, [user, router, searchParams]);
 
+  // Track processing time and show cancel option after 60 seconds
+  React.useEffect(() => {
+    if (currentSubscription && (currentSubscription.status === 'incomplete' || currentSubscription.status === 'pending')) {
+      if (!processingStartTime) {
+        setProcessingStartTime(Date.now());
+      }
+
+      const timer = setInterval(() => {
+        if (processingStartTime) {
+          const elapsed = Math.floor((Date.now() - processingStartTime) / 1000);
+          setProcessingTimeElapsed(elapsed);
+
+          // Show cancel option after 60 seconds
+          if (elapsed >= 60) {
+            setShowCancelOption(true);
+          }
+        }
+      }, 1000);
+
+      return () => clearInterval(timer);
+    } else {
+      // Reset when not processing
+      setProcessingStartTime(null);
+      setShowCancelOption(false);
+      setProcessingTimeElapsed(0);
+    }
+  }, [currentSubscription, processingStartTime]);
+
+  // Function to cancel stuck subscription
+  const cancelStuckSubscription = async () => {
+    if (!user || !currentSubscription) return;
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch('/api/subscription/cancel', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subscriptionId: currentSubscription.stripeSubscriptionId,
+          immediate: true
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Subscription Cancelled",
+          description: "Your stuck subscription has been cancelled. You can try creating a new one.",
+          duration: 5000,
+        });
+
+        // Refresh subscription data
+        await fetchSubscriptionData();
+      } else {
+        throw new Error(result.error || 'Failed to cancel subscription');
+      }
+    } catch (error) {
+      console.error('Error cancelling subscription:', error);
+      toast({
+        title: "Cancel Failed",
+        description: "Failed to cancel subscription. Please contact support.",
+        duration: 5000,
+      });
+    }
+  };
+
   // Function to sync subscription status from Stripe
   const syncSubscriptionStatus = async () => {
     if (!user) return;
 
+    console.log('[SYNC] Starting subscription status sync for user:', user.uid);
+
     try {
       const result = await SubscriptionService.syncSubscriptionStatus(user.uid);
+      console.log('[SYNC] Sync result:', result);
 
       if (result.success) {
         // Clear cache and fetch fresh data after sync
-        const { getOptimizedUserSubscription, clearSubscriptionCache } = await import('../../firebase/optimizedSubscription');
-        clearSubscriptionCache(user.uid); // Clear cache to ensure fresh data
+        try {
+          const { getOptimizedUserSubscription, clearSubscriptionCache } = await import('../../firebase/optimizedSubscription');
+          clearSubscriptionCache(user.uid); // Clear cache to ensure fresh data
+        } catch (cacheError) {
+          console.warn('Cache clearing failed, continuing with sync:', cacheError);
+        }
+
+        const { getOptimizedUserSubscription } = await import('../../firebase/optimizedSubscription');
         const subscriptionData = await getOptimizedUserSubscription(user.uid, {
           useCache: false,
           cacheTTL: 0
@@ -175,11 +257,17 @@ export default function SubscriptionPage() {
           startStatusPolling();
         }
       } else {
+        console.warn('[SYNC] Sync failed, falling back to polling:', result);
         // Fallback to polling if sync fails
         startStatusPolling();
       }
     } catch (error) {
       console.error('Error syncing subscription status:', error);
+      toast({
+        title: "Sync Error",
+        description: "Failed to check subscription status. Trying automatic refresh...",
+        duration: 3000,
+      });
       // Fallback to polling if sync fails
       startStatusPolling();
     }
@@ -200,8 +288,14 @@ export default function SubscriptionPage() {
         }
 
         // Clear cache and fetch fresh subscription data
-        const { getOptimizedUserSubscription, clearSubscriptionCache } = await import('../../firebase/optimizedSubscription');
-        clearSubscriptionCache(user.uid); // Clear cache to ensure fresh data
+        try {
+          const { clearSubscriptionCache } = await import('../../firebase/optimizedSubscription');
+          clearSubscriptionCache(user.uid); // Clear cache to ensure fresh data
+        } catch (cacheError) {
+          console.warn('Cache clearing failed during polling, continuing:', cacheError);
+        }
+
+        const { getOptimizedUserSubscription } = await import('../../firebase/optimizedSubscription');
         const subscriptionData = await getOptimizedUserSubscription(user.uid, {
           useCache: false,
           cacheTTL: 0
@@ -330,6 +424,15 @@ export default function SubscriptionPage() {
                       {currentSubscription.status === 'active' && (
                         <span className="text-green-500 ml-2 font-medium">Active</span>
                       )}
+                      {(currentSubscription.status === 'incomplete' || currentSubscription.status === 'pending') && (
+                        <span className="text-yellow-500 ml-2 font-medium">Processing</span>
+                      )}
+                      {currentSubscription.status === 'past_due' && (
+                        <span className="text-red-500 ml-2 font-medium">Payment Failed</span>
+                      )}
+                      {currentSubscription.status === 'canceled' && (
+                        <span className="text-gray-500 ml-2 font-medium">Canceled</span>
+                      )}
                       {currentSubscription.status === 'canceled' && (
                         <span className="text-orange-500 ml-2 font-medium">Canceled</span>
                       )}
@@ -405,8 +508,52 @@ export default function SubscriptionPage() {
               </div>
             )}
 
-            {/* Only show tier selection if no active subscription */}
-            {(!currentSubscription || currentSubscription.status !== 'active') && (
+            {/* Show different UI based on subscription status */}
+            {currentSubscription && (currentSubscription.status === 'incomplete' || currentSubscription.status === 'pending') ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
+                <h3 className="text-lg font-medium mb-2">Processing Your Subscription</h3>
+                <p className="text-muted-foreground mb-4">
+                  Your payment is being processed. This usually takes a few moments.
+                </p>
+
+                {/* Processing timer */}
+                {processingTimeElapsed > 0 && (
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Processing for {Math.floor(processingTimeElapsed / 60)}:{(processingTimeElapsed % 60).toString().padStart(2, '0')}
+                  </p>
+                )}
+
+                <div className="space-y-3">
+                  <div className="flex justify-center gap-2">
+                    <Button
+                      onClick={syncSubscriptionStatus}
+                      variant="outline"
+                    >
+                      Check Status
+                    </Button>
+
+                    {/* Show cancel option after 60 seconds */}
+                    {showCancelOption && (
+                      <Button
+                        onClick={cancelStuckSubscription}
+                        variant="destructive"
+                        className="ml-2"
+                      >
+                        Cancel Subscription
+                      </Button>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    {showCancelOption
+                      ? "If your subscription is stuck, you can cancel it and try again."
+                      : "If this persists, please contact support or try refreshing the page."
+                    }
+                  </p>
+                </div>
+              </div>
+            ) : (!currentSubscription || currentSubscription.status !== 'active') && (
               <div>
                 <SubscriptionTierCarousel
                   selectedTier={selectedTier}
@@ -450,6 +597,7 @@ export default function SubscriptionPage() {
                   )}
                 </div>
               </div>
+            )}
             )}
           </>
         )}

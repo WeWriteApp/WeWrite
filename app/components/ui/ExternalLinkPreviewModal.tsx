@@ -137,7 +137,7 @@ export function ExternalLinkPreviewModal({
           {/* Compact Modal Content */}
           <motion.div
             className={cn(
-              "relative bg-background border rounded-lg shadow-lg max-w-md w-full mx-4",
+              "relative bg-background border-theme-strong rounded-lg shadow-lg max-w-md w-full mx-4",
               "max-h-[80vh] overflow-y-auto",
               className
             )}
@@ -148,7 +148,7 @@ export function ExternalLinkPreviewModal({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center justify-between p-4 border-b border-theme-medium">
               <div className="flex items-center gap-2">
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
                 <h3 className="text-lg font-semibold">External Link</h3>
@@ -219,7 +219,7 @@ export function ExternalLinkPreviewModal({
             </div>
 
             {/* Footer */}
-            <div className="flex justify-end gap-3 p-4 border-t">
+            <div className="flex justify-end gap-3 p-4 border-t border-theme-medium">
               <Button variant="outline" onClick={onClose}>
                 Back
               </Button>

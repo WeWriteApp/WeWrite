@@ -44,6 +44,10 @@ export async function POST(request: NextRequest) {
 
     // Handle different event types
     switch (event.type) {
+      case 'checkout.session.completed':
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
+
       case 'customer.subscription.created':
         await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
         break;
@@ -86,6 +90,35 @@ export async function POST(request: NextRequest) {
   }
 }
 
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  try {
+    // Only handle subscription mode sessions
+    if (session.mode !== 'subscription' || !session.subscription) {
+      return;
+    }
+
+    const userId = session.metadata?.firebaseUID;
+    if (!userId) {
+      console.error('No Firebase UID in checkout session metadata:', session.id);
+      return;
+    }
+
+    console.log(`[SUBSCRIPTION WEBHOOK] Checkout session completed for user ${userId}, session ${session.id}`);
+
+    // Retrieve the subscription to get the latest status
+    const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+
+    // Update subscription with the latest data from Stripe
+    await handleSubscriptionUpdated(subscription);
+
+    console.log(`[SUBSCRIPTION WEBHOOK] Processed checkout completion for user ${userId}, subscription status: ${subscription.status}`);
+
+  } catch (error) {
+    console.error('[SUBSCRIPTION WEBHOOK] Error handling checkout session completed:', error);
+    throw error;
+  }
+}
+
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   try {
     const userId = subscription.metadata.firebaseUID;
@@ -93,6 +126,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       console.error('No Firebase UID in subscription metadata:', subscription.id);
       return;
     }
+
+    console.log(`[SUBSCRIPTION WEBHOOK] Processing subscription update for user ${userId}, subscription ${subscription.id}, status: ${subscription.status}`);
 
     const price = subscription.items.data[0].price;
     const amount = price.unit_amount ? price.unit_amount / 100 : 0;
@@ -133,11 +168,15 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     // 1. Always update from 'incomplete' to any Stripe status
     // 2. Don't overwrite 'active' with 'incomplete' (race condition protection)
     // 3. Allow other valid status transitions
-    if (existingData?.status === 'active' && subscription.status === 'incomplete') {
+    const currentStatus = existingData?.status;
+    const newStatus = subscription.status;
+
+    if (currentStatus === 'active' && newStatus === 'incomplete') {
+      console.log(`[SUBSCRIPTION WEBHOOK] Preventing status downgrade from 'active' to 'incomplete' for user ${userId}`);
       subscriptionData.status = 'active';
     } else {
-      // Normal status update
-      subscriptionData.status = subscription.status;
+      console.log(`[SUBSCRIPTION WEBHOOK] Status transition for user ${userId}: '${currentStatus}' -> '${newStatus}'`);
+      subscriptionData.status = newStatus;
     }
 
     if (subscriptionDoc.exists()) {
@@ -156,6 +195,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     if (subscription.status === 'active') {
       await TokenService.updateMonthlyTokenAllocation(userId, amount);
     }
+
+    console.log(`[SUBSCRIPTION WEBHOOK] Successfully updated subscription for user ${userId}, final status: ${subscriptionData.status}`);
 
   } catch (error) {
     console.error('Error handling subscription updated:', error);

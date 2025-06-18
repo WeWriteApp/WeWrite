@@ -190,6 +190,12 @@ export const PillLink = forwardRef(({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation(); // Prevent event bubbling to parent containers
+
+            // Remove focus from the clicked element to prevent focus ring on page
+            if (e.target && typeof e.target.blur === 'function') {
+              e.target.blur();
+            }
+
             setShowExternalLinkModal(true);
           }}
           className={baseStyles}
@@ -228,6 +234,11 @@ export const PillLink = forwardRef(({
         if (href && href !== '#') {
           e.preventDefault(); // Prevent default to handle navigation manually
           e.stopPropagation(); // CRITICAL: Stop event bubbling to prevent edit mode activation
+
+          // Remove focus from the clicked element to prevent focus ring on page
+          if (e.target && typeof e.target.blur === 'function') {
+            e.target.blur();
+          }
 
           // Track link click
           trackInteractionEvent(events.INTERNAL_LINK_CLICKED, {

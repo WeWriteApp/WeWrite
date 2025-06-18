@@ -10,7 +10,7 @@ import { useFeatureFlag } from '../../utils/feature-flags';
 import { listenToUserSubscription } from '../../firebase/subscription';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { getSubscriptionStatusInfo } from '../../utils/subscriptionStatus';
+import { getSubscriptionStatusInfo, getSubscriptionGuidanceMessage, getSubscriptionActionText } from '../../utils/subscriptionStatus';
 
 interface Subscription {
   id: string;
@@ -205,12 +205,32 @@ export function SubscriptionOverview() {
             </div>
 
             {/* Status Alerts */}
+            {subscription.status === 'incomplete' && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Payment Required</AlertTitle>
+                <AlertDescription>
+                  {getSubscriptionGuidanceMessage(subscription.status)}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {subscription.status === 'pending' && (
+              <Alert>
+                <Clock className="h-4 w-4" />
+                <AlertTitle>Processing Payment</AlertTitle>
+                <AlertDescription>
+                  {getSubscriptionGuidanceMessage(subscription.status)}
+                </AlertDescription>
+              </Alert>
+            )}
+
             {subscription.status === 'past_due' && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Payment Issue</AlertTitle>
                 <AlertDescription>
-                  Your subscription payment failed. Please update your payment method to continue your subscription.
+                  {getSubscriptionGuidanceMessage(subscription.status)}
                 </AlertDescription>
               </Alert>
             )}
@@ -220,7 +240,7 @@ export function SubscriptionOverview() {
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Subscription Canceled</AlertTitle>
                 <AlertDescription>
-                  Your subscription has been canceled. You can reactivate it at any time.
+                  {getSubscriptionGuidanceMessage(subscription.status)}
                 </AlertDescription>
               </Alert>
             )}

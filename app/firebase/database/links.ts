@@ -9,9 +9,15 @@ export const extractLinksFromNodes = (nodes: SlateContent[]): LinkData[] => {
   const extractFromNode = (node: any) => {
     // Check if this node is a link
     if (node.type === 'link' || node.url || node.href) {
+      // Extract text from children if available
+      let linkText = node.text || node.displayText || '';
+      if (!linkText && node.children && Array.isArray(node.children)) {
+        linkText = node.children.map(child => child.text || '').join('');
+      }
+
       const linkData: LinkData = {
         url: node.url || node.href || '',
-        text: node.text || node.displayText || '',
+        text: linkText,
         type: 'external'
       };
 
@@ -22,9 +28,13 @@ export const extractLinksFromNodes = (nodes: SlateContent[]): LinkData[] => {
         const pageIdMatch = linkData.url.match(/\/pages\/([^\/\?#]+)/);
         if (pageIdMatch) {
           linkData.pageId = pageIdMatch[1];
-        } else if (linkData.url.startsWith('/') && !linkData.url.includes('/')) {
+        } else if (linkData.url.startsWith('/') && linkData.url.length > 1) {
           // Handle direct page ID links like "/pageId"
-          linkData.pageId = linkData.url.substring(1);
+          const directPageId = linkData.url.substring(1);
+          // Only treat as page ID if it doesn't contain additional slashes (not a path)
+          if (!directPageId.includes('/')) {
+            linkData.pageId = directPageId;
+          }
         }
       }
 
@@ -132,6 +142,12 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
         // Extract links from the page content
         const links = extractLinksFromNodes(contentNodes);
 
+        // Debug logging for the first few pages
+        if (backlinks.length < 3) {
+          console.log(`[DEBUG] Page ${doc.id} (${data.title}) has ${links.length} links:`,
+            links.map(l => ({ url: l.url, type: l.type, pageId: l.pageId })));
+        }
+
         // Check if any link points to our target page
         const hasLinkToTarget = links.some(link => {
           // Check for page links that match our target
@@ -139,16 +155,29 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
             return true;
           }
 
-          // Check for URL-based links that match our target (both 'page' and 'internal' types)
-          if ((link.type === 'page' || link.type === 'internal') && link.url) {
-            const linkPageId = link.url.replace('/pages/', '').replace('/', '');
-            return linkPageId === pageId;
+          // Check for URL-based links that match our target
+          if (link.url) {
+            // Handle /pages/pageId format
+            if (link.url.startsWith('/pages/')) {
+              const urlPageId = link.url.replace('/pages/', '').split(/[\/\?#]/)[0];
+              return urlPageId === pageId;
+            }
+
+            // Handle /pageId format (direct page links)
+            if (link.url.startsWith('/') && link.url.length > 1) {
+              const urlPageId = link.url.substring(1).split(/[\/\?#]/)[0];
+              // Only match if it's a simple page ID (no additional path segments)
+              if (!urlPageId.includes('/') && urlPageId === pageId) {
+                return true;
+              }
+            }
           }
 
           return false;
         });
 
         if (hasLinkToTarget) {
+          console.log(`[DEBUG] Found backlink: Page ${doc.id} (${data.title}) links to ${pageId}`);
           backlinks.push({
             id: doc.id,
             title: data.title || 'Untitled',

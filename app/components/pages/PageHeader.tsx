@@ -123,6 +123,20 @@ export default function PageHeader({
   // Date formatting context
   const { formatDateString } = useDateFormat();
 
+  // Calculate header positioning width - should match Header.tsx and SidebarLayout.tsx
+  const headerSidebarWidth = React.useMemo(() => {
+    // Header should only respond to persistent expanded state, not hover state
+    // When expanded: always use full width (256px) regardless of hover
+    // When collapsed: always use collapsed width (64px) regardless of hover
+    if (isExpanded) {
+      return sidebarWidth; // Use full expanded width (256px)
+    } else if (sidebarWidth > 0) {
+      return 64; // Use collapsed width (64px) for collapsed state
+    } else {
+      return 0; // No sidebar (user not authenticated)
+    }
+  }, [isExpanded, sidebarWidth]);
+
   // Daily note navigation state
   const [isNavigating, setIsNavigating] = React.useState<boolean>(false);
   const [showDateFormatPicker, setShowDateFormatPicker] = React.useState<boolean>(false);
@@ -574,8 +588,16 @@ export default function PageHeader({
           width: '100%'
         }}
       >
-        {/* Header content container - full width, no sidebar offset since parent handles it */}
-        <div className="relative px-4 header-padding-mobile w-full">
+        {/* Use the same layout approach as Header.tsx for consistent spacing */}
+        <div className="flex w-full h-full">
+          {/* Sidebar spacer - only on desktop, matches Header.tsx logic */}
+          <div
+            className="hidden md:block transition-all duration-300 ease-in-out flex-shrink-0"
+            style={{ width: `${headerSidebarWidth}px` }}
+          />
+
+          {/* Header content area - matches main header content area */}
+          <div className="flex-1 min-w-0 relative px-4 header-padding-mobile">
             <div
               className="flex items-center justify-between min-h-0 transition-all duration-300 ease-out"
               style={{
@@ -641,7 +663,6 @@ export default function PageHeader({
                       ? "text-xs opacity-90 header-title-mobile"
                       : "text-2xl mb-0.5 header-title-expanded-mobile"
                   }`}
-
                 >
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
@@ -960,8 +981,10 @@ export default function PageHeader({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+            </div>
           </div>
         </div>
+
         {/* Scroll Progress Bar - positioned outside padded container */}
         <div
           className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ease-out"

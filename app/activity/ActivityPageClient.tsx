@@ -64,13 +64,17 @@ export default function ActivityPageClient({
 
   // Filter activities based on view mode
   const filteredActivities = (() => {
+    // Ensure activities is an array before filtering
+    const safeActivities = Array.isArray(activities) ? activities : [];
+    const safeFollowedPages = Array.isArray(followedPages) ? followedPages : [];
+
     if (viewMode === 'following' && user) {
-      return activities.filter(activity => {
+      return safeActivities.filter(activity => {
         // Include activities from followed pages
-        return followedPages.some(page => page.id === activity.pageId);
+        return safeFollowedPages.some(page => page.id === activity.pageId);
       });
     } else if (viewMode === 'mine' && user) {
-      return activities.filter(activity => {
+      return safeActivities.filter(activity => {
         // Include activities from current user's pages or bio edits
         if (activity.activityType === "bio_edit") {
           return activity.pageId.includes(user.uid);
@@ -78,19 +82,21 @@ export default function ActivityPageClient({
         return activity.userId === user.uid;
       });
     }
-    return activities;
+    return safeActivities;
   })();
 
   // Determine which activities to display - prefer filtered client-side data
   // but fall back to server-side data if available
+  const safeActivities = Array.isArray(activities) ? activities : [];
+  const safeInitialActivities = Array.isArray(initialActivities) ? initialActivities : [];
   const activitiesToDisplay = filteredActivities.length > 0 ? filteredActivities :
-    (activities.length > 0 ? activities : initialActivities);
+    (safeActivities.length > 0 ? safeActivities : safeInitialActivities);
   const hasActivities = activitiesToDisplay.length > 0;
 
   // For debugging
   console.log('ActivityPageClient: Rendering with', {
-    clientActivities: activities.length,
-    initialActivities: initialActivities.length,
+    clientActivities: safeActivities.length,
+    initialActivities: safeInitialActivities.length,
     isLoading,
     hasError: !!error || !!initialError
   });

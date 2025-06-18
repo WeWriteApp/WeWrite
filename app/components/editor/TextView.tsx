@@ -64,6 +64,7 @@ import { ExternalLink, Edit2 } from "lucide-react";
 import Modal from "../ui/modal";
 import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
 import { useControlledAnimation } from "../../hooks/useControlledAnimation";
+import { truncateExternalLinkText } from "../../utils/textTruncation";
 import type { TextViewProps } from "../../types/components";
 import type { SlateContent, SlateNode, SlateChild, ViewMode } from "../../types/database";
 import "../paragraph-styles.css";
@@ -1110,6 +1111,18 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
   const href = validatedNode.url || '#';
   const pageId = validatedNode.pageId;
   const isExternal = validatedNode.isExternal === true;
+
+  // Debug logging for external links
+  if (isExternal || validatedNode.className?.includes('external-link')) {
+    console.log('🔍 TextView rendering external link:', {
+      isExternal,
+      href,
+      className: validatedNode.className,
+      validatedNode,
+      canEdit,
+      isEditing
+    });
+  }
   const isPageLink = validatedNode.isPageLink === true;
 
   // Determine if this is a protocol link
@@ -1348,21 +1361,26 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
       finalDisplayText = href;
     }
 
+    // Truncate the display text for better UI
+    const truncatedDisplayText = truncateExternalLinkText(finalDisplayText, href, 50);
+
     // Handle edit mode vs view mode click behavior
     if (canEdit && isEditing) {
       // In edit mode, clicking should open the link editor
       return (
         <span
           className="inline-block cursor-pointer"
+          data-link-type="external"
+          data-url={href}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            // TODO: Open link editor for this link
-            console.log('Edit mode: Open link editor for external link');
+            // The click will be handled by the Editor component's click handler
+            // which detects links with data-link-type attributes
           }}
         >
           <span className="inline-flex items-center px-2 py-1 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/80 transition-colors">
-            {finalDisplayText}
+            {truncatedDisplayText}
             <ExternalLink className="ml-1 h-3 w-3" />
           </span>
         </span>
@@ -1384,7 +1402,7 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
               className="external-link"
               onClick={handleExternalLinkClick}
             >
-              {finalDisplayText}
+              {truncatedDisplayText}
               {/* Removed duplicate ExternalLink icon - PillLink already adds it */}
             </PillLink>
           </span>
@@ -1429,11 +1447,14 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
       <span className="inline-block">
         <span
           className={`${pillStyles} cursor-pointer special-link`}
+          data-link-type={validatedNode.userId ? "user" : "page"}
+          data-id={validatedNode.userId || validatedNode.pageId}
+          data-url={href}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            // TODO: Open link editor for this link
-            console.log('Edit mode: Open link editor for special link');
+            // The click will be handled by the Editor component's click handler
+            // which detects links with data-link-type attributes
           }}
         >
           <span className="pill-text">{displayText}</span>

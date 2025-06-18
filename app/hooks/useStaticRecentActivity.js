@@ -256,7 +256,8 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
           );
 
           // Filter activities based on the current filters
-          let validActivities = activitiesWithSubscriptions;
+          // Ensure activitiesWithSubscriptions is an array before filtering
+          let validActivities = Array.isArray(activitiesWithSubscriptions) ? activitiesWithSubscriptions : [];
 
           // Apply user filter if specified
           if (filterUserId) {
@@ -271,7 +272,7 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
           }
 
           // Apply followed filter if specified
-          if (followedOnly && followedPageIds.length > 0) {
+          if (followedOnly && Array.isArray(followedPageIds) && followedPageIds.length > 0) {
             validActivities = validActivities.filter(activity => {
               // Only include activities for pages the user follows
               return followedPageIds.includes(activity.pageId);

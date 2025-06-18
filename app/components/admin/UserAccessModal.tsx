@@ -152,7 +152,9 @@ export default function UserAccessModal({
   };
 
   const filterUsers = () => {
-    let filtered = users;
+    // Ensure users is an array before filtering
+    const safeUsers = Array.isArray(users) ? users : [];
+    let filtered = safeUsers;
 
     // Filter by search term
     if (searchTerm) {
@@ -288,9 +290,10 @@ export default function UserAccessModal({
     }
   };
 
-  const enabledCount = users.filter(u => u.enabled).length;
-  const disabledCount = users.filter(u => !u.enabled).length;
-  const overriddenCount = users.filter(u => u.overridden).length;
+  const safeUsersForCounts = Array.isArray(users) ? users : [];
+  const enabledCount = safeUsersForCounts.filter(u => u.enabled).length;
+  const disabledCount = safeUsersForCounts.filter(u => !u.enabled).length;
+  const overriddenCount = safeUsersForCounts.filter(u => u.overridden).length;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -340,7 +343,7 @@ export default function UserAccessModal({
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="all">All ({users.length})</TabsTrigger>
+              <TabsTrigger value="all">All ({safeUsersForCounts.length})</TabsTrigger>
               <TabsTrigger value="enabled">Enabled ({enabledCount})</TabsTrigger>
               <TabsTrigger value="disabled">Disabled ({disabledCount})</TabsTrigger>
               <TabsTrigger value="overridden">Overridden ({overriddenCount})</TabsTrigger>

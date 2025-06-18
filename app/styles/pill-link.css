@@ -22,3 +22,15 @@
   height: 12px;
   width: 12px;
 }
+
+/* Prevent focus rings on pill links when clicked, but keep them for keyboard navigation */
+a[data-pill-style]:focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Ensure keyboard navigation still shows focus */
+a[data-pill-style]:focus-visible {
+  outline: 2px solid hsl(var(--primary)) !important;
+  outline-offset: 2px !important;
+}

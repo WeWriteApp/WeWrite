@@ -3,6 +3,8 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { X, Heart, Map, Info, MessageSquare, Github } from 'lucide-react';
+import { useFeatureFlag } from "../../utils/feature-flags";
+import { openExternalLink } from "../../utils/pwa-detection";
 
 interface SiteFooterProps {
   className?: string;
@@ -21,6 +23,7 @@ interface FooterLink {
  */
 export default function SiteFooter({ className = "" }: SiteFooterProps) {
   const currentYear = new Date().getFullYear();
+  const isPaymentsEnabled = useFeatureFlag('payments');
 
   // Interactive footer text options
   const [madeWithIndex, setMadeWithIndex] = useState(0);
@@ -126,10 +129,10 @@ export default function SiteFooter({ className = "" }: SiteFooterProps) {
       external: true
     },
     {
-      href: "/settings/subscription",
+      href: isPaymentsEnabled ? "/settings/subscription" : "https://opencollective.com/wewrite-app",
       label: "Support us",
       icon: <Heart className="h-3 w-3" />,
-      external: false
+      external: !isPaymentsEnabled
     },
     {
       href: "/zRNwhNgIEfLFo050nyAT",

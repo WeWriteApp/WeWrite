@@ -286,10 +286,13 @@ export function UserManagement() {
    * Updates filteredUsers state whenever searchTerm or users array changes
    */
   useEffect(() => {
+    // Ensure users is an array before filtering
+    const safeUsers = Array.isArray(users) ? users : [];
+
     if (!searchTerm) {
-      setFilteredUsers(users);
+      setFilteredUsers(safeUsers);
     } else {
-      const filtered = users.filter(user =>
+      const filtered = safeUsers.filter(user =>
         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.displayName?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -528,18 +531,18 @@ export function UserManagement() {
       <div className="flex flex-wrap gap-6 items-start">
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center p-3 bg-muted/50 rounded-lg">
-            <p className="text-xl font-bold">{users.length}</p>
+            <p className="text-xl font-bold">{Array.isArray(users) ? users.length : 0}</p>
             <p className="text-xs text-muted-foreground">Total Users</p>
           </div>
           <div className="text-center p-3 bg-muted/50 rounded-lg">
             <p className="text-xl font-bold text-success">
-              {users.filter(u => u.emailVerified).length}
+              {Array.isArray(users) ? users.filter(u => u.emailVerified).length : 0}
             </p>
             <p className="text-xs text-muted-foreground">Verified</p>
           </div>
           <div className="text-center p-3 bg-muted/50 rounded-lg">
             <p className="text-xl font-bold text-amber-600">
-              {users.filter(u => !u.emailVerified).length}
+              {Array.isArray(users) ? users.filter(u => !u.emailVerified).length : 0}
             </p>
             <p className="text-xs text-muted-foreground">Unverified</p>
           </div>

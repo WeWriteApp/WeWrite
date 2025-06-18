@@ -145,17 +145,20 @@ const FilteredSearchResults = forwardRef(({
       let allPages = data.pages || [];
       console.log('[FilteredSearchResults] Total pages from search:', allPages.length);
 
+      // Ensure allPages is an array before filtering
+      const safeAllPages = Array.isArray(allPages) ? allPages : [];
+
       // Apply client-side filtering based on the active filter
-      let filteredPages = allPages;
+      let filteredPages = safeAllPages;
 
       if (!searchMode && filter === 'my-pages') {
         // Filter to only show user's own pages
-        filteredPages = allPages.filter(page => page.userId === user.uid);
+        filteredPages = safeAllPages.filter(page => page.userId === user.uid);
         console.log('[FilteredSearchResults] Filtered to my pages:', filteredPages.length);
       } else if (!searchMode && filter === 'recent') {
         // For recent filter, we could implement recent page logic here
         // For now, show all pages but prioritize user's own pages
-        filteredPages = allPages.sort((a, b) => {
+        filteredPages = safeAllPages.sort((a, b) => {
           // Prioritize user's own pages
           if (a.userId === user.uid && b.userId !== user.uid) return -1;
           if (b.userId === user.uid && a.userId !== user.uid) return 1;

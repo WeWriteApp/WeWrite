@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
 import { ChevronLeft } from "lucide-react";
 import { useEffect } from "react";
+import { useSidebarContext } from "./UnifiedSidebar";
 
 export interface NavHeaderProps {
   title?: string;
@@ -27,6 +28,18 @@ export default function NavHeader({
   className = ""
 }: NavHeaderProps) {
   const router = useRouter();
+  const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
+
+  // Calculate header positioning width - should match other headers
+  const headerSidebarWidth = React.useMemo(() => {
+    if (isExpanded) {
+      return sidebarWidth; // Use full expanded width (256px)
+    } else if (sidebarWidth > 0) {
+      return 64; // Use collapsed width (64px) for collapsed state
+    } else {
+      return 0; // No sidebar (user not authenticated)
+    }
+  }, [isExpanded, sidebarWidth]);
 
   const handleBack = () => {
     if (backUrl) {
@@ -51,33 +64,54 @@ export default function NavHeader({
 
   return (
     <div className={`flex flex-col mb-6 ${className}`}>
-      {/* Top row with buttons on mobile, full header on desktop */}
-      <div className="flex items-center justify-between w-full">
-        <div className="flex items-center">
-          {backUrl !== undefined && (
-            <Button variant="outline" size="sm" onClick={handleBack} className="mr-3">
-              <ChevronLeft className="h-5 w-5 mr-2" />
-              {backLabel}
-            </Button>
-          )}
-          {/* Title only visible on desktop */}
-          <h1 className="text-2xl font-bold truncate hidden md:block">
-            {title}
-          </h1>
-        </div>
+      {/* Use the same layout approach as other headers for consistent spacing */}
+      <div className="flex w-full">
+        {/* Sidebar spacer - only on desktop, matches other headers */}
+        <div
+          className="hidden md:block transition-all duration-300 ease-in-out flex-shrink-0"
+          style={{ width: `${headerSidebarWidth}px` }}
+        />
 
-        {rightContent && (
-          <div className="flex items-center">
-            {rightContent}
+        {/* Header content area - matches other header content areas */}
+        <div className="flex-1 min-w-0">
+          {/* Top row with buttons on mobile, full header on desktop */}
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center">
+              {backUrl !== undefined && (
+                <Button variant="outline" size="sm" onClick={handleBack} className="mr-3">
+                  <ChevronLeft className="h-5 w-5 mr-2" />
+                  {backLabel}
+                </Button>
+              )}
+              {/* Title only visible on desktop */}
+              <h1 className="text-2xl font-bold truncate hidden md:block">
+                {title}
+              </h1>
+            </div>
+
+            {rightContent && (
+              <div className="flex items-center">
+                {rightContent}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Title row only visible on mobile */}
+      {/* Title row only visible on mobile - maintain same alignment */}
       {title && (
-        <h1 className="text-2xl font-bold truncate mt-4 md:hidden">
-          {title}
-        </h1>
+        <div className="flex w-full mt-4 md:hidden">
+          {/* Sidebar spacer for mobile title alignment */}
+          <div
+            className="hidden md:block transition-all duration-300 ease-in-out flex-shrink-0"
+            style={{ width: `${headerSidebarWidth}px` }}
+          />
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-bold truncate">
+              {title}
+            </h1>
+          </div>
+        </div>
       )}
 
       {/* Mobile overflow sidebar functionality moved to MobileBottomNav */}

@@ -415,7 +415,34 @@ export const createOptimizedSubscriptionListener = (
  */
 export const clearSubscriptionCache = (userId: string): void => {
   const cacheKey = generateCacheKey('subscription', userId);
-  cache.delete(cacheKey);
+
+  // Clear from the cache utility
+  if (typeof window !== 'undefined') {
+    const cache = getSubscriptionCache();
+    if (cache) {
+      // Use the BatchCache delete method if available
+      try {
+        cache.clear(); // Clear all items for this cache type
+      } catch (error) {
+        console.warn('BatchCache clear failed:', error);
+      }
+    }
+
+    // Also clear from the general cache utility using removeCacheItem
+    try {
+      const { removeCacheItem } = require('../utils/cacheUtils');
+      removeCacheItem(cacheKey);
+    } catch (error) {
+      console.warn('removeCacheItem not available, using localStorage directly:', error);
+      // Fallback to direct localStorage removal
+      try {
+        localStorage.removeItem(cacheKey);
+      } catch (lsError) {
+        console.warn('localStorage removal failed:', lsError);
+      }
+    }
+  }
+
   console.log(`[clearSubscriptionCache] Cleared cache for user: ${userId}`);
 };
 

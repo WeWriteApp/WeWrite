@@ -490,7 +490,9 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
         const activityResults = await Promise.all(activitiesPromises);
 
         // Filter out null results, private pages, and activities with missing usernames
-        const filteredActivities = activityResults
+        // Ensure activityResults is an array before filtering
+        const safeActivityResults = Array.isArray(activityResults) ? activityResults : [];
+        const filteredActivities = safeActivityResults
           .filter(activity => {
             // Skip null activities
             if (activity === null) return false;

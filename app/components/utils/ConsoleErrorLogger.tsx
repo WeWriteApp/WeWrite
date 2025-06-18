@@ -8,8 +8,8 @@ import { useEffect } from 'react'
  */
 export default function ConsoleErrorLogger() {
   useEffect(() => {
-    // Only run in development mode
-    if (process.env.NODE_ENV !== 'development') {
+    // Only run in development mode and in browser environment
+    if (process.env.NODE_ENV !== 'development' || typeof window === 'undefined') {
       return
     }
 
@@ -22,16 +22,30 @@ export default function ConsoleErrorLogger() {
     // Helper function to format arguments
     const formatArgs = (args: any[]) => {
       return args.map(arg => {
-        if (typeof arg === 'object') {
+        if (typeof arg === 'object' && arg !== null) {
           try {
-            return JSON.stringify(arg, null, 2)
+            // Create a new Set for each serialization to track circular references
+            const localSeen = new Set();
+
+            // Handle circular references and other serialization issues
+            return JSON.stringify(arg, (key, value) => {
+              if (typeof value === 'object' && value !== null) {
+                // Simple circular reference detection
+                if (localSeen.has(value)) {
+                  return '[Circular]';
+                }
+                localSeen.add(value);
+              }
+              return value;
+            }, 2);
           } catch (e) {
-            return String(arg)
+            // Fallback for any serialization errors
+            return arg.toString ? arg.toString() : String(arg);
           }
         }
-        return String(arg)
-      }).join(' ')
-    }
+        return String(arg);
+      }).join(' ');
+    };
 
     // THROTTLING: Prevent infinite loops and excessive logging
     const errorCache = new Map<string, number>()
@@ -40,46 +54,64 @@ export default function ConsoleErrorLogger() {
 
     // Helper function to send to server with throttling
     const sendToServer = (level: string, message: string, extra?: any) => {
-      // Create a hash of the error message for deduplication
-      const errorKey = `${level}:${message.substring(0, 100)}`
-      const now = Date.now()
+      try {
+        // Ensure message is a string and not too long
+        const safeMessage = String(message || '').substring(0, 1000);
 
-      // Check if we've seen this error recently
-      const lastSeen = errorCache.get(errorKey) || 0
-      if (now - lastSeen < 5000) { // Don't log same error within 5 seconds
-        return
+        // Create a hash of the error message for deduplication
+        const errorKey = `${level}:${safeMessage.substring(0, 100)}`;
+        const now = Date.now();
+
+        // Check if we've seen this error recently
+        const lastSeen = errorCache.get(errorKey) || 0;
+        if (now - lastSeen < 5000) { // Don't log same error within 5 seconds
+          return;
+        }
+
+        // Count errors in the last minute
+        const recentErrors = Array.from(errorCache.values()).filter(time => now - time < errorCacheCleanupInterval);
+        if (recentErrors.length >= maxErrorsPerMinute) {
+          return; // Stop logging if too many errors
+        }
+
+        // Skip Firebase unavailable errors to prevent cascade
+        if (safeMessage.includes('unavailable') && safeMessage.includes('Firebase')) {
+          return;
+        }
+
+        errorCache.set(errorKey, now);
+
+        // Safely serialize extra data
+        let safeExtra = {};
+        if (extra && typeof extra === 'object') {
+          try {
+            safeExtra = JSON.parse(JSON.stringify(extra));
+          } catch (e) {
+            safeExtra = { error: 'Failed to serialize extra data' };
+          }
+        }
+
+        fetch('/api/log-console-error', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            level,
+            message: safeMessage,
+            timestamp: new Date().toISOString(),
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            ...safeExtra
+          })
+        }).catch(() => {
+          // Silently fail if logging endpoint is not available
+        });
+      } catch (error) {
+        // Prevent infinite loops by not logging errors from the logger itself
+        console.warn('ConsoleErrorLogger: Failed to send error to server:', error);
       }
-
-      // Count errors in the last minute
-      const recentErrors = Array.from(errorCache.values()).filter(time => now - time < errorCacheCleanupInterval)
-      if (recentErrors.length >= maxErrorsPerMinute) {
-        return // Stop logging if too many errors
-      }
-
-      // Skip Firebase unavailable errors to prevent cascade
-      if (message.includes('unavailable') && message.includes('Firebase')) {
-        return
-      }
-
-      errorCache.set(errorKey, now)
-
-      fetch('/api/log-console-error', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          level,
-          message,
-          timestamp: new Date().toISOString(),
-          url: window.location.href,
-          userAgent: navigator.userAgent,
-          ...extra
-        })
-      }).catch(() => {
-        // Silently fail if logging endpoint is not available
-      })
-    }
+    };
 
     // Clean up error cache periodically
     const cleanupInterval = setInterval(() => {
@@ -168,6 +200,12 @@ export default function ConsoleErrorLogger() {
 
     // Capture unhandled promise rejections
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason instanceof Error
+        ? event.reason.message
+        : typeof event.reason === 'string'
+          ? event.reason
+          : JSON.stringify(event.reason);
+
       fetch('/api/log-console-error', {
         method: 'POST',
         headers: {
@@ -175,7 +213,7 @@ export default function ConsoleErrorLogger() {
         },
         body: JSON.stringify({
           level: 'error',
-          message: `Unhandled Promise Rejection: ${event.reason}`,
+          message: `Unhandled Promise Rejection: ${reason}`,
           timestamp: new Date().toISOString(),
           url: window.location.href,
           userAgent: navigator.userAgent
@@ -204,8 +242,9 @@ export default function ConsoleErrorLogger() {
       } catch (error) {
         // Log network failures
         if (args[0] && String(args[0]).includes('firestore')) {
-          sendToServer('error', `Firebase Network Failure: ${error.message} for ${args[0]}`, {
-            error: error.message,
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          sendToServer('error', `Firebase Network Failure: ${errorMessage} for ${args[0]}`, {
+            error: errorMessage,
             url: args[0]
           })
         }

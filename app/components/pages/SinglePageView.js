@@ -1276,7 +1276,9 @@ function SinglePageView({ params, initialEditMode = false }) {
   };
 
   // Pre-compute memoized values for RelatedPages component to avoid hooks order issues
-  const memoizedPage = useMemo(() => pageFullyRendered ? page : null, [pageFullyRendered, page]);
+  // FIXED: Always provide page data to RelatedPages, don't wait for pageFullyRendered
+  // The RelatedPages component can handle loading states internally
+  const memoizedPage = useMemo(() => page, [page]);
   const memoizedLinkedPageIds = useMemo(() =>
     pageFullyRendered ? extractLinkedPageIds(editorState) : [],
     [pageFullyRendered, editorState]

@@ -317,6 +317,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
               });
             } else if (linkType === 'external') {
               const url = element.getAttribute('data-url');
+              console.log('🔵 Converting external link to Slate:', { url, text, linkType, element });
               paragraph.children.push({
                 type: "link",
                 url,
@@ -676,13 +677,25 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         try {
           const slateContent = convertHTMLToSlate(htmlContent);
 
-          // Reduced logging for better performance
+          // Enhanced logging for external link debugging
           if (process.env.NODE_ENV === 'development') {
+            const hasExternalLinks = htmlContent.includes('data-link-type="external"');
+            const externalLinksInSlate = slateContent.some(p =>
+              p.children && p.children.some(c => c.isExternal === true)
+            );
+
             console.log("🔵 Editor.handleContentChange: Converting to Slate:", {
               htmlLength: htmlContent.length,
               slateLength: slateContent.length,
-              hasContent: slateContent.some(p => p.children && p.children.some(c => c.text && c.text.trim()))
+              hasContent: slateContent.some(p => p.children && p.children.some(c => c.text && c.text.trim())),
+              hasExternalLinks,
+              externalLinksInSlate
             });
+
+            if (hasExternalLinks) {
+              console.log("🔍 HTML with external links:", htmlContent);
+              console.log("🔍 Slate content with external links:", JSON.stringify(slateContent, null, 2));
+            }
           }
 
           onChange?.(slateContent);
@@ -1680,6 +1693,20 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     // Keep the link editor open, don't reset state
   }, []);
 
+  // Handle external link deletion
+  const handleExternalLinkDelete = useCallback(() => {
+    if (!editingLink) return;
+
+    // Remove the link element from the DOM
+    editingLink.element.remove();
+
+    // Reset state and close modal
+    setEditingLink(null);
+    setShowLinkEditor(false);
+    resetLinkEditorState();
+    handleContentChange();
+  }, [editingLink, resetLinkEditorState, handleContentChange]);
+
   // Handle external link creation
   const handleExternalLinkCreate = useCallback(() => {
     if (!editorRef.current || !externalUrl.trim()) return;
@@ -1709,6 +1736,12 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       // Update existing link
       editingLink.element.outerHTML = linkHTML;
       setEditingLink(null);
+
+      // Trigger an input event to ensure content change detection
+      if (editorRef.current) {
+        const event = new Event('input', { bubbles: true });
+        editorRef.current.dispatchEvent(event);
+      }
     } else {
       // Create new link
       if (selection) {
@@ -1761,7 +1794,11 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     // Reset state and close modal
     setShowLinkEditor(false);
     resetLinkEditorState();
-    handleContentChange();
+
+    // Ensure content change is triggered after a brief delay to allow DOM updates
+    setTimeout(() => {
+      handleContentChange();
+    }, 10);
   }, [externalUrl, externalDisplayText, showExternalCustomText, pillStyleClasses, selection, restoreSelection, handleContentChange]);
 
   // Optimized link selection handling
@@ -2335,8 +2372,16 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                   </div>
                 )}
 
-                {/* Create button */}
-                <div className="mt-auto pt-6 md:pt-4">
+                {/* Action buttons */}
+                <div className="mt-auto pt-6 md:pt-4 space-y-3">
+                  {editingLink && (
+                    <button
+                      onClick={handleExternalLinkDelete}
+                      className="w-full px-4 py-4 md:py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors text-base md:text-sm font-medium"
+                    >
+                      Delete Link
+                    </button>
+                  )}
                   <button
                     onClick={handleExternalLinkCreate}
                     disabled={!externalUrl.trim()}

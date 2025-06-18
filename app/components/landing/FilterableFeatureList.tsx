@@ -14,9 +14,9 @@ interface Feature {
 }
 
 interface FilterableFeatureListProps {
-  inProgressFeatures: Feature[];
-  comingSoonFeatures: Feature[];
-  availableFeatures: Feature[];
+  inProgressFeatures?: Feature[];
+  comingSoonFeatures?: Feature[];
+  availableFeatures?: Feature[];
   fadeInClass: string;
 }
 
@@ -118,9 +118,9 @@ export function FilterableFeatureList({
   // Combine and filter features based on active filters and sort in the specified order:
   // 1. In Progress, 2. Coming Soon, 3. Available Now
   const filteredFeatures = [
-    ...(filters.inProgress ? inProgressFeatures : []),
-    ...(filters.comingSoon ? comingSoonFeatures : []),
-    ...(filters.available ? availableFeatures : [])
+    ...(filters.inProgress && Array.isArray(inProgressFeatures) ? inProgressFeatures : []),
+    ...(filters.comingSoon && Array.isArray(comingSoonFeatures) ? comingSoonFeatures : []),
+    ...(filters.available && Array.isArray(availableFeatures) ? availableFeatures : [])
   ];
 
   // Check if any filters are active

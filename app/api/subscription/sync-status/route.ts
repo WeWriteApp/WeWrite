@@ -32,8 +32,8 @@ function initializeFirebase() {
 
 // Initialize Stripe with proper config
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
-const stripe = new Stripe(getStripeSecretKey(), {
-  apiVersion: '2025-04-30.basil' as any,
+const stripe = new Stripe(getStripeSecretKey() || '', {
+  apiVersion: '2024-12-18.acacia',
 });
 
 export async function POST(request: NextRequest) {
@@ -79,21 +79,34 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
+    console.log(`[SYNC STATUS] Starting status sync for user ${userId}, subscription ${stripeSubscriptionId}`);
+
     // Fetch the latest subscription data from Stripe
     let stripeSubscription;
     try {
       stripeSubscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
-    } catch (error) {
-      console.error('Error fetching Stripe subscription:', error);
-      return NextResponse.json({ error: 'Failed to fetch subscription from Stripe' }, { status: 500 });
+      console.log(`[SYNC STATUS] Retrieved Stripe subscription, status: ${stripeSubscription.status}`);
+    } catch (error: any) {
+      console.error('[SYNC STATUS] Error fetching Stripe subscription:', error);
+      return NextResponse.json({
+        error: 'Failed to fetch subscription from Stripe',
+        details: error.message
+      }, { status: 500 });
     }
 
     // Update the subscription status in Firestore using Admin SDK
+    const currentStatus = subscriptionData.status;
+    const newStatus = stripeSubscription.status;
+
+    console.log(`[SYNC STATUS] Status transition for user ${userId}: '${currentStatus}' -> '${newStatus}'`);
+
     const updateData = {
       status: stripeSubscription.status,
       currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000).toISOString(),
       currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000).toISOString(),
+      cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
       updatedAt: FieldValue.serverTimestamp(),
+      lastSyncAt: FieldValue.serverTimestamp(),
     };
 
     // Add billing cycle end if available
@@ -103,18 +116,32 @@ export async function POST(request: NextRequest) {
 
     await subscriptionRef.update(updateData);
 
-    console.log(`Subscription status synced successfully for user ${userId}: ${stripeSubscription.status}`);
+    console.log(`[SYNC STATUS] Subscription status synced successfully for user ${userId}: ${stripeSubscription.status}`);
 
-    return NextResponse.json({ 
-      success: true, 
-      status: stripeSubscription.status,
-      message: 'Subscription status synced successfully'
+    return NextResponse.json({
+      success: true,
+      subscription: {
+        id: stripeSubscription.id,
+        status: stripeSubscription.status,
+        currentPeriodStart: updateData.currentPeriodStart,
+        currentPeriodEnd: updateData.currentPeriodEnd,
+        cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
+      },
+      statusChanged: currentStatus !== newStatus,
+      previousStatus: currentStatus,
+      message: `Subscription status synced successfully. Status: ${stripeSubscription.status}`
     });
 
   } catch (error) {
     console.error('Error syncing subscription status:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error' 
+    return NextResponse.json({
+      error: 'Internal server error'
     }, { status: 500 });
   }
+}
+
+export async function GET() {
+  return NextResponse.json({
+    error: 'Method not allowed. Use POST to sync subscription status.'
+  }, { status: 405 });
 }
