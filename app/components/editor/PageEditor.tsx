@@ -92,15 +92,28 @@ const PageEditor: React.FC<PageEditorProps> = ({
   clickPosition = null,
   page = null
 }) => {
-  // Simplified hydration check
+  // Improved hydration check with error handling
   const [isHydrated, setIsHydrated] = useState(false);
+  const [hydrationError, setHydrationError] = useState(false);
 
   // Always use Editor - feature flag removed
 
   useEffect(() => {
-    // Simple hydration check - just wait for the browser environment
+    // Enhanced hydration check with error handling
     if (typeof window !== 'undefined') {
-      setIsHydrated(true);
+      try {
+        // Use requestAnimationFrame to ensure we're in a proper browser paint cycle
+        requestAnimationFrame(() => {
+          setIsHydrated(true);
+        });
+      } catch (error) {
+        console.error('Hydration error in PageEditor:', error);
+        setHydrationError(true);
+        // Fallback: set hydrated after a delay
+        setTimeout(() => {
+          setIsHydrated(true);
+        }, 100);
+      }
     }
   }, []);
 
@@ -481,6 +494,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
                   <button
                     onClick={() => {
                       setIsHydrated(false);
+                      setHydrationError(false);
                       setTimeout(() => setIsHydrated(true), 1000);
                     }}
                     className="px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition-colors"

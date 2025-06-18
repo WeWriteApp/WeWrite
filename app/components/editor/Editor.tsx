@@ -240,9 +240,14 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
       const result = [];
       const children = Array.from(tempDiv.children);
-      const contentDivs = children.filter(child =>
-        child.tagName === 'DIV' && !child.classList.contains('unified-paragraph-number')
-      );
+      const contentDivs = children.filter(child => {
+        try {
+          return child.tagName === 'DIV' && !child.classList?.contains('unified-paragraph-number');
+        } catch (error) {
+          console.error('Error filtering content divs:', error);
+          return child.tagName === 'DIV';
+        }
+      });
 
       if (contentDivs.length === 0) {
         const textContent = tempDiv.textContent || "";
@@ -267,8 +272,12 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         } else if (node.nodeType === Node.ELEMENT_NODE) {
           const element = node as Element;
 
-          if (element.classList.contains('unified-paragraph-number')) {
-            return;
+          try {
+            if (element.classList?.contains('unified-paragraph-number')) {
+              return;
+            }
+          } catch (error) {
+            console.error('Error checking classList:', error);
           }
 
           if (element.tagName === 'BR') {
@@ -316,7 +325,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                 children: [{ text }]
               });
             }
-          } else if (element.classList.contains('compound-link')) {
+          } else if (element.classList?.contains('compound-link')) {
             // CRITICAL FIX: Handle compound links properly
             const pageId = element.getAttribute('data-page-id');
             const authorUsername = element.getAttribute('data-author');
@@ -441,6 +450,9 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
   // Enhanced content area boundary detection
   const getContentAreaBoundary = useCallback((paragraph: Element) => {
+    // HYDRATION FIX: Ensure we're in browser environment
+    if (!isClient || typeof window === 'undefined') return null;
+
     const paragraphNumber = paragraph.querySelector('.unified-paragraph-number, .dense-paragraph-number');
     if (!paragraphNumber) return null;
 
@@ -455,15 +467,20 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     const startsWithLinkPill = startsWithElement &&
       (contentStart as Element).matches('[data-link-type], .compound-link');
 
-    return {
-      paragraphNumber,
-      contentStart: contentStart || null,
-      paragraphRect: paragraph.getBoundingClientRect(),
-      numberRect: paragraphNumber.getBoundingClientRect(),
-      startsWithElement,
-      startsWithLinkPill
-    };
-  }, []);
+    try {
+      return {
+        paragraphNumber,
+        contentStart: contentStart || null,
+        paragraphRect: paragraph.getBoundingClientRect(),
+        numberRect: paragraphNumber.getBoundingClientRect(),
+        startsWithElement,
+        startsWithLinkPill
+      };
+    } catch (error) {
+      console.error('Error getting content area boundary:', error);
+      return null;
+    }
+  }, [isClient]);
 
   // Helper to find the actual beginning of editable content
   const findContentStartPosition = useCallback((paragraph: Element) => {
@@ -493,6 +510,9 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
   // Position cursor at the very beginning of content area with enhanced precision
   const positionCursorAtContentStart = useCallback((paragraph: Element, preferredOffset: number = 0) => {
+    // HYDRATION FIX: Ensure we're in browser environment
+    if (!isClient || typeof window === 'undefined') return false;
+
     const startPosition = findContentStartPosition(paragraph);
     if (!startPosition) return false;
 
@@ -534,62 +554,66 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         return false;
       }
     }
-  }, [findContentStartPosition]);
+  }, [isClient, findContentStartPosition]);
 
   // Enhanced cursor position validation - less aggressive, more precise
   const ensureValidCursorPosition = useCallback(() => {
     if (!isClient || typeof window === 'undefined') return;
 
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
+    try {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
 
-    const range = selection.getRangeAt(0);
-    const startContainer = range.startContainer;
+      const range = selection.getRangeAt(0);
+      const startContainer = range.startContainer;
 
-    // Find the paragraph div that contains the cursor
-    let paragraphDiv = null;
-    let currentNode = startContainer;
+      // Find the paragraph div that contains the cursor
+      let paragraphDiv = null;
+      let currentNode = startContainer;
 
-    while (currentNode && currentNode !== editorRef.current) {
-      if (currentNode.nodeType === Node.ELEMENT_NODE &&
-          (currentNode as Element).tagName === 'DIV' &&
-          (currentNode as Element).parentElement === editorRef.current) {
-        paragraphDiv = currentNode as Element;
-        break;
+      while (currentNode && currentNode !== editorRef.current) {
+        if (currentNode.nodeType === Node.ELEMENT_NODE &&
+            (currentNode as Element).tagName === 'DIV' &&
+            (currentNode as Element).parentElement === editorRef.current) {
+          paragraphDiv = currentNode as Element;
+          break;
+        }
+        currentNode = currentNode.parentNode;
       }
-      currentNode = currentNode.parentNode;
-    }
 
-    if (!paragraphDiv) return;
+      if (!paragraphDiv) return;
 
-    // Check if cursor is specifically in a paragraph number
-    const paragraphNumber = paragraphDiv.querySelector('.unified-paragraph-number, .dense-paragraph-number');
-    if (!paragraphNumber) return;
+      // Check if cursor is specifically in a paragraph number
+      const paragraphNumber = paragraphDiv.querySelector('.unified-paragraph-number, .dense-paragraph-number');
+      if (!paragraphNumber) return;
 
-    let needsRepositioning = false;
+      let needsRepositioning = false;
 
-    // PRECISE: Only reposition if cursor is actually in the paragraph number
-    if (startContainer === paragraphNumber ||
-        (startContainer.nodeType === Node.TEXT_NODE && startContainer.parentElement === paragraphNumber)) {
-      needsRepositioning = true;
-    }
-
-    // Also check if cursor is directly on the paragraph div itself (empty line scenario)
-    if (startContainer === paragraphDiv && range.startOffset === 0) {
-      // Check if this is truly an empty line or if there's content after the paragraph number
-      const boundary = getContentAreaBoundary(paragraphDiv);
-      if (boundary && !boundary.contentStart) {
+      // PRECISE: Only reposition if cursor is actually in the paragraph number
+      if (startContainer === paragraphNumber ||
+          (startContainer.nodeType === Node.TEXT_NODE && startContainer.parentElement === paragraphNumber)) {
         needsRepositioning = true;
       }
-    }
 
-    if (needsRepositioning) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔧 Repositioning cursor from paragraph number to content area');
+      // Also check if cursor is directly on the paragraph div itself (empty line scenario)
+      if (startContainer === paragraphDiv && range.startOffset === 0) {
+        // Check if this is truly an empty line or if there's content after the paragraph number
+        const boundary = getContentAreaBoundary(paragraphDiv);
+        if (boundary && !boundary.contentStart) {
+          needsRepositioning = true;
+        }
       }
 
-      // Use the enhanced positioning function to place cursor at content start
-      positionCursorAtContentStart(paragraphDiv, 0);
+      if (needsRepositioning) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔧 Repositioning cursor from paragraph number to content area');
+        }
+
+        // Use the enhanced positioning function to place cursor at content start
+        positionCursorAtContentStart(paragraphDiv, 0);
+      }
+    } catch (error) {
+      console.error('Error in ensureValidCursorPosition:', error);
     }
   }, [isClient, getContentAreaBoundary, positionCursorAtContentStart]);
 
@@ -597,21 +621,29 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   const saveSelection = useCallback(() => {
     if (!isClient || typeof window === 'undefined') return;
 
-    // CRITICAL FIX: Ensure cursor is in valid position before saving selection
-    ensureValidCursorPosition();
+    try {
+      // CRITICAL FIX: Ensure cursor is in valid position before saving selection
+      ensureValidCursorPosition();
 
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      setSelection(selection.getRangeAt(0).cloneRange());
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        setSelection(selection.getRangeAt(0).cloneRange());
+      }
+    } catch (error) {
+      console.error('Error in saveSelection:', error);
     }
   }, [isClient, ensureValidCursorPosition]);
 
   const restoreSelection = useCallback(() => {
     if (!isClient || typeof window === 'undefined' || !selection) return;
 
-    const windowSelection = window.getSelection();
-    windowSelection?.removeAllRanges();
-    windowSelection?.addRange(selection);
+    try {
+      const windowSelection = window.getSelection();
+      windowSelection?.removeAllRanges();
+      windowSelection?.addRange(selection);
+    } catch (error) {
+      console.error('Error in restoreSelection:', error);
+    }
   }, [isClient, selection]);
 
 
@@ -708,16 +740,20 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     // Only save selection for link insertion - don't interfere with normal typing
     if (!isClient || typeof window === 'undefined') return;
 
-    // First ensure cursor is not on paragraph numbers
-    ensureValidCursorPosition();
+    try {
+      // First ensure cursor is not on paragraph numbers
+      ensureValidCursorPosition();
 
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      // Only save selection if there's actual text selected (not just cursor position)
-      if (!range.collapsed) {
-        setSelection(range.cloneRange());
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        // Only save selection if there's actual text selected (not just cursor position)
+        if (!range.collapsed) {
+          setSelection(range.cloneRange());
+        }
       }
+    } catch (error) {
+      console.error('Error in handleSelectionChange:', error);
     }
   }, [isClient, ensureValidCursorPosition]);
 
@@ -767,57 +803,65 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     if (!isClient || !editorRef.current) return;
 
     const handleMouseDown = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target && (target.classList.contains('unified-paragraph-number') ||
-                    target.classList.contains('dense-paragraph-number'))) {
-        e.preventDefault();
-        e.stopPropagation();
+      try {
+        const target = e.target as HTMLElement;
+        if (target && (target.classList?.contains('unified-paragraph-number') ||
+                      target.classList?.contains('dense-paragraph-number'))) {
+          e.preventDefault();
+          e.stopPropagation();
 
-        // Force focus to content area of this paragraph
-        const paragraph = target.parentElement;
-        if (paragraph) {
-          // Find or create content text node
-          let contentNode = null;
-          const walker = document.createTreeWalker(
-            paragraph,
-            NodeFilter.SHOW_TEXT,
-            {
-              acceptNode: (node) => {
-                if (node.parentElement &&
-                    (node.parentElement.classList.contains('unified-paragraph-number') ||
-                     node.parentElement.classList.contains('dense-paragraph-number'))) {
-                  return NodeFilter.FILTER_REJECT;
+          // Force focus to content area of this paragraph
+          const paragraph = target.parentElement;
+          if (paragraph) {
+            // Find or create content text node
+            let contentNode = null;
+            const walker = document.createTreeWalker(
+              paragraph,
+              NodeFilter.SHOW_TEXT,
+              {
+                acceptNode: (node) => {
+                  if (node.parentElement &&
+                      (node.parentElement.classList?.contains('unified-paragraph-number') ||
+                       node.parentElement.classList?.contains('dense-paragraph-number'))) {
+                    return NodeFilter.FILTER_REJECT;
+                  }
+                  return NodeFilter.FILTER_ACCEPT;
                 }
-                return NodeFilter.FILTER_ACCEPT;
               }
+            );
+
+            contentNode = walker.nextNode();
+            if (!contentNode) {
+              contentNode = document.createTextNode('');
+              paragraph.appendChild(contentNode);
             }
-          );
 
-          contentNode = walker.nextNode();
-          if (!contentNode) {
-            contentNode = document.createTextNode('');
-            paragraph.appendChild(contentNode);
-          }
-
-          // Force cursor to content area
-          const selection = window.getSelection();
-          if (selection) {
-            const range = document.createRange();
-            range.setStart(contentNode, 0);
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
+            // Force cursor to content area
+            const selection = window.getSelection();
+            if (selection) {
+              const range = document.createRange();
+              range.setStart(contentNode, 0);
+              range.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
           }
         }
+      } catch (error) {
+        console.error('Error in handleMouseDown:', error);
       }
     };
 
     const handleSelectStart = (e: Event) => {
-      const target = e.target as HTMLElement;
-      if (target && (target.classList.contains('unified-paragraph-number') ||
-                    target.classList.contains('dense-paragraph-number'))) {
-        e.preventDefault();
-        e.stopPropagation();
+      try {
+        const target = e.target as HTMLElement;
+        if (target && (target.classList?.contains('unified-paragraph-number') ||
+                      target.classList?.contains('dense-paragraph-number'))) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      } catch (error) {
+        console.error('Error in handleSelectStart:', error);
       }
     };
 
@@ -834,18 +878,25 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
   // Determine if click is in paragraph number area or content area
   const isClickInContentArea = useCallback((clickX: number, clickY: number, paragraph: Element) => {
-    const boundary = getContentAreaBoundary(paragraph);
-    if (!boundary) return true; // No paragraph number, entire area is content
+    if (!isClient || typeof window === 'undefined') return true;
 
-    const { numberRect, paragraphRect } = boundary;
+    try {
+      const boundary = getContentAreaBoundary(paragraph);
+      if (!boundary) return true; // No paragraph number, entire area is content
 
-    // For normal mode: content area starts after the paragraph number's right edge
-    // For dense mode: content area starts after the paragraph number plus margin
-    const contentAreaStartX = numberRect.right + 4; // 4px margin buffer
+      const { numberRect, paragraphRect } = boundary;
 
-    // Click is in content area if it's to the right of the paragraph number
-    return clickX >= contentAreaStartX;
-  }, [getContentAreaBoundary]);
+      // For normal mode: content area starts after the paragraph number's right edge
+      // For dense mode: content area starts after the paragraph number plus margin
+      const contentAreaStartX = numberRect.right + 4; // 4px margin buffer
+
+      // Click is in content area if it's to the right of the paragraph number
+      return clickX >= contentAreaStartX;
+    } catch (error) {
+      console.error('Error in isClickInContentArea:', error);
+      return true; // Default to content area on error
+    }
+  }, [isClient, getContentAreaBoundary]);
 
   // Handle click events for link editing with enhanced cursor positioning
   const handleEditorClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
