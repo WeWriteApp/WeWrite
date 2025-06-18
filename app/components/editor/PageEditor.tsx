@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "../../providers/AuthProvider";
 import dynamic from "next/dynamic";
 
@@ -47,8 +47,8 @@ interface PageEditorProps {
   setIsPublic: (isPublic: boolean) => void;
   location?: { lat: number; lng: number } | null;
   setLocation?: (location: { lat: number; lng: number } | null) => void;
-  onSave: () => void;
-  onKeyboardSave?: () => void; // Optional keyboard save handler
+  onSave: (content?: any) => void;
+  onKeyboardSave?: (content?: any) => void; // Optional keyboard save handler
   onCancel: () => void;
   onDelete?: (() => void) | null;
   isSaving: boolean;
@@ -139,12 +139,68 @@ const PageEditor: React.FC<PageEditorProps> = ({
   const [showEmptyLinesAlert, setShowEmptyLinesAlert] = useState(false);
   const [emptyLinesCount, setEmptyLinesCount] = useState(0);
 
+  // Create a wrapper function for keyboard save that captures content
+  const handleKeyboardSaveWithContent = useCallback(async () => {
+    if (editorRef.current && editorRef.current.getContent) {
+      try {
+        // Force a blur event to ensure any pending changes are captured
+        if (document.activeElement === editorRef.current) {
+          editorRef.current.blur();
+          // Small delay to let blur event process
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+
+        const currentContent = editorRef.current.getContent();
+        console.log("🔵 PageEditor: Keyboard save - captured content:", {
+          contentType: typeof currentContent,
+          isArray: Array.isArray(currentContent),
+          length: Array.isArray(currentContent) ? currentContent.length : 0
+        });
+
+        // Process pending page links before saving
+        if (editorRef.current && editorRef.current.processPendingPageLinks) {
+          await editorRef.current.processPendingPageLinks();
+        }
+
+        // Update the parent component with the current content
+        if (onContentChange) {
+          onContentChange(currentContent);
+          // Wait a bit to ensure the parent state is updated
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+        // Call the appropriate save handler with captured content
+        if (onKeyboardSave) {
+          onKeyboardSave(currentContent);
+        } else {
+          onSave(currentContent);
+        }
+      } catch (error) {
+        console.error("🔴 PageEditor: Error capturing content for keyboard save:", error);
+        // Fallback to save with current editor value
+        if (onKeyboardSave) {
+          onKeyboardSave(currentEditorValue);
+        } else {
+          onSave(currentEditorValue);
+        }
+      }
+    } else {
+      console.warn("🟡 PageEditor: Editor ref or getContent method not available for keyboard save");
+      // Fallback to save with current editor value
+      if (onKeyboardSave) {
+        onKeyboardSave(currentEditorValue);
+      } else {
+        onSave(currentEditorValue);
+      }
+    }
+  }, [editorRef, onContentChange, onKeyboardSave, onSave, currentEditorValue]);
+
   // Use keyboard shortcuts
   useKeyboardShortcuts({
     isEditing: true,
     setIsEditing: () => {},
     canEdit: false, // Disable "Enter to edit" in edit mode
-    handleSave: onKeyboardSave || onSave, // Use keyboard save handler if provided, fallback to regular save
+    handleSave: handleKeyboardSaveWithContent,
     isSaving
   });
 
@@ -630,17 +686,17 @@ const PageEditor: React.FC<PageEditorProps> = ({
                   }
 
                   console.log("🔵 PageEditor: Calling onSave with updated content");
-                  onSave();
+                  onSave(currentContent);
                 } catch (error) {
                   console.error("🔴 PageEditor: Error capturing content before save:", error);
-                  // Fallback to save without content update
-                  onSave();
+                  // Fallback to save with current editor value
+                  onSave(currentEditorValue);
                 }
               } else {
                 console.warn("🟡 PageEditor: Editor ref or getContent method not available");
                 console.log("🔵 PageEditor: editorRef.current:", !!editorRef.current);
                 console.log("🔵 PageEditor: getContent method:", !!(editorRef.current && editorRef.current.getContent));
-                onSave();
+                onSave(currentEditorValue);
               }
             }}
             disabled={isSaving}

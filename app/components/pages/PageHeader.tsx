@@ -97,24 +97,12 @@ export default function PageHeader({
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
   const [headerHeight, setHeaderHeight] = React.useState(0);
+  const [headerPadding, setHeaderPadding] = React.useState(8); // Start at 8px (py-2)
   const { trackInteractionEvent, events } = useWeWriteAnalytics();
   const headerRef = React.useRef<HTMLDivElement>(null);
   const { lineMode, setLineMode } = useLineSettings();
 
-  // Calculate header positioning width - only respond to persistent expanded state, not hover
-  // Hover state should overlay without affecting header positioning
-  const headerSidebarWidth = React.useMemo(() => {
-    // Header should only respond to persistent expanded state, not hover state
-    // When expanded: always use full width (256px) regardless of hover
-    // When collapsed: always use collapsed width (64px) regardless of hover
-    if (isExpanded) {
-      return sidebarWidth; // Use full expanded width (256px)
-    } else if (sidebarWidth > 0) {
-      return 64; // Use collapsed width (64px) for collapsed state
-    } else {
-      return 0; // No sidebar (user not authenticated)
-    }
-  }, [isExpanded, sidebarWidth]);
+
   const spacerRef = React.useRef<HTMLDivElement>(null);
   const [displayUsername, setDisplayUsername] = React.useState<string>(username || "Anonymous");
   const [tier, setTier] = React.useState<string | null>(initialTier || null);
@@ -229,13 +217,19 @@ export default function PageHeader({
       return;
     }
 
-    if (canEdit && isEditing) {
-      setIsEditingTitle(true);
-      // Focus the input after state update
-      setTimeout(() => {
-        titleInputRef.current?.focus();
-        titleInputRef.current?.select();
-      }, 0);
+    if (canEdit) {
+      if (!isEditing && setIsEditing) {
+        // If not in edit mode, trigger edit mode first
+        setIsEditing(true);
+      } else if (isEditing) {
+        // If already in edit mode, start editing the title
+        setIsEditingTitle(true);
+        // Focus the input after state update
+        setTimeout(() => {
+          titleInputRef.current?.focus();
+          titleInputRef.current?.select();
+        }, 0);
+      }
     }
   };
 
@@ -404,18 +398,13 @@ export default function PageHeader({
   React.useEffect(() => {
     const updateHeaderHeight = () => {
       if (headerRef.current) {
-        // Wait for any CSS transitions to complete before measuring
-        setTimeout(() => {
-          if (headerRef.current) {
-            const height = headerRef.current.offsetHeight;
-            setHeaderHeight(height);
+        // Calculate the expected height based on scroll state and padding
+        // This provides a more predictable height calculation
+        const baseHeight = isScrolled ? 56 : 80; // Base height for collapsed/expanded states
+        const paddingHeight = headerPadding * 2; // Top and bottom padding
+        const expectedHeight = baseHeight + paddingHeight;
 
-            // Also update spacer height directly to ensure immediate sync
-            if (spacerRef.current) {
-              spacerRef.current.style.height = `${height}px`;
-            }
-          }
-        }, 350); // Wait slightly longer than the 300ms transition duration
+        setHeaderHeight(expectedHeight);
       }
     };
 
@@ -425,50 +414,15 @@ export default function PageHeader({
     // Add resize listener to recalculate on window resize
     window.addEventListener('resize', updateHeaderHeight);
 
-    // Create a MutationObserver to watch for changes to the header
-    const observer = new MutationObserver(() => {
-      // Debounce the mutation observer to avoid excessive updates
-      setTimeout(updateHeaderHeight, 50);
-    });
-
-    if (headerRef.current) {
-      observer.observe(headerRef.current, {
-        attributes: true,
-        childList: true,
-        subtree: true
-      });
-    }
-
     return () => {
       window.removeEventListener('resize', updateHeaderHeight);
-      observer.disconnect();
     };
-  }, [title, isScrolled]);
+  }, [title, isScrolled, headerPadding]);
 
   React.useEffect(() => {
     // Use a throttled scroll handler for better performance
-    let scrollTimeout: ReturnType<typeof setTimeout>;
     let lastScrollY = 0;
     let ticking = false;
-    let heightUpdateTimeout: ReturnType<typeof setTimeout>;
-
-    const updateSpacerHeight = () => {
-      if (headerRef.current && spacerRef.current) {
-        // Clear any pending height updates
-        if (heightUpdateTimeout) {
-          clearTimeout(heightUpdateTimeout);
-        }
-
-        // Wait for transitions to complete before measuring
-        heightUpdateTimeout = setTimeout(() => {
-          if (headerRef.current && spacerRef.current) {
-            const height = headerRef.current.offsetHeight;
-            spacerRef.current.style.height = `${height}px`;
-            setHeaderHeight(height);
-          }
-        }, 350); // Wait for CSS transitions to complete
-      }
-    };
 
     const handleScroll = () => {
       lastScrollY = window.scrollY;
@@ -480,9 +434,16 @@ export default function PageHeader({
           const shouldBeScrolled = lastScrollY > 0;
           if (shouldBeScrolled !== isScrolled) {
             setIsScrolled(shouldBeScrolled);
-            // Update spacer height when scroll state changes
-            updateSpacerHeight();
           }
+
+          // Calculate smooth header padding transition
+          // Transition from 8px to 4px over 50px of scroll
+          const paddingTransitionDistance = 50;
+          const minPadding = 4; // py-1
+          const maxPadding = 8; // py-2
+          const scrollRatio = Math.min(lastScrollY / paddingTransitionDistance, 1);
+          const newPadding = maxPadding - (maxPadding - minPadding) * scrollRatio;
+          setHeaderPadding(newPadding);
 
           // Calculate scroll progress based on main content area only
           const windowHeight = window.innerHeight;
@@ -510,9 +471,6 @@ export default function PageHeader({
       }
     };
 
-    // Initial call to set up the spacer height
-    updateSpacerHeight();
-
     // Use passive event listener for better performance
     window.addEventListener("scroll", handleScroll, { passive: true });
 
@@ -523,9 +481,6 @@ export default function PageHeader({
         // Force scroll to absolute top to avoid partial header overlay
         window.scrollTo({top: 0, behavior: 'instant'});
       }
-
-      // Update spacer height after scrolling stops
-      updateSpacerHeight();
     };
 
     if ('onscrollend' in window) {
@@ -534,12 +489,6 @@ export default function PageHeader({
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      if (scrollTimeout) {
-        clearTimeout(scrollTimeout);
-      }
-      if (heightUpdateTimeout) {
-        clearTimeout(heightUpdateTimeout);
-      }
       if ('onscrollend' in window) {
         window.removeEventListener('scrollend', handleScrollEnd);
       }
@@ -620,19 +569,28 @@ export default function PageHeader({
         }`}
         style={{
           transform: 'translateZ(0)', // Force GPU acceleration
-          left: window.innerWidth >= 768 ? `${headerSidebarWidth}px` : '0px', // Only respond to persistent expanded state
+          left: '0px',
           right: '0px',
-          width: window.innerWidth >= 768 ? `calc(100% - ${headerSidebarWidth}px)` : '100%' // Adjust width for persistent state only
+          width: '100%'
         }}
       >
-        <div className="relative mx-auto px-2 md:px-4">
-          <div className={`flex items-center justify-between ${isScrolled ? 'py-1' : 'py-2'}`}>
+        {/* Header content container - full width, no sidebar offset since parent handles it */}
+        <div className="relative px-4 header-padding-mobile w-full">
+            <div
+              className="flex items-center justify-between min-h-0 transition-all duration-300 ease-out"
+              style={{
+                paddingTop: `${headerPadding}px`,
+                paddingBottom: `${headerPadding}px`,
+                transform: 'translateZ(0)', // Force GPU acceleration
+                willChange: 'padding'
+              }}
+            >
             {/* Left Side - Back Button */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mr-4">
               <Button
                 variant="outline"
                 size="icon"
-                className={`md:mr-2 text-foreground transition-opacity duration-120 ${
+                className={`text-foreground transition-opacity duration-120 ${
                   isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}
                 onClick={handleBackClick}
@@ -664,37 +622,26 @@ export default function PageHeader({
                 </Button>
               )}
 
-              {/* Edit icon positioned outside and to the left of title container */}
-              {isEditing && canEdit && !isScrolled && !isDailyNote && (
-                <Edit2
-                  className="h-4 w-4 opacity-60 hover:opacity-100 transition-opacity duration-200 text-muted-foreground flex-shrink-0 mr-3 cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleTitleClick();
-                  }}
-                  title="Click to edit title"
-                />
-              )}
+
 
               <div
-                className={`text-center space-y-0 transition-all duration-200 ease-out will-change-transform ${
-                  isScrolled ? "flex flex-row items-center gap-2 pl-0" : "max-w-full"
+                className={`text-center space-y-0 transition-all duration-200 ease-out will-change-transform header-mobile-safe w-full max-w-none ${
+                  isScrolled ? "flex flex-row items-center gap-1 sm:gap-2 pl-0" : "flex flex-col items-center"
                 }`}
                 style={{
                   transform: isScrolled ? "translateY(0)" : "translateY(0)",
-                  maxWidth: isScrolled ? "calc(100% - 16px)" : "100%",
-                  margin: isScrolled ? "0 8px" : "0"
+                  maxWidth: isScrolled ? "calc(100% - 16px)" : "100%", // Better mobile spacing
+                  margin: isScrolled ? "0 2px" : "0", // Minimal margin for mobile
+                  minWidth: 0 // Allow shrinking
                 }}
               >
                 <h1
                   className={`font-semibold transition-all duration-200 ease-out will-change-transform ${
                     isScrolled
-                      ? "text-xs opacity-90"
-                      : "text-2xl mb-0.5"
+                      ? "text-xs opacity-90 header-title-mobile"
+                      : "text-2xl mb-0.5 header-title-expanded-mobile"
                   }`}
-                  style={{
-                    maxWidth: isScrolled ? "70vw" : "100%"
-                  }}
+
                 >
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
@@ -725,16 +672,16 @@ export default function PageHeader({
                               : "text-2xl"
                           }`}
                           style={{
-                            maxWidth: isScrolled ? "60vw" : "100%",
-                            minWidth: isScrolled ? "120px" : "200px", // Maintain minimum width
-                            width: isScrolled ? "auto" : "300px" // Fixed width when not scrolled
+                            maxWidth: isScrolled ? "50vw" : "100%",
+                            minWidth: isScrolled ? "60px" : "auto",
+                            width: isScrolled ? "auto" : "100%" // Full width on mobile when expanded
                           }}
                           placeholder={isNewPage ? "Give your page a title..." : "Add a title..."}
                         />
                       ) : (
                         <span
                           className={`${isScrolled ? "text-ellipsis overflow-hidden" : ""} ${
-                            isEditing && canEdit && !isDailyNote
+                            canEdit && !isDailyNote
                               ? `cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 border transition-all duration-200 ${
                                   titleError
                                     ? "border-destructive hover:border-destructive/70"
@@ -749,21 +696,26 @@ export default function PageHeader({
                               : ""
                           }`}
                           style={isScrolled ? {
-                            maxWidth: '60vw',
+                            maxWidth: '50vw',
                             display: 'inline-block',
                             verticalAlign: 'middle',
-                            whiteSpace: 'nowrap',
-                            paddingRight: '4px'
+                            whiteSpace: 'nowrap', // Prevent wrapping in collapsed state
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            lineHeight: '1.2'
                           } : {
-                            minWidth: "200px", // Maintain same minimum width as input
-                            width: "300px", // Maintain same width as input
-                            display: 'inline-block'
+                            // Allow natural wrapping on mobile for expanded state
+                            width: '100%',
+                            display: 'block',
+                            wordWrap: 'break-word',
+                            overflowWrap: 'break-word',
+                            hyphens: 'auto'
                           }}
                           onClick={handleTitleClick}
                           title={
                             isDailyNote
                               ? "Click to change date format"
-                              : (isEditing && canEdit ? "Click to edit title" : undefined)
+                              : (canEdit ? (isEditing ? "Click to edit title" : "Click to edit page") : undefined)
                           }
                         >
                           <span className={!title && isNewPage ? "text-muted-foreground" : ""}>
@@ -785,11 +737,11 @@ export default function PageHeader({
                 <div
                   className={`text-muted-foreground transition-all duration-200 ease-out will-change-transform ${
                     isScrolled
-                      ? "text-xs mt-0 whitespace-nowrap overflow-hidden text-ellipsis inline-block"
+                      ? "text-xs mt-0 overflow-hidden text-ellipsis inline-block header-byline-mobile"
                       : "text-sm mt-0.5"
                   }`}
                   style={{
-                    maxWidth: isScrolled ? "25vw" : "100%",
+                    maxWidth: isScrolled ? "35vw" : "100%", // Better mobile width allocation
                     minWidth: isScrolled ? "auto" : "auto"
                   }}
                 >
@@ -908,7 +860,7 @@ export default function PageHeader({
             </div>
 
             {/* Right Side - Action Menu (only visible when not scrolled) */}
-            <div className="flex items-center">
+            <div className="flex items-center ml-4">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -1012,12 +964,24 @@ export default function PageHeader({
         </div>
         {/* Scroll Progress Bar - positioned outside padded container */}
         <div
-          className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-120"
-          style={{ width: `${scrollProgress}%` }}
+          className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ease-out"
+          style={{
+            width: `${scrollProgress}%`,
+            transform: 'translateZ(0)', // Force GPU acceleration
+            willChange: 'width'
+          }}
         />
       </header>
       {/* Add spacer to prevent content from being hidden under the fixed header */}
-      <div ref={spacerRef} style={{ height: headerHeight + 'px' }} />
+      <div
+        ref={spacerRef}
+        style={{
+          height: `${headerHeight}px`,
+          transition: 'height 300ms ease-in-out',
+          transform: 'translateZ(0)', // Force GPU acceleration
+          willChange: 'height'
+        }}
+      />
 
       {/* Add to Page Modal - shared with bottom button functionality */}
       {pageObject && (

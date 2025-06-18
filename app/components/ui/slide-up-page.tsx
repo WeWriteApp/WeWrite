@@ -97,7 +97,7 @@ export function SlideUpPage({
   // If animation is disabled or not needed, render normally with text selection enabled
   if (!enableAnimation || !shouldAnimate) {
     return (
-      <div className={cn("min-h-screen new-page-container slide-up-page animation-complete", className)}>
+      <div className={cn("new-page-container slide-up-page animation-complete", className)}>
         {children}
       </div>
     );

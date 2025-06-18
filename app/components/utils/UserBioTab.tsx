@@ -250,12 +250,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
         )}
       </div>
 
-      {/* Last edit info */}
-      {lastEditor && lastEditTime && (
-        <div className="text-xs text-muted-foreground mt-4">
-          <p>Last edited by: {lastEditor} on {new Date(lastEditTime).toLocaleString()}</p>
-        </div>
-      )}
+
 
       {/* Unsaved Changes Dialog */}
       <UnsavedChangesDialog

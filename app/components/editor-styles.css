@@ -57,7 +57,7 @@ a[data-user-id]::before {
   text-indent: 0 !important;
   display: inline-flex !important;
   float: none !important;
-  vertical-align: middle !important;
+  vertical-align: top !important; /* Match paragraph number alignment */
   /* DO NOT override padding - let PillStyleContext handle it */
 }
 
@@ -201,7 +201,7 @@ a[data-user-id]::before {
 .editor-content a.user-link,
 .editor-content a.external-link {
   line-height: 1.2; /* Restore pill link line-height */
-  vertical-align: baseline;
+  vertical-align: top; /* Match paragraph number alignment */
   /* Ensure consistent pill styling between view and edit modes */
 }
 

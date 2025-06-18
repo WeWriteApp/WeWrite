@@ -84,7 +84,31 @@ export async function POST(request: NextRequest) {
     const userDoc = await userRef.get();
 
     if (userDoc.exists && userDoc.data()?.stripeCustomerId) {
-      stripeCustomerId = userDoc.data()!.stripeCustomerId;
+      const existingCustomerId = userDoc.data()!.stripeCustomerId;
+
+      try {
+        // Validate that the customer still exists in Stripe
+        await stripe.customers.retrieve(existingCustomerId);
+        stripeCustomerId = existingCustomerId;
+        console.log(`Using existing Stripe customer: ${existingCustomerId}`);
+      } catch (error: any) {
+        console.warn(`Stripe customer ${existingCustomerId} not found, creating new one:`, error.message);
+
+        // Customer doesn't exist in Stripe, create a new one
+        const customer = await stripe.customers.create({
+          metadata: {
+            firebaseUID: userId,
+          },
+        });
+
+        stripeCustomerId = customer.id;
+
+        // Update user document with new Stripe customer ID
+        await userRef.set({
+          stripeCustomerId: customer.id,
+          updatedAt: new Date()
+        }, { merge: true });
+      }
     } else {
       // Create new Stripe customer
       const customer = await stripe.customers.create({
@@ -193,6 +217,9 @@ export async function POST(request: NextRequest) {
       } else if (error.message.includes('stripe') || error.message.includes('Stripe')) {
         errorMessage = 'Payment processing error. Please try again.';
         statusCode = 500;
+      } else if (error.message.includes('No such customer') || error.message.includes('customer')) {
+        errorMessage = 'Customer account error. Please try again or contact support.';
+        statusCode = 400;
       } else if (error.message.includes('Invalid tier') || error.message.includes('amount')) {
         errorMessage = error.message;
         statusCode = 400;

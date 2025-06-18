@@ -7,6 +7,10 @@ import { getDatabase, ref, get } from "firebase/database";
 import { getRecentActivity } from "../firebase/activity";
 import { getBatchUserData } from "../firebase/batchUserData";
 
+// Simple cache for recent activity data
+const activityCache = new Map();
+const CACHE_DURATION = 30000; // 30 seconds cache
+
 const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false, mineOnly = false) => {
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
@@ -119,6 +123,17 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
   useEffect(() => {
     const fetchRecentActivity = async () => {
       try {
+        // Check cache first
+        const cacheKey = `${limitCount}-${filterUserId}-${followedOnly}-${mineOnly}-${user?.uid || 'anonymous'}`;
+        const cached = activityCache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+          console.log('Using cached activity data');
+          setActivities(cached.data);
+          setLoading(false);
+          setHasMore(cached.hasMore);
+          return;
+        }
+
         setLoading(true);
         setError(null);
 
@@ -172,8 +187,9 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
 
         try {
           // Use getRecentActivity to get activities including bio and about edits
+          // Reduced multiplier for better performance
           const { activities: recentActivities } = await getRecentActivity(
-            limitCount * 2,
+            Math.min(limitCount + 5, 20), // Cap at 20 for performance
             user ? user.uid : null
           );
 
@@ -250,6 +266,13 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
 
           // Set hasMore based on the number of activities
           setHasMore(recentActivities.length > validActivities.length);
+
+          // Cache the results
+          activityCache.set(cacheKey, {
+            data: validActivities,
+            hasMore: recentActivities.length > validActivities.length,
+            timestamp: Date.now()
+          });
 
           // Store the last document for pagination (not applicable with the new approach)
           // We'll need to implement a different pagination strategy for bio/about activities

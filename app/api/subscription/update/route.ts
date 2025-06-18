@@ -141,6 +141,13 @@ export async function POST(request: NextRequest) {
         error: 'Payment method error: ' + error.message
       }, { status: 402 });
     } else if (error.type === 'StripeInvalidRequestError') {
+      // Check for specific customer-related errors
+      if (error.message.includes('No such customer') || error.message.includes('customer')) {
+        return NextResponse.json({
+          error: 'Customer account error. Please try creating a new subscription.',
+          code: 'INVALID_CUSTOMER'
+        }, { status: 400 });
+      }
       return NextResponse.json({
         error: 'Invalid request: ' + error.message
       }, { status: 400 });

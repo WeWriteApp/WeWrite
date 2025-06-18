@@ -47,6 +47,14 @@ const UnverifiedUserBanner = dynamic(() => import('./components/utils/Unverified
   ssr: false
 });
 
+const SiteFooter = dynamic(() => import('./components/layout/SiteFooter'), {
+  ssr: false
+});
+
+const ConstructionBanner = dynamic(() => import('./components/utils/ConstructionBanner'), {
+  ssr: false
+});
+
 
 
 
@@ -101,6 +109,12 @@ export default function ClientLayout({ children }) {
                                           </ErrorBoundary>
                                         </AdminFeaturesWrapper>
                                       </main>
+
+                                      {/* Site Footer */}
+                                      {!isAuthPage && <SiteFooter />}
+
+                                      {/* Construction Banner */}
+                                      {!isAuthPage && <ConstructionBanner />}
 
                                       {/* Mobile Bottom Navigation */}
                                       {!isAuthPage && <MobileBottomNav />}

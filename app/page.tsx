@@ -16,7 +16,7 @@ import LazySection from "./components/ui/lazy-section";
 import { Button } from "./components/ui/button";
 import LandingPage from "./components/landing/LandingPage";
 
-import SiteFooter from "./components/layout/SiteFooter";
+
 import { SectionTitle } from "./components/ui/section-title";
 import StickySection from "./components/utils/StickySection";
 import PWABanner from "./components/utils/PWABanner";
@@ -214,7 +214,6 @@ const Home = React.memo(function Home() {
     return (
       <>
         <LandingPage />
-        <SiteFooter className="" />
       </>
     );
   }
@@ -275,7 +274,7 @@ const Home = React.memo(function Home() {
           >
 
             <RecentActivity
-              limit={4}
+              limit={3}
               renderFilterInHeader={true}
               showViewAll={true}
             />
@@ -347,7 +346,7 @@ const Home = React.memo(function Home() {
               minHeight={300}
               fallback={<TrendingPagesSkeleton limit={5} />}
             >
-              <TrendingPages limit={5} priority="low" />
+              <TrendingPages limit={3} priority="low" />
             </LazySection>
           </StickySection>
 
@@ -370,7 +369,6 @@ const Home = React.memo(function Home() {
 
 
         </main>
-        <SiteFooter className="" />
       </Suspense>
     </SmartLoader>
   );

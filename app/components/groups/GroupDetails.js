@@ -24,7 +24,7 @@ import {
   DialogTitle,
   DialogClose
 } from "../ui/dialog";
-import SiteFooter from "../layout/SiteFooter";
+
 
 export default function GroupDetails({ group }) {
   const { theme } = useTheme();
@@ -209,8 +209,6 @@ export default function GroupDetails({ group }) {
           )}
         </div>
       </div>
-
-      <SiteFooter />
 
       <Dialog open={showConfirmDialog} onOpenChange={(open) => {
         setShowConfirmDialog(open);

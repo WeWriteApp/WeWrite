@@ -91,18 +91,37 @@ export async function POST(request: NextRequest) {
     const userData = userDoc.data();
     let stripeCustomerId = userData.stripeCustomerId;
 
-    // Create Stripe customer if doesn't exist
+    // Create Stripe customer if doesn't exist or validate existing one
     if (!stripeCustomerId) {
       const customer = await stripe.customers.create({
         email: userData.email,
         metadata: { firebaseUID: userId }
       });
       stripeCustomerId = customer.id;
-      
+
       // Update user document with Stripe customer ID
       await updateDoc(doc(db, 'users', userId), {
         stripeCustomerId: stripeCustomerId
       });
+    } else {
+      try {
+        // Validate that the customer still exists in Stripe
+        await stripe.customers.retrieve(stripeCustomerId);
+      } catch (error: any) {
+        console.warn(`Stripe customer ${stripeCustomerId} not found, creating new one:`, error.message);
+
+        // Customer doesn't exist in Stripe, create a new one
+        const customer = await stripe.customers.create({
+          email: userData.email,
+          metadata: { firebaseUID: userId }
+        });
+        stripeCustomerId = customer.id;
+
+        // Update user document with new Stripe customer ID
+        await updateDoc(doc(db, 'users', userId), {
+          stripeCustomerId: stripeCustomerId
+        });
+      }
     }
 
     // Get recipient's Stripe Connect account

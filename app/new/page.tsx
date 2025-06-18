@@ -18,7 +18,7 @@ import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../components/utils/UnsavedChangesDialog";
 import { PageProvider } from "../contexts/PageContext";
 import { LineSettingsProvider } from "../contexts/LineSettingsContext";
-import SiteFooter from "../components/layout/SiteFooter";
+
 import TokenPledgeBar from "../components/payments/TokenPledgeBar";
 import { shouldUseQueue, addToQueue, checkOperationAllowed } from "../utils/syncQueue";
 import { useSyncQueue } from "../contexts/SyncQueueContext";
@@ -550,7 +550,7 @@ export default function NewPage() {
           <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
         </Head>
         <PageHeader
-          title={title || (isReply ? "" : "")} // Start with empty title for new pages
+          title={title}
           username={username}
           userId={user?.uid}
           isLoading={isLoading}
@@ -563,18 +563,12 @@ export default function NewPage() {
           onTitleChange={handleTitleChange}
           titleError={titleError}
           canEdit={true} // User can always edit their new page
-          pageId={null} // No page ID for new pages, but needed for ownership dropdown
-          isNewPage={true} // Flag to indicate this is a new page
-          onPrivacyChange={setIsPublic} // Handle privacy toggle changes
-          onOwnershipChange={(newGroupId: string | null, newGroupName: string | null) => {
-            setSelectedGroupId(newGroupId);
-            setSelectedGroupName(newGroupName);
-          }}
         />
-        <div className="pb-24 px-2 md:px-4 w-full max-w-none min-h-screen pt-16">
-          <div className="transition-all duration-300 ease-in-out opacity-100 min-h-[calc(100vh-8rem)]">
+        <div className="w-full max-w-none box-border">
+          {/* Unified container with consistent layout matching SinglePageView */}
+          <div className="px-4 py-4 w-full max-w-none box-border">
             {isEditing ? (
-              <div className="animate-in fade-in-0 duration-300 min-h-[500px]">
+              <div className="animate-in fade-in-0 duration-300">
                 <PageProvider>
                   <LineSettingsProvider isEditMode={true}>
                   <PageEditor
@@ -592,8 +586,8 @@ export default function NewPage() {
                     isReply={isReply}
                     replyToId={searchParams?.get('replyTo') || ""}
                     clickPosition={null}
-                    onSave={() => handleSave(editorContent || editorState, 'button')}
-                    onKeyboardSave={() => handleSave(editorContent || editorState, 'keyboard')}
+                    onSave={(capturedContent) => handleSave(capturedContent || editorContent || editorState, 'button')}
+                    onKeyboardSave={(capturedContent) => handleSave(capturedContent || editorContent || editorState, 'keyboard')}
                     onCancel={handleBackWithCheck}
 
                     page={null} // No existing page for new pages
@@ -615,7 +609,6 @@ export default function NewPage() {
             ) : null}
           </div>
         </div>
-        <SiteFooter className="" />
         {!isEditing && (
           <TokenPledgeBar
             pageId="new-page"

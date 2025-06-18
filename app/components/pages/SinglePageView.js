@@ -20,7 +20,7 @@ import DeletedPageBanner from "../utils/DeletedPageBanner";
 import PublicLayout from "../layout/PublicLayout";
 import PageHeader from "./PageHeader.tsx";
 import PageFooter from "./PageFooter";
-import SiteFooter from "../layout/SiteFooter";
+
 import TokenPledgeBar from "../payments/TokenPledgeBar";
 import RelatedPages from "../features/RelatedPages";
 // Import BacklinksSection with dynamic import to avoid SSR issues
@@ -1665,7 +1665,6 @@ function SinglePageView({ params, initialEditMode = false }) {
           setIsEditing={handleSetIsEditing}
         />
       </PageProvider>
-      <SiteFooter />
       {!isEditing && (
         <TokenPledgeBar
           pageId={page.id}
@@ -1737,7 +1736,7 @@ const PageContentWithLineSettings = ({
             setIsPublic={handleVisibilityChange}
             location={location}
             setLocation={handleLocationChange}
-            onSave={() => handleSave(editorState)}
+            onSave={(capturedContent) => handleSave(capturedContent || editorContent || editorState)}
             onCancel={handleCancel}
             onDelete={handleDelete}
             isSaving={isSaving}
