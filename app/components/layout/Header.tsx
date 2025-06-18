@@ -11,6 +11,7 @@ import { useSidebarContext } from "./UnifiedSidebar";
 import { useAuth } from "../../providers/AuthProvider";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { listenToUserSubscription } from "../../firebase/subscription";
+import { getSubscriptionButtonText, getSubscriptionNavigationPath, isActiveSubscription } from "../../utils/subscriptionStatus";
 
 export default function Header() {
   const router = useRouter();
@@ -133,25 +134,15 @@ export default function Header() {
 
             {/* Support Us / Manage Subscription button (right side) */}
             <div className="flex-1 flex justify-end">
-              {isPaymentsEnabled && subscription && subscription.status === 'active' ? (
+              {isPaymentsEnabled ? (
                 <Button
                   variant="outline"
                   size="sm"
                   className="gap-1 bg-primary hover:bg-primary/90 text-white border-0"
-                  onClick={() => router.push('/settings/subscription/manage')}
+                  onClick={() => router.push(getSubscriptionNavigationPath(subscription?.status))}
                 >
                   <DollarSign className="h-4 w-4 text-white" />
-                  <span className="hidden sm:inline">Manage Subscription</span>
-                </Button>
-              ) : isPaymentsEnabled ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1 bg-primary hover:bg-primary/90 text-white border-0"
-                  onClick={() => router.push('/settings/subscription')}
-                >
-                  <DollarSign className="h-4 w-4 text-white" />
-                  <span className="hidden sm:inline">Activate Subscription</span>
+                  <span className="hidden sm:inline">{getSubscriptionButtonText(subscription?.status)}</span>
                 </Button>
               ) : (
                 <Button

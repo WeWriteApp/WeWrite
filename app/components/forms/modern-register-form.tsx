@@ -13,12 +13,14 @@ import { Check, Loader2, X } from "lucide-react"
 import { debounce } from "lodash"
 import { Separator } from "../ui/separator"
 import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername } from "../../utils/usernameValidation"
+import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics"
 
 export function ModernRegisterForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"form">) {
   const router = useRouter()
+  const { trackAuthEvent } = useWeWriteAnalytics()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [username, setUsername] = useState("")
@@ -179,6 +181,14 @@ export function ModernRegisterForm({
         try {
           await addUsername(result.user.uid, username)
           console.log("Username added successfully")
+
+          // Track user creation event
+          trackAuthEvent('USER_CREATED', {
+            user_id: result.user.uid,
+            username: username,
+            email: email,
+            registration_method: 'email_password'
+          })
 
           // Show redirect overlay
           setIsRedirecting(true)

@@ -77,12 +77,99 @@ export const extractLinksFromNodes = (nodes: SlateContent[]): LinkData[] => {
 /**
  * Find backlinks to a specific page
  */
-export const findBacklinks = async (pageId: string, limitCount: number = 10): Promise<LinkData[]> => {
+export const findBacklinks = async (pageId: string, limitCount: number = 10): Promise<Array<{
+  id: string;
+  title: string;
+  username?: string;
+  lastModified: any;
+  isPublic: boolean;
+}>> => {
   try {
-    // This would typically involve searching through all pages to find links to this page
-    // For now, return empty array as this requires a more complex search implementation
     console.log(`Finding backlinks for page ${pageId} (limit: ${limitCount})`);
-    return [];
+
+    const { db } = await import('../config');
+    const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
+
+    // Query for public pages that might contain links to our target page
+    const pagesQuery = query(
+      collection(db, 'pages'),
+      where('isPublic', '==', true),
+      where('deleted', '!=', true),
+      orderBy('lastModified', 'desc'),
+      limit(100) // Get more pages to search through
+    );
+
+    const snapshot = await getDocs(pagesQuery);
+    const backlinks: Array<{
+      id: string;
+      title: string;
+      username?: string;
+      lastModified: any;
+      isPublic: boolean;
+    }> = [];
+
+    // Search through page content for links to our target page
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+
+      // Skip the target page itself
+      if (doc.id === pageId) continue;
+
+      // Skip if no content
+      if (!data.content) continue;
+
+      try {
+        // Parse content if it's a string
+        let contentNodes: SlateContent[] = [];
+        if (typeof data.content === 'string') {
+          contentNodes = JSON.parse(data.content);
+        } else if (Array.isArray(data.content)) {
+          contentNodes = data.content;
+        } else {
+          continue; // Skip if content format is unexpected
+        }
+
+        // Extract links from the page content
+        const links = extractLinksFromNodes(contentNodes);
+
+        // Check if any link points to our target page
+        const hasLinkToTarget = links.some(link => {
+          // Check for page links that match our target
+          if (link.type === 'page' && link.pageId === pageId) {
+            return true;
+          }
+
+          // Check for URL-based links that match our target (both 'page' and 'internal' types)
+          if ((link.type === 'page' || link.type === 'internal') && link.url) {
+            const linkPageId = link.url.replace('/pages/', '').replace('/', '');
+            return linkPageId === pageId;
+          }
+
+          return false;
+        });
+
+        if (hasLinkToTarget) {
+          backlinks.push({
+            id: doc.id,
+            title: data.title || 'Untitled',
+            username: data.username,
+            lastModified: data.lastModified,
+            isPublic: data.isPublic
+          });
+
+          // Stop when we have enough results
+          if (backlinks.length >= limitCount) {
+            break;
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing page ${doc.id} for backlinks:`, error);
+        continue;
+      }
+    }
+
+    console.log(`Found ${backlinks.length} backlinks for page ${pageId}`);
+    return backlinks;
   } catch (error) {
     console.error("Error finding backlinks:", error);
     return [];
@@ -164,7 +251,7 @@ export const findPagesLinkingToExternalUrl = async (
   lastModified: any;
 }>> => {
   try {
-    const { db } = await import('../database');
+    const { db } = await import('../config');
     const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
 
     // Query for public pages that might contain the external URL

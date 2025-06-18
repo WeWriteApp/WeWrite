@@ -221,6 +221,13 @@ const RandomPages = React.memo(function RandomPages({
       <div className="space-y-4">
         <div className="border border-theme-medium rounded-2xl p-8 text-center">
           <p className="text-muted-foreground">No pages available to display</p>
+          <Button
+            variant="outline"
+            onClick={() => fetchRandomPages()}
+            className="mt-4 rounded-2xl"
+          >
+            Try Again
+          </Button>
         </div>
       </div>
     );

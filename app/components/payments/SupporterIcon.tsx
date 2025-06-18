@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import { Ban, Star } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
 import { useFeatureFlag } from '../../utils/feature-flags';
+import { getSubscriptionStatusInfo, isActiveSubscription } from '../../utils/subscriptionStatus';
 
 interface SupporterIconProps {
   tier?: string | null;
@@ -21,7 +22,9 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
   if (!isPaymentsEnabled) {
     return null;
   }
-  const isActive = status === 'active' || status === 'trialing';
+  // Use unified status system
+  const statusInfo = getSubscriptionStatusInfo(status);
+  const isActive = statusInfo.isActive;
   const iconSizes = { sm: 14, md: 16, lg: 20, xl: 32 };
   const iconSize = iconSizes[size];
 
@@ -29,17 +32,17 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
   let iconContent = null;
 
   if (!tier || tier === 'tier0' || !isActive) {
-    tooltipText = 'No active subscription';
+    tooltipText = `No active subscription (${statusInfo.displayText})`;
     iconContent = (
       <Ban size={iconSize} className="text-gray-400 dark:text-gray-500" />
     );
   } else if (tier === 'tier1') {
-    tooltipText = 'Tier 1 Subscription - $10/mo';
+    tooltipText = `Tier 1 Subscription - $10/mo (${statusInfo.displayText})`;
     iconContent = (
       <Star size={iconSize} className="text-yellow-400 dark:text-yellow-300" fill="#facc15" />
     );
   } else if (tier === 'tier2') {
-    tooltipText = 'Tier 2 Subscription - $20/mo';
+    tooltipText = `Tier 2 Subscription - $20/mo (${statusInfo.displayText})`;
     iconContent = (
       <>
         <Star size={iconSize} className="text-yellow-400 dark:text-yellow-300" fill="#facc15" />
@@ -47,7 +50,7 @@ export function SupporterIcon({ tier, status, size = 'sm', className = '' }: Sup
       </>
     );
   } else if (tier === 'tier3') {
-    tooltipText = 'Tier 3 Subscription - $50+/mo';
+    tooltipText = `Tier 3 Subscription - $50+/mo (${statusInfo.displayText})`;
     iconContent = (
       <span className="flex items-center gap-0.5">
         <Star size={iconSize} className="text-yellow-400 drop-shadow-glow" fill="#facc15" />

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect, useContext } from "react"
-import { X, ChevronLeft, Palette, Settings, Check, User, Users, Shield, Globe, Lock, Link as LinkIcon, Trash2, Clock } from "lucide-react"
+import { X, ChevronLeft, Palette, Settings, Check, User, Users, Shield, Globe, Lock, Link as LinkIcon, Trash2, Clock, Shuffle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { auth } from "../../firebase/config"
 import { signOut } from "firebase/auth"
@@ -17,6 +17,8 @@ import PillStyleToggle from "../utils/PillStyleToggle"
 import { AuthContext } from "../../providers/AuthProvider"
 import { useFeatureFlag } from "../../utils/feature-flags"
 import MapEditor from "../editor/MapEditor"
+import { navigateToRandomPage, RandomPageFilters } from "../../utils/randomPageNavigation"
+import RandomPageFilterMenu from "../ui/RandomPageFilterMenu"
 
 interface SidebarProps {
   isOpen: boolean
@@ -40,6 +42,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [currentSection, setCurrentSection] = useState<string | null>(null)
+  const [isRandomMenuOpen, setIsRandomMenuOpen] = useState(false)
   const { user } = useContext(AuthContext)
 
   // Groups feature is now always enabled for all users
@@ -216,14 +219,41 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
             {/* Main Menu Items */}
             <div className="space-y-1">
               <button
-                onClick={() => router.push('/recents')}
+                onClick={() => {
+                  onClose();
+                  router.push('/recents');
+                }}
                 className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
               >
                 <Clock className="h-5 w-5 mr-2" />
                 <span>Recents</span>
               </button>
 
+              <div className="relative group">
+                <button
+                  onClick={async () => {
+                    onClose();
+                    await navigateToRandomPage(router, user?.uid);
+                  }}
+                  className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                >
+                  <Shuffle className="h-5 w-5 mr-2" />
+                  <span>Random Page</span>
+                </button>
 
+                {/* Random Page Filter Menu */}
+                <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                  <RandomPageFilterMenu
+                    size="sm"
+                    onFiltersChange={(filters: RandomPageFilters) => {
+                      // Filters are automatically persisted by the component
+                    }}
+                    onOpenChange={(isOpen) => {
+                      setIsRandomMenuOpen(isOpen);
+                    }}
+                  />
+                </div>
+              </div>
 
               {/* Groups navigation item - now always visible for all users */}
               <button
@@ -249,7 +279,10 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
               </button>
 
               <button
-                onClick={() => router.push('/settings')}
+                onClick={() => {
+                  onClose();
+                  router.push('/settings');
+                }}
                 className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
               >
                 <Settings className="h-5 w-5 mr-2" />
@@ -257,7 +290,10 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
               </button>
 
               <button
-                onClick={() => router.push(`/user/${user?.uid}`)}
+                onClick={() => {
+                  onClose();
+                  router.push(`/user/${user?.uid}`);
+                }}
                 className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
               >
                 <User className="h-5 w-5 mr-2" />
@@ -267,7 +303,10 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
               {/* Admin Dashboard - Only visible for admins */}
               {user && user.email && isAdmin(user.email) && (
                 <button
-                  onClick={() => router.push('/admin')}
+                  onClick={() => {
+                    onClose();
+                    router.push('/admin');
+                  }}
                   className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
                 >
                   <Shield className="h-5 w-5 mr-2" />
@@ -374,7 +413,12 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
           "fixed inset-0 bg-black/60 z-[999] transition-opacity duration-300 min-h-screen w-screen",
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
-        onClick={onClose}
+        onClick={() => {
+          // Don't close if the random menu is open
+          if (!isRandomMenuOpen) {
+            onClose();
+          }
+        }}
         aria-hidden="true"
       />
 

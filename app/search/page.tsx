@@ -277,18 +277,9 @@ const SearchPage = React.memo(() => {
 
     const saved = saveSearchQuery(searchTerm, userId);
     if (saved) {
-      toast({
-        title: "Search saved",
-        description: "Your search has been saved to pinned searches.",
-      });
       // Force refresh the saved searches component
       const savedSearchesEvent = new Event('savedSearchesUpdated');
       window.dispatchEvent(savedSearchesEvent);
-    } else {
-      toast({
-        title: "Already saved",
-        description: "This search is already in your pinned searches.",
-      });
     }
   }, [userId]);
 
@@ -311,10 +302,6 @@ const SearchPage = React.memo(() => {
     navigator.clipboard.writeText(textToCopy)
       .then(() => {
         console.log("Link copied to clipboard");
-        toast({
-          title: "Link copied",
-          description: "Search URL copied to clipboard",
-        });
       })
       .catch(err => {
         console.error('Failed to copy URL:', err);

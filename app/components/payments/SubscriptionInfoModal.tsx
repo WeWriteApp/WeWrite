@@ -123,7 +123,7 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
             ) : null}
             {/* Only show the CTA button if this is for the current user (no username and no userId) */}
             {(!username && !userId) && (
-              <Link href="/settings/subscription">
+              <Link href={currentTier && currentStatus === 'active' ? '/settings/subscription/manage' : '/settings/subscription'}>
                 <Button>{currentTier && currentStatus === 'active' ? 'Manage Your Subscription' : 'Subscribe Now'}</Button>
               </Link>
             )}

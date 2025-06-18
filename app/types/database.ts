@@ -158,6 +158,61 @@ export interface TokenAllocation {
   updatedAt: string | Timestamp;
 }
 
+// Writer Token Earnings Types
+export interface WriterTokenEarnings {
+  id: string;
+  userId: string; // Writer/recipient
+  month: string; // YYYY-MM format
+  totalTokensReceived: number;
+  totalUsdValue: number; // Tokens converted to USD ($1 = 10 tokens)
+  status: 'pending' | 'available' | 'paid_out';
+  allocations: {
+    allocationId: string;
+    fromUserId: string;
+    fromUsername?: string;
+    resourceType: 'page' | 'group';
+    resourceId: string;
+    resourceTitle?: string;
+    tokens: number;
+    usdValue: number;
+  }[];
+  processedAt?: string | Timestamp;
+  createdAt: string | Timestamp;
+  updatedAt: string | Timestamp;
+}
+
+export interface WriterTokenBalance {
+  userId: string;
+  totalTokensEarned: number;
+  totalUsdEarned: number;
+  pendingTokens: number; // Current month tokens (not yet available for payout)
+  pendingUsdValue: number;
+  availableTokens: number; // Previous months tokens (available for payout)
+  availableUsdValue: number;
+  paidOutTokens: number;
+  paidOutUsdValue: number;
+  lastProcessedMonth: string;
+  createdAt: string | Timestamp;
+  updatedAt: string | Timestamp;
+}
+
+export interface TokenPayout {
+  id: string;
+  userId: string; // Writer requesting payout
+  amount: number; // USD amount
+  tokens: number; // Number of tokens being paid out
+  currency: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  stripePayoutId?: string;
+  stripeTransferId?: string;
+  earningsIds: string[]; // References to WriterTokenEarnings
+  requestedAt: string | Timestamp;
+  processedAt?: string | Timestamp;
+  completedAt?: string | Timestamp;
+  failureReason?: string;
+  minimumThresholdMet: boolean;
+}
+
 export interface MonthlyTokenDistribution {
   id: string;
   month: string; // YYYY-MM format

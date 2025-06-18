@@ -14,6 +14,7 @@ import PageViewCounter from "./PageViewCounter";
 import { initializeNavigationTracking } from "../../utils/navigationTracking";
 import { AuthContext } from "../../providers/AuthProvider";
 import { DataContext } from "../../providers/DataProvider";
+import DeletedPageBanner from "../utils/DeletedPageBanner";
 
 // Removed Slate imports - using simple text rendering now
 import PublicLayout from "../layout/PublicLayout";
@@ -47,7 +48,8 @@ import { toast } from "../ui/use-toast";
 import { RecentPagesContext } from "../../contexts/RecentPagesContext";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { PageProvider } from "../../contexts/PageContext";
-import { LineSettingsProvider, useLineSettings } from "../../contexts/LineSettingsContext";
+import { LineSettingsProvider, useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
+import { Switch } from "../ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -74,6 +76,7 @@ import ConfirmationModal from "../utils/ConfirmationModal";
 import { useLogging } from "../../providers/LoggingProvider";
 import { GroupsContext } from "../../providers/GroupsProvider";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
+import { detectPageChanges } from "../../utils/contentNormalization";
 
 // Username handling is now done directly in this component
 
@@ -127,10 +130,13 @@ function SinglePageView({ params, initialEditMode = false }) {
   const [hasLocationChanged, setHasLocationChanged] = useState(false);
   const [titleError, setTitleError] = useState(false);
 
+  // Deleted page preview state
+  const [isPreviewingDeleted, setIsPreviewingDeleted] = useState(false);
+  const [deletedPageData, setDeletedPageData] = useState(null);
+
   const { user } = useContext(AuthContext);
   const groups = useContext(GroupsContext);
   const { recentPages = [], addRecentPage } = useContext(RecentPagesContext) || {};
-  const { lineMode } = useLineSettings();
   const searchParams = useSearchParams();
   const router = useRouter();
   const contentRef = useRef(null);
@@ -247,42 +253,85 @@ function SinglePageView({ params, initialEditMode = false }) {
       const editorStateJSON = JSON.stringify(finalContent);
       console.log("Saving content:", editorStateJSON.substring(0, 100) + "...");
 
-      // Check if content has actually changed by comparing with the original content
-      let contentChanged = true;
-      if (page.content) {
-        try {
-          const originalContent = typeof page.content === 'string'
-            ? page.content
-            : JSON.stringify(page.content);
-          contentChanged = originalContent !== editorStateJSON;
-          console.log('Content comparison:', {
-            originalLength: originalContent.length,
-            newLength: editorStateJSON.length,
-            changed: contentChanged
-          });
-        } catch (e) {
-          console.error('Error comparing content:', e);
-          contentChanged = true;
-        }
+      // Use centralized change detection logic
+      const currentPageState = {
+        title,
+        isPublic,
+        location,
+        groupId,
+        content: finalContent
+      };
+
+      const previousPageState = {
+        title: page.title,
+        isPublic: page.isPublic,
+        location: page.location,
+        groupId: page.groupId,
+        content: page.content
+      };
+
+      const changeDetection = detectPageChanges(currentPageState, previousPageState);
+      const { hasContentChanges, hasMetadataChanges, hasAnyChanges } = changeDetection;
+
+      console.log('Comprehensive change detection:', {
+        hasContentChanges,
+        hasMetadataChanges,
+        hasAnyChanges,
+        contentDetails: changeDetection.contentComparison.details
+      });
+
+      // If no changes detected, skip the entire save operation
+      if (!hasAnyChanges) {
+        console.log('No meaningful changes detected, skipping save operation');
+        setIsSaving(false);
+
+        // Still exit edit mode since user intended to save
+        setTimeout(() => {
+          handleSetIsEditing(false);
+        }, 300);
+
+        return true;
       }
 
-      // Update the page document first
-      const updateTime = new Date().toISOString();
-      console.log(`Updating page ${page.id} with new metadata and content`);
+      // Update the page document with changes
+      console.log(`Updating page ${page.id} with changes - content: ${hasContentChanges}, metadata: ${hasMetadataChanges}`);
 
-      await updateDoc("pages", page.id, {
+      // Import serverTimestamp for proper Firestore timestamp
+      const { serverTimestamp } = await import('firebase/firestore');
+
+      // Prepare update data - only include lastModified if there are actual changes
+      const updateData = {
         title: title,
         isPublic: isPublic,
         groupId: groupId,
         location: location,
-        lastModified: updateTime,
         content: editorStateJSON
-      });
+      };
+
+      // Only update lastModified if there are meaningful changes
+      // This prevents "no changes" activities from appearing in the feed
+      if (hasAnyChanges) {
+        updateData.lastModified = serverTimestamp();
+      }
+
+      await updateDoc("pages", page.id, updateData);
 
       console.log('Page metadata and content updated successfully');
 
+      // If title changed, propagate to all links referencing this page
+      if (title !== page.title) {
+        console.log(`Page title changed from "${page.title}" to "${title}", propagating to links...`);
+        try {
+          const { propagatePageTitleUpdate } = await import('../../firebase/database/linkPropagation');
+          await propagatePageTitleUpdate(page.id, title, page.title);
+        } catch (error) {
+          console.error('Error propagating title update:', error);
+          // Don't fail the page update if link propagation fails
+        }
+      }
+
       // Only create a new version if content actually changed
-      if (contentChanged) {
+      if (hasContentChanges) {
         try {
           const result = await saveNewVersion(page.id, {
             content: editorStateJSON,
@@ -409,8 +458,7 @@ function SinglePageView({ params, initialEditMode = false }) {
         //   had_group: !!page.groupId
         // });
 
-        // Show success message
-        toast.success("Page deleted successfully");
+
 
         // Trigger success event
         if (typeof window !== 'undefined') {
@@ -444,6 +492,69 @@ function SinglePageView({ params, initialEditMode = false }) {
     window.dispatchEvent(insertLinkEvent);
   };
 
+  // Handle restoring a deleted page
+  const handleRestorePage = async () => {
+    if (!page || !user) return;
+
+    try {
+      // Import the updateDoc function
+      const { updateDoc } = await import('../../firebase/database');
+
+      // Remove the deleted flag and related fields
+      await updateDoc('pages', page.id, {
+        deleted: false,
+        deletedAt: null,
+        deletedBy: null
+      });
+
+
+
+      // Redirect to the restored page (without preview parameter)
+      router.push(`/${page.id}`);
+    } catch (error) {
+      console.error('Error restoring page:', error);
+      toast.error("Failed to restore page");
+    }
+  };
+
+  // Handle permanently deleting a page
+  const handlePermanentlyDeletePage = async () => {
+    if (!page || !user) return;
+
+    try {
+      // Import the deleteDoc function
+      const { db } = await import('../../firebase/database');
+      const { doc, deleteDoc } = await import('firebase/firestore');
+
+      // Actually delete the document from Firestore
+      await deleteDoc(doc(db, 'pages', page.id));
+
+
+
+      // Redirect to deleted pages list
+      router.push('/settings/deleted');
+    } catch (error) {
+      console.error('Error permanently deleting page:', error);
+      toast.error("Failed to permanently delete page");
+    }
+  };
+
+  // Calculate days until permanent deletion
+  const getDaysUntilPermanentDeletion = (deletedAt) => {
+    if (!deletedAt) return 30;
+
+    try {
+      const deletedDate = new Date(deletedAt);
+      const now = new Date();
+      const thirtyDaysLater = new Date(deletedDate.getTime() + (30 * 24 * 60 * 60 * 1000));
+      const timeDiff = thirtyDaysLater.getTime() - now.getTime();
+      const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+      return Math.max(0, daysDiff);
+    } catch {
+      return 30;
+    }
+  };
+
   // Track if there are any unsaved changes
   const hasUnsavedChangesComputed = hasContentChanged || hasTitleChanged || hasVisibilityChanged || hasLocationChanged;
 
@@ -459,6 +570,22 @@ function SinglePageView({ params, initialEditMode = false }) {
       setGroupId(page.groupId || null);
     }
   }, [page]);
+
+  // Check for deleted page preview mode
+  useEffect(() => {
+    const previewParam = searchParams?.get('preview');
+    const isDeletedPreview = previewParam === 'deleted';
+
+    setIsPreviewingDeleted(isDeletedPreview);
+
+    // If we're previewing a deleted page, we need to allow access to deleted pages
+    if (isDeletedPreview && page?.deleted) {
+      setDeletedPageData({
+        deletedAt: page.deletedAt,
+        daysLeft: getDaysUntilPermanentDeletion(page.deletedAt)
+      });
+    }
+  }, [searchParams, page]);
 
   // Memoized save function for the useUnsavedChanges hook
   const saveChanges = useCallback(() => {
@@ -524,12 +651,13 @@ function SinglePageView({ params, initialEditMode = false }) {
     // Only allow editing if:
     // 1. Page is loaded (!isLoading)
     // 2. Page exists (page !== null)
-    // 3. Page isn't deleted (!isDeleted)
+    // 3. Page isn't deleted (!isDeleted) and not previewing deleted
     // 4. User owns the page OR is a member of the group that owns the page
     canEdit: Boolean(
       !isLoading &&
       page !== null &&
       !isDeleted &&
+      !isPreviewingDeleted &&
       user?.uid &&
       (
         // User is the page owner
@@ -664,6 +792,17 @@ function SinglePageView({ params, initialEditMode = false }) {
         // Make sure pageData has a username
         if (!pageData.username) {
           pageData.username = "Anonymous";
+        }
+
+        // Check if this is a deleted page
+        if (pageData.deleted) {
+          console.log(`Page ${pageData.id} is marked as deleted`);
+          // Only set isDeleted if we're not in preview mode
+          if (!isPreviewingDeleted) {
+            setIsDeleted(true);
+            setIsLoading(false);
+            return;
+          }
         }
 
         setPage(pageData);
@@ -1145,8 +1284,15 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   const Layout = user ? React.Fragment : PublicLayout;
 
-  // If the page is deleted, use NotFoundWrapper
-  if (isDeleted) {
+  // If the page is deleted and we're not previewing it, use NotFoundWrapper
+  if (isDeleted && !isPreviewingDeleted) {
+    const NotFoundWrapper = dynamic(() => import('../../not-found-wrapper'), { ssr: false });
+    return <NotFoundWrapper />;
+  }
+
+  // If we're previewing a deleted page but the page data indicates it's deleted,
+  // we need to check if the user is the owner
+  if (isPreviewingDeleted && page?.deleted && (!user || user.uid !== page.userId)) {
     const NotFoundWrapper = dynamic(() => import('../../not-found-wrapper'), { ssr: false });
     return <NotFoundWrapper />;
   }
@@ -1402,7 +1548,7 @@ function SinglePageView({ params, initialEditMode = false }) {
         onTitleChange={handleTitleChange}
         titleError={titleError}
         canEdit={
-          user?.uid && (
+          user?.uid && !isPreviewingDeleted && (
             // User is the page owner
             user.uid === page?.userId ||
             // OR page belongs to a group and user is a member of that group
@@ -1410,149 +1556,114 @@ function SinglePageView({ params, initialEditMode = false }) {
           )
         }
       />
-      <div className="pb-24 w-full max-w-none min-h-screen box-border">
-        {/* Unified container with compact layout for both modes */}
+
+      {/* Deleted Page Banner - shown when previewing deleted pages */}
+      {isPreviewingDeleted && page?.deleted && deletedPageData && (
+        <DeletedPageBanner
+          pageId={page.id}
+          pageTitle={page.title}
+          deletedAt={page.deletedAt}
+          daysLeft={deletedPageData.daysLeft}
+          onRestore={handleRestorePage}
+          onPermanentDelete={handlePermanentlyDeletePage}
+        />
+      )}
+
+      <div className="w-full max-w-none box-border">
+        {/* Unified container with consistent layout for both modes */}
         <div className="px-4 py-4 w-full max-w-none box-border">
-          {isEditing ? (
-            <div className="animate-in fade-in-0 duration-300">
-              <PageProvider>
-                <LineSettingsProvider>
-                  <TextSelectionProvider
-                    contentRef={contentRef}
-                    enableCopy={true}
-                    enableShare={true}
-                    enableAddToPage={true}
-                    username={user?.displayName || user?.username}
-                  >
-                    <PageEditor
-                      key={`editor-${page.id}-${isEditing}`} /* Force re-initialization when switching to edit mode */
-                      title={title}
-                      setTitle={handleTitleChange}
-                      initialContent={editorState}
-                      onContentChange={handleContentChange}
-                      isPublic={isPublic}
-                      setIsPublic={handleVisibilityChange}
-                      location={location}
-                      setLocation={handleLocationChange}
-                      onSave={() => handleSave(editorContent || editorState)}
-                      onCancel={handleCancelWithCheck}
-                      onDelete={handleDelete}
-                      isSaving={isSaving}
-                      error={error}
-                      isNewPage={false}
-                      clickPosition={clickPosition}
-                      page={page}
-                    />
+          {/* Use global LineSettingsProvider for both edit and view modes */}
+          <PageProvider>
+            <PageContentWithLineSettings
+                isEditing={isEditing}
+                page={page}
+                user={user}
+                hasGroupAccess={hasGroupAccess}
+                editorState={editorState}
+                handlePageFullyRendered={handlePageFullyRendered}
+                handleSetIsEditing={handleSetIsEditing}
+                memoizedPage={memoizedPage}
+                memoizedLinkedPageIds={memoizedLinkedPageIds}
+                contentRef={contentRef}
+                title={title}
+                isPublic={isPublic}
+                groupId={groupId}
+                location={location}
+                handleTitleChange={handleTitleChange}
+                handleContentChange={handleContentChange}
+                handleVisibilityChange={handleVisibilityChange}
+                handleLocationChange={handleLocationChange}
+                handleSave={handleSave}
+                handleCancel={handleCancelWithCheck}
+                handleDelete={handleDelete}
+                handleInsertLink={handleInsertLink}
+                isSaving={isSaving}
+                error={error}
+                titleError={titleError}
+                hasUnsavedChanges={hasUnsavedChanges}
+                clickPosition={clickPosition}
+                isPreviewingDeleted={isPreviewingDeleted}
+              />
 
-                {/* Unsaved Changes Dialog */}
-                <UnsavedChangesDialog
-                  isOpen={showUnsavedChangesDialog}
-                  onClose={handleCloseDialog}
-                  onStayAndSave={handleStayAndSave}
-                  onLeaveWithoutSaving={handleLeaveWithoutSaving}
-                  isSaving={isSaving || isHandlingNavigation}
-                />
+              {/* Unsaved Changes Dialog */}
+              <UnsavedChangesDialog
+                isOpen={showUnsavedChangesDialog}
+                onClose={handleCloseDialog}
+                onStayAndSave={handleStayAndSave}
+                onLeaveWithoutSaving={handleLeaveWithoutSaving}
+                isSaving={isSaving || isHandlingNavigation}
+              />
 
-                {/* Delete Confirmation Modal */}
-                <ConfirmationModal
-                  isOpen={confirmationState.isOpen}
-                  onClose={closeConfirmation}
-                  onConfirm={confirmationState.onConfirm}
-                  title={confirmationState.title}
-                  message={confirmationState.message}
-                  confirmText={confirmationState.confirmText}
-                  cancelText={confirmationState.cancelText}
-                  variant={confirmationState.variant}
-                  isLoading={confirmationState.isLoading}
-                  icon={confirmationState.icon}
-                />
-                  </TextSelectionProvider>
-                </LineSettingsProvider>
-              </PageProvider>
-            </div>
-          ) : (
-            <div className="animate-in fade-in-0 duration-300">
-              {/* Identical structure to edit mode */}
-              <PageProvider>
-                <LineSettingsProvider>
-                  <TextSelectionProvider
-                    contentRef={contentRef}
-                    enableCopy={true}
-                    enableShare={true}
-                    enableAddToPage={true}
-                    username={user?.displayName || user?.username}
-                  >
-                    <div ref={contentRef}>
-                      <TextViewErrorBoundary fallbackContent={
-                        <div className="p-4 text-muted-foreground">
-                          <p>Unable to display page content. The page may have formatting issues.</p>
-                          <p className="text-sm mt-2">Page ID: {page.id}</p>
-                        </div>
-                      }>
-                        <TextView
-                            key={`content-${page.id}`} /* Use stable key based on page ID */
-                            content={editorState}
-                            viewMode={lineMode}
-                            onRenderComplete={handlePageFullyRendered}
-                            setIsEditing={handleSetIsEditing}
-                            canEdit={
-                              user?.uid && (
-                                // User is the page owner
-                                user.uid === page.userId ||
-                                // OR page belongs to a group and user is a member of that group
-                                (page.groupId && hasGroupAccess)
-                              )
-                            }
-                            isEditing={isEditing}
-                          />
-                      </TextViewErrorBoundary>
-
-                      {/* Unified text highlighting for URL-based highlights */}
-                      <UnifiedTextHighlighter
-                        contentRef={contentRef}
-                        showNotification={true}
-                        autoScroll={true}
-                      />
-                    </div>
-                  </TextSelectionProvider>
-
-                  {/* Backlinks and Related Pages - Always render with fixed height to prevent layout shifts */}
-                  <div className="mt-8">
-                    {/* What Links Here section */}
-                    <BacklinksSection
-                      page={page}
-                      linkedPageIds={memoizedLinkedPageIds}
-                    />
-
-                    {/* Related Pages section - Using pre-computed memoized values */}
-                    <RelatedPages
-                      page={memoizedPage}
-                      linkedPageIds={memoizedLinkedPageIds}
-                    />
-                  </div>
-                </LineSettingsProvider>
-              </PageProvider>
-            </div>
-          )}
+              {/* Delete Confirmation Modal */}
+              <ConfirmationModal
+                isOpen={confirmationState.isOpen}
+                onClose={closeConfirmation}
+                onConfirm={confirmationState.onConfirm}
+                title={confirmationState.title}
+                message={confirmationState.message}
+                confirmText={confirmationState.confirmText}
+                cancelText={confirmationState.cancelText}
+                variant={confirmationState.variant}
+                isLoading={confirmationState.isLoading}
+                icon={confirmationState.icon}
+              />
+          </PageProvider>
         </div>
       </div>
-      <PageProvider>
-        <LineSettingsProvider>
-          <PageFooter
+
+      {/* Backlinks and Related Pages - positioned outside main content container */}
+      {!isEditing && (
+        <div className="mt-4 px-4">
+          {/* What Links Here section */}
+          <BacklinksSection
             page={page}
-            content={editorState}
-            isOwner={
-              user?.uid && (
-                // User is the page owner
-                user.uid === page.userId ||
-                // OR page belongs to a group and user is a member of that group
-                (page.groupId && hasGroupAccess)
-              )
-            }
-            isEditing={isEditing}
-            setIsEditing={handleSetIsEditing}
+            linkedPageIds={memoizedLinkedPageIds}
           />
-        </LineSettingsProvider>
+
+          {/* Related Pages section - Using pre-computed memoized values */}
+          <RelatedPages
+            page={memoizedPage}
+            linkedPageIds={memoizedLinkedPageIds}
+          />
+        </div>
+      )}
+
+
+      <PageProvider>
+        <PageFooter
+          page={page}
+          content={editorState}
+          isOwner={
+            user?.uid && !isPreviewingDeleted && (
+              // User is the page owner
+              user.uid === page.userId ||
+              // OR page belongs to a group and user is a member of that group
+              (page.groupId && hasGroupAccess)
+            )
+          }
+          isEditing={isEditing}
+          setIsEditing={handleSetIsEditing}
+        />
       </PageProvider>
       <SiteFooter />
       {!isEditing && (
@@ -1566,6 +1677,140 @@ function SinglePageView({ params, initialEditMode = false }) {
     </Layout>
   );
 }
+
+// Inner component that has access to LineSettings context
+const PageContentWithLineSettings = ({
+  isEditing,
+  page,
+  user,
+  hasGroupAccess,
+  editorState,
+  handlePageFullyRendered,
+  handleSetIsEditing,
+  memoizedPage,
+  memoizedLinkedPageIds,
+  contentRef,
+  title,
+  isPublic,
+  groupId,
+  location,
+  handleTitleChange,
+  handleContentChange,
+  handleVisibilityChange,
+  handleLocationChange,
+  handleSave,
+  handleCancel,
+  handleDelete,
+  handleInsertLink,
+  isSaving,
+  error,
+  titleError,
+  hasUnsavedChanges,
+  clickPosition,
+  isPreviewingDeleted
+}) => {
+  // Now we can access the LineSettings context since we're inside the provider
+  const { lineMode, setLineMode } = useLineSettings();
+
+  // Debug: Track lineMode changes
+  useEffect(() => {
+    console.log('🔧 PageContentWithLineSettings: lineMode changed to:', lineMode);
+  }, [lineMode]);
+
+  if (isEditing) {
+    return (
+      <div className="animate-in fade-in-0 duration-300 w-full">
+        <TextSelectionProvider
+          contentRef={contentRef}
+          enableCopy={true}
+          enableShare={true}
+          enableAddToPage={true}
+          username={user?.displayName || user?.username}
+        >
+          <PageEditor
+            key={`editor-${page.id}-${isEditing}`}
+            title={title}
+            setTitle={handleTitleChange}
+            initialContent={editorState}
+            onContentChange={handleContentChange}
+            isPublic={isPublic}
+            setIsPublic={handleVisibilityChange}
+            location={location}
+            setLocation={handleLocationChange}
+            onSave={() => handleSave(editorState)}
+            onCancel={handleCancel}
+            onDelete={handleDelete}
+            isSaving={isSaving}
+            error={error}
+            isNewPage={false}
+            clickPosition={clickPosition}
+            page={page}
+          />
+        </TextSelectionProvider>
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-in fade-in-0 duration-300 w-full">
+      <TextSelectionProvider
+        contentRef={contentRef}
+        enableCopy={true}
+        enableShare={true}
+        enableAddToPage={true}
+        username={user?.displayName || user?.username}
+      >
+        <div ref={contentRef}>
+          <TextViewErrorBoundary fallbackContent={
+            <div className="p-4 text-muted-foreground">
+              <p>Unable to display page content. The page may have formatting issues.</p>
+              <p className="text-sm mt-2">Page ID: {page.id}</p>
+            </div>
+          }>
+            <TextView
+              key={`content-${page.id}`}
+              content={editorState}
+              viewMode={lineMode}
+              onRenderComplete={handlePageFullyRendered}
+              setIsEditing={handleSetIsEditing}
+              canEdit={
+                user?.uid && !isPreviewingDeleted && (
+                  user.uid === page.userId ||
+                  (page.groupId && hasGroupAccess)
+                )
+              }
+              isEditing={isEditing}
+            />
+          </TextViewErrorBoundary>
+
+          <UnifiedTextHighlighter
+            contentRef={contentRef}
+            showNotification={true}
+            autoScroll={true}
+          />
+        </div>
+      </TextSelectionProvider>
+
+
+
+      {/* Dense Mode Toggle - positioned after content but inside LineSettingsProvider */}
+      <div className="mt-8 mb-4">
+        <div className="flex items-center justify-center">
+          <div className="flex items-center gap-3 px-4 py-2 rounded-2xl border border-theme-medium bg-background shadow-sm">
+            <Switch
+              checked={lineMode === LINE_MODES.DENSE}
+              onCheckedChange={(checked) => {
+                const newMode = checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL;
+                setLineMode(newMode);
+              }}
+            />
+            <span className="text-sm font-medium">Dense mode</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // AddToPageDialog component has been moved to PageActions.tsx
 // This implementation is no longer used and has been removed to avoid duplication

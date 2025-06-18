@@ -284,7 +284,7 @@ export default function SubscriptionPaymentPage() {
   };
 
   return (
-    <PaymentFeatureGuard redirectTo="/account">
+    <PaymentFeatureGuard redirectTo="/settings">
       <div className="max-w-md mx-auto p-4">
       <div className="mb-4">
         <Link href="/settings/subscription" className="inline-flex items-center text-primary hover:text-primary/80 text-sm">

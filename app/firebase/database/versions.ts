@@ -14,6 +14,7 @@ import { db } from "./core";
 import { extractLinksFromNodes } from "./links";
 import { createLinkNotification, createAppendNotification } from "../notifications";
 import { recordUserActivity } from "../streaks";
+import { hasContentChanged } from "../../utils/contentNormalization";
 
 import type { PageVersion } from "../../types/database";
 
@@ -371,6 +372,18 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
 
     const pageData = pageDoc.data();
     const currentVersionId = pageData.currentVersion;
+
+    // If skipIfUnchanged is true, check if content has changed using centralized logic
+    if (data.skipIfUnchanged && pageData.content) {
+      console.log('Checking if content has changed before creating version...');
+
+      if (!hasContentChanged(contentString, pageData.content)) {
+        console.log('Content unchanged after normalization, skipping version creation');
+        return { success: false, message: 'Content unchanged' };
+      }
+
+      console.log('Content has changed, proceeding with version creation');
+    }
 
     // Create the new version data
     const versionData = {

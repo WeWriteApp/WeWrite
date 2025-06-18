@@ -16,6 +16,7 @@ import { TokenService } from '../../../services/tokenService';
 import { calculateTokensForAmount, getCurrentMonth } from '../../../utils/subscriptionTiers';
 import { useConfirmation } from '../../../hooks/useConfirmation';
 import ConfirmationModal from '../../../components/utils/ConfirmationModal';
+import { PaymentFeatureGuard } from '../../../components/PaymentFeatureGuard';
 
 interface TokenAllocation {
   id: string;
@@ -52,51 +53,66 @@ export default function SubscriptionManagePage() {
       return;
     }
 
-    fetchData();
+    let unsubscribe: (() => void) | undefined;
+
+    const setupListener = async () => {
+      unsubscribe = await fetchData();
+    };
+
+    setupListener();
+
+    // Cleanup function
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [user, router]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
 
-      // Fetch subscription
-      const subscriptionData = await getOptimizedUserSubscription(user?.uid || '', {
-        useCache: false,
-        verbose: false
+      // Set up real-time subscription listener for consistency
+      const { listenToUserSubscription } = await import('../../../firebase/subscription');
+      const unsubscribe = listenToUserSubscription(user?.uid || '', async (subscriptionData) => {
+        setSubscription(subscriptionData);
+
+        if (subscriptionData?.status === 'active') {
+          // Fetch token balance
+          const balance = await TokenService.getUserTokenBalance(user.uid);
+          setTokenBalance(balance);
+
+          // Fetch token allocations
+          const allocations = await TokenService.getUserTokenAllocations(user.uid);
+
+          // Enhance allocations with page/group titles
+          const enhancedAllocations = await Promise.all(
+            allocations.map(async (allocation) => {
+              // TODO: Fetch page/group titles from database
+              return {
+                ...allocation,
+                pageTitle: allocation.resourceType === 'page' ? `Page ${allocation.resourceId.slice(0, 8)}...` : undefined,
+                groupName: allocation.resourceType === 'group' ? `Group ${allocation.resourceId.slice(0, 8)}...` : undefined,
+              };
+            })
+          );
+
+          setTokenAllocations(enhancedAllocations);
+        }
+        setLoading(false);
       });
-      setSubscription(subscriptionData);
 
-      if (subscriptionData?.status === 'active') {
-        // Fetch token balance
-        const balance = await TokenService.getUserTokenBalance(user.uid);
-        setTokenBalance(balance);
-
-        // Fetch token allocations
-        const allocations = await TokenService.getUserTokenAllocations(user.uid);
-
-        // Enhance allocations with page/group titles
-        const enhancedAllocations = await Promise.all(
-          allocations.map(async (allocation) => {
-            // TODO: Fetch page/group titles from database
-            return {
-              ...allocation,
-              pageTitle: allocation.resourceType === 'page' ? `Page ${allocation.resourceId.slice(0, 8)}...` : undefined,
-              groupName: allocation.resourceType === 'group' ? `Group ${allocation.resourceId.slice(0, 8)}...` : undefined,
-            };
-          })
-        );
-
-        setTokenAllocations(enhancedAllocations);
-      }
+      // Store unsubscribe function for cleanup
+      return unsubscribe;
 
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error setting up subscription listener:', error);
       toast({
         title: "Error",
         description: "Failed to load subscription data",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };
@@ -238,7 +254,8 @@ export default function SubscriptionManagePage() {
   const usagePercentage = tokenBalance ? (tokenBalance.allocatedTokens / tokenBalance.totalTokens) * 100 : 0;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <PaymentFeatureGuard redirectTo="/settings">
+      <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8">
         <Link href="/settings/subscription" className="inline-flex items-center text-blue-500 hover:text-blue-600">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -400,7 +417,8 @@ export default function SubscriptionManagePage() {
         confirmText={confirmationState.confirmText}
         variant={confirmationState.variant}
       />
-    </div>
+      </div>
+    </PaymentFeatureGuard>
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
 import { useFeatureFlag } from '../utils/feature-flags';
@@ -17,21 +17,29 @@ interface PaymentFeatureGuardProps {
 export function PaymentFeatureGuard({ children, redirectTo = '/' }: PaymentFeatureGuardProps) {
   const { user } = useAuth();
   const router = useRouter();
-  const paymentsEnabled = useFeatureFlag('payments', user?.email);
+  const paymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const [hasCheckedFlag, setHasCheckedFlag] = useState(false);
 
   useEffect(() => {
-    // If payments feature is disabled, redirect away from payment pages
-    if (paymentsEnabled === false) {
-      console.log('[PaymentFeatureGuard] Payments feature disabled, redirecting to:', redirectTo);
-      router.push(redirectTo);
-    }
+    // Wait a moment to ensure feature flags have loaded before making decisions
+    const timer = setTimeout(() => {
+      setHasCheckedFlag(true);
+
+      // Only redirect if we've confirmed the flag is disabled after loading
+      if (paymentsEnabled === false) {
+        console.log('[PaymentFeatureGuard] Payments feature disabled, redirecting to:', redirectTo);
+        router.push(redirectTo);
+      }
+    }, 200); // Small delay to allow feature flags to load
+
+    return () => clearTimeout(timer);
   }, [paymentsEnabled, router, redirectTo]);
 
-  // Don't render children if payments are disabled
-  if (paymentsEnabled === false) {
+  // Don't render children if payments are confirmed disabled after checking
+  if (hasCheckedFlag && paymentsEnabled === false) {
     return null;
   }
 
-  // Render children if payments are enabled or still loading
+  // Render children if payments are enabled or still loading/checking
   return <>{children}</>;
 }

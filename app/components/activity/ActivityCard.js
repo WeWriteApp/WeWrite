@@ -37,6 +37,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
   const { user } = useContext(AuthContext);
   const router = useRouter();
   const [pageData, setPageData] = useState(null);
+  const [currentPageName, setCurrentPageName] = useState(activity.pageName);
   const { formatDate, formatDateString } = useDateFormat();
   const { toast } = useToast();
   const [isRestoring, setIsRestoring] = useState(false);
@@ -82,6 +83,30 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
       setIsRestoring(false);
     }
   };
+
+  // Listen for page title updates
+  useEffect(() => {
+    const handleTitleUpdate = (event) => {
+      const { pageId, newTitle } = event.detail;
+
+      // Check if this activity card references the updated page
+      if (activity.pageId === pageId) {
+        console.log(`📱 ActivityCard: Updating page name in real-time: ${currentPageName} -> ${newTitle}`);
+        setCurrentPageName(newTitle);
+      }
+    };
+
+    window.addEventListener('page-title-updated', handleTitleUpdate);
+
+    return () => {
+      window.removeEventListener('page-title-updated', handleTitleUpdate);
+    };
+  }, [activity.pageId, currentPageName]);
+
+  // Update currentPageName when activity changes
+  useEffect(() => {
+    setCurrentPageName(activity.pageName);
+  }, [activity.pageName]);
 
   // Validate activity data
   useEffect(() => {
@@ -280,9 +305,9 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
         {/* Page title with fixed height and ellipsis */}
         <div className="flex-shrink-0 min-w-0 overflow-hidden h-[48px]">
           <PillLink href={activityUrl}>
-            {activity.pageName && isExactDateFormat(activity.pageName)
-              ? formatDateString(activity.pageName)
-              : (activity.pageName || "Untitled page")}
+            {currentPageName && isExactDateFormat(currentPageName)
+              ? formatDateString(currentPageName)
+              : (currentPageName || "Untitled page")}
           </PillLink>
         </div>
 

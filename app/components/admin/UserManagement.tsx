@@ -49,7 +49,6 @@ const FEATURE_FLAGS = [
   'map_view',          // Geographic visualization features
   'calendar_view',     // Temporal organization and calendar features
   'groups',            // Group collaboration features
-  'notifications',     // In-app notification system
   'link_functionality', // Page linking capabilities
   'daily_notes'        // Daily note features
 ] as const;

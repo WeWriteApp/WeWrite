@@ -21,6 +21,7 @@ import {
 } from 'firebase/firestore';
 import Cookies from 'js-cookie';
 import type { User } from '../types/database';
+import { getAnalyticsService } from '../utils/analytics-service';
 
 export const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
@@ -440,6 +441,19 @@ export const loginAnonymously = async (): Promise<AuthResult> => {
       createdAt: new Date().toISOString(),
       lastLogin: new Date().toISOString()
     }, { merge: true });
+
+    // Track anonymous user creation event
+    try {
+      const analytics = getAnalyticsService();
+      analytics.trackAuthEvent('USER_CREATED', {
+        user_id: userCredential.user.uid,
+        username: `anonymous_${anonymousId}`,
+        email: null,
+        registration_method: 'anonymous'
+      });
+    } catch (error) {
+      console.error('Error tracking anonymous user creation:', error);
+    }
 
     return { user: userCredential.user };
   } catch (error: any) {

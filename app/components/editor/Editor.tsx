@@ -4,7 +4,7 @@ import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, us
 import { createPortal } from 'react-dom';
 import { usePillStyle } from '../../contexts/PillStyleContext';
 import { useLineSettings, LINE_MODES } from '../../contexts/LineSettingsContext';
-import { Lock, ExternalLink, X, Grid3X3 } from "lucide-react";
+import { Lock, ExternalLink, X } from "lucide-react";
 import FilteredSearchResults from '../search/FilteredSearchResults';
 import ParagraphNumberOverlay from './ParagraphNumberOverlay';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
@@ -31,6 +31,7 @@ interface EditorProps {
   user?: any; // Current user for permission checking
   currentPage?: any; // Current page for permission checking
   isEditMode?: boolean; // Whether the editor is in edit mode
+  isNewPage?: boolean; // Whether this is a new page for tab order
 }
 
 interface EditorRef {
@@ -71,7 +72,8 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     onEmptyLinesChange,
     user = null,
     currentPage = null,
-    isEditMode = true
+    isEditMode = true,
+    isNewPage = false
   } = props;
 
   // Optimized state management - minimize re-renders
@@ -437,15 +439,172 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   //   // Commenting out to prevent circular updates during typing
   // }, [initialContent, isClient, lineMode]);
 
-  // Memoized selection handling
+  // Enhanced content area boundary detection
+  const getContentAreaBoundary = useCallback((paragraph: Element) => {
+    const paragraphNumber = paragraph.querySelector('.unified-paragraph-number, .dense-paragraph-number');
+    if (!paragraphNumber) return null;
+
+    // Find the first content node after the paragraph number
+    let contentStart = paragraphNumber.nextSibling;
+    while (contentStart && contentStart.nodeType === Node.TEXT_NODE && !contentStart.textContent?.trim()) {
+      contentStart = contentStart.nextSibling;
+    }
+
+    // Check if content starts with a link pill or other element
+    const startsWithElement = contentStart && contentStart.nodeType === Node.ELEMENT_NODE;
+    const startsWithLinkPill = startsWithElement &&
+      (contentStart as Element).matches('[data-link-type], .compound-link');
+
+    return {
+      paragraphNumber,
+      contentStart: contentStart || null,
+      paragraphRect: paragraph.getBoundingClientRect(),
+      numberRect: paragraphNumber.getBoundingClientRect(),
+      startsWithElement,
+      startsWithLinkPill
+    };
+  }, []);
+
+  // Helper to find the actual beginning of editable content
+  const findContentStartPosition = useCallback((paragraph: Element) => {
+    const boundary = getContentAreaBoundary(paragraph);
+    if (!boundary) return null;
+
+    const { contentStart, startsWithLinkPill } = boundary;
+
+    if (!contentStart) {
+      // No content exists, position will be at end of paragraph
+      return { node: paragraph, offset: paragraph.childNodes.length };
+    }
+
+    if (startsWithLinkPill) {
+      // Content starts with a link pill - position before the pill
+      return { node: paragraph, offset: Array.from(paragraph.childNodes).indexOf(contentStart as ChildNode) };
+    }
+
+    if (contentStart.nodeType === Node.TEXT_NODE) {
+      // Content starts with text - position at beginning of text
+      return { node: contentStart, offset: 0 };
+    }
+
+    // Content starts with other element - position before it
+    return { node: paragraph, offset: Array.from(paragraph.childNodes).indexOf(contentStart as ChildNode) };
+  }, [getContentAreaBoundary]);
+
+  // Position cursor at the very beginning of content area with enhanced precision
+  const positionCursorAtContentStart = useCallback((paragraph: Element, preferredOffset: number = 0) => {
+    const startPosition = findContentStartPosition(paragraph);
+    if (!startPosition) return false;
+
+    const selection = window.getSelection();
+    if (!selection) return false;
+
+    try {
+      const range = document.createRange();
+      const { node, offset } = startPosition;
+
+      if (node.nodeType === Node.TEXT_NODE) {
+        // Position within text node, respecting preferred offset
+        const textLength = node.textContent?.length || 0;
+        range.setStart(node, Math.min(preferredOffset, textLength));
+      } else {
+        // Position at specific child offset within element
+        range.setStart(node, offset);
+      }
+
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return true;
+    } catch (error) {
+      console.error('Error positioning cursor at content start:', error);
+
+      // Fallback: create a text node if needed
+      try {
+        const textNode = document.createTextNode('');
+        paragraph.appendChild(textNode);
+        const range = document.createRange();
+        range.setStart(textNode, 0);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        return true;
+      } catch (fallbackError) {
+        console.error('Fallback cursor positioning failed:', fallbackError);
+        return false;
+      }
+    }
+  }, [findContentStartPosition]);
+
+  // Enhanced cursor position validation - less aggressive, more precise
+  const ensureValidCursorPosition = useCallback(() => {
+    if (!isClient || typeof window === 'undefined') return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    const startContainer = range.startContainer;
+
+    // Find the paragraph div that contains the cursor
+    let paragraphDiv = null;
+    let currentNode = startContainer;
+
+    while (currentNode && currentNode !== editorRef.current) {
+      if (currentNode.nodeType === Node.ELEMENT_NODE &&
+          (currentNode as Element).tagName === 'DIV' &&
+          (currentNode as Element).parentElement === editorRef.current) {
+        paragraphDiv = currentNode as Element;
+        break;
+      }
+      currentNode = currentNode.parentNode;
+    }
+
+    if (!paragraphDiv) return;
+
+    // Check if cursor is specifically in a paragraph number
+    const paragraphNumber = paragraphDiv.querySelector('.unified-paragraph-number, .dense-paragraph-number');
+    if (!paragraphNumber) return;
+
+    let needsRepositioning = false;
+
+    // PRECISE: Only reposition if cursor is actually in the paragraph number
+    if (startContainer === paragraphNumber ||
+        (startContainer.nodeType === Node.TEXT_NODE && startContainer.parentElement === paragraphNumber)) {
+      needsRepositioning = true;
+    }
+
+    // Also check if cursor is directly on the paragraph div itself (empty line scenario)
+    if (startContainer === paragraphDiv && range.startOffset === 0) {
+      // Check if this is truly an empty line or if there's content after the paragraph number
+      const boundary = getContentAreaBoundary(paragraphDiv);
+      if (boundary && !boundary.contentStart) {
+        needsRepositioning = true;
+      }
+    }
+
+    if (needsRepositioning) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔧 Repositioning cursor from paragraph number to content area');
+      }
+
+      // Use the enhanced positioning function to place cursor at content start
+      positionCursorAtContentStart(paragraphDiv, 0);
+    }
+  }, [isClient, getContentAreaBoundary, positionCursorAtContentStart]);
+
+  // Memoized selection handling with cursor validation
   const saveSelection = useCallback(() => {
     if (!isClient || typeof window === 'undefined') return;
+
+    // CRITICAL FIX: Ensure cursor is in valid position before saving selection
+    ensureValidCursorPosition();
 
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
       setSelection(selection.getRangeAt(0).cloneRange());
     }
-  }, [isClient]);
+  }, [isClient, ensureValidCursorPosition]);
 
   const restoreSelection = useCallback(() => {
     if (!isClient || typeof window === 'undefined' || !selection) return;
@@ -480,15 +639,19 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         clearTimeout(changeTimeoutRef.current);
       }
 
-      // Debounced update to prevent excessive re-renders
+      // FIXED: Reduced debounce delay for better responsiveness
       changeTimeoutRef.current = setTimeout(() => {
         try {
           const slateContent = convertHTMLToSlate(htmlContent);
-          console.log("🔵 Editor.handleContentChange: Converting to Slate:", {
-            htmlLength: htmlContent.length,
-            slateLength: slateContent.length,
-            hasContent: slateContent.some(p => p.children && p.children.some(c => c.text && c.text.trim()))
-          });
+
+          // Reduced logging for better performance
+          if (process.env.NODE_ENV === 'development') {
+            console.log("🔵 Editor.handleContentChange: Converting to Slate:", {
+              htmlLength: htmlContent.length,
+              slateLength: slateContent.length,
+              hasContent: slateContent.some(p => p.children && p.children.some(c => c.text && c.text.trim()))
+            });
+          }
 
           onChange?.(slateContent);
 
@@ -514,7 +677,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
           // Fallback to basic content structure
           onChange?.([{ type: "paragraph", children: [{ text: "" }] }]);
         }
-      }, 150);
+      }, 50); // FIXED: Reduced from 150ms to 50ms for better responsiveness
     } catch (error) {
       console.error("Editor: Error in handleContentChange:", error);
       // Ensure editor has valid content even on error
@@ -524,28 +687,221 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     }
   }, [isClient, onChange, onEmptyLinesChange, convertHTMLToSlate]);
 
-  // Handle input events
-  const handleInput = useCallback(() => {
+  // CRITICAL FIX: Input handling without interfering with normal editing
+  const handleInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
     if (!isClient) return;
-    handleContentChange();
-  }, [isClient, handleContentChange]);
 
-  // Simplified selection handling - just save selection for link insertion
+    // Trigger content change for responsiveness
+    handleContentChange();
+
+    // CRITICAL FIX: Only validate cursor position after a delay to avoid interfering with typing
+    // This allows normal editing operations to complete first
+    setTimeout(() => {
+      ensureValidCursorPosition();
+    }, 100);
+  }, [isClient, handleContentChange, ensureValidCursorPosition]);
+
+
+
+  // CRITICAL FIX: Selection handling with paragraph number avoidance
   const handleSelectionChange = useCallback(() => {
-    // Just save the selection for link insertion - no complex manipulation
+    // Only save selection for link insertion - don't interfere with normal typing
     if (!isClient || typeof window === 'undefined') return;
+
+    // First ensure cursor is not on paragraph numbers
+    ensureValidCursorPosition();
 
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
-      setSelection(selection.getRangeAt(0).cloneRange());
+      const range = selection.getRangeAt(0);
+      // Only save selection if there's actual text selected (not just cursor position)
+      if (!range.collapsed) {
+        setSelection(range.cloneRange());
+      }
     }
+  }, [isClient, ensureValidCursorPosition]);
+
+  // CRITICAL FIX: Add a MutationObserver to watch for paragraph number injection and prevent interaction
+  useEffect(() => {
+    if (!isClient || !editorRef.current) return;
+
+    const observer = new MutationObserver((mutations) => {
+      let paragraphNumbersChanged = false;
+
+      mutations.forEach((mutation) => {
+        // Check if paragraph numbers were added or modified
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const element = node as Element;
+              if (element.classList.contains('unified-paragraph-number') ||
+                  element.classList.contains('dense-paragraph-number')) {
+                paragraphNumbersChanged = true;
+              }
+            }
+          });
+        }
+      });
+
+      // If paragraph numbers were injected, ensure cursor is in valid position
+      if (paragraphNumbersChanged) {
+        // Single timeout to avoid over-processing
+        setTimeout(() => {
+          ensureValidCursorPosition();
+        }, 20);
+      }
+    });
+
+    observer.observe(editorRef.current, {
+      childList: true,
+      subtree: true
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isClient, ensureValidCursorPosition]);
+
+  // CRITICAL FIX: Add event listeners to completely prevent paragraph number interaction
+  useEffect(() => {
+    if (!isClient || !editorRef.current) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.classList.contains('unified-paragraph-number') ||
+                    target.classList.contains('dense-paragraph-number'))) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Force focus to content area of this paragraph
+        const paragraph = target.parentElement;
+        if (paragraph) {
+          // Find or create content text node
+          let contentNode = null;
+          const walker = document.createTreeWalker(
+            paragraph,
+            NodeFilter.SHOW_TEXT,
+            {
+              acceptNode: (node) => {
+                if (node.parentElement &&
+                    (node.parentElement.classList.contains('unified-paragraph-number') ||
+                     node.parentElement.classList.contains('dense-paragraph-number'))) {
+                  return NodeFilter.FILTER_REJECT;
+                }
+                return NodeFilter.FILTER_ACCEPT;
+              }
+            }
+          );
+
+          contentNode = walker.nextNode();
+          if (!contentNode) {
+            contentNode = document.createTextNode('');
+            paragraph.appendChild(contentNode);
+          }
+
+          // Force cursor to content area
+          const selection = window.getSelection();
+          if (selection) {
+            const range = document.createRange();
+            range.setStart(contentNode, 0);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        }
+      }
+    };
+
+    const handleSelectStart = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.classList.contains('unified-paragraph-number') ||
+                    target.classList.contains('dense-paragraph-number'))) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    editorRef.current.addEventListener('mousedown', handleMouseDown, true);
+    editorRef.current.addEventListener('selectstart', handleSelectStart, true);
+
+    return () => {
+      if (editorRef.current) {
+        editorRef.current.removeEventListener('mousedown', handleMouseDown, true);
+        editorRef.current.removeEventListener('selectstart', handleSelectStart, true);
+      }
+    };
   }, [isClient]);
 
-  // Handle click events for link editing with modal type determination
+  // Determine if click is in paragraph number area or content area
+  const isClickInContentArea = useCallback((clickX: number, clickY: number, paragraph: Element) => {
+    const boundary = getContentAreaBoundary(paragraph);
+    if (!boundary) return true; // No paragraph number, entire area is content
+
+    const { numberRect, paragraphRect } = boundary;
+
+    // For normal mode: content area starts after the paragraph number's right edge
+    // For dense mode: content area starts after the paragraph number plus margin
+    const contentAreaStartX = numberRect.right + 4; // 4px margin buffer
+
+    // Click is in content area if it's to the right of the paragraph number
+    return clickX >= contentAreaStartX;
+  }, [getContentAreaBoundary]);
+
+  // Handle click events for link editing with enhanced cursor positioning
   const handleEditorClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!isClient) return;
 
     const target = e.target as HTMLElement;
+    const clickX = e.clientX;
+    const clickY = e.clientY;
+
+    // Find the paragraph containing the click
+    let paragraph = target;
+    while (paragraph && paragraph !== editorRef.current) {
+      if (paragraph.tagName === 'DIV' && paragraph.parentElement === editorRef.current) {
+        break;
+      }
+      paragraph = paragraph.parentElement as HTMLElement;
+    }
+
+    if (!paragraph || paragraph === editorRef.current) return;
+
+    // CRITICAL FIX: Prevent clicks on paragraph numbers
+    if (target.classList.contains('unified-paragraph-number') ||
+        target.classList.contains('dense-paragraph-number')) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Position cursor at the very beginning of content area
+      positionCursorAtContentStart(paragraph);
+      return;
+    }
+
+    // Enhanced click position handling for content area
+    if (!isClickInContentArea(clickX, clickY, paragraph)) {
+      // Click was in paragraph number area, move to content start
+      e.preventDefault();
+      positionCursorAtContentStart(paragraph);
+      return;
+    }
+
+    // For clicks in content area, use minimal cursor validation
+    setTimeout(() => {
+      // Only ensure cursor is not in paragraph number, don't force repositioning
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const startContainer = range.startContainer;
+
+        // Only reposition if cursor ended up in paragraph number
+        const paragraphNumber = paragraph.querySelector('.unified-paragraph-number, .dense-paragraph-number');
+        if (paragraphNumber &&
+            (startContainer === paragraphNumber ||
+             (startContainer.nodeType === Node.TEXT_NODE && startContainer.parentElement === paragraphNumber))) {
+          positionCursorAtContentStart(paragraph);
+        }
+      }
+    }, 10);
 
     // Check if clicked element is a link or inside a link
     const linkElement = target.closest('[data-link-type]') as HTMLElement;
@@ -629,30 +985,437 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     // This prevents conflicts with React's DOM management
   }, []);
 
+  // Enhanced keyboard navigation with smart cursor positioning
+  const handleKeyboardNavigation = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+
+    // Find current paragraph
+    let paragraph = range.startContainer;
+    while (paragraph && paragraph !== editorRef.current) {
+      if (paragraph.nodeType === Node.ELEMENT_NODE &&
+          (paragraph as Element).tagName === 'DIV' &&
+          (paragraph as Element).parentElement === editorRef.current) {
+        break;
+      }
+      paragraph = paragraph.parentNode;
+    }
+
+    if (!paragraph || paragraph === editorRef.current) return;
+
+    // Handle Home key - position at very beginning of content area
+    if (e.key === 'Home') {
+      e.preventDefault();
+      positionCursorAtContentStart(paragraph as Element, 0);
+      return;
+    }
+
+    // Handle End key - position at end of content
+    if (e.key === 'End') {
+      e.preventDefault();
+      const boundary = getContentAreaBoundary(paragraph as Element);
+      if (boundary) {
+        // Find the last content node
+        const walker = document.createTreeWalker(
+          paragraph as Element,
+          NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+          {
+            acceptNode: (node) => {
+              // Skip paragraph numbers
+              if (node.parentElement &&
+                  (node.parentElement.classList.contains('unified-paragraph-number') ||
+                   node.parentElement.classList.contains('dense-paragraph-number'))) {
+                return NodeFilter.FILTER_REJECT;
+              }
+              return NodeFilter.FILTER_ACCEPT;
+            }
+          }
+        );
+
+        let lastNode = null;
+        let currentNode = walker.nextNode();
+        while (currentNode) {
+          lastNode = currentNode;
+          currentNode = walker.nextNode();
+        }
+
+        if (lastNode) {
+          const newRange = document.createRange();
+          if (lastNode.nodeType === Node.TEXT_NODE) {
+            newRange.setStart(lastNode, lastNode.textContent?.length || 0);
+          } else {
+            newRange.setStartAfter(lastNode);
+          }
+          newRange.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+        }
+      }
+      return;
+    }
+
+    // For arrow keys, use minimal validation after movement
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      setTimeout(() => {
+        ensureValidCursorPosition();
+      }, 10);
+    }
+  }, [positionCursorAtContentStart, getContentAreaBoundary, ensureValidCursorPosition]);
+
+  // Handle Cmd+Delete for delete-to-end-of-line (paragraph numbers as visible newlines)
+  const handleCmdDelete = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!((e.metaKey || e.ctrlKey) && e.key === 'Delete')) return false;
+
+    e.preventDefault();
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return true;
+
+    const range = selection.getRangeAt(0);
+
+    // Find current paragraph
+    let currentParagraph = range.startContainer;
+    while (currentParagraph && currentParagraph !== editorRef.current) {
+      if (currentParagraph.nodeType === Node.ELEMENT_NODE &&
+          (currentParagraph as Element).tagName === 'DIV' &&
+          (currentParagraph as Element).parentElement === editorRef.current) {
+        break;
+      }
+      currentParagraph = currentParagraph.parentNode;
+    }
+
+    if (!currentParagraph || currentParagraph === editorRef.current) return true;
+
+    const paragraph = currentParagraph as Element;
+
+    // Create a range from cursor position to end of paragraph content
+    const deleteRange = document.createRange();
+    deleteRange.setStart(range.startContainer, range.startOffset);
+
+    // Find the last content node in the paragraph (excluding paragraph numbers)
+    const walker = document.createTreeWalker(
+      paragraph,
+      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+      {
+        acceptNode: (node) => {
+          // Skip paragraph numbers
+          if (node.parentElement &&
+              (node.parentElement.classList.contains('unified-paragraph-number') ||
+               node.parentElement.classList.contains('dense-paragraph-number'))) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
+    );
+
+    let lastContentNode = null;
+    let currentNode = walker.nextNode();
+    while (currentNode) {
+      lastContentNode = currentNode;
+      currentNode = walker.nextNode();
+    }
+
+    if (lastContentNode) {
+      // Set end of range to end of last content node
+      if (lastContentNode.nodeType === Node.TEXT_NODE) {
+        deleteRange.setEnd(lastContentNode, lastContentNode.textContent?.length || 0);
+      } else {
+        deleteRange.setEndAfter(lastContentNode);
+      }
+    } else {
+      // No content found, set end to end of paragraph
+      deleteRange.setEndAfter(paragraph.lastChild || paragraph);
+    }
+
+    // Check if we're at the end of the line already
+    if (deleteRange.collapsed) {
+      // At end of line - delete the "newline" (merge with next paragraph)
+      const nextParagraph = paragraph.nextElementSibling;
+      if (nextParagraph && nextParagraph.tagName === 'DIV') {
+        // Get content from next paragraph (excluding paragraph number)
+        const nextWalker = document.createTreeWalker(
+          nextParagraph,
+          NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+          {
+            acceptNode: (node) => {
+              // Skip paragraph numbers
+              if (node.parentElement &&
+                  (node.parentElement.classList.contains('unified-paragraph-number') ||
+                   node.parentElement.classList.contains('dense-paragraph-number'))) {
+                return NodeFilter.FILTER_REJECT;
+              }
+              return NodeFilter.FILTER_ACCEPT;
+            }
+          }
+        );
+
+        // Collect all content nodes from next paragraph
+        const contentNodes: Node[] = [];
+        let node = nextWalker.nextNode();
+        while (node) {
+          contentNodes.push(node.cloneNode(true));
+          node = nextWalker.nextNode();
+        }
+
+        // Append content from next paragraph to current paragraph
+        contentNodes.forEach(contentNode => {
+          paragraph.appendChild(contentNode);
+        });
+
+        // Remove next paragraph
+        nextParagraph.remove();
+
+        // Keep cursor at current position
+        const newRange = document.createRange();
+        newRange.setStart(range.startContainer, range.startOffset);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+
+        // Trigger content change
+        handleContentChange();
+      }
+    } else {
+      // Delete from cursor to end of line
+      deleteRange.deleteContents();
+
+      // Position cursor at deletion point
+      const newRange = document.createRange();
+      newRange.setStart(range.startContainer, range.startOffset);
+      newRange.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+
+      // Trigger content change
+      handleContentChange();
+    }
+
+    return true;
+  }, [getContentAreaBoundary, findContentStartPosition, positionCursorAtContentStart, handleContentChange]);
+
   // Handle key events
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!isClient) return;
 
     onKeyDown?.(e);
 
-    // CRITICAL FIX: Prevent deletion of the last paragraph
+    // Handle Cmd+Delete (delete to end of line) first
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Delete') {
+      if (handleCmdDelete(e)) {
+        return;
+      }
+    }
+
+    // Enhanced keyboard navigation handling
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+      handleKeyboardNavigation(e);
+      return;
+    }
+
+    // Basic cursor validation for Enter key
+    if (e.key === 'Enter') {
+      setTimeout(() => {
+        ensureValidCursorPosition();
+      }, 10);
+    }
+
+    // Handle Delete/Backspace at beginning of line (delete newline behavior)
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+
+        // Find current paragraph
+        let currentParagraph = range.startContainer;
+        while (currentParagraph && currentParagraph !== editorRef.current) {
+          if (currentParagraph.nodeType === Node.ELEMENT_NODE &&
+              (currentParagraph as Element).tagName === 'DIV' &&
+              (currentParagraph as Element).parentElement === editorRef.current) {
+            break;
+          }
+          currentParagraph = currentParagraph.parentNode;
+        }
+
+        if (currentParagraph && currentParagraph !== editorRef.current) {
+          const paragraph = currentParagraph as Element;
+          const startPosition = findContentStartPosition(paragraph);
+
+
+
+          // Check if cursor is at the very beginning of content area
+          // Also check if we're at the beginning of the paragraph div itself
+          const isAtContentStart = startPosition &&
+              range.startContainer === startPosition.node &&
+              range.startOffset === startPosition.offset;
+
+          const isAtParagraphStart = range.startContainer === paragraph && range.startOffset === 0;
+
+          // Also check if we're at the start of the first text node after paragraph number
+          const paragraphNumber = paragraph.querySelector('.unified-paragraph-number, .dense-paragraph-number');
+          const isAfterParagraphNumber = paragraphNumber &&
+              range.startContainer.nodeType === Node.TEXT_NODE &&
+              range.startContainer.previousSibling === paragraphNumber &&
+              range.startOffset === 0;
+
+          if ((isAtContentStart || isAtParagraphStart || isAfterParagraphNumber) && range.collapsed) {
+
+            if (e.key === 'Delete') {
+              // Delete key at beginning: merge with next paragraph
+              const nextParagraph = paragraph.nextElementSibling;
+              if (nextParagraph && nextParagraph.tagName === 'DIV') {
+                e.preventDefault();
+
+                // Store cursor position for restoration
+                const cursorPosition = { node: range.startContainer, offset: range.startOffset };
+
+                // Get all content from next paragraph (excluding paragraph number)
+                const nextContent = Array.from(nextParagraph.childNodes).filter(node => {
+                  if (node.nodeType === Node.ELEMENT_NODE) {
+                    const element = node as Element;
+                    return !element.classList.contains('unified-paragraph-number') &&
+                           !element.classList.contains('dense-paragraph-number');
+                  }
+                  return true;
+                });
+
+                // Create document fragment for atomic operation
+                const fragment = document.createDocumentFragment();
+                nextContent.forEach(node => {
+                  fragment.appendChild(node.cloneNode(true));
+                });
+
+                // Perform atomic merge operation in a single frame to prevent flickering
+                // Append all content at once
+                paragraph.appendChild(fragment);
+
+                // Remove next paragraph
+                nextParagraph.remove();
+
+                // Restore cursor position at merge point
+                try {
+                  const newRange = document.createRange();
+                  newRange.setStart(cursorPosition.node, cursorPosition.offset);
+                  newRange.collapse(true);
+                  selection.removeAllRanges();
+                  selection.addRange(newRange);
+                } catch (error) {
+                  // Fallback to content start if cursor restoration fails
+                  positionCursorAtContentStart(paragraph);
+                }
+
+                // Trigger content change after DOM is stable
+                requestAnimationFrame(() => {
+                  handleContentChange();
+                });
+                return;
+              }
+            } else if (e.key === 'Backspace') {
+              // Backspace at beginning: merge with previous paragraph
+              const previousParagraph = paragraph.previousElementSibling;
+              if (previousParagraph && previousParagraph.tagName === 'DIV') {
+                e.preventDefault();
+
+                // Find the merge point in previous paragraph (end of content)
+                const prevContent = Array.from(previousParagraph.childNodes).filter(node => {
+                  if (node.nodeType === Node.ELEMENT_NODE) {
+                    const element = node as Element;
+                    return !element.classList.contains('unified-paragraph-number') &&
+                           !element.classList.contains('dense-paragraph-number');
+                  }
+                  return true;
+                });
+
+                // Calculate cursor position at end of previous paragraph content
+                let mergePosition = null;
+                if (prevContent.length > 0) {
+                  const lastNode = prevContent[prevContent.length - 1];
+                  if (lastNode.nodeType === Node.TEXT_NODE) {
+                    mergePosition = { node: lastNode, offset: lastNode.textContent?.length || 0 };
+                  } else {
+                    // Position after the last element
+                    mergePosition = { node: previousParagraph, offset: Array.from(previousParagraph.childNodes).indexOf(lastNode as ChildNode) + 1 };
+                  }
+                } else {
+                  // Previous paragraph is empty, position at start
+                  mergePosition = { node: previousParagraph, offset: 0 };
+                }
+
+                // Get all content from current paragraph (excluding paragraph number)
+                const currentContent = Array.from(paragraph.childNodes).filter(node => {
+                  if (node.nodeType === Node.ELEMENT_NODE) {
+                    const element = node as Element;
+                    return !element.classList.contains('unified-paragraph-number') &&
+                           !element.classList.contains('dense-paragraph-number');
+                  }
+                  return true;
+                });
+
+                // Create document fragment for atomic operation
+                const fragment = document.createDocumentFragment();
+                currentContent.forEach(node => {
+                  fragment.appendChild(node.cloneNode(true));
+                });
+
+                // Perform atomic merge operation in a single frame to prevent flickering
+                // Append all content at once
+                previousParagraph.appendChild(fragment);
+
+                // Remove current paragraph
+                paragraph.remove();
+
+                // Position cursor at the merge point
+                if (mergePosition) {
+                  try {
+                    const newRange = document.createRange();
+                    newRange.setStart(mergePosition.node, mergePosition.offset);
+                    newRange.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(newRange);
+                  } catch (error) {
+                    // Fallback to content start if cursor positioning fails
+                    positionCursorAtContentStart(previousParagraph);
+                  }
+                } else {
+                  positionCursorAtContentStart(previousParagraph);
+                }
+
+                // Trigger content change after DOM is stable
+                requestAnimationFrame(() => {
+                  handleContentChange();
+                });
+                return;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // CRITICAL FIX: Only prevent deletion if it would completely empty the editor
     if ((e.key === 'Backspace' || e.key === 'Delete') && editorRef.current) {
       const divs = editorRef.current.querySelectorAll('div');
 
-      // If there's only one div left, prevent deletion if it would empty the editor
+      // Only prevent deletion if there's only one div AND it would be completely emptied
       if (divs.length === 1) {
         const lastDiv = divs[0];
+        // Get text content excluding paragraph numbers
+        const paragraphNumber = lastDiv.querySelector('.unified-paragraph-number, .dense-paragraph-number');
+        const paragraphNumberText = paragraphNumber ? paragraphNumber.textContent || '' : '';
         const textContent = lastDiv.textContent || '';
+        const actualContent = textContent.substring(paragraphNumberText.length).trim();
+
         const selection = window.getSelection();
 
-        // If the selection would delete all content from the last paragraph, prevent it
-        if (selection && selection.rangeCount > 0) {
+        // Only prevent deletion if it would leave the editor completely empty
+        if (selection && selection.rangeCount > 0 && actualContent === '') {
           const range = selection.getRangeAt(0);
-          const isSelectingAll = range.startOffset === 0 &&
-                                range.endOffset === textContent.length;
           const isAtStart = range.startOffset === 0 && range.collapsed;
 
-          if (isSelectingAll || (isAtStart && e.key === 'Backspace' && textContent.trim() === '')) {
+          // Only prevent backspace at the very start of an empty editor
+          if (isAtStart && e.key === 'Backspace') {
             e.preventDefault();
             return;
           }
@@ -672,14 +1435,71 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       setShowLinkEditor(true);
     }
 
-    // Simplified Enter key handling - let browser handle most of it
+    // CRITICAL FIX: Proper Enter key handling for new paragraphs
     if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
-      // Let the browser handle Enter naturally, just trigger content change
-      setTimeout(() => {
-        handleContentChange();
-      }, 10);
+      e.preventDefault(); // Take full control of Enter behavior
+
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+
+        // Create a new div element for the new paragraph
+        const newDiv = document.createElement('div');
+        newDiv.innerHTML = '<br>'; // Ensure proper line height for empty lines
+
+        // Find the current paragraph (div) that contains the cursor
+        let currentDiv = range.startContainer;
+        if (currentDiv.nodeType === Node.TEXT_NODE) {
+          currentDiv = currentDiv.parentElement;
+        }
+
+        // Walk up to find the div that's a direct child of the editor
+        while (currentDiv && currentDiv.parentElement !== editorRef.current) {
+          currentDiv = currentDiv.parentElement;
+        }
+
+        if (currentDiv && currentDiv.tagName === 'DIV') {
+          // Split the current div at the cursor position if there's content after cursor
+          const rangeAfterCursor = document.createRange();
+          rangeAfterCursor.setStart(range.startContainer, range.startOffset);
+          rangeAfterCursor.setEndAfter(currentDiv.lastChild || currentDiv);
+
+          const contentAfterCursor = rangeAfterCursor.extractContents();
+
+          // If there's content after cursor, put it in the new div
+          if (contentAfterCursor.textContent.trim() || contentAfterCursor.querySelector('*')) {
+            newDiv.innerHTML = '';
+            newDiv.appendChild(contentAfterCursor);
+          }
+
+          // Insert the new div after the current one
+          currentDiv.parentNode.insertBefore(newDiv, currentDiv.nextSibling);
+
+          // Position cursor at the beginning of the new div
+          const newRange = document.createRange();
+          if (newDiv.firstChild) {
+            newRange.setStart(newDiv.firstChild, 0);
+          } else {
+            newRange.setStart(newDiv, 0);
+          }
+          newRange.collapse(true);
+
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+
+          // CRITICAL FIX: After paragraph numbers are injected, ensure cursor is positioned correctly
+          setTimeout(() => {
+            ensureValidCursorPosition();
+          }, 50);
+        }
+
+        // Trigger content change
+        requestAnimationFrame(() => {
+          handleContentChange();
+        });
+      }
     }
-  }, [isClient, onKeyDown, saveSelection]);
+  }, [isClient, onKeyDown, saveSelection, handleCmdDelete, handleKeyboardNavigation, ensureValidCursorPosition, handleContentChange]);
 
   // Function to capture initial link editor state for change detection
   const captureInitialLinkEditorState = useCallback(() => {
@@ -897,7 +1717,72 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   const handleLinkSelect = useCallback((item: any) => {
     if (!editorRef.current) return;
 
-    const displayText = (showCustomTextToggle && linkDisplayText.trim()) || item.title || item.username;
+    // Handle new page creation
+    if (item.isNew) {
+      // Create a placeholder link that will be converted to a real page link later
+      const displayText = showCustomTextToggle && linkDisplayText.trim()
+        ? linkDisplayText.trim()
+        : item.title;
+
+      // Use a special data attribute to mark this as a pending page creation
+      const linkHTML = `<span class="${pillStyleClasses} page-link pending-page" data-link-type="page" data-pending-title="${item.title}" contenteditable="false" style="user-select: none; cursor: pointer; opacity: 0.7;">${displayText}</span>`;
+
+      // Insert the placeholder link
+      if (editingLink) {
+        editingLink.element.outerHTML = linkHTML;
+        setEditingLink(null);
+      } else {
+        if (selection) {
+          try {
+            restoreSelection();
+            const currentSelection = window.getSelection();
+            if (currentSelection && currentSelection.rangeCount > 0) {
+              const range = currentSelection.getRangeAt(0);
+              range.deleteContents();
+
+              const tempDiv = document.createElement('div');
+              tempDiv.innerHTML = linkHTML;
+              const linkElement = tempDiv.firstChild;
+
+              if (linkElement) {
+                range.insertNode(linkElement);
+                const spaceNode = document.createTextNode('\u00A0');
+                range.setStartAfter(linkElement);
+                range.insertNode(spaceNode);
+                range.setStartAfter(spaceNode);
+                range.collapse(true);
+
+                currentSelection.removeAllRanges();
+                currentSelection.addRange(range);
+              }
+            } else {
+              document.execCommand('insertHTML', false, linkHTML + '&nbsp;');
+            }
+          } catch (error) {
+            console.error('Error inserting placeholder link:', error);
+            document.execCommand('insertHTML', false, linkHTML + '&nbsp;');
+          }
+        } else {
+          editorRef.current.focus();
+          document.execCommand('insertHTML', false, linkHTML + '&nbsp;');
+        }
+      }
+
+      // Update content and close modal
+      handleContentChange();
+      setTimeout(() => {
+        editorRef.current?.focus();
+      }, 100);
+      setShowLinkEditor(false);
+      resetLinkEditorState();
+      return true;
+    }
+
+    // Only use custom text when the toggle is explicitly enabled
+    // Otherwise, always use the page title to ensure auto-generated titles
+    const displayText = showCustomTextToggle && linkDisplayText.trim()
+      ? linkDisplayText.trim()
+      : (item.title || item.username);
     let linkHTML = "";
 
     if (item.type === 'page' || item.id) {
@@ -983,7 +1868,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     setShowLinkEditor(false);
     resetLinkEditorState();
     return true;
-  }, [linkDisplayText, pillStyleClasses, selection, restoreSelection, handleContentChange, editingLink, showAuthorToggle]);
+  }, [linkDisplayText, showCustomTextToggle, pillStyleClasses, selection, restoreSelection, handleContentChange, editingLink, showAuthorToggle]);
 
   // Optimized link insertion for external API
   const insertLink = useCallback((linkData: any) => {
@@ -1017,6 +1902,58 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     setShowLinkEditor(false);
     return true;
   }, [pillStyleClasses, handleContentChange]);
+
+  // Function to process pending page links and create actual pages
+  const processPendingPageLinks = useCallback(async () => {
+    if (!editorRef.current) return;
+
+    const pendingLinks = editorRef.current.querySelectorAll('.pending-page');
+    if (pendingLinks.length === 0) return;
+
+    console.log(`Processing ${pendingLinks.length} pending page links`);
+
+    for (const linkElement of pendingLinks) {
+      const pendingTitle = linkElement.getAttribute('data-pending-title');
+      if (!pendingTitle) continue;
+
+      try {
+        // Create the new page
+        const response = await fetch('/api/pages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: pendingTitle,
+            content: JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]),
+            isPublic: false, // Default to private
+            location: null,
+            groupId: null
+          }),
+        });
+
+        if (response.ok) {
+          const newPage = await response.json();
+          console.log(`Created new page: ${newPage.id} with title: ${pendingTitle}`);
+
+          // Update the link element to point to the real page
+          linkElement.setAttribute('data-id', newPage.id);
+          linkElement.removeAttribute('data-pending-title');
+          linkElement.classList.remove('pending-page');
+          linkElement.style.opacity = '1'; // Remove the dimmed appearance
+        } else {
+          console.error(`Failed to create page for title: ${pendingTitle}`);
+          // Keep the pending link as is - user can try again later
+        }
+      } catch (error) {
+        console.error(`Error creating page for title: ${pendingTitle}`, error);
+        // Keep the pending link as is - user can try again later
+      }
+    }
+
+    // Trigger content change to save the updated links
+    handleContentChange();
+  }, [handleContentChange]);
 
   // Function to delete all empty lines
   const deleteAllEmptyLines = useCallback(() => {
@@ -1097,28 +2034,46 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       return slateContent;
     },
     insertText: (text: string) => {
-      if (editorRef.current && typeof document !== 'undefined' && document.execCommand) {
+      if (editorRef.current && typeof document !== 'undefined') {
         const selection = window.getSelection();
-        let savedRange = null;
+
         if (selection && selection.rangeCount > 0) {
-          savedRange = selection.getRangeAt(0).cloneRange();
-        }
+          const range = selection.getRangeAt(0);
 
-        document.execCommand('insertText', false, text);
-        handleContentChange();
+          // FIXED: Use modern DOM methods instead of deprecated execCommand
+          try {
+            // Delete any selected content first
+            range.deleteContents();
 
-        if (savedRange) {
-          requestAnimationFrame(() => {
-            try {
-              const newSelection = window.getSelection();
-              if (newSelection) {
-                newSelection.removeAllRanges();
-                newSelection.addRange(savedRange);
-              }
-            } catch (error) {
-              console.debug('Selection restoration failed in insertText:', error);
+            // Create text node and insert it
+            const textNode = document.createTextNode(text);
+            range.insertNode(textNode);
+
+            // Move cursor to end of inserted text
+            range.setStartAfter(textNode);
+            range.collapse(true);
+
+            // Update selection
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            // Trigger content change
+            handleContentChange();
+          } catch (error) {
+            console.error('Error inserting text:', error);
+            // Fallback to execCommand if available
+            if (document.execCommand) {
+              document.execCommand('insertText', false, text);
+              handleContentChange();
             }
-          });
+          }
+        } else {
+          // No selection - focus editor and try to insert at current position
+          editorRef.current.focus();
+          if (document.execCommand) {
+            document.execCommand('insertText', false, text);
+            handleContentChange();
+          }
         }
       }
       return true;
@@ -1148,12 +2103,13 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       setShowLinkEditor(value);
       return true;
     },
-    deleteAllEmptyLines
-  }), [handleContentChange, insertLink, saveSelection, convertHTMLToSlate, deleteAllEmptyLines]);
+    deleteAllEmptyLines,
+    processPendingPageLinks
+  }), [handleContentChange, insertLink, saveSelection, convertHTMLToSlate, deleteAllEmptyLines, processPendingPageLinks]);
 
   // Memoized class names to prevent re-computation
   const editorClassName = useMemo(() =>
-    `prose prose-lg max-w-none focus:outline-none editor-content page-editor-stable box-border ${lineMode === LINE_MODES.DENSE ? 'dense-mode' : 'normal-mode'}`,
+    `prose prose-lg max-w-none focus:outline-none editor-content page-editor-stable box-border mode-transition ${lineMode === LINE_MODES.DENSE ? 'dense-mode' : 'normal-mode'}`,
     [lineMode]
   );
 
@@ -1169,9 +2125,16 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
               <div
                 ref={editorRef}
                 contentEditable
+                tabIndex={isNewPage ? 2 : 0} // Set to 2nd position for new pages: after title (1), before menu (3)
                 onInput={handleInput}
                 onKeyDown={handleKeyDown}
                 onBlur={handleBlur}
+                onFocus={() => {
+                  // Ensure proper cursor positioning when editor gains focus
+                  setTimeout(() => {
+                    ensureValidCursorPosition();
+                  }, 10);
+                }}
                 onMouseUp={saveSelection}
                 onKeyUp={saveSelection}
                 onSelect={handleSelectionChange}
@@ -1180,19 +2143,20 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                 data-placeholder={placeholder}
                 suppressContentEditableWarning={true}
                 style={{
-                  minHeight: '400px',
                   opacity: isInitialized ? 1 : 0,
-                  transition: 'opacity 0.15s ease-in-out'
+                  transition: 'opacity 0.15s ease-in-out',
+                  // FIXED: Ensure proper line height and cursor visibility
+                  minHeight: '1.5em',
+                  lineHeight: '1.5'
                 }}
               />
               {/* Paragraph Number Overlay - Completely separate from contentEditable */}
               {isInitialized && <ParagraphNumberOverlay editorRef={editorRef} />}
             </>
           ) : (
-            // Skeleton loader with exact same dimensions to prevent layout shifts
+            // Skeleton loader with consistent styling
             <div
               className="prose prose-lg max-w-none page-editor-stable box-border animate-pulse"
-              style={{ minHeight: '400px' }}
             >
               <div className="space-y-3">
                 <div className="h-4 bg-muted rounded w-3/4"></div>
@@ -1203,33 +2167,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
           )}
         </div>
 
-        {/* Dense Mode Toggle - Only show in edit mode */}
-        {isEditMode && (
-          <div className="mt-4">
-            <div
-              className={cn(
-                "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl font-medium transition-colors",
-                "border border-theme-medium bg-background text-foreground shadow-sm hover:bg-background hover:shadow-md hover:border-theme-medium",
-                "h-10 px-4 py-2",
-                "gap-2 w-full cursor-pointer"
-              )}
-              onClick={() => {
-                const newMode = lineMode === LINE_MODES.DENSE ? LINE_MODES.NORMAL : LINE_MODES.DENSE;
-                setLineMode(newMode);
-              }}
-            >
-              <Switch
-                checked={lineMode === LINE_MODES.DENSE}
-                onCheckedChange={(checked) => {
-                  const newMode = checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL;
-                  setLineMode(newMode);
-                }}
-              />
-              <Grid3X3 className="h-4 w-4 text-muted-foreground" />
-              <span>Dense mode</span>
-            </div>
-          </div>
-        )}
+
       </div>
 
       {/* Link Editor Modal - Using consistent Modal component */}
@@ -1394,7 +2332,6 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         <div className="page-content unified-editor relative rounded-lg bg-background w-full max-w-none">
           <div
             className="prose prose-lg max-w-none page-editor-stable box-border"
-            style={{ minHeight: '400px' }}
           >
             <div className="flex items-center justify-center h-full">
               <div className="text-center space-y-4">

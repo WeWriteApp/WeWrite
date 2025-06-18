@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Badge } from '../ui/badge'
 import { Trash2, RotateCcw, Calendar, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../../providers/AuthProvider'
+import PillLink from '../utils/PillLink'
 
 interface DeletedPage {
   id: string
@@ -22,6 +23,7 @@ export default function RecentlyDeletedPages() {
   const [deletedPages, setDeletedPages] = useState<DeletedPage[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
   const [restoring, setRestoring] = useState<string | null>(null)
   const [permanentlyDeleting, setPermanentlyDeleting] = useState<string | null>(null)
 
@@ -41,6 +43,7 @@ export default function RecentlyDeletedPages() {
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
+      // FIXED: Improved query with better error handling
       // Query for deleted pages within the last 30 days
       const deletedPagesQuery = query(
         collection(db, 'pages'),
@@ -50,26 +53,44 @@ export default function RecentlyDeletedPages() {
         orderBy('deletedAt', 'desc')
       )
 
+      console.log('Fetching deleted pages for user:', user.uid)
       const snapshot = await getDocs(deletedPagesQuery)
       const pages: DeletedPage[] = []
 
       snapshot.forEach((doc) => {
         const data = doc.data()
-        pages.push({
-          id: doc.id,
-          title: data.title || 'Untitled Page',
-          deletedAt: data.deletedAt,
-          deletedBy: data.deletedBy || data.userId,
-          isPublic: data.isPublic || false,
-          lastModified: data.lastModified,
-          createdAt: data.createdAt
-        })
+        // Validate that the page has required fields
+        if (data.deletedAt && data.deleted === true) {
+          pages.push({
+            id: doc.id,
+            title: data.title || 'Untitled Page',
+            deletedAt: data.deletedAt,
+            deletedBy: data.deletedBy || data.userId,
+            isPublic: data.isPublic || false,
+            lastModified: data.lastModified,
+            createdAt: data.createdAt
+          })
+        }
       })
 
+      console.log(`Found ${pages.length} deleted pages`)
       setDeletedPages(pages)
     } catch (err) {
       console.error('Error fetching deleted pages:', err)
-      setError('Failed to load recently deleted pages')
+
+      // Provide more specific error messages
+      let errorMessage = 'Failed to load recently deleted pages'
+      if (err instanceof Error) {
+        if (err.message.includes('index')) {
+          errorMessage = 'Database index is being built. Please try again in a few minutes.'
+        } else if (err.message.includes('permission')) {
+          errorMessage = 'Permission denied. Please check your account settings.'
+        } else if (err.message.includes('network')) {
+          errorMessage = 'Network error. Please check your connection and try again.'
+        }
+      }
+
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -192,16 +213,22 @@ export default function RecentlyDeletedPages() {
     }
   }
 
+  // Retry function
+  const retryFetch = () => {
+    setRetryCount(prev => prev + 1)
+    fetchDeletedPages()
+  }
+
   useEffect(() => {
     fetchDeletedPages()
   }, [user?.uid])
 
   if (loading) {
     return (
-      <Card>
+      <Card className="wewrite-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trash2 className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-foreground">
+            <Trash2 className="h-5 w-5 text-muted-foreground" />
             Recently Deleted Pages
           </CardTitle>
           <CardDescription>
@@ -210,8 +237,8 @@ export default function RecentlyDeletedPages() {
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-2 text-sm text-gray-600">Loading deleted pages...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-sm text-muted-foreground">Loading deleted pages...</p>
           </div>
         </CardContent>
       </Card>
@@ -219,10 +246,10 @@ export default function RecentlyDeletedPages() {
   }
 
   return (
-    <Card>
+    <Card className="wewrite-card">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Trash2 className="h-5 w-5" />
+        <CardTitle className="flex items-center gap-2 text-foreground">
+          <Trash2 className="h-5 w-5 text-muted-foreground" />
           Recently Deleted Pages
         </CardTitle>
         <CardDescription>
@@ -231,32 +258,57 @@ export default function RecentlyDeletedPages() {
       </CardHeader>
       <CardContent>
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-            <div className="flex items-center gap-2 text-red-800">
+          <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+            <div className="flex items-center gap-2 text-destructive mb-3">
               <AlertTriangle className="h-4 w-4" />
-              <span className="text-sm">{error}</span>
+              <span className="text-sm font-medium">{error}</span>
             </div>
+            {retryCount < 3 && (
+              <Button onClick={retryFetch} variant="outline" size="sm" className="border-destructive/30 text-destructive hover:bg-destructive/10">
+                Try Again {retryCount > 0 && `(${retryCount}/3)`}
+              </Button>
+            )}
+            {retryCount >= 3 && (
+              <div className="space-y-2">
+                <p className="text-xs text-destructive/80">
+                  Multiple attempts failed. Please try refreshing the page or contact support.
+                </p>
+                <Button onClick={() => window.location.reload()} variant="outline" size="sm" className="border-destructive/30 text-destructive hover:bg-destructive/10">
+                  Refresh Page
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
         {deletedPages.length === 0 ? (
-          <div className="text-center py-8">
-            <Trash2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No recently deleted pages</h3>
-            <p className="text-gray-600">Pages you delete will appear here for 30 days before being permanently removed.</p>
+          <div className="text-center py-12">
+            <div className="mx-auto w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mb-4">
+              <Trash2 className="h-8 w-8 text-muted-foreground/60" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">No recently deleted pages</h3>
+            <p className="text-muted-foreground max-w-sm mx-auto">Pages you delete will appear here for 30 days before being permanently removed.</p>
           </div>
         ) : (
           <>
-            <div className="flex justify-between items-center mb-4">
-              <p className="text-sm text-gray-600">
-                {deletedPages.length} page{deletedPages.length !== 1 ? 's' : ''} found
-              </p>
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">
+                  {deletedPages.length} page{deletedPages.length !== 1 ? 's' : ''} found
+                </p>
+                <div className="h-1 w-1 bg-muted-foreground/40 rounded-full"></div>
+                <p className="text-sm text-muted-foreground">
+                  Auto-delete in 30 days
+                </p>
+              </div>
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={deleteAllPermanently}
                 disabled={loading}
+                className="shadow-sm"
               >
+                <Trash2 className="h-3 w-3 mr-1" />
                 Delete All Permanently
               </Button>
             </div>
@@ -264,43 +316,66 @@ export default function RecentlyDeletedPages() {
             <div className="space-y-3">
               {deletedPages.map((page) => {
                 const daysLeft = getDaysUntilPermanentDeletion(page.deletedAt)
-                
+                const isUrgent = daysLeft <= 7
+
                 return (
                   <div
                     key={page.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                    className="group flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-6 border-theme-medium rounded-xl hover:border-theme-strong hover:bg-muted/30 transition-all duration-200"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-medium text-gray-900 truncate">
-                          {page.title}
-                        </h4>
-                        <Badge variant={page.isPublic ? "default" : "secondary"}>
+                      <div className="flex items-start sm:items-center gap-3 mb-3">
+                        <div className="flex-1 min-w-0">
+                          <PillLink
+                            href={`/${page.id}?preview=deleted`}
+                            className="text-base"
+                          >
+                            {page.title}
+                          </PillLink>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 text-muted-foreground border-muted-foreground/30 bg-transparent"
+                        >
                           {page.isPublic ? "Public" : "Private"}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <Calendar className="h-3.5 w-3.5" />
                           Deleted {formatDate(page.deletedAt)}
                         </span>
-                        <span className="text-orange-600 font-medium">
+                        <span className={`flex items-center gap-1.5 font-medium ${
+                          isUrgent
+                            ? 'text-destructive'
+                            : daysLeft <= 14
+                              ? 'text-orange-600 dark:text-orange-400'
+                              : 'text-muted-foreground'
+                        }`}>
+                          <div className={`h-2 w-2 rounded-full ${
+                            isUrgent
+                              ? 'bg-destructive'
+                              : daysLeft <= 14
+                                ? 'bg-orange-500'
+                                : 'bg-muted-foreground/40'
+                          }`}></div>
                           {daysLeft} day{daysLeft !== 1 ? 's' : ''} left
                         </span>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center gap-2 ml-4">
+
+                    <div className="flex flex-col sm:flex-row gap-2 sm:ml-4 opacity-100 sm:opacity-60 sm:group-hover:opacity-100 transition-opacity duration-200">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => restorePage(page.id)}
                         disabled={restoring === page.id || permanentlyDeleting === page.id}
+                        className="flex-1 sm:flex-none border-theme-medium hover:border-theme-strong hover:bg-muted/50 shadow-sm"
                       >
                         {restoring === page.id ? (
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-900"></div>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary mr-2"></div>
                         ) : (
-                          <RotateCcw className="h-3 w-3" />
+                          <RotateCcw className="h-3 w-3 mr-2" />
                         )}
                         Restore
                       </Button>
@@ -309,11 +384,12 @@ export default function RecentlyDeletedPages() {
                         size="sm"
                         onClick={() => permanentlyDeletePage(page.id)}
                         disabled={restoring === page.id || permanentlyDeleting === page.id}
+                        className="flex-1 sm:flex-none shadow-sm"
                       >
                         {permanentlyDeleting === page.id ? (
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
                         ) : (
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-3 w-3 mr-2" />
                         )}
                         Delete Forever
                       </Button>

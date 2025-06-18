@@ -110,23 +110,25 @@ a[data-user-id]::before {
   font-size: 1rem;
   line-height: 1.5; /* Changed from 1.6 to match view mode */
   font-family: inherit;
+  /* Ensure natural content flow without viewport constraints */
+  min-height: auto;
 }
 
-/* Base paragraph styling - IDENTICAL between view and edit modes */
+/* Base paragraph styling - NORMAL MODE with first child number */
 .unified-paragraph,
 .editor-content.normal-mode > div {
-  /* Layout properties - NEVER change these between modes */
+  /* Normal mode: Block layout, paragraph number as first child */
+  display: block;
   margin-bottom: 0.75rem;
   padding: 0.5rem;
-  padding-left: 2.5rem; /* CRITICAL: Space for paragraph number (0.5rem margin + 1rem number + 1rem gap) */
   box-sizing: border-box;
   min-height: 2.5rem;
   width: 100%;
   position: relative;
 
-  /* Typography - IDENTICAL in both modes */
+  /* Typography */
   font-size: 1rem;
-  line-height: 1.5; /* CRITICAL: Must match between modes */
+  line-height: 1.5;
   font-family: inherit;
   letter-spacing: normal;
   word-spacing: normal;
@@ -135,15 +137,11 @@ a[data-user-id]::before {
   border: 2px solid transparent;
   border-radius: 0.375rem;
 
-  /* Smooth transitions - only for visual properties, not layout */
-  transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
-
-  /* Display properties */
-  display: block;
+  /* Smooth transitions for mode switching */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Prevent any unexpected layout changes */
   overflow: visible;
-  /* Remove layout containment to prevent interference with dynamic content */
   contain: style;
 }
 
@@ -163,34 +161,11 @@ a[data-user-id]::before {
   background-color: hsl(var(--muted) / 0.3);
 }
 
-/* Paragraph number styling - IDENTICAL between modes */
+/* Paragraph number styling - first child in paragraph */
 .unified-paragraph-number {
-  /* CRITICAL: Identical positioning and styling to edit mode pseudo-element */
-  position: absolute;
-  left: 0.5rem;
-  top: 0.5rem;
-  width: 1rem;
-  text-align: right;
-  color: var(--muted-foreground);
-  font-size: 0.75rem;
-  opacity: 0.8;
-  user-select: none;
-  pointer-events: none;
-  line-height: 1.5;
-  flex-shrink: 0;
+  /* Simple inline-block first child */
   display: inline-block;
-  min-width: 0.75rem;
-  vertical-align: baseline;
-  margin-right: 0.5rem;
-  float: none;
-}
-
-/* Edit mode pseudo-element - IDENTICAL positioning to view mode */
-.editor-content.normal-mode > div::before {
-  position: absolute;
-  left: 0.5rem;
-  top: 0.5rem;
-  width: 1rem;
+  width: 1.5rem;
   text-align: right;
   color: var(--muted-foreground);
   font-size: 0.75rem;
@@ -198,21 +173,25 @@ a[data-user-id]::before {
   user-select: none;
   pointer-events: none;
   line-height: 1.5;
+  margin-right: 0.5rem;
+  vertical-align: top;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Text content styling - IDENTICAL between modes */
+/* Text content styling - uses full width with hanging indent */
 .unified-text-content {
-  /* CRITICAL: NO additional padding - parent already has padding-left: 2.5rem */
+  /* Text content flows naturally with hanging indent */
+  display: inline;
   line-height: 1.5;
-  margin: 0;
-  padding: 0;
-  font-size: 1rem;
-  font-family: inherit;
-  letter-spacing: normal;
-  word-spacing: normal;
-  box-sizing: border-box;
-  flex-grow: 1;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  /* Reset any text-indent that might interfere */
+  text-indent: 0;
 }
+
+/* Edit mode paragraph numbers are now handled by injected spans - no pseudo-elements needed */
+
+
 
 /* Ensure pill links maintain proper styling within unified content */
 .unified-text-content a.page-link,
@@ -249,6 +228,32 @@ a[data-user-id]::before {
   /* Prevent layout shifts by avoiding transitions on layout properties */
 }
 
+/* Mode transition class for smooth switching between dense and normal modes */
+.mode-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateZ(0); /* Force hardware acceleration */
+  will-change: display, margin, padding;
+  /* Removed border from will-change to prevent glitches */
+}
+
+/* Ensure child elements also transition smoothly */
+.mode-transition .unified-paragraph,
+.mode-transition .unified-paragraph-number,
+.mode-transition .unified-text-content {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth transitions for all paragraph states */
+.unified-paragraph {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border: 2px solid transparent !important;
+}
+
+/* Ensure smooth transitions work in view mode */
+.mode-transition .unified-paragraph {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
 /* Prevent any layout shifts during mode transitions */
 .page-editor-stable {
   /* Reduce containment to prevent interference with dynamic content */
@@ -256,12 +261,14 @@ a[data-user-id]::before {
   /* Ensure consistent dimensions */
   box-sizing: border-box;
   width: 100%;
+  /* Natural content flow without viewport constraints */
+  min-height: auto;
 }
 
 /* CRITICAL FIX: Editor paragraph numbering - COMPLETELY DISABLED CSS APPROACH */
 /* Using JavaScript overlay instead for bulletproof protection */
 
-/* Initialize editor container */
+/* Initialize editor container - IDENTICAL for both view and edit modes */
 .editor-content.normal-mode {
   position: relative;
   /* CRITICAL: Match container styling with view mode */
@@ -274,26 +281,29 @@ a[data-user-id]::before {
   line-height: 1.5; /* Match view mode exactly */
   font-family: inherit;
 
-  /* ENHANCED: Create space for JavaScript overlay numbers */
-  padding-left: 2.5rem; /* Ensure content doesn't overlap with overlay */
+  /* No container padding needed - each paragraph handles its own layout with flexbox */
 }
 
 /* Style each paragraph div in normal mode - IDENTICAL to unified-paragraph */
-.editor-content.normal-mode > div {
+.editor-content.normal-mode > div,
+.editor-content.normal-mode > .paragraph-div {
   /* CRITICAL: These properties must match .unified-paragraph exactly */
   position: relative;
   margin-bottom: 0.75rem;
   padding: 0.5rem;
-  padding-left: 0; /* No left padding - handled by container */
   box-sizing: border-box;
   min-height: 2.5rem;
   width: 100%;
+
   font-size: 1rem;
   line-height: 1.5; /* CRITICAL: Must match view mode */
   border: 2px solid transparent;
   border-radius: 0.375rem;
-  transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Block layout for normal mode */
   display: block;
+
   font-family: inherit;
   letter-spacing: normal;
   word-spacing: normal;
@@ -306,16 +316,26 @@ a[data-user-id]::before {
   content: none !important;
 }
 
-/* Dense mode - no paragraph numbers - IDENTICAL between view and edit modes */
-.editor-content.dense-mode > div,
-.unified-paragraph.dense-mode {
-  display: inline;
-  margin-bottom: 0;
-  padding: 0;
-  border: none;
-  min-height: auto;
+/* Dense mode - continuous inline text flow */
+.unified-paragraph.dense-mode,
+.editor-content.dense-mode > div {
+  /* Dense mode: Inline layout, paragraphs flow horizontally */
+  display: inline !important;
+  margin-bottom: 0 !important;
+  margin-right: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  min-height: auto !important;
+  width: auto !important;
   box-sizing: border-box;
+  vertical-align: baseline;
+
+  /* Smooth transitions for mode switching */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* REMOVED: Visual separator between paragraphs in dense mode for clean appearance */
+/* Dense mode should have no visual separators for minimal, clean spacing */
 
 /* Focus and hover states - IDENTICAL to view mode */
 .editor-content.normal-mode > div:hover,
@@ -323,36 +343,104 @@ a[data-user-id]::before {
   background-color: hsl(var(--muted) / 0.3);
 }
 
+/* Default editor focus state - blue when title is not focused */
 .editor-content:focus .normal-mode > div:focus-within,
 .unified-paragraph.editing-mode {
   border-color: hsl(var(--primary) / 0.2);
 }
 
+/* Coordinated focus states - grey when title is focused */
+.title-focused .editor-content:focus .normal-mode > div:focus-within,
+.title-focused .unified-paragraph.editing-mode {
+  border-color: hsl(var(--muted-foreground) / 0.2) !important;
+}
+
+/* Editor focus ring coordination */
+.editor-content:focus-within {
+  outline: 2px solid hsl(var(--primary) / 0.2);
+  outline-offset: 2px;
+}
+
+.title-focused .editor-content:focus-within {
+  outline: 2px solid hsl(var(--muted-foreground) / 0.2) !important;
+}
+
+/* Dense mode container - allow text to wrap naturally */
+.dense-mode {
+  line-height: 1.6 !important; /* Slightly increased line height for readability */
+}
+
 /* Dense mode styling - maintains consistency between view and edit modes */
 [contenteditable].dense-mode .unified-paragraph,
 .dense-mode .unified-paragraph {
-  display: inline;
+  display: inline-block;
   margin-bottom: 0;
-  padding: 0;
+  margin-right: 0.5rem;
+  padding: 0.25rem 0;
   border: none;
   min-height: auto;
   position: relative; /* Maintain positioning context */
+  vertical-align: top;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 [contenteditable].dense-mode .unified-paragraph-number,
-.dense-mode .unified-paragraph-number {
-  display: inline;
-  position: relative; /* Override absolute positioning in dense mode */
-  left: auto;
-  top: auto;
-  margin-right: 0.25rem;
-  margin-left: 0.5rem;
+.dense-mode .unified-paragraph-number,
+.unified-paragraph.dense-mode .unified-paragraph-number {
+  display: inline !important;
+  position: relative !important; /* Override absolute positioning in dense mode */
+  left: auto !important;
+  top: auto !important;
+  width: auto !important;
+  text-align: left !important;
+  margin-right: 0.25rem !important;
+  margin-left: 0 !important; /* Remove left margin for first element */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 500; /* Slightly bolder for better visibility */
 }
 
-/* Dense mode paragraph numbering in edit mode */
-.editor-content.dense-mode > div::before {
-  content: counter(paragraph-counter) " ";
-  counter-increment: paragraph-counter;
+/* Dense mode paragraph numbering - handled by JavaScript components, not CSS */
+/* CSS counters removed to prevent conflicts with JavaScript-based numbering */
+.editor-content.dense-mode {
+  /* No CSS counter needed - paragraph numbers handled by components */
+}
+
+/* Dense mode spacing - add minimal space between paragraphs without visual separators */
+.editor-content.dense-mode > div:not(:last-child),
+.unified-paragraph.dense-mode:not(:last-child) {
+  margin-right: 0.5rem; /* Small space between paragraphs */
+}
+
+/* Dense mode content wrapper - allows natural text wrapping */
+.dense-content-wrapper {
+  line-height: 1.6;
+  font-size: 1rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Animation for dense mode appearance */
+.dense-content-wrapper.mode-transition {
+  animation: fadeInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dense mode paragraph numbers - inline with content */
+.dense-paragraph-number {
   color: var(--muted-foreground);
   font-size: 0.75rem;
   opacity: 0.8;
@@ -363,11 +451,28 @@ a[data-user-id]::before {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.editor-content.dense-mode {
-  counter-reset: paragraph-counter;
+/* First paragraph number has no left margin */
+.dense-paragraph-number:first-child {
+  margin-left: 0;
 }
+
+/* Dense mode paragraph content - flows naturally */
+.dense-paragraph-content {
+  display: inline;
+  line-height: inherit;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dense mode paragraph separator - minimal space */
+.dense-paragraph-separator {
+  margin: 0 0.25rem;
+}
+
+/* Paragraph numbering is now handled by injected spans in both view and edit modes */
 
 /* CRITICAL FIX: Ensure links are completely non-editable in the editor */
 /* This prevents users from editing link content directly in the editor */

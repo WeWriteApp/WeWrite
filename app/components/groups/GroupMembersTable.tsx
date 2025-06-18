@@ -166,7 +166,6 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
 
       const membersRef = ref(rtdb, `groups/${groupId}/members`);
       await set(membersRef, updatedMembers);
-      toast.success("Member removed successfully");
     } catch (error) {
       console.error("Error removing member:", error);
       toast.error("Failed to remove member. Please try again.");
@@ -183,7 +182,6 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
 
       const membersRef = ref(rtdb, `groups/${groupId}/members`);
       await set(membersRef, updatedMembers);
-      toast.success("You have left the group");
 
       // Redirect to groups page
       router.push("/groups");
@@ -249,11 +247,10 @@ export default function GroupMembersTable({ groupId, members, isOwner }: GroupMe
         groupName           // Group name for notification context
       );
 
-      // Reset form state and provide success feedback
+      // Reset form state
       setIsDialogOpen(false);
       setSearchTerm('');
       setSelectedUser(null);
-      toast.success("Group invitation sent successfully");
     } catch (error) {
       console.error("Error sending group invitation:", error);
       toast.error("Failed to send invitation. Please try again.");

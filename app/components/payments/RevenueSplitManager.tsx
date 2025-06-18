@@ -171,10 +171,6 @@ export default function RevenueSplitManager({
       });
       
       if (response.ok) {
-        toast({
-          title: "Revenue Split Updated",
-          description: "Changes saved successfully",
-        });
         loadRevenueSplit();
         onUpdate?.();
       } else {

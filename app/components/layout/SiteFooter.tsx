@@ -190,8 +190,8 @@ export default function SiteFooter({ className = "" }: SiteFooterProps) {
           </span>
         </div>
 
-        {/* Add extra padding to ensure content isn't covered by pledge bar */}
-        <div className="h-24"></div>
+        {/* Natural spacing for footer content */}
+        <div className="h-4"></div>
       </div>
     </footer>
   );

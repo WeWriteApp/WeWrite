@@ -4,14 +4,11 @@ import React, { useState, useEffect, useContext } from "react";
 import { Button } from "../ui/button";
 import { Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X } from "lucide-react";
 import dynamic from 'next/dynamic';
-import { Switch } from "../ui/switch";
 import { useRouter } from "next/navigation";
 import { toast } from "../ui/use-toast";
 import { deletePage } from "../../firebase/database";
 import { getUserProfile } from "../../firebase/auth";
 import { auth } from "../../firebase/auth";
-import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
-import { cn } from "../../lib/utils";
 
 import {
   DropdownMenu,
@@ -101,23 +98,13 @@ export function PageActions({
   showFollowButton = false
 }: PageActionsProps) {
   const router = useRouter();
-  const { lineMode, setLineMode } = useLineSettings();
   const { user } = useContext(AuthContext) || {};
   const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false);
-  const [currentLineMode, setCurrentLineMode] = useState(lineMode);
 
   // Use confirmation modal hook
   const { confirmationState, confirmDelete, closeConfirmation } = useConfirmation();
 
-  // Ensure the switch reflects the current mode from localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedMode = localStorage.getItem('lineMode');
-      if (savedMode && (savedMode === LINE_MODES.NORMAL || savedMode === LINE_MODES.DENSE)) {
-        setCurrentLineMode(savedMode);
-      }
-    }
-  }, []);
+
 
   // Store the current page content for future use
   const [currentPageContent, setCurrentPageContent] = useState<any>(null);
@@ -150,9 +137,6 @@ export function PageActions({
         // CRITICAL FIX: Delete the page first, then redirect
         // This prevents 404 errors and ensures proper cleanup
         await deletePage(page.id);
-
-        // Show success message
-        toast.success("Page deleted successfully");
 
         // Trigger success event
         if (typeof window !== 'undefined') {
@@ -362,32 +346,7 @@ export function PageActions({
           </Button>
         </div>
 
-        {/* Dense Mode toggle in its own row - using a div instead of Button to avoid nested buttons */}
-        <div className="mt-2">
-          <div
-            className={cn(
-              "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl font-medium transition-colors",
-              "border border-theme-medium bg-background text-foreground shadow-sm hover:bg-background hover:shadow-md hover:border-theme-medium",
-              "h-10 px-4 py-2",
-              "gap-2 w-full cursor-pointer"
-            )}
-            onClick={() => {
-              const newMode = currentLineMode === LINE_MODES.DENSE ? LINE_MODES.NORMAL : LINE_MODES.DENSE;
-              setCurrentLineMode(newMode); // Update local state immediately
-              setLineMode(newMode); // Update the mode without page reload
-            }}
-          >
-            <Switch
-              checked={currentLineMode === LINE_MODES.DENSE}
-              onCheckedChange={(checked) => {
-                const newMode = checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL;
-                setCurrentLineMode(newMode); // Update local state immediately
-                setLineMode(newMode); // Update the mode without page reload
-              }}
-            />
-            <span>Dense mode</span>
-          </div>
-        </div>
+
       </div>
 
       {/* Confirmation Modal */}

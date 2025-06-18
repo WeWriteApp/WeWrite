@@ -94,12 +94,12 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         shadow-none
       `;
     } else {
-      // Default filled style
+      // Default filled style - ensure white text on accent color background
       styleClasses = `
         bg-primary
         border-[1.5px] border-primary/20
         hover:bg-primary/90 hover:border-primary/30
-        text-white
+        text-white !important
         px-2 py-0.5
       `;
     }

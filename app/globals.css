@@ -249,7 +249,6 @@
 }
 
 .page-editor-stable {
-  min-height: 400px;
   contain: layout style;
   transform: translateZ(0);
   will-change: auto;
@@ -257,7 +256,6 @@
 
 /* Prevent layout shift in editor loading states */
 .editor-loading-placeholder {
-  min-height: 400px;
   width: 100%;
   display: flex;
   align-items: center;
@@ -1135,6 +1133,18 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
   color: hsl(var(--primary)) !important;
 }
 
+/* CRITICAL FIX: Ensure filled pills always have white text on accent color background */
+a.bg-primary, button.bg-primary, div.bg-primary,
+a[data-pill-style="filled"], button[data-pill-style="filled"], div[data-pill-style="filled"] {
+  color: white !important;
+}
+
+/* Ensure filled pills maintain white text on hover */
+a.bg-primary:hover, button.bg-primary:hover, div.bg-primary:hover,
+a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[data-pill-style="filled"]:hover {
+  color: white !important;
+}
+
 /* COMPOUND LINK FIXES - Ensure proper separation and styling */
 .compound-link-container {
   display: inline-flex !important;
@@ -1533,5 +1543,32 @@ a.bg-transparent, button.bg-transparent, div.bg-transparent {
   .fixed.z-\[100\],
   .fixed[class*="z-"] {
     box-shadow: none !important;
+  }
+}
+
+/* Pending page link styling */
+.pending-page {
+  opacity: 0.7;
+  position: relative;
+}
+
+.pending-page::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
+  animation: pending-pulse 2s ease-in-out infinite;
+}
+
+@keyframes pending-pulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.7;
   }
 }

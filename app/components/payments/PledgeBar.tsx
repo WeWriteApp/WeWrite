@@ -425,7 +425,7 @@ const PledgeBar: React.FC = () => {
     setShowRebalanceModal(false);
 
     // For now, just show the subscription management page
-    router.push('/settings/subscription');
+    router.push('/settings/subscription/manage');
   };
 
   // Detect if we're on a page view
@@ -662,6 +662,7 @@ const PledgeBar: React.FC = () => {
                 onClick={() => {
                   try {
                     console.log('PledgeBar: Navigating to subscription page');
+                    // For activation, always go to subscription setup page
                     router.push('/settings/subscription');
                   } catch (error) {
                     console.error('Navigation error:', error);
@@ -678,7 +679,8 @@ const PledgeBar: React.FC = () => {
                 }}
                 className="bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 text-white border-0"
               >
-                Activate Subscription
+                {subscription && subscription.status === 'active' ? 'Manage Subscription' :
+                 subscription && subscription.status !== 'active' ? 'Reactivate Subscription' : 'Activate Subscription'}
               </Button>
             ) : (
               <Button

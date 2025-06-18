@@ -191,6 +191,15 @@
         { "fieldPath": "createdAt", "order": "ASCENDING" },
         { "fieldPath": "__name__", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "pages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "deleted", "order": "ASCENDING" },
+        { "fieldPath": "deletedAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -78,12 +78,7 @@ export default function AdminPage() {
       description: 'Enable group functionality for organizing pages and collaboration',
       enabled: true
     },
-    {
-      id: 'notifications',
-      name: 'notifications',
-      description: 'Enable in-app notifications for follows, page links, and other activities',
-      enabled: false
-    },
+
     {
       id: 'link_functionality',
       name: 'link_functionality',

@@ -151,6 +151,7 @@ const TokenPledgeBar: React.FC<TokenPledgeBarProps> = ({
     if (isSubscriptionEnabled) {
       console.log('TokenPledgeBar: Navigating to subscription page');
       try {
+        // Always go to subscription setup page for activation
         router.push('/settings/subscription');
       } catch (error) {
         console.error('Navigation error:', error);
@@ -166,7 +167,7 @@ const TokenPledgeBar: React.FC<TokenPledgeBarProps> = ({
 
   // Handle manage subscription
   const handleManageSubscription = () => {
-    router.push('/settings/subscription');
+    router.push('/settings/subscription/manage');
   };
 
   // Don't render if user is the author

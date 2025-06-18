@@ -17,7 +17,9 @@ import { EditorProvider } from "../layout/UnifiedSidebar";
 import ErrorBoundary from "../utils/ErrorBoundary";
 import { Button } from "../ui/button";
 import { Alert, AlertDescription } from "../ui/alert";
-import { AlertTriangle, X, Link, Check } from "lucide-react";
+import { Switch } from "../ui/switch";
+import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
+import { AlertTriangle, X, Link, Check, Grid3X3 } from "lucide-react";
 // Remove Slate-specific types - using simple text format now
 import { PageEditorSkeleton } from "../skeletons/PageEditorSkeleton";
 import { useAlert } from "../../hooks/useAlert";
@@ -109,6 +111,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
   const { user } = useAuth();
   const editorRef = useRef<any>(null);
+  const { lineMode, setLineMode } = useLineSettings();
 
   // Check if link functionality is enabled
   const linkFunctionalityEnabled = useFeatureFlag('link_functionality', user?.email);
@@ -304,14 +307,16 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
   // Editor handles cursor positioning internally - no manual positioning needed
 
-  // Handle content changes
+  // FIXED: Improved content change handling
   const handleContentChange = (value) => {
-    // Remove debug logging to improve performance
-    // console.log("PageEditor: Content changed:", value?.length, "paragraphs");
+    // Remove debug logging to improve performance in production
+    if (process.env.NODE_ENV === 'development') {
+      console.log("PageEditor: Content changed:", value?.length, "paragraphs");
+    }
 
     // CRITICAL FIX: Don't update currentEditorValue during editing
     // This was causing the Editor to re-render and lose multi-line content
-    // setCurrentEditorValue(value);
+    // Only update if we're not actively editing to prevent cursor issues
 
     if (onContentChange) {
       onContentChange(value);
@@ -505,6 +510,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
                 user={user}
                 currentPage={page}
                 isEditMode={true}
+                isNewPage={isNewPage}
               />
             </div>
           </ErrorBoundary>
@@ -512,7 +518,6 @@ const PageEditor: React.FC<PageEditorProps> = ({
           <PageEditorSkeleton
             showTitle={false}
             showToolbar={true}
-            minHeight="400px"
           />
         )}
       </div>
@@ -564,112 +569,139 @@ const PageEditor: React.FC<PageEditorProps> = ({
       )}
 
       {/* Page Editor Action Buttons */}
-      <div className="mt-8 flex flex-col items-stretch gap-3 w-full md:flex-row md:flex-wrap md:items-center md:justify-center">
-        {/* Insert Link Button */}
-        <Button
-          variant="outline"
-          size="lg"
-          onClick={handleInsertLink}
-          disabled={isSaving}
-          className="gap-2 w-full md:w-auto rounded-2xl font-medium"
-        >
-          <Link className="h-5 w-5" />
-          <span>Insert Link</span>
-        </Button>
+      <div className="mt-8 space-y-4">
+        {/* Mobile: Save button first, Desktop: All buttons in row with save on far right */}
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-center">
+          {/* Save Button - First on mobile, last on desktop */}
+          <Button
+            onClick={async () => {
+              // CRITICAL FIX: Enhanced content capture before saving
+              console.log("🔵 PageEditor: Save button clicked, capturing current content");
 
-        {/* Cancel Button */}
-        <Button
-          variant="outline"
-          size="lg"
-          onClick={onCancel}
-          disabled={isSaving}
-          className="gap-2 w-full md:w-auto rounded-2xl font-medium"
-        >
-          <X className="h-5 w-5" />
-          <span>Cancel</span>
-        </Button>
+              if (editorRef.current && editorRef.current.getContent) {
+                try {
+                  // Force a blur event to ensure any pending changes are captured
+                  if (document.activeElement === editorRef.current) {
+                    editorRef.current.blur();
+                    // Small delay to let blur event process
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                  }
 
-        {/* Save Button */}
-        <Button
-          onClick={async () => {
-            // CRITICAL FIX: Enhanced content capture before saving
-            console.log("🔵 PageEditor: Save button clicked, capturing current content");
+                  const currentContent = editorRef.current.getContent();
+                  console.log("🔵 PageEditor: Successfully captured content from editor:", {
+                    contentType: typeof currentContent,
+                    isArray: Array.isArray(currentContent),
+                    length: Array.isArray(currentContent) ? currentContent.length : 0,
+                    firstItem: Array.isArray(currentContent) && currentContent.length > 0 ? currentContent[0] : null,
+                    hasText: Array.isArray(currentContent) && currentContent.some(p =>
+                      p.children && p.children.some(c => c.text && c.text.trim())
+                    )
+                  });
 
-            if (editorRef.current && editorRef.current.getContent) {
-              try {
-                // Force a blur event to ensure any pending changes are captured
-                if (document.activeElement === editorRef.current) {
-                  editorRef.current.blur();
-                  // Small delay to let blur event process
-                  await new Promise(resolve => setTimeout(resolve, 10));
+                  // Process pending page links before saving
+                  if (editorRef.current && editorRef.current.processPendingPageLinks) {
+                    console.log("🔵 PageEditor: Processing pending page links");
+                    await editorRef.current.processPendingPageLinks();
+                  }
+
+                  // Update the parent component with the current content
+                  if (onContentChange) {
+                    console.log("🔵 PageEditor: Updating parent with captured content");
+                    onContentChange(currentContent);
+
+                    // Wait a bit longer to ensure the parent state is updated
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                  } else {
+                    console.warn("🟡 PageEditor: onContentChange not available");
+                  }
+
+                  console.log("🔵 PageEditor: Calling onSave with updated content");
+                  onSave();
+                } catch (error) {
+                  console.error("🔴 PageEditor: Error capturing content before save:", error);
+                  // Fallback to save without content update
+                  onSave();
                 }
-
-                const currentContent = editorRef.current.getContent();
-                console.log("🔵 PageEditor: Successfully captured content from editor:", {
-                  contentType: typeof currentContent,
-                  isArray: Array.isArray(currentContent),
-                  length: Array.isArray(currentContent) ? currentContent.length : 0,
-                  firstItem: Array.isArray(currentContent) && currentContent.length > 0 ? currentContent[0] : null,
-                  hasText: Array.isArray(currentContent) && currentContent.some(p =>
-                    p.children && p.children.some(c => c.text && c.text.trim())
-                  )
-                });
-
-                // Update the parent component with the current content
-                if (onContentChange) {
-                  console.log("🔵 PageEditor: Updating parent with captured content");
-                  onContentChange(currentContent);
-
-                  // Wait a bit longer to ensure the parent state is updated
-                  await new Promise(resolve => setTimeout(resolve, 100));
-                } else {
-                  console.warn("🟡 PageEditor: onContentChange not available");
-                }
-
-                console.log("🔵 PageEditor: Calling onSave with updated content");
-                onSave();
-              } catch (error) {
-                console.error("🔴 PageEditor: Error capturing content before save:", error);
-                // Fallback to save without content update
+              } else {
+                console.warn("🟡 PageEditor: Editor ref or getContent method not available");
+                console.log("🔵 PageEditor: editorRef.current:", !!editorRef.current);
+                console.log("🔵 PageEditor: getContent method:", !!(editorRef.current && editorRef.current.getContent));
                 onSave();
               }
-            } else {
-              console.warn("🟡 PageEditor: Editor ref or getContent method not available");
-              console.log("🔵 PageEditor: editorRef.current:", !!editorRef.current);
-              console.log("🔵 PageEditor: getContent method:", !!(editorRef.current && editorRef.current.getContent));
-              onSave();
-            }
-          }}
-          disabled={isSaving}
-          size="lg"
-          className="gap-2 w-full md:w-auto rounded-2xl font-medium bg-green-600 hover:bg-green-700 text-white"
-        >
-          {isSaving ? (
-            <>
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-background border-t-transparent" />
-              <span>Saving...</span>
-            </>
-          ) : (
-            <>
-              <Check className="h-5 w-5" />
-              <span>Save</span>
-            </>
-          )}
-        </Button>
-
-        {/* Delete Button (optional - only shown when onDelete is provided) */}
-        {onDelete && (
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={onDelete}
+            }}
             disabled={isSaving}
-            className="gap-2 w-full md:w-auto rounded-2xl font-medium text-destructive hover:text-destructive hover:bg-destructive/10"
+            size="lg"
+            className="gap-2 w-full md:w-auto md:order-last rounded-2xl font-medium bg-green-600 hover:bg-green-700 text-white"
           >
-            <AlertTriangle className="h-5 w-5" />
-            <span>Delete</span>
+            {isSaving ? (
+              <>
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Check className="h-5 w-5" />
+                <span>Save</span>
+              </>
+            )}
           </Button>
-        )}
+
+          {/* Other buttons - after save on mobile, before save on desktop */}
+          <div className="flex flex-col gap-3 md:flex-row md:gap-3">
+            {/* Insert Link Button */}
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={handleInsertLink}
+              disabled={isSaving}
+              className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+            >
+              <Link className="h-5 w-5" />
+              <span>Insert Link</span>
+            </Button>
+
+            {/* Cancel Button */}
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={onCancel}
+              disabled={isSaving}
+              className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+            >
+              <X className="h-5 w-5" />
+              <span>Cancel</span>
+            </Button>
+
+            {/* Delete Button (optional - only shown when onDelete is provided) */}
+            {onDelete && (
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={onDelete}
+                disabled={isSaving}
+                className="gap-2 w-full md:w-auto rounded-2xl font-medium text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <AlertTriangle className="h-5 w-5" />
+                <span>Delete</span>
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Dense Mode Toggle - Always below the button row */}
+        <div className="flex justify-center">
+          <div className="flex items-center gap-2 rounded-2xl font-medium border border-border bg-background text-foreground shadow-sm hover:bg-background hover:shadow-md hover:border-border px-4 py-2 h-10">
+            <Switch
+              checked={lineMode === LINE_MODES.DENSE}
+              onCheckedChange={(checked) => {
+                const newMode = checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL;
+                setLineMode(newMode);
+              }}
+              disabled={isSaving}
+            />
+            <span className="text-sm">Dense mode</span>
+          </div>
+        </div>
       </div>
 
       </div>

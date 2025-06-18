@@ -87,12 +87,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       description: 'Enable link creation and editing in page editors. When disabled, shows a modal with social media follow prompt.',
       enabled: true
     },
-    {
-      id: 'notifications',
-      name: 'notifications',
-      description: 'Enable in-app notifications for follows, page links, and other activities',
-      enabled: false
-    }
+
   ]);
 
   // Load admin users and feature flags on mount

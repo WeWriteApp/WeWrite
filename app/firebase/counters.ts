@@ -413,3 +413,122 @@ export const getUserTotalViewCount = async (userId: string): Promise<number> => 
     return 0;
   }
 };
+
+/**
+ * Get the contributor count for a user with caching
+ * Contributors are unique users with active pledges to this user's pages
+ *
+ * @param userId - The user ID (page author)
+ * @returns The contributor count
+ */
+export const getUserContributorCount = async (userId: string): Promise<number> => {
+  if (!userId) return 0;
+
+  try {
+    // Check cache first
+    const cacheKey = `user_contributor_count_${userId}`;
+    const cachedCount = getCacheItem(cacheKey);
+
+    if (cachedCount !== null) {
+      return cachedCount as number;
+    }
+
+    // If not in cache, get from database
+    // First check if we have a counter document
+    const counterDocRef = doc(db, 'counters', `user_${userId}`);
+    const counterDoc = await getDoc(counterDocRef);
+
+    if (counterDoc.exists() && counterDoc.data().contributorCount !== undefined) {
+      // We have a counter, use it
+      const count = counterDoc.data().contributorCount;
+      setCacheItem(cacheKey, count, CACHE_TTL);
+      return count;
+    }
+
+    // No counter document, calculate contributors manually
+    // Query pledges where this user is the recipient (page author)
+    const pledgesQuery = query(
+      collection(db, 'pledges'),
+      where('metadata.authorUserId', '==', userId),
+      where('status', 'in', ['active', 'completed'])
+    );
+
+    const pledgesSnapshot = await getDocs(pledgesQuery);
+
+    if (pledgesSnapshot.empty) {
+      setCacheItem(cacheKey, 0, CACHE_TTL);
+      return 0;
+    }
+
+    // Count unique contributors (pledgers)
+    const uniqueContributors = new Set();
+    pledgesSnapshot.forEach(doc => {
+      const pledgeData = doc.data();
+      if (pledgeData.userId) {
+        uniqueContributors.add(pledgeData.userId);
+      }
+    });
+
+    const count = uniqueContributors.size;
+
+    // Store the count in the counter document for future use
+    await setDoc(counterDocRef, {
+      contributorCount: count,
+      lastUpdated: new Date()
+    }, { merge: true });
+
+    // Cache the result
+    setCacheItem(cacheKey, count, CACHE_TTL);
+
+    return count;
+  } catch (error) {
+    console.error('Error getting user contributor count:', error);
+    return 0;
+  }
+};
+
+/**
+ * Recalculate and update the contributor count for a user
+ * This should be called when pledges are added, removed, or status changes
+ *
+ * @param userId - The user ID (page author)
+ */
+export const updateUserContributorCount = async (userId: string): Promise<void> => {
+  if (!userId) return;
+
+  try {
+    // Query pledges where this user is the recipient (page author)
+    const pledgesQuery = query(
+      collection(db, 'pledges'),
+      where('metadata.authorUserId', '==', userId),
+      where('status', 'in', ['active', 'completed'])
+    );
+
+    const pledgesSnapshot = await getDocs(pledgesQuery);
+
+    // Count unique contributors (pledgers)
+    const uniqueContributors = new Set();
+    pledgesSnapshot.forEach(doc => {
+      const pledgeData = doc.data();
+      if (pledgeData.userId) {
+        uniqueContributors.add(pledgeData.userId);
+      }
+    });
+
+    const count = uniqueContributors.size;
+
+    // Update the counter document
+    const counterDocRef = doc(db, 'counters', `user_${userId}`);
+    await setDoc(counterDocRef, {
+      contributorCount: count,
+      lastUpdated: new Date()
+    }, { merge: true });
+
+    // Invalidate cache
+    const cacheKey = `user_contributor_count_${userId}`;
+    localStorage.removeItem(cacheKey);
+
+  } catch (error) {
+    console.error('Error updating user contributor count:', error);
+  }
+};

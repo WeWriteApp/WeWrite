@@ -46,14 +46,14 @@
  * 5. Smooth transition to edit mode
  */
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
 import { usePage } from "../../contexts/PageContext";
 import { useLineSettings } from "../../contexts/LineSettingsContext";
 import { nodeTypes } from "../../utils/constants";
 import { PillLink } from "../utils/PillLink";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { getPageById } from "../../firebase/database";
-import { LineSettingsProvider, LINE_MODES } from '../../contexts/LineSettingsContext';
+import { LINE_MODES } from '../../contexts/LineSettingsContext';
 import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform } from "framer-motion";
 import { useAuth } from "../../providers/AuthProvider";
 import { isExternalLink } from "../../utils/linkFormatters";
@@ -152,7 +152,11 @@ const TextView: React.FC<TextViewProps> = ({
 }) => {
   const [parsedContents, setParsedContents] = useState<SlateContent | null>(null);
   const [language, setLanguage] = useState<string | null>(null);
-  const { lineMode } = useLineSettings();
+
+  // Get the full context to ensure we're subscribed to all updates
+  const lineSettingsContext = useLineSettings();
+  const { lineMode, setLineMode: contextSetLineMode } = lineSettingsContext;
+
   const [loadedParagraphs, setLoadedParagraphs] = useState<number[]>([]);
   const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
@@ -162,6 +166,9 @@ const TextView: React.FC<TextViewProps> = ({
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number; clientX: number; clientY: number } | null>(null);
   const { user } = useAuth();
   const { page } = usePage();
+
+  // Debug: Check if context is working
+  console.log('🔍 TextView: Full context:', lineSettingsContext);
 
   // Check if current user can edit this page (enhanced for group support)
   // Use prop value if provided, otherwise calculate
@@ -187,8 +194,23 @@ const TextView: React.FC<TextViewProps> = ({
   const effectiveMode = lineMode || LINE_MODES.NORMAL;
 
   // Create a unique key that changes when lineMode changes to force complete re-render
-  // We no longer need this for re-rendering since we'll handle mode changes directly
-  const renderKey = useMemo(() => 'content-view', []);
+  // This ensures the component properly updates when switching between dense and normal modes
+  const renderKey = useMemo(() => `content-view-${effectiveMode}`, [effectiveMode]);
+
+  // Force re-render when lineMode changes
+  useEffect(() => {
+    console.log('TextView: lineMode changed to:', lineMode);
+    // Force a re-render by updating the loaded paragraphs
+    if (parsedContents && Array.isArray(parsedContents)) {
+      const paragraphCount = parsedContents.filter(node => node.type === nodeTypes.PARAGRAPH).length;
+      setLoadedParagraphs(Array.from({ length: paragraphCount }, (_, i) => i));
+    }
+  }, [lineMode, parsedContents]);
+
+  // Additional effect to force re-render when context changes
+  useEffect(() => {
+    console.log('TextView: Context changed, lineMode:', lineMode);
+  }, [lineSettingsContext, lineMode]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -486,15 +508,13 @@ const TextView: React.FC<TextViewProps> = ({
     }
   }, [parsedContents, isInitialLoad, onRenderComplete, handlePostRender, effectiveMode]);
 
-  const getViewModeStyles = () => {
-    // Use unified styling for consistency with edit mode
-    // Remove space-y-* classes to let CSS handle spacing via margin-bottom
-    if (effectiveMode === LINE_MODES.DENSE) {
-      return 'dense-mode'; // No spacing between paragraphs for dense mode
-    } else {
-      return 'normal-mode'; // Normal mode with CSS-controlled spacing
-    }
-  };
+  // Use the same CSS class structure as the Editor component for consistency
+  const getViewModeStyles = useMemo(() => {
+    // CRITICAL: Use the same class structure as Editor component with smooth transitions
+    return `prose prose-lg max-w-none editor-content page-editor-stable box-border mode-transition ${effectiveMode === LINE_MODES.DENSE ? 'dense-mode' : 'normal-mode'}`;
+  }, [effectiveMode]);
+
+
 
   // Handle click to edit - WYSIWYG smooth transition
   const handleActiveLine = (index) => {
@@ -597,15 +617,20 @@ const TextView: React.FC<TextViewProps> = ({
     }
 
     return (
-      <div className="page-content unified-editor relative rounded-lg bg-background w-full max-w-none">
+      <div
+        key={`textview-${effectiveMode}`}
+        className="page-content unified-editor relative rounded-lg bg-background w-full max-w-none"
+      >
         <div
-          className={`flex flex-col ${getViewModeStyles()} w-full text-left ${
+          className={`${getViewModeStyles} w-full text-left ${
             isScrolled ? 'pb-16' : ''
           } ${
             canEdit ? 'relative cursor-text' : 'relative'
-          } min-h-[400px] ${
+          } ${
             canEdit && isHovering ? 'bg-muted/20' : ''
           } transition-colors duration-150 outline-none page-editor-stable box-border`}
+          data-mode={effectiveMode}
+          data-debug-classes={getViewModeStyles}
           onClick={handleContentClick}
           onMouseEnter={(e) => {
             // Only show hover effects for users with edit permissions
@@ -644,7 +669,7 @@ const TextView: React.FC<TextViewProps> = ({
 
           {parsedContents && (
             <RenderContent
-              key={renderKey}
+              key={`${renderKey}-${effectiveMode}`}
               contents={parsedContents}
               language={language}
               loadedParagraphs={loadedParagraphs}
@@ -702,198 +727,72 @@ const TextView: React.FC<TextViewProps> = ({
 export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false, clickPosition = null, isEditing = false }) => {
   // Wrap in try-catch to handle any rendering errors
   try {
-    // Additional safety checks for browser compatibility
-    if (typeof window !== 'undefined') {
-      // Ensure required browser APIs are available
-      if (!window.requestAnimationFrame) {
-        console.warn('RenderContent: requestAnimationFrame not available, animations may not work');
-      }
-    }
-
-    // Use the line mode settings
-    const { lineMode } = useLineSettings();
-
-    // Always use the latest lineMode from context to ensure immediate updates
-    // Fall back to effectiveMode only if lineMode is not available
-    const mode = lineMode || effectiveMode || LINE_MODES.NORMAL;
-
     if (!contents) return null;
 
-  /**
-   * DENSE MODE IMPLEMENTATION
-   *
-   * Bible verse style with continuous text flow:
-   * - NO line breaks between paragraphs
-   * - Text wraps continuously as if newline characters were temporarily deleted
-   * - Paragraph numbers are inserted inline within the continuous text
-   * - Standard text size (1rem/16px)
-   * - Only a small space separates one paragraph from the next
-   * - Progressive loading animations with shorter delays than normal mode
-   */
-  if (mode === LINE_MODES.DENSE) {
-    // For array of nodes (multiple paragraphs)
     if (Array.isArray(contents)) {
-      return (
-        <div className="relative min-h-[400px]">
-          <div className="prose max-w-full">
-            <p className="unified-text-content text-foreground">
-              {contents.map((node, index) => {
-                if (!loadedParagraphs.includes(index)) return null;
+      // For dense mode, render as continuous text with inline paragraph numbers
+      if (effectiveMode === LINE_MODES.DENSE) {
+        return (
+          <div className="dense-content-wrapper mode-transition">
+            {contents.map((node, index) => {
+              if (!loadedParagraphs.includes(index)) return null;
+              if (node.type !== nodeTypes.PARAGRAPH) return null;
 
-                // Only process paragraph nodes
-                if (node.type !== nodeTypes.PARAGRAPH) return null;
-
-                // Calculate animation delay for dense mode
-                const animationDelay = ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY / 1000 * index; // Convert ms to seconds for framer-motion
-
-                return (
-                  <motion.span
-                    key={index}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: ANIMATION_CONSTANTS.SPRING_STIFFNESS,
-                      damping: ANIMATION_CONSTANTS.SPRING_DAMPING,
-                      mass: ANIMATION_CONSTANTS.SPRING_MASS,
-                      delay: animationDelay // Use dense mode delay
-                    }}
+              return (
+                <Fragment key={index}>
+                  <span className="dense-paragraph-number">
+                    {index + 1}
+                  </span>
+                  <span
+                    className="dense-paragraph-content"
+                    onClick={() => canEdit && onActiveLine && onActiveLine(index)}
+                    style={{ cursor: canEdit ? 'text' : 'default' }}
                   >
-                    {/* Only add a space if this isn't the first paragraph */}
-                    {index > 0 && ' '}
-
-                    {/* Paragraph number - FIXED: Ensure correct paragraph numbering */}
-                    <span
-                      className="paragraph-number text-xs ml-1 select-none"
-                      style={{
-                        verticalAlign: 'top',
-                        position: 'relative',
-                        top: '0.5em',
-                        userSelect: 'none',
-                        WebkitUserSelect: 'none',
-                        MozUserSelect: 'none',
-                        msUserSelect: 'none',
-                        pointerEvents: 'none',
-                        WebkitUserModify: 'read-only',
-                        WebkitTouchCallout: 'none',
-                        WebkitTapHighlightColor: 'transparent'
-                      }}
-                      aria-hidden="true"
-                      data-paragraph-index={index + 1}
-                      contentEditable={false}
-                      suppressContentEditableWarning={true}
-                    >
-                      {index + 1}
-                    </span>{'\u00A0'}
-
-                    {/* Paragraph content without any breaks */}
-                    {node.children && node.children.map((child, childIndex) => {
-
-                      // IMPROVED: More robust link handling in dense mode
+                    {node.children && node.children.map((child, i) => {
                       if (child.type === 'link') {
-                        console.log('LINK_DEBUG: Found link in dense mode:', JSON.stringify(child));
-                        try {
-                          return <LinkNode key={childIndex} node={child} canEdit={false} isEditing={false} />;
-                        } catch (error) {
-                          console.error('LINK_RENDER_ERROR: Error rendering link in dense mode:', error);
-                          return <span key={childIndex} className="text-red-500">[Link Error]</span>;
-                        }
-                      }
-                      // Handle text nodes
-                      else if (child.text) {
-                        let className = '';
-                        if (child.bold) className += ' font-bold';
-                        if (child.italic) className += ' italic';
-                        if (child.underline) className += ' underline';
-
-                        if (child.code) {
-                          return (
-                            <code key={childIndex} className="px-1.5 py-0.5 mx-0.5 rounded bg-muted font-mono">
-                              {child.text}
-                            </code>
-                          );
-                        }
-
-                        return (
-                          <span key={childIndex} className={className || undefined}>
-                            {child.text}
-                          </span>
-                        );
-                      }
-                      // IMPROVED: Handle other node types that might contain links
-                      else if (child.children && Array.isArray(child.children)) {
-                        console.log('LINK_DEBUG: Found node with children in dense mode:', JSON.stringify(child));
-
-
-
-                        return (
-                          <React.Fragment key={childIndex}>
-                            {child.children.map((grandchild, grandchildIndex) => {
-
-
-                              if (grandchild.type === 'link') {
-                                try {
-                                  return <LinkNode key={`${childIndex}-${grandchildIndex}`} node={grandchild} canEdit={false} isEditing={false} />;
-                                } catch (error) {
-                                  console.error('LINK_RENDER_ERROR: Error rendering link in grandchild:', error);
-                                  return <span key={`${childIndex}-${grandchildIndex}`} className="text-red-500">[Link Error]</span>;
-                                }
-                              } else if (grandchild.text) {
-                                return <span key={`${childIndex}-${grandchildIndex}`}>{grandchild.text}</span>;
-                              }
-                              return null;
-                            })}
-                          </React.Fragment>
-                        );
+                        return <LinkNode key={i} node={child} canEdit={canEdit} isEditing={isEditing} />;
+                      } else if (child.text) {
+                        return <span key={i}>{child.text}</span>;
                       }
                       return null;
                     })}
-                  </motion.span>
-                );
-              })}
-            </p>
+                  </span>
+                  {index < contents.length - 1 && <span className="dense-paragraph-separator"> </span>}
+                </Fragment>
+              );
+            })}
           </div>
-        </div>
+        );
+      }
+
+      // For normal mode, render as separate paragraph blocks
+      return (
+        <>
+          {contents.map((node, index) => {
+            if (!loadedParagraphs.includes(index)) return null;
+            if (node.type !== nodeTypes.PARAGRAPH) return null;
+
+            return (
+              <SimpleParagraphNode
+                key={index}
+                node={node}
+                index={index}
+                canEdit={canEdit}
+                isActive={activeLineIndex === index}
+                onActiveLine={onActiveLine}
+                showDiff={showDiff}
+                isEditing={isEditing}
+              />
+            );
+          })}
+        </>
       );
     }
-  }
 
-  /**
-   * NORMAL MODE IMPLEMENTATION
-   *
-   * Traditional document style:
-   * - Paragraph numbers create indentation
-   * - Numbers positioned to the left of the text
-   * - Clear indent for each paragraph
-   * - Standard text size (1rem/16px)
-   * - Proper spacing between paragraphs
-   */
-  // If it's an array, map through and render each node
-  if (Array.isArray(contents)) {
-    return (
-      <div className="w-full text-left">
-        {contents.map((node, index) => (
-          <React.Fragment key={index}>
-            {loadedParagraphs.includes(index) && renderNode(node, mode, index, canEdit, activeLineIndex, onActiveLine, showDiff, isEditing)}
-          </React.Fragment>
-        ))}
-      </div>
-    );
-  }
-
-  // If it's a single node, render it directly
-  return renderNode(contents, mode, 0, canEdit, activeLineIndex, onActiveLine, showDiff, isEditing);
+    return null;
 
   } catch (error) {
     console.error('Error rendering content:', error);
-    console.error('RenderContent error details:', {
-      contentType: typeof contents,
-      isArray: Array.isArray(contents),
-      contentLength: Array.isArray(contents) ? contents.length : 0,
-      errorMessage: error.message,
-      errorStack: error.stack
-    });
-
     return (
       <div className="p-6 text-center space-y-4">
         <div className="text-muted-foreground">
@@ -913,67 +812,13 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
   }
 };
 
-// Render content based on node type
-const renderNode = (node, mode, index, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false, isEditing = false) => {
-  if (!node) return null;
-
-  // Add special debugging for paragraph 2 (index 1)
-  if (index === 1) {
-    console.log(`PARAGRAPH_DEBUG: Rendering paragraph 2 (index ${index}):`, JSON.stringify(node));
-
-    // Check if this paragraph has any link children
-    if (node.children) {
-      node.children.forEach((child, childIndex) => {
-        if (child.type === 'link') {
-          console.log(`PARAGRAPH_DEBUG: Found link in paragraph 2 at child index ${childIndex}:`, JSON.stringify(child));
-        }
-      });
-    }
-  }
-
-  // Only use ParagraphNode for normal mode
-  if (mode === LINE_MODES.NORMAL) {
-    // WeWrite only supports paragraph nodes
-    if (node.type === nodeTypes.PARAGRAPH) {
-      return (
-        <ParagraphNode
-          key={index}
-          node={node}
-          index={index}
-          canEdit={canEdit}
-          isActive={activeLineIndex === index}
-          onActiveLine={onActiveLine}
-          showDiff={showDiff}
-          isEditing={isEditing}
-        />
-      );
-    }
-  }
-
-  // For any other modes, we'll handle them in RenderContent directly
-  return null;
-};
-
 /**
- * ParagraphNode - Renders a paragraph in NORMAL mode
- *
- * Features:
- * - Paragraph numbers create indentation (traditional document style)
- * - Numbers positioned to the left of the text
- * - Clear indent for each paragraph
- * - Standard text size (1rem/16px)
- * - Proper spacing between paragraphs
+ * SimpleParagraphNode - Renders a paragraph as a simple div
+ * CSS handles dense mode styling automatically via container classes
  */
-const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onActiveLine = null, showDiff = false, isEditing = false }) => {
-  const { lineMode } = useLineSettings();
+const SimpleParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onActiveLine = null, showDiff = false, isEditing = false }) => {
   const paragraphRef = useRef(null);
   const [lineHovered, setLineHovered] = useState(false);
-
-  // Define consistent text size for all modes
-  const TEXT_SIZE = "text-base"; // 1rem (16px) for all modes
-
-  // Use reduced vertical padding for normal mode (approximately 15-20% less)
-  const spacingClass = 'py-2';
 
   // Handle click to edit - only for users with edit permissions
   const handleClick = () => {
@@ -1050,70 +895,63 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
     return null;
   };
 
-  // WYSIWYG mode - pixel-perfect match with edit mode styling
+  // Use LineSettings context to determine current mode
+  const { lineMode } = useLineSettings();
+  const effectiveMode = lineMode || LINE_MODES.NORMAL;
+
+  // Render paragraph with proper structure for both normal and dense modes
   return (
     <div
       ref={paragraphRef}
-      id={`paragraph-${index + 1}`}
-      className={`unified-paragraph group relative transition-all duration-150 ${
+      className={`unified-paragraph transition-all duration-300 ease-in-out ${
+        effectiveMode === LINE_MODES.DENSE ? 'dense-mode' : ''
+      } ${
         canEdit ? 'cursor-text hover:bg-muted/30 active:bg-muted/50' : ''
       } ${
         isActive ? 'bg-[var(--active-line-highlight)]' : ''
       } ${
         isEditing ? 'editing-mode' : ''
       }`}
+      data-paragraph-index={index}
+      data-debug="paragraph-div"
       onClick={handleClick}
       onMouseEnter={() => canEdit && setLineHovered(true)}
       onMouseLeave={() => setLineHovered(false)}
       title={canEdit ? "Click to edit" : ""}
     >
-      {/* Paragraph content with identical structure to edit mode */}
-      <div className="flex items-baseline w-full">
-        {/* Paragraph number - positioned identically to edit mode pseudo-element */}
-        <span
-          className="unified-paragraph-number select-none flex-shrink-0"
-          data-paragraph-index={index + 1}
-          aria-hidden="true"
-          style={{
-            userSelect: 'none',
-            WebkitUserSelect: 'none',
-            MozUserSelect: 'none',
-            msUserSelect: 'none',
-            pointerEvents: 'none',
-            WebkitUserModify: 'read-only',
-            WebkitTouchCallout: 'none',
-            WebkitTapHighlightColor: 'transparent'
+      {/* Paragraph number - only in normal mode (dense mode handled in RenderContent) */}
+      {effectiveMode === LINE_MODES.NORMAL && (
+        <span className="unified-paragraph-number">
+          {index + 1}
+        </span>
+      )}
+
+      {/* Paragraph content */}
+      <span className="unified-text-content">
+        {node.children && node.children.map((child, i) => renderChild(child, i))}
+      </span>
+
+      {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
+
+      {/* Edit icon - positioned on the right side */}
+      {canEdit && (
+        <Edit2
+          className={`h-4 w-4 text-muted-foreground absolute right-2 top-2 cursor-pointer transition-opacity duration-200 ${
+            // When in edit mode: show all edit buttons prominently
+            // When not in edit mode: Desktop shows on hover, Mobile shows permanently on first line only
+            isEditing
+              ? 'opacity-80 hover:opacity-100' // Always visible when editing
+              : index === 0
+                ? 'opacity-60 hover:opacity-100 md:opacity-0 md:group-hover:opacity-60 md:hover:opacity-100'
+                : 'opacity-0 group-hover:opacity-60 hover:opacity-100 hidden md:block'
+          }`}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleClick();
           }}
-          contentEditable={false}
-          suppressContentEditableWarning={true}
-        >{index + 1}</span>
-
-        {/* Paragraph content with unified styling - matches edit mode exactly */}
-        <div className="unified-text-content flex-grow">
-          {node.children && node.children.map((child, i) => renderChild(child, i))}
-          {isActive && <span className="inline-block w-0.5 h-5 bg-primary animate-pulse ml-0.5"></span>}
-        </div>
-
-        {/* Edit icon - positioned on the right side */}
-        {canEdit && (
-          <Edit2
-            className={`h-4 w-4 text-muted-foreground flex-shrink-0 ml-2 cursor-pointer transition-opacity duration-200 ${
-              // When in edit mode: show all edit buttons prominently
-              // When not in edit mode: Desktop shows on hover, Mobile shows permanently on first line only
-              isEditing
-                ? 'opacity-80 hover:opacity-100' // Always visible when editing
-                : index === 0
-                  ? 'opacity-60 hover:opacity-100 md:opacity-0 md:group-hover:opacity-60 md:hover:opacity-100'
-                  : 'opacity-0 group-hover:opacity-60 hover:opacity-100 hidden md:block'
-            }`}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleClick();
-            }}
-            title="Click to edit"
-          />
-        )}
-      </div>
+          title="Click to edit"
+        />
+      )}
     </div>
   );
 };
@@ -1122,27 +960,69 @@ const ParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onA
 
 const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
+  const [linkNode, setLinkNode] = useState(node);
+
+  // Listen for page title updates
+  useEffect(() => {
+    const handleTitleUpdate = (event: CustomEvent) => {
+      const { pageId, newTitle } = event.detail;
+
+      // Check if this link references the updated page
+      if (linkNode.pageId === pageId && shouldUpdateLink(linkNode)) {
+        console.log(`🔗 TextView: Updating link title in real-time: ${linkNode.pageTitle} -> ${newTitle}`);
+
+        setLinkNode(prevNode => ({
+          ...prevNode,
+          pageTitle: newTitle,
+          originalPageTitle: newTitle,
+          displayText: newTitle,
+          children: prevNode.children?.map(child =>
+            child.text === prevNode.pageTitle || child.text === prevNode.originalPageTitle
+              ? { ...child, text: newTitle }
+              : child
+          ) || [{ text: newTitle }]
+        }));
+      }
+    };
+
+    window.addEventListener('page-title-updated', handleTitleUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('page-title-updated', handleTitleUpdate as EventListener);
+    };
+  }, [linkNode]);
+
+  // Helper function to determine if link should be updated
+  const shouldUpdateLink = (node: any): boolean => {
+    // Don't update if custom text differs from original page title
+    if (node.displayText &&
+        node.originalPageTitle &&
+        node.displayText !== node.originalPageTitle) {
+      return false;
+    }
+    return true;
+  };
 
   // Add more robust error handling for invalid link nodes
-  if (!node || typeof node !== 'object') {
-    console.error('LINK_RENDER_ERROR: Invalid link node:', node);
+  if (!linkNode || typeof linkNode !== 'object') {
+    console.error('LINK_RENDER_ERROR: Invalid link node:', linkNode);
     return <span className="text-red-500">[Invalid Link]</span>;
   }
 
   // Debug log to help diagnose link rendering issues
-  console.log('LINK_RENDER_DEBUG: Rendering link node:', JSON.stringify(node));
+  console.log('LINK_RENDER_DEBUG: Rendering link node:', JSON.stringify(linkNode));
 
   // MAJOR FIX: Completely rewritten link validation for view mode
   // This ensures links created with any version of the editor will render correctly
   let validatedNode;
   try {
     // First try to validate the node directly
-    validatedNode = validateLink(node);
+    validatedNode = validateLink(linkNode);
 
     // If validation failed or returned null, try to extract a link object from the node
-    if (!validatedNode && node.children) {
+    if (!validatedNode && linkNode.children) {
       // Look for link objects in children
-      for (const child of node.children) {
+      for (const child of linkNode.children) {
         if (child && child.type === 'link') {
           console.log('LINK_RENDER_DEBUG: Found link in children, extracting:', JSON.stringify(child));
           validatedNode = validateLink(child);
@@ -1152,30 +1032,30 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
     }
 
     // If we still don't have a valid node but have a URL, create a minimal valid link
-    if (!validatedNode && node.url) {
-      console.log('LINK_RENDER_DEBUG: Creating minimal valid link from URL:', node.url);
+    if (!validatedNode && linkNode.url) {
+      console.log('LINK_RENDER_DEBUG: Creating minimal valid link from URL:', linkNode.url);
       validatedNode = validateLink({
         type: 'link',
-        url: node.url,
-        children: [{ text: node.displayText || node.children?.[0]?.text || node.url }],
+        url: linkNode.url,
+        children: [{ text: linkNode.displayText || linkNode.children?.[0]?.text || linkNode.url }],
         id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       });
     }
 
     // If still no valid node, check if this is a nested structure
-    if (!validatedNode && node.link && typeof node.link === 'object') {
-      console.log('LINK_RENDER_DEBUG: Found nested link object, extracting:', JSON.stringify(node.link));
-      validatedNode = validateLink(node.link);
+    if (!validatedNode && linkNode.link && typeof linkNode.link === 'object') {
+      console.log('LINK_RENDER_DEBUG: Found nested link object, extracting:', JSON.stringify(linkNode.link));
+      validatedNode = validateLink(linkNode.link);
     }
 
     // Check for data property that might contain link information
-    if (!validatedNode && node.data && typeof node.data === 'object') {
-      if (node.data.url || node.data.href || node.data.pageId) {
-        console.log('LINK_RENDER_DEBUG: Found link data in data property:', JSON.stringify(node.data));
+    if (!validatedNode && linkNode.data && typeof linkNode.data === 'object') {
+      if (linkNode.data.url || linkNode.data.href || linkNode.data.pageId) {
+        console.log('LINK_RENDER_DEBUG: Found link data in data property:', JSON.stringify(linkNode.data));
         validatedNode = validateLink({
-          ...node.data,
+          ...linkNode.data,
           type: 'link',
-          children: [{ text: node.data.displayText || node.data.text || 'Link' }],
+          children: [{ text: linkNode.data.displayText || linkNode.data.text || 'Link' }],
           id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
         });
       }
@@ -1188,9 +1068,9 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
       // Create a minimal valid link as fallback with a unique ID
       validatedNode = {
         type: 'link',
-        url: node.url || '#',
-        children: [{ text: node.displayText || node.children?.[0]?.text || 'Link (Error)' }],
-        displayText: node.displayText || node.children?.[0]?.text || 'Link (Error)',
+        url: linkNode.url || '#',
+        children: [{ text: linkNode.displayText || linkNode.children?.[0]?.text || 'Link (Error)' }],
+        displayText: linkNode.displayText || linkNode.children?.[0]?.text || 'Link (Error)',
         className: 'error-link',
         isError: true,
         id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -1211,9 +1091,9 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
     // Create a minimal valid link as fallback with a unique ID
     validatedNode = {
       type: 'link',
-      url: node.url || '#',
-      children: [{ text: node.displayText || node.children?.[0]?.text || 'Link (Error)' }],
-      displayText: node.displayText || node.children?.[0]?.text || 'Link (Error)',
+      url: linkNode.url || '#',
+      children: [{ text: linkNode.displayText || linkNode.children?.[0]?.text || 'Link (Error)' }],
+      displayText: linkNode.displayText || linkNode.children?.[0]?.text || 'Link (Error)',
       className: 'error-link',
       isError: true,
       id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -1222,7 +1102,7 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
 
   // If validation failed or returned null, show an error
   if (!validatedNode) {
-    console.error('LINK_RENDER_ERROR: Link validation failed for node:', node);
+    console.error('LINK_RENDER_ERROR: Link validation failed for node:', linkNode);
     return <span className="text-red-500">[Invalid Link]</span>;
   }
 

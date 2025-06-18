@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 
 /**
  * LINE_MODES - Constants for paragraph display modes
@@ -36,7 +36,11 @@ interface LineSettingsProviderProps {
   isEditMode?: boolean;
 }
 
-const LineSettingsContext = createContext<LineSettingsContextType | undefined>(undefined);
+const LineSettingsContext = createContext<LineSettingsContextType>({
+  lineMode: LINE_MODES.NORMAL,
+  setLineMode: () => {},
+  isEditMode: false
+});
 
 /**
  * LineSettingsProvider - Context provider for paragraph display settings
@@ -45,79 +49,46 @@ const LineSettingsContext = createContext<LineSettingsContextType | undefined>(u
  * the selection in localStorage for consistent user experience across sessions.
  */
 export function LineSettingsProvider({ children, isEditMode = false }: LineSettingsProviderProps) {
-  // Try to get the initial mode from localStorage if available
-  const getInitialMode = (): LineMode => {
-    if (typeof window !== 'undefined') {
-      const savedMode = localStorage.getItem('lineMode') as LineMode;
-      if (savedMode === LINE_MODES.DENSE) {
-        return LINE_MODES.DENSE;
-      }
-    }
-    return LINE_MODES.NORMAL; // Default to normal mode
-  };
+  // Generate unique ID for this provider instance
+  const providerId = useMemo(() => Math.random().toString(36).substr(2, 9), []);
 
-  // Initialize with the correct mode from localStorage
-  const [lineMode, setLineMode] = useState(getInitialMode());
+  // Initialize with default mode to avoid SSR issues
+  const [lineMode, setLineModeState] = useState<LineMode>(LINE_MODES.NORMAL);
 
-  // Load setting from localStorage on mount
+  // Load setting from localStorage on mount (client-side only)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedMode = localStorage.getItem('lineMode');
 
       // Handle migration from legacy mode names (one-time migration)
       if (savedMode === 'default' || savedMode === 'spaced') {
-        setLineMode(LINE_MODES.NORMAL);
+        setLineModeState(LINE_MODES.NORMAL);
         localStorage.setItem('lineMode', LINE_MODES.NORMAL);
       } else if (savedMode === 'wrapped') {
-        setLineMode(LINE_MODES.DENSE);
+        setLineModeState(LINE_MODES.DENSE);
         localStorage.setItem('lineMode', LINE_MODES.DENSE);
       }
       // Use saved mode if it's valid
-      else if (savedMode && Object.values(LINE_MODES).includes(savedMode)) {
-        setLineMode(savedMode);
+      else if (savedMode && Object.values(LINE_MODES).includes(savedMode as LineMode)) {
+        setLineModeState(savedMode as LineMode);
       }
     }
   }, []);
 
-  // Custom setter function that also shows a toast notification and refreshes the page
-  const setLineModeWithNotification = (mode: LineMode): void => {
+  // Client-side mode switching function that preserves unsaved content
+  const setLineModeWithoutRefresh = (mode: LineMode): void => {
     // Validate the mode before setting it
     if (mode !== LINE_MODES.NORMAL && mode !== LINE_MODES.DENSE) {
       console.error(`Invalid line mode: ${mode}`);
       return;
     }
 
-    // Force update the state immediately
-    setLineMode(mode);
+    // Update state immediately for instant UI response
+    setLineModeState(mode);
 
-    // Also update localStorage immediately to ensure persistence
+    // Persist to localStorage immediately
     if (typeof window !== 'undefined') {
       localStorage.setItem('lineMode', mode);
-      console.log(`Line mode set to ${mode} and saved to localStorage`);
-
-      // No toast notification needed since we have a full page loading state
-      console.log(`Line mode changed to ${mode}`);
-
-      // Show loading overlay before refreshing
-      const loadingOverlay = document.createElement('div');
-      loadingOverlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center';
-      loadingOverlay.id = 'mode-change-overlay';
-
-      const spinner = document.createElement('div');
-      spinner.className = 'loader loader-md mb-4';
-
-      const text = document.createElement('div');
-      text.className = 'text-lg font-medium';
-      text.textContent = 'Refreshing page...';
-
-      loadingOverlay.appendChild(spinner);
-      loadingOverlay.appendChild(text);
-      document.body.appendChild(loadingOverlay);
-
-      // Refresh the page after a short delay to allow the overlay to appear
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
     }
   };
 
@@ -128,12 +99,14 @@ export function LineSettingsProvider({ children, isEditMode = false }: LineSetti
     }
   }, [lineMode]);
 
+  const contextValue = {
+    lineMode,
+    setLineMode: setLineModeWithoutRefresh,
+    isEditMode
+  };
+
   return (
-    <LineSettingsContext.Provider value={{
-      lineMode,
-      setLineMode: setLineModeWithNotification,
-      isEditMode
-    }}>
+    <LineSettingsContext.Provider value={contextValue}>
       {children}
     </LineSettingsContext.Provider>
   );
@@ -149,8 +122,5 @@ export function LineSettingsProvider({ children, isEditMode = false }: LineSetti
  */
 export function useLineSettings(): LineSettingsContextType {
   const context = useContext(LineSettingsContext);
-  if (context === undefined) {
-    throw new Error('useLineSettings must be used within a LineSettingsProvider');
-  }
   return context;
 }

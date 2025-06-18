@@ -69,6 +69,19 @@ export default function GlobalIDPage({ params }) {
           return;
         }
 
+        // Check if this is a deleted page preview request
+        const urlParams = new URLSearchParams(window.location.search);
+        const isPreviewingDeleted = urlParams.get('preview') === 'deleted';
+
+        if (isPreviewingDeleted) {
+          // For deleted page previews, we'll let the SinglePageView component handle the access control
+          // since it has the user context and can properly check ownership
+          console.log('Deleted page preview requested, allowing page component to handle access control');
+          setContentType('page');
+          setIsLoading(false);
+          return;
+        }
+
         // First, check if it's a page using proper access control
         const pageResult = await getPageById(cleanId, null); // No user context for initial check
         if (pageResult.pageData && !pageResult.error) {
@@ -126,11 +139,15 @@ export default function GlobalIDPage({ params }) {
       <SmartLoader
         isLoading={isLoading}
         message="Determining content type..."
-        timeoutMs={10000}
-        autoRecover={true}
+        timeoutMs={15000} // Increased timeout for slow networks
+        initialLoadTimeoutMs={5000} // Shorter initial timeout
+        autoRecover={false} // Disable auto-recovery to prevent loops
         onRetry={() => {
           setIsLoading(true);
-          determineContentType();
+          // Add a small delay before retrying to prevent rapid requests
+          setTimeout(() => {
+            determineContentType();
+          }, 500);
         }}
         fallbackContent={
           <div>
@@ -140,6 +157,9 @@ export default function GlobalIDPage({ params }) {
               <li>Server issues</li>
               <li>The content may not exist</li>
             </ul>
+            <p className="text-sm text-muted-foreground mt-2">
+              Try refreshing the page or check your internet connection.
+            </p>
           </div>
         }
       />

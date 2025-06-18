@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "../ui/button";
-import { Loader, ChevronLeft, ChevronRight, Share2, Lock, MoreHorizontal, Edit2, Plus, MessageSquare } from "lucide-react";
+import { Loader, ChevronLeft, ChevronRight, Share2, Lock, Globe, MoreHorizontal, Edit2, Plus, MessageSquare } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ref, get } from "firebase/database";
 import { rtdb } from "../../firebase/rtdb";
@@ -25,6 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from "../ui/dropdown-menu";
+import { Switch } from "../ui/switch";
 import { useDateFormat } from "../../contexts/DateFormatContext";
 import { DateFormatPicker } from "../ui/date-format-picker";
 import {
@@ -33,6 +34,7 @@ import {
   isExactDateFormat as isDailyNoteFormat
 } from "../../utils/dailyNoteNavigation";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
+import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
 
 // Dynamically import AddToPageButton to avoid SSR issues
 const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
@@ -64,6 +66,8 @@ export interface PageHeaderProps {
   titleError?: boolean;
   pageId?: string | null;
   onOwnershipChange?: (newGroupId: string | null, newGroupName: string | null) => void;
+  isNewPage?: boolean; // Add flag to indicate this is a new page
+  onPrivacyChange?: (isPublic: boolean) => void; // Add handler for privacy toggle
 }
 
 export default function PageHeader({
@@ -84,6 +88,8 @@ export default function PageHeader({
   titleError = false,
   pageId: propPageId = null,
   onOwnershipChange,
+  isNewPage = false,
+  onPrivacyChange,
 }: PageHeaderProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -93,6 +99,7 @@ export default function PageHeader({
   const [headerHeight, setHeaderHeight] = React.useState(0);
   const { trackInteractionEvent, events } = useWeWriteAnalytics();
   const headerRef = React.useRef<HTMLDivElement>(null);
+  const { lineMode, setLineMode } = useLineSettings();
 
   // Calculate header positioning width - only respond to persistent expanded state, not hover
   // Hover state should overlay without affecting header positioning
@@ -122,6 +129,8 @@ export default function PageHeader({
   const [isEditingTitle, setIsEditingTitle] = React.useState<boolean>(false);
   const [editingTitle, setEditingTitle] = React.useState<string>(title || "");
   const titleInputRef = React.useRef<HTMLInputElement>(null);
+  const [isTitleFocused, setIsTitleFocused] = React.useState<boolean>(false);
+  const [isEditorFocused, setIsEditorFocused] = React.useState<boolean>(false);
 
   // Date formatting context
   const { formatDateString } = useDateFormat();
@@ -155,6 +164,61 @@ export default function PageHeader({
   React.useEffect(() => {
     setEditingTitle(title || "");
   }, [title]);
+
+  // Auto-focus title input for new pages
+  React.useEffect(() => {
+    if (isNewPage && isEditing && canEdit && !title) {
+      // Start editing the title immediately for new pages
+      setIsEditingTitle(true);
+      // Focus the input after state update
+      setTimeout(() => {
+        titleInputRef.current?.focus();
+      }, 100);
+    }
+  }, [isNewPage, isEditing, canEdit, title]);
+
+  // Listen for focus changes to coordinate focus rings
+  React.useEffect(() => {
+    const handleFocusChange = () => {
+      const activeElement = document.activeElement;
+
+      // Check if the editor is focused
+      const editorElement = document.querySelector('[contenteditable="true"]');
+      const isEditorActive = editorElement && (
+        activeElement === editorElement ||
+        editorElement.contains(activeElement)
+      );
+
+      setIsEditorFocused(!!isEditorActive);
+
+      // If editor is focused, title is not focused
+      if (isEditorActive && isTitleFocused) {
+        setIsTitleFocused(false);
+      }
+    };
+
+    // Listen for focus events on the document
+    document.addEventListener('focusin', handleFocusChange);
+    document.addEventListener('focusout', handleFocusChange);
+
+    return () => {
+      document.removeEventListener('focusin', handleFocusChange);
+      document.removeEventListener('focusout', handleFocusChange);
+    };
+  }, [isTitleFocused]);
+
+  // Add/remove title-focused class to coordinate focus rings
+  React.useEffect(() => {
+    if (isTitleFocused) {
+      document.body.classList.add('title-focused');
+    } else {
+      document.body.classList.remove('title-focused');
+    }
+
+    return () => {
+      document.body.classList.remove('title-focused');
+    };
+  }, [isTitleFocused]);
 
   // Handle title editing
   const handleTitleClick = () => {
@@ -219,6 +283,7 @@ export default function PageHeader({
       onTitleChange(editingTitle.trim());
     }
     setIsEditingTitle(false);
+    setIsTitleFocused(false);
   };
 
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {
@@ -228,11 +293,18 @@ export default function PageHeader({
     } else if (e.key === 'Escape') {
       setEditingTitle(title || "");
       setIsEditingTitle(false);
+      setIsTitleFocused(false);
     }
   };
 
   const handleTitleBlur = () => {
+    setIsTitleFocused(false);
     handleTitleSubmit();
+  };
+
+  const handleTitleFocus = () => {
+    setIsTitleFocused(true);
+    setIsEditorFocused(false);
   };
 
   // Fetch username if not provided but userId is available
@@ -639,10 +711,14 @@ export default function PageHeader({
                           onChange={(e) => setEditingTitle(e.target.value)}
                           onKeyDown={handleTitleKeyDown}
                           onBlur={handleTitleBlur}
+                          onFocus={handleTitleFocus}
+                          tabIndex={isNewPage ? 1 : undefined} // Explicit first position for new pages
                           className={`bg-background/80 border rounded-lg px-2 py-1 outline-none font-semibold text-center transition-all duration-200 ${
                             titleError
                               ? "border-destructive focus:ring-2 focus:ring-destructive/20 focus:border-destructive"
-                              : "border-primary/30 focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
+                              : isTitleFocused
+                              ? "border-primary/50 ring-2 ring-primary/20"
+                              : "border-muted-foreground/30 ring-2 ring-muted-foreground/10"
                           } ${
                             isScrolled
                               ? "text-xs opacity-90"
@@ -650,9 +726,10 @@ export default function PageHeader({
                           }`}
                           style={{
                             maxWidth: isScrolled ? "60vw" : "100%",
-                            minWidth: "100px"
+                            minWidth: isScrolled ? "120px" : "200px", // Maintain minimum width
+                            width: isScrolled ? "auto" : "300px" // Fixed width when not scrolled
                           }}
-                          placeholder="Add a title..."
+                          placeholder={isNewPage ? "Give your page a title..." : "Add a title..."}
                         />
                       ) : (
                         <span
@@ -661,6 +738,8 @@ export default function PageHeader({
                               ? `cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 border transition-all duration-200 ${
                                   titleError
                                     ? "border-destructive hover:border-destructive/70"
+                                    : isEditorFocused
+                                    ? "border-muted-foreground/30 ring-2 ring-muted-foreground/10"
                                     : "border-muted-foreground/20 hover:border-muted-foreground/30"
                                 }`
                               : isDailyNote && !isScrolled
@@ -675,7 +754,11 @@ export default function PageHeader({
                             verticalAlign: 'middle',
                             whiteSpace: 'nowrap',
                             paddingRight: '4px'
-                          } : {}}
+                          } : {
+                            minWidth: "200px", // Maintain same minimum width as input
+                            width: "300px", // Maintain same width as input
+                            display: 'inline-block'
+                          }}
                           onClick={handleTitleClick}
                           title={
                             isDailyNote
@@ -683,8 +766,15 @@ export default function PageHeader({
                               : (isEditing && canEdit ? "Click to edit title" : undefined)
                           }
                         >
-                          <span>
-                            {isDailyNote && title ? formatDateString(title) : (title || "Untitled")}
+                          <span className={!title && isNewPage ? "text-muted-foreground" : ""}>
+                            {isDailyNote && title
+                              ? formatDateString(title)
+                              : title
+                              ? title
+                              : isNewPage
+                              ? "Give your page a title..."
+                              : "Untitled"
+                            }
                           </span>
                         </span>
                       )}
@@ -743,7 +833,16 @@ export default function PageHeader({
                       <span className="flex items-center gap-1 justify-center mx-auto">
                         <span className="whitespace-nowrap flex-shrink-0">by</span>
                         {/* Show ClickableByline only in edit mode for page owners, otherwise show Link for navigation */}
-                        {user && userId && user.uid === userId && pageId && isEditing ? (
+                        {/* For new pages, make username non-interactive to improve tab order */}
+                        {isNewPage ? (
+                          <span className="overflow-hidden text-ellipsis">
+                            {isLoading || !displayUsername ? (
+                              <span className="inline-flex items-center text-muted-foreground"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
+                            ) : (
+                              <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">{displayUsername}</span>
+                            )}
+                          </span>
+                        ) : user && userId && user.uid === userId && pageId && isEditing ? (
                           <ClickableByline
                             isLoading={isLoading}
                             isChanging={false}
@@ -819,53 +918,92 @@ export default function PageHeader({
                       isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
                     }`}
                     title="Page actions"
+                    tabIndex={isNewPage ? 3 : undefined} // Set to 3rd position: after title (1) and editor (2)
                   >
                     <MoreHorizontal className="h-5 w-5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  {/* Edit option - only visible if user can edit */}
-                  {canEdit && setIsEditing && (
+                  {/* For new pages, show only the privacy toggle */}
+                  {isNewPage ? (
                     <DropdownMenuItem
-                      className="gap-2"
-                      onClick={() => {
-                        setIsEditing(!isEditing);
+                      className="flex items-center justify-between cursor-pointer py-3"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (onPrivacyChange) {
+                          onPrivacyChange(!isPrivate);
+                        }
                       }}
                     >
-                      <Edit2 className="h-4 w-4" />
-                      <span>{isEditing ? "Cancel" : "Edit"}</span>
+                      <div className="flex items-center gap-3">
+                        {!isPrivate ? (
+                          <Globe className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Lock className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <div className="flex flex-col">
+                          <span className="font-medium">{!isPrivate ? "Public" : "Private"}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {!isPrivate ? "Anyone can view this page" : "Only you can view this page"}
+                          </span>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={!isPrivate}
+                        onCheckedChange={(checked) => {
+                          if (onPrivacyChange) {
+                            onPrivacyChange(checked);
+                          }
+                        }}
+                        aria-label="Toggle page visibility"
+                      />
                     </DropdownMenuItem>
-                  )}
+                  ) : (
+                    <>
+                      {/* Edit option - only visible if user can edit */}
+                      {canEdit && setIsEditing && (
+                        <DropdownMenuItem
+                          className="gap-2"
+                          onClick={() => {
+                            setIsEditing(!isEditing);
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                          <span>{isEditing ? "Cancel" : "Edit"}</span>
+                        </DropdownMenuItem>
+                      )}
 
-                  {/* Share option - always visible */}
-                  <DropdownMenuItem
-                    className="gap-2"
-                    onClick={handleShareClick}
-                  >
-                    <Share2 className="h-4 w-4" />
-                    <span>Share</span>
-                  </DropdownMenuItem>
+                      {/* Share option - always visible */}
+                      <DropdownMenuItem
+                        className="gap-2"
+                        onClick={handleShareClick}
+                      >
+                        <Share2 className="h-4 w-4" />
+                        <span>Share</span>
+                      </DropdownMenuItem>
 
-                  {/* Add to Page option - hidden in edit mode */}
-                  {!isEditing && (
-                    <DropdownMenuItem
-                      className="gap-2"
-                      onClick={handleAddToPageClick}
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Add to Page</span>
-                    </DropdownMenuItem>
-                  )}
+                      {/* Add to Page option - hidden in edit mode */}
+                      {!isEditing && (
+                        <DropdownMenuItem
+                          className="gap-2"
+                          onClick={handleAddToPageClick}
+                        >
+                          <Plus className="h-4 w-4" />
+                          <span>Add to Page</span>
+                        </DropdownMenuItem>
+                      )}
 
-                  {/* Reply option - hidden in edit mode */}
-                  {!isEditing && (
-                    <DropdownMenuItem
-                      className="gap-2"
-                      onClick={handleReplyClick}
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                      <span>Reply</span>
-                    </DropdownMenuItem>
+                      {/* Reply option - hidden in edit mode */}
+                      {!isEditing && (
+                        <DropdownMenuItem
+                          className="gap-2"
+                          onClick={handleReplyClick}
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          <span>Reply</span>
+                        </DropdownMenuItem>
+                      )}
+                    </>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>

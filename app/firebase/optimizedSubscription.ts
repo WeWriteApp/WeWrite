@@ -411,6 +411,15 @@ export const createOptimizedSubscriptionListener = (
 };
 
 /**
+ * Clear subscription cache for a specific user
+ */
+export const clearSubscriptionCache = (userId: string): void => {
+  const cacheKey = generateCacheKey('subscription', userId);
+  cache.delete(cacheKey);
+  console.log(`[clearSubscriptionCache] Cleared cache for user: ${userId}`);
+};
+
+/**
  * Clear all subscription-related caches
  */
 export const clearSubscriptionCaches = () => {

@@ -16,6 +16,7 @@ export const AUTH_EVENTS = {
   USER_LOGIN: 'user_login',
   USER_LOGOUT: 'user_logout',
   USER_REGISTER: 'user_register',
+  USER_CREATED: 'user_created',
   PASSWORD_RESET: 'password_reset',
   PASSWORD_RESET_REQUEST: 'password_reset_request',
 };

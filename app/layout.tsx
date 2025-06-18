@@ -21,6 +21,7 @@ import FeatureFlagListener from "./components/utils/FeatureFlagListener"
 // Removed SlateEarlyPatch - no longer needed with SimpleEditor
 import CacheInitializer from "./components/utils/CacheInitializer"
 import { SyncQueueProvider } from "./contexts/SyncQueueContext"
+import { LineSettingsProvider } from "./contexts/LineSettingsContext"
 import ConsoleErrorLogger from "./components/utils/ConsoleErrorLogger"
 
 
@@ -223,8 +224,9 @@ export default function RootLayout({
                               <ToastProvider>
                                 <PillStyleProvider>
                                   <DateFormatProvider>
-                                    <PWAProvider>
-                                      <SyncQueueProvider>
+                                    <LineSettingsProvider>
+                                      <PWAProvider>
+                                        <SyncQueueProvider>
                                         <CacheInitializer />
                                         <ConsoleErrorLogger />
                                         <FeatureFlagListener>
@@ -241,7 +243,8 @@ export default function RootLayout({
                                           <SpeedInsights />
                                         </ErrorBoundary>
                                       </SyncQueueProvider>
-                                    </PWAProvider>
+                                      </PWAProvider>
+                                    </LineSettingsProvider>
                                   </DateFormatProvider>
                                 </PillStyleProvider>
                               </ToastProvider>

@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { rtdb } from "./rtdb";
 import { ref, get } from "firebase/database";
+import { hasContentChanged } from "../utils/contentNormalization";
 
 // Type definitions for bio activity operations
 interface BioActivityData {
@@ -59,18 +60,24 @@ export const recordBioEditActivity = async (
   previousContent: any
 ): Promise<string | null> => {
   try {
+    // Skip activity recording if content hasn't actually changed
+    if (!hasContentChanged(content, previousContent)) {
+      console.log('Bio content unchanged after normalization, skipping activity recording');
+      return null;
+    }
+
     // Get user data to include username
     const userRef = ref(rtdb, `users/${userId}`);
     const userSnapshot = await get(userRef);
-    
+
     if (!userSnapshot.exists()) {
       console.error(`User ${userId} not found`);
       return null;
     }
-    
+
     const userData = userSnapshot.val();
     const username = userData.username || "Unknown";
-    
+
     // Create activity document
     const activityData: BioActivityData = {
       type: "bio_edit",
@@ -83,7 +90,7 @@ export const recordBioEditActivity = async (
       previousContent: JSON.stringify(previousContent || ""),
       isPublic: true // Bio edits are always public
     };
-    
+
     const activityRef = await addDoc(collection(db, "activities"), activityData);
     console.log(`Bio edit activity recorded with ID: ${activityRef.id}`);
     return activityRef.id;
@@ -113,18 +120,24 @@ export const recordGroupAboutEditActivity = async (
   isPublic: boolean
 ): Promise<string | null> => {
   try {
+    // Skip activity recording if content hasn't actually changed
+    if (!hasContentChanged(content, previousContent)) {
+      console.log('Group about content unchanged after normalization, skipping activity recording');
+      return null;
+    }
+
     // Get group data to include name
     const groupRef = ref(rtdb, `groups/${groupId}`);
     const groupSnapshot = await get(groupRef);
-    
+
     if (!groupSnapshot.exists()) {
       console.error(`Group ${groupId} not found`);
       return null;
     }
-    
+
     const groupData = groupSnapshot.val();
     const groupName = groupData.name || "Unknown Group";
-    
+
     // Create activity document
     const activityData: GroupActivityData = {
       type: "group_about_edit",
@@ -137,7 +150,7 @@ export const recordGroupAboutEditActivity = async (
       previousContent: JSON.stringify(previousContent || ""),
       isPublic: isPublic // Respect group privacy setting
     };
-    
+
     const activityRef = await addDoc(collection(db, "activities"), activityData);
     console.log(`Group about edit activity recorded with ID: ${activityRef.id}`);
     return activityRef.id;

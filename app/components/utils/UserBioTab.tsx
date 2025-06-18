@@ -19,7 +19,6 @@ import HoverEditContent from './HoverEditContent';
 import type { UserBioTabProps } from "../../types/components";
 import type { SlateContent, User } from "../../types/database";
 import { PageProvider } from "../../contexts/PageContext";
-import { LineSettingsProvider } from "../../contexts/LineSettingsContext";
 
 // Import the unified PageEditor component
 const PageEditor = dynamic(() => import("../editor/PageEditor"), { ssr: false });
@@ -124,7 +123,6 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
       setLastEditor(editorName);
       setLastEditTime(new Date().toISOString());
 
-      toast.success("Bio updated successfully");
       return true; // Indicate success for the useUnsavedChanges hook
     } catch (err) {
       console.error("Error updating user bio content:", err);
@@ -210,8 +208,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
         {isEditing ? (
           <div className="animate-in fade-in-0 duration-300">
             <PageProvider>
-              <LineSettingsProvider>
-                <PageEditor
+              <PageEditor
                   title="" // Bio doesn't have a title
                   setTitle={() => {}} // Bio doesn't have a title
                   initialContent={bioContent}
@@ -229,7 +226,6 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
                   clickPosition={clickPosition}
                   page={null} // Bio is not a page
                 />
-              </LineSettingsProvider>
             </PageProvider>
           </div>
         ) : (

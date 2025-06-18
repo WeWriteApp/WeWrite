@@ -10,7 +10,7 @@ import {
   ProfilePagesContext,
 } from "../../providers/ProfilePageProvider";
 import { useAuth } from "../../providers/AuthProvider";
-import { Loader, Settings, ChevronLeft, Heart, Users, Eye, Share2 } from "lucide-react";
+import { Loader, Settings, ChevronLeft, Heart, Users, Eye, Share2, DollarSign } from "lucide-react";
 import SupporterBadge from "../payments/SupporterBadge";
 import { SupporterIcon } from "../payments/SupporterIcon";
 import { SubscriptionInfoModal } from "../payments/SubscriptionInfoModal";
@@ -19,10 +19,12 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/database";
 
 import UserProfileTabs from '../utils/UserProfileTabs';
-import { getUserFollowerCount, getUserPageCount, getUserTotalViewCount } from "../../firebase/counters";
+import { getUserFollowerCount, getUserPageCount, getUserTotalViewCount, getUserContributorCount } from "../../firebase/counters";
 // getUserSubscription removed - using optimized listener instead
 import SimpleSparkline from "../utils/SimpleSparkline";
 import { getUserActivityLast24Hours } from "../../firebase/userActivity";
+import { useFeatureFlag } from "../../utils/feature-flags";
+import { useContributorCount } from "../../hooks/useContributorCount";
 
 const SingleProfileView = ({ profile }) => {
   const { user } = useAuth();
@@ -37,6 +39,15 @@ const SingleProfileView = ({ profile }) => {
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
   const [userActivityData, setUserActivityData] = useState(null);
+
+  // Check if payments feature is enabled
+  const paymentsEnabled = useFeatureFlag('payments', user?.email);
+
+  // Use real-time contributor count hook when payments are enabled
+  const {
+    count: contributorCount,
+    isLoading: isLoadingContributors
+  } = useContributorCount(paymentsEnabled ? profile.uid : null, paymentsEnabled);
 
   // Check if subscription feature is enabled
   useEffect(() => {
@@ -379,6 +390,25 @@ const SingleProfileView = ({ profile }) => {
               <span>views</span>
             </div>
           </div>
+
+          {/* Contributors count - only show when payments feature is enabled */}
+          {paymentsEnabled && (
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold">
+                  {isLoadingContributors ? (
+                    <Loader className="h-4 w-4 animate-spin" />
+                  ) : (
+                    contributorCount
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <DollarSign className="h-3 w-3" />
+                <span>contributors</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {!user && (

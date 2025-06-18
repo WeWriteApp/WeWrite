@@ -7,13 +7,15 @@ import { Switch } from "../ui/switch";
 import {
   Home, Search, User, Settings, ChevronLeft, ChevronRight, Bell, Plus,
   Globe, Lock, Link as LinkIcon, X, Check, Trash2, MapPin, Palette, Shield,
-  Sun, Moon, Laptop, ArrowLeft, Clock
+  Sun, Moon, Laptop, ArrowLeft, Clock, Shuffle
 } from "lucide-react";
 import { useAuth } from "../../providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { useTheme } from "next-themes";
+import { navigateToRandomPage, RandomPageFilters } from "../../utils/randomPageNavigation";
 import MapEditor from "../editor/MapEditor";
+import RandomPageFilterMenu from "../ui/RandomPageFilterMenu";
 import { AccountSwitcher } from "../auth/AccountSwitcher";
 import AccentColorSwitcher from "../utils/AccentColorSwitcher";
 import PillStyleToggle from "../utils/PillStyleToggle";
@@ -74,6 +76,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isRandomMenuOpen, setIsRandomMenuOpen] = useState(false);
 
   // Load sidebar state from localStorage and handle mounting
   useEffect(() => {
@@ -106,7 +109,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   return (
     <SidebarContext.Provider value={contextValue}>
       {/* Only render sidebar for authenticated users */}
-      {isMounted && user && <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} />}
+      {isMounted && user && <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} isRandomMenuOpen={isRandomMenuOpen} setIsRandomMenuOpen={setIsRandomMenuOpen} />}
       {children}
     </SidebarContext.Provider>
   );
@@ -119,6 +122,7 @@ export default function UnifiedSidebar() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isRandomMenuOpen, setIsRandomMenuOpen] = useState(false);
 
   // Load sidebar state from localStorage and handle mounting
   useEffect(() => {
@@ -140,7 +144,7 @@ export default function UnifiedSidebar() {
     return null;
   }
 
-  return <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} />;
+  return <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} isRandomMenuOpen={isRandomMenuOpen} setIsRandomMenuOpen={setIsRandomMenuOpen} />;
 }
 
 /**
@@ -152,13 +156,17 @@ function UnifiedSidebarContent({
   setIsExpanded,
   isHovering,
   setIsHovering,
-  toggleExpanded
+  toggleExpanded,
+  isRandomMenuOpen,
+  setIsRandomMenuOpen
 }: {
   isExpanded: boolean;
   setIsExpanded: (value: boolean) => void;
   isHovering: boolean;
   setIsHovering: (value: boolean) => void;
   toggleExpanded: () => void;
+  isRandomMenuOpen: boolean;
+  setIsRandomMenuOpen: (value: boolean) => void;
 }) {
   const { user } = useAuth();
   const router = useRouter();
@@ -187,6 +195,7 @@ function UnifiedSidebarContent({
   const navItems = [
     { icon: Home, label: 'Home', href: '/' },
     { icon: Search, label: 'Search', href: '/search' },
+    { icon: Shuffle, label: 'Random Page', action: () => navigateToRandomPage(router, user?.uid) },
     { icon: Clock, label: 'Recents', href: '/recents' },
     { icon: Plus, label: 'New Page', href: '/new' },
     { icon: Bell, label: 'Notifications', href: '/notifications' },
@@ -202,6 +211,11 @@ function UnifiedSidebarContent({
     if (item.action) {
       item.action();
     } else if (item.href) {
+      // If we're in a temporary hover state (not persistently expanded),
+      // end the hover state before navigation
+      if (isHovering && !isExpanded) {
+        setIsHovering(false);
+      }
       router.push(item.href);
     }
   };
@@ -226,7 +240,12 @@ function UnifiedSidebarContent({
         isHovering && !isExpanded ? "sidebar-hover-overlay" : ""
       )}
       onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
+      onMouseLeave={() => {
+        // Don't collapse if the random page menu is open
+        if (!isRandomMenuOpen) {
+          setIsHovering(false);
+        }
+      }}
     >
         <div className="flex flex-col h-full p-4">
           {/* Header with toggle button */}
@@ -255,32 +274,56 @@ function UnifiedSidebarContent({
           <nav className="flex flex-col gap-2 mb-6">
             {navItems.map((item, index) => {
               const Icon = item.icon;
-              return (
-                <Button
-                  key={item.href || index}
-                  variant="ghost"
-                  onClick={() => handleNavItemClick(item)}
-                  className={cn(
-                    "relative flex items-center h-12 w-full transition-all duration-300 ease-in-out",
-                    "text-foreground hover:bg-primary/10 hover:text-primary"
-                  )}
-                  title={showContent ? "" : item.label}
-                >
-                  {/* Icon container - always in the same position */}
-                  <div className="sidebar-icon-container">
-                    <Icon className="h-5 w-5" />
-                  </div>
+              const isRandomPage = item.label === 'Random Page';
 
-                  {/* Text label - slides in from the right */}
-                  <div className={cn(
-                    "sidebar-text-container flex-1 flex items-center",
-                    showContent ? "opacity-100 max-w-none" : "opacity-0 max-w-0"
-                  )}>
-                    <span className="font-medium whitespace-nowrap text-left">
-                      {item.label}
-                    </span>
-                  </div>
-                </Button>
+              return (
+                <div key={item.href || index} className={cn("relative", isRandomPage && "group")}>
+                  <Button
+                    variant="ghost"
+                    onClick={() => handleNavItemClick(item)}
+                    className={cn(
+                      "relative flex items-center h-12 w-full transition-all duration-300 ease-in-out",
+                      "text-foreground hover:bg-primary/10 hover:text-primary"
+                    )}
+                    title={showContent ? "" : item.label}
+                  >
+                    {/* Icon container - always in the same position */}
+                    <div className="sidebar-icon-container">
+                      <Icon className="h-5 w-5" />
+                    </div>
+
+                    {/* Text label - slides in from the right */}
+                    <div className={cn(
+                      "sidebar-text-container flex-1 flex items-center",
+                      showContent ? "opacity-100 max-w-none" : "opacity-0 max-w-0"
+                    )}>
+                      <span className="font-medium whitespace-nowrap text-left">
+                        {item.label}
+                      </span>
+                    </div>
+                  </Button>
+
+                  {/* Random Page Filter Menu - only show when expanded and for random page item */}
+                  {isRandomPage && showContent && (
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                      <RandomPageFilterMenu
+                        size="sm"
+                        onFiltersChange={(filters) => {
+                          // Update the navigation action with new filters
+                          const updatedItem = { ...item, action: () => navigateToRandomPage(router, user?.uid, filters) };
+                          // The filters are already persisted by the component, so we don't need to do anything else
+                        }}
+                        onOpenChange={(isOpen) => {
+                          setIsRandomMenuOpen(isOpen);
+                          // If menu is closed and we're in hover mode, allow collapse
+                          if (!isOpen && isHovering && !isExpanded) {
+                            setIsHovering(false);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               );
             })}
           </nav>
@@ -477,7 +520,13 @@ function UnifiedSidebarContent({
               ) : (
                 <Button
                   variant="ghost"
-                  onClick={() => router.push('/settings')}
+                  onClick={() => {
+                    // If we're in a temporary hover state, end it before navigation
+                    if (isHovering && !isExpanded) {
+                      setIsHovering(false);
+                    }
+                    router.push('/settings');
+                  }}
                   className="relative flex items-center h-12 w-full text-foreground hover:bg-primary/10 hover:text-primary transition-all duration-300"
                   title="Settings"
                 >

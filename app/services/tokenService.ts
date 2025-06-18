@@ -25,12 +25,13 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { TokenBalance, TokenAllocation, MonthlyTokenDistribution } from '../types/database';
-import { 
-  getCurrentMonth, 
-  getNextMonth, 
+import {
+  getCurrentMonth,
+  getNextMonth,
   TOKEN_ECONOMY,
-  calculateTokensForAmount 
+  calculateTokensForAmount
 } from '../utils/subscriptionTiers';
+import { TokenEarningsService } from './tokenEarningsService';
 
 export class TokenService {
   /**
@@ -242,6 +243,15 @@ export class TokenService {
           availableTokens: increment(-tokenDifference),
           updatedAt: serverTimestamp()
         });
+
+        // Update writer earnings if tokens increased
+        if (tokenDifference > 0) {
+          // Process the additional token allocation for the writer
+          await TokenEarningsService.processTokenAllocation({
+            ...currentAllocation,
+            tokens: tokenDifference
+          } as any);
+        }
       } else {
         // Create new allocation
         const allocationData: Omit<TokenAllocation, 'id'> = {
@@ -265,8 +275,26 @@ export class TokenService {
           updatedAt: serverTimestamp()
         });
       }
-      
+
       await batch.commit();
+
+      // Process writer earnings for new allocation
+      if (!existingAllocation.exists()) {
+        const newAllocation: TokenAllocation = {
+          id: allocationId,
+          userId,
+          recipientUserId,
+          resourceType,
+          resourceId,
+          tokens,
+          month: currentMonth,
+          status: 'active',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        } as any;
+
+        await TokenEarningsService.processTokenAllocation(newAllocation);
+      }
       return { success: true };
       
     } catch (error) {

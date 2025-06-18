@@ -206,7 +206,6 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
         // Log successful operation
         logAppendOperation(user.uid, page.id, selectedPage.id, true);
 
-        toast.success(`Added "${page.title || 'this page'}" to "${selectedPage.title}"`);
         setIsOpen(false);
         setSelectedPage(null);
 

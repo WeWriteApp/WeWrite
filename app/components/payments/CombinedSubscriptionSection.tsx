@@ -26,6 +26,7 @@ import { getDocById } from '../../firebase/database';
 import { PaymentMethodSetup } from './PaymentMethodSetup';
 import { FailedPaymentRecovery } from './FailedPaymentRecovery';
 import { SubscriptionModification } from './SubscriptionModification';
+import { getSubscriptionStatusInfo } from '../../utils/subscriptionStatus';
 
 interface Subscription {
   id: string;
@@ -222,26 +223,12 @@ export function CombinedSubscriptionSection() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants = {
-      active: 'default',
-      inactive: 'secondary',
-      past_due: 'destructive',
-      canceled: 'secondary',
-      unpaid: 'destructive'
-    } as const;
-    
-    const colors = {
-      active: 'text-green-600',
-      inactive: 'text-gray-600',
-      past_due: 'text-red-600',
-      canceled: 'text-gray-600',
-      unpaid: 'text-red-600'
-    } as const;
+    const statusInfo = getSubscriptionStatusInfo(status);
 
     return (
-      <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>
-        <span className={colors[status as keyof typeof colors] || 'text-gray-600'}>
-          {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+      <Badge variant={statusInfo.variant}>
+        <span className={statusInfo.color}>
+          {statusInfo.displayText}
         </span>
       </Badge>
     );

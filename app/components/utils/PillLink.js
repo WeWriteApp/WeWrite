@@ -38,8 +38,53 @@ export const PillLink = forwardRef(({
   const { getPillStyleClasses, pillStyle } = usePillStyle();
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
   const [pageData, setPageData] = useState(null);
+  const [displayTitle, setDisplayTitle] = useState(children);
   const router = useRouter();
   const { trackInteractionEvent, events } = useWeWriteAnalytics();
+
+  // Determine link properties early (before useEffect hooks)
+  const showLock = isPublic === false;
+  const isUserLinkType = isUserLink(href);
+  const isGroupLinkType = isGroupLink(href);
+  const isPageLinkType = isPageLink(href);
+  const isExternalLinkType = isExternalLink(href);
+  const pageId = href.split('/').pop();
+
+  // Listen for page title updates
+  useEffect(() => {
+    const handleTitleUpdate = (event) => {
+      const { pageId: updatedPageId, newTitle } = event.detail;
+
+      // Extract page ID from href for page links
+      let extractedPageId = null;
+      if (isPageLinkType && href) {
+        // Handle different href formats: /pageId, /pages/pageId
+        if (href.startsWith('/pages/')) {
+          extractedPageId = href.replace('/pages/', '').split('?')[0].split('#')[0];
+        } else if (href.startsWith('/') && !href.includes('/')) {
+          extractedPageId = href.substring(1).split('?')[0].split('#')[0];
+        }
+      }
+
+      // Check if this pill link references the updated page
+      // Only update if the current title matches the original (not custom text)
+      if (extractedPageId === updatedPageId && children === displayTitle) {
+        console.log(`💊 PillLink: Updating title in real-time: ${children} -> ${newTitle}`);
+        setDisplayTitle(newTitle);
+      }
+    };
+
+    window.addEventListener('page-title-updated', handleTitleUpdate);
+
+    return () => {
+      window.removeEventListener('page-title-updated', handleTitleUpdate);
+    };
+  }, [children, displayTitle, href, isPageLinkType]);
+
+  // Update displayTitle when children prop changes
+  useEffect(() => {
+    setDisplayTitle(children);
+  }, [children]);
 
   // Show loading state if needed
   if (isLoading) return <PillLinkSkeleton />;
@@ -56,14 +101,6 @@ export const PillLink = forwardRef(({
       </span>
     );
   }
-
-  // Determine link properties
-  const showLock = isPublic === false;
-  const isUserLinkType = isUserLink(href);
-  const isGroupLinkType = isGroupLink(href);
-  const isPageLinkType = isPageLink(href);
-  const isExternalLinkType = isExternalLink(href);
-  const pageId = href.split('/').pop();
 
   // Fetch page data for permission checking (only for page links)
   // CIRCUIT BREAKER: Add error tracking to prevent infinite loops
@@ -122,12 +159,12 @@ export const PillLink = forwardRef(({
   const safeHref = href || '#';
 
   // Format display title
-  let displayTitle = children;
-  if (typeof children === 'string') {
+  let formattedDisplayTitle = displayTitle;
+  if (typeof displayTitle === 'string') {
     if (isUserLinkType) {
-      displayTitle = formatUsername(children);
+      formattedDisplayTitle = formatUsername(displayTitle);
     } else if (isPageLinkType) {
-      displayTitle = formatPageTitle(children);
+      formattedDisplayTitle = formatPageTitle(displayTitle);
     }
   }
 
@@ -160,7 +197,7 @@ export const PillLink = forwardRef(({
           tabIndex={0}
         >
           {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
-          <span className="pill-text">{displayTitle}</span>
+          <span className="pill-text">{formattedDisplayTitle}</span>
           <ExternalLink size={14} className="ml-1 flex-shrink-0" />
           {formattedByline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
         </a>
@@ -169,7 +206,7 @@ export const PillLink = forwardRef(({
           isOpen={showExternalLinkModal}
           onClose={() => setShowExternalLinkModal(false)}
           url={href}
-          displayText={displayTitle}
+          displayText={formattedDisplayTitle}
         />
       </>
     );
@@ -262,7 +299,7 @@ export const PillLink = forwardRef(({
     >
       {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
       {isGroupLinkType && <Users size={14} className="mr-1 flex-shrink-0" />}
-      <span className="pill-text">{displayTitle}</span>
+      <span className="pill-text">{formattedDisplayTitle}</span>
       {formattedByline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
     </a>
   );

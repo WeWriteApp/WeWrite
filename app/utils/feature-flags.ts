@@ -76,7 +76,6 @@ const initializeFeatureFlags = async (): Promise<void> => {
       map_view: false,
       calendar_view: false,
       groups: true,
-      notifications: false,
       link_functionality: true,
       daily_notes: false
     };

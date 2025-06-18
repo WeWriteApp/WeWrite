@@ -462,11 +462,39 @@ const FilteredSearchResults = forwardRef(({
 
             {/* No Results */}
             {(search.length >= 2 || isLinkEditor) && pages.length === 0 && !isSearching && (
-              <div className="p-3 text-center text-muted-foreground">
-                {search.length >= 2
-                  ? `No results found for "${search}"`
-                  : `No ${isSearchMode ? 'results' : (activeFilter === 'recent' ? 'recent pages' : 'pages')} found`
-                }
+              <div className="p-3 text-center">
+                <div className="text-muted-foreground mb-3">
+                  {search.length >= 2
+                    ? `No results found for "${search}"`
+                    : `No ${isSearchMode ? 'results' : (activeFilter === 'recent' ? 'recent pages' : 'pages')} found`
+                  }
+                </div>
+
+                {/* Create new page option - only show in link editor mode with search term */}
+                {isLinkEditor && search.length >= 2 && (
+                  <button
+                    onClick={() => {
+                      // Create a placeholder page object for the link
+                      const newPageData = {
+                        id: `new:${search}`, // Special ID to indicate this is a new page
+                        title: search,
+                        isNew: true, // Flag to indicate this is a new page
+                        isPublic: false, // Default to private
+                        userId: user?.uid
+                      };
+
+                      if (onSelect) {
+                        onSelect(newPageData);
+                      }
+                    }}
+                    className="w-full p-2 hover:bg-muted rounded-md transition-colors border border-dashed border-muted-foreground/30 hover:border-muted-foreground/50"
+                  >
+                    <div className="flex items-center justify-center gap-2 text-sm">
+                      <span className="text-muted-foreground">Create new page:</span>
+                      <span className="font-medium text-foreground">"{search}"</span>
+                    </div>
+                  </button>
+                )}
               </div>
             )}
           </>

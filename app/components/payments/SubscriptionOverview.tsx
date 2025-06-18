@@ -10,6 +10,7 @@ import { useFeatureFlag } from '../../utils/feature-flags';
 import { listenToUserSubscription } from '../../firebase/subscription';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { getSubscriptionStatusInfo } from '../../utils/subscriptionStatus';
 
 interface Subscription {
   id: string;
@@ -63,41 +64,24 @@ export function SubscriptionOverview() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      active: {
-        variant: 'default' as const,
-        color: 'bg-success/10 text-success dark:bg-success/20 dark:text-success-foreground',
-        icon: CheckCircle
-      },
-      trialing: {
-        variant: 'secondary' as const,
-        color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100',
-        icon: Clock
-      },
-      past_due: {
-        variant: 'destructive' as const,
-        color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100',
-        icon: AlertTriangle
-      },
-      canceled: {
-        variant: 'secondary' as const,
-        color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100',
-        icon: AlertTriangle
-      },
-      incomplete: {
-        variant: 'destructive' as const,
-        color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100',
-        icon: AlertTriangle
-      },
+    const statusInfo = getSubscriptionStatusInfo(status);
+
+    // Map status to appropriate icons
+    const iconMap = {
+      active: CheckCircle,
+      trialing: Clock,
+      past_due: AlertTriangle,
+      canceled: AlertTriangle,
+      pending: Clock,
+      incomplete: AlertTriangle,
     };
 
-    const config = statusConfig[status] || statusConfig.canceled;
-    const IconComponent = config.icon;
-    
+    const IconComponent = iconMap[statusInfo.status] || AlertTriangle;
+
     return (
-      <Badge variant={config.variant} className={`${config.color} flex items-center gap-1`}>
+      <Badge variant={statusInfo.variant} className={`${statusInfo.color} flex items-center gap-1`}>
         <IconComponent className="h-3 w-3" />
-        {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+        {statusInfo.displayText}
       </Badge>
     );
   };

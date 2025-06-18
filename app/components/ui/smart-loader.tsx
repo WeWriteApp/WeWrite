@@ -44,14 +44,14 @@ interface SmartLoaderProps {
 export function SmartLoader({
   isLoading,
   message = "Loading...",
-  timeoutMs = 20000, // Increased from 15s to 20s for better stability
+  timeoutMs = 25000, // Increased to 25s for slow networks
   fullScreen = true,
   className,
   onRetry,
   fallbackContent,
   children,
   autoRecover = false, // Disabled by default to maintain stability
-  initialLoadTimeoutMs = 8000 // Increased from 5s to 8s for initial load
+  initialLoadTimeoutMs = 10000 // Increased to 10s for initial load on slow networks
 }: SmartLoaderProps) {
   const [loadStartTime] = useState(Date.now());
   const [loadingTime, setLoadingTime] = useState(0);
@@ -185,10 +185,19 @@ export function SmartLoader({
             {fallbackContent ? (
               <div className="mb-4">{fallbackContent}</div>
             ) : (
-              <p>
-                This content is taking a while to load. You can wait a bit longer,
-                try again, or refresh the page.
-              </p>
+              <div>
+                <p className="mb-2">
+                  This content is taking a while to load. This is often due to:
+                </p>
+                <ul className="list-disc list-inside text-left mb-3 space-y-1">
+                  <li>Slow network connection</li>
+                  <li>High server load</li>
+                  <li>Large content being processed</li>
+                </ul>
+                <p className="text-xs">
+                  You can wait a bit longer, try again, or refresh the page.
+                </p>
+              </div>
             )}
           </div>
 

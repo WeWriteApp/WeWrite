@@ -33,12 +33,16 @@ export default function UserPage({ params }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Helper function to fetch subscription data using optimized Firebase function
+  // Helper function to fetch subscription data using real-time listener for consistency
   const fetchUserSubscription = async (userId) => {
     try {
-      const { getOptimizedUserSubscription } = await import('../../firebase/optimizedSubscription');
-      const subscription = await getOptimizedUserSubscription(userId, { useCache: true });
-      return subscription;
+      const { listenToUserSubscription } = await import('../../firebase/subscription');
+      return new Promise((resolve) => {
+        const unsubscribe = listenToUserSubscription(userId, (subscription) => {
+          unsubscribe(); // Clean up listener after first result
+          resolve(subscription);
+        });
+      });
     } catch (error) {
       console.error('Error fetching user subscription:', error);
     }

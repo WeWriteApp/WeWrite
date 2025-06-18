@@ -19,7 +19,6 @@ import HoverEditContent from '../utils/HoverEditContent';
 import type { GroupAboutTabProps } from "../../types/components";
 import type { SlateContent, Group } from "../../types/database";
 import { PageProvider } from "../../contexts/PageContext";
-import { LineSettingsProvider } from "../../contexts/LineSettingsContext";
 
 // Import the unified PageEditor component
 const PageEditor = dynamic(() => import("../editor/PageEditor"), { ssr: false });
@@ -149,7 +148,6 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
       setLastEditTime(currentTime);
       handleSetIsEditing(false);
 
-      toast.success("Group information updated successfully");
       return true; // Indicate success for the useUnsavedChanges hook
     } catch (err) {
       console.error("Error updating group about content:", err);
@@ -233,8 +231,7 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
         {isEditing ? (
           <div className="animate-in fade-in-0 duration-300">
             <PageProvider>
-              <LineSettingsProvider>
-                <PageEditor
+              <PageEditor
                   title="" // Group about doesn't have a title
                   setTitle={() => {}} // Group about doesn't have a title
                   initialContent={aboutContent}
@@ -252,7 +249,6 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
                   clickPosition={clickPosition}
                   page={null} // Group about is not a page
                 />
-              </LineSettingsProvider>
             </PageProvider>
           </div>
         ) : (

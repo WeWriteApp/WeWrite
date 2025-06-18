@@ -12,6 +12,7 @@ import { Check, Loader2, X, AlertCircle } from "lucide-react";
 import { AuthLayout } from "../../components/layout/auth-layout";
 import { cn } from "../../lib/utils";
 import { debounce } from "lodash";
+import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername } from "../../utils/usernameValidation";
 
 export default function SetupUsernamePage() {
@@ -20,15 +21,16 @@ export default function SetupUsernamePage() {
   const [error, setError] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userId, setUserId] = useState("");
-  
+
   // Username validation state
   const [isChecking, setIsChecking] = useState(false);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
-  
+
   const router = useRouter();
+  const { trackAuthEvent } = useWeWriteAnalytics();
 
   // Check if user came from the registration flow
   useEffect(() => {
@@ -153,14 +155,22 @@ export default function SetupUsernamePage() {
       
       if (result.success) {
         console.log("Username added successfully, redirecting to email verification...");
-        
+
+        // Track user creation event (this completes the user registration process)
+        trackAuthEvent('USER_CREATED', {
+          user_id: userId,
+          username: username,
+          email: userEmail,
+          registration_method: 'email_password_simplified'
+        });
+
         // Clear pending user data
         localStorage.removeItem('pendingUserEmail');
         localStorage.removeItem('pendingUserId');
-        
+
         // Store username for email verification step
         localStorage.setItem('pendingUsername', username);
-        
+
         // Redirect to email verification page
         router.push('/auth/verify-email');
       } else {

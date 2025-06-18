@@ -15,12 +15,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/
 import { AuthRedirectOverlay } from "../auth/AuthRedirectOverlay"
 // reCAPTCHA functionality removed
 import { Alert, AlertDescription } from "../ui/alert"
+import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics"
 
 export function RegisterForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"form">) {
   const router = useRouter()
+  const { trackAuthEvent } = useWeWriteAnalytics()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [username, setUsername] = useState("")
@@ -207,6 +209,14 @@ export function RegisterForm({
         if (usernameResult.success) {
           // Record the initial username in the history
           await recordUsernameHistory(result.user.uid, "initial", username)
+
+          // Track user creation event
+          trackAuthEvent('USER_CREATED', {
+            user_id: result.user.uid,
+            username: username,
+            email: email,
+            registration_method: 'email_password'
+          })
 
           // Show redirect overlay
           setIsRedirecting(true)

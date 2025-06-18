@@ -14,7 +14,6 @@ import { MobileProvider } from "./providers/MobileProvider";
 import { DataProvider } from "./providers/DataProvider";
 import { PortfolioProvider } from "./providers/PortfolioProvider";
 import { RecentPagesProvider } from "./contexts/RecentPagesContext";
-import { LineSettingsProvider } from "./contexts/LineSettingsContext";
 import { ActivityFilterProvider } from "./contexts/ActivityFilterContext";
 import { AccentColorProvider } from "./contexts/AccentColorContext";
 import { MultiAccountProvider } from "./providers/MultiAccountProvider";
@@ -79,11 +78,10 @@ export default function ClientLayout({ children }) {
                         <ActivityFilterProvider>
                           <MobileProvider>
                             <DrawerProvider>
-                              <LineSettingsProvider>
                                 <Drawer />
                                 <SidebarProvider>
                                   <SidebarLayout>
-                                    <div className="flex flex-col min-h-screen bg-background pb-20 md:pb-8">
+                                    <div className="flex flex-col bg-background">
                                       {/* Handle pending replies after authentication */}
                                       <PendingReplyHandler />
 
@@ -114,7 +112,6 @@ export default function ClientLayout({ children }) {
                                     {/* <GADebugger /> */}
                                   </>
                                 )}
-                              </LineSettingsProvider>
                             </DrawerProvider>
                           </MobileProvider>
                         </ActivityFilterProvider>

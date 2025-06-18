@@ -295,9 +295,6 @@ export default function NewPage() {
     setIsSaving(true);
     setError(null);
 
-    // Show immediate feedback that save is starting
-    toast.success("Creating page...", { duration: 2000 });
-
     try {
       const username = user?.username || user?.displayName || 'Anonymous';
       const userId = user.uid;
@@ -371,6 +368,9 @@ export default function NewPage() {
         groupId: selectedGroupId,
       };
 
+      // Note: For new pages, no link propagation is needed since the page doesn't exist yet
+      // Link propagation only applies when updating existing page titles
+
       // Check if operation is allowed
       const operationError = checkOperationAllowed();
       if (operationError) {
@@ -403,11 +403,7 @@ export default function NewPage() {
         setHasTitleChanged(false);
         setHasUnsavedChanges(false);
 
-        // Show success feedback for queued save
-        toast.success("Page queued for creation!", {
-          description: "Your page will be created when you verify your email.",
-          duration: 3000
-        });
+
 
         setIsSaving(false);
 
@@ -454,8 +450,7 @@ export default function NewPage() {
           setHasTitleChanged(false);
           setHasUnsavedChanges(false);
 
-          // Show success feedback before redirecting
-          toast.success("Page created successfully!", { duration: 3000 });
+
 
           setIsSaving(false);
 
@@ -555,7 +550,7 @@ export default function NewPage() {
           <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
         </Head>
         <PageHeader
-          title={title || (isReply ? "" : "Untitled")}
+          title={title || (isReply ? "" : "")} // Start with empty title for new pages
           username={username}
           userId={user?.uid}
           isLoading={isLoading}
@@ -569,6 +564,8 @@ export default function NewPage() {
           titleError={titleError}
           canEdit={true} // User can always edit their new page
           pageId={null} // No page ID for new pages, but needed for ownership dropdown
+          isNewPage={true} // Flag to indicate this is a new page
+          onPrivacyChange={setIsPublic} // Handle privacy toggle changes
           onOwnershipChange={(newGroupId: string | null, newGroupName: string | null) => {
             setSelectedGroupId(newGroupId);
             setSelectedGroupName(newGroupName);

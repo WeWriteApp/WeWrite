@@ -19,6 +19,7 @@ export interface SubscriptionTier {
   stripePriceId?: string;
   features: string[];
   popular?: boolean;
+  isCustom?: boolean;
 }
 
 export interface CustomTierConfig {
@@ -58,25 +59,26 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     popular: true
   },
   {
-    id: 'tier3',
-    name: 'Champion',
-    description: 'Maximum impact with 500+ tokens monthly',
-    amount: 50,
-    tokens: 500,
+    id: 'custom',
+    name: 'Custom',
+    description: 'Choose your own amount ($50+ monthly)',
+    amount: 50, // Default/minimum amount
+    tokens: 500, // Default tokens for minimum amount
     features: [
-      '500+ tokens per month',
+      'Custom token amount',
       'Maximum creator support',
       'Advanced allocation tools',
       'Premium analytics',
       'Direct creator messaging',
       'Beta feature access'
-    ]
+    ],
+    isCustom: true
   }
 ];
 
 // Custom tier configuration
 export const CUSTOM_TIER_CONFIG: CustomTierConfig = {
-  minAmount: 60, // Minimum for custom tier (starts at $60)
+  minAmount: 50, // Minimum for custom tier (starts at $50)
   maxAmount: 1000, // Maximum monthly subscription
   tokensPerDollar: 10 // Token conversion rate
 };

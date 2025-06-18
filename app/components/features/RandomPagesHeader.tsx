@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '../ui/dropdown-menu';
+import RandomPageFilterMenu from '../ui/RandomPageFilterMenu';
 
 /**
  * RandomPagesHeader Component
@@ -124,12 +125,13 @@ const RandomPagesHeader = () => {
             variant="outline"
             size="icon"
             className="h-8 w-8 rounded-2xl hover:bg-muted/80 transition-colors"
-            aria-label="Random pages privacy options"
+            aria-label="Random pages options"
           >
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
+          {/* Privacy and "Not mine" filters using reusable component */}
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
@@ -188,6 +190,7 @@ const RandomPagesHeader = () => {
 
           <DropdownMenuSeparator />
 
+          {/* Dense mode toggle - specific to random pages section */}
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
