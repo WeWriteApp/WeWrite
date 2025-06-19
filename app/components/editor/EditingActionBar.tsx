@@ -2,25 +2,29 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from "../ui/button";
-import { X, Check, Trash2 } from 'lucide-react';
+import { X, Check, Trash2, Link } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export interface EditingActionBarProps {
   onSave: () => void;
   onCancel: () => void;
   onDelete?: () => void;
+  onInsertLink?: () => void;
   isSaving?: boolean;
   hasUnsavedChanges?: boolean;
   className?: string;
+  isStatic?: boolean; // New prop to control static vs floating layout
 }
 
 export default function EditingActionBar({
   onSave,
   onCancel,
   onDelete,
+  onInsertLink,
   isSaving = false,
   hasUnsavedChanges = false,
-  className = ""
+  className = "",
+  isStatic = false
 }: EditingActionBarProps) {
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(0);
@@ -88,6 +92,86 @@ export default function EditingActionBar({
     }
   };
 
+  // Static layout for positioning below content
+  if (isStatic) {
+    return (
+      <div className={`w-full ${className}`}>
+        <div className="flex flex-col items-stretch gap-3 w-full md:flex-row md:flex-wrap md:items-center md:justify-center">
+          {/* Cancel Button */}
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+          >
+            <X className="h-5 w-5" />
+            <span>Cancel</span>
+          </Button>
+
+          {/* Save Button */}
+          <Button
+            onClick={onSave}
+            disabled={isSaving}
+            className="gap-2 w-full md:w-auto rounded-2xl font-medium bg-green-600 hover:bg-green-700 text-white"
+            size="lg"
+          >
+            {isSaving ? (
+              <>
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Check className="h-5 w-5" />
+                <span>Save</span>
+              </>
+            )}
+          </Button>
+
+          {/* Insert Link Button */}
+          {onInsertLink && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={onInsertLink}
+              disabled={isSaving}
+              className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+            >
+              <Link className="h-5 w-5" />
+              <span>Insert Link</span>
+            </Button>
+          )}
+
+          {/* Delete Button (optional) */}
+          {onDelete && (
+            <Button
+              variant="destructive"
+              size="lg"
+              onClick={onDelete}
+              disabled={isSaving}
+              className="gap-2 w-full md:w-auto rounded-2xl font-medium text-white"
+            >
+              <Trash2 className="h-5 w-5" />
+              <span>Delete</span>
+            </Button>
+          )}
+        </div>
+
+        {/* Unsaved changes indicator */}
+        {hasUnsavedChanges && !isSaving && (
+          <div className="flex justify-center mt-2">
+            <div className="flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400">
+              <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
+              <span>Unsaved changes</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Original floating layout
   return (
     <AnimatePresence>
       <motion.div

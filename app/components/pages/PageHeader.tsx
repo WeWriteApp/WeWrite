@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "../ui/button";
-import { Loader, ChevronLeft, ChevronRight, Share2, Lock, Globe, MoreHorizontal, Edit2, Plus, MessageSquare } from "lucide-react";
+import { Loader, ChevronLeft, ChevronRight, Share2, Lock, Globe, MoreHorizontal, Edit2, Plus, MessageSquare, Trash2, Link as LinkIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ref, get } from "firebase/database";
 import { rtdb } from "../../firebase/rtdb";
@@ -68,6 +68,8 @@ export interface PageHeaderProps {
   onOwnershipChange?: (newGroupId: string | null, newGroupName: string | null) => void;
   isNewPage?: boolean; // Add flag to indicate this is a new page
   onPrivacyChange?: (isPublic: boolean) => void; // Add handler for privacy toggle
+  onDelete?: () => void; // Add handler for delete page
+  onInsertLink?: () => void; // Add handler for insert link
 }
 
 export default function PageHeader({
@@ -90,6 +92,8 @@ export default function PageHeader({
   onOwnershipChange,
   isNewPage = false,
   onPrivacyChange,
+  onDelete,
+  onInsertLink,
 }: PageHeaderProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -957,35 +961,60 @@ export default function PageHeader({
                         </DropdownMenuItem>
                       )}
 
-                      {/* Share option - always visible */}
-                      <DropdownMenuItem
-                        className="gap-2"
-                        onClick={handleShareClick}
-                      >
-                        <Share2 className="h-4 w-4" />
-                        <span>Share</span>
-                      </DropdownMenuItem>
+                      {/* Edit mode specific options */}
+                      {isEditing ? (
+                        <>
+                          {/* Insert Link option - only in edit mode */}
+                          {onInsertLink && (
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onClick={onInsertLink}
+                            >
+                              <LinkIcon className="h-4 w-4" />
+                              <span>Insert link</span>
+                            </DropdownMenuItem>
+                          )}
 
-                      {/* Add to Page option - hidden in edit mode */}
-                      {!isEditing && (
-                        <DropdownMenuItem
-                          className="gap-2"
-                          onClick={handleAddToPageClick}
-                        >
-                          <Plus className="h-4 w-4" />
-                          <span>Add to Page</span>
-                        </DropdownMenuItem>
-                      )}
+                          {/* Delete page option - only in edit mode and if user can edit */}
+                          {canEdit && onDelete && (
+                            <DropdownMenuItem
+                              className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={onDelete}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span>Delete page</span>
+                            </DropdownMenuItem>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {/* Share option - only visible when not in edit mode */}
+                          <DropdownMenuItem
+                            className="gap-2"
+                            onClick={handleShareClick}
+                          >
+                            <Share2 className="h-4 w-4" />
+                            <span>Share</span>
+                          </DropdownMenuItem>
 
-                      {/* Reply option - hidden in edit mode */}
-                      {!isEditing && (
-                        <DropdownMenuItem
-                          className="gap-2"
-                          onClick={handleReplyClick}
-                        >
-                          <MessageSquare className="h-4 w-4" />
-                          <span>Reply</span>
-                        </DropdownMenuItem>
+                          {/* Add to Page option - only visible when not in edit mode */}
+                          <DropdownMenuItem
+                            className="gap-2"
+                            onClick={handleAddToPageClick}
+                          >
+                            <Plus className="h-4 w-4" />
+                            <span>Add to Page</span>
+                          </DropdownMenuItem>
+
+                          {/* Reply option - only visible when not in edit mode */}
+                          <DropdownMenuItem
+                            className="gap-2"
+                            onClick={handleReplyClick}
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                            <span>Reply</span>
+                          </DropdownMenuItem>
+                        </>
                       )}
                     </>
                   )}

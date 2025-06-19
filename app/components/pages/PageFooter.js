@@ -7,6 +7,7 @@ import PageStats from "./PageStats";
 import dynamic from "next/dynamic";
 import { Button } from "../ui/button";
 import { Reply } from "lucide-react";
+import EditingActionBar from "../editor/EditingActionBar";
 
 // Dynamically import AddToPageButton to avoid SSR issues
 const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
@@ -37,8 +38,26 @@ import { AuthContext } from "../../providers/AuthProvider";
  * @param {boolean} isOwner - Whether the current user owns the page
  * @param {boolean} isEditing - Whether the page is currently in edit mode
  * @param {Function} setIsEditing - Function to toggle edit mode
+ * @param {Function} onSave - Function to save page changes (for edit mode)
+ * @param {Function} onCancel - Function to cancel editing (for edit mode)
+ * @param {Function} onDelete - Function to delete page (for edit mode)
+ * @param {Function} onInsertLink - Function to insert link (for edit mode)
+ * @param {boolean} isSaving - Whether page is currently being saved
+ * @param {boolean} hasUnsavedChanges - Whether there are unsaved changes
  */
-export default function PageFooter({ page, content, isOwner, isEditing, setIsEditing }) {
+export default function PageFooter({
+  page,
+  content,
+  isOwner,
+  isEditing,
+  setIsEditing,
+  onSave,
+  onCancel,
+  onDelete,
+  onInsertLink,
+  isSaving,
+  hasUnsavedChanges
+}) {
   const { user } = useContext(AuthContext);
   const [viewData, setViewData] = useState({ total: 0, hourly: [] });
   const [changeData, setChangeData] = useState({ count: 0, hourly: [] });
@@ -110,8 +129,21 @@ export default function PageFooter({ page, content, isOwner, isEditing, setIsEdi
         </div>
       )}
 
-      {/* Hide PageActions entirely when in edit mode */}
-      {!isEditing && (
+      {/* Show static editing buttons when in edit mode, otherwise show PageActions */}
+      {isEditing ? (
+        <div className="mb-6 flex flex-col w-full">
+          <EditingActionBar
+            onSave={onSave}
+            onCancel={onCancel}
+            onDelete={isOwner ? onDelete : undefined}
+            onInsertLink={onInsertLink}
+            isSaving={isSaving}
+            hasUnsavedChanges={hasUnsavedChanges}
+            isStatic={true}
+            className="static-editing-buttons"
+          />
+        </div>
+      ) : (
         <div className="mb-6 flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
           <PageActions
             page={page}

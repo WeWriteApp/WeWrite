@@ -30,7 +30,7 @@ import Head from "next/head";
 import { Button } from "../ui/button";
 // Removed EditorContent import - ReplyEditor was replaced with Editor
 import Editor from "../editor/Editor";
-import EditingActionBar from "../editor/EditingActionBar";
+
 import TextView from "../editor/TextView";
 import TextViewErrorBoundary from "../editor/TextViewErrorBoundary";
 import { PageLoader } from "../ui/page-loader";
@@ -1558,6 +1558,8 @@ function SinglePageView({ params, initialEditMode = false }) {
         setIsEditing={handleSetIsEditing}
         onTitleChange={handleTitleChange}
         titleError={titleError}
+        onDelete={handleDelete}
+        onInsertLink={handleInsertLink}
         canEdit={
           user?.uid && !isPreviewingDeleted && (
             // User is the page owner
@@ -1671,6 +1673,12 @@ function SinglePageView({ params, initialEditMode = false }) {
           }
           isEditing={isEditing}
           setIsEditing={handleSetIsEditing}
+          onSave={() => handleSave(editorState, 'button')}
+          onCancel={handleCancelWithCheck}
+          onDelete={handleDelete}
+          onInsertLink={handleInsertLink}
+          isSaving={isSaving}
+          hasUnsavedChanges={hasUnsavedChanges}
         />
       </PageProvider>
       {!isEditing && (
@@ -1787,16 +1795,7 @@ const PageContentWithLineSettings = ({
         </div>
       </TextSelectionProvider>
 
-      {/* Editing Action Bar - only show in edit mode */}
-      {isEditing && (
-        <EditingActionBar
-          onSave={() => handleSave(editorState, 'button')}
-          onCancel={handleCancel}
-          onDelete={canEdit ? handleDelete : undefined}
-          isSaving={isSaving}
-          hasUnsavedChanges={hasUnsavedChanges}
-        />
-      )}
+
 
 
 
