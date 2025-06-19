@@ -7,7 +7,7 @@ import GroupPageClient from "./GroupPageClient";
 
 export async function generateMetadata({ params }) {
   // Properly await the params object
-  const { id } = params;
+  const { id } = await params;
 
   // Check if the groups feature is enabled
   const cookieStore = await cookies();
@@ -46,7 +46,7 @@ export async function generateMetadata({ params }) {
 
 export default async function Page({ params }) {
   // Properly await the params object
-  const { id } = params;
+  const { id } = await params;
 
   // Check if the groups feature is enabled
   const cookieStore = await cookies();

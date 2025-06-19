@@ -286,16 +286,50 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
         )}
 
         {!loading && !combinedError && activities.length > 0 && (
-          <div className="grid grid-cols-1 gap-6 w-full">
-            {activities.slice(0, isHomepage ? limit : activities.length).map((activity, index) => (
-              <div key={`${activity.pageId}-${index}`}>
-                <ActivityCard
-                  activity={activity}
-                  isCarousel={false}
-                  key={`activity-card-${activity.pageId}-${index}`}
-                />
+          <div className="w-full">
+            {isHomepage ? (
+              // For homepage, use horizontal scrollable carousel on mobile
+              <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory">
+                {activities.slice(0, limit).map((activity, index) => (
+                  <div key={`${activity.pageId}-${index}`} className="flex-shrink-0 w-[280px] snap-start">
+                    <ActivityCard
+                      activity={activity}
+                      isCarousel={true}
+                      key={`activity-card-mobile-${activity.pageId}-${index}`}
+                    />
+                  </div>
+                ))}
+                {/* View all button at the end of carousel */}
+                {showViewAll && (
+                  <div className="flex-shrink-0 w-[280px] snap-start flex items-center justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        router.push("/activity");
+                      }}
+                      className="h-full min-h-[120px] w-full border-dashed border-2 hover:border-solid transition-all"
+                    >
+                      View all activity
+                    </Button>
+                  </div>
+                )}
               </div>
-            ))}
+            ) : (
+              // For activity page & user profile, keep vertical stack
+              <div className="grid grid-cols-1 gap-6 w-full">
+                {activities.slice(0, activities.length).map((activity, index) => (
+                  <div key={`${activity.pageId}-${index}`}>
+                    <ActivityCard
+                      activity={activity}
+                      isCarousel={false}
+                      key={`activity-card-${activity.pageId}-${index}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -357,17 +391,33 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
         {!loading && !combinedError && activities.length > 0 && (
           <div className="w-full">
             {isHomepage ? (
-              // For homepage, use a grid layout instead of carousel
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+              // For homepage, use horizontal scrollable carousel on desktop
+              <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory">
                 {activities.slice(0, limit).map((activity, index) => (
-                  <div key={`${activity.pageId}-${index}`} className="h-[200px]">
+                  <div key={`${activity.pageId}-${index}`} className="flex-shrink-0 w-[320px] h-[200px] snap-start">
                     <ActivityCard
                       activity={activity}
-                      isCarousel={false}
+                      isCarousel={true}
                       key={`activity-card-desktop-${activity.pageId}-${index}`}
                     />
                   </div>
                 ))}
+                {/* View all button at the end of carousel */}
+                {showViewAll && (
+                  <div className="flex-shrink-0 w-[320px] h-[200px] snap-start flex items-center justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        router.push("/activity");
+                      }}
+                      className="h-full w-full border-dashed border-2 hover:border-solid transition-all"
+                    >
+                      View all activity
+                    </Button>
+                  </div>
+                )}
               </div>
             ) : (
               // For activity page & user profile, keep the existing grid layout
@@ -387,7 +437,8 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
         )}
       </div>
 
-      {showViewAll && !loading && !combinedError && activities.length > 0 && !isInActivityPage && (
+      {/* View all button is now integrated into the carousel for homepage, or shown separately for other pages */}
+      {showViewAll && !loading && !combinedError && activities.length > 0 && !isInActivityPage && !isHomepage && (
         <div className="flex justify-center">
           <Button
             variant="outline"

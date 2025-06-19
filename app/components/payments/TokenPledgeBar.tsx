@@ -46,12 +46,13 @@ const TokenPledgeBar: React.FC<TokenPledgeBarProps> = ({
   const { toast } = useToast();
   
   // Feature flags - pass user info for proper override checking
+  const isTokenSystemEnabled = useFeatureFlag('token_system', user?.email, user?.uid);
   const isSubscriptionEnabled = useFeatureFlag('payments', user?.email, user?.uid);
 
   // Debug logging
   useEffect(() => {
-    console.log('TokenPledgeBar: payments feature flag =', isSubscriptionEnabled, 'for user:', user?.email);
-  }, [isSubscriptionEnabled, user?.email]);
+    console.log('TokenPledgeBar: token_system feature flag =', isTokenSystemEnabled, 'payments flag =', isSubscriptionEnabled, 'for user:', user?.email);
+  }, [isTokenSystemEnabled, isSubscriptionEnabled, user?.email]);
 
   // State management
   const [loading, setLoading] = useState(false);
@@ -70,14 +71,14 @@ const TokenPledgeBar: React.FC<TokenPledgeBarProps> = ({
 
   // Load user data when user changes
   useEffect(() => {
-    if (user && isSubscriptionEnabled) {
+    if (user && isTokenSystemEnabled && isSubscriptionEnabled) {
       loadUserData();
     } else {
       setTokenBalance(null);
       setSubscription(null);
       setCurrentTokenAllocation(0);
     }
-  }, [user, isSubscriptionEnabled]);
+  }, [user, isTokenSystemEnabled, isSubscriptionEnabled]);
 
   // Load user subscription and token data
   const loadUserData = async () => {
@@ -172,6 +173,11 @@ const TokenPledgeBar: React.FC<TokenPledgeBarProps> = ({
 
   // Don't render if user is the author
   if (user && authorId && user.uid === authorId) {
+    return null;
+  }
+
+  // Don't render if token system is not enabled
+  if (!isTokenSystemEnabled) {
     return null;
   }
 

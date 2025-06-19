@@ -156,6 +156,26 @@ const ParagraphNumberOverlay: React.FC<ParagraphNumberOverlayProps> = ({ editorR
   useEffect(() => {
     if (!editorRef.current) return;
 
+    // CRITICAL FIX: Skip paragraph number injection entirely in dense mode
+    // Dense mode paragraph numbers are handled by TextView's RenderContent component
+    if (lineMode === LINE_MODES.DENSE) {
+      // Remove any existing paragraph numbers in dense mode
+      const existingNumbers = editorRef.current.querySelectorAll('.unified-paragraph-number, .dense-paragraph-number');
+      existingNumbers.forEach(number => number.remove());
+
+      // Reset paragraph styling to default for dense mode
+      const paragraphs = editorRef.current.querySelectorAll('div');
+      paragraphs.forEach((paragraph) => {
+        paragraph.style.display = '';
+        paragraph.style.marginLeft = '';
+        paragraph.style.textIndent = '';
+        paragraph.style.marginRight = '';
+        paragraph.style.alignItems = '';
+        paragraph.style.flexWrap = '';
+      });
+      return;
+    }
+
     const paragraphs = editorRef.current.querySelectorAll('div');
 
     // Use requestAnimationFrame to batch DOM updates and reduce flickering
@@ -176,54 +196,18 @@ const ParagraphNumberOverlay: React.FC<ParagraphNumberOverlayProps> = ({ editorR
         const numberSpan = document.createElement('span');
         numberSpan.textContent = `${index + 1}`;
 
-      if (lineMode === LINE_MODES.DENSE) {
-        // Dense mode: inline layout
-        numberSpan.className = 'dense-paragraph-number';
-        numberSpan.contentEditable = 'false'; // Make completely non-editable
-        numberSpan.style.cssText = `
-          display: inline;
-          color: var(--muted-foreground);
-          font-size: 0.75rem;
-          opacity: 0.8;
-          margin-right: 0.25rem;
-          user-select: none;
-          pointer-events: none;
-          -webkit-user-select: none;
-          -moz-user-select: none;
-          -ms-user-select: none;
-        `;
-        paragraph.style.display = 'inline';
-        paragraph.style.marginLeft = '0';
-        paragraph.style.textIndent = '0';
-        paragraph.style.marginRight = '0.5rem';
-      } else {
-        // Normal mode: first child in hanging indent layout
+        // Normal mode only: EXACT same as view mode - flex layout for horizontal alignment
         numberSpan.className = 'unified-paragraph-number';
-        numberSpan.contentEditable = 'false'; // Make completely non-editable
-        numberSpan.style.cssText = `
-          display: inline-block;
-          width: 1.5rem;
-          text-align: right;
-          color: var(--muted-foreground);
-          font-size: 0.75rem;
-          opacity: 0.8;
-          margin-right: 0.5rem;
-          user-select: none;
-          pointer-events: none;
-          line-height: 1.5;
-          vertical-align: top;
-          -webkit-user-select: none;
-          -moz-user-select: none;
-          -ms-user-select: none;
-        `;
-        paragraph.style.display = 'block';
+        numberSpan.contentEditable = 'false';
+        paragraph.style.display = 'flex';
+        paragraph.style.alignItems = 'baseline';
+        paragraph.style.flexWrap = 'nowrap';
         paragraph.style.marginLeft = '0'; // No margin needed
         paragraph.style.textIndent = '0'; // No text indent needed
         paragraph.style.marginRight = '0';
-      }
 
-      // Insert as first child
-      paragraph.insertBefore(numberSpan, paragraph.firstChild);
+        // Insert as first child - this makes it part of the paragraph flow
+        paragraph.insertBefore(numberSpan, paragraph.firstChild);
 
       // CRITICAL FIX: Ensure there's always a text node for content after the paragraph number
       // This prevents cursor from getting stuck in the paragraph number area

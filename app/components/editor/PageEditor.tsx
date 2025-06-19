@@ -529,6 +529,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
       isSaving={isSaving}
       linkFunctionalityEnabled={linkFunctionalityEnabled}
     >
+      {/* CRITICAL: NO extra containers - match view mode exactly */}
       <div className="editor-container w-full max-w-none">
 
       <div
@@ -581,6 +582,8 @@ const PageEditor: React.FC<PageEditorProps> = ({
                 currentPage={page}
                 isEditMode={true}
                 isNewPage={isNewPage}
+                readOnly={false}
+                canEdit={true}
               />
             </div>
           </ErrorBoundary>

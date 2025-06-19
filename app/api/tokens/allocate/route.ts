@@ -28,9 +28,9 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    if (!['page', 'group'].includes(resourceType)) {
-      return NextResponse.json({ 
-        error: 'Resource type must be "page" or "group"' 
+    if (!['page', 'group', 'user_bio', 'group_about'].includes(resourceType)) {
+      return NextResponse.json({
+        error: 'Resource type must be "page", "group", "user_bio", or "group_about"'
       }, { status: 400 });
     }
 
@@ -48,22 +48,55 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the resource exists and get recipient info
-    const resourceRef = doc(db, resourceType === 'page' ? 'pages' : 'groups', resourceId);
-    const resourceDoc = await getDoc(resourceRef);
-    
-    if (!resourceDoc.exists()) {
-      return NextResponse.json({ 
-        error: 'Resource not found' 
-      }, { status: 404 });
-    }
+    let resourceData: any = null;
 
-    const resourceData = resourceDoc.data();
-    
-    // Verify the recipient owns the resource
-    if (resourceData.userId !== recipientUserId) {
-      return NextResponse.json({ 
-        error: 'Recipient does not own this resource' 
-      }, { status: 400 });
+    if (resourceType === 'user_bio') {
+      // For user bio, the resourceId is the user ID
+      if (resourceId.replace('user_bio_', '') !== recipientUserId) {
+        return NextResponse.json({
+          error: 'Invalid user bio resource ID'
+        }, { status: 400 });
+      }
+      resourceData = { userId: recipientUserId }; // Mock resource data for user bio
+    } else if (resourceType === 'group_about') {
+      // For group about, verify the group exists and get owner
+      const groupId = resourceId.replace('group_about_', '');
+      const groupRef = doc(db, 'groups', groupId);
+      const groupDoc = await getDoc(groupRef);
+
+      if (!groupDoc.exists()) {
+        return NextResponse.json({
+          error: 'Group not found'
+        }, { status: 404 });
+      }
+
+      resourceData = groupDoc.data();
+      if (resourceData.ownerId !== recipientUserId) {
+        return NextResponse.json({
+          error: 'Recipient does not own this group'
+        }, { status: 400 });
+      }
+    } else {
+      // Regular page or group
+      const collectionName = resourceType === 'page' ? 'pages' : 'groups';
+      const resourceRef = doc(db, collectionName, resourceId);
+      const resourceDoc = await getDoc(resourceRef);
+
+      if (!resourceDoc.exists()) {
+        return NextResponse.json({
+          error: 'Resource not found'
+        }, { status: 404 });
+      }
+
+      resourceData = resourceDoc.data();
+
+      // Verify the recipient owns the resource
+      const ownerField = resourceType === 'group' ? 'ownerId' : 'userId';
+      if (resourceData[ownerField] !== recipientUserId) {
+        return NextResponse.json({
+          error: 'Recipient does not own this resource'
+        }, { status: 400 });
+      }
     }
 
     // Allocate tokens
@@ -126,16 +159,16 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 });
     }
 
-    if (!['page', 'group'].includes(resourceType)) {
-      return NextResponse.json({ 
-        error: 'Resource type must be "page" or "group"' 
+    if (!['page', 'group', 'user_bio', 'group_about'].includes(resourceType)) {
+      return NextResponse.json({
+        error: 'Resource type must be "page", "group", "user_bio", or "group_about"'
       }, { status: 400 });
     }
 
     // Remove allocation
     const result = await TokenService.removeTokenAllocation(
       userId,
-      resourceType as 'page' | 'group',
+      resourceType as 'page' | 'group' | 'user_bio' | 'group_about',
       resourceId
     );
 

@@ -274,7 +274,7 @@ const Home = React.memo(function Home() {
           >
 
             <RecentActivity
-              limit={3}
+              limit={10}
               renderFilterInHeader={true}
               showViewAll={true}
             />

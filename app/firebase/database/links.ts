@@ -21,8 +21,22 @@ export const extractLinksFromNodes = (nodes: SlateContent[]): LinkData[] => {
         type: 'external'
       };
 
-      // Check if it's an internal page link
-      if (linkData.url.startsWith('/') || linkData.url.includes('/pages/')) {
+      // ENHANCED: Check for direct pageId property first (most reliable)
+      if (node.pageId) {
+        linkData.type = 'page';
+        linkData.pageId = node.pageId;
+      }
+      // ENHANCED: Check for direct userId property
+      else if (node.userId) {
+        linkData.type = 'user';
+        linkData.userId = node.userId;
+      }
+      // ENHANCED: Check for isExternal flag
+      else if (node.isExternal) {
+        linkData.type = 'external';
+      }
+      // Fallback: Check URL patterns
+      else if (linkData.url.startsWith('/') || linkData.url.includes('/pages/')) {
         linkData.type = 'page';
         // Extract page ID from URL
         const pageIdMatch = linkData.url.match(/\/pages\/([^\/\?#]+)/);
@@ -37,9 +51,8 @@ export const extractLinksFromNodes = (nodes: SlateContent[]): LinkData[] => {
           }
         }
       }
-
       // Check if it's a user link
-      if (linkData.url.includes('/user/') || linkData.url.includes('/users/')) {
+      else if (linkData.url.includes('/user/') || linkData.url.includes('/users/')) {
         linkData.type = 'user';
         const userIdMatch = linkData.url.match(/\/users?\/([^\/\?#]+)/);
         if (userIdMatch) {
@@ -142,10 +155,17 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
         // Extract links from the page content
         const links = extractLinksFromNodes(contentNodes);
 
-        // Debug logging for the first few pages
+        // Enhanced debug logging for the first few pages
         if (backlinks.length < 3) {
           console.log(`[DEBUG] Page ${doc.id} (${data.title}) has ${links.length} links:`,
-            links.map(l => ({ url: l.url, type: l.type, pageId: l.pageId })));
+            links.map(l => ({
+              url: l.url,
+              type: l.type,
+              pageId: l.pageId,
+              userId: l.userId,
+              text: l.text?.substring(0, 50) + (l.text?.length > 50 ? '...' : '')
+            })));
+          console.log(`[DEBUG] Looking for links to pageId: ${pageId}`);
         }
 
         // Check if any link points to our target page

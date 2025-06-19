@@ -10,6 +10,7 @@ import dynamic from "next/dynamic";
 import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../utils/UnsavedChangesDialog";
 import { AuthContext } from "../../providers/AuthProvider";
+import TokenPledgeBar from "../payments/TokenPledgeBar";
 
 import EmptyContentState from '../utils/EmptyContentState';
 import { GroupAboutSkeleton } from "../ui/page-skeleton";
@@ -291,6 +292,14 @@ const GroupAboutTab: React.FC<GroupAboutTabProps> = ({ group, canEdit: propCanEd
         isSaving={isLoading || isHandlingNavigation}
       />
 
+      {/* Token Pledge Bar for supporting group about content */}
+      {!isEditing && (
+        <TokenPledgeBar
+          pageId={`group_about_${group.id}`}
+          pageTitle={`${group.name} Group About`}
+          authorId={group.ownerId}
+        />
+      )}
 
     </div>
   );

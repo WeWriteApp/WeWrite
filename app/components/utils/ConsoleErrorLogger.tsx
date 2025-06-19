@@ -24,23 +24,57 @@ export default function ConsoleErrorLogger() {
       return args.map(arg => {
         if (typeof arg === 'object' && arg !== null) {
           try {
-            // Create a new Set for each serialization to track circular references
-            const localSeen = new Set();
+            // Check if this is a Next.js params or searchParams object (Promise-like)
+            if (arg && typeof arg.then === 'function') {
+              return '[Next.js Async Params - Use React.use() to access]';
+            }
 
-            // Handle circular references and other serialization issues
-            return JSON.stringify(arg, (key, value) => {
-              if (typeof value === 'object' && value !== null) {
-                // Simple circular reference detection
-                if (localSeen.has(value)) {
-                  return '[Circular]';
-                }
-                localSeen.add(value);
+            // For objects, use a safer approach that doesn't trigger Next.js warnings
+            // Instead of JSON.stringify which can trigger property access, use a custom approach
+            if (arg.constructor === Object || Array.isArray(arg)) {
+              // For plain objects and arrays, try to safely serialize
+              try {
+                // Use a replacer function that's more careful about property access
+                const safeStringify = (obj: any, depth = 0): string => {
+                  if (depth > 3) return '[Max Depth Reached]';
+
+                  if (obj === null) return 'null';
+                  if (typeof obj !== 'object') return String(obj);
+
+                  if (Array.isArray(obj)) {
+                    return '[' + obj.map(item => safeStringify(item, depth + 1)).join(', ') + ']';
+                  }
+
+                  // For objects, be very careful about property enumeration
+                  try {
+                    const entries: string[] = [];
+                    // Use Object.getOwnPropertyNames to avoid triggering getters/proxies
+                    const props = Object.getOwnPropertyNames(obj);
+                    for (const prop of props.slice(0, 10)) { // Limit to first 10 properties
+                      try {
+                        const value = obj[prop];
+                        entries.push(`"${prop}": ${safeStringify(value, depth + 1)}`);
+                      } catch (e) {
+                        entries.push(`"${prop}": "[Property Access Error]"`);
+                      }
+                    }
+                    return '{' + entries.join(', ') + '}';
+                  } catch (e) {
+                    return '[Object Enumeration Error]';
+                  }
+                };
+
+                return safeStringify(arg);
+              } catch (e) {
+                return '[Serialization Error]';
               }
-              return value;
-            }, 2);
+            }
+
+            // For other object types, use toString if available
+            return arg.toString ? arg.toString() : '[Object]';
           } catch (e) {
             // Fallback for any serialization errors
-            return arg.toString ? arg.toString() : String(arg);
+            return '[Error formatting object]';
           }
         }
         return String(arg);

@@ -1221,8 +1221,8 @@ select,
 
 /* FIX: Allow pill links to use available space more generously */
 .paragraph-with-number a {
-  display: inline-flex !important;
-  align-items: center;
+  /* PillStyleContext now uses inline-flex with proper alignment */
+  vertical-align: baseline !important; /* Ensure proper alignment with paragraph numbers */
   /* Increase available space for links - only constrain when truly necessary */
   max-width: calc(100vw - 6rem); /* Account for paragraph number and margins with generous space */
 }
@@ -1246,45 +1246,44 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   color: white !important;
 }
 
-/* COMPOUND LINK FIXES - Ensure proper separation and styling */
+/* COMPOUND LINK FIXES - Ensure proper separation and styling with inline-block layout */
 .compound-link-container {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 0.25rem !important; /* gap-1 equivalent */
-  flex-wrap: nowrap !important;
+  display: inline-block !important;
+  vertical-align: baseline !important;
+  white-space: nowrap !important;
 }
 
 /* Prevent any global link styles from merging compound link pills */
 .compound-link-container > a,
 .compound-link-container > span > a {
-  margin-left: 0 !important;
-  margin-right: 0 !important;
+  margin-left: 0.125rem !important;
+  margin-right: 0.125rem !important;
   border-radius: 0.5rem !important; /* Maintain individual pill border radius */
+  display: inline-block !important;
+  vertical-align: baseline !important;
 }
 
 /* Ensure compound link "by" text is properly spaced and styled */
 .compound-link-container > .text-muted-foreground {
-  margin: 0 !important;
+  margin: 0 0.125rem !important;
   padding: 0 !important;
   display: inline !important;
-  flex-shrink: 0 !important;
+  vertical-align: baseline !important;
 }
 
 /* Additional compound link fixes for edit mode */
-[data-slate-editor] .compound-link-container {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 0.25rem !important;
-  flex-wrap: nowrap !important;
+[contenteditable] .compound-link-container {
+  display: inline-block !important;
+  vertical-align: baseline !important;
+  white-space: nowrap !important;
 }
 
 /* Ensure compound link pills in edit mode maintain separation */
-[data-slate-editor] .compound-link-container .page-portion,
-[data-slate-editor] .compound-link-container .author-portion {
-  display: inline-flex !important;
-  align-items: center !important;
-  margin: 0 !important;
-  flex-shrink: 0 !important;
+[contenteditable] .compound-link-container .page-portion,
+[contenteditable] .compound-link-container .author-portion {
+  display: inline-block !important;
+  vertical-align: baseline !important;
+  margin: 0 0.125rem !important;
   border-radius: 0.5rem !important;
 }
 
@@ -1299,6 +1298,33 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   border: none !important;
   padding: 0 !important;
   margin: 0 !important;
+}
+
+/* CRITICAL: ContentEditable specific compound link fixes */
+[contenteditable] .compound-link-container {
+  /* Use inline-block to prevent vertical stacking while preserving layout */
+  display: inline-block !important;
+  vertical-align: baseline !important;
+  white-space: nowrap !important;
+  /* Prevent any flex or block behavior */
+  flex-direction: row !important;
+  align-items: baseline !important;
+}
+
+/* Ensure "by" text in contentEditable maintains inline flow */
+[contenteditable] .compound-link-container .text-muted-foreground {
+  display: inline !important;
+  margin: 0 0.125rem !important;
+  padding: 0 !important;
+  vertical-align: baseline !important;
+  white-space: nowrap !important;
+}
+
+/* Force all compound link children to be inline in contentEditable */
+[contenteditable] .compound-link-container > * {
+  display: inline-block !important;
+  vertical-align: baseline !important;
+  margin: 0 0.125rem !important;
 }
 
 /* Comprehensive fix for text contrast issues */

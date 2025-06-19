@@ -617,6 +617,38 @@ const TextView: React.FC<TextViewProps> = ({
       }
     }
 
+    // For dense mode, return content directly without block containers
+    if (effectiveMode === LINE_MODES.DENSE) {
+      return (
+        <span
+          key={`textview-dense-${effectiveMode}`}
+          className="dense-mode-textview-wrapper"
+          onClick={handleContentClick}
+        >
+          {!parsedContents && !isSearch && (
+            <span className="text-muted-foreground">No content available</span>
+          )}
+
+          {parsedContents && (
+            <RenderContent
+              key={`${renderKey}-${effectiveMode}`}
+              contents={parsedContents}
+              language={language}
+              loadedParagraphs={loadedParagraphs}
+              effectiveMode={effectiveMode}
+              canEdit={canEdit}
+              activeLineIndex={activeLineIndex}
+              onActiveLine={handleActiveLine}
+              showDiff={showDiff}
+              clickPosition={clickPosition}
+              isEditing={isEditing}
+            />
+          )}
+        </span>
+      );
+    }
+
+    // For normal mode, use the standard block layout
     return (
       <div
         key={`textview-${effectiveMode}`}
@@ -733,36 +765,52 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
     if (Array.isArray(contents)) {
       // For dense mode, render as continuous text with inline paragraph numbers
       if (effectiveMode === LINE_MODES.DENSE) {
-        return (
-          <div className="dense-content-wrapper mode-transition">
-            {contents.map((node, index) => {
-              if (!loadedParagraphs.includes(index)) return null;
-              if (node.type !== nodeTypes.PARAGRAPH) return null;
+        // FINAL FIX: Render everything as React elements but in one continuous span
+        // This avoids the div structure that's causing line breaks
+        let elements = [];
+        let elementKey = 0;
 
-              return (
-                <Fragment key={index}>
-                  <span className="dense-paragraph-number">
-                    {index + 1}
-                  </span>
-                  <span
-                    className="dense-paragraph-content"
-                    onClick={() => canEdit && onActiveLine && onActiveLine(index)}
-                    style={{ cursor: canEdit ? 'text' : 'default' }}
-                  >
-                    {node.children && node.children.map((child, i) => {
-                      if (child.type === 'link') {
-                        return <LinkNode key={i} node={child} canEdit={canEdit} isEditing={isEditing} />;
-                      } else if (child.text) {
-                        return <span key={i}>{child.text}</span>;
-                      }
-                      return null;
-                    })}
-                  </span>
-                  {index < contents.length - 1 && <span className="dense-paragraph-separator"> </span>}
-                </Fragment>
-              );
-            })}
-          </div>
+        contents.forEach((node, index) => {
+          if (!loadedParagraphs.includes(index)) return;
+          if (node.type !== nodeTypes.PARAGRAPH) return;
+
+          // Add paragraph number inline
+          elements.push(
+            <span key={`para-num-${elementKey++}`} className="dense-paragraph-number">
+              {index + 1}
+            </span>
+          );
+
+          // Process paragraph content
+          if (node.children) {
+            node.children.forEach((child, i) => {
+              if (child.type === 'link') {
+                // Render proper link component
+                elements.push(
+                  <LinkNode key={`link-${elementKey++}`} node={child} canEdit={canEdit} isEditing={isEditing} />
+                );
+              } else if (child.text) {
+                // Add text as span element
+                elements.push(
+                  <span key={`text-${elementKey++}`}>{child.text}</span>
+                );
+              }
+            });
+          }
+
+          // Add space between paragraphs (except for the last one)
+          if (index < contents.length - 1) {
+            elements.push(<span key={`space-${elementKey++}`}> </span>);
+          }
+        });
+
+        return (
+          <span
+            className="dense-content-wrapper mode-transition"
+            style={{ display: 'inline', whiteSpace: 'normal', lineHeight: '1.6' }}
+          >
+            {elements}
+          </span>
         );
       }
 
@@ -1243,78 +1291,74 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
 
       // Use PillStyleContext for consistent styling between edit and view modes
       const { getPillStyleClasses } = usePillStyle();
-      const pillStyles = getPillStyleClasses();
+      const pillStyles = getPillStyleClasses('paragraph');
 
       // Handle edit mode vs view mode click behavior
       if (canEdit && isEditing) {
         // In edit mode, clicking should open the link editor
         // Use the same pill styling as view mode for consistency
         return (
-          <span className="inline-flex items-center gap-1 compound-link-container">
-            {/* Page title portion - clickable for editing */}
-            <span className="inline-block">
-              <span
-                className={`${pillStyles} cursor-pointer page-link page-portion`}
-                data-page-id={pageId}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  // TODO: Open link editor for this link
-                  console.log('Edit mode: Open link editor for compound link');
-                }}
-              >
-                <span className="pill-text">{pageTitleText}</span>
-              </span>
+          <span
+            className="compound-link-container"
+            style={{
+              display: 'inline-block',
+              whiteSpace: 'nowrap',
+              verticalAlign: 'baseline'
+            }}
+          >
+            <span
+              className={`${pillStyles} cursor-pointer page-link page-portion`}
+              data-page-id={pageId}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // TODO: Open link editor for this link
+                console.log('Edit mode: Open link editor for compound link');
+              }}
+            >
+              <span className="pill-text">{pageTitleText}</span>
             </span>
-
-            {/* "by" text */}
-            <span className="text-muted-foreground text-sm">by</span>
-
-            {/* Author username portion - clickable for editing */}
-            <span className="inline-block">
-              <span
-                className={`${pillStyles} cursor-pointer user-link author-portion`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  // TODO: Open link editor for this link
-                  console.log('Edit mode: Open link editor for compound link');
-                }}
-              >
-                <span className="pill-text">{cleanUsername}</span>
-              </span>
+            <span className="text-muted-foreground text-sm" style={{ margin: '0 0.25rem' }}>by</span>
+            <span
+              className={`${pillStyles} cursor-pointer user-link author-portion`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // TODO: Open link editor for this link
+                console.log('Edit mode: Open link editor for compound link');
+              }}
+            >
+              <span className="pill-text">{cleanUsername}</span>
             </span>
           </span>
         );
       } else {
         // In view mode, normal navigation behavior
         return (
-          <span className="inline-flex items-center gap-1 compound-link-container">
-            {/* Page title portion - clickable pill */}
-            <span className="inline-block">
-              <PillLink
-                href={formattedHref}
-                isPublic={true}
-                className="inline page-link page-portion"
-                data-page-id={pageId}
-              >
-                {pageTitleText}
-              </PillLink>
-            </span>
-
-            {/* "by" text */}
-            <span className="text-muted-foreground text-sm">by</span>
-
-            {/* Author username portion - clickable pill */}
-            <span className="inline-block">
-              <PillLink
-                href={`/user/${cleanUsername}`}
-                isPublic={true}
-                className="inline user-link author-portion"
-              >
-                {cleanUsername}
-              </PillLink>
-            </span>
+          <span
+            className="compound-link-container"
+            style={{
+              display: 'inline-block',
+              whiteSpace: 'nowrap',
+              verticalAlign: 'baseline'
+            }}
+          >
+            <PillLink
+              href={formattedHref}
+              isPublic={true}
+              className="page-link page-portion"
+              data-page-id={pageId}
+            >
+              {pageTitleText}
+            </PillLink>
+            <span className="text-muted-foreground text-sm" style={{ margin: '0 0.25rem' }}>by</span>
+            <PillLink
+              href={`/user/${cleanUsername}`}
+              isPublic={true}
+              className="user-link author-portion"
+            >
+              {cleanUsername}
+            </PillLink>
           </span>
         );
       }
@@ -1437,7 +1481,7 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
 
   // Use PillStyleContext for consistent styling between edit and view modes
   const { getPillStyleClasses } = usePillStyle();
-  const pillStyles = getPillStyleClasses();
+  const pillStyles = getPillStyleClasses('paragraph');
 
   // Handle edit mode vs view mode click behavior for other links
   if (canEdit && isEditing) {
@@ -1582,7 +1626,7 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle, s
 
   // Use PillStyleContext for consistent styling between edit and view modes
   const { getPillStyleClasses } = usePillStyle();
-  const pillStyles = getPillStyleClasses();
+  const pillStyles = getPillStyleClasses('paragraph');
 
   // Handle edit mode vs view mode click behavior
   if (canEdit && isEditing) {

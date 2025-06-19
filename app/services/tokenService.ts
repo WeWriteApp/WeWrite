@@ -92,23 +92,49 @@ export class TokenService {
       const currentAllocation = await this.getCurrentPageAllocation(userId, pageId);
       const newAllocation = Math.max(0, currentAllocation + tokenChange);
 
-      // Get page data to find the author
-      const pageRef = doc(db, 'pages', pageId);
-      const pageDoc = await getDoc(pageRef);
+      // Determine resource type and author based on pageId format
+      let resourceType: 'page' | 'user_bio' | 'group_about' = 'page';
+      let authorId: string;
 
-      if (!pageDoc.exists()) {
-        throw new Error('Page not found');
-      }
+      if (pageId.startsWith('user_bio_')) {
+        resourceType = 'user_bio';
+        authorId = pageId.replace('user_bio_', '');
+      } else if (pageId.startsWith('group_about_')) {
+        resourceType = 'group_about';
+        // For group about pages, we need to get the group owner
+        const groupId = pageId.replace('group_about_', '');
+        const groupRef = doc(db, 'groups', groupId);
+        const groupDoc = await getDoc(groupRef);
 
-      const pageData = pageDoc.data();
-      const authorId = pageData.authorId || pageData.userId;
+        if (!groupDoc.exists()) {
+          throw new Error('Group not found');
+        }
 
-      if (!authorId) {
-        throw new Error('Page author not found');
+        const groupData = groupDoc.data();
+        authorId = groupData.ownerId;
+
+        if (!authorId) {
+          throw new Error('Group owner not found');
+        }
+      } else {
+        // Regular page
+        const pageRef = doc(db, 'pages', pageId);
+        const pageDoc = await getDoc(pageRef);
+
+        if (!pageDoc.exists()) {
+          throw new Error('Page not found');
+        }
+
+        const pageData = pageDoc.data();
+        authorId = pageData.authorId || pageData.userId;
+
+        if (!authorId) {
+          throw new Error('Page author not found');
+        }
       }
 
       // Use the full allocation method
-      const result = await this.allocateTokens(userId, authorId, 'page', pageId, newAllocation);
+      const result = await this.allocateTokens(userId, authorId, resourceType as any, pageId, newAllocation);
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to allocate tokens');
@@ -198,7 +224,7 @@ export class TokenService {
   static async allocateTokens(
     userId: string,
     recipientUserId: string,
-    resourceType: 'page' | 'group',
+    resourceType: 'page' | 'group' | 'user_bio' | 'group_about',
     resourceId: string,
     tokens: number
   ): Promise<{ success: boolean; error?: string }> {
@@ -308,7 +334,7 @@ export class TokenService {
    */
   static async removeTokenAllocation(
     userId: string,
-    resourceType: 'page' | 'group',
+    resourceType: 'page' | 'group' | 'user_bio' | 'group_about',
     resourceId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {

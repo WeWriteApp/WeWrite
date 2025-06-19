@@ -16,7 +16,7 @@ export type PillStyle = typeof PILL_STYLES[keyof typeof PILL_STYLES];
 interface PillStyleContextType {
   pillStyle: PillStyle;
   changePillStyle: (style: PillStyle) => void;
-  getPillStyleClasses: () => string;
+  getPillStyleClasses: (context?: string) => string;
   getTextColorForPill: (backgroundColor: string) => string;
 }
 
@@ -58,23 +58,26 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
   };
 
   // Get the complete pill styling classes - single source of truth
-  const getPillStyleClasses = (): string => {
+  const getPillStyleClasses = (context?: string): string => {
     // Base classes that apply to all pill styles
+    // Use inline-flex for external links to properly align icons, inline-block for others
+    const displayClass = 'inline-flex';
+
     const baseClasses = `
-      inline-flex items-center
+      ${displayClass}
+      items-center
       text-sm font-medium
       rounded-lg
       transition-colors
       whitespace-nowrap
       text-indent-0
       float-none
-      align-baseline
       leading-tight
       w-fit
       min-w-fit
       max-w-none
-      flex-none
       my-0.5
+      vertical-align-baseline
     `.trim().replace(/\s+/g, ' ');
 
     // Style-specific classes

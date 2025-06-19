@@ -32,7 +32,7 @@ export interface TextViewProps extends BaseProps {
   isSearch?: boolean;
   viewMode?: ViewMode;
   onRenderComplete?: () => void;
-  setIsEditing?: (editing: boolean) => void;
+  setIsEditing?: (editing: boolean, position?: { x: number; y: number; clientX: number; clientY: number } | null) => void;
   showDiff?: boolean;
   canEdit?: boolean;
   onActiveLine?: (lineIndex: number) => void;

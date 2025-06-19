@@ -563,6 +563,7 @@ export default function NewPage() {
           onTitleChange={handleTitleChange}
           titleError={titleError}
           canEdit={true} // User can always edit their new page
+          isNewPage={true} // Enable auto-focus for new pages
         />
         <div className="w-full max-w-none box-border">
           {/* Unified container with consistent layout matching SinglePageView */}

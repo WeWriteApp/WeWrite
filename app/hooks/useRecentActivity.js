@@ -9,7 +9,7 @@ import { getBatchUserData } from "../firebase/batchUserData";
 
 // Simple cache for recent activity data
 const activityCache = new Map();
-const CACHE_DURATION = 30000; // 30 seconds cache
+const CACHE_DURATION = 10000; // 10 seconds cache for more frequent updates
 
 const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false, mineOnly = false) => {
   const [loading, setLoading] = useState(true);

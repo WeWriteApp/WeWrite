@@ -320,9 +320,11 @@ export const getRecentActivity = async (
       // Transform bio and about activities to match page activity format
       bioAndAboutActivities = rawBioActivities.map((activity: BioActivityData): ActivityData | null => {
         if (activity.type === "bio_edit") {
+          // Remove @ symbol from username for display in page title
+          const cleanUsername = activity.username?.replace(/^@/, '') || 'Unknown';
           return {
             pageId: `user-bio-${activity.userId}`,
-            pageName: `${activity.username}'s Bio`,
+            pageName: `${cleanUsername}'s Bio`,
             userId: activity.editorId,
             username: activity.editorUsername,
             timestamp: convertToDate(activity.timestamp),

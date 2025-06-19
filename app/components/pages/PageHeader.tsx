@@ -169,15 +169,16 @@ export default function PageHeader({
 
   // Auto-focus title input for new pages
   React.useEffect(() => {
-    if (isNewPage && isEditing && canEdit && !title) {
+    if (isNewPage && isEditing && canEdit) {
       // Start editing the title immediately for new pages
       setIsEditingTitle(true);
       // Focus the input after state update
       setTimeout(() => {
         titleInputRef.current?.focus();
-      }, 100);
+        titleInputRef.current?.select(); // Select all text for immediate typing
+      }, 150); // Slightly longer delay to ensure component is fully rendered
     }
-  }, [isNewPage, isEditing, canEdit, title]);
+  }, [isNewPage, isEditing, canEdit]);
 
   // Listen for focus changes to coordinate focus rings
   React.useEffect(() => {
@@ -292,6 +293,16 @@ export default function PageHeader({
     }
     setIsEditingTitle(false);
     setIsTitleFocused(false);
+
+    // For new pages, focus the editor after title is submitted
+    if (isNewPage) {
+      setTimeout(() => {
+        const editorElement = document.querySelector('[contenteditable="true"]');
+        if (editorElement) {
+          (editorElement as HTMLElement).focus();
+        }
+      }, 100);
+    }
   };
 
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {

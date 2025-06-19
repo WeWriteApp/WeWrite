@@ -5,6 +5,7 @@ import { useEffect, useState, useMemo, useContext } from 'react';
 // Define feature flag types
 export type FeatureFlag =
   | 'payments'
+  | 'token_system'
   | 'map_view'
   | 'calendar_view'
   | 'groups'
@@ -59,6 +60,7 @@ const initializeFeatureFlags = async (): Promise<void> => {
       // Set default flags
       globalFeatureFlags = {
         payments: false,
+        token_system: false,
         map_view: false,
         calendar_view: false,
         groups: true,
@@ -73,6 +75,7 @@ const initializeFeatureFlags = async (): Promise<void> => {
     // Set safe defaults on error
     globalFeatureFlags = {
       payments: false,
+      token_system: false,
       map_view: false,
       calendar_view: false,
       groups: true,

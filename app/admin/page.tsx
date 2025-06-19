@@ -59,7 +59,12 @@ export default function AdminPage() {
       description: 'Enable subscription functionality and UI for managing user subscriptions',
       enabled: false
     },
-
+    {
+      id: 'token_system',
+      name: 'token_system',
+      description: 'Enable token-based payment system with pledge bars and real-time token allocation',
+      enabled: false
+    },
     {
       id: 'map_view',
       name: 'map_view',

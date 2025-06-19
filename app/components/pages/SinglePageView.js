@@ -29,6 +29,8 @@ import Link from "next/link";
 import Head from "next/head";
 import { Button } from "../ui/button";
 // Removed EditorContent import - ReplyEditor was replaced with Editor
+import Editor from "../editor/Editor";
+import EditingActionBar from "../editor/EditingActionBar";
 import TextView from "../editor/TextView";
 import TextViewErrorBoundary from "../editor/TextViewErrorBoundary";
 import { PageLoader } from "../ui/page-loader";
@@ -67,7 +69,7 @@ import {
   CommandItem,
   CommandList
 } from "../ui/command";
-import PageEditor from "../editor/PageEditor";
+// PageEditor removed - now using unified Editor component
 import { saveNewVersion, updateDoc, deletePage } from "../../firebase/database";
 import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../utils/UnsavedChangesDialog";
@@ -487,7 +489,7 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   // Handle insert link action from bottom toolbar
   const handleInsertLink = () => {
-    // Trigger insert link in PageEditor component
+    // Trigger insert link in unified Editor component
     const insertLinkEvent = new CustomEvent('triggerInsertLink');
     window.dispatchEvent(insertLinkEvent);
   };
@@ -1278,7 +1280,14 @@ function SinglePageView({ params, initialEditMode = false }) {
   // Pre-compute memoized values for RelatedPages component to avoid hooks order issues
   // FIXED: Always provide page data to RelatedPages, don't wait for pageFullyRendered
   // The RelatedPages component can handle loading states internally
-  const memoizedPage = useMemo(() => page, [page]);
+  // CRITICAL: Include the current content from editorState for proper related page analysis
+  const memoizedPage = useMemo(() => {
+    if (!page) return null;
+    return {
+      ...page,
+      content: JSON.stringify(editorState) // Include current content for analysis
+    };
+  }, [page, editorState]);
   const memoizedLinkedPageIds = useMemo(() =>
     pageFullyRendered ? extractLinkedPageIds(editorState) : [],
     [pageFullyRendered, editorState]
@@ -1572,10 +1581,8 @@ function SinglePageView({ params, initialEditMode = false }) {
       )}
 
       <div className="w-full max-w-none box-border">
-        {/* Unified container with consistent layout for both modes */}
-        <div className="px-4 py-4 w-full max-w-none box-border">
-          {/* Use global LineSettingsProvider for both edit and view modes */}
-          <PageProvider>
+        {/* Use global LineSettingsProvider for both edit and view modes */}
+        <PageProvider>
             <PageContentWithLineSettings
                 isEditing={isEditing}
                 page={page}
@@ -1631,7 +1638,6 @@ function SinglePageView({ params, initialEditMode = false }) {
               />
           </PageProvider>
         </div>
-      </div>
 
       {/* Backlinks and Related Pages - positioned outside main content container */}
       {!isEditing && (
@@ -1718,42 +1724,16 @@ const PageContentWithLineSettings = ({
     console.log('🔧 PageContentWithLineSettings: lineMode changed to:', lineMode);
   }, [lineMode]);
 
-  if (isEditing) {
-    return (
-      <div className="animate-in fade-in-0 duration-300 w-full">
-        <TextSelectionProvider
-          contentRef={contentRef}
-          enableCopy={true}
-          enableShare={true}
-          enableAddToPage={true}
-          username={user?.displayName || user?.username}
-        >
-          <PageEditor
-            key={`editor-${page.id}-${isEditing}`}
-            title={title}
-            setTitle={handleTitleChange}
-            initialContent={editorState}
-            onContentChange={handleContentChange}
-            isPublic={isPublic}
-            setIsPublic={handleVisibilityChange}
-            location={location}
-            setLocation={handleLocationChange}
-            onSave={(capturedContent) => handleSave(capturedContent || editorContent || editorState)}
-            onCancel={handleCancel}
-            onDelete={handleDelete}
-            isSaving={isSaving}
-            error={error}
-            isNewPage={false}
-            clickPosition={clickPosition}
-            page={page}
-          />
-        </TextSelectionProvider>
-      </div>
-    );
-  }
+  // Calculate user edit permissions
+  const canEdit = user?.uid && !isPreviewingDeleted && (
+    user.uid === page.userId ||
+    (page.groupId && hasGroupAccess)
+  );
 
   return (
-    <div className="animate-in fade-in-0 duration-300 w-full">
+    <div className={`animate-in fade-in-0 duration-300 w-full py-4 max-w-none box-border ${
+      lineMode === LINE_MODES.DENSE ? 'px-1' : 'px-4'
+    }`}>
       <TextSelectionProvider
         contentRef={contentRef}
         enableCopy={true}
@@ -1768,20 +1748,35 @@ const PageContentWithLineSettings = ({
               <p className="text-sm mt-2">Page ID: {page.id}</p>
             </div>
           }>
-            <TextView
-              key={`content-${page.id}`}
-              content={editorState}
-              viewMode={lineMode}
-              onRenderComplete={handlePageFullyRendered}
-              setIsEditing={handleSetIsEditing}
-              canEdit={
-                user?.uid && !isPreviewingDeleted && (
-                  user.uid === page.userId ||
-                  (page.groupId && hasGroupAccess)
-                )
-              }
-              isEditing={isEditing}
-            />
+            {isEditing ? (
+              /* Edit mode: Use Editor component */
+              <Editor
+                key={`unified-editor-${page.id}-${isEditing}`}
+                initialContent={editorState}
+                onChange={handleContentChange}
+                readOnly={false}
+                canEdit={canEdit}
+                onSetIsEditing={handleSetIsEditing}
+                user={user}
+                currentPage={page}
+                contentType="wiki"
+                placeholder="Start typing..."
+                isEditMode={true}
+                isNewPage={false}
+              />
+            ) : (
+              /* View mode: Use TextView component for proper dense mode support */
+              <TextView
+                key={`textview-${page.id}-${lineMode}`}
+                content={editorState}
+                page={page}
+                canEdit={canEdit}
+                setIsEditing={handleSetIsEditing}
+                user={user}
+                contentType="wiki"
+                isEditing={false}
+              />
+            )}
           </TextViewErrorBoundary>
 
           <UnifiedTextHighlighter
@@ -1791,6 +1786,17 @@ const PageContentWithLineSettings = ({
           />
         </div>
       </TextSelectionProvider>
+
+      {/* Editing Action Bar - only show in edit mode */}
+      {isEditing && (
+        <EditingActionBar
+          onSave={() => handleSave(editorState, 'button')}
+          onCancel={handleCancel}
+          onDelete={canEdit ? handleDelete : undefined}
+          isSaving={isSaving}
+          hasUnsavedChanges={hasUnsavedChanges}
+        />
+      )}
 
 
 

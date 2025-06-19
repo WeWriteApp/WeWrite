@@ -14,6 +14,7 @@ import { TokenService } from '../../services/tokenService';
 import { SUBSCRIPTION_TIERS, CUSTOM_TIER_CONFIG } from '../../utils/subscriptionTiers';
 import { useToast } from '../../components/ui/use-toast';
 import SubscriptionTierCarousel from '../../components/subscription/SubscriptionTierCarousel';
+import { useFeatureFlag } from '../../utils/feature-flags';
 
 // Define the Subscription interface
 interface Subscription {
@@ -34,6 +35,10 @@ export default function SubscriptionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedTier, setSelectedTier] = useState<string>('tier2'); // Default to Enthusiast tier
+
+  // Feature flags
+  const isTokenSystemEnabled = useFeatureFlag('token_system', user?.email, user?.uid);
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
   const [loading, setLoading] = useState(true);
   const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
   const [tokenBalance, setTokenBalance] = useState(null);
@@ -50,6 +55,12 @@ export default function SubscriptionPage() {
   useEffect(() => {
     if (!user) {
       router.push('/auth/login');
+      return;
+    }
+
+    // Redirect if token system is not enabled
+    if (!isTokenSystemEnabled || !isPaymentsEnabled) {
+      router.push('/settings');
       return;
     }
 
@@ -147,7 +158,7 @@ export default function SubscriptionPage() {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [user, router, searchParams]);
+  }, [user, router, searchParams, isTokenSystemEnabled, isPaymentsEnabled]);
 
   // Track processing time and show cancel option after 60 seconds
   React.useEffect(() => {

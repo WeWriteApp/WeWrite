@@ -202,10 +202,10 @@ export const PillLink = forwardRef(({
           data-pill-style={pillStyle}
           tabIndex={0}
         >
-          {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
+          {showLock && <Lock size={14} className="flex-shrink-0" />}
           <span className="pill-text">{formattedDisplayTitle}</span>
-          <ExternalLink size={14} className="ml-1 flex-shrink-0" />
-          {formattedByline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
+          <ExternalLink size={14} className="flex-shrink-0" />
+          {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
         </a>
 
         <ExternalLinkPreviewModal
@@ -308,10 +308,10 @@ export const PillLink = forwardRef(({
         }
       }}
     >
-      {showLock && <Lock size={14} className="mr-1 flex-shrink-0" />}
-      {isGroupLinkType && <Users size={14} className="mr-1 flex-shrink-0" />}
+      {showLock && <Lock size={14} className="flex-shrink-0" />}
+      {isGroupLinkType && <Users size={14} className="flex-shrink-0" />}
       <span className="pill-text">{formattedDisplayTitle}</span>
-      {formattedByline && <span className="ml-1 text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
+      {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
     </a>
   );
 });

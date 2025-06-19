@@ -19,14 +19,16 @@ interface SettingsSection {
   icon: React.ComponentType<{ className?: string }>;
   href: string;
   requiresPayments?: boolean;
+  requiresTokenSystem?: boolean;
 }
 
 export default function SettingsIndexPage() {
   const { user } = useAuth();
   const router = useRouter();
 
-  // Check payments feature flag with proper user ID for real-time updates
+  // Check feature flags with proper user ID for real-time updates
   const paymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const tokenSystemEnabled = useFeatureFlag('token_system', user?.email, user?.uid);
 
   useEffect(() => {
     if (!user) {
@@ -47,7 +49,8 @@ export default function SettingsIndexPage() {
       title: 'Subscription',
       icon: CreditCard,
       href: '/settings/subscription',
-      requiresPayments: true
+      requiresPayments: true,
+      requiresTokenSystem: true
     },
     {
       id: 'earnings',
@@ -73,6 +76,9 @@ export default function SettingsIndexPage() {
   // Filter sections based on feature flags
   const availableSections = settingsSections.filter(section => {
     if (section.requiresPayments && !paymentsEnabled) {
+      return false;
+    }
+    if (section.requiresTokenSystem && !tokenSystemEnabled) {
       return false;
     }
     return true;
