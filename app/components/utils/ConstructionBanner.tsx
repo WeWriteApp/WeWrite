@@ -2,8 +2,9 @@
 
 import { useAuth } from "../../providers/AuthProvider";
 import { AlertTriangle, Heart } from "lucide-react";
-import Link from "next/link";
 import { Button } from "../ui/button";
+import { useFeatureFlag } from "../../utils/feature-flags";
+import { openExternalLink } from "../../utils/pwa-detection";
 
 /**
  * Construction banner component that appears at the bottom of logged-in pages
@@ -11,11 +12,22 @@ import { Button } from "../ui/button";
  */
 export default function ConstructionBanner() {
   const { user } = useAuth();
+  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
 
   // Only show for logged-in users
   if (!user) {
     return null;
   }
+
+  const handleSupportClick = () => {
+    if (isPaymentsEnabled) {
+      // Navigate to subscription page when payments are enabled
+      window.location.href = '/settings/subscription';
+    } else {
+      // Open OpenCollective in new tab when payments are disabled
+      openExternalLink('https://opencollective.com/wewrite-app', 'Construction Banner Support');
+    }
+  };
 
   return (
     <div className="w-full bg-red-600 text-white border-t border-red-700 shadow-lg">
@@ -36,16 +48,15 @@ export default function ConstructionBanner() {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 shrink-0">
-            <Link href="/settings/subscription">
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 transition-all duration-200"
-              >
-                <Heart className="h-4 w-4 mr-2" />
-                Support Us
-              </Button>
-            </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 transition-all duration-200"
+              onClick={handleSupportClick}
+            >
+              <Heart className="h-4 w-4 mr-2" />
+              Support Us
+            </Button>
           </div>
         </div>
       </div>

@@ -298,12 +298,16 @@ if (typeof window !== 'undefined') {
     }, 1000);
   });
 
-  // Generate report on page unload (for debugging)
-  window.addEventListener('beforeunload', () => {
-    if (process.env.NODE_ENV === 'development') {
-      performanceMonitor.generateReport();
-    }
-  });
+  // Generate report on page unload (for debugging) - only in development and less frequently
+  if (process.env.NODE_ENV === 'development') {
+    let reportGenerated = false;
+    window.addEventListener('beforeunload', () => {
+      if (!reportGenerated) {
+        performanceMonitor.generateReport();
+        reportGenerated = true;
+      }
+    });
+  }
 }
 
 export default performanceMonitor;

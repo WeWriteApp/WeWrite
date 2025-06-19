@@ -30,6 +30,7 @@ import { checkPageAccess } from "./access";
 import { extractLinksFromNodes } from "./links";
 import { generateCacheKey, getCacheItem, setCacheItem } from "../../utils/cacheUtils";
 import { trackQueryPerformance } from "../../utils/queryMonitor";
+import { trackQuery, trackedFirestoreQuery } from "../../utils/queryOptimizer";
 import { recordUserActivity } from "../streaks";
 import { createLinkNotification, createAppendNotification } from "../notifications";
 
@@ -176,13 +177,17 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
  * Get a page by ID with access control
  */
 export const getPageById = async (pageId: string, userId: string | null = null): Promise<PageWithLinks> => {
-  return await trackQueryPerformance('getPageById', async () => {
-    try {
-      // Validate pageId
-      if (!pageId) {
-        console.error("getPageById called with empty pageId");
-        return { pageData: null, error: "Invalid page ID" };
-      }
+  return await trackedFirestoreQuery('getPageById', async () => {
+    return await trackQueryPerformance('getPageById', async () => {
+      try {
+        // Track this query for optimization analysis
+        trackQuery('getPageById', { pageId, userId });
+
+        // Validate pageId
+        if (!pageId) {
+          console.error("getPageById called with empty pageId");
+          return { pageData: null, error: "Invalid page ID" };
+        }
 
       // Check cache first (only for public pages or if user is the owner)
       const cacheKey = generateCacheKey('page', pageId, userId || 'public');
@@ -357,7 +362,8 @@ export const getPageById = async (pageId: string, userId: string | null = null):
 
       return { pageData: null, error: errorMessage };
     }
-  }, { pageId, userId });
+    }, { pageId, userId });
+  }, { collection: 'pages', pageId });
 };
 
 /**

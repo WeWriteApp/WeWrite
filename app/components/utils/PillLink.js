@@ -11,7 +11,7 @@ import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
 import { Button } from "../ui/button";
 import { usePillStyle } from "../../contexts/PillStyleContext";
 import { navigateToPage, canUserEditPage } from "../../utils/pagePermissions";
-import { getPageById } from "../../firebase/database/pages";
+import { getCachedPageById } from "../../utils/requestCache";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 
 // Simple skeleton loader
@@ -112,8 +112,8 @@ export const PillLink = forwardRef(({
     if (isPageLinkType && pageId && user && fetchAttempts < maxAttempts) {
       const fetchPageData = async () => {
         try {
-          // Use proper page access function instead of direct Firestore access
-          const result = await getPageById(pageId, user?.uid);
+          // Use cached page access with deduplication
+          const result = await getCachedPageById(pageId, user?.uid);
           if (result.pageData && !result.error) {
             setPageData(result.pageData);
             setLastError(null); // Clear error on success
