@@ -509,9 +509,9 @@ function calculateRelevanceScore(sourceWords, targetWords, targetTitle = '', isC
  *
  * @param {Object} page - The current page object with title and content
  * @param {Array} linkedPageIds - Array of page IDs that are already linked in the page content
- * @param {number} maxPages - Maximum number of related pages to display (default: 8)
+ * @param {number} maxPages - Maximum number of related pages to display (default: 20)
  */
-export default function RelatedPages({ page, linkedPageIds = [], maxPages = 8 }) {
+export default function RelatedPages({ page, linkedPageIds = [], maxPages = 20 }) {
   const [relatedPages, setRelatedPages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -852,8 +852,8 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 8 })
           <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
         </div>
       ) : relatedPages.length > 0 ? (
-        // Results state - fixed height container with overflow
-        <div className="flex flex-wrap gap-2 py-4 min-h-[100px] max-h-[200px] overflow-y-auto">
+        // Results state - natural flow layout without scrolling
+        <div className="flex flex-wrap gap-2 py-4">
           {relatedPages.map(page => (
             <div key={page.id} className="flex-none max-w-full">
               <TooltipProvider>
@@ -863,7 +863,7 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 8 })
                       <PillLink
                         key={page.id}
                         href={`/${page.id}`}
-                        className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
+                        className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px] truncate"
                       >
                         {page.title && isDailyNoteFormat(page.title)
                           ? formatDateString(page.title)

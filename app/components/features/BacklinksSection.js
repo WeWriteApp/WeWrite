@@ -65,7 +65,31 @@ const getNoBacklinksCache = (pageId) => {
 const setNoBacklinksCache = (pageId, hasNoBacklinks) => {
   try {
     const cacheJson = localStorage.getItem(NO_BACKLINKS_CACHE_KEY);
-    const cache = cacheJson ? JSON.parse(cacheJson) : {};
+    let cache = cacheJson ? JSON.parse(cacheJson) : {};
+
+    // CRITICAL FIX: Implement cache size management to prevent quota exceeded errors
+    const MAX_CACHE_ENTRIES = 100; // Limit cache to 100 entries
+    const cacheKeys = Object.keys(cache);
+
+    // If cache is at max size, remove oldest entries
+    if (cacheKeys.length >= MAX_CACHE_ENTRIES) {
+      console.log(`Cache size limit reached (${cacheKeys.length}), cleaning up old entries`);
+
+      // Sort by timestamp and keep only the newest 50 entries
+      const sortedEntries = cacheKeys
+        .map(key => ({ key, timestamp: cache[key].timestamp || 0 }))
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 50); // Keep only newest 50
+
+      // Rebuild cache with only the newest entries
+      const newCache = {};
+      sortedEntries.forEach(({ key }) => {
+        newCache[key] = cache[key];
+      });
+      cache = newCache;
+
+      console.log(`Cache cleaned up, reduced from ${cacheKeys.length} to ${Object.keys(cache).length} entries`);
+    }
 
     cache[pageId] = {
       hasNoBacklinks,
@@ -73,10 +97,72 @@ const setNoBacklinksCache = (pageId, hasNoBacklinks) => {
     };
 
     localStorage.setItem(NO_BACKLINKS_CACHE_KEY, JSON.stringify(cache));
+    console.log(`Cache updated for page ${pageId}, total entries: ${Object.keys(cache).length}`);
+
   } catch (error) {
     console.error('Error setting no-backlinks cache:', error);
+
+    // If we still get quota exceeded, clear the entire cache and try again
+    if (error.name === 'QuotaExceededError') {
+      console.warn('Quota exceeded, clearing entire backlinks cache');
+      try {
+        localStorage.removeItem(NO_BACKLINKS_CACHE_KEY);
+        // Try to set just this entry
+        const freshCache = {
+          [pageId]: {
+            hasNoBacklinks,
+            timestamp: Date.now()
+          }
+        };
+        localStorage.setItem(NO_BACKLINKS_CACHE_KEY, JSON.stringify(freshCache));
+        console.log('Cache cleared and reset with single entry');
+      } catch (secondError) {
+        console.error('Failed to reset cache after quota exceeded:', secondError);
+        // Give up on caching for this session
+      }
+    }
   }
 };
+
+// Clean up expired cache entries on app startup
+const cleanupExpiredCache = () => {
+  try {
+    const cacheJson = localStorage.getItem(NO_BACKLINKS_CACHE_KEY);
+    if (!cacheJson) return;
+
+    const cache = JSON.parse(cacheJson);
+    const now = Date.now();
+    let cleanedCount = 0;
+
+    // Remove expired entries
+    Object.keys(cache).forEach(pageId => {
+      const entry = cache[pageId];
+      if (!entry || !entry.timestamp || now - entry.timestamp > CACHE_EXPIRY) {
+        delete cache[pageId];
+        cleanedCount++;
+      }
+    });
+
+    if (cleanedCount > 0) {
+      localStorage.setItem(NO_BACKLINKS_CACHE_KEY, JSON.stringify(cache));
+      console.log(`Cleaned up ${cleanedCount} expired cache entries, ${Object.keys(cache).length} entries remaining`);
+    }
+  } catch (error) {
+    console.error('Error cleaning up expired cache:', error);
+    // If cleanup fails, clear the entire cache
+    try {
+      localStorage.removeItem(NO_BACKLINKS_CACHE_KEY);
+      console.log('Cache cleanup failed, cleared entire cache');
+    } catch (clearError) {
+      console.error('Failed to clear cache:', clearError);
+    }
+  }
+};
+
+// Run cleanup on module load
+if (typeof window !== 'undefined') {
+  cleanupExpiredCache();
+}
 
 /**
  * BacklinksSection Component
@@ -87,9 +173,9 @@ const setNoBacklinksCache = (pageId, hasNoBacklinks) => {
  *
  * @param {Object} page - The current page object
  * @param {Array} linkedPageIds - Array of page IDs that are already linked in the page content
- * @param {number} maxPages - Maximum number of backlinks to display (default: 5)
+ * @param {number} maxPages - Maximum number of backlinks to display (default: 20)
  */
-export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 5 }) {
+export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 20 }) {
   const [backlinks, setBacklinks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [maxRetriesReached, setMaxRetriesReached] = useState(false);
@@ -252,8 +338,10 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
     );
   }
 
+  // Use a fixed height container to prevent layout shifts
+  // The component will maintain the same height regardless of loading state or content
   return (
-    <div className="mt-8 pt-6 min-h-[120px]">
+    <div className="mt-8 pt-6 min-h-[180px]">
       <div className="flex items-center gap-2 mb-4">
         <h3 className="text-lg font-medium">What Links Here</h3>
         <TooltipProvider>
@@ -269,10 +357,12 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
       </div>
 
       {isLoading && !maxRetriesReached ? (
-        <div className="flex justify-center items-center py-4 min-h-[60px]">
+        // Loading state - fixed height placeholder
+        <div className="flex justify-center items-center py-4 h-[100px]">
           <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
         </div>
       ) : backlinks.length > 0 ? (
+        // Results state - natural flow layout without scrolling
         <div className="flex flex-wrap gap-2 py-4">
           {backlinks.map(page => (
             <div key={page.id} className="flex-none max-w-full">
@@ -283,7 +373,7 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
                       <PillLink
                         key={page.id}
                         href={`/${page.id}`}
-                        className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
+                        className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px] truncate"
                       >
                         {page.title && isExactDateFormat(page.title)
                           ? formatDateString(page.title)
@@ -302,7 +392,8 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
           ))}
         </div>
       ) : (
-        <div className="flex justify-center items-center py-4 min-h-[60px] text-muted-foreground border border-dotted border-border/30 rounded-md">
+        // Empty state - fixed height placeholder with subtle dotted border
+        <div className="flex justify-center items-center py-4 h-[100px] text-muted-foreground border border-dotted border-border/30 rounded-md">
           No pages link to this page
         </div>
       )}
