@@ -118,6 +118,12 @@ input, textarea, select {
     width: 100%;
     max-width: 100%;
     overflow-wrap: break-word;
+    /* ADDED: Ensure no excessive padding on mobile */
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
   }
 
   /* Ensure text doesn't overflow */
@@ -125,6 +131,18 @@ input, textarea, select {
     max-width: 100%;
     overflow-wrap: break-word;
     word-break: break-word;
+  }
+
+  /* ADDED: Ensure all content containers are properly sized on mobile */
+  .unified-editor,
+  .editor-content,
+  .unified-paragraph,
+  .unified-text-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
   }
 }
 
@@ -1306,6 +1324,25 @@ select,
   text-overflow: ellipsis;
 }
 
+/* Truncate pill links when the truncate class is applied */
+a.truncate[data-pill-style] {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+/* Ensure pill text inside truncated pill links also truncates */
+a.truncate[data-pill-style] .pill-text,
+a.truncate[data-pill-style] span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+
 /* Truncate links in the editor only when they would cause layout issues */
 .truncate-link {
   /* Only constrain width when absolutely necessary for layout */
@@ -1640,20 +1677,20 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 3rem; /* 48px */
-  height: 3rem; /* 48px */
+  width: 1.25rem; /* 20px - match icon size */
+  height: 1.25rem; /* 20px - match icon size */
   flex-shrink: 0;
-  /* Ensure icon stays in the same position during expansion */
-  margin-left: 0;
-  margin-right: 0;
+  /* Smooth transition for positioning */
+  transition: margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Sidebar button positioning - responsive to sidebar state */
 .sidebar-nav-button {
-  /* Default: center icons in collapsed state (64px sidebar) */
+  /* Default: center content in collapsed state */
+  display: flex !important;
+  align-items: center !important;
   justify-content: center !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
+  padding: 0.75rem !important; /* 12px padding */
   /* Smooth transitions */
   transition: justify-content 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1661,6 +1698,20 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   transform: translateZ(0); /* Force hardware acceleration */
   backface-visibility: hidden;
   box-sizing: border-box;
+  /* No margins - let container handle spacing */
+  margin: 0.125rem 0; /* Only vertical margins */
+  border-radius: 0.75rem; /* 12px - rounded corners */
+}
+
+/* When sidebar is expanded, left-align button content */
+.sidebar-nav-button-expanded {
+  justify-content: flex-start !important;
+}
+
+/* When sidebar is collapsed, ensure no horizontal margins */
+.w-16 .sidebar-nav-button {
+  /* No horizontal margins in collapsed state - container handles spacing */
+  margin: 0.125rem 0; /* Only vertical margins */
 }
 
 /* When sidebar is expanded (hover or persistent), align to left with proper padding */
@@ -1669,6 +1720,9 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   justify-content: flex-start !important;
   padding-left: 0.5rem !important; /* 8px - keeps icon in same visual position */
   padding-right: 0.5rem !important;
+  /* Reset margins for expanded state */
+  margin: 0.125rem 0.25rem; /* Standard margins when expanded */
+  border-radius: 0.5rem; /* 8px - less rounded when expanded */
 }
 
 /* Sidebar text animation */
