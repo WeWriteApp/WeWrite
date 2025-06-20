@@ -193,10 +193,10 @@ export default function MobileBottomNav() {
               // Prevent shrinking and maintain minimum size
               "flex-shrink-0 min-w-0",
               // Base states with enhanced light mode contrast
-              "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
-              // Active state styling with stronger visual distinction
+              "hover:bg-primary/10 active:bg-primary/20 active:scale-95",
+              // Active state styling consistent with desktop sidebar
               isMenuActive
-                ? "bg-accent text-accent-foreground shadow-sm border border-accent/50 dark:bg-accent dark:text-accent-foreground dark:border-accent/60"
+                ? "bg-primary/10 text-primary"
                 : [
                     // Light mode: higher contrast colors
                     "text-slate-600 hover:text-slate-900",
@@ -225,10 +225,10 @@ export default function MobileBottomNav() {
               // Prevent shrinking and maintain minimum size
               "flex-shrink-0 min-w-0",
               // Base states with enhanced light mode contrast
-              "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
-              // Active state styling with stronger visual distinction
+              "hover:bg-primary/10 active:bg-primary/20 active:scale-95",
+              // Active state styling consistent with desktop sidebar
               isHomeActive
-                ? "bg-accent text-accent-foreground shadow-sm border border-accent/50 dark:bg-accent dark:text-accent-foreground dark:border-accent/60"
+                ? "bg-primary/10 text-primary"
                 : [
                     // Light mode: higher contrast colors
                     "text-slate-600 hover:text-slate-900",
@@ -257,10 +257,10 @@ export default function MobileBottomNav() {
               // Prevent shrinking and maintain minimum size
               "flex-shrink-0 min-w-0",
               // Base states with enhanced light mode contrast
-              "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
-              // Active state styling with stronger visual distinction
+              "hover:bg-primary/10 active:bg-primary/20 active:scale-95",
+              // Active state styling consistent with desktop sidebar
               isProfileActive
-                ? "bg-accent text-accent-foreground shadow-sm border border-accent/50 dark:bg-accent dark:text-accent-foreground dark:border-accent/60"
+                ? "bg-primary/10 text-primary"
                 : [
                     // Light mode: higher contrast colors
                     "text-slate-600 hover:text-slate-900",
@@ -289,10 +289,10 @@ export default function MobileBottomNav() {
               // Prevent shrinking and maintain minimum size
               "flex-shrink-0 min-w-0",
               // Base states with enhanced light mode contrast
-              "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
-              // Active state styling with stronger visual distinction
+              "hover:bg-primary/10 active:bg-primary/20 active:scale-95",
+              // Active state styling consistent with desktop sidebar
               isNotificationsActive
-                ? "bg-accent text-accent-foreground shadow-sm border border-accent/50 dark:bg-accent dark:text-accent-foreground dark:border-accent/60"
+                ? "bg-primary/10 text-primary"
                 : [
                     // Light mode: higher contrast colors
                     "text-slate-600 hover:text-slate-900",
@@ -322,10 +322,10 @@ export default function MobileBottomNav() {
               // Prevent shrinking and maintain minimum size
               "flex-shrink-0 min-w-0",
               // Base states with enhanced light mode contrast
-              "hover:bg-accent/10 active:bg-accent/20 active:scale-95",
-              // Active state styling with stronger visual distinction
+              "hover:bg-primary/10 active:bg-primary/20 active:scale-95",
+              // Active state styling consistent with desktop sidebar
               isNewPageActive
-                ? "bg-accent text-accent-foreground shadow-sm border border-accent/50 dark:bg-accent dark:text-accent-foreground dark:border-accent/60"
+                ? "bg-primary/10 text-primary"
                 : [
                     // Light mode: higher contrast colors
                     "text-slate-600 hover:text-slate-900",

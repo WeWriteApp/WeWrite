@@ -10,7 +10,7 @@ import {
   Sun, Moon, Laptop, ArrowLeft, Clock, Shuffle
 } from "lucide-react";
 import { useAuth } from "../../providers/AuthProvider";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { useTheme } from "next-themes";
 import { navigateToRandomPage, RandomPageFilters } from "../../utils/randomPageNavigation";
@@ -170,6 +170,7 @@ function UnifiedSidebarContent({
 }) {
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const editorContext = useContext(EditorContext);
   const { theme, setTheme } = useTheme();
 
@@ -205,6 +206,21 @@ function UnifiedSidebarContent({
     // Admin Dashboard - only for admin users
     ...(isAdmin ? [{ icon: Shield, label: 'Admin Dashboard', href: '/admin' }] : []),
   ];
+
+  // Check if navigation item is active
+  const isNavItemActive = (item: any) => {
+    if (!item.href) return false;
+
+    // Exact match for most routes
+    if (pathname === item.href) return true;
+
+    // Special case for profile - match user profile pages
+    if (item.label === 'Profile' && user && pathname.startsWith(`/user/${user.uid}`)) {
+      return true;
+    }
+
+    return false;
+  };
 
   // Handle navigation item click
   const handleNavItemClick = (item: any) => {
@@ -275,6 +291,7 @@ function UnifiedSidebarContent({
             {navItems.map((item, index) => {
               const Icon = item.icon;
               const isRandomPage = item.label === 'Random Page';
+              const isActive = isNavItemActive(item);
 
               return (
                 <div key={item.href || index} className={cn("relative", isRandomPage && "group")}>
@@ -283,7 +300,10 @@ function UnifiedSidebarContent({
                     onClick={() => handleNavItemClick(item)}
                     className={cn(
                       "relative flex items-center h-12 w-full transition-all duration-300 ease-in-out",
-                      "text-foreground hover:bg-primary/10 hover:text-primary"
+                      "text-foreground hover:bg-primary/10 hover:text-primary",
+                      "sidebar-nav-button",
+                      // Active state styling consistent with mobile toolbar
+                      isActive && "bg-primary/10 text-primary"
                     )}
                     title={showContent ? "" : item.label}
                   >
@@ -527,7 +547,11 @@ function UnifiedSidebarContent({
                     }
                     router.push('/settings');
                   }}
-                  className="relative flex items-center h-12 w-full text-foreground hover:bg-primary/10 hover:text-primary transition-all duration-300"
+                  className={cn(
+                    "relative flex items-center h-12 w-full text-foreground hover:bg-primary/10 hover:text-primary transition-all duration-300 sidebar-nav-button",
+                    // Active state styling consistent with other nav items
+                    pathname === '/settings' && "bg-primary/10 text-primary"
+                  )}
                   title="Settings"
                 >
                   {/* Icon container - always in the same position */}
