@@ -104,13 +104,13 @@ const FilteredSearchResults = forwardRef(({
       return;
     }
 
-    lastRequestRef.current = requestSignature;
-    console.log('[FilteredSearchResults] Fetching comprehensive results for filter:', filter, 'searchTerm:', searchTerm, 'searchMode:', searchMode, 'userId:', user.uid);
-
-    // Cancel any ongoing request
+    // Cancel any ongoing request before starting new one
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
+
+    lastRequestRef.current = requestSignature;
+    console.log('[FilteredSearchResults] Fetching comprehensive results for filter:', filter, 'searchTerm:', searchTerm, 'searchMode:', searchMode, 'userId:', user.uid);
 
     setIsSearching(true);
 
@@ -190,7 +190,7 @@ const FilteredSearchResults = forwardRef(({
     }
   }, [user, resetSearchResults]);
 
-  // Debounced search function with increased delay to reduce API requests
+  // Debounced search function with standardized timing to prevent race conditions
   const debouncedSearch = useCallback(
     debounce(async (searchTerm, searchMode = false) => {
       if (!user) {
@@ -205,7 +205,7 @@ const FilteredSearchResults = forwardRef(({
       }
 
       await fetchFilteredResults(searchTerm, activeFilter, searchMode);
-    }, 1200), // Increased from 800ms to 1200ms to further reduce API requests
+    }, 500), // Standardized to 500ms for better responsiveness while preventing excessive requests
     [user, isLinkEditor, resetSearchResults, fetchFilteredResults, activeFilter]
   );
 
@@ -312,7 +312,7 @@ const FilteredSearchResults = forwardRef(({
       // This prevents the search from firing immediately when the modal opens
       const timer = setTimeout(() => {
         fetchFilteredResults('', activeFilter, false);
-      }, 800); // Increased delay to prevent immediate API call and reduce server load
+      }, 500); // Standardized delay to match debounce timing
 
       return () => clearTimeout(timer);
     }
@@ -431,7 +431,12 @@ const FilteredSearchResults = forwardRef(({
         (search.length >= characterCount || isLinkEditor) ? "opacity-100" : "opacity-0"
       }`}>
         {isSearching && (search.length >= characterCount || isLinkEditor) ? (
-          <Loader />
+          <div className="flex flex-col items-center justify-center py-8 space-y-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            <p className="text-xs text-muted-foreground">
+              {search.length >= 2 ? `Searching for "${search}"...` : 'Loading pages...'}
+            </p>
+          </div>
         ) : (
           <>
             {/* Pages Section */}
@@ -463,8 +468,8 @@ const FilteredSearchResults = forwardRef(({
               </div>
             )}
 
-            {/* No Results */}
-            {(search.length >= 2 || isLinkEditor) && pages.length === 0 && !isSearching && (
+            {/* No Results - Only show after search has completed and we have attempted a search */}
+            {(search.length >= 2 || (isLinkEditor && lastRequestRef.current !== null)) && pages.length === 0 && !isSearching && (
               <div className="p-3 text-center">
                 <div className="text-muted-foreground mb-3">
                   {search.length >= 2

@@ -18,7 +18,6 @@ import { useToast } from '../../../components/ui/use-toast';
 import { generateTextDiff } from '../../../utils/generateTextDiff';
 import { generateDiffContent } from '../../../utils/diffUtils';
 import { PageProvider } from '../../../contexts/PageContext';
-import { LineSettingsProvider } from '../../../contexts/LineSettingsContext';
 
 export default function PageVersionView({ params }: { params: Promise<{ id: string, versionId: string }> | { id: string, versionId: string } }) {
   // Handle both Promise and object params
@@ -298,8 +297,7 @@ export default function PageVersionView({ params }: { params: Promise<{ id: stri
         <div className="border-theme-strong rounded-lg p-4 mb-6">
           {version?.content ? (
             <PageProvider>
-              <LineSettingsProvider>
-                <TextViewErrorBoundary fallbackContent={
+              <TextViewErrorBoundary fallbackContent={
                   <div className="p-4 text-muted-foreground">
                     <p>Unable to display version content. The version may have formatting issues.</p>
                     <p className="text-sm mt-2">Version ID: {versionId}</p>
@@ -359,7 +357,6 @@ export default function PageVersionView({ params }: { params: Promise<{ id: stri
                     showDiff={showDiff}
                   />
                 </TextViewErrorBoundary>
-              </LineSettingsProvider>
             </PageProvider>
           ) : (
             <p className="text-muted-foreground text-center py-8">No content available for this version</p>

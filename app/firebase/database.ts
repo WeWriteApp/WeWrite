@@ -231,6 +231,25 @@ export const appendPageReference = async (
       lastModified: new Date().toISOString()
     });
 
+    // CRITICAL FIX: Invalidate caches after content update
+    try {
+      // Invalidate request cache
+      const { invalidatePageCache } = await import('../utils/requestCache');
+      invalidatePageCache(targetPageId);
+
+      // Clear page cache
+      const { clearPagesCache } = await import('../lib/pageCache');
+      clearPagesCache(pageData.userId);
+
+      // Clear optimized pages cache
+      const { clearPageCaches } = await import('./optimizedPages');
+      clearPageCaches();
+
+      console.log('✅ Caches invalidated after page content append');
+    } catch (cacheError) {
+      console.error('⚠️ Error invalidating caches after append (non-fatal):', cacheError);
+    }
+
     // Create a notification for the source page owner
     if (sourcePageData.userId && sourcePageData.userId !== (userId || pageData.userId)) {
       try {

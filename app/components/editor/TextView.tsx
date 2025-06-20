@@ -509,10 +509,10 @@ const TextView: React.FC<TextViewProps> = ({
     }
   }, [parsedContents, isInitialLoad, onRenderComplete, handlePostRender, effectiveMode]);
 
-  // Use the same CSS class structure as the Editor component for consistency
+  // Use compact styling without prose classes that add excessive padding
   const getViewModeStyles = useMemo(() => {
-    // CRITICAL: Use the same class structure as Editor component with smooth transitions
-    return `prose prose-lg max-w-none editor-content page-editor-stable box-border mode-transition ${effectiveMode === LINE_MODES.DENSE ? 'dense-mode' : 'normal-mode'}`;
+    // FIXED: Remove prose classes that add excessive padding, use compact layout
+    return `editor-content page-editor-stable box-border mode-transition ${effectiveMode === LINE_MODES.DENSE ? 'dense-mode' : 'normal-mode'}`;
   }, [effectiveMode]);
 
 
@@ -626,7 +626,11 @@ const TextView: React.FC<TextViewProps> = ({
           onClick={handleContentClick}
         >
           {!parsedContents && !isSearch && (
-            <span className="text-muted-foreground">No content available</span>
+            <span className="text-muted-foreground">
+              {/* SIMPLIFIED: Always show paragraph 1 even when no content in dense mode */}
+              <span className="dense-paragraph-number">1</span>
+              No content available
+            </span>
           )}
 
           {parsedContents && (
@@ -697,7 +701,13 @@ const TextView: React.FC<TextViewProps> = ({
 
 
           {!parsedContents && !isSearch && (
-            <div className="p-6 text-muted-foreground">No content available</div>
+            <div className="p-2 text-muted-foreground">
+              {/* FIXED: Reduced padding from p-6 to p-2 for compact layout */}
+              <div className="unified-paragraph">
+                <span className="unified-paragraph-number">1</span>
+                <span className="unified-text-content">No content available</span>
+              </div>
+            </div>
           )}
 
           {parsedContents && (

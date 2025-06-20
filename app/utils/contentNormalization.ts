@@ -90,12 +90,14 @@ export function normalizeContent(content: any): string {
 export function compareContent(currentContent: any, previousContent: any): ContentComparisonResult {
   const currentString = typeof currentContent === 'string' ? currentContent : JSON.stringify(currentContent || "");
   const previousString = typeof previousContent === 'string' ? previousContent : JSON.stringify(previousContent || "");
-  
+
   const normalizedCurrent = normalizeContent(currentContent);
   const normalizedPrevious = normalizeContent(previousContent);
-  
+
   const hasChanges = normalizedCurrent !== normalizedPrevious;
-  
+
+  // Simplified: Remove debug logging for cleaner console
+
   return {
     hasChanges,
     normalizedCurrent,

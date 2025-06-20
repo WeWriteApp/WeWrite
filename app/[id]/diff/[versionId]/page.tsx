@@ -12,7 +12,6 @@ import TextView from '../../../components/editor/TextView';
 import TextViewErrorBoundary from '../../../components/editor/TextViewErrorBoundary.js';
 import { generateDiffContent } from '../../../utils/diffUtils';
 import { PageProvider } from '../../../contexts/PageContext';
-import { LineSettingsProvider } from '../../../contexts/LineSettingsContext';
 import PageHeader from '../../../components/pages/PageHeader';
 import { useDateFormat } from '../../../contexts/DateFormatContext';
 
@@ -215,8 +214,7 @@ export default function PageDiff({ params }: PageDiffProps) {
         <div className="border-theme-strong rounded-lg p-4 mb-6">
           {diffContent ? (
             <PageProvider>
-              <LineSettingsProvider>
-                <TextViewErrorBoundary fallbackContent={
+              <TextViewErrorBoundary fallbackContent={
                   <div className="p-4 text-muted-foreground">
                     <p>Unable to display version comparison. The versions may have formatting issues.</p>
                     <p className="text-sm mt-2">Version ID: {params.versionId}</p>
@@ -228,7 +226,6 @@ export default function PageDiff({ params }: PageDiffProps) {
                     showDiff={true}
                   />
                 </TextViewErrorBoundary>
-              </LineSettingsProvider>
             </PageProvider>
           ) : (
             <p className="text-muted-foreground text-center py-8">No content available for comparison</p>

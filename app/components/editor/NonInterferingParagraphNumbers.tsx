@@ -34,9 +34,9 @@ const NonInterferingParagraphNumbers: React.FC<NonInterferingParagraphNumbersPro
 
       // CRITICAL FIX: Always show at least paragraph 1, even if no content
       if (paragraphs.length === 0) {
-        // Show paragraph 1 at the top when no content exists
+        // Show paragraph 1 at the top when no content exists - improved alignment
         positions.push({
-          top: 8, // Standard padding from top
+          top: 12, // Improved baseline alignment for empty content
           number: 1
         });
       } else {
@@ -49,9 +49,11 @@ const NonInterferingParagraphNumbers: React.FC<NonInterferingParagraphNumbersPro
           // Count this as a visible paragraph
           visibleParagraphCount++;
 
-          // Position numbers to align with text baseline
+          // Position numbers to align with text baseline - improved alignment
+          // Calculate the proper baseline offset for better visual alignment
+          const baselineOffset = 12; // Adjusted to center with first line baseline
           positions.push({
-            top: relativeTop + 8, // Adjust for padding to align with text
+            top: relativeTop + baselineOffset, // Better alignment with text baseline
             number: visibleParagraphCount
           });
         });
@@ -129,16 +131,27 @@ const NonInterferingParagraphNumbers: React.FC<NonInterferingParagraphNumbersPro
       {paragraphPositions.map((position) => (
         <div
           key={`para-${position.number}-${position.top}`}
-          className="absolute text-muted-foreground text-sm font-mono select-none"
+          className="absolute select-none"
           style={{
             top: position.top,
-            left: '-3rem', // Position further left with padding from screen edge
-            width: '2.5rem', // Wider to accommodate padding
+            left: '0.5rem', // FIXED: Position close to content, not way off to the left
+            width: '1.5rem', // Compact width for paragraph numbers
             textAlign: 'right',
-            paddingRight: '0.5rem', // Add padding from the editor content
+            paddingRight: '0.25rem', // Small padding from the editor content
             pointerEvents: 'none',
             userSelect: 'none',
-            lineHeight: '1.5'
+            lineHeight: '1.5',
+            /* Consistent styling with view mode paragraph numbers */
+            color: 'hsl(var(--muted-foreground))',
+            fontSize: '0.85em', // Consistent sizing: 85% of main text size
+            opacity: 'var(--paragraph-number-opacity, 0.7)', // Accessible opacity: 70% for better contrast
+            fontWeight: 400, // Normal weight for subtle appearance
+            transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            // Prevent layout shifts by maintaining stable dimensions
+            boxSizing: 'border-box',
+            contain: 'layout style',
+            // Improved baseline alignment
+            transform: 'translateY(-1px)' // Fine-tune vertical alignment with text baseline
           }}
         >
           {position.number}

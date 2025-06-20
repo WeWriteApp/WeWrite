@@ -13,11 +13,11 @@ import { createReplyAttribution } from "../utils/linkUtils";
 import { AuthContext } from "../providers/AuthProvider";
 import PageHeader from "../components/pages/PageHeader";
 import PageEditor from "../components/editor/PageEditor";
+import { useDateFormat } from "../contexts/DateFormatContext";
 
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../components/utils/UnsavedChangesDialog";
 import { PageProvider } from "../contexts/PageContext";
-import { LineSettingsProvider } from "../contexts/LineSettingsContext";
 
 import TokenPledgeBar from "../components/payments/TokenPledgeBar";
 import { shouldUseQueue, addToQueue, checkOperationAllowed } from "../utils/syncQueue";
@@ -76,6 +76,7 @@ export default function NewPage() {
   // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
   // const { trackPageCreationFlow, trackEditingFlow } = useWeWriteAnalytics();
   const { refreshState } = useSyncQueue();
+  const { formatDateString } = useDateFormat();
 
   // State that mimics SinglePageView
   const [isEditing] = useState(true); // Always in editing mode for new pages
@@ -129,9 +130,19 @@ export default function NewPage() {
     if (searchParams) {
       const urlTitle = searchParams.get('title');
       const urlContent = searchParams.get('content');
+      const pageType = searchParams.get('type');
 
       if (urlTitle && urlTitle.trim()) {
-        setTitle(urlTitle.trim());
+        const trimmedTitle = urlTitle.trim();
+
+        // For daily notes, automatically format the title using user's preferred date format
+        if (pageType === 'daily-note' && isExactDateFormat(trimmedTitle)) {
+          // Keep the original YYYY-MM-DD format for storage, but the display will be formatted
+          // The PageHeader component will handle the display formatting
+          setTitle(trimmedTitle);
+        } else {
+          setTitle(trimmedTitle);
+        }
       }
 
       if (urlContent && urlContent.trim()) {
@@ -203,10 +214,18 @@ export default function NewPage() {
     } else if (searchParams) {
       const titleParam = searchParams.get('title');
       const contentParam = searchParams.get('initialContent');
+      const pageType = searchParams.get('type');
 
       if (titleParam) {
         try {
-          setTitle(decodeURIComponent(titleParam));
+          const decodedTitle = decodeURIComponent(titleParam);
+
+          // For daily notes, ensure we store the YYYY-MM-DD format for consistency
+          if (pageType === 'daily-note' && isExactDateFormat(decodedTitle)) {
+            setTitle(decodedTitle); // Keep YYYY-MM-DD format for storage
+          } else {
+            setTitle(decodedTitle);
+          }
         } catch {}
       }
 
@@ -235,6 +254,11 @@ export default function NewPage() {
 
   // Handle title changes
   const handleTitleChange = (newTitle: string) => {
+    // Prevent title changes for daily notes - they should be auto-generated
+    if (isDailyNote) {
+      return;
+    }
+
     setTitle(newTitle);
     setHasTitleChanged(newTitle !== "");
 
@@ -571,7 +595,6 @@ export default function NewPage() {
             {isEditing ? (
               <div className="animate-in fade-in-0 duration-300">
                 <PageProvider>
-                  <LineSettingsProvider isEditMode={true}>
                   <PageEditor
                     title={isReply ? "" : title}
                     setTitle={isDailyNote ? () => {} : handleTitleChange} // Lock title for daily notes
@@ -604,7 +627,6 @@ export default function NewPage() {
                     title="Unsaved Changes"
                     description="You have unsaved changes. Do you want to save them before leaving?"
                   />
-                </LineSettingsProvider>
               </PageProvider>
               </div>
             ) : null}

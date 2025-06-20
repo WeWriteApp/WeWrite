@@ -113,8 +113,7 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
         setMaxRetriesReached(false);
       }
 
-      // CRITICAL FIX: Skip cache for fresh navigation to ensure real-time updates
-      // Check if this is a fresh navigation by looking at navigation history
+      // Check if this is a fresh navigation to ensure real-time updates
       const isFromNavigation = typeof window !== 'undefined' &&
         window.performance &&
         window.performance.navigation &&
@@ -207,6 +206,7 @@ export default function BacklinksSection({ page, linkedPageIds = [], maxPages = 
         } else {
           // Reset counter if we found backlinks
           emptyResultsCount.current = 0;
+          console.log(`Found ${limitedBacklinks.length} backlinks for page ${page.id}`);
           setNoBacklinksCache(page.id, false);
         }
       } catch (error) {

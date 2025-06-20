@@ -425,6 +425,9 @@ input, textarea, select {
 
     /* Active line highlight in editor */
     --active-line-highlight: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.1);
+
+    /* Paragraph numbering opacity - accessible contrast ratio */
+    --paragraph-number-opacity: 0.7;
   }
 
   .dark {
@@ -469,6 +472,9 @@ input, textarea, select {
 
     /* Active line highlight in editor - darker in dark mode */
     --active-line-highlight: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.15);
+
+    /* Paragraph numbering opacity - accessible contrast ratio (same as light mode) */
+    --paragraph-number-opacity: 0.7;
   }
 
   /* High Contrast Mode - Light */
@@ -1612,6 +1618,9 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   /* Ensure sidebar doesn't create shadows outside its boundaries */
   overflow: visible;
   contain: layout;
+  /* Prevent any layout shifts during expansion */
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
 
 /* Sidebar hover state improvements */
@@ -1634,6 +1643,32 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   width: 3rem; /* 48px */
   height: 3rem; /* 48px */
   flex-shrink: 0;
+  /* Ensure icon stays in the same position during expansion */
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Sidebar button positioning - responsive to sidebar state */
+.sidebar-nav-button {
+  /* Default: center icons in collapsed state (64px sidebar) */
+  justify-content: center !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  /* Smooth transitions */
+  transition: justify-content 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Ensure smooth transitions without layout shifts */
+  transform: translateZ(0); /* Force hardware acceleration */
+  backface-visibility: hidden;
+  box-sizing: border-box;
+}
+
+/* When sidebar is expanded (hover or persistent), align to left with proper padding */
+.w-64 .sidebar-nav-button,
+.sidebar-hover-overlay .sidebar-nav-button {
+  justify-content: flex-start !important;
+  padding-left: 0.5rem !important; /* 8px - keeps icon in same visual position */
+  padding-right: 0.5rem !important;
 }
 
 /* Sidebar text animation */
@@ -1641,6 +1676,9 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   overflow: hidden;
   transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Ensure text doesn't push icon around */
+  margin-left: 0;
+  padding-left: 0;
 }
 
 /* Enhanced shadow and backdrop when sticky */

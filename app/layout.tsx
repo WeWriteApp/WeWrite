@@ -24,7 +24,6 @@ import { SyncQueueProvider } from "./contexts/SyncQueueContext"
 import { LineSettingsProvider } from "./contexts/LineSettingsContext"
 import ConsoleErrorLogger from "./components/utils/ConsoleErrorLogger"
 import DoubleClickZoomPrevention from "./components/utils/DoubleClickZoomPrevention"
-import ZoomPreventionTest from "./components/utils/ZoomPreventionTest"
 
 
 
@@ -309,7 +308,7 @@ export default function RootLayout({
                                         <ErrorBoundary name="speed_insights" resetOnPropsChange={false}>
                                           <SpeedInsights />
                                         </ErrorBoundary>
-                                        <ZoomPreventionTest />
+
                                       </SyncQueueProvider>
                                       </PWAProvider>
                                     </LineSettingsProvider>

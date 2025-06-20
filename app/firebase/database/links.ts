@@ -9,6 +9,7 @@ export const extractLinksFromNodes = (nodes: SlateContent[]): LinkData[] => {
   const extractFromNode = (node: any) => {
     // Check if this node is a link
     if (node.type === 'link' || node.url || node.href) {
+
       // Extract text from children if available
       let linkText = node.text || node.displayText || '';
       if (!linkText && node.children && Array.isArray(node.children)) {
@@ -21,17 +22,53 @@ export const extractLinksFromNodes = (nodes: SlateContent[]): LinkData[] => {
         type: 'external'
       };
 
-      // ENHANCED: Check for direct pageId property first (most reliable)
+      // Store additional properties for compound links
+      if (node.showAuthor) {
+        linkData.showAuthor = node.showAuthor;
+      }
+      if (node.authorUsername) {
+        linkData.authorUsername = node.authorUsername;
+      }
+      if (node.pageTitle) {
+        linkData.pageTitle = node.pageTitle;
+      }
+      if (node.originalPageTitle) {
+        linkData.originalPageTitle = node.originalPageTitle;
+      }
+
+      // Check for direct pageId property first (most reliable)
       if (node.pageId) {
         linkData.type = 'page';
         linkData.pageId = node.pageId;
       }
-      // ENHANCED: Check for direct userId property
+      // Check for isPageLink flag (WeWrite specific)
+      else if (node.isPageLink) {
+        linkData.type = 'page';
+        // Try to extract pageId from URL if not directly available
+        if (linkData.url.startsWith('/pages/')) {
+          linkData.pageId = linkData.url.replace('/pages/', '').split(/[\/\?#]/)[0];
+        } else if (linkData.url.startsWith('/') && linkData.url.length > 1) {
+          const directPageId = linkData.url.substring(1).split(/[\/\?#]/)[0];
+          if (!directPageId.includes('/')) {
+            linkData.pageId = directPageId;
+          }
+        }
+      }
+      // Check for direct userId property
       else if (node.userId) {
         linkData.type = 'user';
         linkData.userId = node.userId;
       }
-      // ENHANCED: Check for isExternal flag
+      // Check for isUser flag (WeWrite specific)
+      else if (node.isUser) {
+        linkData.type = 'user';
+        // Try to extract userId from URL if not directly available
+        const userIdMatch = linkData.url.match(/\/users?\/([^\/\?#]+)/);
+        if (userIdMatch) {
+          linkData.userId = userIdMatch[1];
+        }
+      }
+      // Check for isExternal flag
       else if (node.isExternal) {
         linkData.type = 'external';
       }
@@ -114,15 +151,18 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
     const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
 
     // Query for public pages that might contain links to our target page
+    // Note: We filter out deleted pages in the loop instead of using where('deleted', '!=', true)
+    // because that requires all documents to have the 'deleted' field
     const pagesQuery = query(
       collection(db, 'pages'),
       where('isPublic', '==', true),
-      where('deleted', '!=', true),
       orderBy('lastModified', 'desc'),
       limit(100) // Get more pages to search through
     );
 
     const snapshot = await getDocs(pagesQuery);
+    console.log(`Found ${snapshot.docs.length} pages to search through`);
+
     const backlinks: Array<{
       id: string;
       title: string;
@@ -132,20 +172,41 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
     }> = [];
 
     // Search through page content for links to our target page
+    let pagesProcessed = 0;
+    let pagesWithContent = 0;
+    let pagesWithLinks = 0;
+
     for (const doc of snapshot.docs) {
       const data = doc.data();
+      pagesProcessed++;
 
       // Skip the target page itself
-      if (doc.id === pageId) continue;
+      if (doc.id === pageId) {
+        continue;
+      }
+
+      // Skip deleted pages (filter here instead of in query)
+      if (data.deleted === true) {
+        continue;
+      }
 
       // Skip if no content
-      if (!data.content) continue;
+      if (!data.content) {
+        continue;
+      }
+
+      pagesWithContent++;
 
       try {
         // Parse content if it's a string
         let contentNodes: SlateContent[] = [];
         if (typeof data.content === 'string') {
-          contentNodes = JSON.parse(data.content);
+          try {
+            contentNodes = JSON.parse(data.content);
+          } catch (parseError) {
+            console.warn(`Failed to parse content for page ${doc.id}:`, parseError);
+            continue;
+          }
         } else if (Array.isArray(data.content)) {
           contentNodes = data.content;
         } else {
@@ -155,17 +216,8 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
         // Extract links from the page content
         const links = extractLinksFromNodes(contentNodes);
 
-        // Enhanced debug logging for the first few pages
-        if (backlinks.length < 3) {
-          console.log(`[DEBUG] Page ${doc.id} (${data.title}) has ${links.length} links:`,
-            links.map(l => ({
-              url: l.url,
-              type: l.type,
-              pageId: l.pageId,
-              userId: l.userId,
-              text: l.text?.substring(0, 50) + (l.text?.length > 50 ? '...' : '')
-            })));
-          console.log(`[DEBUG] Looking for links to pageId: ${pageId}`);
+        if (links.length > 0) {
+          pagesWithLinks++;
         }
 
         // Check if any link points to our target page
@@ -197,7 +249,6 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
         });
 
         if (hasLinkToTarget) {
-          console.log(`[DEBUG] Found backlink: Page ${doc.id} (${data.title}) links to ${pageId}`);
           backlinks.push({
             id: doc.id,
             title: data.title || 'Untitled',

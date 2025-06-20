@@ -167,8 +167,8 @@ a[data-user-id]::before {
   display: flex;
   align-items: baseline; /* CRITICAL: Align to baseline for proper text alignment */
   flex-wrap: nowrap; /* CRITICAL: Prevent wrapping to new line */
-  margin-bottom: 0.75rem;
-  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding: 0.25rem;
   box-sizing: border-box;
   min-height: 2.5rem;
   width: 100%;
@@ -198,8 +198,8 @@ a[data-user-id]::before {
 .editor-content.normal-mode > .paragraph-div {
   /* Basic paragraph styling for contentEditable - NO FLEX LAYOUT */
   position: relative;
-  margin-bottom: 0.75rem;
-  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding: 0.25rem;
   box-sizing: border-box;
   min-height: 2.5rem;
   width: 100%;
@@ -264,15 +264,23 @@ a[data-user-id]::before {
   /* Flex item that doesn't shrink */
   flex-shrink: 0; /* CRITICAL: Never shrink the paragraph number */
   width: 1.5rem;
+  min-width: 1.5rem; /* Prevent shrinking below minimum width */
   text-align: right;
-  color: var(--muted-foreground);
-  font-size: 0.75rem;
-  opacity: 0.8;
+  /* Theme-aware color inheritance with accessibility-compliant opacity */
+  color: hsl(var(--muted-foreground));
+  font-size: 0.85em; /* Consistent sizing: 85% of main text size */
+  opacity: var(--paragraph-number-opacity, 0.7); /* Accessible opacity: 70% for better contrast */
   user-select: none;
   pointer-events: none;
   line-height: 1.5;
   margin-right: 0.5rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Improved baseline alignment for view mode */
+  align-self: baseline; /* Ensure proper baseline alignment within flex container */
+  font-weight: 400; /* Normal weight for subtle appearance */
+  /* Prevent layout shifts by maintaining stable dimensions */
+  box-sizing: border-box;
+  contain: layout style;
 }
 
 /* Text content styling - flex item that takes remaining space */
@@ -609,13 +617,22 @@ div.unified-paragraph {
   /* No container padding needed - each paragraph handles its own layout with flexbox */
 }
 
+/* View mode specific styling - reduce outer padding for more compact layout */
+.prose.prose-lg.normal-mode:not(.dense-mode) {
+  /* Override default prose padding for more compact view mode layout */
+  padding-left: 1rem !important; /* Reduced from default prose padding */
+  padding-right: 1rem !important; /* Reduced from default prose padding */
+  padding-top: 0.5rem !important; /* Reduced from default prose padding */
+  padding-bottom: 0.5rem !important; /* Reduced from default prose padding */
+}
+
 /* Style each paragraph div in normal mode - SIMPLIFIED for contentEditable */
 .editor-content.normal-mode > div,
 .editor-content.normal-mode > .paragraph-div {
   /* Basic paragraph styling without flex layout that breaks contentEditable */
   position: relative;
-  margin-bottom: 0.75rem;
-  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding: 0.25rem;
   box-sizing: border-box;
   min-height: 2.5rem;
   width: 100%;
@@ -699,17 +716,8 @@ div.unified-paragraph {
   box-shadow: 0 0 0 2px hsl(var(--muted-foreground) / 0.2) !important;
 }
 
-/* Editor container focus ring - only in edit mode */
-.unified-editor:not([data-readonly="true"]) .editor-content:focus-within {
-  /* Use box-shadow with offset instead of outline to prevent layout shifts */
-  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.3), 0 0 0 4px hsl(var(--primary) / 0.1);
-  border-radius: 0.5rem;
-}
-
-.title-focused .unified-editor:not([data-readonly="true"]) .editor-content:focus-within {
-  /* Use box-shadow with offset instead of outline to prevent layout shifts */
-  box-shadow: 0 0 0 2px hsl(var(--muted-foreground) / 0.3), 0 0 0 4px hsl(var(--muted-foreground) / 0.1) !important;
-}
+/* Editor container focus ring - REMOVED to eliminate unwanted UI elements during title editing */
+/* These focus rings were creating visual clutter around the entire editor container */
 
 /* Dense mode container - allow text to wrap naturally */
 .dense-mode {
@@ -747,10 +755,13 @@ div.unified-paragraph {
   top: auto !important;
   width: auto !important;
   text-align: left !important;
-  margin-right: 0.125rem !important; /* Minimal space after number */
+  margin-right: 0.25rem !important; /* Consistent margin with dense-paragraph-number */
   margin-left: 0 !important; /* NO left margin in dense mode for continuous flow */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 500; /* Slightly bolder for better visibility */
+  font-weight: 400; /* Normal weight for subtle appearance */
+  font-size: 0.85em; /* Consistent sizing: 85% of main text size */
+  opacity: var(--paragraph-number-opacity, 0.7); /* Accessible opacity: 70% for better contrast */
+  color: hsl(var(--muted-foreground)); /* Theme-aware color inheritance */
 }
 
 /* First paragraph number has no left margin */
@@ -873,11 +884,14 @@ span.external-link:hover {
   margin: 0 0.25rem 0 0 !important; /* Small right margin only */
   padding: 0 !important;
   vertical-align: baseline !important;
-  font-size: inherit !important;
+  font-size: 0.85em !important; /* Consistent sizing: 85% of main text size */
   line-height: inherit !important;
   position: static !important; /* No absolute positioning */
   float: none !important;
   clear: none !important;
+  color: hsl(var(--muted-foreground)) !important; /* Theme-aware color inheritance */
+  opacity: var(--paragraph-number-opacity, 0.7) !important; /* Accessible opacity: 70% for better contrast */
+  font-weight: 400 !important; /* Normal weight for subtle appearance */
 }
 
 /* Dense mode text content should flow inline */
@@ -928,19 +942,23 @@ span.external-link:hover {
 
 /* Dense mode paragraph numbers - inline with content */
 .dense-paragraph-number {
-  color: var(--muted-foreground);
-  font-size: 0.75rem;
-  opacity: 0.8;
-  margin-right: 0.125rem !important; /* Minimal right margin */
+  /* Theme-aware color inheritance */
+  color: hsl(var(--muted-foreground));
+  font-size: 0.85em; /* Consistent sizing: 85% of main text size */
+  opacity: var(--paragraph-number-opacity, 0.7); /* Accessible opacity: 70% for better contrast */
+  margin-right: 0.25rem !important; /* Slightly more margin for readability */
   margin-left: 0 !important; /* NO left margin for continuous flow */
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-  font-weight: 500;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 400; /* Normal weight for subtle appearance */
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: inline !important;
+  /* Prevent layout shifts by maintaining stable dimensions */
+  box-sizing: border-box;
+  contain: layout style;
 }
 
 /* First paragraph number has no left margin */

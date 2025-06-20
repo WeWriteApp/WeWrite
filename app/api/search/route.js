@@ -137,6 +137,11 @@ function checkSearchMatch(normalizedTitle, searchTermLower) {
     console.log(`🔍 checkSearchMatch: title="${normalizedTitle}", search="${searchTermLower}"`);
   }
 
+  // Performance optimization: Early return for empty search terms
+  if (!searchTermLower || searchTermLower.length === 0) {
+    return false;
+  }
+
   // First try exact substring match (fastest and most accurate)
   if (normalizedTitle.includes(searchTermLower)) {
     if (isDebug) console.log(`✅ Exact substring match found`);
@@ -256,21 +261,14 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
 
     // STEP 1: Search user's own pages
     if (userId) {
-      // Use simpler queries to avoid index requirements, filter deleted pages client-side
+      // Optimized: Use single query with higher limit to reduce API calls
       const userQueries = [
-        // Recent pages by lastModified
+        // Primary query by lastModified (most recent pages first)
         query(
           collection(db, 'pages'),
           where('userId', '==', filterByUserId || userId),
           orderBy('lastModified', 'desc'),
-          limit(3000)
-        ),
-        // Older pages by createdAt to catch pages that might not have lastModified
-        query(
-          collection(db, 'pages'),
-          where('userId', '==', filterByUserId || userId),
-          orderBy('createdAt', 'desc'),
-          limit(1000)
+          limit(5000) // Increased limit to capture more pages in single query
         )
       ];
 
@@ -344,21 +342,14 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
 
     // STEP 2: Search public pages (if not filtering by specific user)
     if (!filterByUserId) {
-      // Use simpler queries to avoid index requirements, filter deleted pages client-side
+      // Optimized: Use single query with higher limit to reduce API calls
       const publicQueries = [
-        // Recent pages by lastModified
+        // Primary query by lastModified (most recent public pages first)
         query(
           collection(db, 'pages'),
           where('isPublic', '==', true),
           orderBy('lastModified', 'desc'),
-          limit(2000)
-        ),
-        // Older pages by createdAt to catch pages that might not have lastModified
-        query(
-          collection(db, 'pages'),
-          where('isPublic', '==', true),
-          orderBy('createdAt', 'desc'),
-          limit(1500)
+          limit(3000) // Increased limit to capture more pages in single query
         )
       ];
 
@@ -448,10 +439,17 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
       console.log('❌ No pages found for search term:', searchTermLower);
     }
 
-    // Fetch usernames for pages that don't have them
+    // Optimized username fetching with caching to reduce redundant lookups
+    const usernameCache = new Map();
     const resultsWithUsernames = await Promise.all(allResults.map(async (result) => {
       if (result.userId && !result.username) {
         try {
+          // Check cache first
+          if (usernameCache.has(result.userId)) {
+            result.username = usernameCache.get(result.userId);
+            return result;
+          }
+
           // Import Firestore modules
           const { doc, getDoc } = await import('firebase/firestore');
           const userDocRef = doc(db, 'users', result.userId);
@@ -459,13 +457,17 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
 
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            result.username = userData.username || 'Anonymous';
+            const username = userData.username || 'Anonymous';
+            result.username = username;
+            usernameCache.set(result.userId, username); // Cache the result
           } else {
             result.username = 'Anonymous';
+            usernameCache.set(result.userId, 'Anonymous'); // Cache the result
           }
         } catch (error) {
           console.error('Error fetching username for user:', result.userId, error);
           result.username = 'Anonymous';
+          usernameCache.set(result.userId, 'Anonymous'); // Cache the error result
         }
       }
       return result;

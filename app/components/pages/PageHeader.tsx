@@ -120,7 +120,7 @@ export default function PageHeader({
   const [isAddToPageOpen, setIsAddToPageOpen] = React.useState<boolean>(false);
   const [isEditingTitle, setIsEditingTitle] = React.useState<boolean>(false);
   const [editingTitle, setEditingTitle] = React.useState<string>(title || "");
-  const titleInputRef = React.useRef<HTMLInputElement>(null);
+  const titleInputRef = React.useRef<HTMLTextAreaElement>(null);
   const [isTitleFocused, setIsTitleFocused] = React.useState<boolean>(false);
   const [isEditorFocused, setIsEditorFocused] = React.useState<boolean>(false);
 
@@ -183,6 +183,14 @@ export default function PageHeader({
       }, 150); // Slightly longer delay to ensure component is fully rendered
     }
   }, [isNewPage, isEditing, canEdit]);
+
+  // Auto-resize textarea when editing title starts
+  React.useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.style.height = 'auto';
+      titleInputRef.current.style.height = titleInputRef.current.scrollHeight + 'px';
+    }
+  }, [isEditingTitle]);
 
   // Listen for focus changes to coordinate focus rings
   React.useEffect(() => {
@@ -328,6 +336,19 @@ export default function PageHeader({
   const handleTitleFocus = () => {
     setIsTitleFocused(true);
     setIsEditorFocused(false);
+    // Auto-resize textarea to fit content
+    if (titleInputRef.current) {
+      titleInputRef.current.style.height = 'auto';
+      titleInputRef.current.style.height = titleInputRef.current.scrollHeight + 'px';
+    }
+  };
+
+  // Auto-resize textarea when content changes
+  const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setEditingTitle(e.target.value);
+    // Auto-resize textarea to fit content
+    e.target.style.height = 'auto';
+    e.target.style.height = e.target.scrollHeight + 'px';
   };
 
   // Fetch username if not provided but userId is available
@@ -659,8 +680,6 @@ export default function PageHeader({
                 </Button>
               )}
 
-
-
               <div
                 className={`text-center space-y-0 transition-all duration-200 ease-out will-change-transform header-mobile-safe w-full max-w-none ${
                   isScrolled ? "flex flex-row items-center gap-1 sm:gap-2 pl-0" : "flex flex-col items-center"
@@ -685,23 +704,22 @@ export default function PageHeader({
                       <span className="text-muted-foreground">Loading title...</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1.5">
-                      {isEditing && canEdit && isEditingTitle ? (
-                        <input
+                    <div className={`flex items-center ${isPrivate ? 'gap-1.5' : ''}`}>
+                      {isEditing && canEdit && isEditingTitle && !isDailyNote ? (
+                        <textarea
                           ref={titleInputRef}
-                          type="text"
                           value={editingTitle}
-                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onChange={handleTitleChange}
                           onKeyDown={handleTitleKeyDown}
                           onBlur={handleTitleBlur}
                           onFocus={handleTitleFocus}
                           tabIndex={isNewPage ? 1 : undefined} // Explicit first position for new pages
-                          className={`bg-background/80 border rounded-lg px-2 py-1 outline-none font-semibold text-center transition-all duration-200 ${
+                          className={`bg-background/80 border rounded-lg px-2 py-1 outline-none font-semibold text-center transition-all duration-200 resize-none overflow-hidden ${
                             titleError
                               ? "border-destructive focus:ring-2 focus:ring-destructive/20 focus:border-destructive"
                               : isTitleFocused
                               ? "border-primary/50 ring-2 ring-primary/20"
-                              : "border-muted-foreground/30 ring-2 ring-muted-foreground/10"
+                              : "border-muted-foreground/30"
                           } ${
                             isScrolled
                               ? "text-xs opacity-90"
@@ -710,9 +728,12 @@ export default function PageHeader({
                           style={{
                             maxWidth: isScrolled ? "50vw" : "100%",
                             minWidth: isScrolled ? "60px" : "auto",
-                            width: isScrolled ? "auto" : "100%" // Full width on mobile when expanded
+                            width: isScrolled ? "auto" : "100%", // Full width on mobile when expanded
+                            minHeight: isScrolled ? "auto" : "2.5rem", // Minimum height for expanded state
+                            lineHeight: isScrolled ? "1.2" : "1.3" // Better line height for readability
                           }}
                           placeholder={isNewPage ? "Give your page a title..." : "Add a title..."}
+                          rows={1}
                         />
                       ) : (
                         <span
@@ -722,7 +743,7 @@ export default function PageHeader({
                                   titleError
                                     ? "border-destructive hover:border-destructive/70"
                                     : isEditorFocused
-                                    ? "border-muted-foreground/30 ring-2 ring-muted-foreground/10"
+                                    ? "border-muted-foreground/30"
                                     : "border-muted-foreground/20 hover:border-muted-foreground/30"
                                 }`
                               : isDailyNote && !isScrolled

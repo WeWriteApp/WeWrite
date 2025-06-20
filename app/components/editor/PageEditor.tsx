@@ -383,9 +383,9 @@ const PageEditor: React.FC<PageEditorProps> = ({
       console.log("PageEditor: Content changed:", value?.length, "paragraphs");
     }
 
-    // CRITICAL FIX: Don't update currentEditorValue during editing
-    // This was causing the Editor to re-render and lose multi-line content
-    // Only update if we're not actively editing to prevent cursor issues
+    // CRITICAL FIX: Update currentEditorValue to ensure save captures latest content
+    // The previous "fix" was preventing content updates, causing save to use stale content
+    setCurrentEditorValue(value);
 
     if (onContentChange) {
       onContentChange(value);
@@ -689,6 +689,13 @@ const PageEditor: React.FC<PageEditorProps> = ({
                   }
 
                   console.log("🔵 PageEditor: Calling onSave with updated content");
+                  console.log("🔵 PageEditor: Content being saved:", {
+                    contentType: typeof currentContent,
+                    isArray: Array.isArray(currentContent),
+                    length: Array.isArray(currentContent) ? currentContent.length : 0,
+                    preview: JSON.stringify(currentContent).substring(0, 300),
+                    fullContent: JSON.stringify(currentContent, null, 2)
+                  });
                   onSave(currentContent);
                 } catch (error) {
                   console.error("🔴 PageEditor: Error capturing content before save:", error);

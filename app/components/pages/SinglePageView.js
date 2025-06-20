@@ -50,7 +50,7 @@ import { toast } from "../ui/use-toast";
 import { RecentPagesContext } from "../../contexts/RecentPagesContext";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { PageProvider } from "../../contexts/PageContext";
-import { LineSettingsProvider, useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
+import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
 import { Switch } from "../ui/switch";
 import {
   Dialog,
@@ -102,7 +102,7 @@ import { detectPageChanges } from "../../utils/contentNormalization";
  */
 function SinglePageView({ params, initialEditMode = false }) {
   const [page, setPage] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(initialEditMode); // SIMPLIFIED: Start in edit mode if initialEditMode is true
   const [editorState, setEditorState] = useState([]);
   const [editorError, setEditorError] = useState(null);
   const [isDeleted, setIsDeleted] = useState(false);
@@ -131,6 +131,9 @@ function SinglePageView({ params, initialEditMode = false }) {
   const [hasVisibilityChanged, setHasVisibilityChanged] = useState(false);
   const [hasLocationChanged, setHasLocationChanged] = useState(false);
   const [titleError, setTitleError] = useState(false);
+
+  // CRITICAL FIX: Add ref to access editor content
+  const editorRef = useRef(null);
 
   // Deleted page preview state
   const [isPreviewingDeleted, setIsPreviewingDeleted] = useState(false);
@@ -173,6 +176,7 @@ function SinglePageView({ params, initialEditMode = false }) {
 
     setEditorContent(content);
     setHasContentChanged(true);
+    console.log("🔵 SinglePageView: hasContentChanged set to TRUE");
   };
 
   // Handle visibility changes
@@ -187,6 +191,9 @@ function SinglePageView({ params, initialEditMode = false }) {
     setHasLocationChanged(true);
   };
 
+  // CRITICAL FIX: Create a ref to store the getCurrentContent function
+  const getCurrentContentRef = useRef(null);
+
   // Handle save action - comprehensive save logic moved from EditPage
   const handleSave = useCallback(async (inputContent, saveMethod = 'button') => {
     console.log("🔵 SinglePageView handleSave called with:", {
@@ -194,7 +201,23 @@ function SinglePageView({ params, initialEditMode = false }) {
       contentType: typeof inputContent,
       isArray: Array.isArray(inputContent),
       length: Array.isArray(inputContent) ? inputContent.length : 0,
-      saveMethod
+      saveMethod,
+      hasUser: !!user,
+      hasPage: !!page,
+      pageId: page?.id,
+      userId: user?.uid,
+      currentEditorContent: editorContent,
+      currentEditorState: editorState,
+      hasContentChanged,
+      hasTitleChanged
+    });
+
+    console.log("🔵 SAVE DEBUG: Current state before save:", {
+      editorContent,
+      editorState,
+      hasContentChanged,
+      hasTitleChanged,
+      title
     });
 
     if (!user) {
@@ -231,8 +254,30 @@ function SinglePageView({ params, initialEditMode = false }) {
     // });
 
     try {
-      // Use the provided content or fall back to current editor content
-      let finalContent = inputContent || editorContent || editorState;
+      // CRITICAL FIX: Get current content from editor using callback function
+      let finalContent = inputContent;
+
+      if (!finalContent && getCurrentContentRef.current) {
+        console.log("🔵 SAVE: Getting current content from editor via callback");
+        try {
+          finalContent = getCurrentContentRef.current();
+          console.log("🔵 SAVE: Got content from editor:", {
+            contentType: typeof finalContent,
+            isArray: Array.isArray(finalContent),
+            length: Array.isArray(finalContent) ? finalContent.length : 0,
+            preview: JSON.stringify(finalContent).substring(0, 200)
+          });
+        } catch (editorError) {
+          console.error("🔴 SAVE: Error getting content from editor:", editorError);
+          finalContent = null;
+        }
+      }
+
+      // Fall back to stored content if editor content is not available
+      if (!finalContent) {
+        finalContent = editorContent || editorState;
+        console.log("🔵 SAVE: Using fallback content from state");
+      }
 
       // CRITICAL FIX: Allow empty content to be saved
       // Users should be able to save pages with just a title
@@ -255,66 +300,31 @@ function SinglePageView({ params, initialEditMode = false }) {
       const editorStateJSON = JSON.stringify(finalContent);
       console.log("Saving content:", editorStateJSON.substring(0, 100) + "...");
 
-      // Use centralized change detection logic
-      const currentPageState = {
-        title,
-        isPublic,
-        location,
-        groupId,
-        content: finalContent
-      };
+      // SIMPLIFIED: Skip complex change detection - just save the content
+      console.log('💾 SIMPLIFIED: Saving content directly without complex change detection');
 
-      const previousPageState = {
-        title: page.title,
-        isPublic: page.isPublic,
-        location: page.location,
-        groupId: page.groupId,
-        content: page.content
-      };
-
-      const changeDetection = detectPageChanges(currentPageState, previousPageState);
-      const { hasContentChanges, hasMetadataChanges, hasAnyChanges } = changeDetection;
-
-      console.log('Comprehensive change detection:', {
-        hasContentChanges,
-        hasMetadataChanges,
-        hasAnyChanges,
-        contentDetails: changeDetection.contentComparison.details
+      // SIMPLIFIED: Always save when user clicks save - no complex change detection
+      console.log('💾 SIMPLIFIED SAVE: Always saving when user clicks save button');
+      console.log('💾 Content to save:', {
+        contentLength: Array.isArray(finalContent) ? finalContent.length : 'not array',
+        contentPreview: JSON.stringify(finalContent).substring(0, 200)
       });
 
-      // If no changes detected, skip the entire save operation
-      if (!hasAnyChanges) {
-        console.log('No meaningful changes detected, skipping save operation');
-        setIsSaving(false);
-
-        // Still exit edit mode since user intended to save
-        setTimeout(() => {
-          handleSetIsEditing(false);
-        }, 300);
-
-        return true;
-      }
-
-      // Update the page document with changes
-      console.log(`Updating page ${page.id} with changes - content: ${hasContentChanges}, metadata: ${hasMetadataChanges}`);
+      // SIMPLIFIED: Update the page document directly
+      console.log(`💾 Updating page ${page.id} with new content`);
 
       // Import serverTimestamp for proper Firestore timestamp
       const { serverTimestamp } = await import('firebase/firestore');
 
-      // Prepare update data - only include lastModified if there are actual changes
+      // Prepare update data - always update everything
       const updateData = {
         title: title,
         isPublic: isPublic,
         groupId: groupId,
         location: location,
-        content: editorStateJSON
+        content: editorStateJSON,
+        lastModified: serverTimestamp()
       };
-
-      // Only update lastModified if there are meaningful changes
-      // This prevents "no changes" activities from appearing in the feed
-      if (hasAnyChanges) {
-        updateData.lastModified = serverTimestamp();
-      }
 
       await updateDoc("pages", page.id, updateData);
 
@@ -332,27 +342,46 @@ function SinglePageView({ params, initialEditMode = false }) {
         }
       }
 
-      // Only create a new version if content actually changed
-      if (hasContentChanges) {
-        try {
-          const result = await saveNewVersion(page.id, {
-            content: editorStateJSON,
-            userId: user.uid,
-            username: user.displayName || user.username,
-            skipIfUnchanged: true
-          });
+      // SIMPLIFIED: Always create a new version when saving
+      try {
+        const result = await saveNewVersion(page.id, {
+          content: editorStateJSON,
+          userId: user.uid,
+          username: user.displayName || user.username,
+          skipIfUnchanged: false // Always create version
+        });
 
-          if (result && result.success) {
-            console.log('New version created successfully:', result.versionId);
-          } else {
-            console.log('Version creation skipped (no changes) or failed');
-          }
-        } catch (versionError) {
-          console.error('Error creating new version:', versionError);
-          // Don't fail the entire save if version creation fails
+        if (result && result.success) {
+          console.log('💾 New version created successfully:', result.versionId);
+        } else {
+          console.log('⚠️ Version creation failed, but page was saved');
         }
-      } else {
-        console.log('Content unchanged, skipping version creation');
+      } catch (versionError) {
+        console.error('⚠️ Error creating new version:', versionError);
+        // Don't fail the entire save if version creation fails
+      }
+
+      // CRITICAL FIX: Invalidate all caches before triggering refresh
+      try {
+        // Invalidate request cache
+        const { invalidatePageCache } = await import('../../utils/requestCache');
+        invalidatePageCache(page.id);
+
+        // Clear page cache
+        const { clearPagesCache } = await import('../../lib/pageCache');
+        clearPagesCache(user.uid);
+
+        // Clear optimized pages cache
+        const { clearPageCaches } = await import('../../firebase/optimizedPages');
+        clearPageCaches();
+
+        // Clear stats cache
+        const { cachedStatsService } = await import('../../services/CachedStatsService');
+        cachedStatsService.clearCache('page', page.id);
+
+        console.log('✅ All caches invalidated after save');
+      } catch (cacheError) {
+        console.error('⚠️ Error invalidating caches (non-fatal):', cacheError);
       }
 
       // Reset all change tracking states
@@ -591,13 +620,13 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   // Memoized save function for the useUnsavedChanges hook
   const saveChanges = useCallback(() => {
-    return handleSave(editorContent || editorState, 'button');
-  }, [editorContent, editorState, handleSave]);
+    return handleSave(null, 'button'); // Let handleSave get current content from editor
+  }, [handleSave]);
 
   // Keyboard save handler
   const handleKeyboardSave = useCallback(() => {
-    return handleSave(editorContent || editorState, 'keyboard');
-  }, [editorContent, editorState, handleSave]);
+    return handleSave(null, 'keyboard'); // Let handleSave get current content from editor
+  }, [handleSave]);
 
   // Use the unsaved changes hook
   const {
@@ -1019,13 +1048,9 @@ function SinglePageView({ params, initialEditMode = false }) {
         }
         // Check for initialEditMode prop (from /[id]/edit route)
         else if (initialEditMode) {
-          console.log('Setting edit mode from initialEditMode prop');
-          // Use animation for smooth transition from normal view to edit mode
-          setShouldAnimateToEdit(true);
-          setTimeout(() => {
-            setIsEditing(true);
-            setShouldAnimateToEdit(false);
-          }, 100); // Small delay to ensure page is rendered first
+          console.log('Setting edit mode from initialEditMode prop - IMMEDIATE');
+          // SIMPLIFIED: Set edit mode immediately without delay
+          setIsEditing(true);
         }
       } else {
         console.log('User does not have edit permissions for this page');
@@ -1061,15 +1086,22 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   // Listen for page-updated events to refresh the page data
   useEffect(() => {
-    const handlePageUpdated = (event) => {
+    const handlePageUpdated = async (event) => {
       // Only refresh if this is the page that was updated
       if (event.detail && event.detail.pageId === params.id) {
         console.log('Page updated event received, refreshing page data');
 
-        // CRITICAL FIX: Don't set isLoading to true here, as it causes a flash of loading state
-        // when switching from edit to view mode
-        // setIsLoading(true);
+        // CRITICAL FIX: Ensure caches are cleared before refetching
+        try {
+          // Additional cache invalidation to ensure fresh data
+          const { invalidatePageCache } = await import('../../utils/requestCache');
+          invalidatePageCache(params.id);
+          console.log('✅ Cache invalidated in page-updated event handler');
+        } catch (cacheError) {
+          console.error('⚠️ Error invalidating cache in event handler:', cacheError);
+        }
 
+        // Force a fresh fetch by creating a new listener
         listenToPageById(params.id, (data) => {
           if (data.error) {
             // Don't show error if page is being deleted - user is already redirected
@@ -1077,6 +1109,13 @@ function SinglePageView({ params, initialEditMode = false }) {
               setError(data.error);
             }
           } else {
+            console.log('📄 Received fresh page data after update:', {
+              hasPageData: !!data.pageData,
+              hasVersionData: !!data.versionData,
+              pageTitle: data.pageData?.title,
+              versionId: data.versionData?.id || data.pageData?.currentVersion
+            });
+
             setPage(data.pageData || data);
 
             // Update editor state with the new content
@@ -1583,9 +1622,9 @@ function SinglePageView({ params, initialEditMode = false }) {
       )}
 
       <div className="w-full max-w-none box-border">
-        {/* Use global LineSettingsProvider for both edit and view modes */}
+        {/* Use global LineSettingsProvider - no need for page-specific provider */}
         <PageProvider>
-            <PageContentWithLineSettings
+          <PageContentWithLineSettings
                 isEditing={isEditing}
                 page={page}
                 user={user}
@@ -1614,6 +1653,9 @@ function SinglePageView({ params, initialEditMode = false }) {
                 hasUnsavedChanges={hasUnsavedChanges}
                 clickPosition={clickPosition}
                 isPreviewingDeleted={isPreviewingDeleted}
+                editorRef={editorRef}
+                getCurrentContentRef={getCurrentContentRef}
+                isEditMode={isEditing}
               />
 
               {/* Unsaved Changes Dialog */}
@@ -1638,7 +1680,7 @@ function SinglePageView({ params, initialEditMode = false }) {
                 isLoading={confirmationState.isLoading}
                 icon={confirmationState.icon}
               />
-          </PageProvider>
+        </PageProvider>
         </div>
 
       {/* Backlinks and Related Pages - positioned outside main content container */}
@@ -1673,7 +1715,7 @@ function SinglePageView({ params, initialEditMode = false }) {
           }
           isEditing={isEditing}
           setIsEditing={handleSetIsEditing}
-          onSave={() => handleSave(editorState, 'button')}
+          onSave={() => handleSave(null, 'button')} // Let handleSave get current content from editor
           onCancel={handleCancelWithCheck}
           onDelete={handleDelete}
           onInsertLink={handleInsertLink}
@@ -1722,7 +1764,10 @@ const PageContentWithLineSettings = ({
   titleError,
   hasUnsavedChanges,
   clickPosition,
-  isPreviewingDeleted
+  isPreviewingDeleted,
+  editorRef,
+  getCurrentContentRef,
+  isEditMode
 }) => {
   // Now we can access the LineSettings context since we're inside the provider
   const { lineMode, setLineMode } = useLineSettings();
@@ -1732,6 +1777,25 @@ const PageContentWithLineSettings = ({
     console.log('🔧 PageContentWithLineSettings: lineMode changed to:', lineMode);
   }, [lineMode]);
 
+  // CRITICAL FIX: Set up the getCurrentContent callback
+  useEffect(() => {
+    if (getCurrentContentRef && editorRef) {
+      getCurrentContentRef.current = () => {
+        if (editorRef.current && editorRef.current.getContent) {
+          return editorRef.current.getContent();
+        }
+        return null;
+      };
+    }
+
+    // Cleanup function
+    return () => {
+      if (getCurrentContentRef) {
+        getCurrentContentRef.current = null;
+      }
+    };
+  }, [getCurrentContentRef, editorRef]);
+
   // Calculate user edit permissions
   const canEdit = user?.uid && !isPreviewingDeleted && (
     user.uid === page.userId ||
@@ -1740,7 +1804,7 @@ const PageContentWithLineSettings = ({
 
   return (
     <div className={`animate-in fade-in-0 duration-300 w-full py-4 max-w-none box-border ${
-      lineMode === LINE_MODES.DENSE ? 'px-1' : 'px-4'
+      lineMode === LINE_MODES.DENSE ? 'px-0' : 'px-0'
     }`}>
       <TextSelectionProvider
         contentRef={contentRef}
@@ -1757,9 +1821,10 @@ const PageContentWithLineSettings = ({
             </div>
           }>
             {isEditing ? (
-              /* Edit mode: Use Editor component */
+              /* SIMPLIFIED EDIT MODE: Direct Editor component */
               <Editor
-                key={`unified-editor-${page.id}-${isEditing}`}
+                ref={editorRef}
+                key={`editor-${page.id}`}
                 initialContent={editorState}
                 onChange={handleContentChange}
                 readOnly={false}
@@ -1773,9 +1838,9 @@ const PageContentWithLineSettings = ({
                 isNewPage={false}
               />
             ) : (
-              /* View mode: Use TextView component for proper dense mode support */
+              /* SIMPLIFIED VIEW MODE: Direct TextView component */
               <TextView
-                key={`textview-${page.id}-${lineMode}`}
+                key={`textview-${page.id}`}
                 content={editorState}
                 page={page}
                 canEdit={canEdit}

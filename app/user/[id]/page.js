@@ -10,7 +10,6 @@ import SingleProfileView from '../../components/pages/SingleProfileView';
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { useAuth } from "../../providers/AuthProvider";
 import { PageProvider } from '../../contexts/PageContext';
-import { LineSettingsProvider } from '../../contexts/LineSettingsContext';
 
 export default function UserPage({ params }) {
   // Handle both Promise and object params
@@ -159,9 +158,7 @@ export default function UserPage({ params }) {
     <>
       {/* ...existing profile rendering... */}
       <PageProvider>
-        <LineSettingsProvider>
-          <SingleProfileView profile={profile} />
-        </LineSettingsProvider>
+        <SingleProfileView profile={profile} />
       </PageProvider>
     </>
   );

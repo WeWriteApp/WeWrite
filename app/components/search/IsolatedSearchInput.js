@@ -63,7 +63,7 @@ const IsolatedSearchInput = ({
     }
   }, [autoFocus]);
 
-  // Stable debounced search function
+  // Stable debounced search function with standardized timing
   const debouncedSearch = useCallback((value) => {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
@@ -75,7 +75,7 @@ const IsolatedSearchInput = ({
         lastSearchValue.current = value;
         onSearch(value);
       }
-    }, 300);
+    }, 500); // Standardized to 500ms to match other search components
   }, [onSearch]);
 
   // Handle input changes - optimized for maximum performance

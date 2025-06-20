@@ -224,7 +224,7 @@ const Search = () => {
       } finally {
         setIsSearching(false);
       }
-    }, 1000), // Increased debounce to 1 second to reduce API requests
+    }, 500), // Standardized debounce timing to 500ms for consistent behavior
     [user, searchCache]
   );
 

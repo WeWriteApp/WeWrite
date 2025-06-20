@@ -1601,8 +1601,8 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                 }}
               />
 
-              {/* NON-INTERFERING: Pure overlay paragraph numbers */}
-              {!readOnly && lineMode === LINE_MODES.NORMAL && (
+              {/* SIMPLIFIED: Always show paragraph numbers in edit mode */}
+              {!readOnly && (
                 <NonInterferingParagraphNumbers editorRef={editorRef} />
               )}
             </>

@@ -65,12 +65,14 @@ export const useSearchState = (userId: string | null, userGroups: string[] | nul
 
   // Memoized search function that's stable across re-renders
   const performSearch = useCallback(async (searchTerm: string): Promise<void> => {
-    // Cancel any ongoing search
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+    const trimmedSearchTerm = searchTerm.trim();
 
-    if (!searchTerm || !searchTerm.trim()) {
+    // Handle empty search terms
+    if (!searchTerm || !trimmedSearchTerm) {
+      // Cancel any ongoing search
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       setResults({ pages: [], users: [], groups: [] });
       setIsLoading(false);
       setCurrentQuery('');
@@ -78,20 +80,23 @@ export const useSearchState = (userId: string | null, userGroups: string[] | nul
       return Promise.resolve(); // Return resolved promise for consistency
     }
 
-    const trimmedSearchTerm = searchTerm.trim();
-
     // Prevent duplicate searches, but allow retry if previous search failed
     if (trimmedSearchTerm === lastSearchRef.current && results.pages.length > 0) {
       console.log('Skipping duplicate search with existing results');
       return Promise.resolve(); // Return resolved promise for consistency
     }
 
-    lastSearchRef.current = trimmedSearchTerm;
-    setIsLoading(true);
-    setCurrentQuery(trimmedSearchTerm);
+    // Cancel any ongoing search before starting new one
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
 
     // Create new abort controller for this search
     abortControllerRef.current = new AbortController();
+
+    lastSearchRef.current = trimmedSearchTerm;
+    setIsLoading(true);
+    setCurrentQuery(trimmedSearchTerm);
 
     try {
       // Allow searches even without authentication for public content

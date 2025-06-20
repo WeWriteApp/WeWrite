@@ -28,7 +28,8 @@ const SearchResultsDisplay = React.memo(({
   isLoading,
   groupsEnabled,
   userId,
-  onSave
+  onSave,
+  error = null
 }) => {
   const { formatDateString } = useDateFormat();
   // Memoize the combined results to prevent unnecessary recalculations
@@ -117,10 +118,19 @@ const SearchResultsDisplay = React.memo(({
       </div>
 
       <div className="space-y-6">
+        {/* Error State */}
+        {!isLoading && error && (
+          <div className="text-center py-8">
+            <p className="text-destructive mb-2">Search error occurred</p>
+            <p className="text-sm text-muted-foreground">{error}</p>
+          </div>
+        )}
+
         {/* Loading State */}
         {isLoading && (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex flex-col items-center justify-center py-8 space-y-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p className="text-sm text-muted-foreground">Searching for "{query}"...</p>
           </div>
         )}
 
@@ -188,8 +198,8 @@ const SearchResultsDisplay = React.memo(({
           </div>
         )}
 
-        {/* No Results */}
-        {!isLoading && query && query.trim() &&
+        {/* No Results - Only show after search has completed and we have a query */}
+        {!isLoading && query && query.trim() && results &&
          (!results?.pages || results.pages.length === 0) &&
          (!results?.users || results.users.length === 0) &&
          (!groupsEnabled || !results?.groups || results.groups.length === 0) && (

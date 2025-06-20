@@ -47,10 +47,11 @@ const ParagraphNumberOverlay: React.FC<ParagraphNumberOverlayProps> = ({ editorR
       const paragraphRect = paragraph.getBoundingClientRect();
       const relativeTop = paragraphRect.top - editorRect.top;
 
-      // Adjust for paragraph padding to align with text baseline
-      // The paragraph has 0.5rem (8px) padding-top, so we add that to align properly
+      // Adjust for paragraph padding to align with text baseline - improved alignment
+      // Calculate the proper baseline offset for better visual alignment
+      const baselineOffset = 12; // Adjusted to center with first line baseline
       positions.push({
-        top: relativeTop + 8, // Add padding offset to align with text
+        top: relativeTop + baselineOffset, // Better alignment with text baseline
         number: index + 1
       });
     });
