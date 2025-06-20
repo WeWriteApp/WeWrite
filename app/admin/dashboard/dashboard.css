@@ -1,0 +1,142 @@
+/* Dashboard Grid Layout Styles */
+.dashboard-grid {
+  position: relative;
+}
+
+/* Override react-grid-layout default styles to match WeWrite theme */
+.react-grid-layout {
+  position: relative;
+}
+
+.react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top;
+}
+
+.react-grid-item.cssTransforms {
+  transition-property: transform;
+}
+
+.react-grid-item > .react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZG90cyBmaWxsPSIjODg4IiBkPSJtMTUgMTJjMCAxLjY1NC0xLjM0NiAzLTMgM3MtMy0xLjM0Ni0zLTMgMS4zNDYtMyAzLTMgMyAxLjM0NiAzIDN6bTAgNWMwIDEuNjU0LTEuMzQ2IDMtMyAzcy0zLTEuMzQ2LTMtMyAxLjM0Ni0zIDMtMyAzIDEuMzQ2IDMgM3ptMCA1YzAgMS42NTQtMS4zNDYgMy0zIDNzLTMtMS4zNDYtMy0zIDEuMzQ2LTMgMy0zIDMgMS4zNDYgMyAzem01LTEwYzAgMS42NTQtMS4zNDYgMy0zIDNzLTMtMS4zNDYtMy0zIDEuMzQ2LTMgMy0zIDMgMS4zNDYgMyAzem0wIDVjMCAxLjY1NC0xLjM0NiAzLTMgM3MtMy0xLjM0Ni0zLTMgMS4zNDYtMyAzLTMgMyAxLjM0NiAzIDN6bTAgNWMwIDEuNjU0LTEuMzQ2IDMtMyAzcy0zLTEuMzQ2LTMtMyAxLjM0Ni0zIDMtMyAzIDEuMzQ2IDMgM3ptNS0xMGMwIDEuNjU0LTEuMzQ2IDMtMyAzcy0zLTEuMzQ2LTMtMyAxLjM0Ni0zIDMtMyAzIDEuMzQ2IDMgM3ptMCA1YzAgMS42NTQtMS4zNDYgMy0zIDNzLTMtMS4zNDYtMy0zIDEuMzQ2LTMgMy0zIDMgMS4zNDYgMyAzem0wIDVjMCAxLjY1NC0xLjM0NiAzLTMgM3MtMy0xLjM0Ni0zLTMgMS4zNDYtMyAzLTMgMyAxLjM0NiAzIDN6Ii8+Cjwvc3ZnPgo=');
+  background-position: bottom right;
+  padding: 0 3px 3px 0;
+  background-repeat: no-repeat;
+  background-origin: content-box;
+  box-sizing: border-box;
+  cursor: se-resize;
+}
+
+.react-grid-item.react-grid-placeholder {
+  background: hsl(var(--primary) / 0.2);
+  opacity: 0.2;
+  transition-duration: 100ms;
+  z-index: 2;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+  border-radius: 0.75rem;
+  border: 2px dashed hsl(var(--primary) / 0.5);
+}
+
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 3;
+  opacity: 0.8;
+}
+
+.react-grid-item.react-grid-placeholder {
+  background: hsl(var(--primary) / 0.1);
+  opacity: 0.2;
+  transition-duration: 100ms;
+  z-index: 2;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+}
+
+/* Dark mode adjustments */
+.dark .react-grid-item > .react-resizable-handle {
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZG90cyBmaWxsPSIjYWFhIiBkPSJtMTUgMTJjMCAxLjY1NC0xLjM0NiAzLTMgM3MtMy0xLjM0Ni0zLTMgMS4zNDYtMyAzLTMgMyAxLjM0NiAzIDN6bTAgNWMwIDEuNjU0LTEuMzQ2IDMtMyAzcy0zLTEuMzQ2LTMtMyAxLjM0Ni0zIDMtMyAzIDEuMzQ2IDMgM3ptMCA1YzAgMS42NTQtMS4zNDYgMy0zIDNzLTMtMS4zNDYtMy0zIDEuMzQ2LTMgMy0zIDMgMS4zNDYgMyAzem01LTEwYzAgMS42NTQtMS4zNDYgMy0zIDNzLTMtMS4zNDYtMy0zIDEuMzQ2LTMgMy0zIDMgMS4zNDYgMyAzem0wIDVjMCAxLjY1NC0xLjM0NiAzLTMgM3MtMy0xLjM0Ni0zLTMgMS4zNDYtMyAzLTMgMyAxLjM0NiAzIDN6bTAgNWMwIDEuNjU0LTEuMzQ2IDMtMyAzcy0zLTEuMzQ2LTMtMyAxLjM0Ni0zIDMtMyAzIDEuMzQ2IDMgM3ptNS0xMGMwIDEuNjU0LTEuMzQ2IDMtMyAzcy0zLTEuMzQ2LTMtMyAxLjM0Ni0zIDMtMyAzIDEuMzQ2IDMgM3ptMCA1YzAgMS42NTQtMS4zNDYgMy0zIDNzLTMtMS4zNDYtMy0zIDEuMzQ2LTMgMy0zIDMgMS4zNDYgMyAzem0wIDVjMCAxLjY1NC0xLjM0NiAzLTMgM3MtMy0xLjM0Ni0zLTMgMS4zNDYtMyAzLTMgMyAxLjM0NiAzIDN6Ii8+Cjwvc3ZnPgo=');
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .react-grid-item > .react-resizable-handle {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Disable dragging on mobile for better touch experience */
+  .react-grid-item.react-draggable {
+    cursor: default;
+  }
+
+  /* Larger touch targets for mobile */
+  .react-grid-item {
+    touch-action: manipulation;
+  }
+
+  /* Ensure charts are readable on mobile */
+  .dashboard-grid .wewrite-card {
+    min-height: 280px;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .dashboard-grid {
+    padding: 0 8px;
+  }
+
+  .react-grid-layout {
+    margin: 0 -8px;
+  }
+
+  /* Stack widgets vertically on very small screens */
+  .react-grid-item {
+    position: static !important;
+    transform: none !important;
+    width: 100% !important;
+    height: auto !important;
+    margin-bottom: 16px;
+  }
+
+  /* Disable grid layout on very small screens */
+  .react-grid-layout {
+    display: block;
+  }
+}
+
+/* Custom date input styling to match theme */
+input[type="date"] {
+  color-scheme: light;
+}
+
+.dark input[type="date"] {
+  color-scheme: dark;
+}
+
+/* Ensure grid items maintain proper spacing */
+.react-grid-layout .wewrite-card {
+  height: 100%;
+  margin-bottom: 0;
+}
+
+/* Loading state for grid layout */
+.dashboard-grid .loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: hsl(var(--muted-foreground));
+}

@@ -97,23 +97,28 @@ export default function EditingActionBar({
     return (
       <div className={`w-full ${className}`}>
         <div className="flex flex-col items-stretch gap-3 w-full md:flex-row md:flex-wrap md:items-center md:justify-center">
-          {/* Cancel Button */}
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={onCancel}
-            disabled={isSaving}
-            className="gap-2 w-full md:w-auto rounded-2xl font-medium"
-          >
-            <X className="h-5 w-5" />
-            <span>Cancel</span>
-          </Button>
+          {/* Mobile order: Insert Link, Save, Cancel, Delete */}
+          {/* Desktop order: Cancel, Save, Insert Link, Delete (preserved) */}
 
-          {/* Save Button */}
+          {/* Insert Link Button - First on mobile, third on desktop */}
+          {onInsertLink && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={onInsertLink}
+              disabled={isSaving}
+              className="gap-2 w-full md:w-auto rounded-2xl font-medium order-1 md:order-3"
+            >
+              <Link className="h-5 w-5" />
+              <span>Insert Link</span>
+            </Button>
+          )}
+
+          {/* Save Button - Second on mobile, second on desktop */}
           <Button
             onClick={onSave}
             disabled={isSaving}
-            className="gap-2 w-full md:w-auto rounded-2xl font-medium bg-green-600 hover:bg-green-700 text-white"
+            className="gap-2 w-full md:w-auto rounded-2xl font-medium bg-green-600 hover:bg-green-700 text-white order-2 md:order-2"
             size="lg"
           >
             {isSaving ? (
@@ -129,28 +134,26 @@ export default function EditingActionBar({
             )}
           </Button>
 
-          {/* Insert Link Button */}
-          {onInsertLink && (
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={onInsertLink}
-              disabled={isSaving}
-              className="gap-2 w-full md:w-auto rounded-2xl font-medium"
-            >
-              <Link className="h-5 w-5" />
-              <span>Insert Link</span>
-            </Button>
-          )}
+          {/* Cancel Button - Third on mobile, first on desktop */}
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="gap-2 w-full md:w-auto rounded-2xl font-medium order-3 md:order-1"
+          >
+            <X className="h-5 w-5" />
+            <span>Cancel</span>
+          </Button>
 
-          {/* Delete Button (optional) */}
+          {/* Delete Button - Last on both mobile and desktop */}
           {onDelete && (
             <Button
               variant="destructive"
               size="lg"
               onClick={onDelete}
               disabled={isSaving}
-              className="gap-2 w-full md:w-auto rounded-2xl font-medium text-white"
+              className="gap-2 w-full md:w-auto rounded-2xl font-medium text-white order-4 md:order-4"
             >
               <Trash2 className="h-5 w-5" />
               <span>Delete</span>
@@ -193,19 +196,23 @@ export default function EditingActionBar({
           border border-border rounded-2xl shadow-lg
           ${isKeyboardOpen ? 'bg-background border-2' : ''}
         `}>
-          {/* Cancel Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onCancel}
-            disabled={isSaving}
-            className="gap-2 rounded-xl"
-          >
-            <X className="h-4 w-4" />
-            <span className="hidden sm:inline">Cancel</span>
-          </Button>
+          {/* Mobile order: Insert Link, Save, Cancel, Delete */}
 
-          {/* Save Button */}
+          {/* Insert Link Button - First on mobile */}
+          {onInsertLink && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onInsertLink}
+              disabled={isSaving}
+              className="gap-2 rounded-xl"
+            >
+              <Link className="h-4 w-4" />
+              <span className="hidden sm:inline">Insert Link</span>
+            </Button>
+          )}
+
+          {/* Save Button - Second */}
           <Button
             onClick={onSave}
             disabled={isSaving}
@@ -225,14 +232,26 @@ export default function EditingActionBar({
             )}
           </Button>
 
-          {/* Delete Button (optional) */}
+          {/* Cancel Button - Third */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="gap-2 rounded-xl"
+          >
+            <X className="h-4 w-4" />
+            <span className="hidden sm:inline">Cancel</span>
+          </Button>
+
+          {/* Delete Button - Last */}
           {onDelete && (
             <Button
-              variant="outline"
+              variant="destructive"
               size="sm"
               onClick={onDelete}
               disabled={isSaving}
-              className="gap-2 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="gap-2 rounded-xl text-white"
             >
               <Trash2 className="h-4 w-4" />
               <span className="hidden sm:inline">Delete</span>

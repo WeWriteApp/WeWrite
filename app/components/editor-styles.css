@@ -168,7 +168,7 @@ a[data-user-id]::before {
   align-items: baseline; /* CRITICAL: Align to baseline for proper text alignment */
   flex-wrap: nowrap; /* CRITICAL: Prevent wrapping to new line */
   margin-bottom: 0.5rem;
-  padding: 0.25rem;
+  padding: 0.125rem 0; /* REMOVED: Eliminated horizontal padding completely */
   box-sizing: border-box;
   min-height: 2.5rem;
   width: 100%;
@@ -193,16 +193,20 @@ a[data-user-id]::before {
   contain: style;
 }
 
-/* ADDED: Editor content divs styling - separate from unified-paragraph */
+/* SIMPLIFIED: Editor content divs styling - block layout with margin for paragraph numbers */
 .editor-content.normal-mode > div,
 .editor-content.normal-mode > .paragraph-div {
-  /* Basic paragraph styling for contentEditable - NO FLEX LAYOUT */
+  /* CRITICAL: Use block layout for proper contentEditable behavior */
+  display: block;
   position: relative;
+
+  /* REDUCED: Create space for absolutely positioned paragraph numbers - reduced from 2rem to 1.5rem */
+  margin-left: 1.5rem;
   margin-bottom: 0.5rem;
-  padding: 0.25rem;
+  padding: 0.25rem 0.5rem; /* Match view mode padding */
   box-sizing: border-box;
   min-height: 2.5rem;
-  width: 100%;
+  width: calc(100% - 1.5rem); /* Account for reduced left margin */
 
   /* Typography matching unified-paragraph */
   font-size: 1rem;
@@ -221,9 +225,6 @@ a[data-user-id]::before {
   /* Prevent any unexpected layout changes */
   overflow: visible;
   contain: style;
-
-  /* CRITICAL: Use normal block layout for contentEditable */
-  display: block;
 }
 
 /* Editor content div hover state */
@@ -231,6 +232,8 @@ a[data-user-id]::before {
 .editor-content.normal-mode > .paragraph-div:hover {
   background-color: hsl(var(--muted) / 0.3);
 }
+
+/* REMOVED: Content wrapper styling - using simplified approach */
 
 /* CRITICAL: Ensure paragraphs with compound links don't wrap */
 .unified-paragraph:has(.compound-link-container) {
@@ -259,28 +262,32 @@ a[data-user-id]::before {
   background-color: hsl(var(--muted) / 0.3);
 }
 
-/* Paragraph number styling - first child in paragraph */
+/* Paragraph number styling - consistent between view and edit modes */
 .unified-paragraph-number {
   /* Flex item that doesn't shrink */
   flex-shrink: 0; /* CRITICAL: Never shrink the paragraph number */
-  width: 1.5rem;
-  min-width: 1.5rem; /* Prevent shrinking below minimum width */
+  width: 1.5rem; /* RESTORED: Back to original readable size */
+  min-width: 1.5rem; /* RESTORED: Prevent shrinking below minimum width */
   text-align: right;
   /* Theme-aware color inheritance with accessibility-compliant opacity */
   color: hsl(var(--muted-foreground));
-  font-size: 0.85em; /* Consistent sizing: 85% of main text size */
+  font-size: 0.85em; /* RESTORED: Back to readable size */
   opacity: var(--paragraph-number-opacity, 0.7); /* Accessible opacity: 70% for better contrast */
   user-select: none;
   pointer-events: none;
   line-height: 1.5;
-  margin-right: 0.5rem;
+  margin-right: 0.5rem; /* RESTORED: Back to proper spacing */
   transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  /* Improved baseline alignment for view mode */
+  /* Improved baseline alignment for both view and edit modes */
   align-self: baseline; /* Ensure proper baseline alignment within flex container */
   font-weight: 400; /* Normal weight for subtle appearance */
   /* Prevent layout shifts by maintaining stable dimensions */
   box-sizing: border-box;
   contain: layout style;
+  /* CRITICAL: Ensure paragraph numbers are never editable */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 /* Text content styling - flex item that takes remaining space */
@@ -291,8 +298,16 @@ a[data-user-id]::before {
   line-height: 1.5;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  /* FIXED: Allow text to wrap properly instead of hiding overflow */
+  overflow: visible;
   /* Reset any text-indent that might interfere */
   text-indent: 0;
+  /* ADDED: Ensure proper text wrapping within container boundaries */
+  max-width: 100%;
+  box-sizing: border-box;
+  /* REMOVED: Eliminate all padding and margins */
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 /* Edit mode paragraph numbers are now handled by injected spans - no pseudo-elements needed */
@@ -574,12 +589,15 @@ div.unified-paragraph {
 
 /* Smooth transitions for all paragraph states */
 .unified-paragraph {
-  transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out !important;
+  transition: all 0.3s ease-in-out !important;
   border: 2px solid transparent !important;
   /* Prevent layout shifts during transitions */
   transform: translateZ(0);
   backface-visibility: hidden;
   contain: layout style;
+  /* Animation for appearing paragraphs in normal mode */
+  opacity: 0;
+  animation: fadeInParagraph 0.4s ease-out forwards;
 }
 
 /* Ensure smooth transitions work in view mode */
@@ -614,17 +632,98 @@ div.unified-paragraph {
   line-height: 1.5; /* Match view mode exactly */
   font-family: inherit;
 
-  /* No container padding needed - each paragraph handles its own layout with flexbox */
+  /* No container padding needed - each paragraph handles its own layout */
 }
 
-/* View mode specific styling - reduce outer padding for more compact layout */
-.prose.prose-lg.normal-mode:not(.dense-mode) {
-  /* Override default prose padding for more compact view mode layout */
-  padding-left: 1rem !important; /* Reduced from default prose padding */
-  padding-right: 1rem !important; /* Reduced from default prose padding */
-  padding-top: 0.5rem !important; /* Reduced from default prose padding */
-  padding-bottom: 0.5rem !important; /* Reduced from default prose padding */
+/* CRITICAL: Ensure view mode containers have no excessive padding */
+.page-content.unified-editor {
+  /* Remove any default padding that might be inherited */
+  padding: 0 !important;
+  margin: 0 !important;
+  /* ADDED: Ensure proper width and prevent overflow */
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
+
+/* Ensure inner content containers also have minimal padding */
+.page-content .editor-content {
+  padding: 0 !important;
+  margin: 0 !important;
+  /* ADDED: Ensure proper width and prevent overflow */
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* ADDED: Ensure all page content containers have proper width constraints */
+.page-content,
+.unified-editor,
+.editor-content {
+  /* Prevent any container from adding excessive left padding */
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  /* Ensure content uses full available width */
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  /* CRITICAL: Remove any margins that might be causing the 20px issue */
+  margin: 0 !important;
+  /* Allow dynamic top padding to be set by inline styles */
+  padding-top: unset !important;
+}
+
+/* CRITICAL FIX: Target the specific problematic element with 20px margin */
+.page-content.unified-editor,
+.page-content .unified-editor,
+.editor-content,
+.editor-content > div,
+.page-content > div,
+.unified-editor > div {
+  margin: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* RESPONSIVE: Ensure compact layout works on mobile */
+@media (max-width: 768px) {
+  .unified-paragraph {
+    /* Reduced padding on mobile for more content space */
+    padding: 0.125rem 0.125rem;
+    margin-bottom: 0.25rem; /* Tighter spacing on mobile for more screen real estate */
+  }
+
+  .unified-paragraph-number {
+    /* MOBILE: Reasonable paragraph number space on mobile */
+    width: 1.25rem; /* RESTORED: Readable size on mobile */
+    min-width: 1.25rem;
+    margin-right: 0.375rem; /* RESTORED: Proper spacing on mobile */
+    font-size: 0.75rem; /* RESTORED: Readable font size on mobile */
+  }
+
+  .editor-content.normal-mode > div,
+  .editor-content.normal-mode > .paragraph-div {
+    /* Match mobile padding for edit mode */
+    padding: 0.25rem 0.25rem;
+    margin-bottom: 0.375rem;
+    /* MOBILE: Reduce left margin for edit mode on mobile */
+    margin-left: 1.25rem; /* Reduced from 1.5rem to 1.25rem on mobile */
+    width: calc(100% - 1.25rem); /* Account for reduced left margin */
+  }
+
+  /* MOBILE: Ensure page content containers don't add extra padding */
+  .page-content,
+  .unified-editor,
+  .editor-content {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}
+
+/* REMOVED: View mode specific styling - eliminate outer padding completely */
+/* No outer padding needed - paragraphs handle their own spacing */
 
 /* Style each paragraph div in normal mode - SIMPLIFIED for contentEditable */
 .editor-content.normal-mode > div,
@@ -653,33 +752,88 @@ div.unified-paragraph {
 
 /* Edit mode paragraph numbers - use DOM elements like view mode, not CSS counters */
 
-/* Dense mode - continuous inline text flow */
-/* CRITICAL: Higher specificity to override [contenteditable] div flex rule */
-[contenteditable].dense-mode div,
-.unified-paragraph.dense-mode,
-.editor-content.dense-mode > div {
-  /* Dense mode: Inline layout for natural text flow like a book */
-  display: inline !important;
-  margin-bottom: 0 !important;
-  margin-right: 0 !important; /* No margin - let text flow naturally */
-  padding: 0 !important;
-  border: none !important;
-  min-height: auto !important;
-  width: auto !important;
-  box-sizing: border-box;
-  vertical-align: baseline; /* Use baseline for natural text alignment */
-
-  /* Override flex properties from [contenteditable] div rule */
-  flex-direction: initial !important;
-  align-items: initial !important;
-  flex-wrap: initial !important;
-
+/* DENSE MODE STYLING - Continuous text flow with inline paragraph numbers */
+.dense-mode-container {
+  line-height: 1.5;
+  font-size: 1rem;
+  padding: 0.125rem 0.25rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  overflow: hidden;
   /* Smooth transitions for mode switching */
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s ease-in-out;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeInUp 0.4s ease-out forwards;
 }
 
-/* REMOVED: Visual separator between paragraphs in dense mode for clean appearance */
-/* Dense mode should have no visual separators for minimal, clean spacing */
+.dense-paragraph-number {
+  color: hsl(var(--muted-foreground));
+  font-weight: 500;
+  margin-right: 0.25rem;
+  font-size: 0.875rem;
+  vertical-align: baseline;
+  /* Animate the numbers appearing */
+  opacity: 0;
+  animation: fadeInNumber 0.3s ease-out forwards;
+}
+
+.dense-paragraph-content {
+  display: inline;
+  line-height: inherit;
+  /* Animate content appearing */
+  opacity: 0;
+  animation: fadeInContent 0.4s ease-out forwards;
+}
+
+.dense-paragraph-separator {
+  margin: 0 0.125rem;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+/* Animation keyframes for dense mode */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInNumber {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeInContent {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInParagraph {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 /* Focus and hover states - IDENTICAL to view mode */
 .unified-paragraph:hover {
@@ -719,105 +873,13 @@ div.unified-paragraph {
 /* Editor container focus ring - REMOVED to eliminate unwanted UI elements during title editing */
 /* These focus rings were creating visual clutter around the entire editor container */
 
-/* Dense mode container - allow text to wrap naturally */
-.dense-mode {
-  line-height: 1.6 !important; /* Slightly increased line height for readability */
-}
+/* Dense mode removed */
 
-/* Dense mode styling - maintains consistency between view and edit modes */
-/* CRITICAL: Higher specificity to override [contenteditable] div flex rule */
-[contenteditable].dense-mode .unified-paragraph,
-[contenteditable].dense-mode div.unified-paragraph,
-.dense-mode .unified-paragraph {
-  display: inline !important;
-  margin-bottom: 0 !important;
-  margin-right: 0 !important; /* No margin - natural text flow */
-  padding: 0 !important;
-  border: none !important;
-  min-height: auto !important;
-  position: relative; /* Maintain positioning context */
-  vertical-align: baseline; /* Use baseline for natural text alignment */
+/* Dense mode removed */
 
-  /* Override flex properties from [contenteditable] div rule */
-  flex-direction: initial !important;
-  align-items: initial !important;
-  flex-wrap: initial !important;
+/* Dense mode removed */
 
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-[contenteditable].dense-mode .unified-paragraph-number,
-.dense-mode .unified-paragraph-number,
-.unified-paragraph.dense-mode .unified-paragraph-number {
-  display: inline !important;
-  position: relative !important; /* Override absolute positioning in dense mode */
-  left: auto !important;
-  top: auto !important;
-  width: auto !important;
-  text-align: left !important;
-  margin-right: 0.25rem !important; /* Consistent margin with dense-paragraph-number */
-  margin-left: 0 !important; /* NO left margin in dense mode for continuous flow */
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 400; /* Normal weight for subtle appearance */
-  font-size: 0.85em; /* Consistent sizing: 85% of main text size */
-  opacity: var(--paragraph-number-opacity, 0.7); /* Accessible opacity: 70% for better contrast */
-  color: hsl(var(--muted-foreground)); /* Theme-aware color inheritance */
-}
-
-/* First paragraph number has no left margin */
-[contenteditable].dense-mode .unified-paragraph-number:first-of-type,
-.dense-mode .unified-paragraph-number:first-of-type,
-.unified-paragraph.dense-mode:first-child .unified-paragraph-number {
-  margin-left: 0 !important;
-}
-
-/* Dense mode link overrides - use inline-block to preserve pill styling */
-[contenteditable].dense-mode a.external-link,
-[contenteditable].dense-mode .compound-link-container,
-[contenteditable].dense-mode .compound-link-container .page-portion,
-[contenteditable].dense-mode .compound-link-container .author-portion,
-[contenteditable].dense-mode .compound-link-container > *,
-[contenteditable].dense-mode span.user-link,
-[contenteditable].dense-mode span.external-link,
-.dense-mode a.external-link,
-.dense-mode .compound-link-container,
-.dense-mode .compound-link-container .page-portion,
-.dense-mode .compound-link-container .author-portion,
-.dense-mode .compound-link-container > *,
-.dense-mode span.user-link,
-.dense-mode span.external-link {
-  display: inline-block !important; /* Use inline-block to preserve pill styling */
-  margin: 0 !important; /* Remove all margins that could cause gaps */
-  vertical-align: baseline !important;
-  white-space: nowrap !important; /* Prevent pill text from wrapping */
-  /* Preserve padding from PillStyleContext - don't override */
-}
-
-/* Dense mode - force specific elements to be inline for continuous text flow */
-/* IMPORTANT: Exclude pill links from universal inline forcing to preserve their styling */
-[contenteditable].dense-mode,
-[contenteditable].dense-mode div:not(.page-link):not(.user-link):not(.external-link):not(.compound-link-container),
-[contenteditable].dense-mode span:not(.page-link):not(.user-link):not(.external-link),
-[contenteditable].dense-mode .unified-text-content,
-.dense-mode,
-.dense-mode div:not(.page-link):not(.user-link):not(.external-link):not(.compound-link-container),
-.dense-mode span:not(.page-link):not(.user-link):not(.external-link),
-.dense-mode .unified-text-content {
-  display: inline !important; /* Everything flows as continuous text */
-  margin: 0 !important; /* No margins */
-  padding: 0 !important; /* No padding */
-  vertical-align: baseline !important;
-  line-height: inherit !important;
-  border: none !important;
-  float: none !important;
-  clear: none !important;
-}
-
-/* Dense mode - hide all <br> tags that cause line breaks */
-[contenteditable].dense-mode br,
-.dense-mode br {
-  display: none !important; /* Hide all line breaks in dense mode */
-}
+/* Dense mode removed */
 
 /* CRITICAL: Ensure pill links in editor get proper styling from PillStyleContext */
 /* These span elements with pill classes should look like proper pill links */
@@ -856,158 +918,11 @@ span.external-link:hover {
   border-color: hsl(var(--primary) / 0.3) !important;
 }
 
-/* Dense mode overrides for pill links - preserve inline-block for proper styling */
-[contenteditable].dense-mode span.page-link,
-[contenteditable].dense-mode span.user-link,
-[contenteditable].dense-mode span.external-link,
-[contenteditable].dense-mode a.page-link,
-[contenteditable].dense-mode a.user-link,
-[contenteditable].dense-mode a.external-link,
-.dense-mode span.page-link,
-.dense-mode span.user-link,
-.dense-mode span.external-link,
-.dense-mode a.page-link,
-.dense-mode a.user-link,
-.dense-mode a.external-link {
-  display: inline-block !important; /* Use inline-block to preserve pill styling */
-  vertical-align: baseline !important; /* Ensure proper alignment with text */
-  margin: 0 !important; /* Remove margins for tight text flow */
-  /* Preserve padding from PillStyleContext - don't override */
-}
+/* Dense mode removed */
 
-/* Dense mode paragraph numbers - ensure they flow inline with text */
-[contenteditable].dense-mode .unified-paragraph-number,
-.dense-mode .unified-paragraph-number,
-[contenteditable].dense-mode .dense-paragraph-number,
-.dense-mode .dense-paragraph-number {
-  display: inline !important; /* Flow with text */
-  margin: 0 0.25rem 0 0 !important; /* Small right margin only */
-  padding: 0 !important;
-  vertical-align: baseline !important;
-  font-size: 0.85em !important; /* Consistent sizing: 85% of main text size */
-  line-height: inherit !important;
-  position: static !important; /* No absolute positioning */
-  float: none !important;
-  clear: none !important;
-  color: hsl(var(--muted-foreground)) !important; /* Theme-aware color inheritance */
-  opacity: var(--paragraph-number-opacity, 0.7) !important; /* Accessible opacity: 70% for better contrast */
-  font-weight: 400 !important; /* Normal weight for subtle appearance */
-}
+/* Dense mode removed */
 
-/* Dense mode text content should flow inline */
-[contenteditable].dense-mode .unified-text-content,
-.dense-mode .unified-text-content {
-  display: inline !important;
-}
-
-/* Dense mode paragraph numbering - handled by JavaScript components, not CSS */
-/* CSS counters removed to prevent conflicts with JavaScript-based numbering */
-.editor-content.dense-mode {
-  /* No CSS counter needed - paragraph numbers handled by components */
-}
-
-/* Dense mode spacing - no spacing for natural text flow */
-.editor-content.dense-mode > div:not(:last-child),
-.unified-paragraph.dense-mode:not(:last-child) {
-  margin-right: 0; /* No spacing - text flows naturally like a book */
-}
-
-/* Dense mode content wrapper - allows natural text wrapping */
-.dense-content-wrapper {
-  line-height: 1.6;
-  font-size: 1rem;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  hyphens: auto;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Animation for dense mode appearance */
-.dense-content-wrapper.mode-transition {
-  animation: fadeInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Dense mode paragraph numbers - inline with content */
-.dense-paragraph-number {
-  /* Theme-aware color inheritance */
-  color: hsl(var(--muted-foreground));
-  font-size: 0.85em; /* Consistent sizing: 85% of main text size */
-  opacity: var(--paragraph-number-opacity, 0.7); /* Accessible opacity: 70% for better contrast */
-  margin-right: 0.25rem !important; /* Slightly more margin for readability */
-  margin-left: 0 !important; /* NO left margin for continuous flow */
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  font-weight: 400; /* Normal weight for subtle appearance */
-  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: inline !important;
-  /* Prevent layout shifts by maintaining stable dimensions */
-  box-sizing: border-box;
-  contain: layout style;
-}
-
-/* First paragraph number has no left margin */
-.dense-paragraph-number:first-child {
-  margin-left: 0 !important;
-}
-
-/* Dense mode content wrapper - ensures continuous flow */
-.dense-content-wrapper {
-  display: inline !important;
-  line-height: inherit;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Dense mode container styling - prevent block layout */
-.dense-mode-container {
-  display: inline-block !important;
-  width: 100% !important;
-  vertical-align: top !important;
-}
-
-.dense-mode-inner {
-  display: inline-block !important;
-  width: 100% !important;
-  vertical-align: top !important;
-}
-
-/* Dense mode paragraph content - flows naturally */
-.dense-paragraph-content {
-  display: inline;
-  line-height: inherit;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Dense mode paragraph separator - minimal space */
-.dense-paragraph-separator {
-  margin: 0 0.0625rem !important; /* Even smaller margin for maximum text flow */
-  display: inline !important;
-}
-
-/* Dense mode textview wrapper - ensures inline flow */
-.dense-mode-textview-wrapper {
-  display: inline !important;
-  line-height: 1.6;
-  font-size: 1rem;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  hyphens: auto;
-}
+/* Dense mode removed */
 
 /* Paragraph numbering is now handled by injected spans in both view and edit modes */
 

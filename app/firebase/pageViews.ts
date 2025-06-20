@@ -528,17 +528,11 @@ async function getFallbackTrendingPages(limitCount: number = 5): Promise<Trendin
         id: pageId,
         title: pageData.title || 'Untitled',
         views: pageViews,
-        views24h: Math.floor(pageViews * 0.1), // Estimate 10% of total views are from last 24h
+        views24h: 0, // TODO: Implement real 24h view tracking
         userId: pageData.userId,
         username: pageData.username,
-        // Generate synthetic hourly data
-        hourlyViews: Array(24).fill(0).map((_, i) => {
-          // Create a bell curve distribution with some randomness
-          const center = 12; // Middle of the day
-          const distance = Math.abs(i - center);
-          const factor = Math.max(0, 1 - (distance / center) * 0.8);
-          return Math.max(1, Math.floor(pageViews * 0.1 / 24 * factor * (0.8 + Math.random() * 0.4)));
-        })
+        // TODO: Implement real hourly view tracking instead of synthetic data
+        hourlyViews: [] // Empty array instead of synthetic data
       });
     });
 

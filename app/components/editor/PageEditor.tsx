@@ -117,10 +117,37 @@ const PageEditor: React.FC<PageEditorProps> = ({
     }
   }, []);
 
+  // CRITICAL: Track when content is properly loaded to prevent data loss
+  useEffect(() => {
+    if (initialContent && Array.isArray(initialContent) && initialContent.length > 0) {
+      // Check if content is not just empty paragraph
+      const hasRealContent = initialContent.some(item =>
+        item.type !== 'paragraph' ||
+        (item.children && item.children.some(child => child.text && child.text.trim() !== ''))
+      );
+
+      if (hasRealContent || !isNewPage) {
+        setContentLoaded(true);
+        console.log('PageEditor: Content properly loaded', {
+          hasRealContent,
+          isNewPage,
+          contentLength: initialContent.length
+        });
+      }
+    } else if (isNewPage) {
+      // For new pages, empty content is expected
+      setContentLoaded(true);
+      console.log('PageEditor: New page - empty content is expected');
+    }
+  }, [initialContent, isNewPage]);
+
   // Initialize editor with initialContent
   const [currentEditorValue, setCurrentEditorValue] = useState<any>(
     initialContent || [{ type: 'paragraph', children: [{ text: '' }] }]
   );
+
+  // CRITICAL: Track if content has been properly loaded
+  const [contentLoaded, setContentLoaded] = useState(false);
 
   const { user } = useAuth();
   const editorRef = useRef<any>(null);
@@ -141,6 +168,22 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
   // Create a wrapper function for keyboard save that captures content
   const handleKeyboardSaveWithContent = useCallback(async () => {
+    // CRITICAL DATA LOSS PREVENTION: Check if content has loaded before saving
+    if (!contentLoaded && !isNewPage) {
+      console.warn("🚨 DATA LOSS PREVENTION: Attempting to save before content is loaded");
+      const confirmSave = window.confirm(
+        "⚠️ WARNING: Content may not be fully loaded yet.\n\n" +
+        "Saving now might result in data loss.\n\n" +
+        "Are you sure you want to continue?\n\n" +
+        "Click 'Cancel' to wait for content to load, or 'OK' to proceed anyway."
+      );
+
+      if (!confirmSave) {
+        console.log("🛡️ DATA LOSS PREVENTED: User cancelled save while content loading");
+        return;
+      }
+    }
+
     if (editorRef.current && editorRef.current.getContent) {
       try {
         // Force a blur event to ensure any pending changes are captured
@@ -150,16 +193,41 @@ const PageEditor: React.FC<PageEditorProps> = ({
           await new Promise(resolve => setTimeout(resolve, 10));
         }
 
-        const currentContent = editorRef.current.getContent();
-        console.log("🔵 PageEditor: Keyboard save - captured content:", {
-          contentType: typeof currentContent,
-          isArray: Array.isArray(currentContent),
-          length: Array.isArray(currentContent) ? currentContent.length : 0
-        });
+        // CRITICAL FIX: Process pending page links BEFORE capturing content
+        let currentContent;
 
-        // Process pending page links before saving
+        // First, check if there are any pending page links
+        const pendingLinks = editorRef.current ? editorRef.current.querySelectorAll('.pending-page') : [];
+        console.log("🔵 PageEditor: Found pending page links (keyboard save):", pendingLinks.length);
+
         if (editorRef.current && editorRef.current.processPendingPageLinks) {
+          console.log("🔵 PageEditor: Processing pending page links BEFORE keyboard save content capture");
           await editorRef.current.processPendingPageLinks();
+
+          // Wait for DOM updates to complete
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+          // Check if pending links were processed
+          const remainingPendingLinks = editorRef.current.querySelectorAll('.pending-page');
+          console.log("🔵 PageEditor: Remaining pending links after processing (keyboard save):", remainingPendingLinks.length);
+
+          // Capture content AFTER processing pending links
+          currentContent = editorRef.current.getContent();
+          console.log("🔵 PageEditor: Captured content AFTER processing pending links (keyboard save):", {
+            contentType: typeof currentContent,
+            isArray: Array.isArray(currentContent),
+            length: Array.isArray(currentContent) ? currentContent.length : 0,
+            contentLoaded
+          });
+        } else {
+          // Fallback: capture content normally
+          currentContent = editorRef.current.getContent();
+          console.log("🔵 PageEditor: Keyboard save - captured content normally:", {
+            contentType: typeof currentContent,
+            isArray: Array.isArray(currentContent),
+            length: Array.isArray(currentContent) ? currentContent.length : 0,
+            contentLoaded
+          });
         }
 
         // Update the parent component with the current content
@@ -193,7 +261,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
         onSave(currentEditorValue);
       }
     }
-  }, [editorRef, onContentChange, onKeyboardSave, onSave, currentEditorValue]);
+  }, [editorRef, onContentChange, onKeyboardSave, onSave, currentEditorValue, contentLoaded, isNewPage]);
 
   // Use keyboard shortcuts
   useKeyboardShortcuts({
@@ -439,6 +507,16 @@ const PageEditor: React.FC<PageEditorProps> = ({
         console.error("[DEBUG] Error focusing editor:", focusError);
       }
 
+      // CRITICAL FIX: Save cursor position before opening link editor
+      if (editorRef.current.saveSelection) {
+        try {
+          editorRef.current.saveSelection();
+          // console.log("[DEBUG] Cursor position saved successfully");
+        } catch (saveError) {
+          console.error("[DEBUG] Error saving cursor position:", saveError);
+        }
+      }
+
       // CRITICAL FIX: Try multiple approaches to ensure the link editor appears
 
       // 1. Try direct method call if available
@@ -531,6 +609,19 @@ const PageEditor: React.FC<PageEditorProps> = ({
     >
       {/* CRITICAL: NO extra containers - match view mode exactly */}
       <div className="editor-container w-full max-w-none">
+
+      {/* CRITICAL: Show loading indicator when content hasn't loaded yet */}
+      {!contentLoaded && !isNewPage && (
+        <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+          <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-yellow-600 border-t-transparent"></div>
+            <span className="text-sm font-medium">Loading page content...</span>
+          </div>
+          <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+            Please wait for content to load before editing to prevent data loss.
+          </p>
+        </div>
+      )}
 
       <div
         className="w-full max-w-none transition-all duration-200 border border-primary/30 rounded-lg p-4 md:p-6 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 hover:border-primary/40"
@@ -660,21 +751,41 @@ const PageEditor: React.FC<PageEditorProps> = ({
                     await new Promise(resolve => setTimeout(resolve, 10));
                   }
 
-                  const currentContent = editorRef.current.getContent();
-                  console.log("🔵 PageEditor: Successfully captured content from editor:", {
-                    contentType: typeof currentContent,
-                    isArray: Array.isArray(currentContent),
-                    length: Array.isArray(currentContent) ? currentContent.length : 0,
-                    firstItem: Array.isArray(currentContent) && currentContent.length > 0 ? currentContent[0] : null,
-                    hasText: Array.isArray(currentContent) && currentContent.some(p =>
-                      p.children && p.children.some(c => c.text && c.text.trim())
-                    )
-                  });
+                  // CRITICAL FIX: Process pending page links BEFORE capturing content
+                  let currentContent;
 
-                  // Process pending page links before saving
+                  // First, check if there are any pending page links
+                  const pendingLinks = editorRef.current ? editorRef.current.querySelectorAll('.pending-page') : [];
+                  console.log("🔵 PageEditor: Found pending page links:", pendingLinks.length);
+
                   if (editorRef.current && editorRef.current.processPendingPageLinks) {
-                    console.log("🔵 PageEditor: Processing pending page links");
+                    console.log("🔵 PageEditor: Processing pending page links BEFORE content capture");
                     await editorRef.current.processPendingPageLinks();
+
+                    // Wait for DOM updates to complete
+                    await new Promise(resolve => setTimeout(resolve, 100));
+
+                    // Check if pending links were processed
+                    const remainingPendingLinks = editorRef.current.querySelectorAll('.pending-page');
+                    console.log("🔵 PageEditor: Remaining pending links after processing:", remainingPendingLinks.length);
+
+                    // Capture content AFTER processing pending links
+                    currentContent = editorRef.current.getContent();
+                    console.log("🔵 PageEditor: Captured content AFTER processing pending links:", {
+                      contentType: typeof currentContent,
+                      isArray: Array.isArray(currentContent),
+                      length: Array.isArray(currentContent) ? currentContent.length : 0,
+                      preview: JSON.stringify(currentContent).substring(0, 300)
+                    });
+                  } else {
+                    // Fallback: capture content normally if no pending links processing
+                    currentContent = editorRef.current.getContent();
+                    console.log("🔵 PageEditor: Captured content normally (no pending links processing):", {
+                      contentType: typeof currentContent,
+                      isArray: Array.isArray(currentContent),
+                      length: Array.isArray(currentContent) ? currentContent.length : 0,
+                      firstItem: Array.isArray(currentContent) && currentContent.length > 0 ? currentContent[0] : null
+                    });
                   }
 
                   // Update the parent component with the current content
@@ -768,20 +879,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
           </div>
         </div>
 
-        {/* Dense Mode Toggle - Always below the button row */}
-        <div className="flex justify-center">
-          <div className="flex items-center gap-2 rounded-2xl font-medium border border-border bg-background text-foreground shadow-sm hover:bg-background hover:shadow-md hover:border-border px-4 py-2 h-10">
-            <Switch
-              checked={lineMode === LINE_MODES.DENSE}
-              onCheckedChange={(checked) => {
-                const newMode = checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL;
-                setLineMode(newMode);
-              }}
-              disabled={isSaving}
-            />
-            <span className="text-sm">Dense mode</span>
-          </div>
-        </div>
+
       </div>
 
       </div>

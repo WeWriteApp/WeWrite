@@ -15,8 +15,9 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
  * - NO line breaks between paragraphs
  * - Text wraps continuously as if newline characters were temporarily deleted
  * - Paragraph numbers inserted inline within the continuous text
- * - Standard text size (1rem/16px)
  * - Only a small space separates paragraphs
+ * - Standard text size (1rem/16px)
+ * - Only available in view mode, not edit mode
  */
 export const LINE_MODES = {
   NORMAL: 'normal',
@@ -45,8 +46,9 @@ const LineSettingsContext = createContext<LineSettingsContextType>({
 /**
  * LineSettingsProvider - Context provider for paragraph display settings
  *
- * Manages the current paragraph display mode (normal or dense) and persists
+ * Manages the current paragraph display mode (normal and dense) and persists
  * the selection in localStorage for consistent user experience across sessions.
+ * Dense mode is only available in view mode - edit mode always uses normal mode.
  */
 export function LineSettingsProvider({ children, isEditMode = false }: LineSettingsProviderProps) {
   // Generate unique ID for this provider instance
@@ -61,14 +63,11 @@ export function LineSettingsProvider({ children, isEditMode = false }: LineSetti
       const savedMode = localStorage.getItem('lineMode');
 
       // Handle migration from legacy mode names (one-time migration)
-      if (savedMode === 'default' || savedMode === 'spaced') {
+      if (savedMode === 'default' || savedMode === 'spaced' || savedMode === 'wrapped') {
         setLineModeState(LINE_MODES.NORMAL);
         localStorage.setItem('lineMode', LINE_MODES.NORMAL);
-      } else if (savedMode === 'wrapped') {
-        setLineModeState(LINE_MODES.DENSE);
-        localStorage.setItem('lineMode', LINE_MODES.DENSE);
       }
-      // Use saved mode if it's valid
+      // Use saved mode if it's valid (both normal and dense modes supported)
       else if (savedMode && Object.values(LINE_MODES).includes(savedMode as LineMode)) {
         setLineModeState(savedMode as LineMode);
       }
@@ -77,8 +76,8 @@ export function LineSettingsProvider({ children, isEditMode = false }: LineSetti
 
   // Client-side mode switching function that preserves unsaved content
   const setLineModeWithoutRefresh = (mode: LineMode): void => {
-    // Validate the mode before setting it
-    if (mode !== LINE_MODES.NORMAL && mode !== LINE_MODES.DENSE) {
+    // Validate the mode before setting it (both normal and dense modes supported)
+    if (!Object.values(LINE_MODES).includes(mode)) {
       console.error(`Invalid line mode: ${mode}`);
       return;
     }

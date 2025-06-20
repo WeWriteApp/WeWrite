@@ -71,31 +71,22 @@ import "../paragraph-styles.css";
 import "../diff-styles.css";
 
 /**
- * TextView Component - Renders text content with different paragraph modes
+ * TextView Component - Renders text content in normal paragraph mode
  *
- * PARAGRAPH MODES REQUIREMENTS:
+ * PARAGRAPH MODE:
  *
- * 1. Normal Mode:
+ * Normal Mode:
  *    - Paragraph numbers create indentation (like traditional documents)
  *    - Numbers positioned to the left of the text
  *    - Creates a clear indent for each paragraph
  *    - Standard text size (1rem/16px)
  *    - Proper spacing between paragraphs
  *
- * 2. Dense Mode:
- *    - Collapses all paragraphs for a more comfortable reading experience
- *    - NO line breaks between paragraphs
- *    - Text wraps continuously as if newline characters were temporarily deleted
- *    - Paragraph numbers are inserted inline within the continuous text
- *    - Standard text size (1rem/16px)
- *    - Only a small space separates one paragraph from the next
- *
  * IMPLEMENTATION NOTES:
- * - Both modes use the same paragraph number style (text-muted-foreground)
- * - Both modes use the same text size (1rem/16px)
- * - Dense mode is implemented directly in RenderContent for a truly continuous flow
- * - Normal mode uses ParagraphNode component with proper spacing and indentation
- * - Animations are applied to both modes for smooth transitions
+ * - Uses paragraph number style (text-muted-foreground)
+ * - Standard text size (1rem/16px)
+ * - Uses ParagraphNode component with proper spacing and indentation
+ * - Smooth animations for transitions
  */
 
 // Cache for page titles to avoid redundant API calls
@@ -191,8 +182,8 @@ const TextView: React.FC<TextViewProps> = ({
     (user?.uid && page?.userId && user.uid === page.userId)
   );
 
-  // Use lineMode from context as the primary mode
-  const effectiveMode = lineMode || LINE_MODES.NORMAL;
+  // Use lineMode from context as the primary mode, but force normal mode when editing
+  const effectiveMode = isEditing ? LINE_MODES.NORMAL : (lineMode || LINE_MODES.NORMAL);
 
   // Create a unique key that changes when lineMode changes to force complete re-render
   // This ensures the component properly updates when switching between dense and normal modes
@@ -471,11 +462,8 @@ const TextView: React.FC<TextViewProps> = ({
       // Log the total number of paragraphs for debugging
       console.log("TextView: Total paragraphs to load:", totalNodes);
 
-      // Determine which mode we're in to set the appropriate delay
-      const isInDenseMode = effectiveMode === LINE_MODES.DENSE;
-      const loadingDelay = isInDenseMode
-        ? ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY
-        : ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY;
+      // Use normal mode loading delay (dense mode removed)
+      const loadingDelay = ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY;
 
       // Progressive loading for both modes
       if (totalNodes > 0) {
@@ -512,7 +500,8 @@ const TextView: React.FC<TextViewProps> = ({
   // Use compact styling without prose classes that add excessive padding
   const getViewModeStyles = useMemo(() => {
     // FIXED: Remove prose classes that add excessive padding, use compact layout
-    return `editor-content page-editor-stable box-border mode-transition ${effectiveMode === LINE_MODES.DENSE ? 'dense-mode' : 'normal-mode'}`;
+    const modeClass = effectiveMode === LINE_MODES.DENSE ? 'dense-mode' : 'normal-mode';
+    return `editor-content page-editor-stable box-border mode-transition ${modeClass}`;
   }, [effectiveMode]);
 
 
@@ -617,45 +606,12 @@ const TextView: React.FC<TextViewProps> = ({
       }
     }
 
-    // For dense mode, return content directly without block containers
-    if (effectiveMode === LINE_MODES.DENSE) {
-      return (
-        <span
-          key={`textview-dense-${effectiveMode}`}
-          className="dense-mode-textview-wrapper"
-          onClick={handleContentClick}
-        >
-          {!parsedContents && !isSearch && (
-            <span className="text-muted-foreground">
-              {/* SIMPLIFIED: Always show paragraph 1 even when no content in dense mode */}
-              <span className="dense-paragraph-number">1</span>
-              No content available
-            </span>
-          )}
+    // Dense mode removed - only normal mode supported
 
-          {parsedContents && (
-            <RenderContent
-              key={`${renderKey}-${effectiveMode}`}
-              contents={parsedContents}
-              language={language}
-              loadedParagraphs={loadedParagraphs}
-              effectiveMode={effectiveMode}
-              canEdit={canEdit}
-              activeLineIndex={activeLineIndex}
-              onActiveLine={handleActiveLine}
-              showDiff={showDiff}
-              clickPosition={clickPosition}
-              isEditing={isEditing}
-            />
-          )}
-        </span>
-      );
-    }
-
-    // For normal mode, use the standard block layout
+    // Use the standard block layout (normal mode only)
     return (
       <div
-        key={`textview-${effectiveMode}`}
+        key={`textview-normal`}
         className="page-content unified-editor relative rounded-lg bg-background w-full max-w-none"
       >
         <div
@@ -701,8 +657,8 @@ const TextView: React.FC<TextViewProps> = ({
 
 
           {!parsedContents && !isSearch && (
-            <div className="p-2 text-muted-foreground">
-              {/* FIXED: Reduced padding from p-6 to p-2 for compact layout */}
+            <div className="text-muted-foreground">
+              {/* REMOVED: Excessive padding for compact layout */}
               <div className="unified-paragraph">
                 <span className="unified-paragraph-number">1</span>
                 <span className="unified-text-content">No content available</span>
@@ -773,58 +729,80 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
     if (!contents) return null;
 
     if (Array.isArray(contents)) {
-      // For dense mode, render as continuous text with inline paragraph numbers
+      // Dense mode: render as continuous text with inline paragraph numbers
       if (effectiveMode === LINE_MODES.DENSE) {
-        // FINAL FIX: Render everything as React elements but in one continuous span
-        // This avoids the div structure that's causing line breaks
-        let elements = [];
-        let elementKey = 0;
+        const paragraphNodes = contents.filter(node => node.type === nodeTypes.PARAGRAPH);
+        const loadedNodes = paragraphNodes.filter((_, index) => loadedParagraphs.includes(index));
 
-        contents.forEach((node, index) => {
-          if (!loadedParagraphs.includes(index)) return;
-          if (node.type !== nodeTypes.PARAGRAPH) return;
-
-          // Add paragraph number inline
-          elements.push(
-            <span key={`para-num-${elementKey++}`} className="dense-paragraph-number">
-              {index + 1}
-            </span>
-          );
-
-          // Process paragraph content
-          if (node.children) {
-            node.children.forEach((child, i) => {
-              if (child.type === 'link') {
-                // Render proper link component
-                elements.push(
-                  <LinkNode key={`link-${elementKey++}`} node={child} canEdit={canEdit} isEditing={isEditing} />
-                );
-              } else if (child.text) {
-                // Add text as span element
-                elements.push(
-                  <span key={`text-${elementKey++}`}>{child.text}</span>
-                );
-              }
-            });
+        // Helper function to render child nodes in dense mode
+        const renderDenseChild = (child, i) => {
+          // Handle link nodes with error handling
+          if (child.type === 'link') {
+            try {
+              return <LinkNode key={i} node={child} canEdit={canEdit} isEditing={isEditing} />;
+            } catch (error) {
+              console.error('DENSE_LINK_ERROR: Error rendering link in dense mode:', error);
+              return <span key={i} className="text-red-500">[Link Error]</span>;
+            }
           }
+          // Handle text nodes
+          else if (child.text) {
+            let className = '';
+            if (child.bold) className += ' font-bold';
+            if (child.italic) className += ' italic';
+            if (child.underline) className += ' underline';
 
-          // Add space between paragraphs (except for the last one)
-          if (index < contents.length - 1) {
-            elements.push(<span key={`space-${elementKey++}`}> </span>);
+            if (child.code) {
+              return (
+                <code
+                  key={i}
+                  className={`px-1.5 py-0.5 mx-0.5 rounded bg-muted font-mono ${className}`}
+                >
+                  {child.text}
+                </code>
+              );
+            }
+
+            return (
+              <span key={i} className={className || undefined}>
+                {child.text}
+              </span>
+            );
           }
-        });
+          return null;
+        };
 
         return (
-          <span
-            className="dense-content-wrapper mode-transition"
-            style={{ display: 'inline', whiteSpace: 'normal', lineHeight: '1.6' }}
-          >
-            {elements}
-          </span>
+          <div className="dense-mode-container">
+            {loadedNodes.map((node, index) => {
+              const actualIndex = paragraphNodes.indexOf(node);
+              return (
+                <React.Fragment key={actualIndex}>
+                  <span
+                    className="dense-paragraph-number"
+                    style={{
+                      animationDelay: `${index * ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY}ms`
+                    }}
+                  >
+                    {actualIndex + 1}
+                  </span>
+                  <span
+                    className="dense-paragraph-content"
+                    style={{
+                      animationDelay: `${index * ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY + 100}ms`
+                    }}
+                  >
+                    {node.children?.map((child, childIndex) => renderDenseChild(child, childIndex))}
+                  </span>
+                  {index < loadedNodes.length - 1 && <span className="dense-paragraph-separator"> </span>}
+                </React.Fragment>
+              );
+            })}
+          </div>
         );
       }
 
-      // For normal mode, render as separate paragraph blocks
+      // Normal mode: render as separate paragraph blocks
       return (
         <>
           {contents.map((node, index) => {
@@ -841,6 +819,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
                 onActiveLine={onActiveLine}
                 showDiff={showDiff}
                 isEditing={isEditing}
+                animationDelay={index * ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY}
               />
             );
           })}
@@ -875,7 +854,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
  * SimpleParagraphNode - Renders a paragraph as a simple div
  * CSS handles dense mode styling automatically via container classes
  */
-const SimpleParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onActiveLine = null, showDiff = false, isEditing = false }) => {
+const SimpleParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onActiveLine = null, showDiff = false, isEditing = false, animationDelay = 0 }) => {
   const paragraphRef = useRef(null);
   const [lineHovered, setLineHovered] = useState(false);
 
@@ -958,19 +937,20 @@ const SimpleParagraphNode = ({ node, index = 0, canEdit = false, isActive = fals
   const { lineMode } = useLineSettings();
   const effectiveMode = lineMode || LINE_MODES.NORMAL;
 
-  // Render paragraph with proper structure for both normal and dense modes
+  // Render paragraph with proper structure
   return (
     <div
       ref={paragraphRef}
       className={`unified-paragraph transition-all duration-300 ease-in-out ${
-        effectiveMode === LINE_MODES.DENSE ? 'dense-mode' : ''
-      } ${
         canEdit ? 'cursor-text hover:bg-muted/30 active:bg-muted/50' : ''
       } ${
         isActive ? 'bg-[var(--active-line-highlight)]' : ''
       } ${
         isEditing ? 'editing-mode' : ''
       }`}
+      style={{
+        animationDelay: `${animationDelay}ms`
+      }}
       data-paragraph-index={index}
       data-debug="paragraph-div"
       onClick={handleClick}
@@ -978,12 +958,10 @@ const SimpleParagraphNode = ({ node, index = 0, canEdit = false, isActive = fals
       onMouseLeave={() => setLineHovered(false)}
       title={canEdit ? "Click to edit" : ""}
     >
-      {/* Paragraph number - only in normal mode (dense mode handled in RenderContent) */}
-      {effectiveMode === LINE_MODES.NORMAL && (
-        <span className="unified-paragraph-number">
-          {index + 1}
-        </span>
-      )}
+      {/* Paragraph number - always show in normal mode */}
+      <span className="unified-paragraph-number">
+        {index + 1}
+      </span>
 
       {/* Paragraph content */}
       <span className="unified-text-content">

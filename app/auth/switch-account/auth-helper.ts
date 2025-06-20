@@ -15,12 +15,11 @@ interface UserData {
 
 /**
  * Helper function to get a custom token for the user
- * This is a simplified version that just returns a mock token for demonstration
- * In a real app, you would call your backend to generate a Firebase custom token
+ * TODO: Implement real custom token generation via backend API
  */
 export const getCustomToken = async (userId: string): Promise<string> => {
-  // In a real implementation, you would call your backend API to generate a custom token
-  // For example:
+  // TODO: Implement real custom token generation
+  // Real implementation would call backend API to generate a Firebase custom token:
   // const response = await fetch('/api/auth/get-custom-token', {
   //   method: 'POST',
   //   headers: { 'Content-Type': 'application/json' },
@@ -29,8 +28,7 @@ export const getCustomToken = async (userId: string): Promise<string> => {
   // const data = await response.json();
   // return data.token;
 
-  // For now, we'll just return a mock token
-  return `mock_token_for_${userId}`;
+  throw new Error('Custom token generation not implemented. Please implement backend API endpoint.');
 };
 
 /**

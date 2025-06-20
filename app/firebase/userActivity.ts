@@ -15,6 +15,7 @@ import {
   type QuerySnapshot,
   type QueryDocumentSnapshot
 } from "firebase/firestore";
+import { getCacheItem, setCacheItem, generateCacheKey } from "../utils/cacheUtils";
 
 // Type definitions for user activity operations
 interface ActivityData {
@@ -27,6 +28,191 @@ interface CachedActivityData {
   data: Record<string, ActivityData>;
   timestamp: number;
 }
+
+/**
+ * Gets comprehensive user activity data for the past 24 hours
+ * This function retrieves page creation, view activity, and follower growth
+ * and formats the data for sparkline visualization
+ *
+ * @param userId - The user ID
+ * @returns Object containing all activity types with hourly data
+ */
+export const getUserComprehensiveActivityLast24Hours = async (userId: string): Promise<{
+  pageCreation: number[];
+  viewCount: number[];
+  followerGrowth: number[];
+}> => {
+  try {
+    if (!userId) {
+      return {
+        pageCreation: Array(24).fill(0),
+        viewCount: Array(24).fill(0),
+        followerGrowth: Array(24).fill(0)
+      };
+    }
+
+    // Check cache first - cache for 5 minutes to balance freshness with performance
+    const cacheKey = generateCacheKey('userComprehensiveActivity', `${userId}_v2`);
+    const cachedData = getCacheItem(cacheKey);
+
+    if (cachedData) {
+      console.log(`Using cached comprehensive activity data for user ${userId}`);
+      return cachedData;
+    }
+
+    // Get current date and time
+    const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+
+    // Initialize all activity arrays
+    const pageCreationData = Array(24).fill(0);
+    const viewCountData = Array(24).fill(0);
+    const followerGrowthData = Array(24).fill(0);
+
+    // 1. Get page creation/editing activity
+    try {
+      const pagesQuery = query(
+        collection(db, "pages"),
+        where("userId", "==", userId),
+        where("lastModified", ">=", Timestamp.fromDate(twentyFourHoursAgo)),
+        orderBy("lastModified", "desc")
+      );
+
+      const pagesSnapshot = await getDocs(pagesQuery);
+
+      pagesSnapshot.forEach(doc => {
+        const pageData = doc.data();
+        if (pageData.lastModified) {
+          const lastModified = pageData.lastModified instanceof Timestamp
+            ? pageData.lastModified.toDate()
+            : new Date(pageData.lastModified);
+
+          if (lastModified >= twentyFourHoursAgo) {
+            const hoursAgo = Math.floor((now.getTime() - lastModified.getTime()) / (1000 * 60 * 60));
+            if (hoursAgo >= 0 && hoursAgo < 24) {
+              pageCreationData[23 - hoursAgo]++;
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching page creation data:", error);
+    }
+
+    // 2. Get view activity data from user's pages
+    try {
+      // First get all pages by this user
+      const userPagesQuery = query(
+        collection(db, "pages"),
+        where("userId", "==", userId)
+      );
+      const userPagesSnapshot = await getDocs(userPagesQuery);
+      const pageIds = userPagesSnapshot.docs.map(doc => doc.id);
+
+      if (pageIds.length > 0) {
+        // Get view data for the past 24 hours for all user's pages
+        const todayStr = now.toISOString().split('T')[0];
+        const yesterdayStr = new Date(now.getTime() - (24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+
+        // Process view data for each page
+        await Promise.all(pageIds.slice(0, 20).map(async (pageId) => { // Limit to 20 pages for performance
+          try {
+            const [todayViewsDoc, yesterdayViewsDoc] = await Promise.all([
+              getDoc(doc(db, "pageViews", `${pageId}_${todayStr}`)),
+              getDoc(doc(db, "pageViews", `${pageId}_${yesterdayStr}`))
+            ]);
+
+            // Process today's views
+            if (todayViewsDoc.exists()) {
+              const todayData = todayViewsDoc.data();
+              const currentHour = now.getHours();
+
+              for (let hour = 0; hour <= currentHour; hour++) {
+                const hourValue = todayData.hours?.[hour] || 0;
+                const arrayIndex = 24 - (currentHour - hour) - 1;
+                if (arrayIndex >= 0 && arrayIndex < 24) {
+                  viewCountData[arrayIndex] += hourValue;
+                }
+              }
+            }
+
+            // Process yesterday's views (only relevant hours)
+            if (yesterdayViewsDoc.exists()) {
+              const yesterdayData = yesterdayViewsDoc.data();
+              const currentHour = now.getHours();
+
+              for (let hour = currentHour + 1; hour < 24; hour++) {
+                const hourValue = yesterdayData.hours?.[hour] || 0;
+                const arrayIndex = hour - (currentHour + 1);
+                if (arrayIndex >= 0 && arrayIndex < 24) {
+                  viewCountData[arrayIndex] += hourValue;
+                }
+              }
+            }
+          } catch (pageError) {
+            console.error(`Error fetching view data for page ${pageId}:`, pageError);
+          }
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching view count data:", error);
+    }
+
+    // 3. Get follower growth data
+    try {
+      // Query for follow events in the last 24 hours
+      // The follows collection has documents with followerId, followedId, and followedAt
+      // Note: This requires a Firestore index on (followedId, followedAt)
+      const followsQuery = query(
+        collection(db, "follows"),
+        where("followedId", "==", userId),
+        where("followedAt", ">=", Timestamp.fromDate(twentyFourHoursAgo)),
+        orderBy("followedAt", "desc")
+      );
+
+      const followsSnapshot = await getDocs(followsQuery);
+
+      followsSnapshot.forEach(doc => {
+        const followData = doc.data();
+        if (followData.followedAt) {
+          const followedAt = followData.followedAt instanceof Timestamp
+            ? followData.followedAt.toDate()
+            : new Date(followData.followedAt);
+
+          if (followedAt >= twentyFourHoursAgo) {
+            const hoursAgo = Math.floor((now.getTime() - followedAt.getTime()) / (1000 * 60 * 60));
+            if (hoursAgo >= 0 && hoursAgo < 24) {
+              followerGrowthData[23 - hoursAgo]++;
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching follower growth data:", error);
+      // If the index doesn't exist or there's another error,
+      // we'll just return empty data for follower growth
+      // The index can be created at: https://console.firebase.google.com/project/wewrite-ccd82/firestore/indexes
+    }
+
+    const result = {
+      pageCreation: pageCreationData,
+      viewCount: viewCountData,
+      followerGrowth: followerGrowthData
+    };
+
+    // Cache the result for 5 minutes (300,000 ms)
+    setCacheItem(cacheKey, result, 5 * 60 * 1000);
+
+    return result;
+  } catch (error) {
+    console.error("Error getting comprehensive user activity:", error);
+    return {
+      pageCreation: Array(24).fill(0),
+      viewCount: Array(24).fill(0),
+      followerGrowth: Array(24).fill(0)
+    };
+  }
+};
 
 /**
  * Gets user activity data for the past 24 hours

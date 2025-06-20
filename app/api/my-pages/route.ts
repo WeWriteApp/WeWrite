@@ -25,16 +25,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // Use lastModified ordering (which has existing indexes and is used throughout the codebase)
+    // Use the simplest possible query to avoid any index requirements
+    // Only use userId filter - no orderBy to avoid index issues
     let pagesQuery = query(
       collection(db, 'pages'),
       where('userId', '==', userId),
-      where('deleted', '!=', true),
-      orderBy('lastModified', 'desc'),
-      limit(limitCount * 2) // Get more to allow for search filtering
+      limit(limitCount * 3) // Get more to allow for filtering out deleted pages and search filtering
     );
 
-    console.log('[my-pages API] Querying with lastModified ordering...');
+    console.log('[my-pages API] Querying with simple userId filter...');
     const pagesSnapshot = await getDocs(pagesQuery);
     console.log('[my-pages API] Query successful, found', pagesSnapshot.docs.length, 'pages');
 
@@ -42,9 +41,15 @@ export async function GET(request: NextRequest) {
 
     pagesSnapshot.forEach(doc => {
       const pageData = { id: doc.id, ...doc.data() } as any;
-      console.log('[my-pages API] Page data:', { id: doc.id, title: pageData.title, lastModified: pageData.lastModified, userId: pageData.userId });
+      console.log('[my-pages API] Page data:', { id: doc.id, title: pageData.title, lastModified: pageData.lastModified, userId: pageData.userId, deleted: pageData.deleted });
 
-      // Apply search filter if provided (deleted pages already filtered at query level)
+      // Skip deleted pages (filter client-side to avoid complex index)
+      if (pageData.deleted === true) {
+        console.log('[my-pages API] Skipping deleted page:', pageData.title);
+        return;
+      }
+
+      // Apply search filter if provided
       if (!searchTerm ||
           pageData.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           pageData.content?.toLowerCase().includes(searchTerm.toLowerCase())) {
@@ -52,7 +57,14 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Limit results after filtering
+    // Sort by lastModified client-side (most recent first)
+    pages.sort((a, b) => {
+      const aTime = new Date(a.lastModified || 0).getTime();
+      const bTime = new Date(b.lastModified || 0).getTime();
+      return bTime - aTime;
+    });
+
+    // Limit results after filtering and sorting
     const limitedPages = pages.slice(0, limitCount);
     console.log('[my-pages API] Returning', limitedPages.length, 'pages after filtering');
 

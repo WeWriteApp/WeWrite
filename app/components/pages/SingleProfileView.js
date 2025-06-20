@@ -22,7 +22,7 @@ import UserProfileTabs from '../utils/UserProfileTabs';
 import { getUserFollowerCount, getUserPageCount, getUserTotalViewCount, getUserContributorCount } from "../../firebase/counters";
 // getUserSubscription removed - using optimized listener instead
 import SimpleSparkline from "../utils/SimpleSparkline";
-import { getUserActivityLast24Hours } from "../../firebase/userActivity";
+import { getUserComprehensiveActivityLast24Hours } from "../../firebase/userActivity";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { useContributorCount } from "../../hooks/useContributorCount";
 
@@ -103,13 +103,23 @@ const SingleProfileView = ({ profile }) => {
             getUserFollowerCount(profile.uid),
             getUserPageCount(profile.uid, user?.uid), // Pass current user ID to get correct count
             getUserTotalViewCount(profile.uid),
-            getUserActivityLast24Hours(profile.uid)
+            getUserComprehensiveActivityLast24Hours(profile.uid)
           ]);
 
           setFollowerCount(followerCountResult);
           setPageCount(pageCountResult);
           setViewCount(viewCountResult);
           setUserActivityData(activityResult);
+
+          // Fix view count discrepancy: if total is 0 but sparkline shows activity, use sparkline total
+          const sparklineViewTotal = activityResult?.viewCount?.reduce((sum, val) => sum + val, 0) || 0;
+          if (viewCountResult === 0 && sparklineViewTotal > 0) {
+            console.log('View count discrepancy detected - using sparkline total:', {
+              originalTotal: viewCountResult,
+              sparklineTotal: sparklineViewTotal
+            });
+            setViewCount(sparklineViewTotal);
+          }
 
         } catch (error) {
           console.error('Error fetching user stats:', error);

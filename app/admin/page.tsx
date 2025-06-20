@@ -9,7 +9,7 @@ import { Input } from '../components/ui/input';
 import { Checkbox } from '../components/ui/checkbox';
 
 import { SwipeableTabs, SwipeableTabsList, SwipeableTabsTrigger, SwipeableTabsContent } from '../components/ui/swipeable-tabs';
-import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react';
 import { db } from "../firebase/database";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
@@ -42,6 +42,10 @@ export default function AdminPage() {
   const { toast } = useToast();
   const { resetBannerState } = usePWA();
   const [activeTab, setActiveTab] = useState('features');
+
+  // Valid tab values for hash navigation
+  const validTabs = ['features', 'users', 'admins', 'tools'];
+  const defaultTab = 'features';
 
   // User management state
   const [searchTerm, setSearchTerm] = useState('');
@@ -115,6 +119,40 @@ export default function AdminPage() {
     }
   }, [hideGloballyEnabled]);
 
+  // Hash-based navigation management
+  useEffect(() => {
+    // Read hash from URL on page load and set initial tab
+    const hash = window.location.hash.slice(1); // Remove the # symbol
+    if (hash && validTabs.includes(hash)) {
+      setActiveTab(hash);
+    } else if (hash && !validTabs.includes(hash)) {
+      // Invalid hash, redirect to default tab
+      window.history.replaceState(null, '', `/admin#${defaultTab}`);
+      setActiveTab(defaultTab);
+    } else if (!hash) {
+      // No hash, set default tab and update URL
+      window.history.replaceState(null, '', `/admin#${defaultTab}`);
+      setActiveTab(defaultTab);
+    }
+  }, []);
+
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash && validTabs.includes(hash)) {
+        setActiveTab(hash);
+      } else {
+        // Invalid or missing hash, redirect to default
+        window.history.replaceState(null, '', `/admin#${defaultTab}`);
+        setActiveTab(defaultTab);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   // Check if user is admin
   useEffect(() => {
     if (!authLoading && user) {
@@ -132,6 +170,15 @@ export default function AdminPage() {
       router.push('/auth/login?redirect=/admin');
     }
   }, [user, authLoading, router]);
+
+  // Custom tab change handler that updates URL hash
+  const handleTabChange = (newTab: string) => {
+    if (validTabs.includes(newTab)) {
+      setActiveTab(newTab);
+      // Update URL hash without triggering a page reload
+      window.history.pushState(null, '', `/admin#${newTab}`);
+    }
+  };
 
   // Load admin users from Firestore
   const loadAdminUsers = async () => {
@@ -550,7 +597,7 @@ export default function AdminPage() {
 
       <SwipeableTabs
         value={activeTab}
-        onValueChange={setActiveTab}
+        onValueChange={handleTabChange}
         className="space-y-6"
         tabsListClassName="flex w-full overflow-x-auto scrollbar-hide"
         preventScrollOnSwipe={false}
@@ -770,7 +817,7 @@ export default function AdminPage() {
                   variant="outline"
                   size="sm"
                   className="gap-2 w-full"
-                  onClick={() => setActiveTab('features')}
+                  onClick={() => handleTabChange('features')}
                 >
                   <Settings className="h-4 w-4" />
                   Go to Feature Flags Tab
@@ -871,6 +918,27 @@ export default function AdminPage() {
               </span>
               <div className="mt-2">
                 <SyncFeatureFlagsButton />
+              </div>
+            </div>
+
+            {/* Admin Dashboard */}
+            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Admin Dashboard</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                View comprehensive analytics including user registrations, page creation metrics, and sharing statistics with interactive charts and date filtering.
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/dashboard')}
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Open Dashboard
+                </Button>
               </div>
             </div>
 
