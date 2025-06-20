@@ -23,6 +23,8 @@ import CacheInitializer from "./components/utils/CacheInitializer"
 import { SyncQueueProvider } from "./contexts/SyncQueueContext"
 import { LineSettingsProvider } from "./contexts/LineSettingsContext"
 import ConsoleErrorLogger from "./components/utils/ConsoleErrorLogger"
+import DoubleClickZoomPrevention from "./components/utils/DoubleClickZoomPrevention"
+import ZoomPreventionTest from "./components/utils/ZoomPreventionTest"
 
 
 
@@ -94,7 +96,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
         <link rel="canonical" href={process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'} />
         {/* Removed SlateEarlyPatch - no longer needed with SimpleEditor */}
 
@@ -197,6 +199,70 @@ export default function RootLayout({
                 originalError.apply(console, arguments);
               };
 
+              // COMPREHENSIVE ZOOM PREVENTION: Initialize on mobile devices
+              if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+                var lastTouchEnd = 0;
+                var initialPinchDistance = 0;
+                var isPinching = false;
+
+                // Prevent double-tap zoom
+                document.addEventListener('touchend', function(event) {
+                  var now = Date.now();
+                  if (event.touches.length === 0 && now - lastTouchEnd <= 300) {
+                    event.preventDefault();
+                  }
+                  lastTouchEnd = now;
+
+                  // Reset pinch detection when all touches end
+                  if (event.touches.length < 2) {
+                    isPinching = false;
+                    initialPinchDistance = 0;
+                  }
+                }, { passive: false });
+
+                // Prevent pinch-to-zoom
+                document.addEventListener('touchstart', function(event) {
+                  if (event.touches.length >= 2) {
+                    var touch1 = event.touches[0];
+                    var touch2 = event.touches[1];
+                    var deltaX = touch2.clientX - touch1.clientX;
+                    var deltaY = touch2.clientY - touch1.clientY;
+                    initialPinchDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                    isPinching = true;
+                  }
+                }, { passive: false });
+
+                document.addEventListener('touchmove', function(event) {
+                  if (event.touches.length >= 2 && isPinching) {
+                    var touch1 = event.touches[0];
+                    var touch2 = event.touches[1];
+                    var deltaX = touch2.clientX - touch1.clientX;
+                    var deltaY = touch2.clientY - touch1.clientY;
+                    var currentDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                    var distanceChange = Math.abs(currentDistance - initialPinchDistance);
+
+                    // Prevent if significant distance change (zoom gesture)
+                    if (distanceChange > 10) {
+                      event.preventDefault();
+                    }
+                  }
+                }, { passive: false });
+
+                // Allow keyboard zoom shortcuts (Ctrl/Cmd + Plus/Minus)
+                // Only prevent trackpad zoom gestures
+                document.addEventListener('wheel', function(event) {
+                  if (event.ctrlKey || event.metaKey) {
+                    // Prevent trackpad zoom (small deltaY values)
+                    var isTrackpadGesture = Math.abs(event.deltaY) < 50 && event.deltaX === 0;
+                    if (isTrackpadGesture) {
+                      event.preventDefault();
+                    }
+                  }
+                }, { passive: false });
+
+                console.log('Comprehensive zoom prevention initialized (keyboard zoom allowed)');
+              }
+
               // CRITICAL FIX: Blank page detection DISABLED to prevent infinite refresh loops
               // This was the PRIMARY CAUSE of the infinite refresh issue affecting users
 
@@ -229,6 +295,7 @@ export default function RootLayout({
                                         <SyncQueueProvider>
                                         <CacheInitializer />
                                         <ConsoleErrorLogger />
+                                        <DoubleClickZoomPrevention />
                                         <FeatureFlagListener>
                                           <ErrorBoundary name="layout" resetOnPropsChange={true}>
                                             <ClientLayout>
@@ -242,6 +309,7 @@ export default function RootLayout({
                                         <ErrorBoundary name="speed_insights" resetOnPropsChange={false}>
                                           <SpeedInsights />
                                         </ErrorBoundary>
+                                        <ZoomPreventionTest />
                                       </SyncQueueProvider>
                                       </PWAProvider>
                                     </LineSettingsProvider>

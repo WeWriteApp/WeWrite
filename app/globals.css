@@ -2,16 +2,113 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Prevent iOS zoom on input focus */
+/* Comprehensive zoom prevention for mobile devices */
 @media screen and (max-width: 768px) {
-  input, textarea, select {
-    font-size: 16px !important;
+  /* Prevent all zoom gestures while preserving scrolling */
+  * {
+    touch-action: pan-x pan-y;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Allow text selection on content areas */
+  p, h1, h2, h3, h4, h5, h6, span, div[contenteditable],
+  .editor-content, .page-content, .editable-container {
+    -webkit-user-select: text;
+    -khtml-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    touch-action: pan-x pan-y;
+  }
+
+  /* Interactive elements need manipulation for proper touch handling */
+  input, textarea, select, button, a, [role="button"], [tabindex] {
+    font-size: 16px !important; /* Prevent zoom on input focus */
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Allow text selection in input fields */
+  input[type="text"], input[type="email"], input[type="password"],
+  input[type="search"], textarea {
+    -webkit-user-select: text;
+    -khtml-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+
+  /* Scrollable containers should allow panning but prevent zoom */
+  .scroll-container, .overflow-auto, .overflow-x-auto, .overflow-y-auto {
+    touch-action: pan-x pan-y;
   }
 
   /* Support for browsers that don't support zoom property */
   body {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    touch-action: pan-x pan-y;
+    overflow-x: hidden; /* Prevent horizontal scroll that can interfere with touch */
+  }
+
+  /* Prevent zoom on common interactive elements */
+  .wewrite-card, .modal, .dropdown, .menu {
+    touch-action: pan-x pan-y;
+  }
+
+  /* Editor-specific zoom prevention */
+  .editor-container, [data-slate-editor], .simple-editor {
+    touch-action: pan-x pan-y;
+  }
+
+  /* Prevent zoom on images and media */
+  img, video, canvas, svg {
+    touch-action: pan-x pan-y;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Prevent zoom on code blocks and pre-formatted text */
+  pre, code, .code-block {
+    touch-action: pan-x pan-y;
+  }
+
+  /* Ensure modals and overlays prevent zoom */
+  .modal, .overlay, .dropdown-menu, .popover {
+    touch-action: pan-x pan-y;
+  }
+}
+
+/* Global zoom prevention (applies to all screen sizes) */
+html {
+  /* Prevent zoom via CSS zoom property */
+  zoom: 1 !important;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Prevent zoom on focus for all input types */
+input, textarea, select {
+  /* Ensure font size is large enough to prevent iOS zoom */
+  font-size: max(16px, 1rem) !important;
+}
+
+/* Additional zoom prevention for WebKit browsers */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  input, textarea, select {
+    font-size: 16px !important;
   }
 }
 

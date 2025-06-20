@@ -7,6 +7,7 @@ import { useLineSettings, LINE_MODES } from '../../contexts/LineSettingsContext'
 import { Lock, ExternalLink, X } from "lucide-react";
 import FilteredSearchResults from '../search/FilteredSearchResults';
 import ParagraphNumberOverlay from './ParagraphNumberOverlay';
+import NonInterferingParagraphNumbers from './NonInterferingParagraphNumbers';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Switch } from '../ui/switch';
 import { cn } from '../../lib/utils';
@@ -467,105 +468,11 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     return null; // No paragraph numbers injected, so no boundary needed
   }, [isClient]);
 
-  // SIMPLIFIED: Find content start position without complex boundary logic
-  const findContentStartPosition = useCallback((paragraph: Element) => {
-    // With no injected paragraph numbers, just position at the beginning of the paragraph
-    if (paragraph.childNodes.length === 0) {
-      return { node: paragraph, offset: 0 };
-    }
+  // SIMPLIFIED: Remove complex cursor positioning functions
 
-    // Find first text node or position at beginning
-    const firstChild = paragraph.firstChild;
-    if (firstChild && firstChild.nodeType === Node.TEXT_NODE) {
-      return { node: firstChild, offset: 0 };
-    }
 
-    return { node: paragraph, offset: 0 };
-  }, []);
 
-  // Position cursor at the very beginning of content area with enhanced precision
-  const positionCursorAtContentStart = useCallback((paragraph: Element, preferredOffset: number = 0) => {
-    // HYDRATION FIX: Ensure we're in browser environment
-    if (!isClient || typeof window === 'undefined') return false;
 
-    const startPosition = findContentStartPosition(paragraph);
-    if (!startPosition) return false;
-
-    const selection = window.getSelection();
-    if (!selection) return false;
-
-    try {
-      const range = document.createRange();
-      const { node, offset } = startPosition;
-
-      if (node.nodeType === Node.TEXT_NODE) {
-        // Position within text node, respecting preferred offset
-        const textLength = node.textContent?.length || 0;
-        range.setStart(node, Math.min(preferredOffset, textLength));
-      } else {
-        // Position at specific child offset within element
-        range.setStart(node, offset);
-      }
-
-      range.collapse(true);
-      selection.removeAllRanges();
-      selection.addRange(range);
-      return true;
-    } catch (error) {
-      console.error('Error positioning cursor at content start:', error);
-
-      // Fallback: create a text node if needed
-      try {
-        const textNode = document.createTextNode('');
-        paragraph.appendChild(textNode);
-        const range = document.createRange();
-        range.setStart(textNode, 0);
-        range.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(range);
-        return true;
-      } catch (fallbackError) {
-        console.error('Fallback cursor positioning failed:', fallbackError);
-        return false;
-      }
-    }
-  }, [isClient, findContentStartPosition]);
-
-  // SIMPLIFIED: Basic cursor position validation without paragraph number complexity
-  const ensureValidCursorPosition = useCallback(() => {
-    if (!isClient || typeof window === 'undefined') return;
-
-    try {
-      const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) return;
-
-      // With no injected paragraph numbers, cursor validation is much simpler
-      // Just ensure we have a valid selection within the editor
-      const range = selection.getRangeAt(0);
-      const startContainer = range.startContainer;
-
-      // Ensure cursor is within the editor
-      let isWithinEditor = false;
-      let currentNode = startContainer;
-      while (currentNode && currentNode !== document.body) {
-        if (currentNode === editorRef.current) {
-          isWithinEditor = true;
-          break;
-        }
-        currentNode = currentNode.parentNode;
-      }
-
-      if (!isWithinEditor && editorRef.current) {
-        // Position cursor at the beginning of the first paragraph
-        const firstDiv = editorRef.current.querySelector('div');
-        if (firstDiv) {
-          positionCursorAtContentStart(firstDiv, 0);
-        }
-      }
-    } catch (error) {
-      console.error('Error in ensureValidCursorPosition:', error);
-    }
-  }, [isClient, positionCursorAtContentStart]);
 
   // Memoized selection handling with cursor validation
   const saveSelection = useCallback(() => {
@@ -728,7 +635,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
   // SIMPLIFIED: No need for click area detection without injected paragraph numbers
 
-  // SIMPLIFIED: Handle click events for link editing without paragraph number complexity
+  // Enhanced click handling for proper cursor positioning
   const handleEditorClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!isClient) return;
 
@@ -771,7 +678,11 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         const linkData = extractLinkDataFromElement(actualLinkElement);
         openLinkEditorForEdit(linkData);
       }
+      return;
     }
+
+    // SIMPLIFIED: Let browser handle click positioning naturally
+    // No custom cursor positioning logic - the browser handles this correctly by default
   }, [isClient, user, currentPage, isEditMode]);
 
   // Click handler for read-only mode - switches to edit mode
@@ -794,42 +705,15 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     }
   }, [canEdit, onSetIsEditing]);
 
-  // Handle blur events - ensure parent gets final content
+  // SIMPLIFIED: Minimal blur handling
   const handleBlur = useCallback(() => {
     if (!isClient || !editorRef.current) return;
 
-    // Clear any pending timeout and immediately notify parent
-    if (changeTimeoutRef.current) {
-      clearTimeout(changeTimeoutRef.current);
-    }
-
+    // Just notify parent of current content on blur
     const htmlContent = editorRef.current.innerHTML;
     const slateContent = convertHTMLToSlate(htmlContent);
-
-    // Immediately notify parent on blur
     onChange?.(slateContent);
-
-    // Count empty lines by checking actual DOM divs
-    if (onEmptyLinesChange && editorRef.current) {
-      const divs = editorRef.current.querySelectorAll('div:not(.unified-paragraph-number)');
-      let emptyLineCount = 0;
-
-      divs.forEach((div) => {
-        const textContent = div.textContent || '';
-        const hasOnlyBr = div.innerHTML === '<br>' || div.innerHTML === '<br/>';
-        const hasOnlyNbsp = div.innerHTML === '&nbsp;' || textContent === '\u00A0';
-        const isEmpty = textContent.trim() === '' || hasOnlyBr || hasOnlyNbsp;
-
-        if (isEmpty) {
-          emptyLineCount++;
-        }
-      });
-
-      onEmptyLinesChange(emptyLineCount);
-    }
-
-    saveSelection();
-  }, [isClient, onChange, onEmptyLinesChange, saveSelection]);
+  }, [isClient, onChange, convertHTMLToSlate]);
 
   // Simplified delete key handling - no complex manipulation
   const handleDeleteKey = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -837,84 +721,11 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     // This prevents conflicts with React's DOM management
   }, []);
 
-  // Enhanced keyboard navigation with smart cursor positioning
+  // SIMPLIFIED: Let browser handle keyboard navigation naturally
   const handleKeyboardNavigation = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-
-    const range = selection.getRangeAt(0);
-
-    // Find current paragraph
-    let paragraph = range.startContainer;
-    while (paragraph && paragraph !== editorRef.current) {
-      if (paragraph.nodeType === Node.ELEMENT_NODE &&
-          (paragraph as Element).tagName === 'DIV' &&
-          (paragraph as Element).parentElement === editorRef.current) {
-        break;
-      }
-      paragraph = paragraph.parentNode;
-    }
-
-    if (!paragraph || paragraph === editorRef.current) return;
-
-    // Handle Home key - position at very beginning of content area
-    if (e.key === 'Home') {
-      e.preventDefault();
-      positionCursorAtContentStart(paragraph as Element, 0);
-      return;
-    }
-
-    // Handle End key - position at end of content
-    if (e.key === 'End') {
-      e.preventDefault();
-      const boundary = getContentAreaBoundary(paragraph as Element);
-      if (boundary) {
-        // Find the last content node
-        const walker = document.createTreeWalker(
-          paragraph as Element,
-          NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
-          {
-            acceptNode: (node) => {
-              // Skip paragraph numbers
-              if (node.parentElement &&
-                  (node.parentElement.classList.contains('unified-paragraph-number') ||
-                   node.parentElement.classList.contains('dense-paragraph-number'))) {
-                return NodeFilter.FILTER_REJECT;
-              }
-              return NodeFilter.FILTER_ACCEPT;
-            }
-          }
-        );
-
-        let lastNode = null;
-        let currentNode = walker.nextNode();
-        while (currentNode) {
-          lastNode = currentNode;
-          currentNode = walker.nextNode();
-        }
-
-        if (lastNode) {
-          const newRange = document.createRange();
-          if (lastNode.nodeType === Node.TEXT_NODE) {
-            newRange.setStart(lastNode, lastNode.textContent?.length || 0);
-          } else {
-            newRange.setStartAfter(lastNode);
-          }
-          newRange.collapse(true);
-          selection.removeAllRanges();
-          selection.addRange(newRange);
-        }
-      }
-      return;
-    }
-
-    // For arrow keys, use minimal validation after movement
-    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-      setTimeout(() => {
-        ensureValidCursorPosition();
-      }, 10);
-    }
-  }, [positionCursorAtContentStart, getContentAreaBoundary, ensureValidCursorPosition]);
+    // Let the browser handle all keyboard navigation naturally
+    // No custom cursor positioning logic
+  }, []);
 
   // Handle Cmd+Delete for delete-to-end-of-line (paragraph numbers as visible newlines)
   const handleCmdDelete = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -1046,240 +857,19 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     }
 
     return true;
-  }, [getContentAreaBoundary, findContentStartPosition, positionCursorAtContentStart, handleContentChange]);
+  }, [handleContentChange]);
 
-  // Handle key events
+  // SIMPLIFIED: Minimal key handling - let browser handle everything naturally
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!isClient) return;
 
     // Allow Cmd+Enter to bubble up for save functionality
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      // Don't prevent default, let it bubble up to parent handlers
       onKeyDown?.(e);
       return;
     }
 
     onKeyDown?.(e);
-
-    // Handle Cmd+Delete (delete to end of line) first
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Delete') {
-      if (handleCmdDelete(e)) {
-        return;
-      }
-    }
-
-    // Enhanced keyboard navigation handling
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
-      handleKeyboardNavigation(e);
-      return;
-    }
-
-    // REMOVED: Aggressive cursor positioning on Enter key
-    // Let the browser handle Enter key naturally
-
-    // Handle Delete/Backspace at beginning of line (delete newline behavior)
-    if (e.key === 'Delete' || e.key === 'Backspace') {
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-
-        // Find current paragraph
-        let currentParagraph = range.startContainer;
-        while (currentParagraph && currentParagraph !== editorRef.current) {
-          if (currentParagraph.nodeType === Node.ELEMENT_NODE &&
-              (currentParagraph as Element).tagName === 'DIV' &&
-              (currentParagraph as Element).parentElement === editorRef.current) {
-            break;
-          }
-          currentParagraph = currentParagraph.parentNode;
-        }
-
-        if (currentParagraph && currentParagraph !== editorRef.current) {
-          const paragraph = currentParagraph as Element;
-          const startPosition = findContentStartPosition(paragraph);
-
-
-
-          // Check if cursor is at the very beginning of content area
-          // Also check if we're at the beginning of the paragraph div itself
-          const isAtContentStart = startPosition &&
-              range.startContainer === startPosition.node &&
-              range.startOffset === startPosition.offset;
-
-          const isAtParagraphStart = range.startContainer === paragraph && range.startOffset === 0;
-
-          // Also check if we're at the start of the first text node after paragraph number
-          const paragraphNumber = paragraph.querySelector('.unified-paragraph-number, .dense-paragraph-number');
-          const isAfterParagraphNumber = paragraphNumber &&
-              range.startContainer.nodeType === Node.TEXT_NODE &&
-              range.startContainer.previousSibling === paragraphNumber &&
-              range.startOffset === 0;
-
-          if ((isAtContentStart || isAtParagraphStart || isAfterParagraphNumber) && range.collapsed) {
-
-            if (e.key === 'Delete') {
-              // Delete key at beginning: merge with next paragraph
-              const nextParagraph = paragraph.nextElementSibling;
-              if (nextParagraph && nextParagraph.tagName === 'DIV') {
-                e.preventDefault();
-
-                // Store cursor position for restoration
-                const cursorPosition = { node: range.startContainer, offset: range.startOffset };
-
-                // Get all content from next paragraph (excluding paragraph number)
-                const nextContent = Array.from(nextParagraph.childNodes).filter(node => {
-                  if (node.nodeType === Node.ELEMENT_NODE) {
-                    const element = node as Element;
-                    return !element.classList.contains('unified-paragraph-number') &&
-                           !element.classList.contains('dense-paragraph-number');
-                  }
-                  return true;
-                });
-
-                // Create document fragment for atomic operation
-                const fragment = document.createDocumentFragment();
-                nextContent.forEach(node => {
-                  fragment.appendChild(node.cloneNode(true));
-                });
-
-                // Perform atomic merge operation in a single frame to prevent flickering
-                // Append all content at once
-                paragraph.appendChild(fragment);
-
-                // Remove next paragraph
-                nextParagraph.remove();
-
-                // Restore cursor position at merge point
-                try {
-                  const newRange = document.createRange();
-                  newRange.setStart(cursorPosition.node, cursorPosition.offset);
-                  newRange.collapse(true);
-                  selection.removeAllRanges();
-                  selection.addRange(newRange);
-                } catch (error) {
-                  // Fallback to content start if cursor restoration fails
-                  positionCursorAtContentStart(paragraph);
-                }
-
-                // Trigger content change after DOM is stable
-                requestAnimationFrame(() => {
-                  handleContentChange();
-                });
-                return;
-              }
-            } else if (e.key === 'Backspace') {
-              // Backspace at beginning: merge with previous paragraph
-              const previousParagraph = paragraph.previousElementSibling;
-              if (previousParagraph && previousParagraph.tagName === 'DIV') {
-                e.preventDefault();
-
-                // Find the merge point in previous paragraph (end of content)
-                const prevContent = Array.from(previousParagraph.childNodes).filter(node => {
-                  if (node.nodeType === Node.ELEMENT_NODE) {
-                    const element = node as Element;
-                    return !element.classList.contains('unified-paragraph-number') &&
-                           !element.classList.contains('dense-paragraph-number');
-                  }
-                  return true;
-                });
-
-                // Calculate cursor position at end of previous paragraph content
-                let mergePosition = null;
-                if (prevContent.length > 0) {
-                  const lastNode = prevContent[prevContent.length - 1];
-                  if (lastNode.nodeType === Node.TEXT_NODE) {
-                    mergePosition = { node: lastNode, offset: lastNode.textContent?.length || 0 };
-                  } else {
-                    // Position after the last element
-                    mergePosition = { node: previousParagraph, offset: Array.from(previousParagraph.childNodes).indexOf(lastNode as ChildNode) + 1 };
-                  }
-                } else {
-                  // Previous paragraph is empty, position at start
-                  mergePosition = { node: previousParagraph, offset: 0 };
-                }
-
-                // Get all content from current paragraph (excluding paragraph number)
-                const currentContent = Array.from(paragraph.childNodes).filter(node => {
-                  if (node.nodeType === Node.ELEMENT_NODE) {
-                    const element = node as Element;
-                    return !element.classList.contains('unified-paragraph-number') &&
-                           !element.classList.contains('dense-paragraph-number');
-                  }
-                  return true;
-                });
-
-                // Create document fragment for atomic operation
-                const fragment = document.createDocumentFragment();
-                currentContent.forEach(node => {
-                  fragment.appendChild(node.cloneNode(true));
-                });
-
-                // Perform atomic merge operation in a single frame to prevent flickering
-                // Append all content at once
-                previousParagraph.appendChild(fragment);
-
-                // Remove current paragraph
-                paragraph.remove();
-
-                // Position cursor at the merge point
-                if (mergePosition) {
-                  try {
-                    const newRange = document.createRange();
-                    newRange.setStart(mergePosition.node, mergePosition.offset);
-                    newRange.collapse(true);
-                    selection.removeAllRanges();
-                    selection.addRange(newRange);
-                  } catch (error) {
-                    // Fallback to content start if cursor positioning fails
-                    positionCursorAtContentStart(previousParagraph);
-                  }
-                } else {
-                  positionCursorAtContentStart(previousParagraph);
-                }
-
-                // Trigger content change after DOM is stable
-                requestAnimationFrame(() => {
-                  handleContentChange();
-                });
-                return;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // CRITICAL FIX: Only prevent deletion if it would completely empty the editor
-    if ((e.key === 'Backspace' || e.key === 'Delete') && editorRef.current) {
-      const divs = editorRef.current.querySelectorAll('div');
-
-      // Only prevent deletion if there's only one div AND it would be completely emptied
-      if (divs.length === 1) {
-        const lastDiv = divs[0];
-        // Get text content excluding paragraph numbers
-        const paragraphNumber = lastDiv.querySelector('.unified-paragraph-number, .dense-paragraph-number');
-        const paragraphNumberText = paragraphNumber ? paragraphNumber.textContent || '' : '';
-        const textContent = lastDiv.textContent || '';
-        const actualContent = textContent.substring(paragraphNumberText.length).trim();
-
-        const selection = window.getSelection();
-
-        // Only prevent deletion if it would leave the editor completely empty
-        if (selection && selection.rangeCount > 0 && actualContent === '') {
-          const range = selection.getRangeAt(0);
-          const isAtStart = range.startOffset === 0 && range.collapsed;
-
-          // Only prevent backspace at the very start of an empty editor
-          if (isAtStart && e.key === 'Backspace') {
-            e.preventDefault();
-            return;
-          }
-        }
-      }
-    }
-
-    // ENHANCED: Check for delete operations that might affect paragraph numbers
-    handleDeleteKey(e);
 
     // Handle Ctrl+K for link insertion
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -1288,18 +878,33 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       setLinkSearchText("");
       setLinkDisplayText("");
       setShowLinkEditor(true);
+      return;
     }
 
-    // SIMPLIFIED: Allow normal Enter key behavior for line breaks
-    if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
-      // Let the browser handle Enter key naturally for line breaks
-      // Only ensure cursor positioning after the fact
-      setTimeout(() => {
-        ensureValidCursorPosition();
-        handleContentChange();
-      }, 10);
+    // Only prevent deletion if it would completely empty the editor
+    if ((e.key === 'Backspace' || e.key === 'Delete') && editorRef.current) {
+      const divs = editorRef.current.querySelectorAll('div');
+      if (divs.length === 1) {
+        const lastDiv = divs[0];
+        const textContent = lastDiv.textContent || '';
+        const actualContent = textContent.trim();
+
+        if (actualContent === '') {
+          const selection = window.getSelection();
+          if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const isAtStart = range.startOffset === 0 && range.collapsed;
+            if (isAtStart && e.key === 'Backspace') {
+              e.preventDefault();
+              return;
+            }
+          }
+        }
+      }
     }
-  }, [isClient, onKeyDown, saveSelection, handleCmdDelete, handleKeyboardNavigation, ensureValidCursorPosition, handleContentChange]);
+
+    // Let browser handle all other keys naturally (including Enter)
+  }, [isClient, onKeyDown, saveSelection]);
 
   // Function to capture initial link editor state for change detection
   const captureInitialLinkEditorState = useCallback(() => {
@@ -1958,43 +1563,27 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                 ref={editorRef}
                 contentEditable={!readOnly}
                 tabIndex={readOnly ? -1 : (isNewPage ? 2 : 0)} // Disable tab focus in readOnly mode
-                onInput={readOnly ? undefined : handleInput}
+                onInput={readOnly ? undefined : undefined}
                 onKeyDown={readOnly ? undefined : handleKeyDown}
                 onBlur={readOnly ? undefined : handleBlur}
-                onFocus={readOnly ? undefined : () => {
-                  // CRITICAL FIX: Ensure proper focus and cursor positioning for empty content
-                  setTimeout(() => {
-                    if (!editorRef.current) return;
-
-                    const selection = window.getSelection();
-                    if (!selection) return;
-
-                    // If no selection or selection is outside editor, position cursor properly
-                    if (selection.rangeCount === 0 || !editorRef.current.contains(selection.anchorNode)) {
-                      const firstDiv = editorRef.current.querySelector('div');
-                      if (firstDiv) {
-                        // If the div only contains &nbsp;, select it so user can start typing
-                        if (firstDiv.innerHTML === '&nbsp;' || firstDiv.textContent === '\u00A0') {
-                          const range = document.createRange();
-                          range.selectNodeContents(firstDiv);
-                          selection.removeAllRanges();
-                          selection.addRange(range);
-                        } else {
-                          positionCursorAtContentStart(firstDiv);
-                        }
-                      }
-                    }
-                  }, 10);
-                }}
-                onMouseUp={readOnly ? undefined : saveSelection}
-                onKeyUp={readOnly ? undefined : saveSelection}
-                onSelect={readOnly ? undefined : handleSelectionChange}
+                onFocus={readOnly ? undefined : undefined}
+                onMouseUp={readOnly ? undefined : undefined}
+                onKeyUp={readOnly ? undefined : undefined}
+                onSelect={readOnly ? undefined : undefined}
                 onClick={readOnly ? (canEdit ? handleViewModeClick : undefined) : (e) => {
-                  // Ensure editor gets focus when clicked
-                  if (editorRef.current && !editorRef.current.contains(document.activeElement)) {
-                    editorRef.current.focus();
+                  // SIMPLIFIED: Only handle link clicks, let browser handle cursor positioning naturally
+                  const target = e.target as HTMLElement;
+                  const linkElement = target.closest('[data-link-type]') as HTMLElement;
+                  const compoundElement = target.closest('.compound-link') as HTMLElement;
+                  const actualLinkElement = compoundElement || linkElement;
+
+                  if (actualLinkElement) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const linkData = extractLinkDataFromElement(actualLinkElement);
+                    openLinkEditorForEdit(linkData);
                   }
-                  handleEditorClick(e);
+                  // For all other clicks, let the browser handle cursor positioning naturally
                 }}
                 className={`${editorClassName} ${readOnly ? 'cursor-text' : ''}`}
                 data-placeholder={readOnly ? undefined : placeholder}
@@ -2012,9 +1601,9 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                 }}
               />
 
-              {/* Paragraph number overlay - only in edit mode and normal line mode */}
+              {/* NON-INTERFERING: Pure overlay paragraph numbers */}
               {!readOnly && lineMode === LINE_MODES.NORMAL && (
-                <ParagraphNumberOverlay editorRef={editorRef} />
+                <NonInterferingParagraphNumbers editorRef={editorRef} />
               )}
             </>
           ) : (
