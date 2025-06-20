@@ -105,9 +105,6 @@ export default function PageHeader({
   const { trackInteractionEvent, events } = useWeWriteAnalytics();
   const headerRef = React.useRef<HTMLDivElement>(null);
   const { lineMode, setLineMode } = useLineSettings();
-
-
-  const spacerRef = React.useRef<HTMLDivElement>(null);
   const [displayUsername, setDisplayUsername] = React.useState<string>(username || "Anonymous");
   const [tier, setTier] = React.useState<string | null>(initialTier || null);
   const [subscriptionStatus, setSubscriptionStatus] = React.useState<string | null>(initialStatus || null);
@@ -448,26 +445,67 @@ export default function PageHeader({
   React.useEffect(() => {
     const updateHeaderHeight = () => {
       if (headerRef.current) {
-        // Calculate the expected height based on scroll state and padding
-        // This provides a more predictable height calculation
-        const baseHeight = isScrolled ? 56 : 80; // Base height for collapsed/expanded states
-        const paddingHeight = headerPadding * 2; // Top and bottom padding
-        const expectedHeight = baseHeight + paddingHeight;
+        // Use actual measured height instead of calculated height
+        // This accounts for dynamic title wrapping and content changes
+        const actualHeight = headerRef.current.offsetHeight;
+        const clientHeight = headerRef.current.clientHeight;
+        const scrollHeight = headerRef.current.scrollHeight;
+        const computedStyle = window.getComputedStyle(headerRef.current);
+        const borderTop = parseFloat(computedStyle.borderTopWidth) || 0;
+        const borderBottom = parseFloat(computedStyle.borderBottomWidth) || 0;
 
-        setHeaderHeight(expectedHeight);
+        // Calculate the content height without borders
+        const contentHeight = actualHeight - borderTop - borderBottom;
+
+        setHeaderHeight(actualHeight);
+
+        // Debug logging to track height calculations (can be removed in production)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('PageHeader height update:', {
+            actualHeight,
+            contentHeight,
+            adjustedHeight: Math.max(contentHeight - 4, actualHeight * 0.95),
+            isScrolled,
+            headerPadding,
+            title: title?.substring(0, 30) + (title && title.length > 30 ? '...' : '')
+          });
+        }
+
+        // Use a slightly reduced height to account for any extra spacing
+        // This prevents excessive padding while still providing enough clearance
+        const adjustedHeight = Math.max(contentHeight - 4, actualHeight * 0.95);
+        document.documentElement.style.setProperty('--page-header-height', `${adjustedHeight}px`);
       }
     };
 
-    // Initial update
-    updateHeaderHeight();
+    // Initial update with a small delay to ensure rendering is complete
+    const timeoutId = setTimeout(updateHeaderHeight, 50);
 
     // Add resize listener to recalculate on window resize
     window.addEventListener('resize', updateHeaderHeight);
 
+    // Use ResizeObserver for more accurate height tracking with debouncing
+    let resizeObserver: ResizeObserver | null = null;
+    let resizeTimeout: NodeJS.Timeout | null = null;
+
+    if (headerRef.current && 'ResizeObserver' in window) {
+      resizeObserver = new ResizeObserver(() => {
+        // Debounce the resize updates to prevent excessive recalculations
+        if (resizeTimeout) clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(updateHeaderHeight, 16); // ~60fps
+      });
+      resizeObserver.observe(headerRef.current);
+    }
+
     return () => {
+      clearTimeout(timeoutId);
+      if (resizeTimeout) clearTimeout(resizeTimeout);
       window.removeEventListener('resize', updateHeaderHeight);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
     };
-  }, [title, isScrolled, headerPadding]);
+  }, [title, isScrolled, headerPadding, isEditingTitle]);
 
   React.useEffect(() => {
     // Use a throttled scroll handler for better performance
@@ -739,15 +777,19 @@ export default function PageHeader({
                         <span
                           className={`${isScrolled ? "text-ellipsis overflow-hidden" : ""} ${
                             canEdit && !isDailyNote
-                              ? `cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 border transition-all duration-200 ${
-                                  titleError
-                                    ? "border-destructive hover:border-destructive/70"
-                                    : isEditorFocused
-                                    ? "border-muted-foreground/30"
-                                    : "border-muted-foreground/20 hover:border-muted-foreground/30"
-                                }`
+                              ? isEditing
+                                ? `cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 border transition-all duration-200 ${
+                                    titleError
+                                      ? "border-destructive hover:border-destructive/70"
+                                      : isEditorFocused
+                                      ? "border-muted-foreground/30"
+                                      : "border-muted-foreground/20 hover:border-muted-foreground/30"
+                                  }`
+                                : "cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 transition-all duration-200"
                               : isDailyNote && !isScrolled
-                              ? "flex flex-col items-center gap-1 cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 border border-muted-foreground/20 hover:border-muted-foreground/30 transition-all duration-200"
+                              ? isEditing
+                                ? "flex flex-col items-center gap-1 cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 border border-muted-foreground/20 hover:border-muted-foreground/30 transition-all duration-200"
+                                : "flex flex-col items-center gap-1 cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 transition-all duration-200"
                               : isDailyNote
                               ? "cursor-pointer"
                               : ""
@@ -1056,16 +1098,6 @@ export default function PageHeader({
           }}
         />
       </header>
-      {/* Add spacer to prevent content from being hidden under the fixed header */}
-      <div
-        ref={spacerRef}
-        style={{
-          height: `${headerHeight}px`,
-          transition: 'height 300ms ease-in-out',
-          transform: 'translateZ(0)', // Force GPU acceleration
-          willChange: 'height'
-        }}
-      />
 
       {/* Add to Page Modal - shared with bottom button functionality */}
       {pageObject && (

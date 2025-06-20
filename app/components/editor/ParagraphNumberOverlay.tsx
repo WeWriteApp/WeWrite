@@ -30,11 +30,7 @@ const ParagraphNumberOverlay: React.FC<ParagraphNumberOverlayProps> = ({ editorR
       return;
     }
 
-    // Only update positions in normal mode
-    if (lineMode === LINE_MODES.DENSE) {
-      setParagraphPositions([]);
-      return;
-    }
+    // Dense mode removed - always update positions in normal mode
 
     const editorRect = editorRef.current.getBoundingClientRect();
     const paragraphs = editorRef.current.querySelectorAll('div');
@@ -157,25 +153,7 @@ const ParagraphNumberOverlay: React.FC<ParagraphNumberOverlayProps> = ({ editorR
   useEffect(() => {
     if (!editorRef.current) return;
 
-    // CRITICAL FIX: Skip paragraph number injection entirely in dense mode
-    // Dense mode paragraph numbers are handled by TextView's RenderContent component
-    if (lineMode === LINE_MODES.DENSE) {
-      // Remove any existing paragraph numbers in dense mode
-      const existingNumbers = editorRef.current.querySelectorAll('.unified-paragraph-number, .dense-paragraph-number');
-      existingNumbers.forEach(number => number.remove());
-
-      // Reset paragraph styling to default for dense mode
-      const paragraphs = editorRef.current.querySelectorAll('div');
-      paragraphs.forEach((paragraph) => {
-        paragraph.style.display = '';
-        paragraph.style.marginLeft = '';
-        paragraph.style.textIndent = '';
-        paragraph.style.marginRight = '';
-        paragraph.style.alignItems = '';
-        paragraph.style.flexWrap = '';
-      });
-      return;
-    }
+    // Dense mode removed - always inject paragraph numbers in normal mode
 
     const paragraphs = editorRef.current.querySelectorAll('div');
 
@@ -197,21 +175,33 @@ const ParagraphNumberOverlay: React.FC<ParagraphNumberOverlayProps> = ({ editorR
         const numberSpan = document.createElement('span');
         numberSpan.textContent = `${index + 1}`;
 
-        // Normal mode only: EXACT same as view mode - flex layout for horizontal alignment
+        // SIMPLIFIED: Use margin-based approach like view mode without complex wrappers
         numberSpan.className = 'unified-paragraph-number';
         numberSpan.contentEditable = 'false';
-        paragraph.style.display = 'flex';
-        paragraph.style.alignItems = 'baseline';
-        paragraph.style.flexWrap = 'nowrap';
-        paragraph.style.marginLeft = '0'; // No margin needed
-        paragraph.style.textIndent = '0'; // No text indent needed
-        paragraph.style.marginRight = '0';
 
-        // Insert as first child - this makes it part of the paragraph flow
+        // Reset paragraph to normal block layout - no flex
+        paragraph.style.display = 'block';
+        paragraph.style.alignItems = '';
+        paragraph.style.flexWrap = '';
+        paragraph.style.marginLeft = '2rem'; // Create space for paragraph number
+        paragraph.style.textIndent = '0';
+        paragraph.style.marginRight = '0';
+        paragraph.style.paddingLeft = '0';
+        paragraph.style.position = 'relative'; // For absolute positioning of number
+
+        // Position paragraph number absolutely to avoid interfering with content flow
+        numberSpan.style.position = 'absolute';
+        numberSpan.style.left = '0.5rem';
+        numberSpan.style.top = '0.25rem'; // Align with paragraph padding
+        numberSpan.style.width = '1.5rem';
+        numberSpan.style.textAlign = 'right';
+        numberSpan.style.pointerEvents = 'none';
+        numberSpan.style.userSelect = 'none';
+
+        // Insert as first child - positioned absolutely so it doesn't affect content flow
         paragraph.insertBefore(numberSpan, paragraph.firstChild);
 
-      // CRITICAL FIX: Ensure there's always a text node for content after the paragraph number
-      // This prevents cursor from getting stuck in the paragraph number area
+      // SIMPLIFIED: Ensure there's content for typing and cursor isn't in paragraph number
       let hasContentNode = false;
       let nextNode = numberSpan.nextSibling;
 
@@ -236,29 +226,15 @@ const ParagraphNumberOverlay: React.FC<ParagraphNumberOverlayProps> = ({ editorR
         const contentTextNode = document.createTextNode('');
         paragraph.appendChild(contentTextNode);
 
-        // If this paragraph currently has focus, position cursor in the content area
+        // If cursor is in paragraph number, move it to content area
         const selection = window.getSelection();
         if (selection && selection.rangeCount > 0) {
           const range = selection.getRangeAt(0);
           const currentContainer = range.startContainer;
 
-          // Check if cursor is currently in this paragraph
-          let isInThisParagraph = false;
-          let checkNode = currentContainer;
-          while (checkNode && checkNode !== document.body) {
-            if (checkNode === paragraph) {
-              isInThisParagraph = true;
-              break;
-            }
-            checkNode = checkNode.parentNode;
-          }
-
-          // If cursor is in this paragraph and in a bad position, move it to content area
-          if (isInThisParagraph &&
-              (currentContainer === paragraph ||
-               currentContainer === numberSpan ||
-               (currentContainer.nodeType === Node.TEXT_NODE && currentContainer.parentElement === numberSpan))) {
-
+          // If cursor is in paragraph number, move it to content
+          if (currentContainer === numberSpan ||
+              (currentContainer.nodeType === Node.TEXT_NODE && currentContainer.parentElement === numberSpan)) {
             try {
               const newRange = document.createRange();
               newRange.setStart(contentTextNode, 0);

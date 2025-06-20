@@ -14,11 +14,20 @@ import { DrawerContext } from "../../providers/DrawerProvider';
  * 
  * A drawer menu for mobile devices that allows users to switch between different paragraph modes.
  */
-export function LineSettingsDrawer() {
-  const { lineMode, setLineMode } = useLineSettings();
+export function LineSettingsDrawer({ isEditing = false }) {
+  const { lineMode, setLineMode, isEditMode } = useLineSettings();
   const { theme } = useTheme();
   const { isMobile } = useContext(MobileContext);
   const { isOpen, setIsOpen, setSelected } = useContext(DrawerContext);
+
+  // Don't render in edit mode - dense mode is only for view mode
+  // Check for edit mode through URL or other indicators
+  const isInEditMode = isEditing || isEditMode ||
+    (typeof window !== 'undefined' && window.location.pathname.includes('/edit'));
+
+  if (isInEditMode) {
+    return null;
+  }
 
   // Handle mode change with animation
   const handleModeChange = (mode) => {

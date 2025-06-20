@@ -225,6 +225,39 @@ function SinglePageView({ params, initialEditMode = false }) {
       return false;
     }
 
+    // CRITICAL DATA LOSS PREVENTION: Validate content before saving
+    const contentToSave = inputContent || editorContent || editorState;
+
+    // Check if content is unexpectedly empty
+    const isContentEmpty = !contentToSave ||
+      (Array.isArray(contentToSave) && (
+        contentToSave.length === 0 ||
+        (contentToSave.length === 1 &&
+         contentToSave[0]?.type === 'paragraph' &&
+         contentToSave[0]?.children?.length === 1 &&
+         contentToSave[0]?.children[0]?.text === '')
+      ));
+
+    // If content is empty but the page should have content, show warning
+    if (isContentEmpty && page && !page.isNewPage) {
+      console.warn("🚨 DATA LOSS PREVENTION: Attempting to save empty content for existing page");
+
+      // Show confirmation dialog for potentially destructive save
+      const confirmSave = window.confirm(
+        "⚠️ WARNING: You are about to save empty content.\n\n" +
+        "This will permanently delete all existing content on this page.\n\n" +
+        "Are you sure you want to continue?\n\n" +
+        "Click 'Cancel' to go back and check your content, or 'OK' to proceed with saving empty content."
+      );
+
+      if (!confirmSave) {
+        console.log("🛡️ DATA LOSS PREVENTED: User cancelled empty content save");
+        return false;
+      } else {
+        console.log("⚠️ User confirmed saving empty content");
+      }
+    }
+
     if (!page) {
       setError("Page data not available");
       return false;
@@ -1048,9 +1081,15 @@ function SinglePageView({ params, initialEditMode = false }) {
         }
         // Check for initialEditMode prop (from /[id]/edit route)
         else if (initialEditMode) {
-          console.log('Setting edit mode from initialEditMode prop - IMMEDIATE');
-          // SIMPLIFIED: Set edit mode immediately without delay
-          setIsEditing(true);
+          // CRITICAL FIX: Wait for content to load before entering edit mode
+          // This prevents the race condition where editor initializes with empty content
+          if (editorState && editorState.length > 0) {
+            console.log('Setting edit mode from initialEditMode prop - content loaded');
+            setIsEditing(true);
+          } else {
+            console.log('Waiting for content to load before entering edit mode...');
+            // Content will trigger edit mode when it loads (see content loading effect below)
+          }
         }
       } else {
         console.log('User does not have edit permissions for this page');
@@ -1060,7 +1099,19 @@ function SinglePageView({ params, initialEditMode = false }) {
         }
       }
     }
-  }, [searchParams, isLoading, page, user, hasGroupAccess, initialEditMode, params.id, router]);
+  }, [searchParams, isLoading, page, user, hasGroupAccess, initialEditMode, params.id, router, editorState]);
+
+  // CRITICAL FIX: Separate effect to handle edit mode when content loads
+  useEffect(() => {
+    // If we're waiting for content to load for initial edit mode
+    if (!isLoading && page && user && initialEditMode && !isEditing && editorState && editorState.length > 0) {
+      const canEdit = user.uid === page.userId || (page.groupId && hasGroupAccess);
+      if (canEdit) {
+        console.log('Content loaded, now entering edit mode');
+        setIsEditing(true);
+      }
+    }
+  }, [isLoading, page, user, initialEditMode, isEditing, editorState, hasGroupAccess]);
 
   // Handle browser back button navigation
   useEffect(() => {
@@ -1802,10 +1853,16 @@ const PageContentWithLineSettings = ({
     (page.groupId && hasGroupAccess)
   );
 
+
+
   return (
-    <div className={`animate-in fade-in-0 duration-300 w-full py-4 max-w-none box-border ${
-      lineMode === LINE_MODES.DENSE ? 'px-0' : 'px-0'
-    }`}>
+    <div
+      className={`animate-in fade-in-0 duration-300 w-full pb-1 max-w-none box-border px-0`}
+      style={{
+        paddingTop: 'var(--page-header-height, 80px)', // Use dynamic header height with fallback
+        transition: 'padding-top 300ms ease-in-out' // Smooth transition when header height changes
+      }}
+    >
       <TextSelectionProvider
         contentRef={contentRef}
         enableCopy={true}
@@ -1864,21 +1921,22 @@ const PageContentWithLineSettings = ({
 
 
 
-      {/* Dense Mode Toggle - positioned after content but inside LineSettingsProvider */}
-      <div className="mt-8 mb-4">
-        <div className="flex items-center justify-center">
-          <div className="flex items-center gap-3 px-4 py-2 rounded-2xl border border-theme-medium bg-background shadow-sm">
+      {/* Dense mode toggle - only show in view mode */}
+      {!isEditing && (
+        <div className="flex items-center justify-center py-2 transition-all duration-300 ease-in-out">
+          <div className="flex items-center space-x-3 transition-all duration-200 ease-in-out hover:scale-105">
+            <span className="text-sm text-muted-foreground transition-colors duration-200">Dense mode</span>
             <Switch
               checked={lineMode === LINE_MODES.DENSE}
               onCheckedChange={(checked) => {
-                const newMode = checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL;
-                setLineMode(newMode);
+                setLineMode(checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL);
               }}
+              aria-label="Toggle dense mode"
+              className="transition-all duration-200 ease-in-out"
             />
-            <span className="text-sm font-medium">Dense mode</span>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

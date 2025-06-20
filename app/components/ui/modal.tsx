@@ -144,7 +144,7 @@ export function Modal({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[100] flex md:items-center md:justify-center items-end justify-center overflow-y-auto"
+          className="fixed inset-0 z-[100] flex md:items-center md:justify-center items-end justify-center overflow-hidden"
           onClick={handleBackdropInteraction}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -180,10 +180,10 @@ export function Modal({
               "relative bg-background shadow-lg border border-border dark:border-border z-10",
               // Mobile: Full screen slide-up modal
               "w-full h-full rounded-t-2xl md:rounded-2xl",
-              // Desktop: Centered modal with constraints
-              "md:w-[calc(100%-2rem)] md:max-w-md md:h-auto md:mx-4 md:my-4",
-              // Padding
-              "p-6",
+              // Desktop: Centered modal with constraints and overflow handling
+              "md:w-[calc(100%-2rem)] md:max-w-md md:h-auto md:max-h-[calc(100vh-40px)] md:mx-4 md:my-5",
+              // Padding and overflow
+              "p-6 overflow-hidden flex flex-col",
               className
             )}
             initial={{
@@ -219,14 +219,14 @@ export function Modal({
             )}
 
             {title && (
-              <div className="mb-4 text-center">
+              <div className="mb-4 text-center flex-shrink-0">
                 <h3 className="text-lg font-semibold w-full">{title}</h3>
               </div>
             )}
 
-            <div className="py-2">{children}</div>
+            <div className="py-2 flex-1 min-h-0 overflow-hidden">{children}</div>
 
-            {footer && <div className="mt-4">{footer}</div>}
+            {footer && <div className="mt-4 flex-shrink-0">{footer}</div>}
           </motion.div>
         </motion.div>
       )}

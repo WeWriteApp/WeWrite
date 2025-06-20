@@ -24,6 +24,7 @@ import { SyncQueueProvider } from "./contexts/SyncQueueContext"
 import { LineSettingsProvider } from "./contexts/LineSettingsContext"
 import ConsoleErrorLogger from "./components/utils/ConsoleErrorLogger"
 import DoubleClickZoomPrevention from "./components/utils/DoubleClickZoomPrevention"
+import TerminalConsole from "./components/utils/TerminalConsole"
 
 
 
@@ -294,6 +295,7 @@ export default function RootLayout({
                                         <SyncQueueProvider>
                                         <CacheInitializer />
                                         <ConsoleErrorLogger />
+                                        <TerminalConsole />
                                         <DoubleClickZoomPrevention />
                                         <FeatureFlagListener>
                                           <ErrorBoundary name="layout" resetOnPropsChange={true}>

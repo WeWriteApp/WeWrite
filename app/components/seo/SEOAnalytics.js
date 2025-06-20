@@ -42,24 +42,15 @@ export function SEOAnalytics({ showDebugInfo = false, enableRealTimeTracking = t
     };
   }, [enableRealTimeTracking, seoState.score, seoState.isOptimized]);
 
-  // Mock analytics data (in real implementation, this would come from your analytics service)
+  // TODO: Implement real analytics data from Google Analytics 4 or Search Console
   useEffect(() => {
-    // Simulate fetching analytics data
-    const fetchAnalytics = async () => {
-      // This would typically be an API call to your analytics service
-      const mockData = {
-        pageViews: Math.floor(Math.random() * 1000) + 100,
-        avgTimeOnPage: Math.floor(Math.random() * 300) + 60, // 1-5 minutes
-        bounceRate: Math.floor(Math.random() * 50) + 25, // 25-75%
-        searchImpressions: Math.floor(Math.random() * 5000) + 500,
-        clickThroughRate: (Math.random() * 10 + 2).toFixed(2), // 2-12%
-        avgPosition: (Math.random() * 20 + 5).toFixed(1) // Position 5-25
-      };
-      
-      setAnalytics(mockData);
-    };
+    // Real implementation would:
+    // 1. Call Google Analytics 4 API for pageViews, avgTimeOnPage, bounceRate
+    // 2. Call Google Search Console API for searchImpressions, clickThroughRate, avgPosition
+    // 3. Handle authentication and API rate limits
 
-    fetchAnalytics();
+    // For now, show empty state instead of mock data
+    setAnalytics(null);
   }, []);
 
   // Always hide the debugger - can be re-enabled by setting showDebugInfo to true
@@ -112,16 +103,28 @@ export function SEOAnalytics({ showDebugInfo = false, enableRealTimeTracking = t
         </div>
       )}
 
-      <div style={{ borderTop: '1px solid hsl(var(--border))', paddingTop: '8px', marginTop: '8px' }}>
-        <div style={{ fontSize: '11px', opacity: 0.8 }}>
-          <div>Page Views: {analytics.pageViews.toLocaleString()}</div>
-          <div>Avg Time: {Math.floor(analytics.avgTimeOnPage / 60)}m {analytics.avgTimeOnPage % 60}s</div>
-          <div>Bounce Rate: {analytics.bounceRate}%</div>
-          <div>Search Impressions: {analytics.searchImpressions.toLocaleString()}</div>
-          <div>CTR: {analytics.clickThroughRate}%</div>
-          <div>Avg Position: {analytics.avgPosition}</div>
+      {analytics && (
+        <div style={{ borderTop: '1px solid hsl(var(--border))', paddingTop: '8px', marginTop: '8px' }}>
+          <div style={{ fontSize: '11px', opacity: 0.8 }}>
+            <div>Page Views: {analytics.pageViews.toLocaleString()}</div>
+            <div>Avg Time: {Math.floor(analytics.avgTimeOnPage / 60)}m {analytics.avgTimeOnPage % 60}s</div>
+            <div>Bounce Rate: {analytics.bounceRate}%</div>
+            <div>Search Impressions: {analytics.searchImpressions.toLocaleString()}</div>
+            <div>CTR: {analytics.clickThroughRate}%</div>
+            <div>Avg Position: {analytics.avgPosition}</div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {!analytics && (
+        <div style={{ borderTop: '1px solid hsl(var(--border))', paddingTop: '8px', marginTop: '8px' }}>
+          <div style={{ fontSize: '11px', opacity: 0.6, fontStyle: 'italic' }}>
+            Analytics data not available
+            <br />
+            <span style={{ fontSize: '10px' }}>Connect Google Analytics & Search Console</span>
+          </div>
+        </div>
+      )}
 
       <button
         onClick={() => validateSEO()}

@@ -27,6 +27,7 @@ import { LineSettingsDrawer } from "./LineSettingsDrawer';
  * LineSettingsMenu Component
  *
  * A dropdown menu that allows users to switch between different paragraph modes.
+ * Only available in view mode - edit mode always uses normal mode.
  *
  * Available Paragraph Modes:
  * 1. Normal Mode: Traditional document style with paragraph numbers creating indentation
@@ -48,10 +49,19 @@ import { LineSettingsDrawer } from "./LineSettingsDrawer';
  * - Persists selection in localStorage via LineSettingsContext
  * - Consistent styling with the rest of the application
  */
-export function LineSettingsMenu() {
-  const { lineMode, setLineMode } = useLineSettings();
+export function LineSettingsMenu({ isEditing = false }) {
+  const { lineMode, setLineMode, isEditMode } = useLineSettings();
   const { theme } = useTheme();
   const { isMobile } = useContext(MobileContext);
+
+  // Don't render in edit mode - dense mode is only for view mode
+  // Check for edit mode through URL or other indicators
+  const isInEditMode = isEditing || isEditMode ||
+    (typeof window !== 'undefined' && window.location.pathname.includes('/edit'));
+
+  if (isInEditMode) {
+    return null;
+  }
 
   // Handle mode change with animation
   const handleModeChange = (mode) => {

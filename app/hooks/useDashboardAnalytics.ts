@@ -1,0 +1,267 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  DashboardAnalyticsService,
+  type DashboardMetrics,
+  type DateRange
+} from '../services/dashboardAnalytics';
+
+// Debounce utility
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+interface UseDashboardAnalyticsReturn {
+  metrics: DashboardMetrics | null;
+  summaryStats: {
+    totalNewAccounts: number;
+    totalNewPages: number;
+    totalShares: number;
+    totalSuccessfulShares: number;
+    shareSuccessRate: number;
+  } | null;
+  loading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+}
+
+/**
+ * Custom hook for fetching dashboard analytics data with debouncing
+ */
+export function useDashboardAnalytics(dateRange: DateRange): UseDashboardAnalyticsReturn {
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [summaryStats, setSummaryStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes to avoid excessive API calls
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  // Track if this is the initial load
+  const isInitialLoad = useRef(true);
+
+  const fetchData = useCallback(async () => {
+
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch both metrics and summary stats
+      const [metricsData, statsData] = await Promise.all([
+        DashboardAnalyticsService.getAllMetrics(debouncedDateRange),
+        DashboardAnalyticsService.getSummaryStats(debouncedDateRange)
+      ]);
+
+      setMetrics(metricsData);
+      setSummaryStats(statsData);
+    } catch (err) {
+      console.error('Error fetching dashboard analytics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch analytics data');
+    } finally {
+      setLoading(false);
+      isInitialLoad.current = false;
+    }
+  }, [debouncedDateRange]);
+
+  // Fetch data when debounced date range changes
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return {
+    metrics,
+    summaryStats,
+    loading,
+    error,
+    refetch: fetchData
+  };
+}
+
+/**
+ * Hook for fetching individual metric types
+ */
+export function useAccountsMetrics(dateRange: DateRange) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await DashboardAnalyticsService.getNewAccountsCreated(debouncedDateRange);
+      setData(result);
+    } catch (err) {
+      console.error('Error fetching accounts metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch accounts data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+export function usePagesMetrics(dateRange: DateRange) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await DashboardAnalyticsService.getNewPagesCreated(debouncedDateRange);
+      setData(result);
+    } catch (err) {
+      console.error('Error fetching pages metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch pages data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+export function useSharesMetrics(dateRange: DateRange) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await DashboardAnalyticsService.getSharesAnalytics(debouncedDateRange);
+      setData(result);
+    } catch (err) {
+      console.error('Error fetching shares metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch shares data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+export function useEditsMetrics(dateRange: DateRange) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await DashboardAnalyticsService.getEditsAnalytics(debouncedDateRange);
+      setData(result);
+    } catch (err) {
+      console.error('Error fetching edits metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch edits data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+export function useContentChangesMetrics(dateRange: DateRange) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await DashboardAnalyticsService.getContentChangesAnalytics(debouncedDateRange);
+      setData(result);
+    } catch (err) {
+      console.error('Error fetching content changes metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch content changes data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+export function usePWAInstallsMetrics(dateRange: DateRange) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await DashboardAnalyticsService.getPWAInstallsAnalytics(debouncedDateRange);
+      setData(result);
+    } catch (err) {
+      console.error('Error fetching PWA installs metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch PWA installs data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}

@@ -19,6 +19,7 @@ import { Search } from "lucide-react";
 import { Input } from "../ui/input";
 import { ClearableInput } from "../ui/clearable-input";
 import { PillLink } from "../utils/PillLink";
+import searchPerformanceMonitor from '../../utils/searchPerformanceMonitor';
 import { shouldAllowRequest } from "../../utils/requestThrottle";
 
 // Simple Loader component
@@ -110,9 +111,10 @@ const FilteredSearchResults = forwardRef(({
     }
 
     lastRequestRef.current = requestSignature;
-    console.log('[FilteredSearchResults] Fetching comprehensive results for filter:', filter, 'searchTerm:', searchTerm, 'searchMode:', searchMode, 'userId:', user.uid);
+    console.log('[FilteredSearchResults] Fetching results - filter:', filter, 'searchTerm:', searchTerm, 'searchMode:', searchMode, 'userId:', user.uid);
 
     setIsSearching(true);
+    const searchStartTime = Date.now();
 
     try {
       // Create new abort controller for this request
@@ -120,11 +122,28 @@ const FilteredSearchResults = forwardRef(({
 
       const encodedSearch = encodeURIComponent(searchTerm.trim());
 
-      // Always use the comprehensive search API to get all available pages
-      // This ensures we don't miss any pages due to artificial limits
-      const queryUrl = `/api/search?searchTerm=${encodedSearch}&userId=${user.uid}`;
+      // Choose the appropriate API based on mode and filter
+      let queryUrl;
+      if (isLinkEditor) {
+        if (searchMode) {
+          // When in search mode (user typed something), use the same search API as main search page
+          queryUrl = `/api/search?searchTerm=${encodedSearch}&userId=${user.uid}`;
+        } else if (filter === 'my-pages') {
+          // Use dedicated my-pages API for "My Pages" filter
+          queryUrl = `/api/my-pages?userId=${user.uid}&searchTerm=${encodedSearch}&limit=25`;
+        } else if (filter === 'recent') {
+          // For recent pages, use main search API with empty search to get all recent pages
+          queryUrl = `/api/search?searchTerm=&userId=${user.uid}`;
+        } else {
+          // Fallback to main search API
+          queryUrl = `/api/search?searchTerm=${encodedSearch}&userId=${user.uid}`;
+        }
+      } else {
+        // Use optimized search API for general search
+        queryUrl = `/api/search-optimized?searchTerm=${encodedSearch}&userId=${user.uid}&titleOnly=false&maxResults=50`;
+      }
 
-      console.log('[FilteredSearchResults] Making comprehensive search request to:', queryUrl);
+      console.log('[FilteredSearchResults] Making API request to:', queryUrl, 'for searchMode:', searchMode);
 
       const response = await fetch(queryUrl, {
         signal: abortControllerRef.current.signal
@@ -141,6 +160,13 @@ const FilteredSearchResults = forwardRef(({
       const data = await response.json();
       console.log('[FilteredSearchResults] Response data:', data);
 
+      // Record search performance
+      const searchDuration = Date.now() - searchStartTime;
+      const searchType = isLinkEditor ? 'linkEditor' : 'optimized';
+      const resultCount = data.pages ? data.pages.length : 0;
+      const cacheHit = data.source && data.source.includes('cache');
+      searchPerformanceMonitor.recordSearch(searchType, searchTerm, searchDuration, resultCount, cacheHit, data.source);
+
       // Get all pages from the comprehensive search
       let allPages = data.pages || [];
       console.log('[FilteredSearchResults] Total pages from search:', allPages.length);
@@ -148,16 +174,16 @@ const FilteredSearchResults = forwardRef(({
       // Ensure allPages is an array before filtering
       const safeAllPages = Array.isArray(allPages) ? allPages : [];
 
-      // Apply client-side filtering based on the active filter
+      // For link editor mode with dedicated APIs, pages are already filtered server-side
+      // For general search mode, apply client-side filtering if needed
       let filteredPages = safeAllPages;
 
-      if (!searchMode && filter === 'my-pages') {
-        // Filter to only show user's own pages
+      if (!isLinkEditor && !searchMode && filter === 'my-pages') {
+        // Filter to only show user's own pages (only for non-link editor mode)
         filteredPages = safeAllPages.filter(page => page.userId === user.uid);
         console.log('[FilteredSearchResults] Filtered to my pages:', filteredPages.length);
-      } else if (!searchMode && filter === 'recent') {
-        // For recent filter, we could implement recent page logic here
-        // For now, show all pages but prioritize user's own pages
+      } else if (!isLinkEditor && !searchMode && filter === 'recent') {
+        // For recent filter in non-link editor mode, sort by recency
         filteredPages = safeAllPages.sort((a, b) => {
           // Prioritize user's own pages
           if (a.userId === user.uid && b.userId !== user.uid) return -1;
@@ -169,10 +195,14 @@ const FilteredSearchResults = forwardRef(({
           return bTime - aTime;
         });
         console.log('[FilteredSearchResults] Sorted for recent filter:', filteredPages.length);
+      } else {
+        // For link editor mode or search mode, use pages as-is (already filtered server-side)
+        console.log('[FilteredSearchResults] Using server-filtered pages:', filteredPages.length);
       }
 
       setPages(filteredPages);
       console.log('[FilteredSearchResults] Set filtered pages:', filteredPages.length, 'pages');
+      console.log('[FilteredSearchResults] Pages state updated:', filteredPages);
 
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -252,6 +282,7 @@ const FilteredSearchResults = forwardRef(({
 
   // Handle filter change
   const handleFilterChange = useCallback((filter) => {
+    console.log('[FilteredSearchResults] Filter changed to:', filter, 'isLinkEditor:', isLinkEditor, 'search:', search);
     setActiveFilter(filter);
     setIsSearchMode(false); // Exit search mode when selecting a filter
 
@@ -259,9 +290,11 @@ const FilteredSearchResults = forwardRef(({
     // This ensures we get all available pages and apply filtering client-side
     if (isLinkEditor) {
       // In link editor mode, always show comprehensive results
+      console.log('[FilteredSearchResults] Calling fetchFilteredResults for link editor mode');
       fetchFilteredResults(search, filter, false);
     } else if (search.trim().length >= characterCount) {
       // In regular mode, only search if we have enough characters
+      console.log('[FilteredSearchResults] Calling fetchFilteredResults for regular mode');
       fetchFilteredResults(search, filter, false);
     }
   }, [search, characterCount, isLinkEditor, fetchFilteredResults]);
@@ -303,14 +336,18 @@ const FilteredSearchResults = forwardRef(({
 
   // Initialize search on mount and when filter changes
   useEffect(() => {
+    console.log('[FilteredSearchResults] useEffect triggered - user:', !!user, 'isLinkEditor:', isLinkEditor, 'activeFilter:', activeFilter, 'initialSearch:', initialSearch);
     if (!user) return; // Wait for user to be available
 
     if (initialSearch) {
+      console.log('[FilteredSearchResults] Running initial search:', initialSearch);
       debouncedSearch(initialSearch);
     } else if (isLinkEditor) {
       // In link editor mode, delay the initial search to prevent excessive API requests
       // This prevents the search from firing immediately when the modal opens
+      console.log('[FilteredSearchResults] Setting up delayed search for link editor mode');
       const timer = setTimeout(() => {
+        console.log('[FilteredSearchResults] Executing delayed search for filter:', activeFilter);
         fetchFilteredResults('', activeFilter, false);
       }, 500); // Standardized delay to match debounce timing
 
@@ -366,9 +403,9 @@ const FilteredSearchResults = forwardRef(({
   if (!user) return null;
 
   return (
-    <div className={`flex flex-col ${className}`}>
+    <div className={`flex flex-col h-full ${className}`}>
       {/* Search Input */}
-      <div className="relative">
+      <div className="relative flex-shrink-0 mb-3">
         {isLinkEditor ? (
           <ClearableInput
             ref={ref || searchInputRef}
@@ -402,7 +439,7 @@ const FilteredSearchResults = forwardRef(({
 
       {/* Filter Chips - only show in link editor mode */}
       {isLinkEditor && (
-        <div className="flex gap-2 mt-3 mb-2">
+        <div className="flex gap-2 mb-3 flex-shrink-0">
           <button
             onClick={() => handleFilterChange('recent')}
             className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
@@ -426,8 +463,8 @@ const FilteredSearchResults = forwardRef(({
         </div>
       )}
 
-      {/* Search Results - fixed height for link editor to prevent layout shift */}
-      <div className={`space-y-1 transition-all ${isLinkEditor ? 'h-[320px]' : 'max-h-[40vh]'} overflow-y-auto ${
+      {/* Search Results - flexible height with proper overflow handling */}
+      <div className={`flex-1 min-h-0 space-y-1 transition-all overflow-y-auto overflow-x-hidden ${
         (search.length >= characterCount || isLinkEditor) ? "opacity-100" : "opacity-0"
       }`}>
         {isSearching && (search.length >= characterCount || isLinkEditor) ? (
@@ -441,37 +478,39 @@ const FilteredSearchResults = forwardRef(({
           <>
             {/* Pages Section */}
             {pages.length > 0 && (
-              <div>
-                <h3 className="text-xs font-medium text-muted-foreground mb-1 px-2">
+              <div className="space-y-1">
+                <h3 className="text-xs font-medium text-muted-foreground mb-2 px-1">
                   {isSearchMode ? 'Search Results' : (activeFilter === 'recent' ? 'Recent Pages' : 'My Pages')}
                 </h3>
-                {pages.map((page) => (
-                  <button
-                    key={page.id}
-                    onClick={() => handleSelect(page)}
-                    className={`w-full text-left p-2 hover:bg-muted rounded-md transition-colors ${
-                      selectedId === page.id ? 'bg-muted' : ''
-                    }`}
-                  >
-                    <PillLink
-                      href={`/${page.id}`}
-                      isPublic={page.isPublic}
-                      isOwned={page.userId === user?.uid}
-                      className="pointer-events-none"
+                <div className="space-y-1">
+                  {pages.map((page) => (
+                    <button
+                      key={page.id}
+                      onClick={() => handleSelect(page)}
+                      className={`w-full text-left p-2 hover:bg-muted rounded-md transition-colors ${
+                        selectedId === page.id ? 'bg-muted' : ''
+                      }`}
                     >
-                      {page.title && isExactDateFormat(page.title)
-                        ? formatDateString(page.title)
-                        : page.title}
-                    </PillLink>
-                  </button>
-                ))}
+                      <PillLink
+                        href={`/${page.id}`}
+                        isPublic={page.isPublic}
+                        isOwned={page.userId === user?.uid}
+                        className="pointer-events-none"
+                      >
+                        {page.title && isExactDateFormat(page.title)
+                          ? formatDateString(page.title)
+                          : page.title}
+                      </PillLink>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* No Results - Only show after search has completed and we have attempted a search */}
             {(search.length >= 2 || (isLinkEditor && lastRequestRef.current !== null)) && pages.length === 0 && !isSearching && (
-              <div className="p-3 text-center">
-                <div className="text-muted-foreground mb-3">
+              <div className="p-4 text-center">
+                <div className="text-muted-foreground mb-4">
                   {search.length >= 2
                     ? `No results found for "${search}"`
                     : `No ${isSearchMode ? 'results' : (activeFilter === 'recent' ? 'recent pages' : 'pages')} found`
@@ -495,7 +534,7 @@ const FilteredSearchResults = forwardRef(({
                         onSelect(newPageData);
                       }
                     }}
-                    className="w-full p-2 hover:bg-muted rounded-md transition-colors border border-dashed border-muted-foreground/30 hover:border-muted-foreground/50"
+                    className="w-full p-3 hover:bg-muted rounded-md transition-colors border border-dashed border-muted-foreground/30 hover:border-muted-foreground/50"
                   >
                     <div className="flex items-center justify-center gap-2 text-sm">
                       <span className="text-muted-foreground">Create new page:</span>

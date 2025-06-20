@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   addDoc,
+  deleteDoc,
   onSnapshot,
   query,
   where,
@@ -159,8 +160,18 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
         return pageRef.id;
       } catch (versionError) {
         console.error("Error creating version:", versionError);
-        // Even if version creation fails, return the page ID
-        return pageRef.id;
+
+        // CRITICAL FIX: If version creation fails, delete the page and return null
+        // This prevents orphaned pages without currentVersion
+        try {
+          console.log(`Deleting orphaned page ${pageRef.id} due to version creation failure`);
+          await deleteDoc(doc(db, "pages", pageRef.id));
+          console.log(`Successfully deleted orphaned page ${pageRef.id}`);
+        } catch (deleteError) {
+          console.error(`Failed to delete orphaned page ${pageRef.id}:`, deleteError);
+        }
+
+        return null;
       }
     } catch (pageError) {
       console.error("Error creating page document:", pageError);

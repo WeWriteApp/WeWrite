@@ -278,7 +278,7 @@ const SwipeableTabs = ({
               value={child.props.value}
               className={cn("mt-0", child.props.className, tabsContentClassName)}
             >
-              <div className="relative" style={{ minHeight: '50vh' }}>
+              <div className="relative">
                 <AnimatedTabsContent
                   direction={direction}
                   activeTab={activeTab}
@@ -292,7 +292,6 @@ const SwipeableTabs = ({
                     {...swipeHandlers}
                     className="swipe-area"
                     style={{
-                      minHeight: '100%',
                       width: '100%',
                       position: 'relative',
                       touchAction: preventScrollOnSwipe ? 'none' : 'pan-y',

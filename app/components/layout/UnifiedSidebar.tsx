@@ -263,7 +263,10 @@ function UnifiedSidebarContent({
         }
       }}
     >
-        <div className="flex flex-col h-full p-4">
+        <div className={cn(
+          "flex flex-col h-full",
+          showContent ? "p-4" : "py-4 px-1"
+        )}>
           {/* Header with toggle button */}
           <div className="flex items-center justify-between mb-6">
             {showContent && (
@@ -302,14 +305,18 @@ function UnifiedSidebarContent({
                       "relative flex items-center h-12 w-full transition-all duration-300 ease-in-out",
                       "text-foreground hover:bg-primary/10 hover:text-primary",
                       "sidebar-nav-button",
-                      // Active state styling consistent with mobile toolbar
+                      showContent && "sidebar-nav-button-expanded",
+                      // Active state styling
                       isActive && "bg-primary/10 text-primary"
                     )}
                     title={showContent ? "" : item.label}
                   >
-                    {/* Icon container - always in the same position */}
-                    <div className="sidebar-icon-container">
-                      <Icon className="h-5 w-5" />
+                    {/* Icon container - maintains position during transitions */}
+                    <div className={cn(
+                      "sidebar-icon-container",
+                      showContent && "mr-3"
+                    )}>
+                      <Icon className="h-5 w-5 flex-shrink-0" />
                     </div>
 
                     {/* Text label - slides in from the right */}
@@ -549,14 +556,15 @@ function UnifiedSidebarContent({
                   }}
                   className={cn(
                     "relative flex items-center h-12 w-full text-foreground hover:bg-primary/10 hover:text-primary transition-all duration-300 sidebar-nav-button",
+                    showContent && "sidebar-nav-button-expanded",
                     // Active state styling consistent with other nav items
                     pathname === '/settings' && "bg-primary/10 text-primary"
                   )}
                   title="Settings"
                 >
-                  {/* Icon container - always in the same position */}
+                  {/* Icon container - maintains position during transitions */}
                   <div className="sidebar-icon-container">
-                    <Settings className="h-5 w-5" />
+                    <Settings className="h-5 w-5 flex-shrink-0" />
                   </div>
                 </Button>
               )}
