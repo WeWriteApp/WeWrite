@@ -7,6 +7,7 @@ import { NotificationContext } from '../providers/NotificationProvider';
 import NavHeader from '../components/layout/NavHeader';
 import NotificationItem from '../components/utils/NotificationItem';
 import { Button } from '../components/ui/button';
+import { NotificationListSkeleton } from '../components/ui/skeleton';
 import { Loader, CheckCheck, ChevronLeft } from 'lucide-react';
 
 export default function NotificationsPage() {
@@ -90,11 +91,8 @@ export default function NotificationsPage() {
       </div>
 
       <div className="mt-6">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader className="animate-spin h-6 w-6 text-primary mr-2" />
-            <span className="text-foreground opacity-80">Loading notifications...</span>
-          </div>
+        {loading && notifications.length === 0 ? (
+          <NotificationListSkeleton count={5} />
         ) : notifications.length > 0 ? (
           <>
             <div className="space-y-4">

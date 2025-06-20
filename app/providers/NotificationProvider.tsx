@@ -86,6 +86,27 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
 
         console.log('NotificationProvider - fetched notifications:', notificationData.map(n => ({ id: n.id, read: n.read, type: n.type })));
 
+        // Extract unique user IDs from notifications for batch fetching
+        const userIds = new Set<string>();
+        notificationData.forEach(notification => {
+          if (notification.sourceUserId) {
+            userIds.add(notification.sourceUserId);
+          }
+        });
+
+        // Preload user data for all users mentioned in notifications
+        if (userIds.size > 0) {
+          console.log(`NotificationProvider - preloading user data for ${userIds.size} users`);
+          try {
+            const { preloadUserData } = await import('../firebase/batchUserData');
+            await preloadUserData(Array.from(userIds));
+            console.log('NotificationProvider - user data preloaded successfully');
+          } catch (preloadError) {
+            console.warn('NotificationProvider - error preloading user data:', preloadError);
+            // Continue even if preloading fails
+          }
+        }
+
         // Count actual unread notifications from the fetched data
         const actualUnreadCount = notificationData.filter(n => !n.read).length;
         console.log('NotificationProvider - actual unread count from data:', actualUnreadCount);
@@ -133,6 +154,27 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         20,
         lastDoc
       );
+
+      // Extract unique user IDs from new notifications for batch fetching
+      const userIds = new Set<string>();
+      newNotifications.forEach(notification => {
+        if (notification.sourceUserId) {
+          userIds.add(notification.sourceUserId);
+        }
+      });
+
+      // Preload user data for all users mentioned in new notifications
+      if (userIds.size > 0) {
+        console.log(`NotificationProvider - preloading user data for ${userIds.size} additional users`);
+        try {
+          const { preloadUserData } = await import('../firebase/batchUserData');
+          await preloadUserData(Array.from(userIds));
+          console.log('NotificationProvider - additional user data preloaded successfully');
+        } catch (preloadError) {
+          console.warn('NotificationProvider - error preloading additional user data:', preloadError);
+          // Continue even if preloading fails
+        }
+      }
 
       setNotifications(prev => [...prev, ...newNotifications]);
       setLastDoc(newLastDoc);
