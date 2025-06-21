@@ -342,14 +342,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
                     />
                   </div>
 
-                  {/* Insert Link button */}
-                  <button
-                    onClick={editorProps?.onInsertLink}
-                    className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
-                  >
-                    <LinkIcon className="h-5 w-5 mr-2" />
-                    <span>Insert Link</span>
-                  </button>
+                  {/* Insert Link button removed - editing controls should only be in editing contexts */}
 
                   {/* Location button - only show if map feature is enabled */}
                   {mapFeatureEnabled && (

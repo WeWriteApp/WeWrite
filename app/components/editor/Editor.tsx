@@ -1125,14 +1125,17 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
     // Handle Ctrl+K for link insertion
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-      console.log("🔵 [DEBUG] Cmd+K pressed - opening link editor");
+      console.log("🔵 [DEBUG] Cmd+K pressed - opening link editor via keyboard shortcut");
+      console.log("🔵 [DEBUG] readOnly:", readOnly);
+      console.log("🔵 [DEBUG] showLinkEditor current state:", showLinkEditor);
       e.preventDefault();
       saveSelection();
-      console.log("🔵 [DEBUG] Selection saved");
+      console.log("🔵 [DEBUG] Selection saved via keyboard shortcut");
       setLinkSearchText("");
       setLinkDisplayText("");
       setShowLinkEditor(true);
-      console.log("🔵 [DEBUG] Link editor state set to true");
+      console.log("🔵 [DEBUG] Link editor state set to true via keyboard shortcut");
+      console.log("🔵 [DEBUG] showLinkEditor should now be:", true);
       return;
     }
 
@@ -1953,7 +1956,12 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                   transition: 'opacity 0.15s ease-in-out',
                   // FIXED: Ensure proper line height and cursor visibility
                   minHeight: '1.5em',
-                  lineHeight: '1.5'
+                  lineHeight: '1.5',
+                  // CRITICAL: Add left padding for paragraph numbers in edit mode
+                  ...((!readOnly) && {
+                    '--edit-mode-left-margin': '2.25rem',
+                    '--edit-mode-content-width': 'calc(100% - 2.25rem)'
+                  })
                 }}
               />
 

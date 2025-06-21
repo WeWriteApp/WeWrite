@@ -9,7 +9,7 @@ export interface EditingActionBarProps {
   onSave: () => void;
   onCancel: () => void;
   onDelete?: () => void;
-  onInsertLink?: () => void;
+  onInsertLink?: () => void; // Add Insert Link handler
   isSaving?: boolean;
   hasUnsavedChanges?: boolean;
   className?: string;
@@ -20,7 +20,6 @@ export default function EditingActionBar({
   onSave,
   onCancel,
   onDelete,
-  onInsertLink,
   isSaving = false,
   hasUnsavedChanges = false,
   className = "",
@@ -101,18 +100,7 @@ export default function EditingActionBar({
           {/* Desktop order: Cancel, Save, Insert Link, Delete (preserved) */}
 
           {/* Insert Link Button - First on mobile, third on desktop */}
-          {onInsertLink && (
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={onInsertLink}
-              disabled={isSaving}
-              className="gap-2 w-full md:w-auto rounded-2xl font-medium order-1 md:order-3"
-            >
-              <Link className="h-5 w-5" />
-              <span>Insert Link</span>
-            </Button>
-          )}
+          {/* Insert Link Button removed - only keeping PageEditor implementation */}
 
           {/* Save Button - Second on mobile, second on desktop */}
           <Button
@@ -199,18 +187,7 @@ export default function EditingActionBar({
           {/* Mobile order: Insert Link, Save, Cancel, Delete */}
 
           {/* Insert Link Button - First on mobile */}
-          {onInsertLink && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onInsertLink}
-              disabled={isSaving}
-              className="gap-2 rounded-xl"
-            >
-              <Link className="h-4 w-4" />
-              <span className="hidden sm:inline">Insert Link</span>
-            </Button>
-          )}
+          {/* Insert Link Button removed - only keeping PageEditor implementation */}
 
           {/* Save Button - Second */}
           <Button

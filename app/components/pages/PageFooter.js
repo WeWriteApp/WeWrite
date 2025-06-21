@@ -7,7 +7,7 @@ import PageStats from "./PageStats";
 import dynamic from "next/dynamic";
 import { Button } from "../ui/button";
 import { Reply } from "lucide-react";
-import EditingActionBar from "../editor/EditingActionBar";
+import EditorActionButtons from "../editor/EditorActionButtons";
 
 // Dynamically import AddToPageButton to avoid SSR issues
 const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
@@ -132,14 +132,13 @@ export default function PageFooter({
       {/* Show static editing buttons when in edit mode, otherwise show PageActions */}
       {isEditing ? (
         <div className="mb-6 flex flex-col w-full">
-          <EditingActionBar
+          <EditorActionButtons
             onSave={onSave}
             onCancel={onCancel}
             onDelete={isOwner ? onDelete : undefined}
             onInsertLink={onInsertLink}
             isSaving={isSaving}
             hasUnsavedChanges={hasUnsavedChanges}
-            isStatic={true}
             className="static-editing-buttons"
           />
         </div>
