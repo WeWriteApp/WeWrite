@@ -1125,11 +1125,14 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
     // Handle Ctrl+K for link insertion
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      console.log("🔵 [DEBUG] Cmd+K pressed - opening link editor");
       e.preventDefault();
       saveSelection();
+      console.log("🔵 [DEBUG] Selection saved");
       setLinkSearchText("");
       setLinkDisplayText("");
       setShowLinkEditor(true);
+      console.log("🔵 [DEBUG] Link editor state set to true");
       return;
     }
 
@@ -1851,8 +1854,18 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     insertLink: readOnly ? () => false : insertLink,
     saveSelection: readOnly ? () => false : saveSelection,
     openLinkEditor: () => {
-      if (readOnly) return false;
+      console.log("🔵 [DEBUG] openLinkEditor method called");
+      console.log("🔵 [DEBUG] readOnly:", readOnly);
+
+      if (readOnly) {
+        console.log("🟡 [DEBUG] Editor is readOnly, returning false");
+        return false;
+      }
+
+      console.log("🔵 [DEBUG] Saving selection");
       saveSelection();
+
+      console.log("🔵 [DEBUG] Resetting link editor state");
       // Reset all link editor state
       setLinkSearchText("");
       setLinkDisplayText("");
@@ -1861,14 +1874,18 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       setExternalUrl("");
       setExternalDisplayText("");
       setShowExternalCustomText(false);
+
+      console.log("🔵 [DEBUG] Setting showLinkEditor to true");
       // Keep the last selected tab for better UX
       setShowLinkEditor(true);
 
       // Capture initial state for new link creation
       setTimeout(() => {
+        console.log("🔵 [DEBUG] Capturing initial link editor state");
         captureInitialLinkEditorState();
       }, 100);
 
+      console.log("✅ [DEBUG] openLinkEditor completed successfully");
       return true;
     },
     setShowLinkEditor: (value: boolean) => {

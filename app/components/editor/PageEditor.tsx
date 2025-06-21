@@ -485,41 +485,61 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
   // Handle link insertion - simplified to match Cmd+K functionality
   const handleInsertLink = () => {
+    console.log("🔵 [DEBUG] handleInsertLink called");
+
     try {
       // Check if link functionality is enabled
       if (!linkFunctionalityEnabled) {
+        console.log("🟡 [DEBUG] Link functionality disabled, showing modal");
         setShowDisabledLinkModal(true);
         return;
       }
 
+      console.log("🔵 [DEBUG] Link functionality enabled, checking editor ref");
+      console.log("🔵 [DEBUG] editorRef.current:", !!editorRef.current);
+
       // Ensure editor is available
       if (!editorRef.current) {
+        console.error("🔴 [DEBUG] Editor ref not available");
         toast.error("Editor is not ready. Please try again later.");
         return;
       }
 
+      console.log("🔵 [DEBUG] Editor ref available, checking methods");
+      console.log("🔵 [DEBUG] Available methods on editor:", Object.keys(editorRef.current));
+      console.log("🔵 [DEBUG] openLinkEditor method type:", typeof editorRef.current.openLinkEditor);
+
       // Use the same approach as Cmd+K shortcut - directly call openLinkEditor
       if (typeof editorRef.current.openLinkEditor === 'function') {
+        console.log("🔵 [DEBUG] openLinkEditor method found, calling it");
+
         try {
           // Focus the editor first
           editorRef.current.focus();
+          console.log("🔵 [DEBUG] Editor focused");
 
           // Call openLinkEditor directly - this is exactly what Cmd+K does
           const result = editorRef.current.openLinkEditor();
+          console.log("🔵 [DEBUG] openLinkEditor result:", result);
 
           if (!result) {
+            console.error("🔴 [DEBUG] openLinkEditor returned false");
             toast.error("Could not open link editor. Please try again.");
+          } else {
+            console.log("✅ [DEBUG] openLinkEditor succeeded");
           }
         } catch (error) {
-          console.error("Error opening link editor:", error);
+          console.error("🔴 [DEBUG] Error calling openLinkEditor:", error);
           toast.error("Could not open link editor. Please try again.");
         }
       } else {
-        console.error("openLinkEditor method not available on editor");
+        console.error("🔴 [DEBUG] openLinkEditor method not available on editor");
+        console.log("🔵 [DEBUG] Editor ref type:", typeof editorRef.current);
+        console.log("🔵 [DEBUG] Editor ref constructor:", editorRef.current.constructor.name);
         toast.error("Link insertion is not available. Please try again later.");
       }
     } catch (error) {
-      console.error("Critical error in handleInsertLink:", error);
+      console.error("🔴 [DEBUG] Critical error in handleInsertLink:", error);
       showError('Link Editor Error', 'Failed to open link editor. Please try again.');
     }
   };
