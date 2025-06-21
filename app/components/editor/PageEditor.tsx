@@ -483,97 +483,43 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
 
 
-  // Handle link insertion
+  // Handle link insertion - simplified to match Cmd+K functionality
   const handleInsertLink = () => {
     try {
-      // Remove debug logging to improve performance
-      // console.log("[DEBUG] Insert link button clicked");
-
       // Check if link functionality is enabled
       if (!linkFunctionalityEnabled) {
-        // console.log("[DEBUG] Link functionality is disabled, showing modal");
         setShowDisabledLinkModal(true);
         return;
       }
 
-    if (editorRef.current) {
-      // console.log("[DEBUG] Editor ref exists, attempting to open link editor");
-
-      // Focus the editor first
-      try {
-        editorRef.current.focus();
-        // console.log("[DEBUG] Editor focused successfully");
-      } catch (focusError) {
-        console.error("[DEBUG] Error focusing editor:", focusError);
+      // Ensure editor is available
+      if (!editorRef.current) {
+        toast.error("Editor is not ready. Please try again later.");
+        return;
       }
 
-      // CRITICAL FIX: Save cursor position before opening link editor
-      if (editorRef.current.saveSelection) {
+      // Use the same approach as Cmd+K shortcut - directly call openLinkEditor
+      if (typeof editorRef.current.openLinkEditor === 'function') {
         try {
-          editorRef.current.saveSelection();
-          // console.log("[DEBUG] Cursor position saved successfully");
-        } catch (saveError) {
-          console.error("[DEBUG] Error saving cursor position:", saveError);
-        }
-      }
+          // Focus the editor first
+          editorRef.current.focus();
 
-      // CRITICAL FIX: Try multiple approaches to ensure the link editor appears
+          // Call openLinkEditor directly - this is exactly what Cmd+K does
+          const result = editorRef.current.openLinkEditor();
 
-      // 1. Try direct method call if available
-      if (typeof editorRef.current.setShowLinkEditor === 'function') {
-        // console.log("[DEBUG] Using direct setShowLinkEditor method");
-        editorRef.current.setShowLinkEditor(true);
-      }
-
-      // 2. Directly dispatch the custom event to show the link editor
-      try {
-        const event = new CustomEvent('show-link-editor', {
-          detail: {
-            position: {
-              top: window.innerHeight / 2,
-              left: window.innerWidth / 2,
-            },
-            initialTab: 'page',
-            showLinkEditor: true,
-            source: 'insert-link-button'
-          }
-        });
-        document.dispatchEvent(event);
-        // console.log("[DEBUG] Directly dispatched show-link-editor event from button");
-
-        // 3. Force a global event as well
-        window.dispatchEvent(new CustomEvent('linkEditorStateChange', {
-          detail: {
-            showLinkEditor: true
-          }
-        }));
-      } catch (eventError) {
-        console.error("[DEBUG] Error dispatching event:", eventError);
-
-        // 4. Fallback to using the openLinkEditor method if available
-        if (editorRef.current.openLinkEditor) {
-          // console.log("[DEBUG] Falling back to openLinkEditor method");
-          try {
-            // Open the link editor directly without creating a temporary link first
-            // Pass "page" as the initial tab to show
-            const result = editorRef.current.openLinkEditor("page");
-            // console.log("[DEBUG] openLinkEditor result:", result);
-          } catch (error) {
-            console.error("[DEBUG] Error opening link editor:", error);
+          if (!result) {
             toast.error("Could not open link editor. Please try again.");
           }
-        } else {
-          console.error("[DEBUG] openLinkEditor method not available");
-          toast.error("Link insertion is not available. Please try again later.");
+        } catch (error) {
+          console.error("Error opening link editor:", error);
+          toast.error("Could not open link editor. Please try again.");
         }
+      } else {
+        console.error("openLinkEditor method not available on editor");
+        toast.error("Link insertion is not available. Please try again later.");
       }
-    } else {
-      console.error("[DEBUG] Editor ref not available");
-      toast.error("Editor is not ready. Please try again later.");
-    }
     } catch (error) {
-      console.error("[DEBUG] Critical error in handleInsertLink:", error);
-      // Provide user feedback
+      console.error("Critical error in handleInsertLink:", error);
       showError('Link Editor Error', 'Failed to open link editor. Please try again.');
     }
   };
