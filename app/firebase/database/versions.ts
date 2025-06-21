@@ -249,11 +249,14 @@ export const setCurrentVersion = async (pageId: string, versionId: string): Prom
       return false;
     }
 
+    // Import Firestore Timestamp for proper timestamp handling
+    const { Timestamp } = await import('firebase/firestore');
+
     // Update the page document with the new current version and content
     await setDoc(doc(db, "pages", pageId), {
       currentVersion: versionId,
       content: versionData.content, // Restore the content from this version
-      lastModified: new Date().toISOString()
+      lastModified: Timestamp.now()
     }, { merge: true });
 
     console.log(`Successfully set version ${versionId} as current for page ${pageId}`);
@@ -385,10 +388,14 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
       console.log('Content has changed, proceeding with version creation');
     }
 
+    // Import Firestore Timestamp for proper timestamp handling
+    const { Timestamp } = await import('firebase/firestore');
+    const now = Timestamp.now();
+
     // Create the new version data
     const versionData = {
       content: contentString,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
       userId: data.userId,
       username: data.username || "Anonymous",
       groupId: data.groupId || null,
@@ -403,7 +410,7 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
     await setDoc(doc(db, "pages", pageId), {
       currentVersion: versionRef.id,
       content: contentString, // Store content directly on page for faster access
-      lastModified: new Date().toISOString()
+      lastModified: now
     }, { merge: true });
 
     // Record user activity for streak tracking

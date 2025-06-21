@@ -130,13 +130,19 @@ export function usePagesMetrics(dateRange: DateRange) {
   const debouncedDateRange = useDebounce(dateRange, 300);
 
   const fetchData = useCallback(async () => {
+    console.log('🔍 [usePagesMetrics] Fetching pages data for date range:', {
+      startDate: debouncedDateRange.startDate.toISOString(),
+      endDate: debouncedDateRange.endDate.toISOString()
+    });
+
     try {
       setLoading(true);
       setError(null);
       const result = await DashboardAnalyticsService.getNewPagesCreated(debouncedDateRange);
+      console.log('✅ [usePagesMetrics] Received pages data:', result);
       setData(result);
     } catch (err) {
-      console.error('Error fetching pages metrics:', err);
+      console.error('❌ [usePagesMetrics] Error fetching pages metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch pages data');
     } finally {
       setLoading(false);
@@ -188,13 +194,19 @@ export function useEditsMetrics(dateRange: DateRange) {
   const debouncedDateRange = useDebounce(dateRange, 300);
 
   const fetchData = useCallback(async () => {
+    console.log('🔍 [useEditsMetrics] Fetching edits data for date range:', {
+      startDate: debouncedDateRange.startDate.toISOString(),
+      endDate: debouncedDateRange.endDate.toISOString()
+    });
+
     try {
       setLoading(true);
       setError(null);
       const result = await DashboardAnalyticsService.getEditsAnalytics(debouncedDateRange);
+      console.log('✅ [useEditsMetrics] Received edits data:', result);
       setData(result);
     } catch (err) {
-      console.error('Error fetching edits metrics:', err);
+      console.error('❌ [useEditsMetrics] Error fetching edits metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch edits data');
     } finally {
       setLoading(false);

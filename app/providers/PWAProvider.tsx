@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { isPWA, shouldShowPWABanner } from "../utils/pwa-detection";
 import { getAnalyticsService } from "../utils/analytics-service";
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
+import { PWAInstallTrackingService } from '../services/pwaInstallTracking';
 
 // Define the context type
 interface PWAContextType {
@@ -37,6 +38,14 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Only check banner visibility if not in PWA mode
       if (!pwaStatus) {
         setShowBanner(shouldShowPWABanner());
+      }
+
+      // Initialize PWA installation tracking
+      try {
+        PWAInstallTrackingService.initialize();
+        console.log('PWA installation tracking initialized');
+      } catch (error) {
+        console.error('Error initializing PWA installation tracking:', error);
       }
 
       // Track PWA status in analytics

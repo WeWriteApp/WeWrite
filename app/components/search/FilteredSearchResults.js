@@ -84,6 +84,8 @@ const FilteredSearchResults = forwardRef(({
     setUsers([]);
     setGroups([]);
     setIsSearching(false);
+    // Clear any pending request signature
+    lastRequestRef.current = null;
   }, []);
 
   // Fetch comprehensive search results and apply filtering client-side
@@ -103,8 +105,8 @@ const FilteredSearchResults = forwardRef(({
     // Create request signature for deduplication
     const requestSignature = `${searchTerm}-${filter}-${searchMode}-${user.uid}`;
 
-    // Skip if this exact request is already in progress
-    if (lastRequestRef.current === requestSignature) {
+    // IMPROVED: Only skip if the exact same request is in progress AND we haven't cleared it
+    if (lastRequestRef.current === requestSignature && abortControllerRef.current) {
       console.log('[FilteredSearchResults] Skipping duplicate request:', requestSignature);
       return;
     }
@@ -114,9 +116,13 @@ const FilteredSearchResults = forwardRef(({
       abortControllerRef.current.abort();
     }
 
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
     lastRequestRef.current = requestSignature;
+
     console.log('[FilteredSearchResults] Fetching results - filter:', filter, 'searchTerm:', searchTerm, 'searchMode:', searchMode, 'userId:', user.uid);
 
+    // CRITICAL FIX: Always set loading state immediately
     setIsSearching(true);
     const searchStartTime = Date.now();
 
@@ -145,8 +151,18 @@ const FilteredSearchResults = forwardRef(({
       console.log('[FilteredSearchResults] Making API request to:', queryUrl, 'for searchMode:', searchMode);
 
       const response = await fetch(queryUrl, {
-        signal: abortControllerRef.current.signal
+        signal: abortControllerRef.current.signal,
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
       });
+
+      // Check if request was aborted after fetch
+      if (abortControllerRef.current.signal.aborted) {
+        console.log('[FilteredSearchResults] Request was aborted after fetch');
+        return;
+      }
 
       console.log('[FilteredSearchResults] Response status:', response.status);
 
@@ -158,6 +174,12 @@ const FilteredSearchResults = forwardRef(({
 
       const data = await response.json();
       console.log('[FilteredSearchResults] Response data:', data);
+
+      // CRITICAL FIX: Validate response data structure to prevent null results
+      if (!data || typeof data !== 'object') {
+        console.error('[FilteredSearchResults] Invalid response data structure:', data);
+        throw new Error('Invalid response data structure');
+      }
 
       // Record search performance
       const searchDuration = Date.now() - searchStartTime;
@@ -267,21 +289,30 @@ const FilteredSearchResults = forwardRef(({
     }
   }, [user, resetSearchResults]);
 
-  // Debounced search function with standardized timing to prevent race conditions
+  // Debounced search function with improved reliability to prevent race conditions
   const debouncedSearch = useCallback(
     debounce(async (searchTerm, searchMode = false) => {
       if (!user) {
+        console.log('[FilteredSearchResults] No user available for search');
         return;
       }
 
       // In link editor mode, always show results (even with empty search)
       // In regular mode, only search if there's a search term
       if (!searchTerm && !isLinkEditor) {
+        console.log('[FilteredSearchResults] Empty search term, resetting results');
         resetSearchResults();
         return;
       }
 
-      await fetchFilteredResults(searchTerm, activeFilter, searchMode);
+      console.log('[FilteredSearchResults] Debounced search triggered:', { searchTerm, searchMode, activeFilter });
+
+      try {
+        await fetchFilteredResults(searchTerm, activeFilter, searchMode);
+      } catch (error) {
+        console.error('[FilteredSearchResults] Error in debounced search:', error);
+        // Don't reset results on error - let the user retry
+      }
     }, 500), // Standardized to 500ms for better responsiveness while preventing excessive requests
     [user, isLinkEditor, resetSearchResults, fetchFilteredResults, activeFilter]
   );

@@ -10,7 +10,7 @@ import {
   type DocumentData
 } from 'firebase/firestore';
 import { db } from '../firebase/database/core';
-import { format, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns';
+import { format, eachDayOfInterval, eachHourOfInterval, startOfDay, endOfDay, startOfHour } from 'date-fns';
 
 // Cache configuration
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -85,7 +85,8 @@ export interface PWAInstallsDataPoint {
  * Cache utility functions
  */
 function getCacheKey(method: string, dateRange: DateRange): string {
-  return `${method}_${format(dateRange.startDate, 'yyyy-MM-dd')}_${format(dateRange.endDate, 'yyyy-MM-dd')}`;
+  const timeConfig = getTimeIntervals(dateRange);
+  return `${method}_${format(dateRange.startDate, 'yyyy-MM-dd-HH')}_${format(dateRange.endDate, 'yyyy-MM-dd-HH')}_${timeConfig.granularity}`;
 }
 
 function getCachedData<T>(key: string): T | null {
@@ -113,6 +114,36 @@ function clearExpiredCache(): void {
 setInterval(clearExpiredCache, 60 * 1000);
 
 /**
+ * Helper function to determine granularity and generate time intervals
+ */
+function getTimeIntervals(dateRange: DateRange) {
+  const { startDate, endDate } = dateRange;
+  const diffInHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+
+  // Use hourly granularity for ranges <= 7 days (168 hours)
+  // Use daily granularity for longer ranges
+  const useHourlyGranularity = diffInHours <= 168;
+
+  if (useHourlyGranularity) {
+    const hours = eachHourOfInterval({ start: startDate, end: endDate });
+    return {
+      intervals: hours,
+      formatKey: (date: Date) => format(date, 'yyyy-MM-dd-HH'),
+      formatLabel: (date: Date) => format(date, 'MMM dd HH:mm'),
+      granularity: 'hourly' as const
+    };
+  } else {
+    const days = eachDayOfInterval({ start: startDate, end: endDate });
+    return {
+      intervals: days,
+      formatKey: (date: Date) => format(date, 'yyyy-MM-dd'),
+      formatLabel: (date: Date) => format(date, 'MMM dd'),
+      granularity: 'daily' as const
+    };
+  }
+}
+
+/**
  * Dashboard Analytics Service
  * Provides data fetching functions for admin dashboard widgets with caching
  */
@@ -134,7 +165,8 @@ export class DashboardAnalyticsService {
       }
 
       const { startDate, endDate } = dateRange;
-      
+      const timeConfig = getTimeIntervals(dateRange);
+
       // Query users collection for accounts created in date range
       const usersRef = collection(db, 'users');
 
@@ -153,21 +185,20 @@ export class DashboardAnalyticsService {
       const snapshot = await getDocs(q);
       console.log(`✅ [Analytics Service] Users query successful, found ${snapshot.size} documents`);
 
-      // Group by date
+      // Group by time interval
       const dateMap = new Map<string, number>();
-      
-      // Initialize all dates in range with 0
-      const days = eachDayOfInterval({ start: startDate, end: endDate });
-      days.forEach(day => {
-        const dateKey = format(day, 'yyyy-MM-dd');
+
+      // Initialize all time intervals in range with 0
+      timeConfig.intervals.forEach(interval => {
+        const dateKey = timeConfig.formatKey(interval);
         dateMap.set(dateKey, 0);
       });
 
-      // Count users by creation date
+      // Count users by creation time interval
       snapshot.forEach(doc => {
         const data = doc.data();
         const createdAt = data.createdAt;
-        
+
         if (createdAt) {
           let date: Date;
           if (createdAt instanceof Timestamp) {
@@ -177,19 +208,28 @@ export class DashboardAnalyticsService {
           } else {
             return; // Skip invalid dates
           }
-          
-          const dateKey = format(date, 'yyyy-MM-dd');
+
+          // Round to appropriate time interval
+          const intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(date) : startOfDay(date);
+          const dateKey = timeConfig.formatKey(intervalDate);
           const currentCount = dateMap.get(dateKey) || 0;
           dateMap.set(dateKey, currentCount + 1);
         }
       });
 
       // Convert to chart data format
-      const result = Array.from(dateMap.entries()).map(([date, count]) => ({
-        date,
-        count,
-        label: format(new Date(date), 'MMM dd')
-      }));
+      const result = Array.from(dateMap.entries()).map(([dateKey, count]) => {
+        // Parse the date key back to a Date object for formatting
+        const date = timeConfig.granularity === 'hourly'
+          ? new Date(dateKey.replace(/-(\d{2})$/, ':$1:00'))
+          : new Date(dateKey);
+
+        return {
+          date: dateKey,
+          count,
+          label: timeConfig.formatLabel(date)
+        };
+      });
 
       // Cache the result
       setCachedData(cacheKey, result);
@@ -208,7 +248,8 @@ export class DashboardAnalyticsService {
   static async getNewPagesCreated(dateRange: DateRange): Promise<ChartDataPoint[]> {
     console.log('🔍 [Analytics Service] getNewPagesCreated called with dateRange:', {
       startDate: dateRange.startDate.toISOString(),
-      endDate: dateRange.endDate.toISOString()
+      endDate: dateRange.endDate.toISOString(),
+      daysDifference: Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24))
     });
 
     try {
@@ -221,7 +262,8 @@ export class DashboardAnalyticsService {
       }
 
       const { startDate, endDate } = dateRange;
-      
+      const timeConfig = getTimeIntervals(dateRange);
+
       // Query pages collection for pages created in date range
       const pagesRef = collection(db, 'pages');
 
@@ -239,14 +281,13 @@ export class DashboardAnalyticsService {
       await throttleQuery(); // Throttle query execution
       const snapshot = await getDocs(q);
       console.log(`✅ [Analytics Service] Pages query successful, found ${snapshot.size} documents`);
-      
-      // Group by date
+
+      // Group by time interval
       const dateMap = new Map<string, number>();
-      
-      // Initialize all dates in range with 0
-      const days = eachDayOfInterval({ start: startDate, end: endDate });
-      days.forEach(day => {
-        const dateKey = format(day, 'yyyy-MM-dd');
+
+      // Initialize all time intervals in range with 0
+      timeConfig.intervals.forEach(interval => {
+        const dateKey = timeConfig.formatKey(interval);
         dateMap.set(dateKey, 0);
       });
 
@@ -268,21 +309,44 @@ export class DashboardAnalyticsService {
           } else if (typeof createdAt === 'string') {
             date = new Date(createdAt);
           } else {
+            console.warn('Invalid createdAt format:', createdAt, 'for page:', doc.id);
             return; // Skip invalid dates
           }
 
-          const dateKey = format(date, 'yyyy-MM-dd');
-          const currentCount = dateMap.get(dateKey) || 0;
-          dateMap.set(dateKey, currentCount + 1);
+          // Validate the date is within our expected range
+          if (date >= startDate && date <= endDate) {
+            // Round to appropriate time interval
+            const intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(date) : startOfDay(date);
+            const dateKey = timeConfig.formatKey(intervalDate);
+            const currentCount = dateMap.get(dateKey) || 0;
+            dateMap.set(dateKey, currentCount + 1);
+            console.log(`📊 [Analytics] Found page created on ${dateKey}, count now: ${currentCount + 1}`);
+          } else {
+            console.log(`📊 [Analytics] Page ${doc.id} created outside date range: ${date.toISOString()}`);
+          }
         }
       });
 
       // Convert to chart data format
-      const result = Array.from(dateMap.entries()).map(([date, count]) => ({
-        date,
-        count,
-        label: format(new Date(date), 'MMM dd')
-      }));
+      const result = Array.from(dateMap.entries()).map(([dateKey, count]) => {
+        // Parse the date key back to a Date object for formatting
+        const date = timeConfig.granularity === 'hourly'
+          ? new Date(dateKey.replace(/-(\d{2})$/, ':$1:00'))
+          : new Date(dateKey);
+
+        return {
+          date: dateKey,
+          count,
+          label: timeConfig.formatLabel(date)
+        };
+      });
+
+      console.log('📊 [Analytics Service] New pages result summary:', {
+        totalDays: result.length,
+        totalPages: result.reduce((sum, item) => sum + item.count, 0),
+        daysWithData: result.filter(item => item.count > 0).length,
+        sampleData: result.slice(0, 5)
+      });
 
       // Cache the result
       setCachedData(cacheKey, result);
@@ -296,8 +360,7 @@ export class DashboardAnalyticsService {
 
   /**
    * Get shares analytics within date range
-   * TODO: Implement real share analytics by querying actual analytics events
-   * This should query Google Analytics 4 events or a Firestore analytics collection
+   * Queries the analytics_events collection for share_event events
    */
   static async getSharesAnalytics(dateRange: DateRange): Promise<SharesDataPoint[]> {
     try {
@@ -308,14 +371,88 @@ export class DashboardAnalyticsService {
         return cachedData;
       }
 
-      // TODO: Replace this with real implementation
-      // Real implementation would:
-      // 1. Query Google Analytics 4 for PAGE_SHARE_ABORTED and PAGE_SHARE_SUCCEEDED events
-      // 2. Or query a Firestore 'analytics_events' collection
-      // 3. Aggregate the data by date within the dateRange
+      const { startDate, endDate } = dateRange;
+      const timeConfig = getTimeIntervals(dateRange);
 
-      // For now, return empty array to show proper empty state
-      const result: SharesDataPoint[] = [];
+      // Group by time interval
+      const dateMap = new Map<string, { successful: number; aborted: number }>();
+
+      // Initialize all time intervals in range with 0
+      timeConfig.intervals.forEach(interval => {
+        const dateKey = timeConfig.formatKey(interval);
+        dateMap.set(dateKey, { successful: 0, aborted: 0 });
+      });
+
+      // Query analytics_events collection for share events
+      const analyticsRef = collection(db, 'analytics_events');
+      const q = query(
+        analyticsRef,
+        where('eventType', '==', 'share_event'),
+        where('timestamp', '>=', Timestamp.fromDate(startDate)),
+        where('timestamp', '<=', Timestamp.fromDate(endDate)),
+        orderBy('timestamp', 'asc'),
+        limit(1000)
+      );
+
+      console.log('🔍 [Analytics Service] Executing shares query...');
+      await throttleQuery();
+      const snapshot = await getDocs(q);
+      console.log(`✅ [Analytics Service] Shares query successful, found ${snapshot.size} events`);
+
+      // Aggregate share events by time interval
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const timestamp = data.timestamp;
+        const eventType = data.eventType; // 'share_succeeded' or 'share_aborted'
+
+        if (timestamp) {
+          let date: Date;
+          if (timestamp instanceof Timestamp) {
+            date = timestamp.toDate();
+          } else {
+            return;
+          }
+
+          // Round to appropriate time interval
+          const intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(date) : startOfDay(date);
+          const dateKey = timeConfig.formatKey(intervalDate);
+          const current = dateMap.get(dateKey) || { successful: 0, aborted: 0 };
+
+          if (eventType === 'share_succeeded') {
+            current.successful += 1;
+          } else if (eventType === 'share_aborted') {
+            current.aborted += 1;
+          }
+
+          dateMap.set(dateKey, current);
+        }
+      });
+
+      // Convert to chart data format
+      const result = Array.from(dateMap.entries()).map(([dateKey, shares]) => {
+        // Parse the date key back to a Date object for formatting
+        const date = timeConfig.granularity === 'hourly'
+          ? new Date(dateKey.replace(/-(\d{2})$/, ':$1:00'))
+          : new Date(dateKey);
+
+        const total = shares.successful + shares.aborted;
+
+        return {
+          date: dateKey,
+          successful: shares.successful,
+          aborted: shares.aborted,
+          total,
+          label: timeConfig.formatLabel(date)
+        };
+      });
+
+      console.log('📊 [Analytics Service] Shares result summary:', {
+        totalIntervals: result.length,
+        totalShares: result.reduce((sum, item) => sum + item.total, 0),
+        totalSuccessful: result.reduce((sum, item) => sum + item.successful, 0),
+        totalAborted: result.reduce((sum, item) => sum + item.aborted, 0),
+        intervalsWithData: result.filter(item => item.total > 0).length
+      });
 
       // Cache the result
       setCachedData(cacheKey, result);
@@ -323,7 +460,7 @@ export class DashboardAnalyticsService {
 
     } catch (error) {
       console.error('Error fetching shares analytics:', error);
-      throw new Error('Failed to fetch share analytics data');
+      return [];
     }
   }
 
@@ -341,14 +478,14 @@ export class DashboardAnalyticsService {
       }
 
       const { startDate, endDate } = dateRange;
+      const timeConfig = getTimeIntervals(dateRange);
 
-      // Group by date
+      // Group by time interval
       const dateMap = new Map<string, number>();
 
-      // Initialize all dates in range with 0
-      const days = eachDayOfInterval({ start: startDate, end: endDate });
-      days.forEach(day => {
-        const dateKey = format(day, 'yyyy-MM-dd');
+      // Initialize all time intervals in range with 0
+      timeConfig.intervals.forEach(interval => {
+        const dateKey = timeConfig.formatKey(interval);
         dateMap.set(dateKey, 0);
       });
 
@@ -391,6 +528,7 @@ export class DashboardAnalyticsService {
           } else if (typeof lastModified === 'string') {
             modDate = new Date(lastModified);
           } else {
+            console.warn('Invalid lastModified format:', lastModified, 'for page:', doc.id);
             return; // Skip invalid dates
           }
 
@@ -399,25 +537,50 @@ export class DashboardAnalyticsService {
           } else if (typeof createdAt === 'string') {
             createDate = new Date(createdAt);
           } else {
+            console.warn('Invalid createdAt format:', createdAt, 'for page:', doc.id);
             return; // Skip invalid dates
           }
 
           // Only count as edit if lastModified is different from createdAt
           // (i.e., the page was actually edited after creation)
           if (modDate.getTime() !== createDate.getTime()) {
-            const dateKey = format(modDate, 'yyyy-MM-dd');
-            const currentCount = dateMap.get(dateKey) || 0;
-            dateMap.set(dateKey, currentCount + 1);
+            // Validate the date is within our expected range
+            if (modDate >= startDate && modDate <= endDate) {
+              // Round to appropriate time interval
+              const intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(modDate) : startOfDay(modDate);
+              const dateKey = timeConfig.formatKey(intervalDate);
+              const currentCount = dateMap.get(dateKey) || 0;
+              dateMap.set(dateKey, currentCount + 1);
+              console.log(`📊 [Analytics] Found page edit on ${dateKey}, count now: ${currentCount + 1}`);
+            } else {
+              console.log(`📊 [Analytics] Page ${doc.id} edited outside date range: ${modDate.toISOString()}`);
+            }
+          } else {
+            console.log(`📊 [Analytics] Page ${doc.id} not counted as edit (same creation/modification time)`);
           }
         }
       });
 
       // Convert to chart data format
-      const result = Array.from(dateMap.entries()).map(([date, count]) => ({
-        date,
-        count,
-        label: format(new Date(date), 'MMM dd')
-      }));
+      const result = Array.from(dateMap.entries()).map(([dateKey, count]) => {
+        // Parse the date key back to a Date object for formatting
+        const date = timeConfig.granularity === 'hourly'
+          ? new Date(dateKey.replace(/-(\d{2})$/, ':$1:00'))
+          : new Date(dateKey);
+
+        return {
+          date: dateKey,
+          count,
+          label: timeConfig.formatLabel(date)
+        };
+      });
+
+      console.log('📊 [Analytics Service] Edits result summary:', {
+        totalDays: result.length,
+        totalEdits: result.reduce((sum, item) => sum + item.count, 0),
+        daysWithData: result.filter(item => item.count > 0).length,
+        sampleData: result.slice(0, 5)
+      });
 
       // Cache the result
       setCachedData(cacheKey, result);
@@ -431,8 +594,7 @@ export class DashboardAnalyticsService {
 
   /**
    * Get content changes analytics within date range
-   * For now, returns empty state as historical character tracking is not available
-   * TODO: Implement real character tracking when page edit events are enhanced
+   * Queries the analytics_events collection for content_change events
    */
   static async getContentChangesAnalytics(dateRange: DateRange): Promise<ContentChangesDataPoint[]> {
     try {
@@ -443,16 +605,85 @@ export class DashboardAnalyticsService {
         return cachedData;
       }
 
-      // TODO: Implement real content changes tracking
-      // Real implementation would:
-      // 1. Track character additions/deletions in page edit events
-      // 2. Store this data in a separate analytics collection
-      // 3. Query that collection for the date range
-      // 4. Calculate net changes per day
+      const { startDate, endDate } = dateRange;
+      const timeConfig = getTimeIntervals(dateRange);
 
-      // For now, return empty array to show proper empty state
-      // Historical character tracking is not available without complex version analysis
-      const result: ContentChangesDataPoint[] = [];
+      // Group by time interval
+      const dateMap = new Map<string, { added: number; deleted: number }>();
+
+      // Initialize all time intervals in range with 0
+      timeConfig.intervals.forEach(interval => {
+        const dateKey = timeConfig.formatKey(interval);
+        dateMap.set(dateKey, { added: 0, deleted: 0 });
+      });
+
+      // Query analytics_events collection for content changes
+      const analyticsRef = collection(db, 'analytics_events');
+      const q = query(
+        analyticsRef,
+        where('eventType', '==', 'content_change'),
+        where('timestamp', '>=', Timestamp.fromDate(startDate)),
+        where('timestamp', '<=', Timestamp.fromDate(endDate)),
+        orderBy('timestamp', 'asc'),
+        limit(1000)
+      );
+
+      console.log('🔍 [Analytics Service] Executing content changes query...');
+      await throttleQuery();
+      const snapshot = await getDocs(q);
+      console.log(`✅ [Analytics Service] Content changes query successful, found ${snapshot.size} events`);
+
+      // Aggregate content changes by time interval
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const timestamp = data.timestamp;
+        const charactersAdded = data.charactersAdded || 0;
+        const charactersDeleted = data.charactersDeleted || 0;
+
+        if (timestamp) {
+          let date: Date;
+          if (timestamp instanceof Timestamp) {
+            date = timestamp.toDate();
+          } else {
+            return;
+          }
+
+          // Round to appropriate time interval
+          const intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(date) : startOfDay(date);
+          const dateKey = timeConfig.formatKey(intervalDate);
+          const current = dateMap.get(dateKey) || { added: 0, deleted: 0 };
+
+          dateMap.set(dateKey, {
+            added: current.added + charactersAdded,
+            deleted: current.deleted + charactersDeleted
+          });
+        }
+      });
+
+      // Convert to chart data format
+      const result = Array.from(dateMap.entries()).map(([dateKey, changes]) => {
+        // Parse the date key back to a Date object for formatting
+        const date = timeConfig.granularity === 'hourly'
+          ? new Date(dateKey.replace(/-(\d{2})$/, ':$1:00'))
+          : new Date(dateKey);
+
+        const netChange = changes.added - changes.deleted;
+
+        return {
+          date: dateKey,
+          charactersAdded: changes.added,
+          charactersDeleted: changes.deleted,
+          netChange,
+          label: timeConfig.formatLabel(date)
+        };
+      });
+
+      console.log('📊 [Analytics Service] Content changes result summary:', {
+        totalIntervals: result.length,
+        totalAdded: result.reduce((sum, item) => sum + item.charactersAdded, 0),
+        totalDeleted: result.reduce((sum, item) => sum + item.charactersDeleted, 0),
+        intervalsWithData: result.filter(item => item.charactersAdded > 0 || item.charactersDeleted > 0).length
+      });
 
       // Cache the result
       setCachedData(cacheKey, result);
@@ -504,8 +735,7 @@ export class DashboardAnalyticsService {
 
   /**
    * Get PWA installation analytics within date range
-   * TODO: Implement PWA installation tracking
-   * For now, returns empty state as PWA installation tracking is not implemented
+   * Queries the analytics_events collection for pwa_install events
    */
   static async getPWAInstallsAnalytics(dateRange: DateRange): Promise<PWAInstallsDataPoint[]> {
     try {
@@ -516,16 +746,77 @@ export class DashboardAnalyticsService {
         return cachedData;
       }
 
-      // TODO: Implement real PWA installation tracking
-      // Real implementation would:
-      // 1. Listen for 'beforeinstallprompt' and 'appinstalled' events
-      // 2. Track these events in Google Analytics or Firestore
-      // 3. Query the analytics data for the date range
-      // 4. Aggregate installations per day
+      const { startDate, endDate } = dateRange;
+      const timeConfig = getTimeIntervals(dateRange);
 
-      // For now, return empty array to show proper empty state
-      // PWA installation tracking is not yet implemented
-      const result: PWAInstallsDataPoint[] = [];
+      // Group by time interval
+      const dateMap = new Map<string, number>();
+
+      // Initialize all time intervals in range with 0
+      timeConfig.intervals.forEach(interval => {
+        const dateKey = timeConfig.formatKey(interval);
+        dateMap.set(dateKey, 0);
+      });
+
+      // Query analytics_events collection for PWA installations
+      const analyticsRef = collection(db, 'analytics_events');
+      const q = query(
+        analyticsRef,
+        where('eventType', '==', 'pwa_install'),
+        where('timestamp', '>=', Timestamp.fromDate(startDate)),
+        where('timestamp', '<=', Timestamp.fromDate(endDate)),
+        orderBy('timestamp', 'asc'),
+        limit(1000)
+      );
+
+      console.log('🔍 [Analytics Service] Executing PWA installs query...');
+      await throttleQuery();
+      const snapshot = await getDocs(q);
+      console.log(`✅ [Analytics Service] PWA installs query successful, found ${snapshot.size} events`);
+
+      // Count PWA installations by time interval
+      // Only count 'app_installed' events as actual installations
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const timestamp = data.timestamp;
+        const eventType = data.eventType;
+
+        // Only count actual installations, not prompts
+        if (timestamp && eventType === 'app_installed') {
+          let date: Date;
+          if (timestamp instanceof Timestamp) {
+            date = timestamp.toDate();
+          } else {
+            return;
+          }
+
+          // Round to appropriate time interval
+          const intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(date) : startOfDay(date);
+          const dateKey = timeConfig.formatKey(intervalDate);
+          const currentCount = dateMap.get(dateKey) || 0;
+          dateMap.set(dateKey, currentCount + 1);
+        }
+      });
+
+      // Convert to chart data format
+      const result = Array.from(dateMap.entries()).map(([dateKey, count]) => {
+        // Parse the date key back to a Date object for formatting
+        const date = timeConfig.granularity === 'hourly'
+          ? new Date(dateKey.replace(/-(\d{2})$/, ':$1:00'))
+          : new Date(dateKey);
+
+        return {
+          date: dateKey,
+          count,
+          label: timeConfig.formatLabel(date)
+        };
+      });
+
+      console.log('📊 [Analytics Service] PWA installs result summary:', {
+        totalIntervals: result.length,
+        totalInstalls: result.reduce((sum, item) => sum + item.count, 0),
+        intervalsWithData: result.filter(item => item.count > 0).length
+      });
 
       // Cache the result
       setCachedData(cacheKey, result);
@@ -533,7 +824,7 @@ export class DashboardAnalyticsService {
 
     } catch (error) {
       console.error('Error fetching PWA installs analytics:', error);
-      throw new Error('Failed to fetch PWA installation data');
+      return [];
     }
   }
 

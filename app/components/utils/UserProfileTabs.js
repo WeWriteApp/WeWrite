@@ -61,7 +61,18 @@ function PageList({ pageList, emptyMessage, isCurrentUserList = false }) {
 }
 
 export default function UserProfileTabs({ profile }) {
-  const [activeTab, setActiveTab] = useState("bio"); // Changed default tab to "bio"
+  // Initialize activeTab from URL hash if available, otherwise use default
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.slice(1);
+      // Define basic valid tabs (we'll validate against full list in useEffect)
+      const basicValidTabs = ["bio", "pages", "activity", "groups", "following", "private"];
+      if (hash && basicValidTabs.includes(hash)) {
+        return hash;
+      }
+    }
+    return "bio"; // Default tab
+  });
   const [direction, setDirection] = useState(0); // -1 for right, 1 for left
   const { user } = useContext(AuthContext);
   const isCurrentUser = user && profile && user.uid === profile.uid;
@@ -205,18 +216,43 @@ export default function UserProfileTabs({ profile }) {
   };
 
   // Determine which tabs to show in the requested order
-  const visibleTabs = ["bio", "pages", "activity"];
+  const visibleTabs = React.useMemo(() => {
+    const tabs = ["bio", "pages", "activity"];
 
-  // Add groups tab only if the feature is enabled
-  if (groupsEnabled) {
-    visibleTabs.push("groups");
-  }
+    // Add groups tab only if the feature is enabled
+    if (groupsEnabled) {
+      tabs.push("groups");
+    }
 
-  // Add following tab only for the current user (privacy restriction)
-  if (isCurrentUser) {
-    visibleTabs.push("following");
-    visibleTabs.push("private");
-  }
+    // Add following tab only for the current user (privacy restriction)
+    if (isCurrentUser) {
+      tabs.push("following");
+      tabs.push("private");
+    }
+
+    return tabs;
+  }, [groupsEnabled, isCurrentUser]);
+
+  // Handle browser navigation (back/forward) for hash-based tab navigation
+  React.useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash && visibleTabs.includes(hash) && hash !== activeTab) {
+        setActiveTab(hash);
+      } else if (!hash && activeTab !== "bio") {
+        // If no hash, default to bio tab
+        setActiveTab("bio");
+      }
+    };
+
+    // Listen for hash changes (browser back/forward)
+    window.addEventListener('hashchange', handleHashChange);
+
+    // Also check on mount in case the component was rendered with a hash
+    handleHashChange();
+
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [visibleTabs, activeTab]);
 
 
 

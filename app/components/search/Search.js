@@ -109,11 +109,11 @@ const Search = () => {
           groupIds = Object.keys(user.groups);
         }
 
-        // Fetch both pages and users in parallel
-        const pagesUrl = `/api/search?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&groupIds=${groupIds}&useScoring=true`;
+        // CRITICAL FIX: Use optimized search API for better performance
+        const pagesUrl = `/api/search-optimized?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&groupIds=${groupIds}&titleOnly=false&maxResults=50`;
         const usersUrl = `/api/search-users?searchTerm=${encodeURIComponent(searchTerm)}`;
 
-        console.log('Making API requests to:', { pagesUrl, usersUrl });
+        console.log('Making optimized API requests to:', { pagesUrl, usersUrl });
 
         // Use Promise.allSettled to handle partial failures
         const [pagesResponse, usersResponse] = await Promise.allSettled([

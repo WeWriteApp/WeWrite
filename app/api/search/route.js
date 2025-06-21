@@ -239,100 +239,94 @@ function checkSearchMatch(normalizedTitle, searchTermLower) {
   return result;
 }
 
-// Simplified function to search pages in Firestore
+// Optimized function to search pages in Firestore with performance improvements
 async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterByUserId = null) {
   try {
-    console.log(`🔍 SIMPLIFIED SEARCH: "${searchTerm}" for user: ${userId}`);
+    console.log(`🔍 OPTIMIZED SEARCH: "${searchTerm}" for user: ${userId}`);
+    const startTime = Date.now();
 
-    // Handle empty search terms - return all available pages for browsing
+    // Handle empty search terms - return recent pages for browsing
     const isEmptySearch = !searchTerm || searchTerm.trim().length === 0;
     if (isEmptySearch) {
-      console.log('Empty search term, returning all available pages for browsing');
+      console.log('Empty search term, returning recent pages for browsing');
     }
 
     // Import Firestore modules
-    const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
+    const { collection, query, where, orderBy, limit, getDocs, select } = await import('firebase/firestore');
     const { db } = await import('../../firebase/database');
 
     const searchTermLower = searchTerm.toLowerCase().trim();
     const allResults = [];
 
+    // PERFORMANCE OPTIMIZATION: Only fetch essential fields
+    const fieldsToSelect = [
+      'title', 'userId', 'username', 'isPublic', 'lastModified',
+      'createdAt', 'deleted', 'content' // Keep content for now but will optimize later
+    ];
+
     console.log(`🔍 Searching for: "${searchTermLower}"`);
 
-    // STEP 1: Search user's own pages
+    // STEP 1: Search user's own pages with optimized query
     if (userId) {
-      // Optimized: Use single query with higher limit to reduce API calls
-      const userQueries = [
-        // Primary query by lastModified (most recent pages first)
-        query(
-          collection(db, 'pages'),
-          where('userId', '==', filterByUserId || userId),
-          orderBy('lastModified', 'desc'),
-          limit(5000) // Increased limit to capture more pages in single query
-        )
-      ];
+      // MAJOR OPTIMIZATION: Reduced limit and server-side filtering
+      const userQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', filterByUserId || userId),
+        where('deleted', '!=', true), // Server-side filtering - MAJOR PERFORMANCE BOOST
+        orderBy('deleted'), // Required for != queries
+        orderBy('lastModified', 'desc'),
+        select(...fieldsToSelect), // Only fetch needed fields - MAJOR OPTIMIZATION
+        limit(isEmptySearch ? 50 : 100) // Reasonable limits - MAJOR OPTIMIZATION
+      );
 
       const allUserPages = new Map(); // Use Map to deduplicate
 
-      for (const userQuery of userQueries) {
-        try {
-          const userPagesSnapshot = await getDocs(userQuery);
-          console.log(`📄 Found ${userPagesSnapshot.size} user pages in query (before filtering deleted pages)`);
+      try {
+        const userPagesSnapshot = await getDocs(userQuery);
+        console.log(`👤 Found ${userPagesSnapshot.size} user pages (server-side filtered)`);
 
-          userPagesSnapshot.forEach(doc => {
-            if (!allUserPages.has(doc.id)) {
-              const data = doc.data();
+        userPagesSnapshot.forEach(doc => {
+          const data = doc.data();
+          const pageTitle = data.title || 'Untitled';
+          const normalizedTitle = pageTitle.toLowerCase();
 
-              // Filter out soft-deleted pages client-side
-              if (data.deleted === true) {
-                return;
-              }
+          let isMatch = false;
+          if (isEmptySearch) {
+            isMatch = true;
+          } else {
+            // PERFORMANCE OPTIMIZATION: Simplified matching logic
+            // Check title first (most common case)
+            const titleMatch = normalizedTitle.includes(searchTermLower) ||
+                             normalizedTitle.startsWith(searchTermLower);
 
-              const pageTitle = data.title || 'Untitled';
-              const normalizedTitle = pageTitle.toLowerCase();
-
-              // Also search in page content if available
-              const pageContent = data.content || '';
-              const normalizedContent = pageContent.toLowerCase();
-
-              // Enhanced search logic - check both title and content, or include all if empty search
-              let isMatch = false;
-              if (isEmptySearch) {
-                // For empty search, include all pages
-                isMatch = true;
-              } else {
-                const titleMatch = checkSearchMatch(normalizedTitle, searchTermLower);
-                const contentMatch = pageContent && checkSearchMatch(normalizedContent, searchTermLower);
-                isMatch = titleMatch || contentMatch;
-              }
-
-              if (isMatch) {
-                if (isEmptySearch) {
-                  console.log(`✅ User page included: "${pageTitle}" (empty search - showing all pages)`);
-                } else {
-                  const titleMatch = checkSearchMatch(normalizedTitle, searchTermLower);
-                  const contentMatch = pageContent && checkSearchMatch(normalizedContent, searchTermLower);
-                  console.log(`✅ User page match: "${pageTitle}" matches "${searchTermLower}" (title: ${titleMatch}, content: ${contentMatch})`);
-                }
-                allUserPages.set(doc.id, {
-                  id: doc.id,
-                  title: pageTitle,
-                  isOwned: true,
-                  isEditable: true,
-                  userId: data.userId,
-                  username: data.username || null,
-                  isPublic: data.isPublic,
-                  lastModified: data.lastModified,
-                  createdAt: data.createdAt,
-                  type: 'user',
-                  isContentMatch: !isEmptySearch && pageContent && checkSearchMatch(normalizedContent, searchTermLower) && !checkSearchMatch(normalizedTitle, searchTermLower)
-                });
-              }
+            // Only check content if title doesn't match and we have content
+            let contentMatch = false;
+            if (!titleMatch && data.content) {
+              const normalizedContent = data.content.toLowerCase();
+              contentMatch = normalizedContent.includes(searchTermLower);
             }
-          });
-        } catch (queryError) {
-          console.warn('Error in user pages query:', queryError);
-        }
+
+            isMatch = titleMatch || contentMatch;
+          }
+
+          if (isMatch) {
+            allUserPages.set(doc.id, {
+              id: doc.id,
+              title: pageTitle,
+              type: 'user',
+              isOwned: true,
+              isEditable: true,
+              userId: data.userId,
+              username: data.username || null,
+              isPublic: data.isPublic,
+              lastModified: data.lastModified,
+              createdAt: data.createdAt,
+              isContentMatch: false // Simplified for performance
+            });
+          }
+        });
+      } catch (queryError) {
+        console.warn('Error in user pages query:', queryError);
       }
 
       // Add all user pages to results
@@ -340,85 +334,73 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
       console.log(`📄 Total unique user pages found: ${allUserPages.size}`);
     }
 
-    // STEP 2: Search public pages (if not filtering by specific user)
-    if (!filterByUserId) {
-      // Optimized: Use single query with higher limit to reduce API calls
-      const publicQueries = [
-        // Primary query by lastModified (most recent public pages first)
-        query(
-          collection(db, 'pages'),
-          where('isPublic', '==', true),
-          orderBy('lastModified', 'desc'),
-          limit(3000) // Increased limit to capture more pages in single query
-        )
-      ];
+    // STEP 2: Search public pages (if not filtering by specific user and haven't reached limit)
+    if (!filterByUserId && allResults.length < (isEmptySearch ? 100 : 150)) {
+      const remainingSlots = (isEmptySearch ? 100 : 150) - allResults.length;
+
+      // MAJOR OPTIMIZATION: Server-side filtering and reduced limits
+      const publicQuery = query(
+        collection(db, 'pages'),
+        where('isPublic', '==', true),
+        where('deleted', '!=', true), // Server-side filtering - MAJOR PERFORMANCE BOOST
+        orderBy('deleted'), // Required for != queries
+        orderBy('lastModified', 'desc'),
+        select(...fieldsToSelect), // Only fetch needed fields - MAJOR OPTIMIZATION
+        limit(Math.min(remainingSlots * 2, isEmptySearch ? 100 : 200)) // Reasonable limits - MAJOR OPTIMIZATION
+      );
 
       const allPublicPages = new Map(); // Use Map to deduplicate
 
-      for (const publicQuery of publicQueries) {
-        try {
-          const publicPagesSnapshot = await getDocs(publicQuery);
-          console.log(`🌐 Found ${publicPagesSnapshot.size} public pages in query`);
+      try {
+        const publicPagesSnapshot = await getDocs(publicQuery);
+        console.log(`🌐 Found ${publicPagesSnapshot.size} public pages (server-side filtered)`);
 
-          publicPagesSnapshot.forEach(doc => {
-            if (!allPublicPages.has(doc.id)) {
-              const data = doc.data();
+        publicPagesSnapshot.forEach(doc => {
+          // Skip user's own pages (already included above)
+          if (doc.data().userId === userId) {
+            return;
+          }
 
-              // Filter out soft-deleted pages client-side
-              if (data.deleted === true) {
-                return;
-              }
+          const data = doc.data();
+          const pageTitle = data.title || 'Untitled';
+          const normalizedTitle = pageTitle.toLowerCase();
 
-              // Skip user's own pages (already included above)
-              if (data.userId === userId) {
-                return;
-              }
+          let isMatch = false;
+          if (isEmptySearch) {
+            isMatch = true;
+          } else {
+            // PERFORMANCE OPTIMIZATION: Simplified matching logic
+            const titleMatch = normalizedTitle.includes(searchTermLower) ||
+                             normalizedTitle.startsWith(searchTermLower);
 
-              const pageTitle = data.title || 'Untitled';
-              const normalizedTitle = pageTitle.toLowerCase();
-
-              // Also search in page content if available
-              const pageContent = data.content || '';
-              const normalizedContent = pageContent.toLowerCase();
-
-              // Enhanced search logic - check both title and content, or include all if empty search
-              let isMatch = false;
-              if (isEmptySearch) {
-                // For empty search, include all pages
-                isMatch = true;
-              } else {
-                const titleMatch = checkSearchMatch(normalizedTitle, searchTermLower);
-                const contentMatch = pageContent && checkSearchMatch(normalizedContent, searchTermLower);
-                isMatch = titleMatch || contentMatch;
-              }
-
-              if (isMatch) {
-                if (isEmptySearch) {
-                  console.log(`✅ Public page included: "${pageTitle}" (empty search - showing all pages)`);
-                } else {
-                  const titleMatch = checkSearchMatch(normalizedTitle, searchTermLower);
-                  const contentMatch = pageContent && checkSearchMatch(normalizedContent, searchTermLower);
-                  console.log(`✅ Public page match: "${pageTitle}" matches "${searchTermLower}" (title: ${titleMatch}, content: ${contentMatch})`);
-                }
-                allPublicPages.set(doc.id, {
-                  id: doc.id,
-                  title: pageTitle,
-                  isOwned: false,
-                  isEditable: false,
-                  userId: data.userId,
-                  username: data.username || null,
-                  isPublic: data.isPublic,
-                  lastModified: data.lastModified,
-                  createdAt: data.createdAt,
-                  type: 'public',
-                  isContentMatch: !isEmptySearch && pageContent && checkSearchMatch(normalizedContent, searchTermLower) && !checkSearchMatch(normalizedTitle, searchTermLower)
-                });
-              }
+            // Only check content if title doesn't match and we have content
+            let contentMatch = false;
+            if (!titleMatch && data.content) {
+              const normalizedContent = data.content.toLowerCase();
+              contentMatch = normalizedContent.includes(searchTermLower);
             }
-          });
-        } catch (queryError) {
-          console.warn('Error in public pages query:', queryError);
-        }
+
+            isMatch = titleMatch || contentMatch;
+          }
+
+          if (isMatch && allResults.length + allPublicPages.size < (isEmptySearch ? 100 : 150)) {
+            allPublicPages.set(doc.id, {
+              id: doc.id,
+              title: pageTitle,
+              type: 'public',
+              isOwned: false,
+              isEditable: false,
+              userId: data.userId,
+              username: data.username || null,
+              isPublic: data.isPublic,
+              lastModified: data.lastModified,
+              createdAt: data.createdAt,
+              isContentMatch: false // Simplified for performance
+            });
+          }
+        });
+      } catch (queryError) {
+        console.warn('Error in public pages query:', queryError);
       }
 
       // Add all public pages to results
@@ -426,7 +408,8 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
       console.log(`🌐 Total unique public pages found: ${allPublicPages.size}`);
     }
 
-    console.log(`🎯 Total matches found: ${allResults.length}`);
+    const searchTime = Date.now() - startTime;
+    console.log(`🎯 Total matches found: ${allResults.length} in ${searchTime}ms`);
 
     // Debug: Log sample of found pages for troubleshooting
     if (allResults.length > 0) {
