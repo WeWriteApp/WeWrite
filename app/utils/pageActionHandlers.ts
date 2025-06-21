@@ -44,6 +44,7 @@ import { saveDraftReply, setPendingReplyAction } from "./draftReplyUtils";
 import { getCurrentUsername } from "./userUtils";
 import { getAnalyticsService } from "./analytics-service";
 import { INTERACTION_EVENTS } from "../constants/analytics-events";
+import { SharesTrackingService } from "../services/sharesTracking";
 
 /**
  * Page interface for action handlers
@@ -250,6 +251,16 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
         page_title: title || page.title || "Untitled",
         page_author: page.username || "Anonymous"
       });
+
+      // Also track in Firestore for dashboard analytics
+      SharesTrackingService.trackShareSucceeded(
+        page.id,
+        'native_share',
+        user?.uid,
+        user?.displayName || user?.username,
+        title || page.title,
+        page.username
+      );
     }).catch(err => {
       console.log('Error sharing:', err);
 
@@ -264,6 +275,17 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
           page_author: page.username || "Anonymous",
           abort_reason: 'user_cancelled'
         });
+
+        // Also track in Firestore for dashboard analytics
+        SharesTrackingService.trackShareAborted(
+          page.id,
+          'native_share',
+          'user_cancelled',
+          user?.uid,
+          user?.displayName || user?.username,
+          title || page.title,
+          page.username
+        );
       } else {
         // Track aborted share due to error
         analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_ABORTED, {
@@ -274,6 +296,17 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
           page_author: page.username || "Anonymous",
           abort_reason: 'share_error'
         });
+
+        // Also track in Firestore for dashboard analytics
+        SharesTrackingService.trackShareAborted(
+          page.id,
+          'native_share',
+          'share_error',
+          user?.uid,
+          user?.displayName || user?.username,
+          title || page.title,
+          page.username
+        );
 
         // Fallback to clipboard
         fallbackShare(pageUrl, shareText, page, user, title);
@@ -310,6 +343,16 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
           page_title: title || page.title || "Untitled",
           page_author: page.username || "Anonymous"
         });
+
+        // Also track in Firestore for dashboard analytics
+        SharesTrackingService.trackShareSucceeded(
+          page.id,
+          'copy_link',
+          user?.uid,
+          user?.displayName || user?.username,
+          title || page.title,
+          page.username
+        );
       }
     }).catch(err => {
       console.error('Failed to copy to clipboard:', err);
@@ -324,6 +367,17 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
           page_author: page.username || "Anonymous",
           abort_reason: 'clipboard_error'
         });
+
+        // Also track in Firestore for dashboard analytics
+        SharesTrackingService.trackShareAborted(
+          page.id,
+          'copy_link',
+          'clipboard_error',
+          user?.uid,
+          user?.displayName || user?.username,
+          title || page.title,
+          page.username
+        );
       }
       // Remove error toast - allow users to cancel share actions without showing error messages
     });
@@ -347,6 +401,16 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
           page_title: title || page.title || "Untitled",
           page_author: page.username || "Anonymous"
         });
+
+        // Also track in Firestore for dashboard analytics
+        SharesTrackingService.trackShareSucceeded(
+          page.id,
+          'copy_link_legacy',
+          user?.uid,
+          user?.displayName || user?.username,
+          title || page.title,
+          page.username
+        );
       }
     } catch (err) {
       console.error('Fallback copy failed:', err);
@@ -361,6 +425,17 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
           page_author: page.username || "Anonymous",
           abort_reason: 'legacy_clipboard_error'
         });
+
+        // Also track in Firestore for dashboard analytics
+        SharesTrackingService.trackShareAborted(
+          page.id,
+          'copy_link_legacy',
+          'legacy_clipboard_error',
+          user?.uid,
+          user?.displayName || user?.username,
+          title || page.title,
+          page.username
+        );
       }
       // Remove error toast - allow users to cancel share actions without showing error messages
     }

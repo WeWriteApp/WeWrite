@@ -138,12 +138,12 @@ const SearchResults = ({
         const isFilteringByUser = !!userId;
         const encodedSearch = encodeURIComponent(searchTerm.trim());
 
-        // Construct API URL
+        // CRITICAL FIX: Use optimized search API for better performance
         let queryUrl;
         if (isFilteringByUser) {
-          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodedSearch}&filterByUserId=${userId}&groupIds=${groupIds}`;
+          queryUrl = `/api/search-optimized?userId=${selectedUserId}&searchTerm=${encodedSearch}&filterByUserId=${userId}&groupIds=${groupIds}&titleOnly=false&maxResults=50`;
         } else {
-          queryUrl = `/api/search?userId=${selectedUserId}&searchTerm=${encodedSearch}&groupIds=${groupIds}`;
+          queryUrl = `/api/search-optimized?userId=${selectedUserId}&searchTerm=${encodedSearch}&groupIds=${groupIds}&titleOnly=false&maxResults=50`;
         }
 
         const userSearchUrl = isFilteringByUser ? null : `/api/search-users?searchTerm=${encodedSearch}`;

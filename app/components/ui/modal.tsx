@@ -160,7 +160,9 @@ export function Modal({
             left: 0,
             right: 0,
             bottom: 0,
-            zIndex: 100
+            zIndex: 100,
+            // Add top padding for mobile to create gap from screen edge
+            paddingTop: isMobile ? '20px' : '0'
           }}
         >
           {/* Backdrop */}
@@ -178,10 +180,12 @@ export function Modal({
             className={cn(
               // Base styles
               "relative bg-background shadow-lg border border-border dark:border-border z-10",
-              // Mobile: Full screen slide-up modal
-              "w-full h-full rounded-t-2xl md:rounded-2xl",
+              // Mobile: Full screen slide-up modal with top margin
+              "w-full rounded-t-2xl md:rounded-2xl",
+              // Mobile height: account for top padding (20px) to prevent full screen coverage
+              "h-[calc(100%-20px)] md:h-auto",
               // Desktop: Centered modal with constraints and overflow handling
-              "md:w-[calc(100%-2rem)] md:max-w-md md:h-auto md:max-h-[calc(100vh-40px)] md:mx-4 md:my-5",
+              "md:w-[calc(100%-2rem)] md:max-w-md md:max-h-[calc(100vh-40px)] md:mx-4 md:my-5",
               // Padding and overflow
               "p-6 overflow-hidden flex flex-col",
               className

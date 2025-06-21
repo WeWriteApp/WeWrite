@@ -8,6 +8,7 @@ import { createPage } from "../firebase/database";
 // ReactGA removed - analytics now handled by UnifiedAnalyticsProvider
 // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
 // import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
+import { ContentChangesTrackingService } from "../services/contentChangesTracking";
 // import { CONTENT_EVENTS } from "../constants/analytics-events";
 import { createReplyAttribution } from "../utils/linkUtils";
 import { AuthContext } from "../providers/AuthProvider";
@@ -455,6 +456,18 @@ export default function NewPage() {
         const res = await createPage(data);
 
         if (res) {
+          // Track content changes for new page creation
+          try {
+            await ContentChangesTrackingService.trackContentChangeAdvanced(
+              res.id,
+              userId,
+              username,
+              null, // No previous content for new pages
+              finalContent
+            );
+          } catch (trackingError) {
+            console.error('Error tracking content changes for new page (non-fatal):', trackingError);
+          }
 
           // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
           // Track analytics (non-blocking) - now handled by UnifiedAnalyticsProvider

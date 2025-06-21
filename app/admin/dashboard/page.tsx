@@ -23,11 +23,12 @@ export default function AdminDashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  // Date range state - default to last 30 days
+  // Date range state - default to last 24 hours
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 30);
+    startDate.setDate(startDate.getDate() - 1);
+
     return { startDate, endDate };
   });
 
@@ -42,14 +43,24 @@ export default function AdminDashboardPage() {
 
   // Check if user is admin
   useEffect(() => {
+    console.log('🔍 [Admin Dashboard] Auth state check:', {
+      authLoading,
+      hasUser: !!user,
+      userEmail: user?.email,
+      isAdminResult: user?.email ? isAdmin(user.email) : 'no email'
+    });
+
     if (!authLoading && user) {
       if (!isAdmin(user.email)) {
+        console.log('❌ [Admin Dashboard] User is not admin, redirecting to home');
         router.push('/');
       } else {
+        console.log('✅ [Admin Dashboard] User is admin, loading dashboard');
         // User is admin, stop dashboard loading
         setDashboardLoading(false);
       }
     } else if (!authLoading && !user) {
+      console.log('❌ [Admin Dashboard] No user, redirecting to login');
       router.push('/auth/login?redirect=/admin/dashboard');
     }
   }, [user, authLoading, router]);

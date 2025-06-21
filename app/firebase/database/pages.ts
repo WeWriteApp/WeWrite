@@ -90,13 +90,17 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
       }
     }
 
+    // Import Firestore Timestamp for proper timestamp handling
+    const { Timestamp } = await import('firebase/firestore');
+    const now = Timestamp.now();
+
     const pageData = {
       title: data.title || "Untitled",
       isPublic: data.isPublic !== undefined ? data.isPublic : true,
       userId: data.userId,
       username: username || "Anonymous", // Ensure username is saved with the page
-      createdAt: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
+      createdAt: now,
+      lastModified: now,
       // Add group ID if provided
       groupId: data.groupId || null,
       groupName: data.groupName || null,
@@ -123,7 +127,7 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
       // Ensure we have content before creating a version
       const versionData = {
         content: data.content || JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]),
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         userId: data.userId,
         username: username || "Anonymous", // Also store username in version data for consistency
         groupId: data.groupId || null // Store group ID if the page belongs to a group

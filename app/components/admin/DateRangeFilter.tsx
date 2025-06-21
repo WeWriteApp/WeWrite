@@ -20,6 +20,13 @@ export function DateRangeFilter({ dateRange, onDateRangeChange, className = "" }
   // Preset date range options
   const presetRanges = [
     {
+      label: 'Last 24 Hours',
+      getValue: () => ({
+        startDate: subDays(new Date(), 1),
+        endDate: new Date()
+      })
+    },
+    {
       label: 'Last 7 Days',
       getValue: () => ({
         startDate: startOfDay(subDays(new Date(), 7)),
@@ -83,11 +90,11 @@ export function DateRangeFilter({ dateRange, onDateRangeChange, className = "" }
     onDateRangeChange(preset.getValue());
   };
 
-  // Reset to default (last 30 days)
+  // Reset to default (last 24 hours)
   const resetToDefault = () => {
     onDateRangeChange({
-      startDate: startOfDay(subDays(new Date(), 30)),
-      endDate: endOfDay(new Date())
+      startDate: subDays(new Date(), 1),
+      endDate: new Date()
     });
   };
 
@@ -105,7 +112,7 @@ export function DateRangeFilter({ dateRange, onDateRangeChange, className = "" }
             size="sm"
             onClick={resetToDefault}
             className="h-8 w-8 p-0"
-            title="Reset to last 30 days"
+            title="Reset to last 24 hours"
           >
             <RotateCcw className="h-4 w-4" />
           </Button>

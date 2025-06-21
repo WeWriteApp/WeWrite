@@ -103,8 +103,9 @@ export const useSearchState = (userId: string | null, userGroups: string[] | nul
       const searchUserId = stableUserId.current || null;
       console.log(`Performing search for: "${trimmedSearchTerm}" with userId:`, searchUserId);
 
-      const queryUrl = `/api/search?userId=${searchUserId || ''}&searchTerm=${encodeURIComponent(trimmedSearchTerm)}&groupIds=${stableUserGroups.current || []}&useScoring=true`;
-      console.log(`Making API request to search for "${trimmedSearchTerm}"`, queryUrl);
+      // CRITICAL FIX: Use optimized search API for better performance
+      const queryUrl = `/api/search-optimized?userId=${searchUserId || ''}&searchTerm=${encodeURIComponent(trimmedSearchTerm)}&groupIds=${stableUserGroups.current || []}&titleOnly=false&maxResults=50`;
+      console.log(`Making optimized API request to search for "${trimmedSearchTerm}"`, queryUrl);
 
       const response = await fetch(queryUrl, {
         signal: abortControllerRef.current.signal,

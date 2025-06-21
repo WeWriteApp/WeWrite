@@ -24,6 +24,7 @@ export default function NotificationItem({ notification }) {
   const { markAsRead, markAsUnread } = useContext(NotificationContext);
   const [showMenu, setShowMenu] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [menuPosition, setMenuPosition] = useState('right-0');
   const menuRef = useRef(null);
   const { trackNotificationInteraction } = useWeWriteAnalytics();
 
@@ -125,6 +126,24 @@ export default function NotificationItem({ notification }) {
         notification_type: notification.type,
         is_unread: isUnread
       });
+
+      // Calculate menu position based on available space
+      if (menuRef.current) {
+        const buttonRect = menuRef.current.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const menuWidth = 180; // min-w-[180px]
+
+        // Check if there's enough space on the right side
+        const spaceOnRight = viewportWidth - buttonRect.right;
+
+        if (spaceOnRight < menuWidth) {
+          // Not enough space on right, position menu to the left
+          setMenuPosition('right-0');
+        } else {
+          // Enough space on right, use default right alignment
+          setMenuPosition('right-0');
+        }
+      }
     }
     setShowMenu(!showMenu);
   };
@@ -500,12 +519,15 @@ export default function NotificationItem({ notification }) {
 
             {/* Dropdown Menu */}
             {showMenu && (
-              <div className="absolute right-0 top-full mt-2 w-44 bg-background border border-border rounded-lg shadow-lg z-50">
+              <div className={cn(
+                "absolute top-full mt-2 min-w-[180px] w-max bg-background border border-border rounded-lg shadow-lg z-50",
+                menuPosition
+              )}>
                 <div className="py-2">
                   {!isUnread ? (
                     <button
                       onClick={handleMarkAsUnread}
-                      className="flex items-center w-full px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors text-left"
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors text-left whitespace-nowrap"
                     >
                       <X className="h-4 w-4 mr-3 flex-shrink-0" />
                       <span>Mark as unread</span>
@@ -513,7 +535,7 @@ export default function NotificationItem({ notification }) {
                   ) : (
                     <button
                       onClick={handleMarkAsRead}
-                      className="flex items-center w-full px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors text-left"
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors text-left whitespace-nowrap"
                     >
                       <Check className="h-4 w-4 mr-3 flex-shrink-0" />
                       <span>Mark as read</span>

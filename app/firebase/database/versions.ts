@@ -249,11 +249,14 @@ export const setCurrentVersion = async (pageId: string, versionId: string): Prom
       return false;
     }
 
+    // Import Firestore Timestamp for proper timestamp handling
+    const { Timestamp } = await import('firebase/firestore');
+
     // Update the page document with the new current version and content
     await setDoc(doc(db, "pages", pageId), {
       currentVersion: versionId,
       content: versionData.content, // Restore the content from this version
-      lastModified: new Date().toISOString()
+      lastModified: Timestamp.now()
     }, { merge: true });
 
     console.log(`Successfully set version ${versionId} as current for page ${pageId}`);
@@ -342,10 +345,10 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
                     await createLinkNotification(
                       targetPageData.userId, // Target user (owner of the linked page)
                       data.userId, // Source user (person creating the link)
-                      pageId, // Source page ID
-                      sourcePageTitle, // Source page title
-                      targetPageId, // Target page ID
-                      targetPageData.title || "Untitled Page" // Target page title
+                      targetPageId, // Target page ID (page being linked TO)
+                      targetPageData.title || "Untitled Page", // Target page title (page being linked TO)
+                      pageId, // Source page ID (page containing the link)
+                      sourcePageTitle // Source page title (page containing the link)
                     );
                   }
                 }
@@ -385,10 +388,14 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
       console.log('Content has changed, proceeding with version creation');
     }
 
+    // Import Firestore Timestamp for proper timestamp handling
+    const { Timestamp } = await import('firebase/firestore');
+    const now = Timestamp.now();
+
     // Create the new version data
     const versionData = {
       content: contentString,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
       userId: data.userId,
       username: data.username || "Anonymous",
       groupId: data.groupId || null,
@@ -403,7 +410,7 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
     await setDoc(doc(db, "pages", pageId), {
       currentVersion: versionRef.id,
       content: contentString, // Store content directly on page for faster access
-      lastModified: new Date().toISOString()
+      lastModified: now
     }, { merge: true });
 
     // Record user activity for streak tracking

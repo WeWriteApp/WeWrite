@@ -79,6 +79,7 @@ import { useLogging } from "../../providers/LoggingProvider";
 import { GroupsContext } from "../../providers/GroupsProvider";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { detectPageChanges } from "../../utils/contentNormalization";
+import { ContentChangesTrackingService } from "../../services/contentChangesTracking";
 
 // Username handling is now done directly in this component
 
@@ -362,6 +363,19 @@ function SinglePageView({ params, initialEditMode = false }) {
       await updateDoc("pages", page.id, updateData);
 
       console.log('Page metadata and content updated successfully');
+
+      // Track content changes for analytics
+      try {
+        await ContentChangesTrackingService.trackContentChangeAdvanced(
+          page.id,
+          user.uid,
+          user.displayName || user.username || 'Anonymous',
+          page.content, // Previous content
+          finalContent  // New content
+        );
+      } catch (trackingError) {
+        console.error('Error tracking content changes (non-fatal):', trackingError);
+      }
 
       // If title changed, propagate to all links referencing this page
       if (title !== page.title) {

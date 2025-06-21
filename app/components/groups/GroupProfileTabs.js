@@ -10,7 +10,17 @@ import GroupMembersTab from "./GroupMembersTab";
 import GroupActivityTab from "./GroupActivityTab";
 
 export default function GroupProfileTabs({ group, isOwner, isMember, canEdit }) {
-  const [activeTab, setActiveTab] = useState("about");
+  // Initialize activeTab from URL hash if available, otherwise use default
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.slice(1);
+      const validTabs = ["about", "pages", "members", "activity"];
+      if (hash && validTabs.includes(hash)) {
+        return hash;
+      }
+    }
+    return "about"; // Default tab
+  });
   const [direction, setDirection] = useState(0);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
@@ -129,6 +139,29 @@ export default function GroupProfileTabs({ group, isOwner, isMember, canEdit }) 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [tabsOriginalTop, isTabsSticky]);
+
+  // Handle browser navigation (back/forward) for hash-based tab navigation
+  useEffect(() => {
+    const validTabs = ["about", "pages", "members", "activity"];
+
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash && validTabs.includes(hash) && hash !== activeTab) {
+        setActiveTab(hash);
+      } else if (!hash && activeTab !== "about") {
+        // If no hash, default to about tab
+        setActiveTab("about");
+      }
+    };
+
+    // Listen for hash changes (browser back/forward)
+    window.addEventListener('hashchange', handleHashChange);
+
+    // Also check on mount in case the component was rendered with a hash
+    handleHashChange();
+
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [activeTab]);
 
   // Scroll active tab into view when component mounts or active tab changes
   useEffect(() => {
