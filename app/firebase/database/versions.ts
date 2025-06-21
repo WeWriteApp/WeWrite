@@ -342,10 +342,10 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
                     await createLinkNotification(
                       targetPageData.userId, // Target user (owner of the linked page)
                       data.userId, // Source user (person creating the link)
-                      pageId, // Source page ID
-                      sourcePageTitle, // Source page title
-                      targetPageId, // Target page ID
-                      targetPageData.title || "Untitled Page" // Target page title
+                      targetPageId, // Target page ID (page being linked TO)
+                      targetPageData.title || "Untitled Page", // Target page title (page being linked TO)
+                      pageId, // Source page ID (page containing the link)
+                      sourcePageTitle // Source page title (page containing the link)
                     );
                   }
                 }
