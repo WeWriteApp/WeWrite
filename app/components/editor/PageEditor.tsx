@@ -275,18 +275,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
   // Use click-to-edit hook for cursor positioning
   useClickToEdit(editorRef.current, clickPosition, true, currentEditorValue);
 
-  // Listen for insert link event from bottom toolbar
-  useEffect(() => {
-    const handleInsertLinkEvent = () => {
-      handleInsertLink();
-    };
-
-    window.addEventListener('triggerInsertLink', handleInsertLinkEvent);
-
-    return () => {
-      window.removeEventListener('triggerInsertLink', handleInsertLinkEvent);
-    };
-  }, []);
+  // Remove event listener - using proper EditorProvider prop flow instead
 
   // Fetch original page data for reply functionality
   useEffect(() => {

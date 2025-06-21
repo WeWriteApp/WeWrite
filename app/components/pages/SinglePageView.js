@@ -549,12 +549,7 @@ function SinglePageView({ params, initialEditMode = false }) {
     }
   };
 
-  // Handle insert link action from bottom toolbar
-  const handleInsertLink = () => {
-    // Trigger insert link in unified Editor component
-    const insertLinkEvent = new CustomEvent('triggerInsertLink');
-    window.dispatchEvent(insertLinkEvent);
-  };
+  // Remove handleInsertLink - let EditorProvider handle this through proper prop flow
 
   // Handle restoring a deleted page
   const handleRestorePage = async () => {
@@ -1649,7 +1644,6 @@ function SinglePageView({ params, initialEditMode = false }) {
         onTitleChange={handleTitleChange}
         titleError={titleError}
         onDelete={handleDelete}
-        onInsertLink={handleInsertLink}
         canEdit={
           user?.uid && !isPreviewingDeleted && (
             // User is the page owner
@@ -1697,7 +1691,6 @@ function SinglePageView({ params, initialEditMode = false }) {
                 handleSave={handleSave}
                 handleCancel={handleCancelWithCheck}
                 handleDelete={handleDelete}
-                handleInsertLink={handleInsertLink}
                 isSaving={isSaving}
                 error={error}
                 titleError={titleError}
@@ -1769,7 +1762,6 @@ function SinglePageView({ params, initialEditMode = false }) {
           onSave={() => handleSave(null, 'button')} // Let handleSave get current content from editor
           onCancel={handleCancelWithCheck}
           onDelete={handleDelete}
-          onInsertLink={handleInsertLink}
           isSaving={isSaving}
           hasUnsavedChanges={hasUnsavedChanges}
         />
@@ -1809,7 +1801,6 @@ const PageContentWithLineSettings = ({
   handleSave,
   handleCancel,
   handleDelete,
-  handleInsertLink,
   isSaving,
   error,
   titleError,
