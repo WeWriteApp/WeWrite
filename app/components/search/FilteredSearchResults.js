@@ -59,6 +59,8 @@ const FilteredSearchResults = forwardRef(({
   // State management
   const [search, setSearch] = useState(initialSearch);
   const [pages, setPages] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedId, setSelectedId] = useState(initialSelectedId);
   const [pageDataCache, setPageDataCache] = useState(new Map());
@@ -79,6 +81,8 @@ const FilteredSearchResults = forwardRef(({
   // Reset search results
   const resetSearchResults = useCallback(() => {
     setPages([]);
+    setUsers([]);
+    setGroups([]);
     setIsSearching(false);
   }, []);
 
@@ -125,18 +129,13 @@ const FilteredSearchResults = forwardRef(({
       // Choose the appropriate API based on mode and filter
       let queryUrl;
       if (isLinkEditor) {
-        if (searchMode) {
-          // When in search mode (user typed something), use the same search API as main search page
-          queryUrl = `/api/search?searchTerm=${encodedSearch}&userId=${user.uid}`;
-        } else if (filter === 'my-pages') {
-          // Use dedicated my-pages API for "My Pages" filter
-          queryUrl = `/api/my-pages?userId=${user.uid}&searchTerm=${encodedSearch}&limit=25`;
-        } else if (filter === 'recent') {
-          // For recent pages, use main search API with empty search to get all recent pages
-          queryUrl = `/api/search?searchTerm=&userId=${user.uid}`;
-        } else {
-          // Fallback to main search API
-          queryUrl = `/api/search?searchTerm=${encodedSearch}&userId=${user.uid}`;
+        // Use enhanced search API for link editor that includes pages, users, and groups
+        queryUrl = `/api/search-link-editor-enhanced?searchTerm=${encodedSearch}&userId=${user.uid}&maxResults=25`;
+
+        // Add current page ID to exclude it from results if available
+        const currentPageId = new URLSearchParams(window.location.search).get('currentPageId');
+        if (currentPageId) {
+          queryUrl += `&currentPageId=${currentPageId}`;
         }
       } else {
         // Use optimized search API for general search
@@ -162,47 +161,95 @@ const FilteredSearchResults = forwardRef(({
 
       // Record search performance
       const searchDuration = Date.now() - searchStartTime;
-      const searchType = isLinkEditor ? 'linkEditor' : 'optimized';
-      const resultCount = data.pages ? data.pages.length : 0;
+      const searchType = isLinkEditor ? 'linkEditorEnhanced' : 'optimized';
+
+      let resultCount = 0;
+      if (isLinkEditor && data.results) {
+        resultCount = data.results.length;
+      } else if (data.pages) {
+        resultCount = data.pages.length;
+      }
+
       const cacheHit = data.source && data.source.includes('cache');
       searchPerformanceMonitor.recordSearch(searchType, searchTerm, searchDuration, resultCount, cacheHit, data.source);
 
-      // Get all pages from the comprehensive search
-      let allPages = data.pages || [];
-      console.log('[FilteredSearchResults] Total pages from search:', allPages.length);
+      // Handle enhanced search results for link editor
+      if (isLinkEditor && data.results) {
+        // Process enhanced search results with different types
+        const allResults = Array.isArray(data.results) ? data.results : [];
+        const pageResults = allResults.filter(r => r.type === 'page');
+        const userResults = allResults.filter(r => r.type === 'user');
+        const groupResults = allResults.filter(r => r.type === 'group');
 
-      // Ensure allPages is an array before filtering
-      const safeAllPages = Array.isArray(allPages) ? allPages : [];
-
-      // For link editor mode with dedicated APIs, pages are already filtered server-side
-      // For general search mode, apply client-side filtering if needed
-      let filteredPages = safeAllPages;
-
-      if (!isLinkEditor && !searchMode && filter === 'my-pages') {
-        // Filter to only show user's own pages (only for non-link editor mode)
-        filteredPages = safeAllPages.filter(page => page.userId === user.uid);
-        console.log('[FilteredSearchResults] Filtered to my pages:', filteredPages.length);
-      } else if (!isLinkEditor && !searchMode && filter === 'recent') {
-        // For recent filter in non-link editor mode, sort by recency
-        filteredPages = safeAllPages.sort((a, b) => {
-          // Prioritize user's own pages
-          if (a.userId === user.uid && b.userId !== user.uid) return -1;
-          if (b.userId === user.uid && a.userId !== user.uid) return 1;
-
-          // Then sort by last modified
-          const aTime = new Date(a.lastModified || 0).getTime();
-          const bTime = new Date(b.lastModified || 0).getTime();
-          return bTime - aTime;
+        console.log('[FilteredSearchResults] Enhanced results:', {
+          total: allResults.length,
+          pages: pageResults.length,
+          users: userResults.length,
+          groups: groupResults.length
         });
-        console.log('[FilteredSearchResults] Sorted for recent filter:', filteredPages.length);
-      } else {
-        // For link editor mode or search mode, use pages as-is (already filtered server-side)
-        console.log('[FilteredSearchResults] Using server-filtered pages:', filteredPages.length);
-      }
 
-      setPages(filteredPages);
-      console.log('[FilteredSearchResults] Set filtered pages:', filteredPages.length, 'pages');
-      console.log('[FilteredSearchResults] Pages state updated:', filteredPages);
+        // Apply client-side filtering for enhanced results
+        let filteredPages = pageResults;
+        if (!searchMode && filter === 'my-pages') {
+          filteredPages = pageResults.filter(page => page.userId === user.uid);
+        } else if (!searchMode && filter === 'recent') {
+          filteredPages = pageResults.sort((a, b) => {
+            if (a.userId === user.uid && b.userId !== user.uid) return -1;
+            if (b.userId === user.uid && a.userId !== user.uid) return 1;
+            const aTime = new Date(a.lastModified || 0).getTime();
+            const bTime = new Date(b.lastModified || 0).getTime();
+            return bTime - aTime;
+          });
+        }
+
+        setPages(filteredPages);
+        setUsers(userResults);
+        setGroups(groupResults);
+        console.log('[FilteredSearchResults] Set enhanced results:', {
+          pages: filteredPages.length,
+          users: userResults.length,
+          groups: groupResults.length
+        });
+
+      } else {
+        // Handle regular search results
+        let allPages = data.pages || [];
+        console.log('[FilteredSearchResults] Total pages from search:', allPages.length);
+
+        // Ensure allPages is an array before filtering
+        const safeAllPages = Array.isArray(allPages) ? allPages : [];
+
+        // For regular search mode, apply client-side filtering if needed
+        let filteredPages = safeAllPages;
+
+        if (!searchMode && filter === 'my-pages') {
+          // Filter to only show user's own pages (only for non-link editor mode)
+          filteredPages = safeAllPages.filter(page => page.userId === user.uid);
+          console.log('[FilteredSearchResults] Filtered to my pages:', filteredPages.length);
+        } else if (!searchMode && filter === 'recent') {
+          // For recent filter in non-link editor mode, sort by recency
+          filteredPages = safeAllPages.sort((a, b) => {
+            // Prioritize user's own pages
+            if (a.userId === user.uid && b.userId !== user.uid) return -1;
+            if (b.userId === user.uid && a.userId !== user.uid) return 1;
+
+            // Then sort by last modified
+            const aTime = new Date(a.lastModified || 0).getTime();
+            const bTime = new Date(b.lastModified || 0).getTime();
+            return bTime - aTime;
+          });
+          console.log('[FilteredSearchResults] Sorted for recent filter:', filteredPages.length);
+        } else {
+          // Use pages as-is (already filtered server-side)
+          console.log('[FilteredSearchResults] Using server-filtered pages:', filteredPages.length);
+        }
+
+        setPages(filteredPages);
+        setUsers([]); // Clear users for regular search
+        setGroups([]); // Clear groups for regular search
+        console.log('[FilteredSearchResults] Set filtered pages:', filteredPages.length, 'pages');
+        console.log('[FilteredSearchResults] Pages state updated:', filteredPages);
+      }
 
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -478,9 +525,11 @@ const FilteredSearchResults = forwardRef(({
           <>
             {/* Pages Section */}
             {pages.length > 0 && (
-              <div className="space-y-1">
+              <div className="space-y-1 mb-4">
                 <h3 className="text-xs font-medium text-muted-foreground mb-2 px-1">
-                  {isSearchMode ? 'Search Results' : (activeFilter === 'recent' ? 'Recent Pages' : 'My Pages')}
+                  {isLinkEditor && isSearchMode ? 'Pages' :
+                   isSearchMode ? 'Search Results' :
+                   (activeFilter === 'recent' ? 'Recent Pages' : 'My Pages')}
                 </h3>
                 <div className="space-y-1">
                   {pages.map((page) => (
@@ -501,6 +550,83 @@ const FilteredSearchResults = forwardRef(({
                           ? formatDateString(page.title)
                           : page.title}
                       </PillLink>
+                      {isLinkEditor && page.category && (
+                        <div className="text-xs text-muted-foreground mt-1 px-2">
+                          {page.category}
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Users Section - only show in link editor mode */}
+            {isLinkEditor && users.length > 0 && (
+              <div className="space-y-1 mb-4">
+                <h3 className="text-xs font-medium text-muted-foreground mb-2 px-1">
+                  User Profiles
+                </h3>
+                <div className="space-y-1">
+                  {users.map((user) => (
+                    <button
+                      key={user.id}
+                      onClick={() => handleSelect(user)}
+                      className={`w-full text-left p-2 hover:bg-muted rounded-md transition-colors ${
+                        selectedId === user.id ? 'bg-muted' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {user.photoURL && (
+                          <img
+                            src={user.photoURL}
+                            alt={user.title}
+                            className="w-5 h-5 rounded-full"
+                          />
+                        )}
+                        <span className="text-sm font-medium text-foreground">
+                          @{user.title}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          (User Profile)
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Groups Section - only show in link editor mode */}
+            {isLinkEditor && groups.length > 0 && (
+              <div className="space-y-1 mb-4">
+                <h3 className="text-xs font-medium text-muted-foreground mb-2 px-1">
+                  Groups
+                </h3>
+                <div className="space-y-1">
+                  {groups.map((group) => (
+                    <button
+                      key={group.id}
+                      onClick={() => handleSelect(group)}
+                      className={`w-full text-left p-2 hover:bg-muted rounded-md transition-colors ${
+                        selectedId === group.id ? 'bg-muted' : ''
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-medium text-foreground">
+                            {group.title}
+                          </div>
+                          {group.description && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {group.description}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {group.memberCount} member{group.memberCount !== 1 ? 's' : ''}
+                        </div>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -508,7 +634,8 @@ const FilteredSearchResults = forwardRef(({
             )}
 
             {/* No Results - Only show after search has completed and we have attempted a search */}
-            {(search.length >= 2 || (isLinkEditor && lastRequestRef.current !== null)) && pages.length === 0 && !isSearching && (
+            {(search.length >= 2 || (isLinkEditor && lastRequestRef.current !== null)) &&
+             pages.length === 0 && users.length === 0 && groups.length === 0 && !isSearching && (
               <div className="p-4 text-center">
                 <div className="text-muted-foreground mb-4">
                   {search.length >= 2
