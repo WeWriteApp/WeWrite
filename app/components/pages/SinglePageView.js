@@ -549,12 +549,37 @@ function SinglePageView({ params, initialEditMode = false }) {
     }
   };
 
-  // Handle insert link action from bottom toolbar
-  const handleInsertLink = () => {
-    // Trigger insert link in unified Editor component
-    const insertLinkEvent = new CustomEvent('triggerInsertLink');
-    window.dispatchEvent(insertLinkEvent);
-  };
+  // Handle link insertion for existing pages
+  const handleInsertLink = useCallback(() => {
+    console.log("🔵 [DEBUG] SinglePageView handleInsertLink called");
+    console.log("🔵 [DEBUG] editorRef.current:", editorRef.current);
+
+    if (!editorRef.current) {
+      console.error("🔴 [DEBUG] Editor ref not available");
+      return;
+    }
+
+    try {
+      // Check if the editor has the openLinkEditor method
+      if (typeof editorRef.current.openLinkEditor === 'function') {
+        console.log("🔵 [DEBUG] Calling editorRef.current.openLinkEditor()");
+        const result = editorRef.current.openLinkEditor();
+        console.log("🔵 [DEBUG] openLinkEditor result:", result);
+
+        if (!result) {
+          console.error("🔴 [DEBUG] openLinkEditor returned false");
+          toast.error("Could not open link editor. Please try again.");
+        }
+      } else {
+        console.error("🔴 [DEBUG] openLinkEditor method not available on editor");
+        console.log("🔵 [DEBUG] Available methods:", Object.getOwnPropertyNames(editorRef.current));
+        toast.error("Link insertion is not available. Please try again later.");
+      }
+    } catch (error) {
+      console.error("🔴 [DEBUG] Error in handleInsertLink:", error);
+      toast.error("Failed to open link editor. Please try again.");
+    }
+  }, [editorRef]);
 
   // Handle restoring a deleted page
   const handleRestorePage = async () => {
@@ -1649,7 +1674,6 @@ function SinglePageView({ params, initialEditMode = false }) {
         onTitleChange={handleTitleChange}
         titleError={titleError}
         onDelete={handleDelete}
-        onInsertLink={handleInsertLink}
         canEdit={
           user?.uid && !isPreviewingDeleted && (
             // User is the page owner
@@ -1697,7 +1721,6 @@ function SinglePageView({ params, initialEditMode = false }) {
                 handleSave={handleSave}
                 handleCancel={handleCancelWithCheck}
                 handleDelete={handleDelete}
-                handleInsertLink={handleInsertLink}
                 isSaving={isSaving}
                 error={error}
                 titleError={titleError}
@@ -1769,7 +1792,7 @@ function SinglePageView({ params, initialEditMode = false }) {
           onSave={() => handleSave(null, 'button')} // Let handleSave get current content from editor
           onCancel={handleCancelWithCheck}
           onDelete={handleDelete}
-          onInsertLink={handleInsertLink}
+          onInsertLink={handleInsertLink} // Add Insert Link handler
           isSaving={isSaving}
           hasUnsavedChanges={hasUnsavedChanges}
         />
@@ -1809,7 +1832,6 @@ const PageContentWithLineSettings = ({
   handleSave,
   handleCancel,
   handleDelete,
-  handleInsertLink,
   isSaving,
   error,
   titleError,

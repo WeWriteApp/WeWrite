@@ -275,18 +275,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
   // Use click-to-edit hook for cursor positioning
   useClickToEdit(editorRef.current, clickPosition, true, currentEditorValue);
 
-  // Listen for insert link event from bottom toolbar
-  useEffect(() => {
-    const handleInsertLinkEvent = () => {
-      handleInsertLink();
-    };
-
-    window.addEventListener('triggerInsertLink', handleInsertLinkEvent);
-
-    return () => {
-      window.removeEventListener('triggerInsertLink', handleInsertLinkEvent);
-    };
-  }, []);
+  // Remove event listener - using proper EditorProvider prop flow instead
 
   // Fetch original page data for reply functionality
   useEffect(() => {
@@ -483,10 +472,68 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
 
 
+  // Add global click listener for debugging
+  useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Log ALL clicks to see what's happening
+      console.log("🔵 [DEBUG] Click detected on:", {
+        tagName: target.tagName,
+        className: target.className,
+        id: target.id,
+        textContent: target.textContent?.substring(0, 50),
+        closest_button: !!target.closest('button'),
+        closest_insert_link: !!target.closest('#page-editor-insert-link-button')
+      });
+
+      // Check if this is related to Insert Link
+      if (target.closest('#page-editor-insert-link-button') ||
+          target.textContent?.includes('Insert Link') ||
+          target.closest('button')?.textContent?.includes('Insert Link')) {
+        console.log("🔵 [DEBUG] *** INSERT LINK RELATED CLICK ***");
+        console.log("🔵 [DEBUG] Click target:", target);
+        console.log("🔵 [DEBUG] Target tagName:", target.tagName);
+        console.log("🔵 [DEBUG] Target className:", target.className);
+        console.log("🔵 [DEBUG] Target textContent:", target.textContent);
+        console.log("🔵 [DEBUG] Closest button:", target.closest('button'));
+      }
+    };
+
+    document.addEventListener('click', handleGlobalClick, true);
+    return () => document.removeEventListener('click', handleGlobalClick, true);
+  }, []);
+
+  // Debug: Log when component renders
+  useEffect(() => {
+    console.log("🔵 [DEBUG] PageEditor component rendered/updated");
+    console.log("🔵 [DEBUG] linkFunctionalityEnabled:", linkFunctionalityEnabled);
+    console.log("🔵 [DEBUG] isSaving:", isSaving);
+
+    // Check if button exists in DOM
+    setTimeout(() => {
+      const button = document.getElementById('page-editor-insert-link-button');
+      console.log("🔵 [DEBUG] Insert Link button found in DOM:", !!button);
+      if (button) {
+        console.log("🔵 [DEBUG] Button disabled:", button.hasAttribute('disabled'));
+        console.log("🔵 [DEBUG] Button style:", button.style.cssText);
+        console.log("🔵 [DEBUG] Button computed style display:", window.getComputedStyle(button).display);
+        console.log("🔵 [DEBUG] Button computed style visibility:", window.getComputedStyle(button).visibility);
+        console.log("🔵 [DEBUG] Button computed style pointer-events:", window.getComputedStyle(button).pointerEvents);
+      }
+    }, 100);
+  });
+
   // Handle link insertion - simplified to match Cmd+K functionality
   const handleInsertLink = () => {
     console.log("🔵 [DEBUG] handleInsertLink called");
+    console.log("🔵 [DEBUG] Current timestamp:", new Date().toISOString());
 
+    // Make function available globally for console testing
+    if (typeof window !== 'undefined') {
+      (window as any).testHandleInsertLink = handleInsertLink;
+      (window as any).testEditorRef = editorRef;
+    }
     try {
       // Check if link functionality is enabled
       if (!linkFunctionalityEnabled) {
@@ -496,17 +543,38 @@ const PageEditor: React.FC<PageEditorProps> = ({
       }
 
       console.log("🔵 [DEBUG] Link functionality enabled, checking editor ref");
-      console.log("🔵 [DEBUG] editorRef.current:", !!editorRef.current);
+      console.log("🔵 [DEBUG] editorRef:", editorRef);
+      console.log("🔵 [DEBUG] editorRef.current:", editorRef.current);
+      console.log("🔵 [DEBUG] editorRef.current exists:", !!editorRef.current);
 
       // Ensure editor is available
       if (!editorRef.current) {
         console.error("🔴 [DEBUG] Editor ref not available");
+        console.log("🔵 [DEBUG] Trying to find editor in DOM...");
+        const editorElements = document.querySelectorAll('[contenteditable="true"]');
+        console.log("🔵 [DEBUG] Found contenteditable elements:", editorElements.length);
         toast.error("Editor is not ready. Please try again later.");
         return;
       }
 
-      console.log("🔵 [DEBUG] Editor ref available, checking methods");
-      console.log("🔵 [DEBUG] Available methods on editor:", Object.keys(editorRef.current));
+      console.log("🔵 [DEBUG] Editor ref available, inspecting editor object");
+      console.log("🔵 [DEBUG] Editor ref type:", typeof editorRef.current);
+      console.log("🔵 [DEBUG] Editor ref constructor:", editorRef.current.constructor?.name);
+      console.log("🔵 [DEBUG] Editor ref tagName:", editorRef.current.tagName);
+      console.log("🔵 [DEBUG] Editor ref innerHTML length:", editorRef.current.innerHTML?.length);
+
+      // Get all properties and methods
+      const allKeys = [];
+      let obj = editorRef.current;
+      while (obj && obj !== Object.prototype) {
+        allKeys.push(...Object.getOwnPropertyNames(obj));
+        obj = Object.getPrototypeOf(obj);
+      }
+      console.log("🔵 [DEBUG] All available properties/methods:", allKeys.filter(key => !key.startsWith('_')));
+      console.log("🔵 [DEBUG] Methods starting with 'open':", allKeys.filter(key => key.toLowerCase().includes('open')));
+      console.log("🔵 [DEBUG] Methods containing 'link':", allKeys.filter(key => key.toLowerCase().includes('link')));
+
+      console.log("🔵 [DEBUG] Direct openLinkEditor check:", editorRef.current.openLinkEditor);
       console.log("🔵 [DEBUG] openLinkEditor method type:", typeof editorRef.current.openLinkEditor);
 
       // Use the same approach as Cmd+K shortcut - directly call openLinkEditor
@@ -515,13 +583,14 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
         try {
           // Focus the editor first
+          console.log("🔵 [DEBUG] Focusing editor...");
           editorRef.current.focus();
           console.log("🔵 [DEBUG] Editor focused");
 
           // Call openLinkEditor directly - this is exactly what Cmd+K does
+          console.log("🔵 [DEBUG] Calling openLinkEditor...");
           const result = editorRef.current.openLinkEditor();
           console.log("🔵 [DEBUG] openLinkEditor result:", result);
-
           if (!result) {
             console.error("🔴 [DEBUG] openLinkEditor returned false");
             toast.error("Could not open link editor. Please try again.");
@@ -530,16 +599,22 @@ const PageEditor: React.FC<PageEditorProps> = ({
           }
         } catch (error) {
           console.error("🔴 [DEBUG] Error calling openLinkEditor:", error);
+          console.error("🔴 [DEBUG] Error stack:", error.stack);
           toast.error("Could not open link editor. Please try again.");
         }
       } else {
         console.error("🔴 [DEBUG] openLinkEditor method not available on editor");
-        console.log("🔵 [DEBUG] Editor ref type:", typeof editorRef.current);
-        console.log("🔵 [DEBUG] Editor ref constructor:", editorRef.current.constructor.name);
+        console.log("🔵 [DEBUG] Trying alternative approaches...");
+
+        // Try to find the editor component instance
+        if (editorRef.current._reactInternalFiber || editorRef.current._reactInternalInstance) {
+          console.log("🔵 [DEBUG] Found React internal instance");
+        }
         toast.error("Link insertion is not available. Please try again later.");
       }
     } catch (error) {
       console.error("🔴 [DEBUG] Critical error in handleInsertLink:", error);
+      console.error("🔴 [DEBUG] Error stack:", error.stack);
       showError('Link Editor Error', 'Failed to open link editor. Please try again.');
     }
   };
@@ -566,7 +641,6 @@ const PageEditor: React.FC<PageEditorProps> = ({
       setIsPublic={setIsPublic}
       location={location}
       setLocation={setLocation}
-      onInsertLink={handleInsertLink}
       onCancel={onCancel}
       onSave={onSave}
       onDelete={onDelete}
@@ -700,9 +774,46 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
       {/* Page Editor Action Buttons */}
       <div className="mt-8 space-y-4">
-        {/* Mobile: Save button first, Desktop: All buttons in row with save on far right */}
+        {/* Mobile: Insert Link first, then Save, Cancel, Delete */}
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-center">
-          {/* Save Button - First on mobile, last on desktop */}
+
+          {/* Insert Link Button - First on mobile and desktop */}
+          <Button
+            id="page-editor-insert-link-button"
+            data-testid="page-editor-insert-link"
+            variant="outline"
+            size="lg"
+            onClick={(e) => {
+              console.log("🔵 [DEBUG] ===== INSERT LINK BUTTON CLICKED =====");
+              console.log("🔵 [DEBUG] Event target:", e.target);
+              console.log("🔵 [DEBUG] Event currentTarget:", e.currentTarget);
+              console.log("🔵 [DEBUG] Button ID:", e.currentTarget.id);
+              console.log("🔵 [DEBUG] PageEditor Insert Link button clicked - ONLY implementation");
+              console.log("🔵 [DEBUG] linkFunctionalityEnabled:", linkFunctionalityEnabled);
+              console.log("🔵 [DEBUG] isSaving:", isSaving);
+              console.log("🔵 [DEBUG] About to call handleInsertLink from PageEditor");
+
+              // Prevent event bubbling and default behavior
+              e.preventDefault();
+              e.stopPropagation();
+
+              try {
+                handleInsertLink();
+                console.log("🔵 [DEBUG] handleInsertLink call completed successfully");
+              } catch (error) {
+                console.error("🔴 [DEBUG] Error calling handleInsertLink:", error);
+              }
+
+              console.log("🔵 [DEBUG] ===== INSERT LINK BUTTON CLICK HANDLER FINISHED =====");
+            }}
+            disabled={isSaving}
+            className="gap-2 w-full md:w-auto rounded-2xl font-medium order-1"
+          >
+            <Link className="h-5 w-5" />
+            <span>Insert Link</span>
+          </Button>
+
+          {/* Save Button - Second on mobile and desktop */}
           <Button
             onClick={async () => {
               // CRITICAL FIX: Enhanced content capture before saving
@@ -788,7 +899,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
             }}
             disabled={isSaving}
             size="lg"
-            className="gap-2 w-full md:w-auto md:order-last rounded-2xl font-medium bg-green-600 hover:bg-green-700 text-white"
+            className="gap-2 w-full md:w-auto rounded-2xl font-medium bg-green-600 hover:bg-green-700 text-white order-2"
           >
             {isSaving ? (
               <>
@@ -803,46 +914,31 @@ const PageEditor: React.FC<PageEditorProps> = ({
             )}
           </Button>
 
-          {/* Other buttons - after save on mobile, before save on desktop */}
-          <div className="flex flex-col gap-3 md:flex-row md:gap-3">
-            {/* Insert Link Button */}
+          {/* Cancel Button - Third */}
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="gap-2 w-full md:w-auto rounded-2xl font-medium order-3"
+          >
+            <X className="h-5 w-5" />
+            <span>Cancel</span>
+          </Button>
+
+          {/* Delete Button - Fourth (optional - only shown when onDelete is provided) */}
+          {onDelete && (
             <Button
               variant="outline"
               size="lg"
-              onClick={handleInsertLink}
+              onClick={onDelete}
               disabled={isSaving}
-              className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+              className="gap-2 w-full md:w-auto rounded-2xl font-medium text-destructive hover:text-destructive hover:bg-destructive/10 order-4"
             >
-              <Link className="h-5 w-5" />
-              <span>Insert Link</span>
+              <AlertTriangle className="h-5 w-5" />
+              <span>Delete</span>
             </Button>
-
-            {/* Cancel Button */}
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={onCancel}
-              disabled={isSaving}
-              className="gap-2 w-full md:w-auto rounded-2xl font-medium"
-            >
-              <X className="h-5 w-5" />
-              <span>Cancel</span>
-            </Button>
-
-            {/* Delete Button (optional - only shown when onDelete is provided) */}
-            {onDelete && (
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={onDelete}
-                disabled={isSaving}
-                className="gap-2 w-full md:w-auto rounded-2xl font-medium text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
-                <AlertTriangle className="h-5 w-5" />
-                <span>Delete</span>
-              </Button>
-            )}
-          </div>
+          )}
         </div>
 
 

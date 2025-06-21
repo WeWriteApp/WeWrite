@@ -44,7 +44,6 @@ interface EditorContextType {
   setIsPublic?: (value: boolean) => void;
   location?: { lat: number; lng: number } | null;
   setLocation?: (location: { lat: number; lng: number } | null) => void;
-  onInsertLink?: () => void;
   onCancel?: () => void;
   onSave?: () => void;
   onDelete?: () => void;
@@ -390,20 +389,7 @@ function UnifiedSidebarContent({
                   )}
                 </div>
 
-                {/* Insert Link button */}
-                <Button
-                  onClick={editorContext.onInsertLink}
-                  variant="outline"
-                  className={cn(
-                    "flex items-center gap-3 h-auto p-3 justify-start",
-                    !showContent && "justify-center w-12 h-12 p-0",
-                    !editorContext.linkFunctionalityEnabled && "opacity-60"
-                  )}
-                  title={showContent ? "" : "Insert Link"}
-                >
-                  <LinkIcon className="h-4 w-4 flex-shrink-0" />
-                  {showContent && <span className="font-medium transition-opacity duration-200">Insert Link</span>}
-                </Button>
+                {/* Insert Link button removed - editing controls should only be in editing contexts */}
 
                 {/* Location button - only show if map feature is enabled */}
                 {mapFeatureEnabled && (

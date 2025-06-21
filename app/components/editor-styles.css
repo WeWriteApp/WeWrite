@@ -193,20 +193,23 @@ a[data-user-id]::before {
   contain: style;
 }
 
-/* SIMPLIFIED: Editor content divs styling - block layout with margin for paragraph numbers */
-.editor-content.normal-mode > div,
-.editor-content.normal-mode > .paragraph-div {
+/* CRITICAL: Editor content divs styling - ONLY for edit mode (contentEditable) */
+/* High specificity to ensure this rule applies ONLY in edit mode */
+[contenteditable="true"].editor-content.normal-mode > div,
+[contenteditable="true"].editor-content.normal-mode > .paragraph-div,
+.unified-editor[data-readonly="false"] .editor-content.normal-mode[contenteditable="true"] > div,
+.unified-editor[data-readonly="false"] .editor-content.normal-mode[contenteditable="true"] > .paragraph-div {
   /* CRITICAL: Use block layout for proper contentEditable behavior */
-  display: block;
+  display: block !important;
   position: relative;
 
-  /* REDUCED: Create space for absolutely positioned paragraph numbers - reduced from 2rem to 1.5rem */
-  margin-left: 1.5rem;
+  /* INCREASED: Create proper space for absolutely positioned paragraph numbers */
+  margin-left: 2.25rem !important; /* Increased from 1.5rem to 2.25rem to prevent overlap */
   margin-bottom: 0.5rem;
   padding: 0.25rem 0.5rem; /* Match view mode padding */
   box-sizing: border-box;
   min-height: 2.5rem;
-  width: calc(100% - 1.5rem); /* Account for reduced left margin */
+  width: calc(100% - 2.25rem) !important; /* Account for increased left margin */
 
   /* Typography matching unified-paragraph */
   font-size: 1rem;
@@ -656,6 +659,7 @@ div.unified-paragraph {
   box-sizing: border-box !important;
 }
 
+
 /* ADDED: Ensure all page content containers have proper width constraints */
 .page-content,
 .unified-editor,
@@ -701,14 +705,17 @@ div.unified-paragraph {
     font-size: 0.75rem; /* RESTORED: Readable font size on mobile */
   }
 
-  .editor-content.normal-mode > div,
-  .editor-content.normal-mode > .paragraph-div {
+  /* MOBILE: High specificity editor content styling - ONLY for edit mode */
+  [contenteditable="true"].editor-content.normal-mode > div,
+  [contenteditable="true"].editor-content.normal-mode > .paragraph-div,
+  .unified-editor[data-readonly="false"] .editor-content.normal-mode[contenteditable="true"] > div,
+  .unified-editor[data-readonly="false"] .editor-content.normal-mode[contenteditable="true"] > .paragraph-div {
     /* Match mobile padding for edit mode */
     padding: 0.25rem 0.25rem;
     margin-bottom: 0.375rem;
-    /* MOBILE: Reduce left margin for edit mode on mobile */
-    margin-left: 1.25rem; /* Reduced from 1.5rem to 1.25rem on mobile */
-    width: calc(100% - 1.25rem); /* Account for reduced left margin */
+    /* MOBILE: Proper left margin for edit mode on mobile to prevent overlap */
+    margin-left: 2rem !important; /* Increased from 1.25rem to 2rem on mobile for paragraph numbers */
+    width: calc(100% - 2rem) !important; /* Account for increased left margin */
   }
 
   /* MOBILE: Ensure page content containers don't add extra padding */
@@ -725,29 +732,60 @@ div.unified-paragraph {
 /* REMOVED: View mode specific styling - eliminate outer padding completely */
 /* No outer padding needed - paragraphs handle their own spacing */
 
-/* Style each paragraph div in normal mode - SIMPLIFIED for contentEditable */
-.editor-content.normal-mode > div,
-.editor-content.normal-mode > .paragraph-div {
-  /* Basic paragraph styling without flex layout that breaks contentEditable */
-  position: relative;
-  margin-bottom: 0.5rem;
-  padding: 0.25rem;
-  box-sizing: border-box;
-  min-height: 2.5rem;
-  width: 100%;
+/* CRITICAL: Ultra-high specificity rule for edit mode paragraph spacing */
+/* This ensures paragraph numbers don't overlap with text content - EDIT MODE ONLY */
+.unified-editor[data-readonly="false"] .editor-content.normal-mode[contenteditable="true"] > div,
+.page-content.unified-editor .editor-content.normal-mode[contenteditable="true"] > div,
+div.page-content.unified-editor div.editor-content.normal-mode[contenteditable="true"] > div {
+  margin-left: 2.25rem !important;
+  width: calc(100% - 2.25rem) !important;
+  padding-left: 0.5rem !important;
+  box-sizing: border-box !important;
+}
 
-  font-size: 1rem;
-  line-height: 1.5;
-  border: 2px solid transparent;
-  border-radius: 0.375rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* MOBILE: Ultra-high specificity rule for mobile edit mode ONLY */
+@media (max-width: 768px) {
+  .unified-editor[data-readonly="false"] .editor-content.normal-mode[contenteditable="true"] > div,
+  .page-content.unified-editor .editor-content.normal-mode[contenteditable="true"] > div,
+  div.page-content.unified-editor div.editor-content.normal-mode[contenteditable="true"] > div {
+    margin-left: 2rem !important;
+    width: calc(100% - 2rem) !important;
+  }
+}
 
-  /* REMOVED: Flex layout that was breaking contentEditable functionality */
-  /* Use normal block layout for proper text editing */
+/* NUCLEAR OPTION: Target the exact class structure from the browser - EDIT MODE ONLY */
+/* This should override any Tailwind or other global styles - ONLY when contentEditable */
+div.prose.editor-content.normal-mode[contenteditable="true"] > div {
+  margin-left: 2.25rem !important;
+  width: calc(100% - 2.25rem) !important;
+  padding-left: 0.5rem !important;
+  box-sizing: border-box !important;
+}
 
-  font-family: inherit;
-  letter-spacing: normal;
-  word-spacing: normal;
+/* ULTIMATE OVERRIDE: Use inline style approach for edit mode ONLY */
+/* This targets the exact contentEditable structure and overrides everything */
+[contenteditable="true"].prose.prose-lg.max-w-none.focus\\:outline-none.editor-content.page-editor-stable.box-border.mode-transition.normal-mode > div,
+[contenteditable="true"].editor-content.normal-mode > div,
+[contenteditable="true"].editor-content > div,
+div[contenteditable="true"].editor-content > div {
+  margin-left: var(--edit-mode-left-margin, 2.25rem) !important;
+  width: var(--edit-mode-content-width, calc(100% - 2.25rem)) !important;
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+}
+
+/* CSS VARIABLE APPROACH: Use CSS variables set by JavaScript - EDIT MODE ONLY */
+/* This ensures the styles are applied dynamically based on edit mode state */
+[contenteditable="true"][style*="--edit-mode-left-margin"] > div,
+[contenteditable="true"][style*="--edit-mode-left-margin"].editor-content > div {
+  margin-left: var(--edit-mode-left-margin) !important;
+  width: var(--edit-mode-content-width) !important;
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+  box-sizing: border-box !important;
+  position: relative !important;
 }
 
 /* Edit mode paragraph numbers - use DOM elements like view mode, not CSS counters */
@@ -873,6 +911,22 @@ div.unified-paragraph {
 /* Editor container focus ring - REMOVED to eliminate unwanted UI elements during title editing */
 /* These focus rings were creating visual clutter around the entire editor container */
 
+/* CRITICAL FIX: Remove outer focus ring from /new page body content to match /edit */
+/* The /new page has an outer focus ring around the entire editor that /edit doesn't have */
+.prose.prose-lg.max-w-none.focus\\:outline-none.editor-content.page-editor-stable.box-border.mode-transition.normal-mode,
+.prose.prose-lg.max-w-none.focus\\:outline-none.editor-content.page-editor-stable.box-border.mode-transition.normal-mode:focus,
+.prose.prose-lg.max-w-none.focus\\:outline-none.editor-content.page-editor-stable.box-border.mode-transition.normal-mode:focus-within,
+.prose.prose-lg.max-w-none.focus\\:outline-none.editor-content,
+.prose.prose-lg.max-w-none.focus\\:outline-none.editor-content:focus,
+.prose.prose-lg.max-w-none.focus\\:outline-none.editor-content:focus-within,
+.focus\\:outline-none.editor-content,
+.focus\\:outline-none.editor-content:focus,
+.focus\\:outline-none.editor-content:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-color: transparent !important;
+}
 /* Dense mode removed */
 
 /* Dense mode removed */

@@ -591,7 +591,13 @@ export default function NewPage() {
         />
         <div className="w-full max-w-none box-border">
           {/* Unified container with consistent layout matching SinglePageView */}
-          <div className="px-4 py-4 w-full max-w-none box-border">
+          <div
+            className="px-4 py-4 w-full max-w-none box-border"
+            style={{
+              paddingTop: 'calc(var(--page-header-height, 80px) + 1rem)', // Add extra 1rem (16px) to prevent overlap
+              transition: 'padding-top 300ms ease-in-out' // Smooth transition when header height changes
+            }}
+          >
             {isEditing ? (
               <div className="animate-in fade-in-0 duration-300">
                 <PageProvider>
