@@ -5,6 +5,7 @@ import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Respons
 import { FileText } from 'lucide-react';
 import { useContentChangesMetrics } from '../../hooks/useDashboardAnalytics';
 import type { DateRange } from '../../services/dashboardAnalytics';
+import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface ContentChangesAnalyticsWidgetProps {
   dateRange: DateRange;
@@ -13,6 +14,7 @@ interface ContentChangesAnalyticsWidgetProps {
 
 export function ContentChangesAnalyticsWidget({ dateRange, className = "" }: ContentChangesAnalyticsWidgetProps) {
   const { data, loading, error } = useContentChangesMetrics(dateRange);
+  const chartConfig = useResponsiveChart(data.length, data);
 
   // Check if we have any data
   const hasData = data && data.length > 0;
@@ -138,12 +140,7 @@ export function ContentChangesAnalyticsWidget({ dateRange, className = "" }: Con
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={data}
-              margin={{
-                top: 5,
-                right: window.innerWidth < 768 ? 5 : 30,
-                left: window.innerWidth < 768 ? 5 : 20,
-                bottom: 5,
-              }}
+              margin={chartConfig.margins}
             >
               <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
               <XAxis
@@ -151,15 +148,16 @@ export function ContentChangesAnalyticsWidget({ dateRange, className = "" }: Con
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: window.innerWidth < 768 ? 10 : 12 }}
-                interval={window.innerWidth < 768 ? 'preserveStartEnd' : 0}
+                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                interval={chartConfig.interval}
+                tickFormatter={(value, index) => formatTickLabel(value, index, chartConfig.granularity)}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: window.innerWidth < 768 ? 10 : 12 }}
-                width={window.innerWidth < 768 ? 40 : 50}
+                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                width={chartConfig.tickConfig.width}
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend

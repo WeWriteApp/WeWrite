@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Smartphone } from 'lucide-react';
 import { usePWAInstallsMetrics } from '../../hooks/useDashboardAnalytics';
 import type { DateRange } from '../../services/dashboardAnalytics';
+import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface PWAInstallsAnalyticsWidgetProps {
   dateRange: DateRange;
@@ -13,6 +14,7 @@ interface PWAInstallsAnalyticsWidgetProps {
 
 export function PWAInstallsAnalyticsWidget({ dateRange, className = "" }: PWAInstallsAnalyticsWidgetProps) {
   const { data, loading, error } = usePWAInstallsMetrics(dateRange);
+  const chartConfig = useResponsiveChart(data.length, data);
 
   // Check if we have any data
   const hasData = data && data.length > 0;
@@ -143,12 +145,7 @@ export function PWAInstallsAnalyticsWidget({ dateRange, className = "" }: PWAIns
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={data}
-              margin={{
-                top: 5,
-                right: window.innerWidth < 768 ? 5 : 30,
-                left: window.innerWidth < 768 ? 5 : 20,
-                bottom: 5,
-              }}
+              margin={chartConfig.margins}
             >
               <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
               <XAxis
@@ -156,16 +153,17 @@ export function PWAInstallsAnalyticsWidget({ dateRange, className = "" }: PWAIns
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: window.innerWidth < 768 ? 10 : 12 }}
-                interval={window.innerWidth < 768 ? 'preserveStartEnd' : 0}
+                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
+                interval={chartConfig.interval}
+                tickFormatter={(value, index) => formatTickLabel(value, index, chartConfig.granularity)}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
                 className="text-xs"
-                tick={{ fontSize: window.innerWidth < 768 ? 10 : 12 }}
+                tick={{ fontSize: chartConfig.tickConfig.fontSize }}
                 allowDecimals={false}
-                width={window.innerWidth < 768 ? 30 : 40}
+                width={chartConfig.tickConfig.width}
               />
               <Tooltip content={<CustomTooltip />} />
               <Bar
