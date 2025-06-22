@@ -51,6 +51,7 @@ export const INTERACTION_EVENTS = {
   NOTIFICATION_MARKED_READ: 'notification_marked_read',
   NOTIFICATION_MARKED_UNREAD: 'notification_marked_unread',
   NOTIFICATION_MENU_OPENED: 'notification_menu_opened',
+  NOTIFICATIONS_MARK_ALL_READ: 'notifications_mark_all_read',
   PLEDGE_BAR_CLICKED: 'pledge_bar_clicked',
   LINK_EDITOR_OPENED: 'link_editor_opened',
   LINK_EDITOR_CLOSED: 'link_editor_closed',

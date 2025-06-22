@@ -9,6 +9,7 @@ import NotificationItem from '../components/utils/NotificationItem';
 import { Button } from '../components/ui/button';
 import { NotificationListSkeleton } from '../components/ui/skeleton';
 import { Loader, CheckCheck, ChevronLeft } from 'lucide-react';
+import { useWeWriteAnalytics } from '../hooks/useWeWriteAnalytics';
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function NotificationsPage() {
     loadMoreNotifications,
     markAllAsRead
   } = useContext(NotificationContext);
+  const { trackNotificationInteraction } = useWeWriteAnalytics();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -32,7 +34,18 @@ export default function NotificationsPage() {
   const handleMarkAllAsRead = async () => {
     try {
       console.log('handleMarkAllAsRead clicked - current notifications:', notifications.map(n => ({ id: n.id, read: n.read })));
+
+      // Count unread notifications before marking as read
+      const unreadCount = notifications.filter(n => !n.read).length;
+
+      // Call the API to mark all as read
       await markAllAsRead();
+
+      // Track the analytics event after successful API call
+      trackNotificationInteraction('mark_all_read', undefined, {
+        notification_count: unreadCount,
+        total_notifications: notifications.length
+      });
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
       // You could add a toast notification here to inform the user of the error

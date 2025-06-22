@@ -497,8 +497,8 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
             // Skip null activities
             if (activity === null) return false;
 
-            // Skip activities with missing or null usernames
-            if (!activity.username || activity.username === "Missing username" || activity.username === "Anonymous") {
+            // Skip activities with missing or null usernames (but allow "Anonymous")
+            if (!activity.username || activity.username === "Missing username") {
               return false;
             }
 

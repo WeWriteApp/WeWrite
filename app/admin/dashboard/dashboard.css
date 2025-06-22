@@ -140,3 +140,25 @@ input[type="date"] {
   height: 200px;
   color: hsl(var(--muted-foreground));
 }
+
+/* Large screen optimizations for TV displays and wide monitors */
+@media (min-width: 1536px) {
+  /* Increase grid columns for extra large screens */
+  .dashboard-grid-xl {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1920px) {
+  /* Ultra-wide screen support */
+  .dashboard-grid-xxl {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+/* Ensure proper spacing and readability on large displays */
+@media (min-width: 1200px) {
+  .dashboard-grid .wewrite-card {
+    min-height: 320px;
+  }
+}

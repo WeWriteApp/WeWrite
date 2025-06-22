@@ -216,10 +216,10 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
           // Ensure activitiesWithSubscriptions is an array before filtering
           let validActivities = Array.isArray(activitiesWithSubscriptions) ? activitiesWithSubscriptions : [];
 
-          // Filter out activities with missing usernames
+          // Filter out activities with missing usernames (but allow "Anonymous")
           validActivities = validActivities.filter(activity => {
             // Skip activities with missing or null usernames
-            if (!activity.username || activity.username === "Missing username" || activity.username === "Anonymous") {
+            if (!activity.username || activity.username === "Missing username") {
               return false;
             }
             return true;

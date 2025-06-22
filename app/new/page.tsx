@@ -9,6 +9,7 @@ import { createPage } from "../firebase/database";
 // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
 // import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
 import { ContentChangesTrackingService } from "../services/contentChangesTracking";
+import { useRecentPages } from "../contexts/RecentPagesContext";
 // import { CONTENT_EVENTS } from "../constants/analytics-events";
 import { createReplyAttribution } from "../utils/linkUtils";
 import { AuthContext } from "../providers/AuthProvider";
@@ -77,6 +78,7 @@ export default function NewPage() {
   // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
   // const { trackPageCreationFlow, trackEditingFlow } = useWeWriteAnalytics();
   const { refreshState } = useSyncQueue();
+  const { addRecentPage } = useRecentPages();
   const { formatDateString } = useDateFormat();
 
   // State that mimics SinglePageView
@@ -467,6 +469,19 @@ export default function NewPage() {
             );
           } catch (trackingError) {
             console.error('Error tracking content changes for new page (non-fatal):', trackingError);
+          }
+
+          // Add the new page to recent pages tracking
+          try {
+            await addRecentPage({
+              id: res.id,
+              title: title || 'Untitled',
+              userId: userId,
+              username: username
+            });
+            console.log('Added new page to recent pages tracking');
+          } catch (recentPagesError) {
+            console.error('Error adding page to recent pages (non-fatal):', recentPagesError);
           }
 
           // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this

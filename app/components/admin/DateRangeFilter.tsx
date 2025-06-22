@@ -119,55 +119,64 @@ export function DateRangeFilter({ dateRange, onDateRangeChange, className = "" }
         </div>
 
         {/* Controls */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-6">
           {/* Date Inputs */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex items-center gap-2 text-sm flex-1">
-              <span className="text-muted-foreground whitespace-nowrap min-w-[40px]">From:</span>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex items-center gap-3 text-sm flex-1">
+              <span className="text-muted-foreground whitespace-nowrap min-w-[45px] font-medium">From:</span>
               <input
                 type="date"
                 value={formatDateForInput(dateRange.startDate)}
                 onChange={handleStartDateChange}
                 max={formatDateForInput(dateRange.endDate)}
-                className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-background text-sm"
+                className="flex-1 px-3 py-2.5 border border-border rounded-md text-foreground bg-background text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
               />
             </div>
-            <div className="flex items-center gap-2 text-sm flex-1">
-              <span className="text-muted-foreground whitespace-nowrap min-w-[25px]">To:</span>
+            <div className="flex items-center gap-3 text-sm flex-1">
+              <span className="text-muted-foreground whitespace-nowrap min-w-[30px] font-medium">To:</span>
               <input
                 type="date"
                 value={formatDateForInput(dateRange.endDate)}
                 onChange={handleEndDateChange}
                 min={formatDateForInput(dateRange.startDate)}
                 max={formatDateForInput(new Date())}
-                className="flex-1 px-3 py-2 border border-border rounded text-foreground bg-background text-sm"
+                className="flex-1 px-3 py-2.5 border border-border rounded-md text-foreground bg-background text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
               />
             </div>
           </div>
 
           {/* Preset Buttons */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-            {presetRanges.map((preset) => (
-              <Button
-                key={preset.label}
-                variant="outline"
-                size="sm"
-                onClick={() => applyPresetRange(preset)}
-                className="text-xs whitespace-nowrap"
-              >
-                {preset.label}
-              </Button>
-            ))}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-foreground">Quick Select:</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {presetRanges.map((preset) => (
+                <Button
+                  key={preset.label}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyPresetRange(preset)}
+                  className="text-sm py-2.5 px-3 h-auto whitespace-nowrap hover:bg-primary hover:text-primary-foreground transition-colors"
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Selected Range Display */}
-      <div className="mt-3 pt-3 border-t border-border">
-        <div className="text-sm text-muted-foreground">
-          <span className="font-medium">Selected Range:</span>{' '}
-          {format(dateRange.startDate, 'MMM dd, yyyy')} - {format(dateRange.endDate, 'MMM dd, yyyy')}
-          {' '}({Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24))} days)
+      <div className="mt-4 pt-4 border-t border-border bg-muted/30 rounded-lg p-3">
+        <div className="text-sm">
+          <div className="font-medium text-foreground mb-1">Selected Range:</div>
+          <div className="text-muted-foreground">
+            <span className="font-mono">{format(dateRange.startDate, 'MMM dd, yyyy')}</span>
+            <span className="mx-2">→</span>
+            <span className="font-mono">{format(dateRange.endDate, 'MMM dd, yyyy')}</span>
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            ({Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24))} days)
+          </div>
         </div>
       </div>
     </div>
