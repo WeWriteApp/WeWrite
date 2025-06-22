@@ -130,19 +130,13 @@ export function usePagesMetrics(dateRange: DateRange) {
   const debouncedDateRange = useDebounce(dateRange, 300);
 
   const fetchData = useCallback(async () => {
-    console.log('🔍 [usePagesMetrics] Fetching pages data for date range:', {
-      startDate: debouncedDateRange.startDate.toISOString(),
-      endDate: debouncedDateRange.endDate.toISOString()
-    });
-
     try {
       setLoading(true);
       setError(null);
       const result = await DashboardAnalyticsService.getNewPagesCreated(debouncedDateRange);
-      console.log('✅ [usePagesMetrics] Received pages data:', result);
       setData(result);
     } catch (err) {
-      console.error('❌ [usePagesMetrics] Error fetching pages metrics:', err);
+      console.error('Error fetching pages metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch pages data');
     } finally {
       setLoading(false);
@@ -266,6 +260,38 @@ export function usePWAInstallsMetrics(dateRange: DateRange) {
     } catch (err) {
       console.error('Error fetching PWA installs metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch PWA installs data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+/**
+ * Hook for fetching visitor analytics metrics
+ */
+export function useVisitorMetrics(dateRange: DateRange) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await DashboardAnalyticsService.getVisitorAnalytics(debouncedDateRange);
+      setData(result);
+    } catch (err) {
+      console.error('Error fetching visitor metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch visitor data');
     } finally {
       setLoading(false);
     }

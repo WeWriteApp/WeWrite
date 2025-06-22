@@ -119,11 +119,12 @@ export const useWeWriteAnalytics = () => {
     });
   };
 
-  const trackNotificationInteraction = (action: 'read' | 'unread' | 'menu_opened', notificationId?: string, params: Partial<AnalyticsEventParams> = {}) => {
+  const trackNotificationInteraction = (action: 'read' | 'unread' | 'menu_opened' | 'mark_all_read', notificationId?: string, params: Partial<AnalyticsEventParams> = {}) => {
     const eventMap = {
       read: INTERACTION_EVENTS.NOTIFICATION_MARKED_READ,
       unread: INTERACTION_EVENTS.NOTIFICATION_MARKED_UNREAD,
-      menu_opened: INTERACTION_EVENTS.NOTIFICATION_MENU_OPENED
+      menu_opened: INTERACTION_EVENTS.NOTIFICATION_MENU_OPENED,
+      mark_all_read: INTERACTION_EVENTS.NOTIFICATIONS_MARK_ALL_READ
     };
 
     trackInteractionEvent(eventMap[action], {

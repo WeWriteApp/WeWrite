@@ -883,12 +883,12 @@ export class DashboardAnalyticsService {
   static async getSummaryStats(dateRange: DateRange) {
     try {
       const metrics = await this.getAllMetrics(dateRange);
-      
+
       const totalNewAccounts = metrics.newAccountsCreated.reduce((sum, item) => sum + item.count, 0);
       const totalNewPages = metrics.newPagesCreated.reduce((sum, item) => sum + item.count, 0);
       const totalShares = metrics.sharesAnalytics.reduce((sum, item) => sum + item.total, 0);
       const totalSuccessfulShares = metrics.sharesAnalytics.reduce((sum, item) => sum + item.successful, 0);
-      
+
       return {
         totalNewAccounts,
         totalNewPages,
@@ -905,6 +905,92 @@ export class DashboardAnalyticsService {
         totalSuccessfulShares: 0,
         shareSuccessRate: 0
       };
+    }
+  }
+
+  /**
+   * Get visitor analytics over time for the date range
+   */
+  static async getVisitorAnalytics(dateRange: DateRange) {
+    try {
+      const { startDate, endDate } = dateRange;
+      const timeConfig = getTimeIntervals(dateRange);
+
+      // Group by time interval
+      const dateMap = new Map<string, { authenticated: number; anonymous: number; total: number }>();
+
+      // Initialize all time intervals in range with 0
+      timeConfig.intervals.forEach(interval => {
+        const dateKey = timeConfig.formatKey(interval);
+        dateMap.set(dateKey, { authenticated: 0, anonymous: 0, total: 0 });
+      });
+
+      // Query pageViews collection for visitor data
+      const pageViewsRef = collection(db, 'pageViews');
+      const q = query(
+        pageViewsRef,
+        where('lastUpdated', '>=', Timestamp.fromDate(startDate)),
+        where('lastUpdated', '<=', Timestamp.fromDate(endDate)),
+        orderBy('lastUpdated', 'asc'),
+        limit(1000)
+      );
+
+      const snapshot = await getDocs(q);
+
+      // Process page view data
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const lastUpdated = data.lastUpdated;
+        const hours = data.hours || {};
+
+        if (lastUpdated) {
+          let date: Date;
+          if (lastUpdated instanceof Timestamp) {
+            date = lastUpdated.toDate();
+          } else {
+            return;
+          }
+
+          // For each hour in the day, add to the appropriate time interval
+          Object.entries(hours).forEach(([hour, views]) => {
+            const hourDate = new Date(date);
+            hourDate.setHours(parseInt(hour), 0, 0, 0);
+
+            // Skip if outside our date range
+            if (hourDate < startDate || hourDate > endDate) {
+              return;
+            }
+
+            // Round to appropriate time interval
+            const intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(hourDate) : startOfDay(hourDate);
+            const dateKey = timeConfig.formatKey(intervalDate);
+
+            if (dateMap.has(dateKey)) {
+              const current = dateMap.get(dateKey)!;
+              // For now, treat all page views as anonymous visitors
+              // In the future, we could track authenticated vs anonymous separately
+              current.anonymous += views as number;
+              current.total += views as number;
+              dateMap.set(dateKey, current);
+            }
+          });
+        }
+      });
+
+      // Convert to array format
+      const result = Array.from(dateMap.entries()).map(([dateKey, counts]) => ({
+        date: dateKey,
+        label: dateKey,
+        authenticated: counts.authenticated,
+        anonymous: counts.anonymous,
+        total: counts.total
+      }));
+
+      return result;
+
+    } catch (error) {
+      console.error('❌ [Analytics Service] Error fetching visitor analytics:', error);
+      return [];
     }
   }
 

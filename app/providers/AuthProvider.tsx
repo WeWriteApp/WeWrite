@@ -11,6 +11,7 @@ import { rtdb } from "../firebase/rtdb";
 import Cookies from 'js-cookie';
 import { setAnalyticsUserInfo } from "../utils/analytics-user-tracking";
 import { checkEmailVerificationOnStartup } from "../services/emailVerificationNotifications";
+import { visitorTrackingService } from "../services/VisitorTrackingService";
 
 /**
  * User data interface
@@ -264,8 +265,63 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // User is signed in
         localStorage.setItem('authState', 'authenticated');
         localStorage.setItem('isAuthenticated', 'true');
-        // Clear any previous user session since we have a new login
-        localStorage.removeItem('previousUserSession');
+
+        // Check if we're adding a new account
+        const addingNewAccount = localStorage.getItem('addingNewAccount') === 'true';
+        const previousUserSession = localStorage.getItem('previousUserSession');
+
+        if (addingNewAccount && previousUserSession) {
+          // We're adding a new account - handle multi-account scenario
+          console.log('AuthProvider: New account added, updating saved accounts');
+
+          try {
+            const previousUser = JSON.parse(previousUserSession);
+            const savedAccounts = JSON.parse(localStorage.getItem('savedAccounts') || '[]');
+
+            // Add the new user to saved accounts
+            const newUserAccount = {
+              uid: user.uid,
+              email: user.email,
+              username: '', // Will be updated after Firestore fetch
+              isCurrent: true
+            };
+
+            // Mark previous user as not current and add new user as current
+            const updatedAccounts = savedAccounts.map(acc => ({
+              ...acc,
+              isCurrent: false
+            }));
+
+            // Add previous user if not already in the list
+            const previousUserExists = updatedAccounts.some(acc => acc.uid === previousUser.uid);
+            if (!previousUserExists) {
+              updatedAccounts.push({
+                ...previousUser,
+                isCurrent: false
+              });
+            }
+
+            // Add new user as current
+            updatedAccounts.unshift(newUserAccount);
+
+            // Save updated accounts
+            localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
+
+            // Clear the adding account flags
+            localStorage.removeItem('addingNewAccount');
+            localStorage.removeItem('previousUserSession');
+            sessionStorage.removeItem('wewrite_adding_account');
+            sessionStorage.removeItem('wewrite_previous_user');
+
+            console.log('AuthProvider: Successfully added new account to multi-account list');
+          } catch (error) {
+            console.error('AuthProvider: Error handling new account addition:', error);
+          }
+        } else {
+          // Normal login - clear any previous user session since we have a new login
+          localStorage.removeItem('previousUserSession');
+        }
+
         // Also clear account switching flags to prevent redirect loops
         localStorage.removeItem('accountSwitchInProgress');
         localStorage.removeItem('switchToAccount');
@@ -284,6 +340,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               username: userData.username || user.displayName || '',
               ...userData
             });
+
+            // Update saved accounts with the correct username if this user is in the list
+            try {
+              const savedAccounts = JSON.parse(localStorage.getItem('savedAccounts') || '[]');
+              const updatedAccounts = savedAccounts.map(acc =>
+                acc.uid === user.uid
+                  ? { ...acc, username: userData.username || user.displayName || '', email: user.email }
+                  : acc
+              );
+
+              if (JSON.stringify(savedAccounts) !== JSON.stringify(updatedAccounts)) {
+                localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
+                console.log('AuthProvider: Updated saved accounts with current user data');
+              }
+            } catch (error) {
+              console.error('AuthProvider: Error updating saved accounts:', error);
+            }
 
             // Log the user data for debugging
             console.log("User data from Firestore:", userData);
@@ -308,6 +381,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
             // Check for email verification notification after user is authenticated
             checkEmailVerificationOnStartup();
+
+            // Track authenticated visitor
+            if (typeof window !== 'undefined') {
+              visitorTrackingService.trackVisitor(user.uid, true);
+            }
           } else {
             // No user document, create default data
             setUser({
@@ -417,6 +495,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Remove session cookie
           Cookies.remove('session');
           Cookies.remove('authenticated');
+
+          // Track anonymous visitor after logout
+          if (typeof window !== 'undefined') {
+            visitorTrackingService.trackVisitor(undefined, false);
+          }
         }
       }
 
@@ -506,23 +589,43 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const { newUser } = event.detail;
       console.log('AuthProvider: Account switch detected, updating user context:', newUser.email);
 
+      // Validate the account switch data
+      if (!newUser || !newUser.uid || !newUser.email) {
+        console.error('AuthProvider: Invalid account switch data received');
+        return;
+      }
+
+      // Clear any existing authentication state to prevent conflicts
+      localStorage.removeItem('authState');
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('previousUserSession');
+      localStorage.removeItem('accountSwitchInProgress');
+
       // Immediately update the user context with the new account
       const switchedUser = {
         uid: newUser.uid,
         email: newUser.email,
         username: newUser.username,
         isSessionUser: true,
-        sessionTimestamp: Date.now()
+        sessionTimestamp: Date.now(),
+        // Add a flag to indicate this is from account switching
+        fromAccountSwitch: true
       };
 
       setUser(switchedUser);
+      setLoading(false); // Ensure loading is false after switch
 
       // Update cookies to reflect the new user for consistent authentication
       Cookies.set('userSession', JSON.stringify(newUser), { expires: 7 });
       Cookies.set('wewrite_user_id', newUser.uid, { expires: 7 });
       Cookies.set('wewrite_authenticated', 'true', { expires: 7 });
+      Cookies.set('authenticated', 'true', { expires: 7 });
 
-      console.log('AuthProvider: User context updated for account switch');
+      // Update localStorage for consistency
+      localStorage.setItem('authState', 'authenticated');
+      localStorage.setItem('isAuthenticated', 'true');
+
+      console.log('AuthProvider: User context updated for account switch to:', newUser.email);
     };
 
     // Listen for custom account switch events
@@ -530,6 +633,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     return () => {
       window.removeEventListener('accountSwitch', handleAccountSwitch as EventListener);
+    };
+  }, []);
+
+  // Cleanup visitor tracking on unmount
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined') {
+        visitorTrackingService.cleanup();
+      }
     };
   }, []);
 

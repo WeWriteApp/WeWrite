@@ -18,12 +18,20 @@ export interface PWAInstallEvent {
 export class PWAInstallTrackingService {
   private static isInitialized = false;
   private static deferredPrompt: any = null;
+  private static currentUserId?: string;
+  private static currentUsername?: string;
 
   /**
    * Initialize PWA installation tracking
    */
   static initialize(userId?: string, username?: string): void {
+    // Update current user context
+    this.currentUserId = userId;
+    this.currentUsername = username;
+
     if (this.isInitialized || typeof window === 'undefined') {
+      // If already initialized, just update the user context
+      console.log('📱 PWA tracking user context updated:', userId ? `${username} (${userId})` : 'anonymous');
       return;
     }
 
@@ -33,24 +41,24 @@ export class PWAInstallTrackingService {
     window.addEventListener('beforeinstallprompt', (e) => {
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
-      
+
       // Store the event for later use
       this.deferredPrompt = e;
-      
-      // Track that the install prompt was shown
-      this.trackInstallEvent('install_prompt_shown', userId, username);
-      
+
+      // Track that the install prompt was shown using current user context
+      this.trackInstallEvent('install_prompt_shown', this.currentUserId, this.currentUsername);
+
       console.log('📱 PWA install prompt available');
     });
 
     // Listen for appinstalled event
     window.addEventListener('appinstalled', () => {
-      // Track successful installation
-      this.trackInstallEvent('app_installed', userId, username);
-      
+      // Track successful installation using current user context
+      this.trackInstallEvent('app_installed', this.currentUserId, this.currentUsername);
+
       // Clear the deferredPrompt
       this.deferredPrompt = null;
-      
+
       console.log('📱 PWA was installed successfully');
     });
 
@@ -60,7 +68,7 @@ export class PWAInstallTrackingService {
   /**
    * Show the PWA install prompt
    */
-  static async showInstallPrompt(userId?: string, username?: string): Promise<boolean> {
+  static async showInstallPrompt(): Promise<boolean> {
     if (!this.deferredPrompt) {
       console.log('📱 No install prompt available');
       return false;
@@ -69,16 +77,16 @@ export class PWAInstallTrackingService {
     try {
       // Show the install prompt
       this.deferredPrompt.prompt();
-      
+
       // Wait for the user to respond to the prompt
       const { outcome } = await this.deferredPrompt.userChoice;
-      
+
       if (outcome === 'accepted') {
-        this.trackInstallEvent('install_accepted', userId, username);
+        this.trackInstallEvent('install_accepted', this.currentUserId, this.currentUsername);
         console.log('📱 User accepted the install prompt');
         return true;
       } else {
-        this.trackInstallEvent('install_dismissed', userId, username);
+        this.trackInstallEvent('install_dismissed', this.currentUserId, this.currentUsername);
         console.log('📱 User dismissed the install prompt');
         return false;
       }
@@ -116,17 +124,29 @@ export class PWAInstallTrackingService {
         platform: this.getPlatform()
       };
 
+      // Prepare data for Firestore - remove undefined values to prevent Firestore errors
+      const firestoreData: any = {
+        timestamp: Timestamp.fromDate(installEvent.timestamp),
+        eventType: 'pwa_install',
+        userAgent: installEvent.userAgent,
+        platform: installEvent.platform
+      };
+
+      // Only add userId and username if they are defined
+      if (userId) {
+        firestoreData.userId = userId;
+      }
+      if (username) {
+        firestoreData.username = username;
+      }
+
       // Store in Firestore analytics collection
       const analyticsRef = collection(db, 'analytics_events');
-      await addDoc(analyticsRef, {
-        ...installEvent,
-        timestamp: Timestamp.fromDate(installEvent.timestamp),
-        eventType: 'pwa_install'
-      });
+      await addDoc(analyticsRef, firestoreData);
 
       console.log('📊 PWA install event tracked:', {
         eventType,
-        userId,
+        userId: userId || 'anonymous',
         platform: installEvent.platform
       });
 
