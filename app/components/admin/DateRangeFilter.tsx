@@ -14,9 +14,19 @@ interface DateRangeFilterProps {
   dateRange: DateRange;
   onDateRangeChange: (dateRange: DateRange) => void;
   className?: string;
+  compact?: boolean; // New prop for horizontal compact layout
+  granularity?: number; // Chart granularity/buckets
+  onGranularityChange?: (granularity: number) => void; // Granularity change handler
 }
 
-export function DateRangeFilter({ dateRange, onDateRangeChange, className = "" }: DateRangeFilterProps) {
+export function DateRangeFilter({
+  dateRange,
+  onDateRangeChange,
+  className = "",
+  compact = false,
+  granularity = 50,
+  onGranularityChange
+}: DateRangeFilterProps) {
   // Preset date range options
   const presetRanges = [
     {
@@ -98,6 +108,116 @@ export function DateRangeFilter({ dateRange, onDateRangeChange, className = "" }
     });
   };
 
+  // Granularity options
+  const granularityOptions = [10, 20, 50, 100, 200, 500];
+
+  // Handle granularity change
+  const handleGranularityChange = (newGranularity: number) => {
+    if (onGranularityChange) {
+      onGranularityChange(newGranularity);
+    }
+  };
+
+  // Compact horizontal layout for filter bar
+  if (compact) {
+    return (
+      <div className={`${className}`}>
+        <div className="flex items-center gap-4 overflow-x-auto pb-2 options-bar-compact">
+          {/* Date Inputs - Compact */}
+          <div className="flex items-center gap-2 text-sm whitespace-nowrap">
+            <span className="text-muted-foreground font-medium">From:</span>
+            <input
+              type="date"
+              value={formatDateForInput(dateRange.startDate)}
+              onChange={handleStartDateChange}
+              max={formatDateForInput(dateRange.endDate)}
+              className="px-2 py-1.5 border border-border rounded text-foreground bg-background text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-colors w-36"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 text-sm whitespace-nowrap">
+            <span className="text-muted-foreground font-medium">To:</span>
+            <input
+              type="date"
+              value={formatDateForInput(dateRange.endDate)}
+              onChange={handleEndDateChange}
+              min={formatDateForInput(dateRange.startDate)}
+              max={formatDateForInput(new Date())}
+              className="px-2 py-1.5 border border-border rounded text-foreground bg-background text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-colors w-36"
+            />
+          </div>
+
+          {/* Separator */}
+          <div className="h-6 w-px bg-border"></div>
+
+          {/* Preset Buttons - Horizontal */}
+          {presetRanges.map((preset) => (
+            <Button
+              key={preset.label}
+              variant="outline"
+              size="sm"
+              onClick={() => applyPresetRange(preset)}
+              className="text-xs px-3 py-1.5 h-auto whitespace-nowrap hover:bg-primary hover:text-primary-foreground transition-colors flex-shrink-0"
+            >
+              {preset.label}
+            </Button>
+          ))}
+
+          {/* Separator */}
+          <div className="h-6 w-px bg-border"></div>
+
+          {/* Reset Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={resetToDefault}
+            className="h-8 w-8 p-0 flex-shrink-0"
+            title="Reset to last 24 hours"
+          >
+            <RotateCcw className="h-3 w-3" />
+          </Button>
+
+          {/* Separator */}
+          <div className="h-6 w-px bg-border"></div>
+
+          {/* Granularity Controls */}
+          {onGranularityChange && (
+            <>
+              <div className="flex items-center gap-2 text-sm whitespace-nowrap">
+                <span className="text-muted-foreground font-medium">Granularity:</span>
+              </div>
+
+              {/* Granularity Buttons - Horizontal */}
+              {granularityOptions.map((option) => (
+                <Button
+                  key={option}
+                  variant={granularity === option ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleGranularityChange(option)}
+                  className="text-xs px-3 py-1.5 h-auto whitespace-nowrap hover:bg-primary hover:text-primary-foreground transition-colors flex-shrink-0"
+                >
+                  {option}
+                </Button>
+              ))}
+
+              {/* Separator */}
+              <div className="h-6 w-px bg-border"></div>
+            </>
+          )}
+
+          {/* Current Range Display - Compact */}
+          <div className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 ml-2">
+            <span className="font-mono">{format(dateRange.startDate, 'MMM dd')}</span>
+            <span className="mx-1">→</span>
+            <span className="font-mono">{format(dateRange.endDate, 'MMM dd')}</span>
+            <span className="ml-2">({Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24))}d)</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Original card layout for non-compact mode
   return (
     <div className={`wewrite-card ${className}`}>
       <div className="flex flex-col gap-4">

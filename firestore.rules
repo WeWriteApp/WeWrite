@@ -15,17 +15,15 @@
  * 5. Principle of Least Privilege: No default allow-all rules, explicit permissions
  *
  * 🔒 Collection Security Summary:
- * - Pages: Owner access, public/private visibility controls, group membership rules
+ * - Pages: Owner access, all pages are public by default
  * - Users: Authenticated read, owner-only write, UID immutability
- * - Groups: Public/private access, member management, role-based permissions
  * - Admin Collections: Super restricted access for feature flags and admin users
  * - Privacy-Sensitive Data: Owner/admin access only for sensitive information
  *
  * ✅ Application Functionality Preserved:
  * - TopUsers component works with authentication requirement
  * - User profile pages maintain public/private data separation
- * - Group functionality preserved with proper authorization
- * - Page management workflows maintained with visibility controls
+ * - Page management workflows maintained with simplified visibility controls
  * - Search & discovery works with authentication requirement
  *
  * ⚠️ Breaking Changes:
@@ -65,24 +63,15 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // Pages collection - Core content with public access for public pages
+    // Pages collection - Core content with simplified public access
     match /pages/{pageId} {
-      // Reading rules: Public pages accessible to everyone, private pages require authentication
+      // Reading rules: All pages are now public by default
       allow read: if
         // Page owner can always read their own pages (requires auth)
         (isAuthenticated() && resource.data.userId == request.auth.uid) ||
 
-        // Public pages not in groups are readable by EVERYONE (no auth required)
-        (resource.data.isPublic == true && resource.data.groupId == null) ||
-
-        // Group pages: check group membership and visibility
-        (resource.data.groupId != null && (
-          // Public groups: all pages visible to everyone (no auth required)
-          get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.isPublic == true ||
-
-          // Private groups: only authenticated members can access
-          (isAuthenticated() && exists(/databases/$(database)/documents/groups/$(resource.data.groupId)/members/$(request.auth.uid)))
-        ));
+        // All pages are now public and readable by everyone (no auth required)
+        true;
 
       // Writing rules: Only page owner can modify, with data validation
       allow create: if isAuthenticated() &&
@@ -91,12 +80,11 @@ service cloud.firestore {
         request.resource.data.title is string &&
         request.resource.data.isPublic is bool &&
         request.resource.data.userId is string &&
-        request.resource.data.createdAt is string &&
+        (request.resource.data.createdAt is string || request.resource.data.createdAt is timestamp) &&
         // Allow optional fields that the application uses
         (!request.resource.data.keys().hasAny(['username']) || request.resource.data.username is string) &&
-        (!request.resource.data.keys().hasAny(['lastModified']) || request.resource.data.lastModified is string) &&
-        (!request.resource.data.keys().hasAny(['groupId']) || request.resource.data.groupId == null || request.resource.data.groupId is string) &&
-        (!request.resource.data.keys().hasAny(['groupName']) || request.resource.data.groupName == null || request.resource.data.groupName is string) &&
+        (!request.resource.data.keys().hasAny(['lastModified']) || request.resource.data.lastModified is string || request.resource.data.lastModified is timestamp) &&
+
         (!request.resource.data.keys().hasAny(['location']) || request.resource.data.location == null || request.resource.data.location is string) &&
         (!request.resource.data.keys().hasAny(['totalPledged']) || request.resource.data.totalPledged is number) &&
         (!request.resource.data.keys().hasAny(['pledgeCount']) || request.resource.data.pledgeCount is number) &&
@@ -119,16 +107,8 @@ service cloud.firestore {
           // Page owner can always read their own page versions (requires auth)
           (isAuthenticated() && get(/databases/$(database)/documents/pages/$(pageId)).data.userId == request.auth.uid) ||
 
-          // Public pages not in groups are readable by everyone (no auth required)
-          (get(/databases/$(database)/documents/pages/$(pageId)).data.isPublic == true &&
-           get(/databases/$(database)/documents/pages/$(pageId)).data.groupId == null) ||
-
-          // Public group pages are readable by everyone (no auth required)
-          (get(/databases/$(database)/documents/pages/$(pageId)).data.groupId != null &&
-           get(/databases/$(database)/documents/groups/$(get(/databases/$(database)/documents/pages/$(pageId)).data.groupId)).data.isPublic == true) ||
-
-          // Allow all authenticated users to read versions of public pages (fallback)
-          (isAuthenticated() && get(/databases/$(database)/documents/pages/$(pageId)).data.isPublic == true);
+          // All page versions are now public and readable by everyone
+          true;
 
         allow write: if isAuthenticated() &&
           get(/databases/$(database)/documents/pages/$(pageId)).data.userId == request.auth.uid;
@@ -147,9 +127,9 @@ service cloud.firestore {
 
     // User profiles - Public profile data with privacy controls
     match /users/{userId} {
-      // Allow reading basic profile info by authenticated users
+      // Allow reading basic profile info by everyone (for public pages)
       // Private fields should be handled by the application layer
-      allow read: if isAuthenticated();
+      allow read: if true;
 
       // Allow writing only to own profile with data validation
       allow create: if isOwner(userId) &&
@@ -207,45 +187,7 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
-    // Groups collection - Community features with membership controls
-    match /groups/{groupId} {
-      // Reading: Public groups readable by all, private groups only by members
-      allow read: if isAuthenticated() && (
-        resource.data.isPublic == true ||
-        exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid))
-      );
-
-      // Writing: Only group owners and admins can modify group settings
-      allow create: if isAuthenticated() &&
-        request.resource.data.owner == request.auth.uid &&
-        request.resource.data.keys().hasAll(['name', 'isPublic', 'owner', 'created']);
-
-      allow update: if isAuthenticated() && (
-        resource.data.owner == request.auth.uid ||
-        (exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)).data.role == 'admin')
-      );
-
-      allow delete: if isAuthenticated() && resource.data.owner == request.auth.uid;
-
-      // Group members subcollection
-      match /members/{memberId} {
-        allow read: if isAuthenticated() && (
-          get(/databases/$(database)/documents/groups/$(groupId)).data.isPublic == true ||
-          exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid))
-        );
-
-        allow write: if isAuthenticated() && (
-          // Group owner can manage all members
-          get(/databases/$(database)/documents/groups/$(groupId)).data.owner == request.auth.uid ||
-          // Group admins can manage members
-          (exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)) &&
-           get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)).data.role == 'admin') ||
-          // Users can join/leave themselves
-          memberId == request.auth.uid
-        );
-      }
-    }
+    // Groups functionality removed - no longer needed
 
     // Feature flags - Public configuration that everyone can read
     match /config/featureFlags {
@@ -282,8 +224,8 @@ service cloud.firestore {
 
     // Counters collection - Read-only for most users, write for system
     match /counters/{counterId} {
-      // Allow reading counter data for TopUsers and profile displays
-      allow read: if isAuthenticated();
+      // Allow reading counter data for TopUsers and profile displays (public access)
+      allow read: if true;
 
       // Only allow system operations (via admin or page owners for their own counters)
       allow write: if isAdmin() || (
@@ -302,25 +244,25 @@ service cloud.firestore {
       allow write: if isOwner(subscriptionId) || isAdmin();
     }
 
-    // Notifications collection - User-specific
-    match /notifications/{notificationId} {
+    // User notifications subcollection - User-specific
+    match /users/{userId}/notifications/{notificationId} {
       // Users can only read their own notifications
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isOwner(userId);
 
-      // System can create notifications, users can mark as read/delete
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Users can create, update, and delete their own notifications
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
     }
 
     // Page views - Analytics data with privacy controls
     match /pageViews/{viewId} {
-      // Allow reading aggregated view data for trending/analytics
-      allow read: if isAuthenticated();
+      // Allow reading aggregated view data for trending/analytics (public data)
+      allow read: if true;
 
-      // Only allow authenticated users to record views
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
+      // Allow anyone to record views (for anonymous tracking)
+      allow create: if true;
+      allow update: if true;
       // Prevent deletion of view records for analytics integrity
       allow delete: if isAdmin();
     }
@@ -337,7 +279,13 @@ service cloud.firestore {
       allow write: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
     }
 
-    // Follower relationships - Privacy controls
+    // User follows collections - Privacy controls
+    match /userFollows/{userId} {
+      // Only allow the user to read their own followed pages
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
+    }
+
     match /userFollowers/{userId} {
       // Only allow the user to read their own followers
       allow read: if isOwner(userId);
@@ -400,8 +348,6 @@ service cloud.firestore {
         // Resource owner can read splits
         (splitId.matches('page_.*') &&
          get(/databases/$(database)/documents/pages/$(splitId.split('_')[1])).data.userId == request.auth.uid) ||
-        (splitId.matches('group_.*') &&
-         get(/databases/$(database)/documents/groups/$(splitId.split('_')[1])).data.createdBy == request.auth.uid) ||
         // Contributors can read splits they're part of
         resource.data.splits.hasAny([{'recipientId': 'recipient_' + request.auth.uid}]) ||
         isAdmin()
@@ -411,8 +357,6 @@ service cloud.firestore {
       allow write: if isAuthenticated() && (
         (splitId.matches('page_.*') &&
          get(/databases/$(database)/documents/pages/$(splitId.split('_')[1])).data.userId == request.auth.uid) ||
-        (splitId.matches('group_.*') &&
-         get(/databases/$(database)/documents/groups/$(splitId.split('_')[1])).data.createdBy == request.auth.uid) ||
         isAdmin()
       );
     }
@@ -454,7 +398,7 @@ service cloud.firestore {
 
     // Activities collection - Bio and about page edit activities
     match /activities/{activityId} {
-      // Allow reading public activities by everyone (no auth required for public content)
+      // Allow reading public activities by everyone (both authenticated and unauthenticated)
       allow read: if resource.data.isPublic == true;
 
       // Allow authenticated users to create activities for their own content
@@ -477,14 +421,38 @@ service cloud.firestore {
       );
     }
 
-    // TEMPORARY: Allow all reads and writes for debugging subscription issue
-    // TODO: Remove this after fixing the subscription issue
-    match /{document=**} {
-      allow read, write: if true;
+    // Site visitors collection - Visitor tracking and analytics
+    match /siteVisitors/{visitorId} {
+      // Allow anyone to create visitor sessions (for anonymous tracking)
+      allow create: if true;
+
+      // Allow updating visitor sessions (for interaction tracking)
+      allow update: if true;
+
+      // Allow reading visitor data for analytics (authenticated users only)
+      allow read: if isAuthenticated();
+
+      // Allow deletion for cleanup (admins only)
+      allow delete: if isAdmin();
     }
 
-    // REMOVED: Dangerous default rule that allowed unrestricted access
-    // All collections must now have explicit rules defined above
+    // Analytics events collection - PWA and general analytics tracking
+    match /analytics_events/{eventId} {
+      // Allow anyone to create analytics events (for anonymous tracking)
+      allow create: if true;
+
+      // Allow reading analytics data for dashboard (authenticated users only)
+      allow read: if isAuthenticated();
+
+      // Allow updating analytics events (for event completion tracking)
+      allow update: if true;
+
+      // Allow deletion for cleanup (admins only)
+      allow delete: if isAdmin();
+    }
+
+    // SECURITY: All collections must have explicit rules defined above
     // This ensures the principle of least privilege is enforced
+    // NO DEFAULT ALLOW-ALL RULES - Each collection has specific access controls
   }
 }

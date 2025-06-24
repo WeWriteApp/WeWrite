@@ -17,7 +17,6 @@ import { LiveVisitorsWidget } from "../../components/admin/LiveVisitorsWidget";
 import { VisitorAnalyticsWidget } from "../../components/admin/VisitorAnalyticsWidget";
 import { DashboardErrorBoundary, WidgetErrorBoundary } from "../../components/admin/DashboardErrorBoundary";
 import { DashboardGridSkeleton, DateRangeFilterSkeleton } from "../../components/admin/DashboardSkeleton";
-import { Modal } from "../../components/ui/modal";
 import './dashboard.css';
 
 
@@ -38,31 +37,16 @@ export default function AdminDashboardPage() {
   // Dashboard loading state
   const [dashboardLoading, setDashboardLoading] = useState(true);
 
-  // Filter modal state
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [tempDateRange, setTempDateRange] = useState<DateRange>(dateRange);
+  // Options bar state
+  const [isOptionsBarExpanded, setIsOptionsBarExpanded] = useState(false);
 
-  // Handle filter modal actions
-  const handleOpenFilterModal = () => {
-    setTempDateRange(dateRange);
-    setIsFilterModalOpen(true);
+  // Granularity state for chart detail
+  const [granularity, setGranularity] = useState<number>(50);
+
+  // Handle options bar toggle
+  const handleToggleOptionsBar = () => {
+    setIsOptionsBarExpanded(!isOptionsBarExpanded);
   };
-
-  const handleApplyFilters = () => {
-    setDateRange(tempDateRange);
-    setIsFilterModalOpen(false);
-  };
-
-  const handleCancelFilters = () => {
-    setTempDateRange(dateRange);
-    setIsFilterModalOpen(false);
-  };
-
-
-
-
-
-
 
   // Check if user is admin
   useEffect(() => {
@@ -88,8 +72,6 @@ export default function AdminDashboardPage() {
     }
   }, [user, authLoading, router]);
 
-
-
   // Show loading while checking auth
   if (authLoading || !user || !isAdmin(user.email)) {
     return (
@@ -101,54 +83,70 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Minimal Navigation - Back Button Only */}
+      {/* Clean Header with Back Button and Centered Title */}
       <div className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.push('/admin#tools')}
-              className="gap-2"
             >
-              <ChevronLeft className="h-4 w-4" />
-              Back to Admin Tools
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Back
             </Button>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-              <p className="text-sm text-muted-foreground">
-                Analytics and insights for WeWrite
-              </p>
-            </div>
+
+            <h1 className="text-2xl font-bold">WeWrite Dashboard</h1>
+
+            {/* Options Button - toggle options bar */}
+            {!dashboardLoading && (
+              <Button
+                variant={isOptionsBarExpanded ? "default" : "outline"}
+                onClick={handleToggleOptionsBar}
+                className="gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                Options
+              </Button>
+            )}
+
+            {/* Loading state placeholder for options button */}
+            {dashboardLoading && (
+              <div className="h-9 w-20 bg-muted animate-pulse rounded"></div>
+            )}
           </div>
         </div>
       </div>
 
+      {/* Collapsible Options Bar */}
+      <div
+        className={`border-b border-border bg-card transition-all duration-300 ease-in-out overflow-hidden ${
+          isOptionsBarExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <div className="px-6 py-4">
+          {!dashboardLoading && (
+            <DateRangeFilter
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              granularity={granularity}
+              onGranularityChange={setGranularity}
+              className="border-0 shadow-none p-0 bg-transparent"
+              compact={true}
+            />
+          )}
+        </div>
+      </div>
+
       {/* Dashboard Content */}
-      <div className="container mx-auto px-4 py-6">
+      <div className="px-6 py-6">
         <DashboardErrorBoundary>
           {dashboardLoading ? (
             <>
-              {/* Loading state */}
-              <div className="mb-6 flex justify-end">
-                <div className="h-10 w-24 bg-muted animate-pulse rounded"></div>
-              </div>
               <DashboardGridSkeleton />
             </>
           ) : (
             <>
-              {/* Filter Button */}
-              <div className="mb-6 flex justify-end">
-                <Button
-                  variant="outline"
-                  onClick={handleOpenFilterModal}
-                  className="gap-2"
-                >
-                  <Filter className="h-4 w-4" />
-                  Filter
-                </Button>
-              </div>
-
               {/* Responsive Grid Layout optimized for large displays */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
                 {/* Live Visitors Widget */}
@@ -158,76 +156,43 @@ export default function AdminDashboardPage() {
 
                 {/* New Accounts Created Widget */}
                 <WidgetErrorBoundary widgetName="New Accounts">
-                  <NewAccountsWidget dateRange={dateRange} />
+                  <NewAccountsWidget dateRange={dateRange} granularity={granularity} />
                 </WidgetErrorBoundary>
 
                 {/* New Pages Created Widget */}
                 <WidgetErrorBoundary widgetName="New Pages">
-                  <NewPagesWidget dateRange={dateRange} />
+                  <NewPagesWidget dateRange={dateRange} granularity={granularity} />
                 </WidgetErrorBoundary>
 
                 {/* Visitor Analytics Widget */}
                 <WidgetErrorBoundary widgetName="Visitor Analytics">
-                  <VisitorAnalyticsWidget dateRange={dateRange} />
+                  <VisitorAnalyticsWidget dateRange={dateRange} granularity={granularity} />
                 </WidgetErrorBoundary>
 
                 {/* Shares Analytics Widget */}
                 <WidgetErrorBoundary widgetName="Shares Analytics">
-                  <SharesAnalyticsWidget dateRange={dateRange} />
+                  <SharesAnalyticsWidget dateRange={dateRange} granularity={granularity} />
                 </WidgetErrorBoundary>
 
                 {/* Edits Analytics Widget */}
                 <WidgetErrorBoundary widgetName="Edits Analytics">
-                  <EditsAnalyticsWidget dateRange={dateRange} />
+                  <EditsAnalyticsWidget dateRange={dateRange} granularity={granularity} />
                 </WidgetErrorBoundary>
 
                 {/* Content Changes Analytics Widget */}
                 <WidgetErrorBoundary widgetName="Content Changes Analytics">
-                  <ContentChangesAnalyticsWidget dateRange={dateRange} />
+                  <ContentChangesAnalyticsWidget dateRange={dateRange} granularity={granularity} />
                 </WidgetErrorBoundary>
 
                 {/* PWA Installs Analytics Widget */}
                 <WidgetErrorBoundary widgetName="PWA Installs Analytics">
-                  <PWAInstallsAnalyticsWidget dateRange={dateRange} />
+                  <PWAInstallsAnalyticsWidget dateRange={dateRange} granularity={granularity} />
                 </WidgetErrorBoundary>
               </div>
             </>
           )}
         </DashboardErrorBoundary>
       </div>
-
-      {/* Filter Modal */}
-      <Modal
-        isOpen={isFilterModalOpen}
-        onClose={handleCancelFilters}
-        title="Dashboard Filters"
-        className="sm:max-w-3xl"
-        footer={
-          <div className="flex justify-end gap-3 w-full pt-4 border-t border-border">
-            <Button
-              variant="outline"
-              onClick={handleCancelFilters}
-              className="px-6"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleApplyFilters}
-              className="px-6"
-            >
-              Apply Filters
-            </Button>
-          </div>
-        }
-      >
-        <div className="py-2">
-          <DateRangeFilter
-            dateRange={tempDateRange}
-            onDateRangeChange={setTempDateRange}
-            className="border-0 shadow-none p-0 bg-transparent"
-          />
-        </div>
-      </Modal>
     </div>
   );
 }

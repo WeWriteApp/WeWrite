@@ -188,7 +188,16 @@ export default function PageDiff({ params }: PageDiffProps) {
                       {currentVersion?.timestamp && formatDate(new Date(currentVersion.timestamp))}
                     </div>
                     <div className="text-muted-foreground text-xs">
-                      {currentVersion?.timestamp && formatDistanceToNow(new Date(currentVersion.timestamp))} ago
+                      {currentVersion?.timestamp && (() => {
+                        try {
+                          const date = new Date(currentVersion.timestamp);
+                          if (isNaN(date.getTime())) return '';
+                          return formatDistanceToNow(date) + ' ago';
+                        } catch (error) {
+                          console.error('Error formatting version time:', error);
+                          return '';
+                        }
+                      })()}
                     </div>
                   </div>
                   
@@ -201,7 +210,16 @@ export default function PageDiff({ params }: PageDiffProps) {
                       {previousVersion?.timestamp && formatDate(new Date(previousVersion.timestamp))}
                     </div>
                     <div className="text-muted-foreground text-xs">
-                      {previousVersion?.timestamp && formatDistanceToNow(new Date(previousVersion.timestamp))} ago
+                      {previousVersion?.timestamp && (() => {
+                        try {
+                          const date = new Date(previousVersion.timestamp);
+                          if (isNaN(date.getTime())) return '';
+                          return formatDistanceToNow(date) + ' ago';
+                        } catch (error) {
+                          console.error('Error formatting version time:', error);
+                          return '';
+                        }
+                      })()}
                     </div>
                   </div>
                 </div>

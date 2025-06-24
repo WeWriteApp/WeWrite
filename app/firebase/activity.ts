@@ -194,7 +194,12 @@ export const getRecentActivity = async (
     try {
       pagesSnapshot = await getDocs(pagesQuery);
     } catch (queryError) {
-      console.error('Error executing Firestore query:', queryError);
+      // Handle permission denied errors gracefully - this is expected for private pages
+      if (queryError?.code === 'permission-denied') {
+        console.log('Permission denied executing Firestore query - this is expected for private pages');
+      } else {
+        console.error('Error executing Firestore query:', queryError);
+      }
       return {
         activities: getSampleActivities(limitCount),
         note: "Using sample data due to database connection issues"

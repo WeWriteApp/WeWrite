@@ -40,7 +40,7 @@ export interface DateRange {
 
 export interface DashboardMetrics {
   newAccountsCreated: ChartDataPoint[];
-  newPagesCreated: ChartDataPoint[];
+  newPagesCreated: PagesDataPoint[];
   sharesAnalytics: SharesDataPoint[];
   editsAnalytics: EditsDataPoint[];
   contentChangesAnalytics: ContentChangesDataPoint[];
@@ -50,6 +50,14 @@ export interface DashboardMetrics {
 export interface ChartDataPoint {
   date: string;
   count: number;
+  label: string; // Human readable date
+}
+
+export interface PagesDataPoint {
+  date: string;
+  publicPages: number;
+  privatePages: number;
+  totalPages: number;
   label: string; // Human readable date
 }
 
@@ -116,12 +124,40 @@ setInterval(clearExpiredCache, 60 * 1000);
 /**
  * Helper function to determine granularity and generate time intervals
  */
-function getTimeIntervals(dateRange: DateRange) {
+function getTimeIntervals(dateRange: DateRange, customGranularity?: number) {
   const { startDate, endDate } = dateRange;
-  const diffInHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+  const totalDuration = endDate.getTime() - startDate.getTime();
 
-  // Use hourly granularity for ranges <= 7 days (168 hours)
-  // Use daily granularity for longer ranges
+  // If custom granularity is specified, create that many equal intervals
+  if (customGranularity && customGranularity > 0) {
+    const intervalDuration = totalDuration / customGranularity;
+    const intervals: Date[] = [];
+
+    for (let i = 0; i < customGranularity; i++) {
+      const intervalStart = new Date(startDate.getTime() + (i * intervalDuration));
+      intervals.push(intervalStart);
+    }
+
+    // Determine format based on interval duration
+    const intervalHours = intervalDuration / (1000 * 60 * 60);
+    const useHourlyFormat = intervalHours < 24;
+
+    return {
+      intervals,
+      formatKey: (date: Date) => useHourlyFormat
+        ? format(date, 'yyyy-MM-dd-HH')
+        : format(date, 'yyyy-MM-dd'),
+      formatLabel: (date: Date) => useHourlyFormat
+        ? format(date, 'MMM dd HH:mm')
+        : format(date, 'MMM dd'),
+      granularity: useHourlyFormat ? 'hourly' as const : 'daily' as const,
+      intervalDuration,
+      customGranularity
+    };
+  }
+
+  // Default behavior: automatic granularity based on date range
+  const diffInHours = totalDuration / (1000 * 60 * 60);
   const useHourlyGranularity = diffInHours <= 168;
 
   if (useHourlyGranularity) {
@@ -152,20 +188,19 @@ export class DashboardAnalyticsService {
   /**
    * Get new accounts created within date range
    */
-  static async getNewAccountsCreated(dateRange: DateRange): Promise<ChartDataPoint[]> {
+  static async getNewAccountsCreated(dateRange: DateRange, granularity?: number): Promise<ChartDataPoint[]> {
 
 
     try {
-      // Check cache first
-      const cacheKey = getCacheKey('accounts', dateRange);
+      // Check cache first (include granularity in cache key)
+      const cacheKey = getCacheKey('accounts', dateRange) + (granularity ? `-g${granularity}` : '');
       const cachedData = getCachedData<ChartDataPoint[]>(cacheKey);
       if (cachedData) {
-
         return cachedData;
       }
 
       const { startDate, endDate } = dateRange;
-      const timeConfig = getTimeIntervals(dateRange);
+      const timeConfig = getTimeIntervals(dateRange, granularity);
 
       // Query users collection for accounts created in date range
       const usersRef = collection(db, 'users');
@@ -209,8 +244,19 @@ export class DashboardAnalyticsService {
             return; // Skip invalid dates
           }
 
-          // Round to appropriate time interval
-          const intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(date) : startOfDay(date);
+          // Find the appropriate interval bucket for this date
+          let intervalDate: Date;
+          if (timeConfig.customGranularity && timeConfig.intervalDuration) {
+            // For custom granularity, find which bucket this date belongs to
+            const timeSinceStart = date.getTime() - startDate.getTime();
+            const bucketIndex = Math.floor(timeSinceStart / timeConfig.intervalDuration);
+            const clampedIndex = Math.max(0, Math.min(bucketIndex, timeConfig.intervals.length - 1));
+            intervalDate = timeConfig.intervals[clampedIndex];
+          } else {
+            // Use standard rounding for automatic granularity
+            intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(date) : startOfDay(date);
+          }
+
           const dateKey = timeConfig.formatKey(intervalDate);
           const currentCount = dateMap.get(dateKey) || 0;
           dateMap.set(dateKey, currentCount + 1);
@@ -243,9 +289,9 @@ export class DashboardAnalyticsService {
   }
 
   /**
-   * Get new pages created within date range
+   * Get new pages created within date range with public/private breakdown
    */
-  static async getNewPagesCreated(dateRange: DateRange): Promise<ChartDataPoint[]> {
+  static async getNewPagesCreated(dateRange: DateRange, granularity?: number): Promise<PagesDataPoint[]> {
     console.log('🔍 [Analytics Service] getNewPagesCreated called with dateRange:', {
       startDate: dateRange.startDate.toISOString(),
       endDate: dateRange.endDate.toISOString(),
@@ -253,16 +299,16 @@ export class DashboardAnalyticsService {
     });
 
     try {
-      // Check cache first
-      const cacheKey = getCacheKey('pages', dateRange);
-      const cachedData = getCachedData<ChartDataPoint[]>(cacheKey);
+      // Check cache first (include granularity in cache key)
+      const cacheKey = getCacheKey('pages', dateRange) + (granularity ? `-g${granularity}` : '');
+      const cachedData = getCachedData<PagesDataPoint[]>(cacheKey);
       if (cachedData) {
         console.log('📦 [Analytics Service] Returning cached pages data:', cachedData.length, 'items');
         return cachedData;
       }
 
       const { startDate, endDate } = dateRange;
-      const timeConfig = getTimeIntervals(dateRange);
+      const timeConfig = getTimeIntervals(dateRange, granularity);
 
       // Query pages collection for pages created in date range
       const pagesRef = collection(db, 'pages');
@@ -282,20 +328,21 @@ export class DashboardAnalyticsService {
       const snapshot = await getDocs(q);
       console.log(`✅ [Analytics Service] Pages query successful, found ${snapshot.size} documents`);
 
-      // Group by time interval
-      const dateMap = new Map<string, number>();
+      // Group by time interval with public/private breakdown
+      const dateMap = new Map<string, { publicPages: number; privatePages: number }>();
 
       // Initialize all time intervals in range with 0
       timeConfig.intervals.forEach(interval => {
         const dateKey = timeConfig.formatKey(interval);
-        dateMap.set(dateKey, 0);
+        dateMap.set(dateKey, { publicPages: 0, privatePages: 0 });
       });
 
-      // Count pages by creation date, filtering out deleted pages in memory
+      // Count pages by creation date with public/private breakdown, filtering out deleted pages in memory
       snapshot.forEach(doc => {
         const data = doc.data();
         const createdAt = data.createdAt;
         const deleted = data.deleted;
+        const isPublic = data.isPublic;
 
         // Skip soft-deleted pages (filter in memory to avoid complex query)
         if (deleted === true) {
@@ -318,33 +365,48 @@ export class DashboardAnalyticsService {
             // Round to appropriate time interval
             const intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(date) : startOfDay(date);
             const dateKey = timeConfig.formatKey(intervalDate);
-            const currentCount = dateMap.get(dateKey) || 0;
-            dateMap.set(dateKey, currentCount + 1);
-            console.log(`📊 [Analytics] Found page created on ${dateKey}, count now: ${currentCount + 1}`);
+            const currentCounts = dateMap.get(dateKey) || { publicPages: 0, privatePages: 0 };
+
+            // Increment the appropriate counter based on page visibility
+            if (isPublic === true) {
+              currentCounts.publicPages += 1;
+              console.log(`📊 [Analytics] Found public page created on ${dateKey}, public count now: ${currentCounts.publicPages}`);
+            } else {
+              currentCounts.privatePages += 1;
+              console.log(`📊 [Analytics] Found private page created on ${dateKey}, private count now: ${currentCounts.privatePages}`);
+            }
+
+            dateMap.set(dateKey, currentCounts);
           } else {
             console.log(`📊 [Analytics] Page ${doc.id} created outside date range: ${date.toISOString()}`);
           }
         }
       });
 
-      // Convert to chart data format
-      const result = Array.from(dateMap.entries()).map(([dateKey, count]) => {
+      // Convert to chart data format with public/private breakdown
+      const result = Array.from(dateMap.entries()).map(([dateKey, counts]) => {
         // Parse the date key back to a Date object for formatting
         const date = timeConfig.granularity === 'hourly'
           ? new Date(dateKey.replace(/-(\d{2})$/, ':$1:00'))
           : new Date(dateKey);
 
+        const totalPages = counts.publicPages + counts.privatePages;
+
         return {
           date: dateKey,
-          count,
+          publicPages: counts.publicPages,
+          privatePages: counts.privatePages,
+          totalPages,
           label: timeConfig.formatLabel(date)
         };
       });
 
       console.log('📊 [Analytics Service] New pages result summary:', {
         totalDays: result.length,
-        totalPages: result.reduce((sum, item) => sum + item.count, 0),
-        daysWithData: result.filter(item => item.count > 0).length,
+        totalPages: result.reduce((sum, item) => sum + item.totalPages, 0),
+        totalPublicPages: result.reduce((sum, item) => sum + item.publicPages, 0),
+        totalPrivatePages: result.reduce((sum, item) => sum + item.privatePages, 0),
+        daysWithData: result.filter(item => item.totalPages > 0).length,
         sampleData: result.slice(0, 5)
       });
 
@@ -362,17 +424,17 @@ export class DashboardAnalyticsService {
    * Get shares analytics within date range
    * Queries the analytics_events collection for share_event events
    */
-  static async getSharesAnalytics(dateRange: DateRange): Promise<SharesDataPoint[]> {
+  static async getSharesAnalytics(dateRange: DateRange, granularity?: number): Promise<SharesDataPoint[]> {
     try {
-      // Check cache first
-      const cacheKey = getCacheKey('shares', dateRange);
+      // Check cache first (include granularity in cache key)
+      const cacheKey = getCacheKey('shares', dateRange) + (granularity ? `-g${granularity}` : '');
       const cachedData = getCachedData<SharesDataPoint[]>(cacheKey);
       if (cachedData) {
         return cachedData;
       }
 
       const { startDate, endDate } = dateRange;
-      const timeConfig = getTimeIntervals(dateRange);
+      const timeConfig = getTimeIntervals(dateRange, granularity);
 
       // Group by time interval
       const dateMap = new Map<string, { successful: number; aborted: number }>();
@@ -413,8 +475,17 @@ export class DashboardAnalyticsService {
             return;
           }
 
-          // Round to appropriate time interval
-          const intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(date) : startOfDay(date);
+          // Find the appropriate interval bucket for this date
+          let intervalDate: Date;
+          if (timeConfig.customGranularity && timeConfig.intervalDuration) {
+            const timeSinceStart = date.getTime() - startDate.getTime();
+            const bucketIndex = Math.floor(timeSinceStart / timeConfig.intervalDuration);
+            const clampedIndex = Math.max(0, Math.min(bucketIndex, timeConfig.intervals.length - 1));
+            intervalDate = timeConfig.intervals[clampedIndex];
+          } else {
+            intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(date) : startOfDay(date);
+          }
+
           const dateKey = timeConfig.formatKey(intervalDate);
           const current = dateMap.get(dateKey) || { successful: 0, aborted: 0 };
 
@@ -468,17 +539,17 @@ export class DashboardAnalyticsService {
    * Get page edits made within date range
    * Uses simplified approach to avoid complex index requirements
    */
-  static async getEditsAnalytics(dateRange: DateRange): Promise<EditsDataPoint[]> {
+  static async getEditsAnalytics(dateRange: DateRange, granularity?: number): Promise<EditsDataPoint[]> {
     try {
-      // Check cache first
-      const cacheKey = getCacheKey('edits', dateRange);
+      // Check cache first (include granularity in cache key)
+      const cacheKey = getCacheKey('edits', dateRange) + (granularity ? `-g${granularity}` : '');
       const cachedData = getCachedData<EditsDataPoint[]>(cacheKey);
       if (cachedData) {
         return cachedData;
       }
 
       const { startDate, endDate } = dateRange;
-      const timeConfig = getTimeIntervals(dateRange);
+      const timeConfig = getTimeIntervals(dateRange, granularity);
 
       // Group by time interval
       const dateMap = new Map<string, number>();
@@ -596,17 +667,17 @@ export class DashboardAnalyticsService {
    * Get content changes analytics within date range
    * Queries the analytics_events collection for content_change events
    */
-  static async getContentChangesAnalytics(dateRange: DateRange): Promise<ContentChangesDataPoint[]> {
+  static async getContentChangesAnalytics(dateRange: DateRange, granularity?: number): Promise<ContentChangesDataPoint[]> {
     try {
-      // Check cache first
-      const cacheKey = getCacheKey('content-changes', dateRange);
+      // Check cache first (include granularity in cache key)
+      const cacheKey = getCacheKey('content-changes', dateRange) + (granularity ? `-g${granularity}` : '');
       const cachedData = getCachedData<ContentChangesDataPoint[]>(cacheKey);
       if (cachedData) {
         return cachedData;
       }
 
       const { startDate, endDate } = dateRange;
-      const timeConfig = getTimeIntervals(dateRange);
+      const timeConfig = getTimeIntervals(dateRange, granularity);
 
       // Group by time interval
       const dateMap = new Map<string, { added: number; deleted: number }>();
@@ -737,17 +808,17 @@ export class DashboardAnalyticsService {
    * Get PWA installation analytics within date range
    * Queries the analytics_events collection for pwa_install events
    */
-  static async getPWAInstallsAnalytics(dateRange: DateRange): Promise<PWAInstallsDataPoint[]> {
+  static async getPWAInstallsAnalytics(dateRange: DateRange, granularity?: number): Promise<PWAInstallsDataPoint[]> {
     try {
-      // Check cache first
-      const cacheKey = getCacheKey('pwa-installs', dateRange);
+      // Check cache first (include granularity in cache key)
+      const cacheKey = getCacheKey('pwa-installs', dateRange) + (granularity ? `-g${granularity}` : '');
       const cachedData = getCachedData<PWAInstallsDataPoint[]>(cacheKey);
       if (cachedData) {
         return cachedData;
       }
 
       const { startDate, endDate } = dateRange;
-      const timeConfig = getTimeIntervals(dateRange);
+      const timeConfig = getTimeIntervals(dateRange, granularity);
 
       // Group by time interval
       const dateMap = new Map<string, number>();
@@ -911,10 +982,10 @@ export class DashboardAnalyticsService {
   /**
    * Get visitor analytics over time for the date range
    */
-  static async getVisitorAnalytics(dateRange: DateRange) {
+  static async getVisitorAnalytics(dateRange: DateRange, granularity?: number) {
     try {
       const { startDate, endDate } = dateRange;
-      const timeConfig = getTimeIntervals(dateRange);
+      const timeConfig = getTimeIntervals(dateRange, granularity);
 
       // Group by time interval
       const dateMap = new Map<string, { authenticated: number; anonymous: number; total: number }>();

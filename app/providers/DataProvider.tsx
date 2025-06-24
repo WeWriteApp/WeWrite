@@ -77,7 +77,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
     hasMorePages,
     error,
     refreshPages
-  } = useOptimizedPages(user ? user.uid : null, true, user?.uid, false); // Use `user.uid` to fetch pages for the logged-in user, with default limit for home page
+  } = useOptimizedPages(user ? user.uid : null, user?.uid, false); // Use `user.uid` to fetch pages for the logged-in user, with default limit for home page
 
   // Derive loading state with timeout protection
   const [loading, setLoading] = useState<boolean>(pagesLoading);

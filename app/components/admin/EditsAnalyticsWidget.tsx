@@ -9,11 +9,12 @@ import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface EditsAnalyticsWidgetProps {
   dateRange: DateRange;
+  granularity?: number;
   className?: string;
 }
 
-export function EditsAnalyticsWidget({ dateRange, className = "" }: EditsAnalyticsWidgetProps) {
-  const { data, loading, error } = useEditsMetrics(dateRange);
+export function EditsAnalyticsWidget({ dateRange, granularity, className = "" }: EditsAnalyticsWidgetProps) {
+  const { data, loading, error } = useEditsMetrics(dateRange, granularity);
   const chartConfig = useResponsiveChart(data.length, data);
 
   // Check if we have any data

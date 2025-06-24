@@ -20,6 +20,7 @@ import { PWAProvider } from "./providers/PWAProvider"
 import FeatureFlagListener from "./components/utils/FeatureFlagListener"
 // Removed SlateEarlyPatch - no longer needed with SimpleEditor
 import CacheInitializer from "./components/utils/CacheInitializer"
+import CacheInvalidationInitializer from "./components/utils/CacheInvalidationInitializer"
 import { SyncQueueProvider } from "./contexts/SyncQueueContext"
 import { LineSettingsProvider } from "./contexts/LineSettingsContext"
 import ConsoleErrorLogger from "./components/utils/ConsoleErrorLogger"
@@ -294,6 +295,7 @@ export default function RootLayout({
                                       <PWAProvider>
                                         <SyncQueueProvider>
                                         <CacheInitializer />
+                                        <CacheInvalidationInitializer />
                                         <ConsoleErrorLogger />
                                         <TerminalConsole />
                                         <DoubleClickZoomPrevention />

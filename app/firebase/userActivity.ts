@@ -386,73 +386,7 @@ export const getGroupUserActivityLast24Hours = async (userId: string, groupId: s
   }
 };
 
-/**
- * Gets user activity data for multiple users in a specific group
- * This is an optimized version for fetching group-specific activity data for multiple users at once
- *
- * @param userIds - Array of user IDs
- * @param groupId - The group ID to filter activities by
- * @returns Object mapping user IDs to their activity data
- */
-export const getBatchGroupUserActivityLast24Hours = async (userIds: string[], groupId: string): Promise<Record<string, ActivityData>> => {
-  try {
-    if (!userIds || userIds.length === 0 || !groupId) return {};
-
-    // Get current date and time
-    const now = new Date();
-
-    // Calculate 24 hours ago
-    const twentyFourHoursAgo = new Date(now);
-    twentyFourHoursAgo.setHours(now.getHours() - 24);
-
-    // Initialize result object
-    const result = {};
-    userIds.forEach(userId => {
-      result[userId] = { total: 0, hourly: Array(24).fill(0) };
-    });
-
-    // Query for pages edited/created by any of these users in the last 24 hours that belong to the group
-    const pagesQuery = query(
-      collection(db, "pages"),
-      where("userId", "in", userIds.slice(0, 10)), // Firestore limits 'in' queries to 10 values
-      where("groupId", "==", groupId),
-      where("lastModified", ">=", twentyFourHoursAgo),
-      orderBy("lastModified", "desc")
-    );
-
-    const pagesSnapshot = await getDocs(pagesQuery);
-
-    // Process each page edit/creation
-    pagesSnapshot.forEach(doc => {
-      const pageData = doc.data();
-      const userId = pageData.userId;
-
-      if (userId && pageData.lastModified && result[userId]) {
-        // Convert to Date if it's a Timestamp
-        const lastModified = pageData.lastModified instanceof Timestamp
-          ? pageData.lastModified.toDate()
-          : new Date(pageData.lastModified);
-
-        // Only count if it's within the last 24 hours
-        if (lastModified >= twentyFourHoursAgo) {
-          // Calculate hours ago (0-23, where 0 is the most recent hour)
-          const hoursAgo = Math.floor((now.getTime() - lastModified.getTime()) / (1000 * 60 * 60));
-
-          // Make sure the index is within bounds (0-23)
-          if (hoursAgo >= 0 && hoursAgo < 24) {
-            result[userId].hourly[23 - hoursAgo]++;
-            result[userId].total++;
-          }
-        }
-      }
-    });
-
-    return result;
-  } catch (err) {
-    console.error("Error fetching batch group user activity:", err);
-    return {};
-  }
-};
+// Groups functionality removed
 
 export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promise<Record<string, ActivityData>> => {
   try {

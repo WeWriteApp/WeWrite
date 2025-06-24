@@ -141,13 +141,20 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
             setFetchAttempts(maxAttempts); // Stop further attempts
           }
         } catch (error) {
-          console.error('Error fetching page data for permissions:', error);
+          // Only log actual errors, not permission denied which is expected for private pages
+          if (error?.code !== 'permission-denied') {
+            console.error(`Error fetching page data for ${activity.pageId}:`, error);
+            setLastError(error);
+          } else {
+            console.log(`ActivityCard: Permission denied for page ${activity.pageId} - this is expected for private pages`);
+            setLastError(null); // Don't show error to user for permission denied
+          }
+
           setFetchAttempts(prev => prev + 1);
-          setLastError(error);
 
           // Stop retrying on certain error types
           if (error?.code === 'unavailable' || error?.code === 'permission-denied') {
-            console.warn(`ActivityCard: Stopping retries for page ${activity.pageId} due to ${error.code}`);
+            console.log(`ActivityCard: Stopping retries for page ${activity.pageId} due to ${error.code}`);
             setFetchAttempts(maxAttempts); // Stop further attempts
           }
         }

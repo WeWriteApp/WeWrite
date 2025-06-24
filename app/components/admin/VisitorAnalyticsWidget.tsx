@@ -9,11 +9,12 @@ import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface VisitorAnalyticsWidgetProps {
   dateRange: DateRange;
+  granularity?: number;
   className?: string;
 }
 
-export function VisitorAnalyticsWidget({ dateRange, className = "" }: VisitorAnalyticsWidgetProps) {
-  const { data, loading, error } = useVisitorMetrics(dateRange);
+export function VisitorAnalyticsWidget({ dateRange, granularity, className = "" }: VisitorAnalyticsWidgetProps) {
+  const { data, loading, error } = useVisitorMetrics(dateRange, granularity);
   const chartConfig = useResponsiveChart(data.length, data);
 
   // Check if we have any data

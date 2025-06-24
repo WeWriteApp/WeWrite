@@ -33,20 +33,20 @@ import { generateCacheKey, getCacheItem, setCacheItem } from "../../utils/cacheU
 import { trackQueryPerformance } from "../../utils/queryMonitor";
 import { trackQuery, trackedFirestoreQuery } from "../../utils/queryOptimizer";
 import { recordUserActivity } from "../streaks";
-import { createLinkNotification, createAppendNotification } from "../notifications";
+// Notifications functionality removed
 
-import type { User, Group } from "../../types/database";
+import type { User } from "../../types/database";
 
 /**
  * Create a new page
  */
 export const createPage = async (data: CreatePageData): Promise<string | null> => {
   try {
-    console.log('Creating page with data:', { ...data, content: '(content omitted)' });
+    console.log('🔵 createPage: Starting page creation with data:', { ...data, content: '(content omitted)' });
 
     // Validate required fields to prevent empty path errors
     if (!data || !data.userId) {
-      console.error("Cannot create page: Missing required user ID");
+      console.error("🔴 createPage: Cannot create page: Missing required user ID");
       return null;
     }
 
@@ -92,7 +92,8 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
 
     // Import Firestore Timestamp for proper timestamp handling
     const { Timestamp } = await import('firebase/firestore');
-    const now = Timestamp.now();
+    // CRITICAL FIX: Use ISO string format for consistent sorting across all pages
+    const now = new Date().toISOString();
 
     const pageData = {
       title: data.title || "Untitled",
@@ -101,9 +102,8 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
       username: username || "Anonymous", // Ensure username is saved with the page
       createdAt: now,
       lastModified: now,
-      // Add group ID if provided
-      groupId: data.groupId || null,
-      groupName: data.groupName || null,
+      // CRITICAL FIX: Explicitly set deleted to false for new pages
+      deleted: false,
       // Add location data if provided
       location: data.location || null,
       // Add fundraising fields
@@ -127,10 +127,9 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
       // Ensure we have content before creating a version
       const versionData = {
         content: data.content || JSON.stringify([{ type: "paragraph", children: [{ text: "" }] }]),
-        createdAt: now,
+        createdAt: now, // Using the same ISO string format
         userId: data.userId,
-        username: username || "Anonymous", // Also store username in version data for consistency
-        groupId: data.groupId || null // Store group ID if the page belongs to a group
+        username: username || "Anonymous" // Also store username in version data for consistency
       };
 
       try {
@@ -225,7 +224,8 @@ export const getPageById = async (pageId: string, userId: string | null = null):
         // CRITICAL: Check access permissions including soft delete status
         const accessCheck = await checkPageAccess(pageData, userId);
         if (!accessCheck.hasAccess) {
-          console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}: ${accessCheck.error}`);
+          // Use console.log instead of console.error for access denied - this is expected behavior
+          console.log(`Access denied to page ${pageId} for user ${userId || 'anonymous'}: ${accessCheck.error}`);
           return { pageData: null, error: accessCheck.error };
         }
 
@@ -296,7 +296,6 @@ export const getPageById = async (pageId: string, userId: string | null = null):
                 createdAt: pageData.lastModified || new Date().toISOString(),
                 userId: pageData.userId,
                 username: pageData.username || "Anonymous",
-                groupId: pageData.groupId || null,
                 previousVersionId: null // This is a recovery version
               };
 
@@ -349,15 +348,20 @@ export const getPageById = async (pageId: string, userId: string | null = null):
         return { pageData: null, error: "Page not found" };
       }
     } catch (error) {
-      console.error("Error fetching page:", error);
-      console.error("Fetch page error details:", {
-        pageId,
-        userId,
-        errorMessage: error?.message || 'Unknown error',
-        errorCode: error?.code || 'unknown',
-        errorType: typeof error,
-        errorString: String(error)
-      });
+      // Only log as error if it's not a permission denied (which is expected for private pages)
+      if (error?.code !== 'permission-denied') {
+        console.error("Error fetching page:", error);
+        console.error("Fetch page error details:", {
+          pageId,
+          userId,
+          errorMessage: error?.message || 'Unknown error',
+          errorCode: error?.code || 'unknown',
+          errorType: typeof error,
+          errorString: String(error)
+        });
+      } else {
+        console.log(`Permission denied for page ${pageId} - this is expected for private pages`);
+      }
 
       // Provide more specific error messages based on error type
       let errorMessage = "Error fetching page";
@@ -422,7 +426,8 @@ export const listenToPageById = (
       try {
         const accessCheck = await checkPageAccess(pageData, userId);
         if (!accessCheck.hasAccess) {
-          console.error(`Access denied to page ${pageId} for user ${userId || 'anonymous'}: ${accessCheck.error}`);
+          // Use console.log instead of console.error for access denied - this is expected behavior
+          console.log(`Access denied to page ${pageId} for user ${userId || 'anonymous'}: ${accessCheck.error}`);
           onPageUpdate({ error: accessCheck.error });
           return;
         }
@@ -457,7 +462,6 @@ export const listenToPageById = (
                 createdAt: pageData.lastModified || new Date().toISOString(),
                 userId: pageData.userId,
                 username: pageData.username || "Anonymous",
-                groupId: pageData.groupId || null,
                 previousVersionId: null // This is a recovery version
               };
 
@@ -586,8 +590,24 @@ export const listenToPageById = (
           } else {
             console.error("Version document does not exist:", currentVersionId);
           }
+        }, (error) => {
+          // Handle permission denied errors gracefully - this is expected for private pages
+          if (error?.code === 'permission-denied') {
+            console.log(`Permission denied accessing version ${currentVersionId} for page ${pageId} - this is expected for private pages`);
+            onPageUpdate({ error: "You don't have permission to view this page" });
+          } else {
+            console.error(`Error in version listener for page ${pageId}:`, error);
+            onPageUpdate({ error: "Error loading page content" });
+          }
         });
       } catch (error) {
+        // Handle permission denied errors gracefully - this is expected for private pages
+        if (error?.code === 'permission-denied') {
+          console.log(`Permission denied checking page access for ${pageId} - this is expected for private pages`);
+          onPageUpdate({ error: "You don't have permission to view this page" });
+          return;
+        }
+
         console.error("Error checking page access:", error);
         console.error("Page access error details:", {
           pageId,
@@ -600,9 +620,7 @@ export const listenToPageById = (
 
         // Provide more specific error messages based on error type
         let errorMessage = "Error checking page access";
-        if (error?.code === 'permission-denied') {
-          errorMessage = "You don't have permission to view this page";
-        } else if (error?.code === 'not-found') {
+        if (error?.code === 'not-found') {
           errorMessage = "Page not found";
         } else if (error?.code === 'unavailable') {
           errorMessage = "Service temporarily unavailable. Please try again later.";
@@ -619,6 +637,15 @@ export const listenToPageById = (
     } else {
       // If page document doesn't exist
       onPageUpdate({ error: "Page not found" });
+    }
+  }, (error) => {
+    // Handle permission denied errors gracefully - this is expected for private pages
+    if (error?.code === 'permission-denied') {
+      console.log(`Permission denied accessing page ${pageId} - this is expected for private pages`);
+      onPageUpdate({ error: "You don't have permission to view this page" });
+    } else {
+      console.error(`Error in page listener for ${pageId}:`, error);
+      onPageUpdate({ error: "Error loading page" });
     }
   });
 
@@ -664,9 +691,7 @@ export const getEditablePagesByUser = async (userId: string): Promise<any[]> => 
         userId: data.userId,
         authorName: data.authorName || data.displayName,
         lastModified: data.lastModified,
-        createdAt: data.createdAt,
-        groupId: data.groupId,
-        groupName: data.groupName
+        createdAt: data.createdAt
       });
     });
 

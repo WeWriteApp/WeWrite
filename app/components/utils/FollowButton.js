@@ -16,7 +16,7 @@ import {
 } from "../ui/dialog";
 import { toast } from "../ui/use-toast";
 import { followPage, unfollowPage, isFollowingPage } from "../../firebase/follows";
-import { createFollowNotification } from "../../firebase/notifications";
+// Notifications functionality removed
 
 /**
  * FollowButton Component
@@ -89,15 +89,7 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
 
         toast.success(`You are now following "${pageTitle}"`);
 
-        // Create a notification for the page owner
-        if (pageOwnerId && pageOwnerId !== user.uid) {
-          try {
-            await createFollowNotification(pageOwnerId, user.uid, pageId, pageTitle);
-          } catch (notificationError) {
-            console.error("Error creating follow notification:", notificationError);
-            // Don't show an error to the user, as the follow action succeeded
-          }
-        }
+        // Notifications functionality removed
 
         // Reset animation after it completes
         setTimeout(() => {

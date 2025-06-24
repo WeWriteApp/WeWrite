@@ -17,7 +17,7 @@ import { db } from "./core";
 import { generateCacheKey, getCacheItem, setCacheItem } from "../../utils/cacheUtils";
 import { trackQueryPerformance } from "../../utils/queryMonitor";
 
-import type { User, Group } from "../../types/database";
+import type { User } from "../../types/database";
 
 /**
  * Get user pages with pagination and access control
@@ -92,86 +92,7 @@ export async function getUserPages(
         });
       });
 
-      // Get pages from groups the user is a member of
-      const groupsRef = ref(rtdb, 'groups');
-      const groupsSnapshot = await get(groupsRef);
-
-      if (groupsSnapshot.exists()) {
-        const groups = groupsSnapshot.val();
-
-        // Find groups where user is a member
-        const userGroups = Object.entries(groups)
-          .filter(([_, groupData]) =>
-            (groupData as any).members && (groupData as any).members[userId]
-          )
-          .map(([groupId, groupData]) => ({
-            id: groupId,
-            ...(groupData as any)
-          }));
-
-        // For each group, get all pages using batch operations
-        if (userGroups.length > 0) {
-          // Collect all group page IDs
-          const groupPageIds = [];
-          const groupInfoByPageId = {};
-
-          for (const group of userGroups) {
-            // Skip private groups if the current user is not a member or owner
-            if (!group.isPublic && currentUserId !== userId) {
-              if (group.owner !== currentUserId &&
-                  (!group.members || !group.members[currentUserId])) {
-                continue;
-              }
-            }
-
-            if (group.pages) {
-              // Get page IDs from this group
-              const pageIds = Object.keys(group.pages);
-
-              for (const pageId of pageIds) {
-                // Check if we already have this page
-                if (!pages.some(p => p.id === pageId) && !groupPageIds.includes(pageId)) {
-                  groupPageIds.push(pageId);
-                  groupInfoByPageId[pageId] = {
-                    groupId: group.id,
-                    groupName: group.name
-                  };
-                }
-              }
-            }
-          }
-
-          // Batch fetch pages in chunks of 10 (Firestore limit for 'in' queries)
-          const batchSize = 10;
-          for (let i = 0; i < groupPageIds.length; i += batchSize) {
-            const batch = groupPageIds.slice(i, i + batchSize);
-
-            if (batch.length === 0) continue;
-
-            // Create a query for this batch (exclude deleted pages)
-            const batchQuery = query(
-              collection(db, 'pages'),
-              where('__name__', 'in', batch),
-              where('deleted', '!=', true)
-            );
-
-            const batchSnapshot = await getDocs(batchQuery);
-
-            batchSnapshot.forEach(doc => {
-              const pageData = doc.data();
-              const groupInfo = groupInfoByPageId[doc.id];
-
-              pages.push({
-                id: doc.id,
-                ...pageData,
-                // Add group information
-                groupId: groupInfo.groupId,
-                groupName: groupInfo.groupName
-              });
-            });
-          }
-        }
-      }
+      // Groups functionality removed - only showing user's own pages now
 
       // Sort all pages by last modified date
       pages.sort((a, b) => {

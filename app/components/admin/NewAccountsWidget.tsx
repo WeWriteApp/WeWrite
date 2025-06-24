@@ -9,11 +9,12 @@ import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface NewAccountsWidgetProps {
   dateRange: DateRange;
+  granularity?: number;
   className?: string;
 }
 
-export function NewAccountsWidget({ dateRange, className = "" }: NewAccountsWidgetProps) {
-  const { data, loading, error } = useAccountsMetrics(dateRange);
+export function NewAccountsWidget({ dateRange, granularity, className = "" }: NewAccountsWidgetProps) {
+  const { data, loading, error } = useAccountsMetrics(dateRange, granularity);
   const chartConfig = useResponsiveChart(data.length, data);
 
 

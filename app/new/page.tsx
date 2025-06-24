@@ -28,6 +28,7 @@ import SlideUpPage from "../components/ui/slide-up-page";
 import { NewPageSkeleton } from "../components/skeletons/PageEditorSkeleton";
 import { toast } from "../components/ui/use-toast";
 
+
 /**
  * Editor content node interface
  */
@@ -79,6 +80,8 @@ export default function NewPage() {
   // const { trackPageCreationFlow, trackEditingFlow } = useWeWriteAnalytics();
   const { refreshState } = useSyncQueue();
   const { addRecentPage } = useRecentPages();
+
+  // RUTHLESS SIMPLIFICATION: No cache invalidation at all - just use short TTLs and browser refresh
   const { formatDateString } = useDateFormat();
 
   // State that mimics SinglePageView
@@ -102,9 +105,7 @@ export default function NewPage() {
   const [hasTitleChanged, setHasTitleChanged] = useState<boolean>(false);
   const [titleError, setTitleError] = useState<boolean>(false);
 
-  // Group ownership state
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [selectedGroupName, setSelectedGroupName] = useState<string | null>(null);
+  // Groups functionality removed
 
   // Determine page type
   const isReply = searchParams?.has('replyTo') || false;
@@ -455,18 +456,91 @@ export default function NewPage() {
         return true;
       } else {
         // Normal page creation for verified users
+        console.log('🔵 DEBUG: About to call createPage with data:', { ...data, content: '(content omitted)' });
         const res = await createPage(data);
+        console.log('🔵 DEBUG: createPage returned:', res);
 
         if (res) {
+          // res is the page ID string returned by createPage
+          const pageId = res;
+          console.log('🔵 PAGE CREATION: Page creation successful, pageId:', pageId, 'userId:', userId);
+          console.error('🔵 PAGE CREATION: Page creation successful, pageId:', pageId, 'userId:', userId);
+
+          // CRITICAL DEBUG: Immediately try to fetch the page to see if it exists
+          try {
+            console.log('🔍 DEBUG: Attempting to fetch newly created page...');
+            const { getPageById } = await import('../firebase/database');
+            const fetchResult = await getPageById(pageId, userId);
+            console.log('🔍 DEBUG: Fetch result:', fetchResult);
+            if (fetchResult.pageData) {
+              console.log('✅ DEBUG: Page exists in database immediately after creation');
+            } else {
+              console.error('❌ DEBUG: Page does NOT exist in database after creation!', fetchResult.error);
+            }
+          } catch (fetchError) {
+            console.error('❌ DEBUG: Error fetching newly created page:', fetchError);
+          }
+
+          // Invalidate caches to ensure new page appears in UI immediately
+          console.log('✅ DEBUG: Page created successfully, ID:', pageId);
+          console.error('✅ DEBUG: Page created successfully, ID:', pageId);
+
+          // CRITICAL FIX: Immediate cache invalidation to ensure new page appears in profile
+          // Clear caches immediately to prevent stale data from showing
+          try {
+            const { invalidatePageCreationCaches } = await import('../utils/cacheInvalidation');
+            invalidatePageCreationCaches(userId);
+            console.log('✅ Immediate cache invalidation triggered for user:', userId);
+          } catch (cacheError) {
+            console.error('Error triggering immediate cache invalidation (non-fatal):', cacheError);
+          }
+
+          // CRITICAL FIX: Dispatch event with new page data to immediately update UI
+          // This bypasses Firestore indexing delays by directly updating the local state
+          try {
+            const newPageData = {
+              id: pageId,
+              title: title || 'Untitled',
+              userId: userId,
+              username: username,
+              lastModified: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              isPublic: isPublic,
+              deleted: false
+            };
+
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('page-created-immediate', {
+                detail: { pageData: newPageData, userId }
+              }));
+              console.log('✅ Immediate page-created event dispatched with page data');
+            }
+          } catch (eventError) {
+            console.error('Error dispatching immediate page-created event (non-fatal):', eventError);
+          }
+
+          // CRITICAL FIX: Additional delayed cache invalidation to handle Firestore indexing delays
+          setTimeout(async () => {
+            try {
+              const { invalidatePageCreationCaches } = await import('../utils/cacheInvalidation');
+              invalidatePageCreationCaches(userId);
+              console.log('✅ Delayed cache invalidation triggered for user:', userId);
+            } catch (cacheError) {
+              console.error('Error triggering delayed cache invalidation (non-fatal):', cacheError);
+            }
+          }, 3000); // 3s delay to handle Firestore indexing delays
+
           // Track content changes for new page creation
           try {
+            console.log('🔵 Tracking content changes with pageId:', pageId);
             await ContentChangesTrackingService.trackContentChangeAdvanced(
-              res.id,
+              pageId,
               userId,
               username,
               null, // No previous content for new pages
               finalContent
             );
+            console.log('🔵 Content tracking completed successfully');
           } catch (trackingError) {
             console.error('Error tracking content changes for new page (non-fatal):', trackingError);
           }
@@ -474,7 +548,7 @@ export default function NewPage() {
           // Add the new page to recent pages tracking
           try {
             await addRecentPage({
-              id: res.id,
+              id: pageId,
               title: title || 'Untitled',
               userId: userId,
               username: username
@@ -483,6 +557,10 @@ export default function NewPage() {
           } catch (recentPagesError) {
             console.error('Error adding page to recent pages (non-fatal):', recentPagesError);
           }
+
+          // Cache invalidation has been triggered above
+
+
 
           // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
           // Track analytics (non-blocking) - now handled by UnifiedAnalyticsProvider
@@ -510,7 +588,7 @@ export default function NewPage() {
           // This prevents 404 errors when navigating to newly created pages
           setTimeout(() => {
             // Use replace instead of push to prevent back button issues
-            router.replace(`/${res}`);
+            router.replace(`/${pageId}`);
           }, 1000);
 
           return true;
@@ -606,8 +684,6 @@ export default function NewPage() {
           username={username}
           userId={user?.uid}
           isLoading={isLoading}
-          groupId={selectedGroupId}
-          groupName={selectedGroupName}
           scrollDirection="none"
           isPrivate={!isPublic}
           isEditing={isEditing}

@@ -31,13 +31,12 @@ import { get, ref } from "firebase/database";
 import { generateCacheKey, getCacheItem, setCacheItem } from "../../utils/cacheUtils";
 import { trackQueryPerformance } from "../../utils/queryMonitor";
 import { recordUserActivity } from "../streaks";
-import { createLinkNotification, createAppendNotification } from "../notifications";
+// Notifications functionality removed
 
 // Import types
 import type {
   Page,
   User,
-  Group,
   SlateContent,
   PageVersion,
   LinkData
@@ -103,8 +102,7 @@ export interface CreatePageData {
   isPublic?: boolean;
   userId: string;
   username?: string;
-  groupId?: string | null;
-  groupName?: string | null;
+  // Groups functionality removed
   location?: string | null;
   fundraisingGoal?: number;
   isReply?: boolean;
@@ -117,7 +115,7 @@ export interface PageUpdateData {
   content: string;
   userId: string;
   username?: string;
-  groupId?: string | null;
+  // Groups functionality removed
 }
 
 export interface PageStats {

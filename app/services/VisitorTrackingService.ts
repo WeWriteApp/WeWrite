@@ -224,7 +224,12 @@ class VisitorTrackingService {
       });
 
     } catch (error) {
-      console.error('Error tracking visitor:', error);
+      // Handle permission denied errors gracefully - this is expected for private data
+      if (error?.code === 'permission-denied') {
+        console.log('Permission denied tracking visitor - this is expected for private data');
+      } else {
+        console.error('Error tracking visitor:', error);
+      }
       this.isTracking = false;
     }
   }
@@ -264,7 +269,12 @@ class VisitorTrackingService {
 
       return null;
     } catch (error) {
-      console.error('Error finding existing session:', error);
+      // Handle permission denied errors gracefully - this is expected for private data
+      if (error?.code === 'permission-denied') {
+        console.log('Permission denied finding existing session - this is expected for private data');
+      } else {
+        console.error('Error finding existing session:', error);
+      }
       return null;
     }
   }

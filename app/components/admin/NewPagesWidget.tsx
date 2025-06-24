@@ -9,39 +9,66 @@ import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface NewPagesWidgetProps {
   dateRange: DateRange;
+  granularity?: number;
   className?: string;
 }
 
-export function NewPagesWidget({ dateRange, className = "" }: NewPagesWidgetProps) {
-  const { data, loading, error } = usePagesMetrics(dateRange);
+export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPagesWidgetProps) {
+  const { data, loading, error } = usePagesMetrics(dateRange, granularity);
   const chartConfig = useResponsiveChart(data.length, data);
 
 
 
-  // Calculate summary statistics
-  const totalPages = data.reduce((sum, item) => sum + item.count, 0);
+  // Calculate summary statistics with public/private breakdown
+  const totalPages = data.reduce((sum, item) => sum + (item.totalPages || item.count || 0), 0);
+  const totalPublicPages = data.reduce((sum, item) => sum + (item.publicPages || 0), 0);
+  const totalPrivatePages = data.reduce((sum, item) => sum + (item.privatePages || 0), 0);
   const averagePerDay = data.length > 0 ? (totalPages / data.length).toFixed(1) : '0';
-  
+
   // Calculate trend (compare first half vs second half of period)
   const midPoint = Math.floor(data.length / 2);
   const firstHalf = data.slice(0, midPoint);
   const secondHalf = data.slice(midPoint);
-  
-  const firstHalfAvg = firstHalf.length > 0 ? firstHalf.reduce((sum, item) => sum + item.count, 0) / firstHalf.length : 0;
-  const secondHalfAvg = secondHalf.length > 0 ? secondHalf.reduce((sum, item) => sum + item.count, 0) / secondHalf.length : 0;
-  
+
+  const firstHalfAvg = firstHalf.length > 0 ? firstHalf.reduce((sum, item) => sum + (item.totalPages || item.count || 0), 0) / firstHalf.length : 0;
+  const secondHalfAvg = secondHalf.length > 0 ? secondHalf.reduce((sum, item) => sum + (item.totalPages || item.count || 0), 0) / secondHalf.length : 0;
+
   const trendPercentage = firstHalfAvg > 0 ? ((secondHalfAvg - firstHalfAvg) / firstHalfAvg * 100) : 0;
   const isPositiveTrend = trendPercentage > 0;
+
+  // Check if we have the new data structure with public/private breakdown
+  const hasBreakdown = data.length > 0 && data[0].hasOwnProperty('publicPages');
 
   // Custom tooltip component
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      const total = data.totalPages || data.count || 0;
+
       return (
         <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
           <p className="font-medium">{label}</p>
-          <p className="text-sm text-primary">
-            {payload[0].value} new page{payload[0].value !== 1 ? 's' : ''}
-          </p>
+          {hasBreakdown ? (
+            <div className="space-y-1">
+              <p className="text-sm text-primary font-medium">
+                {total} total page{total !== 1 ? 's' : ''}
+              </p>
+              <div className="text-xs space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-sm bg-blue-500"></div>
+                  <span>{data.publicPages || 0} public</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-sm bg-purple-500"></div>
+                  <span>{data.privatePages || 0} private</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-primary">
+              {total} new page{total !== 1 ? 's' : ''}
+            </p>
+          )}
         </div>
       );
     }
@@ -74,9 +101,23 @@ export function NewPagesWidget({ dateRange, className = "" }: NewPagesWidgetProp
         {/* Summary Stats */}
         <div className="text-right">
           <div className="text-2xl font-bold text-primary">{totalPages}</div>
-          <div className="text-xs text-muted-foreground">
-            {averagePerDay}/day avg
-          </div>
+          {hasBreakdown ? (
+            <div className="text-xs text-muted-foreground space-y-1">
+              <div className="flex items-center gap-2 justify-end">
+                <div className="w-2 h-2 rounded-sm bg-blue-500"></div>
+                <span>{totalPublicPages} public</span>
+              </div>
+              <div className="flex items-center gap-2 justify-end">
+                <div className="w-2 h-2 rounded-sm bg-purple-500"></div>
+                <span>{totalPrivatePages} private</span>
+              </div>
+              <div>{averagePerDay}/day avg</div>
+            </div>
+          ) : (
+            <div className="text-xs text-muted-foreground">
+              {averagePerDay}/day avg
+            </div>
+          )}
         </div>
       </div>
 
@@ -130,12 +171,31 @@ export function NewPagesWidget({ dateRange, className = "" }: NewPagesWidgetProp
                 width={chartConfig.tickConfig.width}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Bar
-                dataKey="count"
-                fill="hsl(var(--primary))"
-                radius={[2, 2, 0, 0]}
-                className="hover:opacity-80 transition-opacity"
-              />
+              {hasBreakdown ? (
+                <>
+                  <Bar
+                    dataKey="publicPages"
+                    stackId="pages"
+                    fill="#3b82f6"
+                    radius={[0, 0, 0, 0]}
+                    className="hover:opacity-80 transition-opacity"
+                  />
+                  <Bar
+                    dataKey="privatePages"
+                    stackId="pages"
+                    fill="#8b5cf6"
+                    radius={[2, 2, 0, 0]}
+                    className="hover:opacity-80 transition-opacity"
+                  />
+                </>
+              ) : (
+                <Bar
+                  dataKey="count"
+                  fill="hsl(var(--primary))"
+                  radius={[2, 2, 0, 0]}
+                  className="hover:opacity-80 transition-opacity"
+                />
+              )}
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -145,9 +205,21 @@ export function NewPagesWidget({ dateRange, className = "" }: NewPagesWidgetProp
       {!loading && data.length > 0 && (
         <div className="mt-4 pt-4 border-t border-border">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Peak: {Math.max(...data.map(d => d.count))} pages</span>
+            <span>Peak: {Math.max(...data.map(d => d.totalPages || d.count || 0))} pages</span>
             <span>Total days: {data.length}</span>
           </div>
+          {hasBreakdown && (
+            <div className="mt-2 flex gap-4 text-xs">
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-sm bg-blue-500"></div>
+                <span>Public Pages</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-sm bg-purple-500"></div>
+                <span>Private Pages</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

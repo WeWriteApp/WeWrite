@@ -8,7 +8,6 @@ export type FeatureFlag =
   | 'token_system'
   | 'map_view'
   | 'calendar_view'
-  | 'groups'
   | 'link_functionality'
   | 'daily_notes';
 
@@ -63,7 +62,6 @@ const initializeFeatureFlags = async (): Promise<void> => {
         token_system: false,
         map_view: false,
         calendar_view: false,
-        groups: true,
         link_functionality: true,
         daily_notes: false
       };
@@ -78,7 +76,6 @@ const initializeFeatureFlags = async (): Promise<void> => {
       token_system: false,
       map_view: false,
       calendar_view: false,
-      groups: true,
       link_functionality: true,
       daily_notes: false
     };

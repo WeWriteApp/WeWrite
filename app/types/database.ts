@@ -40,8 +40,7 @@ export interface Page {
   linkedPageIds?: string[];
   version?: number;
   currentVersion?: string;
-  groupId?: string;
-  groupName?: string;
+  // Groups functionality removed
   description?: string;
   fundraisingGoal?: number;
   isReply?: boolean;
@@ -66,7 +65,7 @@ export interface PageVersion {
   createdAt: string | Timestamp;
   userId: string;
   username?: string;
-  groupId?: string | null;
+  // Groups functionality removed
   previousVersionId?: string;
 }
 
@@ -92,21 +91,7 @@ export interface EditorChild {
 
 export type EditorContent = EditorNode[];
 
-// Group types
-export interface Group {
-  id: string;
-  name: string;
-  description?: string;
-  about?: string | EditorContent;
-  aboutLastEditor?: string;
-  aboutLastEditTime?: string;
-  createdAt: string | Timestamp;
-  createdBy: string;
-  isPublic: boolean;
-  memberCount?: number;
-  pageCount?: number;
-  members?: Record<string, any>;
-}
+// Groups functionality removed
 
 // Activity types
 export interface Activity {
@@ -114,20 +99,16 @@ export interface Activity {
   type: ActivityType;
   userId: string;
   pageId?: string;
-  groupId?: string;
+  // Groups functionality removed
   timestamp: string | Timestamp;
   metadata?: Record<string, any>;
 }
 
-export type ActivityType = 
+export type ActivityType =
   | 'page_created'
   | 'page_updated'
   | 'page_deleted'
-  | 'bio_updated'
-  | 'group_created'
-  | 'group_updated'
-  | 'group_joined'
-  | 'group_left';
+  | 'bio_updated';
 
 // Subscription types
 export type SubscriptionTier = 'tier1' | 'tier2' | 'tier3' | 'custom';
@@ -149,7 +130,7 @@ export interface TokenAllocation {
   id: string;
   userId: string;
   recipientUserId: string;
-  resourceType: 'page' | 'group' | 'user_bio' | 'group_about' | 'wewrite';
+  resourceType: 'page' | 'user_bio' | 'wewrite';
   resourceId: string;
   tokens: number;
   month: string; // YYYY-MM format
@@ -170,7 +151,7 @@ export interface WriterTokenEarnings {
     allocationId: string;
     fromUserId: string;
     fromUsername?: string;
-    resourceType: 'page' | 'group' | 'user_bio' | 'group_about';
+    resourceType: 'page' | 'user_bio';
     resourceId: string;
     resourceTitle?: string;
     tokens: number;
@@ -272,7 +253,6 @@ export interface Notification {
 export type NotificationType =
   | 'page_mention'
   | 'page_follow'
-  | 'group_invite'
   | 'system_announcement'
   | 'email_verification'
   | 'pledge_received'
@@ -294,7 +274,7 @@ export interface Pledge {
   id: string;
   userId: string; // The user making the pledge
   pageId: string;
-  groupId?: string;
+  // Groups functionality removed
   amount: number;
   currency: string;
   status: 'active' | 'cancelled' | 'failed' | 'pending';
@@ -316,9 +296,9 @@ export interface PaymentTransaction {
   id: string;
   pledgeId: string;
   userId: string; // Pledger
-  recipientUserId: string; // Page/group owner
+  recipientUserId: string; // Page owner
   pageId?: string;
-  groupId?: string;
+  // Groups functionality removed
   amount: number;
   platformFee: number;
   netAmount: number;

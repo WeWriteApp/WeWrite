@@ -224,7 +224,12 @@ export const getPageViewsLast24Hours = async (pageId: string): Promise<ViewsLast
       hourly: hourlyData
     };
   } catch (error) {
-    console.error("Error getting page views:", error);
+    // Handle permission denied errors gracefully - this is expected for private pages
+    if (error?.code === 'permission-denied') {
+      console.log("Permission denied getting page views - this is expected for private pages");
+    } else {
+      console.error("Error getting page views:", error);
+    }
     return { total: 0, hourly: Array(24).fill(0) };
   }
 };

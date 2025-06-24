@@ -9,11 +9,19 @@ import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 
 /**
  * Listen to pledge changes for a specific user and update their contributor count
+ * PERFORMANCE: Only enable real-time listening when explicitly needed
  * @param userId - The user ID (page author) to monitor pledges for
+ * @param enableRealTime - Whether to use real-time listeners (default: false for performance)
  * @returns Unsubscribe function
  */
-export const listenToPledgeChangesForUser = (userId: string) => {
+export const listenToPledgeChangesForUser = (userId: string, enableRealTime: boolean = false) => {
   if (!userId) return null;
+
+  // PERFORMANCE OPTIMIZATION: Only use real-time listeners when explicitly enabled
+  if (!enableRealTime) {
+    console.log(`Pledge listener disabled for performance for user ${userId}`);
+    return null;
+  }
 
   try {
     // Query pledges where this user is the recipient (page author)
@@ -22,10 +30,10 @@ export const listenToPledgeChangesForUser = (userId: string) => {
       where('metadata.authorUserId', '==', userId)
     );
 
-    // Set up real-time listener
+    // Set up real-time listener (only when enabled)
     const unsubscribe = onSnapshot(pledgesQuery, (snapshot) => {
       console.log(`Pledge changes detected for user ${userId}, updating contributor count...`);
-      
+
       // Update contributor count in the background
       updateUserContributorCount(userId).catch(error => {
         console.error('Error updating contributor count after pledge change:', error);

@@ -15,7 +15,15 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: 'Only available in development' }, { status: 403 })
     }
 
-    const body = await request.json()
+    // Handle malformed JSON gracefully
+    let body;
+    try {
+      body = await request.json()
+    } catch (jsonError) {
+      console.error('Invalid JSON in log-console-error request:', jsonError.message)
+      return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 })
+    }
+
     const { level, message, timestamp, url, userAgent, filename, lineno, colno, stack } = body
 
     // Format the log message for terminal output

@@ -12,7 +12,7 @@ import dynamic from 'next/dynamic';
 import { getUsernameById, getUserSubscriptionTier } from "../../utils/userUtils";
 import { SupporterIcon } from "../payments/SupporterIcon";
 import { SubscriptionInfoModal } from "../payments/SubscriptionInfoModal";
-import PageOwnershipDropdown from "./PageOwnershipDropdown";
+
 import ClickableByline from "../utils/ClickableByline";
 import { useAuth } from "../../providers/AuthProvider";
 import { handleAddToPage, handleReply, handleShare } from "../../utils/pageActionHandlers";
@@ -53,8 +53,6 @@ export interface PageHeaderProps {
   username?: string;
   userId?: string;
   isLoading?: boolean;
-  groupId?: string;
-  groupName?: string;
   scrollDirection?: string;
   isPrivate?: boolean;
   tier?: string;
@@ -65,7 +63,6 @@ export interface PageHeaderProps {
   canEdit?: boolean;
   titleError?: boolean;
   pageId?: string | null;
-  onOwnershipChange?: (newGroupId: string | null, newGroupName: string | null) => void;
   isNewPage?: boolean; // Add flag to indicate this is a new page
   onPrivacyChange?: (isPublic: boolean) => void; // Add handler for privacy toggle
   onDelete?: () => void; // Add handler for delete page
@@ -77,8 +74,6 @@ export default function PageHeader({
   username,
   userId,
   isLoading = false,
-  groupId: initialGroupId,
-  groupName: initialGroupName,
   // scrollDirection is not used but kept for compatibility
   isPrivate = false,
   tier: initialTier,
@@ -110,10 +105,7 @@ export default function PageHeader({
   const [subscriptionStatus, setSubscriptionStatus] = React.useState<string | null>(initialStatus || null);
   const [isLoadingTier, setIsLoadingTier] = React.useState<boolean>(false);
   const subscriptionEnabled = useFeatureFlag('payments', user?.email);
-  const [groupId, setGroupId] = React.useState<string | null>(initialGroupId || null);
-  const [groupName, setGroupName] = React.useState<string | null>(initialGroupName || null);
   const [pageId, setPageId] = React.useState<string | null>(propPageId);
-  const [hasGroupAccess, setHasGroupAccess] = React.useState<boolean>(false);
   const [isAddToPageOpen, setIsAddToPageOpen] = React.useState<boolean>(false);
   const [isEditingTitle, setIsEditingTitle] = React.useState<boolean>(false);
   const [editingTitle, setEditingTitle] = React.useState<string>(title || "");
@@ -157,11 +149,8 @@ export default function PageHeader({
     // User is the page owner
     if (userId && user.uid === userId) return true;
 
-    // Page belongs to a group and user is a member of that group
-    if (groupId && hasGroupAccess) return true;
-
     return false;
-  }, [propCanEdit, user, userId, groupId, hasGroupAccess]);
+  }, [propCanEdit, user, userId]);
 
   // Update editing title when title prop changes
   React.useEffect(() => {
@@ -412,34 +401,7 @@ export default function PageHeader({
     }
   }, [user, userId]);
 
-  // Check if user has access to the group
-  React.useEffect(() => {
-    if (!groupId || !user) {
-      setHasGroupAccess(false);
-      return;
-    }
-
-    const checkGroupAccess = async () => {
-      try {
-        const groupRef = ref(rtdb, 'groups/' + groupId);
-        const groupSnapshot = await get(groupRef);
-
-        if (groupSnapshot.exists()) {
-          const groupData = groupSnapshot.val();
-          // Check if the user is a member of the group
-          const isMember = user.uid && groupData.members && groupData.members[user.uid];
-          setHasGroupAccess(!!isMember);
-        } else {
-          setHasGroupAccess(false);
-        }
-      } catch (error) {
-        console.error('Error checking group access:', error);
-        setHasGroupAccess(false);
-      }
-    };
-
-    checkGroupAccess();
-  }, [groupId, user]);
+  // Groups functionality removed
 
   // Calculate and update header height when component mounts or when title/isScrolled changes
   React.useEffect(() => {
@@ -847,95 +809,34 @@ export default function PageHeader({
                   {isLoading ? (
                     <span className="inline-flex items-center"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
                   ) : (
-                    groupId && groupName ? (
-                      <span className="flex items-center gap-1 justify-center mx-auto">
-                        <span className="whitespace-nowrap flex-shrink-0">in</span>
-                        {/* Show ClickableByline only in edit mode for page owners, otherwise show Link for navigation */}
-                        {user && userId && user.uid === userId && pageId && isEditing ? (
-                          <ClickableByline
-                            isLoading={isLoading}
-                            isChanging={false}
-                            dropdown={
-                              <PageOwnershipDropdown
-                                pageId={pageId}
-                                userId={userId}
-                                username={displayUsername}
-                                groupId={groupId}
-                                groupName={groupName}
-                                onOwnershipChange={(newGroupId, newGroupName) => {
-                                  setGroupId(newGroupId);
-                                  setGroupName(newGroupName);
-                                  if (onOwnershipChange) {
-                                    onOwnershipChange(newGroupId, newGroupName);
-                                  }
-                                }}
-                              />
-                            }
-                          >
-                            <span data-component-name="PageHeader" data-group-name={groupName} className="overflow-hidden text-ellipsis">{groupName}</span>
-                          </ClickableByline>
-                        ) : (
-                          <Link href={`/group/${groupId}`} className="hover:underline overflow-hidden text-ellipsis">
-                            <span data-component-name="PageHeader" data-group-name={groupName}>{groupName}</span>
-                          </Link>
-                        )}
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 justify-center mx-auto">
-                        <span className="whitespace-nowrap flex-shrink-0">by</span>
-                        {/* Show ClickableByline only in edit mode for page owners, otherwise show Link for navigation */}
-                        {/* For new pages, make username non-interactive to improve tab order */}
-                        {isNewPage ? (
-                          <span className="overflow-hidden text-ellipsis">
-                            {isLoading || !displayUsername ? (
-                              <span className="inline-flex items-center text-muted-foreground"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
-                            ) : (
-                              <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">{displayUsername}</span>
-                            )}
-                          </span>
-                        ) : user && userId && user.uid === userId && pageId && isEditing ? (
-                          <ClickableByline
-                            isLoading={isLoading}
-                            isChanging={false}
-                            dropdown={
-                              <PageOwnershipDropdown
-                                pageId={pageId}
-                                userId={userId}
-                                username={displayUsername}
-                                onOwnershipChange={(newGroupId, newGroupName) => {
-                                  setGroupId(newGroupId);
-                                  setGroupName(newGroupName);
-                                  if (onOwnershipChange) {
-                                    onOwnershipChange(newGroupId, newGroupName);
-                                  }
-                                }}
-                              />
-                            }
-                          >
-                            {isLoading || !displayUsername ? (
-                              <span className="inline-flex items-center text-muted-foreground"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
-                            ) : (
-                              <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">{displayUsername}</span>
-                            )}
-                          </ClickableByline>
-                        ) : (
-                          <Link href={`/user/${userId}`} className="hover:underline overflow-hidden text-ellipsis">
-                            {isLoading || !displayUsername ? (
-                              <span className="inline-flex items-center text-muted-foreground"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
-                            ) : (
-                              <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">{displayUsername}</span>
-                            )}
-                          </Link>
-                        )}
-                        {subscriptionEnabled && (
-                          <SubscriptionInfoModal currentTier={tier} currentStatus={subscriptionStatus} userId={userId} username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}>
-                            <div className="cursor-pointer flex-shrink-0 flex items-center">
-                              <SupporterIcon tier={tier} status={subscriptionStatus} size="sm" />
-                            </div>
-                          </SubscriptionInfoModal>
-                        )}
-                      </span>
-                    )
+                    <span className="flex items-center gap-1 justify-center mx-auto">
+                      <span className="whitespace-nowrap flex-shrink-0">by</span>
+                      {/* For new pages, make username non-interactive to improve tab order */}
+                      {isNewPage ? (
+                        <span className="overflow-hidden text-ellipsis">
+                          {isLoading || !displayUsername ? (
+                            <span className="inline-flex items-center text-muted-foreground"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
+                          ) : (
+                            <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">{displayUsername}</span>
+                          )}
+                        </span>
+                      ) : (
+                        <Link href={`/user/${userId}`} className="hover:underline overflow-hidden text-ellipsis">
+                          {isLoading || !displayUsername ? (
+                            <span className="inline-flex items-center text-muted-foreground"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
+                          ) : (
+                            <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">{displayUsername}</span>
+                          )}
+                        </Link>
+                      )}
+                      {subscriptionEnabled && (
+                        <SubscriptionInfoModal currentTier={tier} currentStatus={subscriptionStatus} userId={userId} username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}>
+                          <div className="cursor-pointer flex-shrink-0 flex items-center">
+                            <SupporterIcon tier={tier} status={subscriptionStatus} size="sm" />
+                          </div>
+                        </SubscriptionInfoModal>
+                      )}
+                    </span>
                   )}
                 </div>
               </div>

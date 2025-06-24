@@ -46,10 +46,7 @@ const TrendingPages = dynamic(() => import("./components/features/TrendingPages"
 
 
 
-const HomeGroupsSection = dynamic(() => import("./components/groups/HomeGroupsSection"), {
-  loading: () => <GroupsSkeleton limit={3} />,
-  ssr: false
-});
+// Groups functionality removed
 
 
 
@@ -280,55 +277,7 @@ const Home = React.memo(function Home() {
             />
           </StickySection>
 
-          {/* 2. Groups Section - Medium priority */}
-          <StickySection
-            sectionId="groups"
-            headerContent={
-              <SectionTitle
-                icon={Users}
-                title="Your Groups"
-                rightContent={
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {/* Desktop: Button with text and icon */}
-                    <Button
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.location.href = '/group/new';
-                      }}
-                      className="hidden sm:flex items-center gap-2 rounded-2xl h-8 px-3"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span className="hidden md:inline">New Group</span>
-                    </Button>
-
-                    {/* Mobile: Icon-only button */}
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.location.href = '/group/new';
-                      }}
-                      className="sm:hidden h-8 w-8 rounded-2xl"
-                      aria-label="Create new group"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                }
-              />
-            }
-          >
-            <LazySection
-              name="groups"
-              priority="medium"
-              minHeight={200}
-              fallback={<GroupsSkeleton limit={3} />}
-            >
-              <HomeGroupsSection hideHeader={true} />
-            </LazySection>
-          </StickySection>
+          {/* Groups functionality removed */}
 
           {/* 3. Trending Pages - Low priority, lazy loaded */}
           <StickySection

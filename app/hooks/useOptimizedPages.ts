@@ -15,14 +15,11 @@ interface PageData {
 
 interface UseOptimizedPagesReturn {
   pages: PageData[];
-  publicPages: PageData[];
-  privatePages: PageData[];
   loading: boolean;
   error: string | null;
   hasMorePages: boolean;
   isMoreLoading: boolean;
   loadMorePages: () => Promise<void>;
-  loadMorePrivatePages: () => Promise<void>;
   refreshPages: () => void;
 }
 
@@ -42,7 +39,6 @@ const LOAD_MORE_LIMIT = 50;
  */
 const useOptimizedPages = (
   userId: string,
-  includePrivate: boolean = true,
   currentUserId: string | null = null,
   isUserPage: boolean = false
 ): UseOptimizedPagesReturn => {
@@ -50,19 +46,15 @@ const useOptimizedPages = (
   const initialLimitCount = isUserPage ? USER_PAGE_INITIAL_LIMIT : DEFAULT_INITIAL_LIMIT;
   
   // State for pages data
-  const [publicPages, setPublicPages] = useState<PageData[]>([]);
-  const [privatePages, setPrivatePages] = useState<PageData[]>([]);
-  const [lastPublicKey, setLastPublicKey] = useState<any>(null);
-  const [lastPrivateKey, setLastPrivateKey] = useState<any>(null);
+  const [pages, setPages] = useState<PageData[]>([]);
+  const [lastPageKey, setLastPageKey] = useState<any>(null);
 
   // Loading states
   const [loading, setLoading] = useState<boolean>(true);
-  const [isMorePublicLoading, setIsMorePublicLoading] = useState<boolean>(false);
-  const [isMorePrivateLoading, setIsMorePrivateLoading] = useState<boolean>(false);
+  const [isMoreLoading, setIsMoreLoading] = useState<boolean>(false);
 
   // Pagination states
-  const [hasMorePublicPages, setHasMorePublicPages] = useState<boolean>(true);
-  const [hasMorePrivatePages, setHasMorePrivatePages] = useState<boolean>(true);
+  const [hasMorePages, setHasMorePages] = useState<boolean>(true);
 
   // Error state
   const [error, setError] = useState<string | null>(null);
@@ -101,23 +93,16 @@ const useOptimizedPages = (
       
       // If we have cached data, use it even if it's stale
       const cachedPublicData = localStorage.getItem(`wewrite_pages_${userId}_public_${currentUserId === userId ? 'owner' : 'visitor'}_${initialLimitCount}`);
-      const cachedPrivateData = includePrivate && currentUserId === userId ? 
-        localStorage.getItem(`wewrite_pages_${userId}_private_owner_${initialLimitCount}`) : null;
-      
-      if (cachedPublicData || cachedPrivateData) {
+
+      if (cachedPublicData) {
         console.log("useOptimizedPages: Using stale cached data as fallback");
         
         try {
           if (cachedPublicData) {
             const parsed = JSON.parse(cachedPublicData);
-            setPublicPages(parsed.data || []);
+            setPages(parsed.data || []);
           }
-          
-          if (cachedPrivateData) {
-            const parsed = JSON.parse(cachedPrivateData);
-            setPrivatePages(parsed.data || []);
-          }
-          
+
           // Still show error but at least we have some data
           setError("We're having trouble refreshing your data. Showing cached content.");
         } catch (e) {
@@ -125,8 +110,7 @@ const useOptimizedPages = (
         }
       } else {
         // No cached data available, show empty state
-        setPublicPages([]);
-        setPrivatePages([]);
+        setPages([]);
         setError("We couldn't load your content. Please try again later.");
       }
       
@@ -134,33 +118,18 @@ const useOptimizedPages = (
     }, 3000);
     
     try {
-      // First, fetch public pages
-      const publicResult = await fetchPages(
-        userId, 
+      // Fetch public pages only
+      const result = await fetchPages(
+        userId,
         true, // isPublic = true
         currentUserId,
         initialLimitCount
       );
-      
-      // Update public pages state
-      setPublicPages(publicResult.data || []);
-      setLastPublicKey(publicResult.lastKey);
-      setHasMorePublicPages(publicResult.hasMore);
-      
-      // If we're the owner and includePrivate is true, fetch private pages
-      if (includePrivate && currentUserId === userId) {
-        const privateResult = await fetchPages(
-          userId,
-          false, // isPublic = false
-          currentUserId,
-          initialLimitCount
-        );
-        
-        // Update private pages state
-        setPrivatePages(privateResult.data || []);
-        setLastPrivateKey(privateResult.lastKey);
-        setHasMorePrivatePages(privateResult.hasMore);
-      }
+
+      // Update pages state
+      setPages(result.data || []);
+      setLastPageKey(result.lastKey);
+      setHasMorePages(result.hasMore);
       
       // Reset fetch attempts on success
       fetchAttemptsRef.current = 0;
@@ -208,7 +177,7 @@ const useOptimizedPages = (
         if (cachedPublicData) {
           try {
             const parsed = JSON.parse(cachedPublicData);
-            setPublicPages(parsed.data || []);
+            setPages(parsed.data || []);
             setError("We're having trouble connecting to the server. Showing cached content.");
           } catch (e) {
             console.error("Error parsing cached data:", e);
@@ -216,83 +185,52 @@ const useOptimizedPages = (
         }
       }
     }
-  }, [userId, currentUserId, includePrivate, initialLimitCount]);
+  }, [userId, currentUserId, initialLimitCount]);
   
-  // Function to load more public pages
-  const loadMorePublicPages = useCallback(async (): Promise<void> => {
-    if (!lastPublicKey || isMorePublicLoading || !hasMorePublicPages) {
+  // Function to load more pages
+  const loadMorePages = useCallback(async (): Promise<void> => {
+    if (!lastPageKey || isMoreLoading || !hasMorePages) {
       return;
     }
-    
-    setIsMorePublicLoading(true);
-    
+
+    setIsMoreLoading(true);
+
     try {
       const result = await fetchPages(
         userId,
         true, // isPublic = true
         currentUserId,
         LOAD_MORE_LIMIT,
-        lastPublicKey
+        lastPageKey
       );
-      
+
       // Update state with new pages
-      setPublicPages(prev => [...prev, ...result.data]);
-      setLastPublicKey(result.lastKey);
-      setHasMorePublicPages(result.hasMore);
-      setIsMorePublicLoading(false);
+      setPages(prev => [...prev, ...result.data]);
+      setLastPageKey(result.lastKey);
+      setHasMorePages(result.hasMore);
+      setIsMoreLoading(false);
     } catch (err) {
-      console.error("Error loading more public pages:", err);
+      console.error("Error loading more pages:", err);
       setError("Failed to load more pages. Please try again.");
-      setIsMorePublicLoading(false);
+      setIsMoreLoading(false);
     }
-  }, [userId, currentUserId, lastPublicKey, isMorePublicLoading, hasMorePublicPages]);
-  
-  // Function to load more private pages
-  const loadMorePrivatePages = useCallback(async (): Promise<void> => {
-    if (!lastPrivateKey || isMorePrivateLoading || !hasMorePrivatePages || currentUserId !== userId) {
-      return;
-    }
-    
-    setIsMorePrivateLoading(true);
-    
-    try {
-      const result = await fetchPages(
-        userId,
-        false, // isPublic = false
-        currentUserId,
-        LOAD_MORE_LIMIT,
-        lastPrivateKey
-      );
-      
-      // Update state with new pages
-      setPrivatePages(prev => [...prev, ...result.data]);
-      setLastPrivateKey(result.lastKey);
-      setHasMorePrivatePages(result.hasMore);
-      setIsMorePrivateLoading(false);
-    } catch (err) {
-      console.error("Error loading more private pages:", err);
-      setError("Failed to load more private pages. Please try again.");
-      setIsMorePrivateLoading(false);
-    }
-  }, [userId, currentUserId, lastPrivateKey, isMorePrivateLoading, hasMorePrivatePages]);
+  }, [userId, currentUserId, lastPageKey, isMoreLoading, hasMorePages]);
+
   
   // Function to force refresh the data
   const refreshPages = useCallback((): void => {
     // Clear cache for this user
     clearPagesCache(userId);
-    
+
     // Reset states
-    setPublicPages([]);
-    setPrivatePages([]);
-    setLastPublicKey(null);
-    setLastPrivateKey(null);
-    setHasMorePublicPages(true);
-    setHasMorePrivatePages(true);
-    
+    setPages([]);
+    setLastPageKey(null);
+    setHasMorePages(true);
+
     // Reset fetch attempts
     fetchAttemptsRef.current = 0;
     backoffTimeRef.current = 1000;
-    
+
     // Load pages again
     loadInitialPages();
   }, [userId, loadInitialPages]);
@@ -320,26 +258,20 @@ const useOptimizedPages = (
     };
   }, [userId, loadInitialPages, refreshPages]);
   
-  // Combine public and private pages for the full list
-  const allPages = [...publicPages, ...privatePages];
-  
-  // Sort by lastModified (newest first)
-  allPages.sort((a, b) => {
+  // Sort pages by lastModified (newest first)
+  const sortedPages = [...pages].sort((a, b) => {
     const dateA = a.lastModified?.toDate?.() || new Date(a.lastModified || 0);
     const dateB = b.lastModified?.toDate?.() || new Date(b.lastModified || 0);
     return dateB - dateA;
   });
-  
+
   return {
-    pages: allPages,
-    publicPages,
-    privatePages,
+    pages: sortedPages,
     loading,
     error,
-    hasMorePages: hasMorePublicPages || hasMorePrivatePages,
-    isMoreLoading: isMorePublicLoading || isMorePrivateLoading,
-    loadMorePages: loadMorePublicPages,
-    loadMorePrivatePages,
+    hasMorePages,
+    isMoreLoading,
+    loadMorePages,
     refreshPages
   };
 };

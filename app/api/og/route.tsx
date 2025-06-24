@@ -91,11 +91,7 @@ export async function GET(request: Request) {
     let sponsorCount = 8; // Default for demo
 
     switch (type) {
-      case 'group':
-        typeLabel = 'Group';
-        displayTitle = title || `Group ${pageId.substring(0, 8)}...`;
-        displayAuthor = author || 'WeWrite Community';
-        break;
+      // Groups functionality removed
       case 'user':
         typeLabel = 'Profile';
         displayTitle = title || `User Profile`;

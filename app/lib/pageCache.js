@@ -3,8 +3,8 @@
 import { db } from "../firebase/database";
 import { collection, query, where, orderBy, limit, getDocs, startAfter } from "firebase/firestore";
 
-// Cache configuration
-const CACHE_EXPIRY = (5 * 60 * 1000); // 5 minutes in milliseconds
+// Cache configuration - RUTHLESS SIMPLIFICATION: Very short TTL
+const CACHE_EXPIRY = 0; // DISABLE CACHE - force fresh queries every time
 const CACHE_KEY_PREFIX = 'wewrite_pages_';
 
 /**

@@ -628,41 +628,7 @@ const FilteredSearchResults = forwardRef(({
               </div>
             )}
 
-            {/* Groups Section - only show in link editor mode */}
-            {isLinkEditor && groups.length > 0 && (
-              <div className="space-y-1 mb-4">
-                <h3 className="text-xs font-medium text-muted-foreground mb-2 px-1">
-                  Groups
-                </h3>
-                <div className="space-y-1">
-                  {groups.map((group) => (
-                    <button
-                      key={group.id}
-                      onClick={() => handleSelect(group)}
-                      className={`w-full text-left p-2 hover:bg-muted rounded-md transition-colors ${
-                        selectedId === group.id ? 'bg-muted' : ''
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-medium text-foreground">
-                            {group.title}
-                          </div>
-                          {group.description && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {group.description}
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {group.memberCount} member{group.memberCount !== 1 ? 's' : ''}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Groups functionality removed */}
 
             {/* No Results - Only show after search has completed and we have attempted a search */}
             {(search.length >= 2 || (isLinkEditor && lastRequestRef.current !== null)) &&

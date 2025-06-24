@@ -170,34 +170,7 @@ export async function generateGroupsSitemap(options: SitemapOptions = {}): Promi
     const groupsSnapshot = await get(groupsRef)
     const entries: SitemapEntry[] = []
 
-    if (groupsSnapshot.exists()) {
-      const groups = groupsSnapshot.val()
-
-      // Filter for public groups and create entries
-      Object.entries(groups).forEach(([groupId, groupData]: [string, any]) => {
-        // Only include public groups
-        if (!groupData.isPublic) return
-
-        const lastActivity = groupData.lastActivity ? new Date(groupData.lastActivity) :
-                           groupData.createdAt ? new Date(groupData.createdAt) : new Date()
-        const memberCount = groupData.members ? Object.keys(groupData.members).length : 0
-
-        let priority = 0.5
-        if (memberCount > 100) priority = 0.8
-        else if (memberCount > 20) priority = 0.7
-        else if (memberCount > 5) priority = 0.6
-
-        entries.push({
-          url: `${baseUrl}/group/${groupId}`,
-          lastModified: lastActivity,
-          changeFrequency: 'weekly',
-          priority
-        })
-      })
-
-      // Limit the results
-      entries.splice(maxGroups)
-    }
+    // Groups functionality removed
 
     // Generate XML sitemap
     const xmlEntries = entries.map(entry => `
@@ -225,7 +198,7 @@ export async function generateSitemapIndex(): Promise<string> {
   const sitemaps = [
     { url: `${baseUrl}/sitemap-pages.xml`, lastmod: new Date().toISOString() },
     { url: `${baseUrl}/sitemap-users.xml`, lastmod: new Date().toISOString() },
-    { url: `${baseUrl}/sitemap-groups.xml`, lastmod: new Date().toISOString() },
+    // Groups functionality removed
     { url: `${baseUrl}/sitemap-news.xml`, lastmod: new Date().toISOString() }
   ]
 

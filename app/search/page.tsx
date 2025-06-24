@@ -189,13 +189,13 @@ const SearchPage = React.memo(() => {
   // Memoize user data to prevent unnecessary re-renders
   const userId = useMemo(() => user?.uid || null, [user?.uid]);
   const userEmail = useMemo(() => user?.email || null, [user?.email]);
-  const userGroups = useMemo(() => user?.groups ? Object.keys(user.groups) : [], [user?.groups]);
+  // Groups functionality removed
 
   // Use isolated search state to prevent re-renders
-  const { currentQuery, results, isLoading, performSearch, clearSearch } = useSearchState(userId, userGroups);
+  const { currentQuery, results, isLoading, performSearch, clearSearch } = useSearchState(userId, []);
 
-  // Groups feature is always enabled (per memories) - no need for feature flag listener
-  const groupsEnabled = true;
+  // Groups functionality removed
+  const groupsEnabled = false;
 
   // Get initial query from URL only once on mount
   const initialQuery = useMemo(() => {

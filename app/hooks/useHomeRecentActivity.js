@@ -5,6 +5,7 @@ import { AuthContext } from "../providers/AuthProvider";
 import { getPageVersions } from "../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
 import { getBatchUserData } from "../firebase/batchUserData";
+import { registerHomeActivityInvalidation } from "../utils/globalCacheInvalidation";
 
 /**
  * Deduplicates activities by pageId, keeping only the most recent activity for each page
@@ -150,52 +151,18 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
     }
   };
 
-  // Helper function to check if a page belongs to a group
-  // and if the current user has access to it based on group settings
+  // Simplified page access check - all pages are now public
   const checkPageGroupAccess = async (pageData) => {
-    try {
-      // If page doesn't belong to a group, it's accessible based on its own privacy setting
-      if (!pageData.groupId) {
-        return pageData.isPublic || (userRef.current && pageData.userId === userRef.current.uid);
-      }
-
-      // Get the group data
-      const rtdb = getDatabase();
-      const groupRef = ref(rtdb, `groups/${pageData.groupId}`);
-      const snapshot = await get(groupRef);
-
-      if (!snapshot.exists()) {
-        // Group doesn't exist, fall back to page's own privacy setting
-        return pageData.isPublic || (userRef.current && pageData.userId === userRef.current.uid);
-      }
-
-      const groupData = snapshot.val();
-
-      // If group is public, all pages in the group are accessible to everyone
-      if (groupData.isPublic) return true;
-
-      // For private groups, only members can access
-      if (!userRef.current) return false; // Not logged in
-
-      // If user is the page owner, allow access
-      if (pageData.userId === userRef.current.uid) return true;
-
-      // If user is the group owner, allow access
-      if (groupData.owner === userRef.current.uid) return true;
-
-      // If user is a group member, allow access
-      if (groupData.members && groupData.members[userRef.current.uid]) return true;
-
-      // Otherwise, deny access to private group content
-      return false;
-    } catch (err) {
-      console.error("Error checking group access:", err);
-      return false; // Default to denying access on error
-    }
+    // All pages are now public by default, only check ownership for editing
+    return true;
   };
 
   // Track loading state to prevent concurrent fetches
   const isFetchingRef = useRef(false);
+
+  // Blacklist for pages that have failed with permission denied errors
+  // This prevents repeated attempts to access private pages
+  const permissionDeniedPagesRef = useRef(new Set());
 
   // Function to fetch recent activity data
   const fetchRecentActivity = async () => {
@@ -328,6 +295,8 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
           return;
         }
 
+        console.log(`Found ${pagesSnapshot.docs.length} pages from query`);
+
 
 
         // For followed pages, we need to sort the results manually since we can't use orderBy with "in" queries
@@ -359,6 +328,12 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
           // since we removed the server-side filter to avoid failed-precondition errors
           if (pageData.deleted === true) continue;
 
+          // Check if this page is in our permission denied blacklist
+          if (permissionDeniedPagesRef.current.has(pageData.id)) {
+            console.log(`Skipping page ${pageData.id} - previously failed with permission denied`);
+            continue;
+          }
+
           // Check if the page belongs to a private group and if the user has access
           const hasAccess = await checkPageGroupAccess(pageData);
           if (!hasAccess) continue;
@@ -378,7 +353,14 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
               }
             });
           } catch (err) {
-            console.error("Error processing page versions:", err);
+            // Only log actual errors, not permission denied which is expected for private pages
+            if (err?.code !== 'permission-denied') {
+              console.error("Error processing page versions:", err);
+            } else {
+              console.log(`Permission denied accessing page ${pageData.id} versions - adding to blacklist to prevent retries`);
+              // Add this page to the blacklist to prevent future attempts
+              permissionDeniedPagesRef.current.add(pageData.id);
+            }
           }
         }
 
@@ -488,6 +470,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
 
         // Wait for all promises to resolve
         const activityResults = await Promise.all(activitiesPromises);
+        console.log(`Processed ${activitiesPromises.length} pages, got ${activityResults.filter(r => r !== null).length} valid activities`);
 
         // Filter out null results, private pages, and activities with missing usernames
         // Ensure activityResults is an array before filtering
@@ -509,8 +492,11 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
             return activity.isPublic === true;
           });
 
+        console.log(`After filtering: ${filteredActivities.length} activities remain`);
+
         // DEDUPLICATION LOGIC: Ensure variety by showing only the most recent activity per page
         const deduplicatedActivities = deduplicateActivitiesByPage(filteredActivities);
+        console.log(`After deduplication: ${deduplicatedActivities.length} activities remain`);
 
         // Sort by timestamp (most recent first) and limit results
         const validActivities = deduplicatedActivities
@@ -522,6 +508,8 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
           })
           .slice(0, limitRef.current);
 
+        console.log(`Final activities to display: ${validActivities.length}`);
+
 
 
         if (validActivities.length === 0 && followedOnlyRef.current) {
@@ -531,35 +519,117 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
         setActivities(validActivities);
       } catch (err) {
         console.error("Error with Firestore query:", err);
-        setError({
-          message: "Failed to fetch recent activity",
-          details: err.message || "Unknown database error",
-          code: err.code || "unknown"
-        });
 
-        // For logged-out users, provide empty array instead of showing error
-        if (!userRef.current) {
-          setActivities([]);
+        // For permission denied errors, log but don't show error to user
+        if (err?.code === 'permission-denied') {
+          console.log("Permission denied in recent activity query - this might indicate a configuration issue");
+          setError(null);
+        } else {
+          setError({
+            message: "Failed to fetch recent activity",
+            details: err.message || "Unknown database error",
+            code: err.code || "unknown"
+          });
         }
+
+        // Always try to show empty activities rather than leaving in loading state
+        setActivities([]);
       }
     } catch (err) {
       console.error("Error in fetchRecentActivity:", err);
-      setError({
-        message: "Failed to process recent activity data",
-        details: err.message || "Unknown error",
-        code: err.code || "unknown"
-      });
+
+      // For permission denied errors, log but don't show error to user
+      if (err?.code === 'permission-denied') {
+        console.log("Permission denied in recent activity processing - this might indicate a configuration issue");
+        setError(null);
+      } else {
+        setError({
+          message: "Failed to process recent activity data",
+          details: err.message || "Unknown error",
+          code: err.code || "unknown"
+        });
+      }
+
+      // Always try to show empty activities rather than leaving in loading state
+      setActivities([]);
     } finally {
       setLoading(false);
       isFetchingRef.current = false;
     }
   };
 
+  // Simple refresh trigger state
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Listen for page creation events to trigger refresh
+  useEffect(() => {
+    const handlePageCreated = (event) => {
+      const pageId = event.detail?.pageId;
+      const pageTitle = event.detail?.title;
+      const userId = event.detail?.userId;
+      console.log('🔵 useHomeRecentActivity: Page created event received, refreshing recent activity', {
+        pageId,
+        pageTitle,
+        userId,
+        currentActivitiesCount: activities.length,
+        event: event.detail
+      });
+
+
+      // Trigger refresh by updating state
+      console.log('🔵 useHomeRecentActivity: Triggering refresh with refreshTrigger update');
+      setRefreshTrigger(prev => {
+        const newValue = prev + 1;
+        console.log('🔵 useHomeRecentActivity: refreshTrigger updated from', prev, 'to', newValue);
+        return newValue;
+      });
+    };
+
+    if (typeof window !== 'undefined') {
+      console.log('🔵 useHomeRecentActivity: Registering page-created event listener');
+
+      window.addEventListener('page-created', handlePageCreated);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        console.log('🔵 useHomeRecentActivity: Unregistering page-created event listener');
+        window.removeEventListener('page-created', handlePageCreated);
+      }
+    };
+  }, []);
+
+  // Register global cache invalidation callback (new system)
+  useEffect(() => {
+    console.log('🔵 useHomeRecentActivity: Registering global cache invalidation');
+
+    const unregister = registerHomeActivityInvalidation(() => {
+      console.log('🔵 useHomeRecentActivity: Global cache invalidation triggered');
+
+      // Trigger refresh by updating state
+      console.log('🔵 useHomeRecentActivity: Triggering refresh with refreshTrigger update');
+      setRefreshTrigger(prev => {
+        const newValue = prev + 1;
+        console.log('🔵 useHomeRecentActivity: refreshTrigger updated from', prev, 'to', newValue);
+        return newValue;
+      });
+    });
+
+    return () => {
+      console.log('🔵 useHomeRecentActivity: Unregistering global cache invalidation');
+      unregister();
+    };
+  }, []);
+
   useEffect(() => {
     // Reset state before fetching
     setActivities([]);
     setLoading(true);
     setError(null);
+
+    // Clear the permission denied blacklist when refreshing
+    // This allows retrying pages if permissions have changed
+    permissionDeniedPagesRef.current.clear();
 
     // Fetch data
     fetchRecentActivity();
@@ -569,7 +639,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
       // If component unmounts while fetching, mark as not fetching
       isFetchingRef.current = false;
     };
-  }, [followedOnly, mineOnly, limitCount]); // Re-run when followedOnly, mineOnly, or limitCount changes
+  }, [followedOnly, mineOnly, limitCount, refreshTrigger]); // Re-run when followedOnly, mineOnly, limitCount, or refreshTrigger changes
 
   // Provide dummy values for hasMore and loadingMore to match the interface of useRecentActivity
   const hasMore = false;
@@ -584,3 +654,4 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
 };
 
 export default useHomeRecentActivity;
+// Updated to handle permission denied errors gracefully

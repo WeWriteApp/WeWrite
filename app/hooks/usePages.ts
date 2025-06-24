@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { collection, query, where, orderBy, onSnapshot, limit, startAfter, getDocs, DocumentSnapshot, QueryDocumentSnapshot } from "firebase/firestore";
+import { registerUserPagesInvalidator, unregisterCacheInvalidator } from "../utils/cacheInvalidation";
+import { registerUserPagesInvalidation } from "../utils/globalCacheInvalidation";
 
 // Types
 interface PageData {
@@ -15,27 +17,19 @@ interface PageData {
 
 interface CacheData {
   pages: PageData[];
-  privatePages: PageData[];
   lastPageKey: { id: string } | null;
-  lastPrivatePageKey: { id: string } | null;
   hasMorePages: boolean;
-  hasMorePrivatePages: boolean;
   timestamp: number;
 }
 
 interface UsePagesReturn {
   loading: boolean;
   pages: PageData[];
-  privatePages: PageData[];
   lastPageKey: QueryDocumentSnapshot | null;
-  lastPrivatePageKey: QueryDocumentSnapshot | null;
   isMoreLoading: boolean;
-  isMorePrivateLoading: boolean;
   hasMorePages: boolean;
-  hasMorePrivatePages: boolean;
   error: string | null;
   fetchMorePages: () => Promise<PageData[]>;
-  fetchMorePrivatePages: () => Promise<PageData[]>;
   refreshData: () => void;
 }
 
@@ -46,24 +40,29 @@ const loadMoreLimitCount = 30; // Reduced from 100 to improve performance
 
 const usePages = (
   userId: string,
-  includePrivate: boolean = true,
   currentUserId: string | null = null,
   isUserPage: boolean = false
 ): UsePagesReturn => {
+
+
   // Use higher limit for user pages, default limit for home page
   const initialLimitCount = isUserPage ? USER_PAGE_INITIAL_LIMIT : DEFAULT_INITIAL_LIMIT;
   const [loading, setLoading] = useState<boolean>(true);
   const [pages, setPages] = useState<PageData[]>([]);
-  const [privatePages, setPrivatePages] = useState<PageData[]>([]);
   const [lastPageKey, setLastPageKey] = useState<QueryDocumentSnapshot | null>(null);
-  const [lastPrivatePageKey, setLastPrivatePageKey] = useState<QueryDocumentSnapshot | null>(null);
   const [isMoreLoading, setIsMoreLoading] = useState<boolean>(false);
-  const [isMorePrivateLoading, setIsMorePrivateLoading] = useState<boolean>(false);
   const [hasMorePages, setHasMorePages] = useState<boolean>(true);
-  const [hasMorePrivatePages, setHasMorePrivatePages] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
   const fetchInitialPages = async (): Promise<() => void> => {
+    console.log('🔍 DEBUG: fetchInitialPages() function called!');
+    console.log('🔍 DEBUG: fetchInitialPages parameters:', {
+      userId,
+      currentUserId,
+      initialLimitCount
+    });
+
     // Check if the current user is the owner of the pages
     const isOwner = currentUserId && userId === currentUserId;
 
@@ -78,15 +77,12 @@ const usePages = (
           const parsed = JSON.parse(cachedData);
           const cacheAge = Date.now() - (parsed.timestamp || 0);
 
-          // Use cache if it's less than 5 minutes old
-          if (cacheAge < 5 * 60 * 1000) {
+          // DISABLE CACHE - never use cached data
+          if (false) {
             console.log("usePages: Using cached data");
             setPages(parsed.pages || []);
-            setPrivatePages(parsed.privatePages || []);
             setLastPageKey(parsed.lastPageKey ? { ...parsed.lastPageKey } : null);
-            setLastPrivatePageKey(parsed.lastPrivatePageKey ? { ...parsed.lastPrivatePageKey } : null);
             setHasMorePages(parsed.hasMorePages);
-            setHasMorePrivatePages(parsed.hasMorePrivatePages);
 
             // Still set loading to false even when using cached data
             setLoading(false);
@@ -119,7 +115,6 @@ const usePages = (
         console.log("usePages: No pages loaded yet, providing empty data as fallback");
         // Only set empty arrays if we don't have any data yet
         setPages([]);
-        setPrivatePages([]);
       } else {
         console.log("usePages: Keeping existing pages data instead of clearing");
         // Keep existing data, just update loading state
@@ -144,102 +139,86 @@ const usePages = (
       // Define the fields we need to reduce data transfer
       const requiredFields = ['title', 'lastModified', 'isPublic', 'userId', 'groupId', 'createdAt'];
 
-      // Use separate queries for public and private pages to improve performance
-      let publicPagesQuery;
-      let privatePagesQuery = null;
+      // CRITICAL FIX: Show ALL pages (public + private) when viewing your own profile
+      // Only show public pages when viewing someone else's profile
+      const isOwner = currentUserId && userId === currentUserId;
 
-      // Query for public pages (exclude deleted)
-      // CRITICAL FIX: The compound query with multiple where clauses and orderBy
-      // requires a composite index that may not exist. Let's simplify the query.
-      publicPagesQuery = query(
-        collection(db, 'pages'),
-        where('userId', '==', userId),
-        where('isPublic', '==', true),
-        orderBy('lastModified', 'desc'),
-        limit(initialLimitCount)
-      );
-
-      // Only query for private pages if the current user is the owner
-      if (includePrivate && isOwner) {
-        console.log('usePages: Building private pages query for owner');
-        privatePagesQuery = query(
+      let pagesQuery;
+      if (isOwner) {
+        // Owner sees all their pages (public + private, exclude deleted)
+        pagesQuery = query(
           collection(db, 'pages'),
           where('userId', '==', userId),
-          where('isPublic', '==', false),
+          orderBy('lastModified', 'desc'),
+          limit(initialLimitCount)
+        );
+      } else {
+        // Others only see public pages (exclude deleted)
+        pagesQuery = query(
+          collection(db, 'pages'),
+          where('userId', '==', userId),
+          where('isPublic', '==', true),
           orderBy('lastModified', 'desc'),
           limit(initialLimitCount)
         );
       }
 
-      // Execute the queries with detailed logging
-      console.log('usePages: Executing public pages query...');
-      const publicPagesPromise = getDocs(publicPagesQuery);
-      const privatePagesPromise = privatePagesQuery ? getDocs(privatePagesQuery) : Promise.resolve(null);
+      // Execute the query with detailed logging
+      console.log(`usePages: Executing ${isOwner ? 'all pages' : 'public pages'} query for user ${userId}...`);
+      const pagesSnapshot = await getDocs(pagesQuery);
 
-      // Wait for both queries to complete
-      const [publicSnapshot, privateSnapshot] = await Promise.all([
-        publicPagesPromise,
-        privatePagesPromise
-      ]);
-
-      console.log('usePages: Public pages query completed. Found', publicSnapshot.size, 'documents');
+      console.log('usePages: Pages query completed. Found', pagesSnapshot.size, 'documents');
 
       // Clear the timeout since we got a response
       clearTimeout(queryTimeoutId);
 
-      // Process public pages with filtering for deleted pages
+      // Process pages with filtering for deleted pages
       const pagesArray = [];
-      publicSnapshot.forEach((doc) => {
+      pagesSnapshot.forEach((doc) => {
         try {
           const pageData = { id: doc.id, ...doc.data() };
           // CRITICAL FIX: Filter out deleted pages client-side since the compound index might not exist
           if (!pageData.deleted) {
             pagesArray.push(pageData);
+            // DEBUG: Log page details to understand ordering
+            console.log('🔍 DEBUG: Page found:', {
+              id: pageData.id,
+              title: pageData.title,
+              lastModified: pageData.lastModified,
+              createdAt: pageData.createdAt,
+              isPublic: pageData.isPublic
+            });
           } else {
             console.log('usePages: Filtered out deleted page:', pageData.id);
           }
         } catch (docError) {
-          console.error(`Error processing public document ${doc.id}:`, docError);
+          console.error(`Error processing document ${doc.id}:`, docError);
         }
       });
 
-      console.log('usePages: Processed', pagesArray.length, 'public pages after filtering');
-
-      // Process private pages if available with filtering for deleted pages
-      const privateArray = [];
-      if (privateSnapshot) {
-        privateSnapshot.forEach((doc) => {
-          try {
-            const pageData = { id: doc.id, ...doc.data() };
-            // Filter out deleted pages client-side
-            if (!pageData.deleted) {
-              privateArray.push(pageData);
-            } else {
-              console.log('usePages: Filtered out deleted private page:', pageData.id);
-            }
-          } catch (docError) {
-            console.error(`Error processing private document ${doc.id}:`, docError);
-          }
-        });
-      }
-
-      console.log('usePages: Processed', privateArray.length, 'private pages after filtering');
+      console.log('usePages: Processed', pagesArray.length, 'pages after filtering');
+      console.log('🔍 DEBUG: User pages query returned:', {
+        totalCount: pagesArray.length,
+        isOwner: isOwner,
+        firstFewPages: pagesArray.slice(0, 3).map(p => ({
+          id: p.id,
+          title: p.title,
+          lastModified: p.lastModified,
+          isPublic: p.isPublic,
+          userId: p.userId
+        }))
+      });
 
       // Update state with the results
       setPages(pagesArray);
-      setPrivatePages(privateArray);
 
-      // Set pagination flags
-      setHasMorePages(pagesArray.length >= initialLimitCount);
-      setHasMorePrivatePages(privateArray.length >= initialLimitCount);
+      // Set pagination flags based on RAW query results, not filtered results
+      // This accounts for client-side filtering of deleted pages
+      setHasMorePages(pagesSnapshot.docs.length >= initialLimitCount);
 
-      // Set the last document keys for pagination
-      if (publicSnapshot.docs.length > 0) {
-        setLastPageKey(publicSnapshot.docs[publicSnapshot.docs.length - 1]);
-      }
-
-      if (privateSnapshot && privateSnapshot.docs.length > 0) {
-        setLastPrivatePageKey(privateSnapshot.docs[privateSnapshot.docs.length - 1]);
+      // Set the last document key for pagination
+      if (pagesSnapshot.docs.length > 0) {
+        setLastPageKey(pagesSnapshot.docs[pagesSnapshot.docs.length - 1]);
       }
 
       // Cache the results for future use
@@ -247,12 +226,8 @@ const usePages = (
         if (typeof window !== 'undefined' && window.localStorage) {
           const cacheData = {
             pages: pagesArray,
-            privatePages: privateArray,
-            lastPageKey: publicSnapshot.docs.length > 0 ? { id: publicSnapshot.docs[publicSnapshot.docs.length - 1].id } : null,
-            lastPrivatePageKey: privateSnapshot && privateSnapshot.docs.length > 0 ?
-              { id: privateSnapshot.docs[privateSnapshot.docs.length - 1].id } : null,
+            lastPageKey: pagesSnapshot.docs.length > 0 ? { id: pagesSnapshot.docs[pagesSnapshot.docs.length - 1].id } : null,
             hasMorePages: pagesArray.length >= initialLimitCount,
-            hasMorePrivatePages: privateArray.length >= initialLimitCount,
             timestamp: Date.now()
           };
           localStorage.setItem(cacheKey, JSON.stringify(cacheData));
@@ -288,39 +263,33 @@ const usePages = (
       // This is a simplified version of fetchInitialPages that doesn't update loading state
       const isOwner = currentUserId && userId === currentUserId;
 
-      // Define queries similar to fetchInitialPages (filter deleted pages client-side)
-      let publicPagesQuery = query(
-        collection(db, 'pages'),
-        where('userId', '==', userId),
-        where('isPublic', '==', true),
-        orderBy('lastModified', 'desc'),
-        limit(initialLimitCount)
-      );
-
-      let privatePagesQuery = null;
-      if (includePrivate && isOwner) {
-        // Query for private pages (filter deleted pages client-side)
-        privatePagesQuery = query(
+      // Define query based on ownership (same logic as fetchInitialPages)
+      let pagesQuery;
+      if (isOwner) {
+        // Owner sees all their pages (public + private, exclude deleted)
+        pagesQuery = query(
           collection(db, 'pages'),
           where('userId', '==', userId),
-          where('isPublic', '==', false),
+          orderBy('lastModified', 'desc'),
+          limit(initialLimitCount)
+        );
+      } else {
+        // Others only see public pages (exclude deleted)
+        pagesQuery = query(
+          collection(db, 'pages'),
+          where('userId', '==', userId),
+          where('isPublic', '==', true),
           orderBy('lastModified', 'desc'),
           limit(initialLimitCount)
         );
       }
 
-      // Execute the queries
-      const publicPagesPromise = getDocs(publicPagesQuery);
-      const privatePagesPromise = privatePagesQuery ? getDocs(privatePagesQuery) : Promise.resolve(null);
-
-      const [publicSnapshot, privateSnapshot] = await Promise.all([
-        publicPagesPromise,
-        privatePagesPromise
-      ]);
+      // Execute the query
+      const pagesSnapshot = await getDocs(pagesQuery);
 
       // Process results and update state with client-side filtering
       const pagesArray = [];
-      publicSnapshot.forEach((doc) => {
+      pagesSnapshot.forEach((doc) => {
         try {
           const pageData = { id: doc.id, ...doc.data() };
           // Filter out deleted pages client-side
@@ -332,36 +301,16 @@ const usePages = (
         }
       });
 
-      const privateArray = [];
-      if (privateSnapshot) {
-        privateSnapshot.forEach((doc) => {
-          try {
-            const pageData = { id: doc.id, ...doc.data() };
-            // Filter out deleted pages client-side
-            if (!pageData.deleted) {
-              privateArray.push(pageData);
-            }
-          } catch (docError) {
-            console.error(`Error processing private document ${doc.id}:`, docError);
-          }
-        });
-      }
-
       // Update state with fresh data
       setPages(pagesArray);
-      setPrivatePages(privateArray);
 
-      // Update pagination state
-      setHasMorePages(pagesArray.length >= initialLimitCount);
-      setHasMorePrivatePages(privateArray.length >= initialLimitCount);
+      // Update pagination state based on RAW query results, not filtered results
+      // This accounts for client-side filtering of deleted pages
+      setHasMorePages(pagesSnapshot.docs.length >= initialLimitCount);
 
-      // Update last keys for pagination
-      if (publicSnapshot.docs.length > 0) {
-        setLastPageKey(publicSnapshot.docs[publicSnapshot.docs.length - 1]);
-      }
-
-      if (privateSnapshot && privateSnapshot.docs.length > 0) {
-        setLastPrivatePageKey(privateSnapshot.docs[privateSnapshot.docs.length - 1]);
+      // Update last key for pagination
+      if (pagesSnapshot.docs.length > 0) {
+        setLastPageKey(pagesSnapshot.docs[pagesSnapshot.docs.length - 1]);
       }
 
       // Update cache with fresh data
@@ -370,12 +319,8 @@ const usePages = (
           const cacheKey = `user_pages_${userId}_${isOwner ? 'owner' : 'visitor'}_${initialLimitCount}`;
           const cacheData = {
             pages: pagesArray,
-            privatePages: privateArray,
-            lastPageKey: publicSnapshot.docs.length > 0 ? { id: publicSnapshot.docs[publicSnapshot.docs.length - 1].id } : null,
-            lastPrivatePageKey: privateSnapshot && privateSnapshot.docs.length > 0 ?
-              { id: privateSnapshot.docs[privateSnapshot.docs.length - 1].id } : null,
-            hasMorePages: pagesArray.length >= initialLimitCount,
-            hasMorePrivatePages: privateArray.length >= initialLimitCount,
+            lastPageKey: pagesSnapshot.docs.length > 0 ? { id: pagesSnapshot.docs[pagesSnapshot.docs.length - 1].id } : null,
+            hasMorePages: pagesSnapshot.docs.length >= initialLimitCount,
             timestamp: Date.now()
           };
           localStorage.setItem(cacheKey, JSON.stringify(cacheData));
@@ -406,15 +351,28 @@ const usePages = (
       // Define the fields we need to reduce data transfer
       const requiredFields = ['title', 'lastModified', 'isPublic', 'userId', 'groupId', 'createdAt'];
 
-      // Query for more public pages (filter deleted pages client-side)
-      const moreQuery = query(
-        collection(db, 'pages'),
-        where('userId', '==', userId),
-        where('isPublic', '==', true),
-        orderBy('lastModified', 'desc'),
-        startAfter(lastPageKey),
-        limit(loadMoreLimitCount)
-      );
+      // Query for more pages (same logic as initial fetch)
+      let moreQuery;
+      if (isOwner) {
+        // Owner sees all their pages (public + private, exclude deleted)
+        moreQuery = query(
+          collection(db, 'pages'),
+          where('userId', '==', userId),
+          orderBy('lastModified', 'desc'),
+          startAfter(lastPageKey),
+          limit(loadMoreLimitCount)
+        );
+      } else {
+        // Others only see public pages (exclude deleted)
+        moreQuery = query(
+          collection(db, 'pages'),
+          where('userId', '==', userId),
+          where('isPublic', '==', true),
+          orderBy('lastModified', 'desc'),
+          startAfter(lastPageKey),
+          limit(loadMoreLimitCount)
+        );
+      }
 
       setIsMoreLoading(true);
 
@@ -444,7 +402,7 @@ const usePages = (
 
       setPages((prevPages) => [...prevPages, ...newPagesArray]);
 
-      // Update pagination state
+      // Update pagination state based on RAW query results, not filtered results
       setHasMorePages(snapshot.docs.length >= loadMoreLimitCount);
 
       // Update last key for pagination
@@ -486,114 +444,72 @@ const usePages = (
     }
   };
 
-  // Function to fetch more private pages
-  const fetchMorePrivatePages = async (): Promise<PageData[]> => {
-    try {
-      // TEMPORARY: Use dynamic import like the working API
-      const { db } = await import('../firebase/database');
 
-      // Check if the current user is the owner of the pages
-      const isOwner = currentUserId && userId === currentUserId;
-
-      if (!isOwner) {
-        throw new Error("You don't have permission to view private pages");
-      }
-
-      if (!lastPrivatePageKey) {
-        setHasMorePrivatePages(false);
-        throw new Error("No more private pages to load");
-      }
-
-      // Define the fields we need to reduce data transfer
-      const requiredFields = ['title', 'lastModified', 'isPublic', 'userId', 'groupId', 'createdAt'];
-
-      // Query for more private pages (filter deleted pages client-side)
-      const moreQuery = query(
-        collection(db, 'pages'),
-        where('userId', '==', userId),
-        where('isPublic', '==', false),
-        orderBy('lastModified', 'desc'),
-        startAfter(lastPrivatePageKey),
-        limit(loadMoreLimitCount)
-      );
-
-      setIsMorePrivateLoading(true);
-
-      // Set up a timeout to detect stalled queries
-      const timeoutId = setTimeout(() => {
-        console.warn("usePages: Load more private query taking too long, may be stalled");
-        setIsMorePrivateLoading(false);
-        setError("Failed to load more private pages. Please try again later.");
-      }, 5000);
-
-      const snapshot = await getDocs(moreQuery);
-      clearTimeout(timeoutId);
-
-      const newPrivateArray = [];
-
-      snapshot.forEach((doc) => {
-        try {
-          const pageData = { id: doc.id, ...doc.data() };
-          // Filter out deleted pages client-side
-          if (!pageData.deleted) {
-            newPrivateArray.push(pageData);
-          }
-        } catch (docError) {
-          console.error(`Error processing private document ${doc.id}:`, docError);
-        }
-      });
-
-      setPrivatePages((prevPages) => [...prevPages, ...newPrivateArray]);
-
-      // Update pagination state
-      setHasMorePrivatePages(snapshot.docs.length >= loadMoreLimitCount);
-
-      // Update last key for pagination
-      if (snapshot.docs.length > 0) {
-        setLastPrivatePageKey(snapshot.docs[snapshot.docs.length - 1]);
-      } else {
-        setHasMorePrivatePages(false);
-      }
-
-      // Update cache with the new combined data
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          const cacheKey = `user_pages_${userId}_${isOwner ? 'owner' : 'visitor'}_${initialLimitCount}`;
-          const cachedData = localStorage.getItem(cacheKey);
-
-          if (cachedData) {
-            const parsed = JSON.parse(cachedData);
-            const updatedCache = {
-              ...parsed,
-              privatePages: [...(parsed.privatePages || []), ...newPrivateArray],
-              lastPrivatePageKey: snapshot.docs.length > 0 ? { id: snapshot.docs[snapshot.docs.length - 1].id } : parsed.lastPrivatePageKey,
-              hasMorePrivatePages: snapshot.docs.length >= loadMoreLimitCount,
-              timestamp: Date.now()
-            };
-            localStorage.setItem(cacheKey, JSON.stringify(updatedCache));
-          }
-        }
-      } catch (cacheError) {
-        console.error("Error updating cache after loading more private pages:", cacheError);
-      }
-
-      setIsMorePrivateLoading(false);
-      return newPrivateArray;
-    } catch (err) {
-      console.error("Error fetching more private pages:", err);
-      setError("Failed to load more private pages. Please try again later.");
-      setIsMorePrivateLoading(false);
-      throw err;
-    }
-  };
 
   // Track fetch attempts to prevent infinite loops
   const fetchAttemptsRef = useRef(0);
   const maxFetchAttempts = 3;
   const lastFetchTimeRef = useRef(0);
 
+  // RUTHLESS SIMPLIFICATION: Remove all event listening complexity
+  // Just rely on short TTL (5 seconds) and browser refresh
+
+  // Register global cache invalidation callback (new system)
+  useEffect(() => {
+    console.log('🔵 usePages: Registering global cache invalidation for userId:', userId);
+
+    const unregister = registerUserPagesInvalidation(() => {
+      console.log('🔵 usePages: Global cache invalidation triggered for userId:', userId);
+
+      // Clear localStorage cache for this user
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const isOwner = currentUserId && userId === currentUserId;
+          const cacheKey = `user_pages_${userId}_${isOwner ? 'owner' : 'visitor'}_${initialLimitCount}`;
+          console.log('🔵 usePages: Cleared localStorage cache for key:', cacheKey);
+          localStorage.removeItem(cacheKey);
+
+          // Also clear any activity caches
+          const activityKeys = Object.keys(localStorage).filter(key =>
+            key.includes('activity_cache_') || key.includes('recent_activity_')
+          );
+          activityKeys.forEach(key => {
+            localStorage.removeItem(key);
+            console.log('🔵 usePages: Cleared activity cache key:', key);
+          });
+        }
+      } catch (error) {
+        console.error('Error clearing localStorage cache:', error);
+      }
+
+      // Trigger refresh by updating state
+      console.log('🔵 usePages: Triggering refresh with refreshTrigger update');
+      setRefreshTrigger(prev => {
+        const newValue = prev + 1;
+        console.log('🔵 usePages: refreshTrigger updated from', prev, 'to', newValue);
+        return newValue;
+      });
+    });
+
+    return () => {
+      console.log('🔵 usePages: Unregistering global cache invalidation for userId:', userId);
+      unregister();
+    };
+  }, [userId, currentUserId, initialLimitCount]);
+
+  // Register old cache invalidation callback (keep for compatibility)
+  useEffect(() => {
+    if (userId) {
+      const unregister = registerUserPagesInvalidator(userId, () => {
+        setRefreshTrigger(prev => prev + 1);
+      });
+      return unregister;
+    }
+  }, [userId, currentUserId, initialLimitCount]);
+
   // Fetch initial pages when the component mounts
   useEffect(() => {
+
     let unsubscribe = () => {};
     let fetchTimeoutId = null;
     let hardTimeoutId = null;
@@ -609,9 +525,7 @@ const usePages = (
         if (pages.length === 0) {
           console.log("usePages: Hard timeout - no pages loaded yet, providing empty data as fallback");
           setPages([]);
-          setPrivatePages([]);
           setHasMorePages(false);
-          setHasMorePrivatePages(false);
         } else {
           console.log("usePages: Hard timeout - keeping existing pages data instead of clearing");
           // Keep existing data, just update loading state
@@ -651,9 +565,12 @@ const usePages = (
 
       console.log(`usePages: Fetching pages for user ${userId}, attempt ${fetchAttemptsRef.current}`);
 
+
       try {
+        console.log('🔍 DEBUG: Calling fetchInitialPages() now...');
         // Execute the fetch function (now returns a no-op unsubscribe)
         unsubscribe = await fetchInitialPages();
+        console.log('🔍 DEBUG: fetchInitialPages() completed successfully');
 
         // Reset fetch attempts on successful fetch
         fetchAttemptsRef.current = 0;
@@ -746,19 +663,22 @@ const usePages = (
         console.error("usePages: Error during cleanup:", err);
       }
     };
-  }, [userId, currentUserId, initialLimitCount, includePrivate]);
+  }, [userId, currentUserId, initialLimitCount, refreshTrigger]);
+
+  // Manual refresh function
+  const refreshData = useCallback(() => {
+    console.log('🔄 Manual refresh triggered for usePages');
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
 
   return {
     pages,
-    privatePages,
     loading,
     error,
     hasMorePages,
-    hasMorePrivatePages,
     isMoreLoading,
-    isMorePrivateLoading,
     fetchMorePages,
-    fetchMorePrivatePages
+    refreshData
   };
 };
 

@@ -35,7 +35,15 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Request is required' }, { status: 400 });
   }
   try {
-    const body = await request.json();
+    // Handle malformed JSON gracefully
+    let body;
+    try {
+      body = await request.json();
+    } catch (jsonError) {
+      console.error('Invalid JSON in errors request:', jsonError.message);
+      return NextResponse.json({ success: true, warning: 'Invalid JSON, error logged locally only' }, { status: 200 });
+    }
+
     const { error } = body;
 
     if (!error) {

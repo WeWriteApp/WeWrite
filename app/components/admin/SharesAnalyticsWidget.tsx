@@ -9,11 +9,12 @@ import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface SharesAnalyticsWidgetProps {
   dateRange: DateRange;
+  granularity?: number;
   className?: string;
 }
 
-export function SharesAnalyticsWidget({ dateRange, className = "" }: SharesAnalyticsWidgetProps) {
-  const { data, loading, error } = useSharesMetrics(dateRange);
+export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }: SharesAnalyticsWidgetProps) {
+  const { data, loading, error } = useSharesMetrics(dateRange, granularity);
   const chartConfig = useResponsiveChart(data.length, data);
 
   // Check if we have any data

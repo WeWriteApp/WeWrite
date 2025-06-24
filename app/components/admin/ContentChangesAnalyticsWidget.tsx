@@ -9,11 +9,12 @@ import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface ContentChangesAnalyticsWidgetProps {
   dateRange: DateRange;
+  granularity?: number;
   className?: string;
 }
 
-export function ContentChangesAnalyticsWidget({ dateRange, className = "" }: ContentChangesAnalyticsWidgetProps) {
-  const { data, loading, error } = useContentChangesMetrics(dateRange);
+export function ContentChangesAnalyticsWidget({ dateRange, granularity, className = "" }: ContentChangesAnalyticsWidgetProps) {
+  const { data, loading, error } = useContentChangesMetrics(dateRange, granularity);
   const chartConfig = useResponsiveChart(data.length, data);
 
   // Check if we have any data
