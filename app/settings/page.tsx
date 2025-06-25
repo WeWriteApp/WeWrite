@@ -28,11 +28,29 @@ export default function SettingsIndexPage() {
 
   // Check feature flags with proper user ID for real-time updates
   const paymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
-  const tokenSystemEnabled = useFeatureFlag('token_system', user?.email, user?.uid);
+  // Token system is enabled by payments feature flag
+  const tokenSystemEnabled = paymentsEnabled;
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔥 Settings page feature flags:', {
+      user: !!user,
+      userEmail: user?.email,
+      userUid: user?.uid,
+      paymentsEnabled,
+      tokenSystemEnabled
+    });
+  }, [user, paymentsEnabled, tokenSystemEnabled]);
 
   useEffect(() => {
     if (!user) {
       router.push('/auth/login');
+      return;
+    }
+
+    // On desktop, redirect to first available settings page (profile)
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      router.push('/settings/profile');
       return;
     }
   }, [user, router]);
@@ -66,10 +84,10 @@ export default function SettingsIndexPage() {
       href: '/settings/deleted'
     },
     {
-      id: 'account',
-      title: 'Account',
+      id: 'advanced',
+      title: 'Advanced',
       icon: SettingsIcon,
-      href: '/settings/account'
+      href: '/settings/advanced'
     }
   ];
 

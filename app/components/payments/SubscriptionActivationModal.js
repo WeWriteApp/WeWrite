@@ -99,12 +99,16 @@ const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customConten
       // Use the new subscription service
       const { SubscriptionService } = await import('../../services/subscriptionService');
 
+      // Capture the current page to redirect back to after successful activation
+      const currentPath = window.location.pathname;
+      const returnUrl = encodeURIComponent(currentPath);
+
       const result = await SubscriptionService.createCheckoutSession({
         userId: user.uid,
         tier,
         customAmount: amount,
-        successUrl: `${window.location.origin}/settings/subscription?success=true`,
-        cancelUrl: `${window.location.origin}/settings/subscription?cancelled=true`
+        successUrl: `${window.location.origin}/settings/subscription/success?session_id={CHECKOUT_SESSION_ID}&return_to=${returnUrl}`,
+        cancelUrl: `${window.location.origin}${currentPath}`
       });
 
       if (result.error) {

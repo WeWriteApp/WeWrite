@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/database/core';
 import { format, eachDayOfInterval, eachHourOfInterval, startOfDay, endOfDay, startOfHour } from 'date-fns';
+import { AnalyticsAggregationService } from './analyticsAggregation';
 
 // Cache configuration
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -58,6 +59,23 @@ export interface PagesDataPoint {
   publicPages: number;
   privatePages: number;
   totalPages: number;
+  label: string; // Human readable date
+}
+
+export interface CompositePagesDataPoint {
+  date: string;
+  pagesCreated: number;
+  pagesDeleted: number;
+  publicPagesCreated: number;
+  privatePagesCreated: number;
+  netChange: number;
+  label: string; // Human readable date
+}
+
+export interface CumulativePagesDataPoint {
+  date: string;
+  totalActivePages: number;
+  totalPagesEverCreated: number;
   label: string; // Human readable date
 }
 
@@ -205,20 +223,19 @@ export class DashboardAnalyticsService {
       // Query users collection for accounts created in date range
       const usersRef = collection(db, 'users');
 
-      // Optimized query approach - use single timestamp format consistently
-      // Use Firestore Timestamp for better performance and index efficiency
-      const q = query(
-        usersRef,
-        where('createdAt', '>=', Timestamp.fromDate(startDate)),
-        where('createdAt', '<=', Timestamp.fromDate(endDate)),
-        orderBy('createdAt', 'asc'),
-        limit(1000) // Add limit to prevent excessive reads
-      );
+      // Since we may not have the right indexes and createdAt can be stored as either
+      // ISO string or Timestamp, let's use a simpler approach: get all users and filter in memory
+      // This is acceptable for analytics since we limit to 1000 users anyway
 
-      console.log('🔍 [Analytics Service] Executing optimized users query...');
-      await throttleQuery(); // Throttle query execution
-      const snapshot = await getDocs(q);
-      console.log(`✅ [Analytics Service] Users query successful, found ${snapshot.size} documents`);
+      console.log('🔍 [Analytics Service] Fetching users for analytics (limited to 1000)...');
+      await throttleQuery();
+
+      const simpleQuery = query(usersRef, limit(1000));
+      const snapshot = await getDocs(simpleQuery);
+
+      console.log(`✅ [Analytics Service] Users query successful, found ${snapshot.size} documents, will filter by date in memory`);
+
+
 
       // Group by time interval
       const dateMap = new Map<string, number>();
@@ -229,7 +246,7 @@ export class DashboardAnalyticsService {
         dateMap.set(dateKey, 0);
       });
 
-      // Count users by creation time interval
+      // Count users by creation time interval, filtering by date range in memory
       snapshot.forEach(doc => {
         const data = doc.data();
         const createdAt = data.createdAt;
@@ -240,8 +257,19 @@ export class DashboardAnalyticsService {
             date = createdAt.toDate();
           } else if (typeof createdAt === 'string') {
             date = new Date(createdAt);
+            // Validate the parsed date
+            if (isNaN(date.getTime())) {
+              console.warn('Invalid date string:', createdAt, 'for user:', doc.id);
+              return; // Skip invalid dates
+            }
           } else {
+            console.warn('Unknown createdAt format:', typeof createdAt, createdAt, 'for user:', doc.id);
             return; // Skip invalid dates
+          }
+
+          // Filter by date range in memory since we couldn't use indexes
+          if (date < startDate || date > endDate) {
+            return; // Skip users outside the date range
           }
 
           // Find the appropriate interval bucket for this date
@@ -284,6 +312,113 @@ export class DashboardAnalyticsService {
 
     } catch (error) {
       console.error('Error fetching new accounts data:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get composite pages data (created and deleted) within date range using aggregation
+   */
+  static async getCompositePagesData(dateRange: DateRange, granularity?: number): Promise<CompositePagesDataPoint[]> {
+    console.log('🔍 [Analytics Service] getCompositePagesData called with dateRange:', {
+      startDate: dateRange.startDate.toISOString(),
+      endDate: dateRange.endDate.toISOString(),
+      daysDifference: Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24))
+    });
+
+    try {
+      // Check cache first
+      const cacheKey = getCacheKey('composite-pages', dateRange) + (granularity ? `-g${granularity}` : '');
+      const cachedData = getCachedData<CompositePagesDataPoint[]>(cacheKey);
+      if (cachedData) {
+        return cachedData;
+      }
+
+      const { startDate, endDate } = dateRange;
+      const timeConfig = getTimeIntervals(dateRange, granularity);
+
+      // Use aggregation service for efficient data retrieval
+      const diffInHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+
+      if (diffInHours <= 168) { // 7 days or less - use hourly aggregations
+        const hourlyData = await AnalyticsAggregationService.getHourlyAggregations(startDate, endDate);
+
+        // Group hourly data into the requested time intervals
+        const dateMap = new Map<string, {
+          pagesCreated: number;
+          pagesDeleted: number;
+          publicPagesCreated: number;
+          privatePagesCreated: number;
+        }>();
+
+        timeConfig.intervals.forEach(interval => {
+          const dateKey = timeConfig.formatKey(interval);
+          dateMap.set(dateKey, {
+            pagesCreated: 0,
+            pagesDeleted: 0,
+            publicPagesCreated: 0,
+            privatePagesCreated: 0
+          });
+        });
+
+        // Aggregate hourly data into time intervals
+        hourlyData.forEach(hour => {
+          const hourDate = new Date(hour.datetime.replace(/-(\d{2})$/, ':$1:00'));
+          const dateKey = timeConfig.formatKey(hourDate);
+          const currentCounts = dateMap.get(dateKey);
+
+          if (currentCounts) {
+            currentCounts.pagesCreated += hour.pagesCreated || 0;
+            currentCounts.pagesDeleted += hour.pagesDeleted || 0;
+            currentCounts.publicPagesCreated += hour.publicPagesCreated || 0;
+            currentCounts.privatePagesCreated += hour.privatePagesCreated || 0;
+            dateMap.set(dateKey, currentCounts);
+          }
+        });
+
+        // Convert to chart data format
+        const result = Array.from(dateMap.entries()).map(([dateKey, counts]) => {
+          const date = timeConfig.granularity === 'hourly'
+            ? new Date(dateKey.replace(/-(\d{2})$/, ':$1:00'))
+            : new Date(dateKey);
+
+          const netChange = counts.pagesCreated - counts.pagesDeleted;
+
+          return {
+            date: dateKey,
+            pagesCreated: counts.pagesCreated,
+            pagesDeleted: counts.pagesDeleted,
+            publicPagesCreated: counts.publicPagesCreated,
+            privatePagesCreated: counts.privatePagesCreated,
+            netChange,
+            label: timeConfig.formatLabel(date)
+          };
+        });
+
+        setCachedData(cacheKey, result);
+        return result;
+
+      } else {
+        // Use daily aggregations for longer periods
+        const dailyData = await AnalyticsAggregationService.getDailyAggregations(startDate, endDate);
+
+        // Convert daily aggregations to chart format
+        const result = dailyData.map(day => ({
+          date: day.date,
+          pagesCreated: day.pagesCreated || 0,
+          pagesDeleted: day.pagesDeleted || 0,
+          publicPagesCreated: day.publicPagesCreated || 0,
+          privatePagesCreated: day.privatePagesCreated || 0,
+          netChange: day.netChange || 0,
+          label: new Date(day.date).toLocaleDateString()
+        }));
+
+        setCachedData(cacheKey, result);
+        return result;
+      }
+
+    } catch (error) {
+      console.error('Error fetching composite pages data:', error);
       return [];
     }
   }
@@ -417,6 +552,63 @@ export class DashboardAnalyticsService {
     } catch (error) {
       console.error('Error fetching new pages data:', error);
       return [];
+    }
+  }
+
+  /**
+   * Get cumulative pages data showing running total of active pages over time using aggregation
+   */
+  static async getCumulativePagesData(dateRange: DateRange, granularity?: number): Promise<CumulativePagesDataPoint[]> {
+    console.log('🔍 [Analytics Service] getCumulativePagesData called with dateRange:', {
+      startDate: dateRange.startDate.toISOString(),
+      endDate: dateRange.endDate.toISOString()
+    });
+
+    try {
+      // Check cache first
+      const cacheKey = getCacheKey('cumulative-pages', dateRange) + (granularity ? `-g${granularity}` : '');
+      const cachedData = getCachedData<CumulativePagesDataPoint[]>(cacheKey);
+      if (cachedData) {
+        return cachedData;
+      }
+
+      // Use the efficient aggregation service
+      const result = await AnalyticsAggregationService.getCumulativeData(dateRange.startDate, dateRange.endDate);
+
+      setCachedData(cacheKey, result);
+      return result;
+
+    } catch (error) {
+      console.error('Error fetching cumulative pages data:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get total pages ever created in the system using global counters
+   */
+  static async getTotalPagesEverCreated(): Promise<number> {
+    try {
+      // Check cache first
+      const cacheKey = 'total-pages-ever-created';
+      const cachedData = getCachedData<number>(cacheKey);
+      if (cachedData !== null) {
+        return cachedData;
+      }
+
+      // Use the efficient aggregation service
+      const globalCounters = await AnalyticsAggregationService.getGlobalCounters();
+      const totalCount = globalCounters.totalPagesEverCreated;
+
+      console.log('📊 [Analytics Service] Total pages ever created:', totalCount);
+
+      // Cache for 5 minutes since this changes infrequently
+      setCachedData(cacheKey, totalCount);
+      return totalCount;
+
+    } catch (error) {
+      console.error('Error fetching total pages count:', error);
+      return 0;
     }
   }
 

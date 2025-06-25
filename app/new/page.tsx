@@ -21,7 +21,7 @@ import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../components/utils/UnsavedChangesDialog";
 import { PageProvider } from "../contexts/PageContext";
 
-import TokenPledgeBar from "../components/payments/TokenPledgeBar";
+import TokenAllocationBar from "../components/payments/TokenAllocationBar";
 import { shouldUseQueue, addToQueue, checkOperationAllowed } from "../utils/syncQueue";
 import { useSyncQueue } from "../contexts/SyncQueueContext";
 import SlideUpPage from "../components/ui/slide-up-page";
@@ -105,7 +105,8 @@ export default function NewPage() {
   const [hasTitleChanged, setHasTitleChanged] = useState<boolean>(false);
   const [titleError, setTitleError] = useState<boolean>(false);
 
-  // Groups functionality removed
+  // Groups functionality removed - but keep selectedGroupId for compatibility
+  const selectedGroupId = null;
 
   // Determine page type
   const isReply = searchParams?.has('replyTo') || false;
@@ -302,11 +303,26 @@ export default function NewPage() {
 
   // Handle save
   const handleSave = async (content: EditorNode[], saveMethod: 'keyboard' | 'button' = 'button'): Promise<boolean> => {
+    console.log('🔵 DEBUG: handleSave called with:', {
+      saveMethod,
+      hasTitle: !!(title && title.trim()),
+      hasContent: !!(content && content.length),
+      isReply,
+      userId: user?.uid
+    });
+
     // CRITICAL FIX: Enhanced title validation with visual feedback
     if (!title || title.trim() === '') {
       if (!isReply) {
-        setError("Please add a title before saving");
+        console.error('🔴 DEBUG: Save failed - missing title');
+        const errorMsg = "Please add a title before saving";
+        setError(errorMsg);
         setTitleError(true);
+        toast({
+          title: "Missing Title",
+          description: errorMsg,
+          variant: "destructive",
+        });
         return false;
       }
     }
@@ -316,10 +332,18 @@ export default function NewPage() {
 
     // Validate user authentication
     if (!user || !user.uid) {
-      setError("You must be logged in to create a page");
+      console.error('🔴 DEBUG: Save failed - user not authenticated');
+      const errorMsg = "You must be logged in to create a page";
+      setError(errorMsg);
+      toast({
+        title: "Authentication Required",
+        description: errorMsg,
+        variant: "destructive",
+      });
       return false;
     }
 
+    console.log('🔵 DEBUG: Starting save process...');
     setIsSaving(true);
     setError(null);
 
@@ -593,15 +617,39 @@ export default function NewPage() {
 
           return true;
         } else {
-          console.error('Page creation failed: createPage returned null/false');
+          console.error('🔴 DEBUG: Page creation failed - createPage returned null/false');
           setIsSaving(false);
-          setError("Failed to create page. Please try again.");
+          const errorMsg = "Failed to create page. Please try again.";
+          setError(errorMsg);
+
+          toast({
+            title: "Creation Failed",
+            description: errorMsg,
+            variant: "destructive",
+          });
+
           return false;
         }
       }
     } catch (error: any) {
+      console.error('🔴 DEBUG: Save failed with error:', error);
+      console.error('🔴 DEBUG: Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        cause: error.cause
+      });
+
       setIsSaving(false);
-      setError("Failed to create page: " + (error.message || 'Unknown error'));
+      const errorMsg = "Failed to create page: " + (error.message || 'Unknown error');
+      setError(errorMsg);
+
+      toast({
+        title: "Save Failed",
+        description: error.message || 'Unknown error occurred while creating the page',
+        variant: "destructive",
+      });
+
       return false;
     }
   };
@@ -720,7 +768,22 @@ export default function NewPage() {
                     isReply={isReply}
                     replyToId={searchParams?.get('replyTo') || ""}
                     clickPosition={null}
-                    onSave={(capturedContent) => handleSave(capturedContent || editorContent || editorState, 'button')}
+                    onSave={(capturedContent) => {
+                      console.log('🔵 DEBUG: Save button clicked, calling handleSave');
+                      console.log('🔵 DEBUG: Current state:', {
+                        title,
+                        hasContent: !!(capturedContent || editorContent || editorState),
+                        userId: user?.uid,
+                        isReply
+                      });
+
+                      // Add a simple test to see if this function is being called
+                      if (typeof window !== 'undefined') {
+                        console.log('🔵 DEBUG: About to call handleSave...');
+                      }
+
+                      return handleSave(capturedContent || editorContent || editorState, 'button');
+                    }}
                     onKeyboardSave={(capturedContent) => handleSave(capturedContent || editorContent || editorState, 'keyboard')}
                     onCancel={handleBackWithCheck}
 
@@ -743,7 +806,7 @@ export default function NewPage() {
           </div>
         </div>
         {!isEditing && (
-          <TokenPledgeBar
+          <TokenAllocationBar
             pageId="new-page"
             pageTitle="New Page"
             authorId={user?.uid}

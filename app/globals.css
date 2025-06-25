@@ -35,6 +35,7 @@
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+    pointer-events: auto; /* Ensure buttons are clickable */
   }
 
   /* Allow text selection in input fields */
@@ -88,6 +89,36 @@
   .modal, .overlay, .dropdown-menu, .popover {
     touch-action: pan-x pan-y;
   }
+
+  /* Ensure pledge bar buttons are always interactive */
+  [data-pledge-bar] button,
+  [data-pledge-bar] [role="button"],
+  [data-pledge-bar] .btn,
+  [data-pledge-bar] .button {
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+    cursor: pointer !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+  }
+
+  /* Ensure pledge bar container is interactive */
+  [data-pledge-bar] {
+    pointer-events: auto !important;
+    touch-action: pan-x pan-y !important;
+  }
+
+  /* Ensure pledge bar cards are interactive */
+  [data-pledge-bar] .wewrite-card {
+    pointer-events: auto !important;
+  }
+
+  /* Override any global pointer-events: none for pledge bar elements */
+  [data-pledge-bar] * {
+    pointer-events: auto !important;
+  }
 }
 
 /* Global zoom prevention (applies to all screen sizes) */
@@ -103,6 +134,31 @@ html {
 input, textarea, select {
   /* Ensure font size is large enough to prevent iOS zoom */
   font-size: max(16px, 1rem) !important;
+}
+
+/* Global pledge bar button interactivity (all screen sizes) */
+[data-pledge-bar] button,
+[data-pledge-bar] [role="button"],
+[data-pledge-bar] .btn,
+[data-pledge-bar] .button {
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  cursor: pointer !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Global pledge bar container interactivity */
+[data-pledge-bar] {
+  pointer-events: auto !important;
+  touch-action: pan-x pan-y !important;
+}
+
+/* Override any global pointer-events: none for pledge bar elements */
+[data-pledge-bar] * {
+  pointer-events: auto !important;
 }
 
 /* Additional zoom prevention for WebKit browsers */

@@ -62,7 +62,8 @@ const ConstructionBanner = dynamic(() => import('./components/utils/Construction
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith('/auth/');
-  const isAdminDashboard = pathname?.startsWith('/admin/dashboard'); // Admin dashboard pages
+  const isAdminPage = pathname?.startsWith('/admin'); // All admin pages
+  const isAdminDashboard = pathname?.startsWith('/admin/dashboard'); // Admin dashboard pages specifically
   const isHomePage = pathname === '/';
 
   // Use scroll restoration hook to ensure pages always start at the top
@@ -115,8 +116,8 @@ export default function ClientLayout({ children }) {
                                         {/* Handle pending replies after authentication */}
                                         <PendingReplyHandler />
 
-                                        {!isAuthPage && !isAdminDashboard && <UsernameWarningBanner />}
-                                        {!isAuthPage && !isAdminDashboard && <UsernameEnforcementBanner />}
+                                        {!isAuthPage && !isAdminPage && <UsernameWarningBanner />}
+                                        {!isAuthPage && !isAdminPage && <UsernameEnforcementBanner />}
                                         <FeatureFlagCookieManager />
                                         <main className="flex-grow">
                                           <AdminFeaturesWrapper>
@@ -133,13 +134,13 @@ export default function ClientLayout({ children }) {
                                         </main>
 
                                         {/* Site Footer */}
-                                        {!isAuthPage && !isAdminDashboard && <SiteFooter />}
+                                        {!isAuthPage && !isAdminPage && <SiteFooter />}
 
                                         {/* Construction Banner */}
-                                        {!isAuthPage && !isAdminDashboard && <ConstructionBanner />}
+                                        {!isAuthPage && !isAdminPage && <ConstructionBanner />}
 
                                         {/* Mobile Bottom Navigation */}
-                                        {!isAuthPage && !isAdminDashboard && <MobileBottomNav />}
+                                        {!isAuthPage && !isAdminPage && <MobileBottomNav />}
                                       </div>
                                     </SidebarLayout>
                                   </SidebarProvider>

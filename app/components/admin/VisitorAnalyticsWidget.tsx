@@ -162,6 +162,7 @@ export function VisitorAnalyticsWidget({ dateRange, granularity, className = "" 
                 fill="hsl(142, 76%, 36%)"
                 radius={[0, 0, 0, 0]}
                 className="hover:opacity-80 transition-opacity"
+                maxBarSize={60}
               />
               <Bar
                 dataKey="anonymous"
@@ -169,6 +170,7 @@ export function VisitorAnalyticsWidget({ dateRange, granularity, className = "" 
                 fill="hsl(221, 83%, 53%)"
                 radius={[2, 2, 0, 0]}
                 className="hover:opacity-80 transition-opacity"
+                maxBarSize={60}
               />
             </BarChart>
           </ResponsiveContainer>

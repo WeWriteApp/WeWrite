@@ -11,11 +11,22 @@
 /**
  * Set user information in Google Analytics
  * This should be called when a user logs in or when their profile information changes
- * 
+ *
  * @param {Object} user - The user object containing uid, username, etc.
  */
 export const setAnalyticsUserInfo = (user) => {
-  if (!user || typeof window === 'undefined' || !window.gtag) return;
+  if (!user || typeof window === 'undefined') return;
+
+  // Skip gtag calls in development to prevent authentication errors
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Analytics user info skipped in development:', user.username || 'Anonymous');
+    return;
+  }
+
+  if (!window.gtag) {
+    console.warn('gtag not available for user tracking');
+    return;
+  }
 
   try {
     // Set user ID for cross-device tracking
@@ -33,7 +44,7 @@ export const setAnalyticsUserInfo = (user) => {
 
 
   } catch (error) {
-    console.error('Error setting analytics user info:', error);
+    console.error('Error setting analytics user info (non-fatal):', error);
   }
 };
 

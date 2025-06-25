@@ -22,6 +22,7 @@ import { setCurrentVersion } from "../../firebase/database";
 import { useToast } from "../ui/use-toast";
 import { Button } from "../ui/button";
 import { RotateCcw } from "lucide-react";
+import { hasContentChanged } from "../../utils/contentNormalization";
 
 /**
  * ActivityCard component displays a single activity card
@@ -199,6 +200,16 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
     added = diffResult.added;
     removed = diffResult.removed;
     textDiff = generateTextDiff(activity.currentContent, activity.previousContent);
+  }
+
+  // Safety check: Don't render cards for no-op edits (activities with zero meaningful changes)
+  // This is a final safety net to catch any no-op activities that might have slipped through
+  if (!isNewPage && added === 0 && removed === 0 && activity.currentContent && activity.previousContent) {
+    // Double-check with robust content normalization
+    if (!hasContentChanged(activity.currentContent, activity.previousContent)) {
+      console.log(`ActivityCard: Refusing to render no-op activity card for page ${activity.pageId}`);
+      return null; // Don't render this card
+    }
   }
 
   // Handle card click to navigate to the page

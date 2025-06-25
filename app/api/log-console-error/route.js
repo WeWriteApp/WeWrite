@@ -24,7 +24,29 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 })
     }
 
-    const { level, message, timestamp, url, userAgent, filename, lineno, colno, stack } = body
+    const { level, message, timestamp, url, userAgent, filename, lineno, colno, stack, stackAnalysis, isGoogleApiError, scriptTags, type } = body
+
+    // Enhanced logging for Google API errors
+    const isGoogleError = isGoogleApiError || (message && (
+      message.includes('apiKey') ||
+      message.includes('authenticator') ||
+      message.includes('google')
+    ));
+
+    if (isGoogleError && level === 'error') {
+      console.log('\n🔍 GOOGLE API ERROR DETECTED - ENHANCED DEBUGGING:');
+      console.log('📍 Error Message:', message);
+      console.log('📍 Error Type:', type || 'unknown');
+      console.log('📍 Stack Analysis:', stackAnalysis);
+      console.log('📍 Filename:', filename);
+      console.log('📍 Line/Column:', `${lineno}:${colno}`);
+      console.log('📍 Script Tags:', scriptTags);
+      console.log('📍 Full Stack:', stack);
+      console.log('📍 URL:', url);
+      console.log('📍 User Agent:', userAgent);
+      console.log('📍 Full Body:', JSON.stringify(body, null, 2));
+      console.log('─'.repeat(80));
+    }
 
     // Format the log message for terminal output
     const logPrefixes = {

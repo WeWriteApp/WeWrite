@@ -132,8 +132,7 @@ const Home = React.memo(function Home() {
   const [loadingRetryCount, setLoadingRetryCount] = useState<number>(0);
   const [initialLoadStartTime, setInitialLoadStartTime] = useState<number | null>(null);
 
-  // Feature flag for daily notes - now includes user ID for user-specific overrides
-  const dailyNotesEnabled = useFeatureFlag('daily_notes', user?.email, user?.uid);
+  // Daily notes are now permanently enabled
 
 
 
@@ -254,12 +253,10 @@ const Home = React.memo(function Home() {
             <SearchButton placeholder="Search all pages..." />
           </div>
 
-          {/* Daily Notes Section - Feature flagged */}
-          {dailyNotesEnabled && (
-            <div data-component="DailyNotesSection">
-              <DailyNotesSection />
-            </div>
-          )}
+          {/* Daily Notes Section - Now permanently enabled */}
+          <div data-component="DailyNotesSection">
+            <DailyNotesSection />
+          </div>
 
 
           {/* 1. Recent Activity - High priority, loads first */}

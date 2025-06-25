@@ -34,7 +34,7 @@ import {
   deleteDoc,
   serverTimestamp 
 } from 'firebase/firestore';
-import { db } from '../../firebase/database';
+import { db } from '../../firebase/config';
 import { useToast } from '../ui/use-toast';
 import { useAuth } from '../../providers/AuthProvider';
 
@@ -310,10 +310,10 @@ export default function UserAccessModal({
 
         <div className="flex-1 overflow-hidden flex flex-col space-y-4">
           {/* Global Status Banner */}
-          <div className={`p-3 rounded-lg border ${
+          <div className={`p-3 rounded-lg ${
             featureFlag.enabled
-              ? 'bg-success/10 border-success/30 dark:bg-success/20 dark:border-success/40'
-              : 'bg-muted border-border'
+              ? 'bg-success/10 border-success/30 dark:bg-success/20 dark:border-success/40 border'
+              : 'bg-muted border-theme-medium'
           }`}>
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4" />

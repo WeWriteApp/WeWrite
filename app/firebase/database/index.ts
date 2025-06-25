@@ -34,6 +34,9 @@ export * from './search';
 // User operations
 export * from './users';
 
+// Analytics operations
+export * from './analytics';
+
 // Additional functions that need to be added to complete the migration
 // These would be extracted from the remaining parts of the original database.ts file
 

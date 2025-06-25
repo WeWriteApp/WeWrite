@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from "../ui/button";
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from "../../firebase/database";
+import { db } from "../../firebase/config";
 import { FeatureFlag } from "../../utils/feature-flags";
 import { useToast } from "../ui/use-toast";
 import { RefreshCw } from 'lucide-react';
@@ -13,9 +13,7 @@ const validFeatureFlags: FeatureFlag[] = [
   'payments',
   'map_view',
   'calendar_view',
-  'groups',
-  'notifications',
-  'link_functionality'
+  'inactive_subscription'
 ];
 
 export default function FixFeatureFlagsButton() {

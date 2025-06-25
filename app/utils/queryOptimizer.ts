@@ -17,7 +17,7 @@ class QueryOptimizer {
   };
 
   private readonly STATS_RESET_INTERVAL = 60000; // 1 minute
-  private readonly WARNING_THRESHOLD = 200; // Queries per minute
+  private readonly WARNING_THRESHOLD = 500; // Queries per minute (increased threshold)
 
   /**
    * Track a query execution
@@ -37,7 +37,7 @@ class QueryOptimizer {
     this.stats.patterns.set(pattern, (this.stats.patterns.get(pattern) || 0) + 1);
 
     // Warn about excessive queries (less frequently)
-    if (this.stats.count > this.WARNING_THRESHOLD && this.stats.count % 50 === 0) {
+    if (this.stats.count > this.WARNING_THRESHOLD && this.stats.count % 100 === 0) {
       this.logPerformanceWarning();
     }
   }

@@ -6,9 +6,21 @@ import { useFeatureFlag } from '../../utils/feature-flags';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { Switch } from '../ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useToast } from '../ui/use-toast';
-import { realPledgeService } from '../../services/realPledgeService';
+import { TokenEarningsService } from '../../services/tokenEarningsService';
+import {
+  calculateFeeBreakdown,
+  meetsMinimumThreshold,
+  formatCurrency,
+  getFeeExplanation,
+  WEWRITE_FEE_STRUCTURE,
+  assessPayoutRisk,
+  getPayoutProtectionWarnings,
+  type FeeBreakdown,
+  type PayoutRiskAssessment
+} from '../../utils/feeCalculations';
 import {
   DollarSign,
   TrendingUp,
@@ -18,7 +30,9 @@ import {
   ExternalLink,
   Settings,
   Download,
-  RefreshCw
+  RefreshCw,
+  Zap,
+  Wallet
 } from 'lucide-react';
 
 interface EarningsBreakdown {
@@ -31,7 +45,7 @@ interface EarningsBreakdown {
   lastPayoutDate?: string;
   nextPayoutDate?: string;
   earningsBySource: {
-    pledges: number;
+    tokens: number;
     subscriptions: number;
     bonuses: number;
   };
@@ -55,12 +69,69 @@ export default function PayoutDashboard() {
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
+  const [preferences, setPreferences] = useState<any>(null);
+  const [updatingPreferences, setUpdatingPreferences] = useState(false);
+  const [stripeAccountStatus, setStripeAccountStatus] = useState<any>(null);
+  const [feeBreakdown, setFeeBreakdown] = useState<FeeBreakdown | null>(null);
+  const [payoutMethod, setPayoutMethod] = useState<'standard' | 'instant'>('standard');
+  const [riskAssessment, setRiskAssessment] = useState<PayoutRiskAssessment | null>(null);
 
   useEffect(() => {
     if (user && isPaymentsEnabled) {
       loadPayoutData();
     }
   }, [user, isPaymentsEnabled]);
+
+  // Calculate fee breakdown and risk assessment when earnings change
+  const updateFeeBreakdown = (availableBalance: number) => {
+    if (availableBalance > 0) {
+      const breakdown = calculateFeeBreakdown(availableBalance, 'usd', payoutMethod);
+      setFeeBreakdown(breakdown);
+
+      // Assess payout risk (using mock data for account creation date and recent payouts)
+      const accountCreatedDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
+      const recentPayouts = payouts.map(p => ({
+        amount: p.amount,
+        date: new Date(p.scheduledAt)
+      }));
+
+      const risk = assessPayoutRisk(
+        availableBalance,
+        accountCreatedDate,
+        recentPayouts,
+        'usd',
+        payoutMethod
+      );
+      setRiskAssessment(risk);
+    } else {
+      setFeeBreakdown(null);
+      setRiskAssessment(null);
+    }
+  };
+
+  const loadBankAccountStatus = async () => {
+    if (!user?.stripeConnectedAccountId) {
+      setStripeAccountStatus(null);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/stripe/account-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stripeConnectedAccountId: user.stripeConnectedAccountId
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setStripeAccountStatus(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading bank account status:', error);
+    }
+  };
 
   const loadPayoutData = async () => {
     try {
@@ -75,17 +146,43 @@ export default function PayoutDashboard() {
         setSetup(setupData.data);
       }
 
-      // Load real user earnings data
-      const realUserEarnings = await realPledgeService.getUserEarnings(user.uid);
-      setUserEarnings(realUserEarnings);
+      // Load payout preferences
+      await loadPayoutPreferences();
 
-      // Load real transaction data as recipient (earnings)
-      const realEarningsTransactions = await realPledgeService.getUserTransactions(user.uid, true);
-      setEarnings(realEarningsTransactions);
+      // Load bank account status
+      await loadBankAccountStatus();
 
-      // Load real transaction data as pledger (for reference)
-      const realPledgeTransactions = await realPledgeService.getUserTransactions(user.uid, false);
-      setRecentTransactions(realPledgeTransactions);
+      // Load token earnings data
+      const tokenBalance = await TokenEarningsService.getWriterTokenBalance(user.uid);
+      if (tokenBalance) {
+        const earnings = {
+          totalEarnings: tokenBalance.totalUsdEarned,
+          availableBalance: tokenBalance.availableUsdValue,
+          pendingBalance: tokenBalance.pendingUsdValue,
+          totalPlatformFees: 0, // Platform fees handled at subscription level
+          currency: 'usd'
+        };
+        setUserEarnings(earnings);
+
+        // Calculate fee breakdown for available balance
+        updateFeeBreakdown(earnings.availableBalance);
+      }
+
+      // Load token earnings history
+      const tokenEarnings = await TokenEarningsService.getWriterTokenEarnings(user.uid);
+      setEarnings(tokenEarnings.map(earning => ({
+        id: earning.id,
+        amount: earning.totalUsdValue,
+        source: 'Token Allocation',
+        date: earning.createdAt,
+        type: 'token' as any,
+        status: earning.status === 'available' ? 'completed' : 'pending' as any,
+        pageId: earning.allocations?.[0]?.resourceId,
+        pageTitle: 'Token Earnings'
+      })));
+
+      // Recent transactions are now token allocations
+      setRecentTransactions([]);
 
       // Load payout history from API
       const earningsResponse = await fetch('/api/payouts/earnings');
@@ -103,6 +200,69 @@ export default function PayoutDashboard() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPayoutPreferences = async () => {
+    try {
+      const response = await fetch('/api/payouts/preferences');
+      if (response.ok) {
+        const data = await response.json();
+        setPreferences(data.data);
+      } else if (response.status === 404) {
+        // If no payout recipient exists yet, set default preferences
+        // This allows the automatic payout settings to be visible even before setup
+        setPreferences({
+          autoPayoutEnabled: false,
+          minimumThreshold: 25,
+          currency: 'usd',
+          schedule: 'monthly',
+          notificationsEnabled: true
+        });
+      }
+    } catch (error) {
+      console.error('Error loading payout preferences:', error);
+      // Set default preferences on error to ensure UI is visible
+      setPreferences({
+        autoPayoutEnabled: false,
+        minimumThreshold: 25,
+        currency: 'usd',
+        schedule: 'monthly',
+        notificationsEnabled: true
+      });
+    }
+  };
+
+  const updatePayoutPreferences = async (updates: any) => {
+    try {
+      setUpdatingPreferences(true);
+
+      const response = await fetch('/api/payouts/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPreferences(data.data);
+        toast({
+          title: "Settings Updated",
+          description: "Your payout preferences have been updated successfully.",
+        });
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update preferences');
+      }
+    } catch (error) {
+      console.error('Error updating payout preferences:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update preferences",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingPreferences(false);
     }
   };
 
@@ -199,7 +359,7 @@ export default function PayoutDashboard() {
     lastPayoutDate: payouts.length > 0 ? payouts[0].completedAt : null,
     nextPayoutDate: '2024-02-01', // Calculate based on schedule
     earningsBySource: {
-      pledges: userEarnings.totalEarnings || 0,
+      tokens: userEarnings.totalEarnings || 0,
       subscriptions: 0,
       bonuses: 0
     }
@@ -210,14 +370,14 @@ export default function PayoutDashboard() {
     platformFees: 0,
     netEarnings: 0,
     lastPayoutAmount: 0,
-    earningsBySource: { pledges: 0, subscriptions: 0, bonuses: 0 }
+    earningsBySource: { tokens: 0, subscriptions: 0, bonuses: 0 }
   };
 
   return (
     <div className="space-y-6">
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="wewrite-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1">
               <DollarSign className="h-4 w-4 text-green-600" />
@@ -226,10 +386,13 @@ export default function PayoutDashboard() {
             <p className="text-2xl font-bold text-green-600">
               {formatCurrency(earnings_breakdown.availableAmount)}
             </p>
+            <div className="text-xs text-muted-foreground mt-1">
+              Ready for payout
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="wewrite-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1">
               <Clock className="h-4 w-4 text-yellow-600" />
@@ -238,10 +401,13 @@ export default function PayoutDashboard() {
             <p className="text-2xl font-bold text-yellow-600">
               {formatCurrency(earnings_breakdown.pendingAmount)}
             </p>
+            <div className="text-xs text-muted-foreground mt-1">
+              Processing
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="wewrite-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1">
               <TrendingUp className="h-4 w-4 text-blue-600" />
@@ -250,10 +416,13 @@ export default function PayoutDashboard() {
             <p className="text-2xl font-bold text-blue-600">
               {formatCurrency(earnings_breakdown.totalEarnings)}
             </p>
+            <div className="text-xs text-muted-foreground mt-1">
+              All time
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="wewrite-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1">
               <CheckCircle className="h-4 w-4 text-purple-600" />
@@ -265,12 +434,120 @@ export default function PayoutDashboard() {
                 : '$0.00'
               }
             </p>
+            <div className="text-xs text-muted-foreground mt-1">
+              {earnings_breakdown.lastPayoutDate
+                ? new Date(earnings_breakdown.lastPayoutDate).toLocaleDateString()
+                : 'No payouts yet'
+              }
+            </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Fee Breakdown Section */}
+      {feeBreakdown && (
+        <Card className="wewrite-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Fee Breakdown
+            </CardTitle>
+            <CardDescription>
+              Transparent breakdown of all fees and your net payout amount
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Gross Earnings</span>
+                  <span className="font-medium">{formatCurrency(feeBreakdown.grossEarnings)}</span>
+                </div>
+
+                {feeBreakdown.wewritePlatformFee > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">WeWrite Platform Fee</span>
+                    <span className="font-medium text-red-600">
+                      -{formatCurrency(feeBreakdown.wewritePlatformFee)}
+                    </span>
+                  </div>
+                )}
+
+                {feeBreakdown.stripePayoutFee > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      Payout Fee ({payoutMethod === 'instant' ? 'Instant' : 'Standard'})
+                    </span>
+                    <span className="font-medium text-red-600">
+                      -{formatCurrency(feeBreakdown.stripePayoutFee)}
+                    </span>
+                  </div>
+                )}
+
+                {feeBreakdown.taxWithholding > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Tax Withholding</span>
+                    <span className="font-medium text-red-600">
+                      -{formatCurrency(feeBreakdown.taxWithholding)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                      Net Payout Amount
+                    </span>
+                    <span className="text-lg font-bold text-green-800 dark:text-green-200">
+                      {formatCurrency(feeBreakdown.netPayoutAmount)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-xs text-muted-foreground">
+                  {getFeeExplanation(payoutMethod)}
+                </div>
+
+                {!meetsMinimumThreshold(feeBreakdown.grossEarnings, 'usd', payoutMethod) && (
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                    <div className="text-sm text-yellow-800 dark:text-yellow-200">
+                      <strong>Minimum not met:</strong> You need at least {formatCurrency(WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold)} after fees to request a payout.
+                    </div>
+                  </div>
+                )}
+
+                {/* Risk Assessment Warnings */}
+                {riskAssessment && !riskAssessment.canPayout && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                    <div className="text-sm text-red-800 dark:text-red-200">
+                      <strong>Payout Blocked:</strong>
+                      <ul className="mt-1 list-disc list-inside">
+                        {riskAssessment.reasons.map((reason, index) => (
+                          <li key={index}>{reason}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                {/* Protection Warnings */}
+                {riskAssessment && riskAssessment.canPayout && riskAssessment.riskLevel !== 'low' && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="text-sm text-blue-800 dark:text-blue-200">
+                      <strong>Security Notice:</strong> {riskAssessment.recommendedAction}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Account Status & Actions */}
-      <Card>
+      <Card className="wewrite-card">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -292,40 +569,246 @@ export default function PayoutDashboard() {
                 <RefreshCw className="h-4 w-4 mr-1" />
                 Refresh
               </Button>
+              {/* Automatic Payout Toggle */}
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={preferences?.autoPayoutEnabled || false}
+                  onCheckedChange={(checked) =>
+                    updatePayoutPreferences({ autoPayoutEnabled: checked })
+                  }
+                  disabled={updatingPreferences || !riskAssessment?.canPayout}
+                />
+                <span className="text-sm font-medium">
+                  {preferences?.autoPayoutEnabled ? 'Auto Payouts On' : 'Auto Payouts Off'}
+                </span>
+              </div>
+
+              {/* Manual Payout Button */}
               <Button
                 onClick={requestPayout}
-                disabled={requesting || earnings_breakdown.availableAmount < 25}
+                disabled={requesting || !riskAssessment?.canPayout}
                 size="sm"
+                variant={preferences?.autoPayoutEnabled ? "outline" : "default"}
               >
-                {requesting ? 'Processing...' : 'Request Payout'}
+                {requesting ? 'Processing...' : 'Request Payout Now'}
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {setup.accountStatus.canReceivePayouts ? (
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              ) : (
-                <AlertCircle className="h-5 w-5 text-yellow-600" />
-              )}
-              <div>
-                <p className="font-medium">
-                  {setup.accountStatus.canReceivePayouts ? 'Verified' : 'Pending Verification'}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Minimum payout: $25.00
-                </p>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {setup.accountStatus.canReceivePayouts ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-yellow-600" />
+                )}
+                <div>
+                  <p className="font-medium">
+                    {setup.accountStatus.canReceivePayouts ? 'Verified' : 'Pending Verification'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Minimum payout: $25.00
+                  </p>
+                </div>
               </div>
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-1" />
+                Manage Account
+              </Button>
             </div>
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-1" />
-              Manage Account
-            </Button>
+
+            {/* Bank Account Details */}
+            {stripeAccountStatus?.bank_account && (
+              <div className="p-3 bg-muted/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wallet className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Connected Bank Account</span>
+                </div>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Bank:</span>
+                    <span className="font-medium">
+                      {stripeAccountStatus.bank_account.bank_name || 'Bank Account'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Account:</span>
+                    <span className="font-medium">
+                      ****{stripeAccountStatus.bank_account.last4}
+                    </span>
+                  </div>
+                  {stripeAccountStatus.bank_account.routing_number && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Routing:</span>
+                      <span className="font-medium">
+                        {stripeAccountStatus.bank_account.routing_number}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Currency:</span>
+                    <span className="font-medium uppercase">
+                      {stripeAccountStatus.bank_account.currency}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Automatic Payout Settings */}
+      {preferences && (
+        <Card className="wewrite-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5" />
+              Automatic Payouts
+            </CardTitle>
+            <CardDescription>
+              Configure automatic payout processing for your earnings
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Auto Payout Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <div className="font-medium">Enable Automatic Payouts</div>
+                <div className="text-sm text-muted-foreground">
+                  Automatically process payouts when your balance reaches {formatCurrency(WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold)} (after fees)
+                </div>
+              </div>
+              <Switch
+                checked={preferences.autoPayoutEnabled}
+                onCheckedChange={(checked) =>
+                  updatePayoutPreferences({ autoPayoutEnabled: checked })
+                }
+                disabled={updatingPreferences}
+              />
+            </div>
+
+            {/* Payout Method Selection */}
+            <div className="space-y-3">
+              <div className="font-medium text-sm">Payout Method</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div
+                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                    payoutMethod === 'standard'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                  onClick={() => {
+                    setPayoutMethod('standard');
+                    if (userEarnings) updateFeeBreakdown(userEarnings.availableBalance);
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`w-3 h-3 rounded-full border-2 ${
+                      payoutMethod === 'standard' ? 'border-primary bg-primary' : 'border-muted-foreground'
+                    }`} />
+                    <span className="font-medium text-sm">Standard Payout</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Free • 2-5 business days
+                  </div>
+                </div>
+
+                <div
+                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                    payoutMethod === 'instant'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                  onClick={() => {
+                    setPayoutMethod('instant');
+                    if (userEarnings) updateFeeBreakdown(userEarnings.availableBalance);
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`w-3 h-3 rounded-full border-2 ${
+                      payoutMethod === 'instant' ? 'border-primary bg-primary' : 'border-muted-foreground'
+                    }`} />
+                    <span className="font-medium text-sm">Instant Payout</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    1.5% fee (min 50¢) • Within minutes
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Payout Schedule Information */}
+            <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+              <div className="font-medium text-sm">Automatic Payout Schedule</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Processing Date:</span>
+                  <span className="ml-2 font-medium">1st of each month</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Minimum Threshold:</span>
+                  <span className="ml-2 font-medium">{formatCurrency(preferences.minimumThreshold || WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold)}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Processing Time:</span>
+                  <span className="ml-2 font-medium">
+                    {payoutMethod === 'instant' ? 'Within minutes' : '2-5 business days'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Currency:</span>
+                  <span className="ml-2 font-medium uppercase">{preferences.currency || 'USD'}</span>
+                </div>
+              </div>
+
+              {/* Additional Information */}
+              <div className="pt-3 border-t border-border/50">
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div>• Automatic payouts are processed on the 1st of each month if your balance meets the minimum threshold</div>
+                  <div>• You can still request manual payouts at any time using the "Request Payout Now" button</div>
+                  <div>• All fees are clearly displayed before processing any payout</div>
+                  {stripeAccountStatus?.bank_account && (
+                    <div>• Payouts will be sent to your connected bank account: ****{stripeAccountStatus.bank_account.last4}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Status Information */}
+            <div className="flex items-start gap-3 p-4 border rounded-lg">
+              {preferences.autoPayoutEnabled ? (
+                <>
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                  <div>
+                    <div className="font-medium text-green-900 dark:text-green-100">
+                      Automatic Payouts Enabled
+                    </div>
+                    <div className="text-sm text-green-700 dark:text-green-300">
+                      Your earnings will be automatically processed for payout on the 1st of each month
+                      when your balance reaches ${preferences.minimumThreshold} or more.
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                  <div>
+                    <div className="font-medium text-yellow-900 dark:text-yellow-100">
+                      Manual Payouts Only
+                    </div>
+                    <div className="text-sm text-yellow-700 dark:text-yellow-300">
+                      You'll need to manually request payouts using the "Request Payout" button above.
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Detailed Tables */}
       <Tabs defaultValue="earnings" className="space-y-4">
@@ -339,7 +822,7 @@ export default function PayoutDashboard() {
             <CardHeader>
               <CardTitle>Recent Earnings</CardTitle>
               <CardDescription>
-                Your latest earnings from pledges and subscriptions
+                Your latest earnings from token allocations
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -354,10 +837,10 @@ export default function PayoutDashboard() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-medium">
-                            {earning.pageId ? 'Page Pledge' : earning.groupId ? 'Group Pledge' : 'Payment'}
+                            {earning.pageId ? 'Token Allocation' : 'Token Earnings'}
                           </span>
                           <Badge variant="outline" className="text-xs">
-                            pledge
+                            tokens
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">

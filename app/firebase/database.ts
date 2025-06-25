@@ -23,6 +23,7 @@ export * from './database/access';
 export * from './database/search';
 export * from './database/links';
 export * from './database/users';
+export * from './database/analytics';
 
 // Import required functions for additional exports
 import { db, updateDoc, getDoc, doc } from './database/core';
@@ -68,6 +69,16 @@ export const deletePage = async (pageId: string): Promise<boolean> => {
 
     if (deleteResult) {
       console.log(`Successfully soft deleted page ${pageId}`);
+
+      // Update user page count
+      try {
+        const { decrementUserPageCount } = await import('./counters');
+        await decrementUserPageCount(pageData.userId, pageData.isPublic);
+        console.log("Updated user page count for deletion");
+      } catch (counterError) {
+        console.error("Error updating user page count for deletion:", counterError);
+        // Don't fail page deletion if counter update fails
+      }
 
       // TODO: In the future, we could also mark versions as deleted
       // For now, we keep versions for potential recovery

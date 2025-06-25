@@ -171,12 +171,14 @@ export function ContentChangesAnalyticsWidget({ dateRange, granularity, classNam
                 fill="#22c55e"
                 name="Added"
                 radius={[2, 2, 0, 0]}
+                maxBarSize={60}
               />
               <Bar
                 dataKey="charactersDeleted"
                 fill="#ef4444"
                 name="Deleted"
                 radius={[0, 0, 2, 2]}
+                maxBarSize={60}
                 // Make deleted values negative for display
                 transform="scale(1, -1)"
               />

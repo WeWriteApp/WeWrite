@@ -303,3 +303,87 @@ export function useVisitorMetrics(dateRange: DateRange, granularity?: number) {
 
   return { data, loading, error, refetch: fetchData };
 }
+
+export function useCompositePagesMetrics(dateRange: DateRange, granularity?: number) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await DashboardAnalyticsService.getCompositePagesData(debouncedDateRange, granularity);
+      setData(result);
+    } catch (err) {
+      console.error('Error fetching composite pages metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch composite pages data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, granularity]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+export function useCumulativePagesMetrics(dateRange: DateRange, granularity?: number) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await DashboardAnalyticsService.getCumulativePagesData(debouncedDateRange, granularity);
+      setData(result);
+    } catch (err) {
+      console.error('Error fetching cumulative pages metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch cumulative pages data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, granularity]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+export function useTotalPagesEverCreated() {
+  const [data, setData] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await DashboardAnalyticsService.getTotalPagesEverCreated();
+      setData(result);
+    } catch (err) {
+      console.error('Error fetching total pages count:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch total pages count');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}

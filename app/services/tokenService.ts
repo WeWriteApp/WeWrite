@@ -21,7 +21,9 @@ import {
   serverTimestamp,
   increment,
   orderBy,
-  limit
+  limit,
+  onSnapshot,
+  Unsubscribe
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { TokenBalance, TokenAllocation, MonthlyTokenDistribution } from '../types/database';
@@ -35,7 +37,7 @@ import { TokenEarningsService } from './tokenEarningsService';
 
 export class TokenService {
   /**
-   * Get user's current token balance
+   * Get user's current token balance (from tokenBalances collection)
    */
   static async getUserTokenBalance(userId: string): Promise<TokenBalance | null> {
     try {
@@ -46,7 +48,19 @@ export class TokenService {
         return null;
       }
 
-      return balanceDoc.data() as TokenBalance;
+      const balanceData = balanceDoc.data();
+
+      // Convert to TokenBalance format
+      return {
+        userId,
+        totalTokens: balanceData.totalTokens || 0,
+        allocatedTokens: balanceData.allocatedTokens || 0,
+        availableTokens: balanceData.availableTokens || 0,
+        monthlyAllocation: balanceData.monthlyAllocation || 0,
+        lastAllocationDate: balanceData.lastAllocationDate || '',
+        createdAt: balanceData.createdAt || new Date(),
+        updatedAt: balanceData.updatedAt || new Date()
+      };
     } catch (error) {
       console.error('Error getting user token balance:', error);
       throw error;
@@ -61,86 +75,132 @@ export class TokenService {
   }
 
   /**
-   * Get current page allocation for a user
+   * Listen to real-time token balance changes
+   */
+  static listenToTokenBalance(
+    userId: string,
+    callback: (balance: TokenBalance | null) => void
+  ): Unsubscribe {
+    const balanceRef = doc(db, 'tokenBalances', userId);
+
+    return onSnapshot(balanceRef, (doc) => {
+      if (doc.exists()) {
+        callback(doc.data() as TokenBalance);
+      } else {
+        callback(null);
+      }
+    }, (error) => {
+      console.error('Error listening to token balance:', error);
+      callback(null);
+    });
+  }
+
+  /**
+   * Get current page allocation for a user (from tokenAllocations collection)
    */
   static async getCurrentPageAllocation(userId: string, pageId: string): Promise<number> {
     try {
       const currentMonth = getCurrentMonth();
-      const allocationId = `${userId}_page_${pageId}_${currentMonth}`;
+      const allocationsRef = collection(db, 'tokenAllocations');
+      const q = query(
+        allocationsRef,
+        where('userId', '==', userId),
+        where('resourceId', '==', pageId),
+        where('resourceType', '==', 'page'),
+        where('month', '==', currentMonth),
+        where('status', '==', 'active')
+      );
 
-      const allocationRef = doc(db, 'tokenAllocations', allocationId);
-      const allocationDoc = await getDoc(allocationRef);
+      const querySnapshot = await getDocs(q);
 
-      if (!allocationDoc.exists()) {
+      if (querySnapshot.empty) {
         return 0;
       }
 
-      const allocation = allocationDoc.data() as TokenAllocation;
-      return allocation.status === 'active' ? allocation.tokens : 0;
+      // Sum up all allocations for this page in the current month
+      let totalAllocation = 0;
+      querySnapshot.forEach(doc => {
+        const allocation = doc.data();
+        totalAllocation += allocation.tokens || 0;
+      });
+
+      return totalAllocation;
     } catch (error) {
-      console.error('Error getting current page allocation:', error);
+      console.error('TokenService: Error getting current page allocation:', error);
       return 0;
     }
   }
 
   /**
-   * Simplified token allocation for pages (used by TokenPledgeBar)
+   * Allocate tokens to a page using proper database collections
    */
   static async allocateTokensToPage(userId: string, pageId: string, tokenChange: number): Promise<void> {
     try {
-      // Get current allocation
-      const currentAllocation = await this.getCurrentPageAllocation(userId, pageId);
-      const newAllocation = Math.max(0, currentAllocation + tokenChange);
+      const currentMonth = getCurrentMonth();
 
-      // Determine resource type and author based on pageId format
-      let resourceType: 'page' | 'user_bio' | 'group_about' = 'page';
-      let authorId: string;
+      // Get current token balance
+      const balanceRef = doc(db, 'tokenBalances', userId);
+      const balanceDoc = await getDoc(balanceRef);
 
-      if (pageId.startsWith('user_bio_')) {
-        resourceType = 'user_bio';
-        authorId = pageId.replace('user_bio_', '');
-      } else if (pageId.startsWith('group_about_')) {
-        resourceType = 'group_about';
-        // For group about pages, we need to get the group owner
-        const groupId = pageId.replace('group_about_', '');
-        const groupRef = doc(db, 'groups', groupId);
-        const groupDoc = await getDoc(groupRef);
+      if (!balanceDoc.exists()) {
+        throw new Error('Token balance not found. Please initialize your subscription first.');
+      }
 
-        if (!groupDoc.exists()) {
-          throw new Error('Group not found');
-        }
+      const balanceData = balanceDoc.data();
 
-        const groupData = groupDoc.data();
-        authorId = groupData.ownerId;
+      // Get current page allocation
+      const currentPageAllocation = await this.getCurrentPageAllocation(userId, pageId);
+      const newPageAllocation = Math.max(0, currentPageAllocation + tokenChange);
+      const allocationDifference = newPageAllocation - currentPageAllocation;
 
-        if (!authorId) {
-          throw new Error('Group owner not found');
-        }
+      // Check if user has enough available tokens
+      if (allocationDifference > 0 && allocationDifference > balanceData.availableTokens) {
+        throw new Error('Insufficient tokens available');
+      }
+
+      // Use a batch to ensure atomicity
+      const batch = writeBatch(db);
+
+      // Update token balance
+      const newAllocatedTokens = balanceData.allocatedTokens + allocationDifference;
+      const newAvailableTokens = balanceData.availableTokens - allocationDifference;
+
+      batch.update(balanceRef, {
+        allocatedTokens: newAllocatedTokens,
+        availableTokens: newAvailableTokens,
+        updatedAt: serverTimestamp()
+      });
+
+      // Handle token allocation record
+      if (newPageAllocation > 0) {
+        // Create or update allocation record
+        const allocationId = `${userId}_${pageId}_${currentMonth}`;
+        const allocationRef = doc(db, 'tokenAllocations', allocationId);
+
+        batch.set(allocationRef, {
+          id: allocationId,
+          userId,
+          recipientUserId: '', // Will be filled when we know the page owner
+          resourceType: 'page',
+          resourceId: pageId,
+          tokens: newPageAllocation,
+          month: currentMonth,
+          status: 'active',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
       } else {
-        // Regular page
-        const pageRef = doc(db, 'pages', pageId);
-        const pageDoc = await getDoc(pageRef);
-
-        if (!pageDoc.exists()) {
-          throw new Error('Page not found');
-        }
-
-        const pageData = pageDoc.data();
-        authorId = pageData.authorId || pageData.userId;
-
-        if (!authorId) {
-          throw new Error('Page author not found');
-        }
+        // Remove allocation if tokens are 0
+        const allocationId = `${userId}_${pageId}_${currentMonth}`;
+        const allocationRef = doc(db, 'tokenAllocations', allocationId);
+        batch.delete(allocationRef);
       }
 
-      // Use the full allocation method
-      const result = await this.allocateTokens(userId, authorId, resourceType as any, pageId, newAllocation);
+      // Commit the batch
+      await batch.commit();
 
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to allocate tokens');
-      }
     } catch (error) {
-      console.error('Error in simplified token allocation:', error);
+      console.error('TokenService: Error in token allocation:', error);
       throw error;
     }
   }
@@ -171,49 +231,45 @@ export class TokenService {
   }
 
   /**
-   * Initialize or update user's monthly token allocation based on subscription
+   * Initialize user's monthly token allocation (store in tokenBalances collection)
    */
   static async updateMonthlyTokenAllocation(
-    userId: string, 
+    userId: string,
     subscriptionAmount: number
   ): Promise<void> {
     try {
       const tokens = calculateTokensForAmount(subscriptionAmount);
       const currentMonth = getCurrentMonth();
-      
+
       const balanceRef = doc(db, 'tokenBalances', userId);
       const balanceDoc = await getDoc(balanceRef);
-      
-      const balanceData: Partial<TokenBalance> = {
-        userId,
-        totalTokens: tokens,
-        monthlyAllocation: tokens,
-        lastAllocationDate: currentMonth,
-        updatedAt: serverTimestamp()
-      };
-      
+
       if (balanceDoc.exists()) {
-        const currentBalance = balanceDoc.data() as TokenBalance;
-        
-        // If it's a new month or amount changed, reset available tokens
-        if (currentBalance.lastAllocationDate !== currentMonth || 
-            currentBalance.monthlyAllocation !== tokens) {
-          balanceData.availableTokens = tokens;
-          balanceData.allocatedTokens = 0;
-        }
-        
-        await updateDoc(balanceRef, balanceData);
+        // Update existing balance
+        const existingData = balanceDoc.data();
+        await updateDoc(balanceRef, {
+          totalTokens: tokens,
+          availableTokens: tokens - (existingData.allocatedTokens || 0),
+          monthlyAllocation: tokens,
+          lastAllocationDate: currentMonth,
+          updatedAt: serverTimestamp()
+        });
       } else {
-        // First time setup
+        // Create new balance record
         await setDoc(balanceRef, {
-          ...balanceData,
+          userId,
+          totalTokens: tokens,
           allocatedTokens: 0,
           availableTokens: tokens,
-          createdAt: serverTimestamp()
+          monthlyAllocation: tokens,
+          lastAllocationDate: currentMonth,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
         });
       }
+
     } catch (error) {
-      console.error('Error updating monthly token allocation:', error);
+      console.error('TokenService: Error updating monthly token allocation:', error);
       throw error;
     }
   }

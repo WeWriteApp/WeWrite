@@ -172,6 +172,7 @@ export function PWAInstallsAnalyticsWidget({ dateRange, granularity, className =
                 fill="#a855f7"
                 name="Installs"
                 radius={[2, 2, 0, 0]}
+                maxBarSize={60}
               />
             </BarChart>
           </ResponsiveContainer>

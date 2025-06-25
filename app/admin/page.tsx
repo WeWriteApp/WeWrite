@@ -10,7 +10,7 @@ import { Checkbox } from '../components/ui/checkbox';
 
 import { SwipeableTabs, SwipeableTabsList, SwipeableTabsTrigger, SwipeableTabsContent } from '../components/ui/swipeable-tabs';
 import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react';
-import { db } from "../firebase/database";
+import { db } from "../firebase/config";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
 import { FeatureFlag, isAdmin } from "../utils/feature-flags";
@@ -60,13 +60,7 @@ export default function AdminPage() {
     {
       id: 'payments',
       name: 'payments',
-      description: 'Enable subscription functionality and UI for managing user subscriptions',
-      enabled: false
-    },
-    {
-      id: 'token_system',
-      name: 'token_system',
-      description: 'Enable token-based payment system with pledge bars and real-time token allocation',
+      description: 'Enable subscription functionality, payment processing, and token-based pledge system',
       enabled: false
     },
     {
@@ -79,6 +73,12 @@ export default function AdminPage() {
       id: 'calendar_view',
       name: 'calendar_view',
       description: 'Enable calendar view for activity tracking and temporal organization',
+      enabled: false
+    },
+    {
+      id: 'inactive_subscription',
+      name: 'inactive_subscription',
+      description: 'Admin testing: Show subscription as inactive for UI testing (admin only)',
       enabled: false
     },
     {
@@ -578,6 +578,7 @@ export default function AdminPage() {
   }
 
   return (
+    <div className="min-h-screen bg-background">
       <div className={`py-6 px-4 ${activeTab === 'users' ? 'w-full' : 'container mx-auto max-w-5xl'}`}>
       <div className="mb-8">
         <Link href="/settings" className="inline-flex items-center text-blue-500 hover:text-blue-600">
@@ -638,30 +639,19 @@ export default function AdminPage() {
         </SwipeableTabsList>
 
         {/* Feature Flags Tab */}
-        <SwipeableTabsContent value="features" className="space-y-4 pt-4">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Feature Flags</h2>
-              <p className="text-muted-foreground">Enable or disable features across the platform</p>
+        <SwipeableTabsContent value="features" className="space-y-6 pt-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Feature Flags</h2>
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="hide-globally-enabled"
+                checked={hideGloballyEnabled}
+                onCheckedChange={(checked) => setHideGloballyEnabled(checked as boolean)}
+              />
+              <label htmlFor="hide-globally-enabled" className="text-sm cursor-pointer">
+                Hide enabled ({filteredFeatureFlags.length}/{featureFlags.length})
+              </label>
             </div>
-          </div>
-
-          {/* Filter Controls */}
-          <div className="flex items-center space-x-2 mb-4 p-3 bg-muted/30 rounded-lg border">
-            <Checkbox
-              id="hide-globally-enabled"
-              checked={hideGloballyEnabled}
-              onCheckedChange={(checked) => setHideGloballyEnabled(checked as boolean)}
-            />
-            <label
-              htmlFor="hide-globally-enabled"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-            >
-              Hide globally enabled flags
-            </label>
-            <span className="text-xs text-muted-foreground ml-2">
-              ({filteredFeatureFlags.length} of {featureFlags.length} flags shown)
-            </span>
           </div>
 
           {isLoading ? (
@@ -672,7 +662,7 @@ export default function AdminPage() {
             <>
 
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
                 {filteredFeatureFlags.map(flag => (
                   <FeatureFlagCard
                     key={flag.id}
@@ -950,6 +940,7 @@ export default function AdminPage() {
 
         </SwipeableTabsContent>
       </SwipeableTabs>
+      </div>
     </div>
   );
 }

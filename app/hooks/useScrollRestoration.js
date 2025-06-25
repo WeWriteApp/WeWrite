@@ -49,13 +49,30 @@ export function useScrollRestoration(options = {}) {
     const scrollToTop = () => {
       // Only scroll if we're actually on a new page and the page has loaded
       if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        window.scrollTo({
-          top: 0,
-          left: 0,
-          behavior: behavior
-        });
+        // Check if there are any sticky/fixed elements that might cause warnings
+        const hasProblematicElements = document.querySelector('[style*="position: sticky"], [style*="position: fixed"], .sticky, .fixed');
 
-        console.log(`Scroll restoration: Scrolled to top for ${isPageChange ? 'new page' : 'same page'}:`, pathname);
+        // Use a more gentle scroll approach if problematic elements exist
+        if (hasProblematicElements) {
+          // Use a timeout to avoid conflicts with sticky elements
+          setTimeout(() => {
+            window.scrollTo({
+              top: 0,
+              left: 0,
+              behavior: 'instant' // Use instant to avoid conflicts
+            });
+          }, 50);
+        } else {
+          window.scrollTo({
+            top: 0,
+            left: 0,
+            behavior: behavior
+          });
+        }
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Scroll restoration: Scrolled to top for ${isPageChange ? 'new page' : 'same page'}:`, pathname);
+        }
       }
     };
 

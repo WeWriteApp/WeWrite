@@ -23,6 +23,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Check if payments feature is enabled for this user
+    const { checkPaymentsFeatureFlag } = await import('../../feature-flag-helper');
+    const featureCheckResponse = await checkPaymentsFeatureFlag(userId);
+    if (featureCheckResponse) {
+      return featureCheckResponse;
+    }
+
     const body = await request.json();
     const { subscriptionId, immediate = false } = body;
 

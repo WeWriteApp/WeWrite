@@ -171,6 +171,7 @@ export function EditsAnalyticsWidget({ dateRange, granularity, className = "" }:
                 fill="#3b82f6"
                 name="Edits"
                 radius={[2, 2, 0, 0]}
+                maxBarSize={60}
               />
             </BarChart>
           </ResponsiveContainer>

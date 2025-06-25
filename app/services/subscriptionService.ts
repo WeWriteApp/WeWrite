@@ -20,16 +20,16 @@ import {
   getDocs,
   serverTimestamp
 } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import { db } from '../firebase/config';
+import { db, auth } from '../firebase/config';
 import { TokenService } from './tokenService';
-import { 
-  SUBSCRIPTION_TIERS, 
-  CUSTOM_TIER_CONFIG, 
-  getTierById, 
+import {
+  SUBSCRIPTION_TIERS,
+  CUSTOM_TIER_CONFIG,
+  getTierById,
   validateCustomAmount,
-  calculateTokensForAmount 
+  calculateTokensForAmount
 } from '../utils/subscriptionTiers';
+import { getStripePublishableKey } from '../utils/stripeConfig';
 // import { getAnalyticsService } from '../utils/analytics-service';
 
 // Types
@@ -71,7 +71,12 @@ export class SubscriptionService {
    */
   private static getStripe() {
     if (!this.stripePromise) {
-      this.stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
+      const publishableKey = getStripePublishableKey();
+      if (!publishableKey) {
+        console.error('Stripe publishable key not found');
+        return Promise.resolve(null);
+      }
+      this.stripePromise = loadStripe(publishableKey);
     }
     return this.stripePromise;
   }
@@ -113,7 +118,6 @@ export class SubscriptionService {
       const tokens = calculateTokensForAmount(amount);
 
       // Get authentication token
-      const auth = getAuth();
       const user = auth.currentUser;
       if (!user) {
         return { error: 'User not authenticated' };
@@ -241,9 +245,6 @@ export class SubscriptionService {
       const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
       await updateDoc(subscriptionRef, subscriptionData);
 
-      // Update user's token allocation
-      await TokenService.updateMonthlyTokenAllocation(userId, amount);
-
       console.log(`Subscription updated for user ${userId}: ${tier} - $${amount}/mo - ${tokens} tokens`);
 
     } catch (error) {
@@ -263,7 +264,6 @@ export class SubscriptionService {
       }
 
       // Get authentication token
-      const auth = getAuth();
       const user = auth.currentUser;
       if (!user) {
         return { success: false, error: 'User not authenticated' };
@@ -311,7 +311,74 @@ export class SubscriptionService {
   }
 
   /**
-   * Update subscription tier/amount
+   * Add amount to existing subscription (bypasses tier validation)
+   */
+  static async addToSubscription(
+    userId: string,
+    additionalAmount: number
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const currentSubscription = await this.getUserSubscription(userId);
+      if (!currentSubscription) {
+        return { success: false, error: 'No active subscription found' };
+      }
+
+      const newAmount = currentSubscription.amount + additionalAmount;
+
+      // Simple validation for amount increases
+      if (newAmount <= 0) {
+        return { success: false, error: 'Amount must be greater than $0' };
+      }
+
+      if (newAmount > CUSTOM_TIER_CONFIG.maxAmount) {
+        return { success: false, error: `Amount cannot exceed $${CUSTOM_TIER_CONFIG.maxAmount}` };
+      }
+
+      // Get authentication token
+      const user = auth.currentUser;
+      if (!user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      const token = await user.getIdToken();
+
+      // Update via API with the new total amount (not tier-based)
+      const response = await fetch('/api/subscription/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId,
+          subscriptionId: currentSubscription.stripeSubscriptionId,
+          newTier: 'custom', // Always custom for amount-based updates
+          newAmount: newAmount,
+          skipValidation: true // Flag to skip minimum validation
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { success: false, error: errorData.error || 'Failed to update subscription' };
+      }
+
+      // The server already handles token allocation updates, so we don't need to do it here
+      const result = await response.json();
+      return {
+        success: true,
+        data: result.subscription // Include subscription data for success modal
+      };
+
+    } catch (error) {
+      console.error('Error adding to subscription:', error);
+      return { success: false, error: 'Failed to update subscription' };
+    }
+  }
+
+  /**
+   * Update subscription tier/amount (always updates existing subscription, never creates multiple)
+   * This ensures one subscription per user by modifying the existing Stripe subscription
    */
   static async updateSubscription(
     userId: string,
@@ -331,9 +398,13 @@ export class SubscriptionService {
           return { success: false, error: 'Custom amount is required' };
         }
         
-        const validation = validateCustomAmount(customAmount);
-        if (!validation.valid) {
-          return { success: false, error: validation.error };
+        // For updates, skip minimum validation to allow adding small amounts like $10
+        if (customAmount <= 0) {
+          return { success: false, error: 'Amount must be greater than $0' };
+        }
+
+        if (customAmount > CUSTOM_TIER_CONFIG.maxAmount) {
+          return { success: false, error: `Amount cannot exceed $${CUSTOM_TIER_CONFIG.maxAmount}` };
         }
         
         amount = customAmount;
@@ -346,7 +417,6 @@ export class SubscriptionService {
       }
 
       // Get authentication token
-      const auth = getAuth();
       const user = auth.currentUser;
       if (!user) {
         return { success: false, error: 'User not authenticated' };
@@ -374,9 +444,6 @@ export class SubscriptionService {
         return { success: false, error: errorData.error || 'Failed to update subscription' };
       }
 
-      // Update token allocation
-      await TokenService.updateMonthlyTokenAllocation(userId, amount);
-
       // Track analytics
       // if (typeof window !== 'undefined') {
       //   const analytics = getAnalyticsService();
@@ -402,7 +469,6 @@ export class SubscriptionService {
   static async syncSubscriptionStatus(userId: string): Promise<{ success: boolean; error?: string }> {
     try {
       // Get authentication token
-      const auth = getAuth();
       const user = auth.currentUser;
       if (!user) {
         return { success: false, error: 'User not authenticated' };
@@ -439,7 +505,6 @@ export class SubscriptionService {
   static async createPortalSession(userId: string): Promise<{ url?: string; error?: string }> {
     try {
       // Get authentication token
-      const auth = getAuth();
       const user = auth.currentUser;
       if (!user) {
         return { error: 'User not authenticated' };

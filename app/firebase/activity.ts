@@ -259,6 +259,12 @@ export const getRecentActivity = async (
             const versionData = versionDoc.data();
             const versionId = versionDoc.id;
 
+            // Skip no-op edits from user-facing activity displays
+            if (versionData.isNoOp === true) {
+              console.log(`Filtering out no-op edit version ${versionId} from activity display`);
+              return null;
+            }
+
             // Get username for this version
             const username = await getUsernameById(versionData.userId);
 
@@ -284,7 +290,8 @@ export const getRecentActivity = async (
           })
         );
 
-        return versionActivities;
+        // Filter out null values from no-op edits
+        return versionActivities.filter(activity => activity !== null);
       } catch (error) {
         console.error(`Error fetching versions for page ${pageId}:`, error);
         return [];

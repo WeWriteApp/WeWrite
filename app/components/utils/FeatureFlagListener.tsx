@@ -3,7 +3,7 @@
 import React, { useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../../providers/AuthProvider';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../../firebase/database';
+import { db } from '../../firebase/config';
 import { useToast } from '../ui/use-toast';
 
 interface FeatureFlagListenerProps {

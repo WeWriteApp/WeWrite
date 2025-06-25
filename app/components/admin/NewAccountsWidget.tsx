@@ -136,6 +136,7 @@ export function NewAccountsWidget({ dateRange, granularity, className = "" }: Ne
                 fill="hsl(var(--primary))"
                 radius={[2, 2, 0, 0]}
                 className="hover:opacity-80 transition-opacity"
+                maxBarSize={60}
               />
             </BarChart>
           </ResponsiveContainer>

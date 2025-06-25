@@ -1,6 +1,7 @@
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase/database/core';
 import { extractTextContent } from '../utils/text-extraction';
+import { hasContentChanged } from '../utils/contentNormalization';
 
 export interface ContentChangeEvent {
   pageId: string;
@@ -33,26 +34,33 @@ export class ContentChangesTrackingService {
     newContent: any
   ): Promise<void> {
     try {
+      // Enhanced no-op detection: Use robust content normalization
+      if (!hasContentChanged(newContent, previousContent)) {
+        console.log('Content tracking: No meaningful changes detected, skipping analytics recording');
+        return;
+      }
+
       // Extract text content from both versions
       const previousText = extractTextContent(previousContent);
       const newText = extractTextContent(newContent);
-      
+
       // Calculate character changes
       const previousLength = previousText.length;
       const newLength = newText.length;
-      
+
       // Simple character diff calculation
       let charactersAdded = 0;
       let charactersDeleted = 0;
-      
+
       if (newLength > previousLength) {
         charactersAdded = newLength - previousLength;
       } else if (previousLength > newLength) {
         charactersDeleted = previousLength - newLength;
       }
-      
-      // Only track if there are actual changes
+
+      // Additional check: Only track if there are actual character changes
       if (charactersAdded === 0 && charactersDeleted === 0) {
+        console.log('Content tracking: No character changes detected, skipping analytics recording');
         return;
       }
       
@@ -104,15 +112,22 @@ export class ContentChangesTrackingService {
     newContent: any
   ): Promise<void> {
     try {
+      // Enhanced no-op detection: Use robust content normalization
+      if (!hasContentChanged(newContent, previousContent)) {
+        console.log('Advanced content tracking: No meaningful changes detected, skipping analytics recording');
+        return;
+      }
+
       // Extract text content from both versions
       const previousText = extractTextContent(previousContent);
       const newText = extractTextContent(newContent);
-      
+
       // Calculate more accurate character changes using LCS
       const { added, removed } = this.calculateCharacterDiff(previousText, newText);
-      
-      // Only track if there are actual changes
+
+      // Additional check: Only track if there are actual character changes
       if (added === 0 && removed === 0) {
+        console.log('Advanced content tracking: No character changes detected, skipping analytics recording');
         return;
       }
       

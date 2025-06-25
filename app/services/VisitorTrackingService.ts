@@ -187,7 +187,7 @@ class VisitorTrackingService {
       this.currentSession = {
         id: sessionId,
         fingerprint,
-        userId,
+        ...(userId !== undefined && { userId }), // Only include userId if defined
         isAuthenticated,
         isBot: botDetection.isBot || false,
         botConfidence: botDetection.confidence || 0,
@@ -205,13 +205,22 @@ class VisitorTrackingService {
         }
       };
 
-      // Store session in Firestore
+      // Store session in Firestore (filter out undefined values)
       const sessionRef = doc(db, 'siteVisitors', sessionId);
-      await setDoc(sessionRef, {
+      const sessionData = {
         ...this.currentSession,
         startTime: this.currentSession.startTime,
         lastSeen: this.currentSession.lastSeen
+      };
+
+      // Remove undefined values to prevent Firestore errors
+      Object.keys(sessionData).forEach(key => {
+        if (sessionData[key] === undefined) {
+          delete sessionData[key];
+        }
       });
+
+      await setDoc(sessionRef, sessionData);
 
       this.isTracking = true;
       this.setupHeartbeat();
@@ -290,11 +299,17 @@ class VisitorTrackingService {
       this.currentSession.isAuthenticated = isAuthenticated;
 
       const sessionRef = doc(db, 'siteVisitors', this.currentSession.id);
-      await updateDoc(sessionRef, {
-        userId: userId || null,
+      const updateData: any = {
         isAuthenticated,
         lastSeen: Timestamp.now()
-      });
+      };
+
+      // Only include userId if it's defined
+      if (userId !== undefined) {
+        updateData.userId = userId;
+      }
+
+      await updateDoc(sessionRef, updateData);
 
       console.log('🔄 Session authentication updated:', { userId, isAuthenticated });
     } catch (error) {

@@ -33,7 +33,7 @@ import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { doc, getDoc, setDoc, collection, getDocs, query, where, orderBy, limit, updateDoc, arrayUnion, Timestamp, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../firebase/database';
+import { db } from '../../firebase/config';
 import { useToast } from '../ui/use-toast';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ColumnDef } from '@tanstack/react-table';

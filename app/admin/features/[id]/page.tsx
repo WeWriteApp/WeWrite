@@ -7,7 +7,7 @@ import { isAdmin } from '../../../utils/feature-flags';
 import { PageLoader } from '../../../components/ui/page-loader';
 import FeatureDetailPage from '../../../components/admin/FeatureDetailPage';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../firebase/database';
+import { db } from '../../../firebase/config';
 import { Button } from '../../../components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';

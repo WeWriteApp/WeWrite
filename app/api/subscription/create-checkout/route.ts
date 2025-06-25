@@ -144,6 +144,43 @@ export async function POST(request: NextRequest) {
 
     console.log(`Using price ID for tier ${tier}: ${priceId} ($${finalAmount}/mo, ${finalTokens} tokens)`);
 
+    // Check for existing active subscription and cancel it to prevent multiple subscriptions
+    const existingSubscriptions = await stripe.subscriptions.list({
+      customer: stripeCustomerId,
+      status: 'active',
+      limit: 10,
+    });
+
+    // Cancel any existing active subscriptions
+    for (const existingSubscription of existingSubscriptions.data) {
+      console.log(`Cancelling existing active subscription ${existingSubscription.id} for user ${userId}`);
+      await stripe.subscriptions.cancel(existingSubscription.id);
+    }
+
+    // Also check for incomplete subscriptions and cancel them
+    const incompleteSubscriptions = await stripe.subscriptions.list({
+      customer: stripeCustomerId,
+      status: 'incomplete',
+      limit: 10,
+    });
+
+    for (const incompleteSubscription of incompleteSubscriptions.data) {
+      console.log(`Cancelling incomplete subscription ${incompleteSubscription.id} for user ${userId}`);
+      await stripe.subscriptions.cancel(incompleteSubscription.id);
+    }
+
+    // Also check for past_due subscriptions and cancel them
+    const pastDueSubscriptions = await stripe.subscriptions.list({
+      customer: stripeCustomerId,
+      status: 'past_due',
+      limit: 10,
+    });
+
+    for (const pastDueSubscription of pastDueSubscriptions.data) {
+      console.log(`Cancelling past_due subscription ${pastDueSubscription.id} for user ${userId}`);
+      await stripe.subscriptions.cancel(pastDueSubscription.id);
+    }
+
     // Create Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,

@@ -153,8 +153,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
   const editorRef = useRef<any>(null);
   const { lineMode, setLineMode } = useLineSettings();
 
-  // Check if link functionality is enabled
-  const linkFunctionalityEnabled = useFeatureFlag('link_functionality', user?.email);
+  // Link functionality is now permanently enabled
 
   // Custom modal hooks
   const { alertState, showError, closeAlert } = useAlert();
@@ -537,7 +536,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
   // Debug: Log when component renders
   useEffect(() => {
     console.log("🔵 [DEBUG] PageEditor component rendered/updated");
-    console.log("🔵 [DEBUG] linkFunctionalityEnabled:", linkFunctionalityEnabled);
+    console.log("🔵 [DEBUG] linkFunctionalityEnabled: true (permanently enabled)");
     console.log("🔵 [DEBUG] isSaving:", isSaving);
 
     // Check if button exists in DOM
@@ -566,12 +565,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
     }
 
     try {
-      // Check if link functionality is enabled
-      if (!linkFunctionalityEnabled) {
-        console.log("🟡 [DEBUG] Link functionality disabled, showing modal");
-        setShowDisabledLinkModal(true);
-        return;
-      }
+      // Link functionality is now permanently enabled
 
       console.log("🔵 [DEBUG] Link functionality enabled, checking editor ref");
       console.log("🔵 [DEBUG] editorRef:", editorRef);
@@ -822,7 +816,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
               console.log("🔵 [DEBUG] Event currentTarget:", e.currentTarget);
               console.log("🔵 [DEBUG] Button ID:", e.currentTarget.id);
               console.log("🔵 [DEBUG] PageEditor Insert Link button clicked - ONLY implementation");
-              console.log("🔵 [DEBUG] linkFunctionalityEnabled:", linkFunctionalityEnabled);
+              console.log("🔵 [DEBUG] linkFunctionalityEnabled: true (permanently enabled)");
               console.log("🔵 [DEBUG] isSaving:", isSaving);
               console.log("🔵 [DEBUG] About to call handleInsertLink from PageEditor");
 

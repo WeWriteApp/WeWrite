@@ -15,6 +15,7 @@ import { ContentChangesAnalyticsWidget } from "../../components/admin/ContentCha
 import { PWAInstallsAnalyticsWidget } from "../../components/admin/PWAInstallsAnalyticsWidget";
 import { LiveVisitorsWidget } from "../../components/admin/LiveVisitorsWidget";
 import { VisitorAnalyticsWidget } from "../../components/admin/VisitorAnalyticsWidget";
+import { AnalyticsBackfillWidget } from "../../components/admin/AnalyticsBackfillWidget";
 import { DashboardErrorBoundary, WidgetErrorBoundary } from "../../components/admin/DashboardErrorBoundary";
 import { DashboardGridSkeleton, DateRangeFilterSkeleton } from "../../components/admin/DashboardSkeleton";
 import './dashboard.css';
@@ -187,6 +188,11 @@ export default function AdminDashboardPage() {
                 {/* PWA Installs Analytics Widget */}
                 <WidgetErrorBoundary widgetName="PWA Installs Analytics">
                   <PWAInstallsAnalyticsWidget dateRange={dateRange} granularity={granularity} />
+                </WidgetErrorBoundary>
+
+                {/* Analytics Backfill Widget */}
+                <WidgetErrorBoundary widgetName="Analytics Backfill">
+                  <AnalyticsBackfillWidget />
                 </WidgetErrorBoundary>
               </div>
             </>

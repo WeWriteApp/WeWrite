@@ -1,4 +1,5 @@
 import { loadStripe, Stripe } from '@stripe/stripe-js';
+import { getStripePublishableKey } from '../utils/stripeConfig';
 
 // Types
 interface CheckoutSessionParams {
@@ -36,7 +37,12 @@ interface ApiResponse {
 let stripePromise: Promise<Stripe | null>;
 const getStripe = (): Promise<Stripe | null> => {
   if (!stripePromise) {
-    stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
+    const publishableKey = getStripePublishableKey();
+    if (!publishableKey) {
+      console.error('Stripe publishable key not found');
+      return Promise.resolve(null);
+    }
+    stripePromise = loadStripe(publishableKey);
   }
   return stripePromise;
 };

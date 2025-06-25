@@ -6,6 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { TokenEarningsService } from '../../../services/tokenEarningsService';
+import { FinancialOperationsService } from '../../../services/financialOperationsService';
+import { FinancialUtils } from '../../../types/financial';
 
 export async function GET(request: NextRequest) {
   try {
@@ -64,20 +66,25 @@ export async function POST(request: NextRequest) {
     const { action, amount } = body;
 
     if (action === 'request_payout') {
-      // Request payout for available tokens
-      const result = await TokenEarningsService.requestPayout(userId, amount);
-      
+      // Generate correlation ID for tracking
+      const correlationId = FinancialUtils.generateCorrelationId();
+
+      // Request payout for available tokens with retry logic and correlation tracking
+      const result = await FinancialOperationsService.requestPayout(userId, amount, correlationId);
+
       if (result.success) {
         return NextResponse.json({
           success: true,
-          data: {
-            payoutId: result.payoutId
-          },
+          data: result.data,
+          correlationId: result.correlationId,
           message: 'Payout requested successfully'
         });
       } else {
         return NextResponse.json({
-          error: result.error
+          error: result.error?.message || 'Payout request failed',
+          code: result.error?.code,
+          correlationId: result.correlationId,
+          retryable: result.error?.retryable
         }, { status: 400 });
       }
     }

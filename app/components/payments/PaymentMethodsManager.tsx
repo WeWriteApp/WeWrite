@@ -13,13 +13,10 @@ import { Badge } from '../ui/badge';
 import { useTheme } from '../../providers/ThemeProvider';
 import { toast } from 'sonner';
 import { useFeatureFlag } from '../../utils/feature-flags';
+import { getStripePublishableKey } from '../../utils/stripeConfig';
 
 // Initialize Stripe
-const stripePromise = loadStripe(
-  process.env.NODE_ENV === 'development'
-    ? process.env.NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
-    : process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
-);
+const stripePromise = loadStripe(getStripePublishableKey() || '');
 
 interface PaymentMethod {
   id: string;

@@ -203,6 +203,7 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
                 fill="#22c55e"
                 name="Successful"
                 radius={[0, 0, 0, 0]}
+                maxBarSize={60}
               />
               <Bar
                 dataKey="aborted"
@@ -210,6 +211,7 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
                 fill="#ef4444"
                 name="Aborted"
                 radius={[2, 2, 0, 0]}
+                maxBarSize={60}
               />
             </BarChart>
           </ResponsiveContainer>

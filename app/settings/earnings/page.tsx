@@ -8,10 +8,25 @@ import { ChevronLeft, Coins, Wallet } from 'lucide-react';
 import WriterTokenDashboard from '../../components/payments/WriterTokenDashboard';
 import WriterEarningsFeatureGuard from '../../components/payments/WriterEarningsFeatureGuard';
 import { PayoutsManager } from '../../components/payments/PayoutsManager';
+import { subscribeFeeChanges } from '../../services/feeService';
+import { useEffect, useState } from 'react';
 
 export default function EarningsPage() {
   const { user } = useAuth();
   const router = useRouter();
+
+  // State for dynamic fee percentage
+  const [wewriteFeePercentage, setWewriteFeePercentage] = useState<number>(0);
+
+  // Subscribe to real-time fee structure changes
+  useEffect(() => {
+    const unsubscribe = subscribeFeeChanges((feeStructure) => {
+      setWewriteFeePercentage(feeStructure.platformFeePercentage * 100);
+    });
+
+    // Cleanup subscription on unmount
+    return unsubscribe;
+  }, []);
 
   if (!user) {
     return null;
@@ -43,7 +58,7 @@ export default function EarningsPage() {
         </div>
 
             {/* Tabbed Interface */}
-            <Tabs defaultValue="earnings" className="space-y-6">
+            <Tabs defaultValue="earnings" className="space-y-6" urlNavigation="hash">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="earnings" className="flex items-center gap-2">
                   <Coins className="h-4 w-4" />
@@ -60,7 +75,7 @@ export default function EarningsPage() {
                   <div>
                     <h2 className="text-xl font-semibold mb-2">Token Earnings</h2>
                     <p className="text-muted-foreground">
-                      Tokens received from supporters.
+                      Tokens received from supporters. WeWrite takes a {wewriteFeePercentage}% platform fee - you keep {100 - wewriteFeePercentage}% of your earnings (minus payment processing fees).
                     </p>
                   </div>
 
@@ -75,7 +90,7 @@ export default function EarningsPage() {
                   <div>
                     <h2 className="text-xl font-semibold mb-2">Payouts</h2>
                     <p className="text-muted-foreground">
-                      Set up bank account and request payouts.
+                      Set up bank account and request payouts. WeWrite platform fee: {wewriteFeePercentage}%.
                     </p>
                   </div>
 
@@ -98,6 +113,9 @@ export default function EarningsPage() {
                 </p>
                 <p>
                   <strong>Rate:</strong> 10 tokens = $1. Minimum payout $25.
+                </p>
+                <p>
+                  <strong>WeWrite Fee:</strong> {wewriteFeePercentage}% platform fee - you keep {100 - wewriteFeePercentage}% of earnings (only payment processing fees apply).
                 </p>
               </div>
         </div>

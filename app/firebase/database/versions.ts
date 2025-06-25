@@ -350,16 +350,25 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
     const pageData = pageDoc.data();
     const currentVersionId = pageData.currentVersion;
 
-    // If skipIfUnchanged is true, check if content has changed using centralized logic
-    if (data.skipIfUnchanged && pageData.content) {
+    // Enhanced no-op detection: Check if content has changed using centralized logic
+    let isNoOpEdit = false;
+    if (pageData.content) {
       console.log('Checking if content has changed before creating version...');
 
       if (!hasContentChanged(contentString, pageData.content)) {
-        console.log('Content unchanged after normalization, skipping version creation');
-        return { success: false, message: 'Content unchanged' };
-      }
+        isNoOpEdit = true;
+        console.log('Content unchanged after normalization - this is a no-op edit');
 
-      console.log('Content has changed, proceeding with version creation');
+        // If skipIfUnchanged is true, skip version creation entirely
+        if (data.skipIfUnchanged) {
+          console.log('Skipping version creation for no-op edit');
+          return { success: false, message: 'Content unchanged' };
+        } else {
+          console.log('Creating version for no-op edit (skipIfUnchanged=false) but marking as no-op');
+        }
+      } else {
+        console.log('Content has changed, proceeding with version creation');
+      }
     }
 
     // CRITICAL FIX: Use ISO string instead of Firestore Timestamp for consistent format
@@ -373,7 +382,8 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
       userId: data.userId,
       username: data.username || "Anonymous",
       groupId: data.groupId || null,
-      previousVersionId: currentVersionId || null // Link to the previous version
+      previousVersionId: currentVersionId || null, // Link to the previous version
+      isNoOp: isNoOpEdit // Flag to identify no-op edits for filtering
     };
 
     // Create the new version document

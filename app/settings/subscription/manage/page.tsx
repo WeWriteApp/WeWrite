@@ -79,9 +79,10 @@ export default function SubscriptionManagePage() {
         setSubscription(subscriptionData);
 
         if (subscriptionData?.status === 'active') {
-          // Fetch token balance
-          const balance = await TokenService.getUserTokenBalance(user.uid);
-          setTokenBalance(balance);
+          // Set up real-time token balance listener
+          const unsubscribeTokenBalance = TokenService.listenToTokenBalance(user.uid, (balance) => {
+            setTokenBalance(balance);
+          });
 
           // Fetch token allocations
           const allocations = await TokenService.getUserTokenAllocations(user.uid);

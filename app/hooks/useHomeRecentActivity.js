@@ -6,6 +6,7 @@ import { getPageVersions } from "../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
 import { getBatchUserData } from "../firebase/batchUserData";
 import { registerHomeActivityInvalidation } from "../utils/globalCacheInvalidation";
+import { hasContentChanged } from "../utils/contentNormalization";
 
 /**
  * Deduplicates activities by pageId, keeping only the most recent activity for each page
@@ -416,13 +417,20 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
             // For pages with multiple versions
             const previousVersion = versions[1];
 
-            // Skip if we don't have content to compare or if there are no changes
+            // Enhanced no-op detection: Check if this version is marked as no-op
+            if (currentVersion.isNoOp === true) {
+              console.log(`Filtering no-op edit from homepage activity for page ${pageData.id}`);
+              return null;
+            }
+
+            // Skip if we don't have content to compare
             if (!currentVersion.content || !previousVersion.content) {
               return null;
             }
 
-            // Skip if content is identical
-            if (currentVersion.content === previousVersion.content) {
+            // Enhanced no-op detection: Use robust content normalization
+            if (!hasContentChanged(currentVersion.content, previousVersion.content)) {
+              console.log(`Filtering no-op edit (content unchanged) from homepage activity for page ${pageData.id}`);
               return null;
             }
 
@@ -472,7 +480,7 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
         const activityResults = await Promise.all(activitiesPromises);
         console.log(`Processed ${activitiesPromises.length} pages, got ${activityResults.filter(r => r !== null).length} valid activities`);
 
-        // Filter out null results, private pages, and activities with missing usernames
+        // Filter out null results, private pages, activities with missing usernames, and no-op edits
         // Ensure activityResults is an array before filtering
         const safeActivityResults = Array.isArray(activityResults) ? activityResults : [];
         const filteredActivities = safeActivityResults
@@ -483,6 +491,15 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
             // Skip activities with missing or null usernames (but allow "Anonymous")
             if (!activity.username || activity.username === "Missing username") {
               return false;
+            }
+
+            // Additional no-op filtering: Skip activities where content hasn't meaningfully changed
+            // This catches any remaining no-op edits that might have been created before our implementation
+            if (!activity.isNewPage && activity.currentContent && activity.previousContent) {
+              if (!hasContentChanged(activity.currentContent, activity.previousContent)) {
+                console.log(`Filtering no-op activity at display level for page ${activity.pageId}`);
+                return false;
+              }
             }
 
             // If viewing own profile, show all pages

@@ -285,7 +285,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
   return (
     <>
       {/* Google Analytics Script - needed for gtag to be available globally */}
-      {GA_MEASUREMENT_ID && (
+      {GA_MEASUREMENT_ID && process.env.NODE_ENV !== 'development' && (
         <>
           <Script
             strategy="afterInteractive"
@@ -312,6 +312,25 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
             }}
           />
         </>
+      )}
+      {process.env.NODE_ENV === 'development' && (
+        <Script
+          id="google-analytics-dev-stub"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Development stub for gtag to prevent errors
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){
+                if (typeof console !== 'undefined') {
+                  console.log('gtag (dev stub):', arguments);
+                }
+              }
+              window.gtag = gtag;
+              console.log('Google Analytics disabled in development (stub loaded)');
+            `,
+          }}
+        />
       )}
 
       {/* Children content */}

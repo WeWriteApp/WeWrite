@@ -41,6 +41,25 @@ export async function POST(request: NextRequest) {
     // Get account status from Stripe
     const account = await stripe.accounts.retrieve(stripeConnectedAccountId);
 
+    // Get bank account details from external accounts
+    let bankAccountDetails = null;
+    if (account.external_accounts?.data && account.external_accounts.data.length > 0) {
+      const bankAccount = account.external_accounts.data.find(
+        (account: any) => account.object === 'bank_account'
+      );
+
+      if (bankAccount) {
+        bankAccountDetails = {
+          last4: bankAccount.last4,
+          bank_name: bankAccount.bank_name,
+          account_holder_type: bankAccount.account_holder_type,
+          currency: bankAccount.currency,
+          country: bankAccount.country,
+          routing_number: bankAccount.routing_number ? `****${bankAccount.routing_number.slice(-4)}` : null
+        };
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -56,7 +75,8 @@ export async function POST(request: NextRequest) {
         },
         capabilities: account.capabilities,
         country: account.country,
-        default_currency: account.default_currency
+        default_currency: account.default_currency,
+        bank_account: bankAccountDetails
       }
     });
 

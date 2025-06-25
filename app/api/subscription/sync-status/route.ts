@@ -49,72 +49,104 @@ export async function POST(request: NextRequest) {
     db = firestore;
     auth = firebaseAuth;
 
-    // Check if payments feature is enabled
-    const featureCheckResponse = await checkPaymentsFeatureFlag();
-    if (featureCheckResponse) {
-      return featureCheckResponse;
-    }
-
-    // Get user ID from request using our helper
+    // Get user ID from request using our helper first
     const userId = await getUserIdFromRequest(request);
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get the current subscription from Firestore using Admin SDK
-    const subscriptionRef = db.collection('users').doc(userId).collection('subscription').doc('current');
-    const subscriptionDoc = await subscriptionRef.get();
-
-    if (!subscriptionDoc.exists) {
-      return NextResponse.json({ error: 'No subscription found' }, { status: 404 });
+    // Check if payments feature is enabled for this specific user
+    const featureCheckResponse = await checkPaymentsFeatureFlag(userId);
+    if (featureCheckResponse) {
+      return featureCheckResponse;
     }
 
-    const subscriptionData = subscriptionDoc.data();
-    const stripeSubscriptionId = subscriptionData?.stripeSubscriptionId;
+    // Get user's Stripe customer ID
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
 
-    if (!stripeSubscriptionId) {
+    if (!userDoc.exists) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const userData = userDoc.data();
+    const stripeCustomerId = userData?.stripeCustomerId;
+
+    if (!stripeCustomerId) {
       return NextResponse.json({
-        error: 'No Stripe subscription ID found'
-      }, { status: 404 });
+        error: 'No Stripe customer ID found'
+      }, { status: 400 });
     }
 
-    console.log(`[SYNC STATUS] Starting status sync for user ${userId}, subscription ${stripeSubscriptionId}`);
+    console.log(`[SYNC STATUS] Starting status sync for user ${userId}, customer ${stripeCustomerId}`);
 
-    // Fetch the latest subscription data from Stripe
-    let stripeSubscription;
+    // Get all subscriptions for this customer from Stripe
+    let subscriptions;
     try {
-      stripeSubscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
-      console.log(`[SYNC STATUS] Retrieved Stripe subscription, status: ${stripeSubscription.status}`);
+      subscriptions = await stripe.subscriptions.list({
+        customer: stripeCustomerId,
+        limit: 10,
+        expand: ['data.latest_invoice', 'data.latest_invoice.payment_intent']
+      });
+      console.log(`[SYNC STATUS] Found ${subscriptions.data.length} subscriptions in Stripe`);
     } catch (error: any) {
-      console.error('[SYNC STATUS] Error fetching Stripe subscription:', error);
+      console.error('[SYNC STATUS] Error fetching Stripe subscriptions:', error);
       return NextResponse.json({
-        error: 'Failed to fetch subscription from Stripe',
+        error: 'Failed to fetch subscriptions from Stripe',
         details: error.message
       }, { status: 500 });
     }
 
-    // Update the subscription status in Firestore using Admin SDK
-    const currentStatus = subscriptionData.status;
+    if (subscriptions.data.length === 0) {
+      return NextResponse.json({
+        error: 'No subscriptions found in Stripe for this customer'
+      }, { status: 404 });
+    }
+
+    // Find the most recent active or incomplete subscription
+    const activeSubscription = subscriptions.data.find(sub =>
+      sub.status === 'active' || sub.status === 'trialing'
+    );
+
+    const stripeSubscription = activeSubscription || subscriptions.data[0];
+    console.log(`[SYNC STATUS] Using subscription ${stripeSubscription.id}, status: ${stripeSubscription.status}`);
+
+    // Get or create subscription record
+    const subscriptionRef = db.collection('users').doc(userId).collection('subscription').doc('current');
+    const subscriptionDoc = await subscriptionRef.get();
+
+    const currentStatus = subscriptionDoc.exists ? subscriptionDoc.data()?.status : 'not_found';
     const newStatus = stripeSubscription.status;
 
     console.log(`[SYNC STATUS] Status transition for user ${userId}: '${currentStatus}' -> '${newStatus}'`);
 
-    const updateData = {
+    // Calculate amount and tokens
+    const amount = (stripeSubscription.items.data[0]?.price.unit_amount || 0) / 100;
+    const tokens = amount * 10;
+
+    const subscriptionData = {
+      stripeSubscriptionId: stripeSubscription.id,
+      stripeCustomerId: stripeCustomerId,
       status: stripeSubscription.status,
+      amount: amount,
+      tokens: tokens,
       currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000).toISOString(),
       currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000).toISOString(),
       cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
+      createdAt: new Date(stripeSubscription.created * 1000), // Use actual Stripe creation time
       updatedAt: FieldValue.serverTimestamp(),
       lastSyncAt: FieldValue.serverTimestamp(),
+      syncedFromStripe: true
     };
 
     // Add billing cycle end if available
     if (stripeSubscription.current_period_end) {
-      updateData.billingCycleEnd = new Date(stripeSubscription.current_period_end * 1000).toISOString();
+      subscriptionData.billingCycleEnd = new Date(stripeSubscription.current_period_end * 1000).toISOString();
     }
 
-    await subscriptionRef.update(updateData);
+    // Use set with merge to create or update the subscription
+    await subscriptionRef.set(subscriptionData, { merge: true });
 
     console.log(`[SYNC STATUS] Subscription status synced successfully for user ${userId}: ${stripeSubscription.status}`);
 
@@ -123,8 +155,10 @@ export async function POST(request: NextRequest) {
       subscription: {
         id: stripeSubscription.id,
         status: stripeSubscription.status,
-        currentPeriodStart: updateData.currentPeriodStart,
-        currentPeriodEnd: updateData.currentPeriodEnd,
+        amount: amount,
+        tokens: tokens,
+        currentPeriodStart: subscriptionData.currentPeriodStart,
+        currentPeriodEnd: subscriptionData.currentPeriodEnd,
         cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
       },
       statusChanged: currentStatus !== newStatus,

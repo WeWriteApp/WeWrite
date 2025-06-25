@@ -35,7 +35,6 @@ import { Search, Mail, MailCheck, Clock, RefreshCw, Check, X, AlertTriangle } fr
 import { collection, query, orderBy, limit, getDocs, where, doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { auth } from '../../firebase/auth';
-import { getAuth } from 'firebase/auth';
 import { getQueueCount } from '../../utils/syncQueue';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Alert, AlertDescription } from '../ui/alert';
@@ -45,12 +44,10 @@ import { Alert, AlertDescription } from '../ui/alert';
  * These flags control access to various features and can be overridden per user
  */
 const FEATURE_FLAGS = [
-  'payments',           // Subscription and payment functionality
+  'payments',           // Subscription and payment functionality (includes token system)
   'map_view',          // Geographic visualization features
   'calendar_view',     // Temporal organization and calendar features
-  'groups',            // Group collaboration features
-  'link_functionality', // Page linking capabilities
-  'daily_notes'        // Daily note features
+  'inactive_subscription', // Admin testing: Show subscription as inactive
 ] as const;
 
 type FeatureFlagKey = typeof FEATURE_FLAGS[number];
@@ -174,7 +171,7 @@ export function UserManagement() {
 
       console.log(`Found ${snapshot.docs.length} users in Firestore`);
       const userData: UserData[] = [];
-      const authInstance = getAuth();
+      const authInstance = auth;
 
       for (const userDoc of snapshot.docs) {
         try {

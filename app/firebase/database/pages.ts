@@ -155,8 +155,13 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
           const { incrementUserPageCount } = await import('../counters');
           await incrementUserPageCount(data.userId, pageData.isPublic);
           console.log("Updated user page count");
-        } catch (counterError) {
-          console.error("Error updating user page count:", counterError);
+        } catch (counterError: any) {
+          // Handle permission denied errors gracefully
+          if (counterError?.code === 'permission-denied') {
+            console.log("Permission denied updating user page count - this is expected in some environments");
+          } else {
+            console.error("Error updating user page count:", counterError);
+          }
           // Don't fail page creation if counter update fails
         }
 

@@ -66,13 +66,21 @@ class AnalyticsService {
     if (this.gaId && typeof window !== 'undefined') {
       try {
         if (!window.GA_INITIALIZED) {
+          // Skip ReactGA initialization in development to prevent authentication errors
+          if (process.env.NODE_ENV === 'development') {
+            console.log('ReactGA disabled in development to prevent authentication errors');
+            window.GA_INITIALIZED = true;
+            this.gaInitialized = true;
+            return;
+          }
+
           if (this.debug) console.log('Initializing Google Analytics with ID:', this.gaId);
 
           ReactGA.initialize(this.gaId, {
             gaOptions: {
-              debug_mode: this.debug
+              debug_mode: false // Disable debug mode to prevent API calls
             },
-            testMode: process.env.NODE_ENV !== "production"
+            testMode: false // Disable test mode to prevent authentication issues
           });
 
           window.GA_INITIALIZED = true;
@@ -83,7 +91,10 @@ class AnalyticsService {
           this.gaInitialized = true;
         }
       } catch (error) {
-        console.error('Failed to initialize Google Analytics:', error);
+        console.error('Failed to initialize Google Analytics (non-fatal):', error);
+        // Mark as initialized even if there's an error to prevent repeated attempts
+        window.GA_INITIALIZED = true;
+        this.gaInitialized = true;
       }
     }
 
@@ -120,15 +131,20 @@ class AnalyticsService {
     // Track in Google Analytics
     if (this.gaInitialized) {
       try {
-        ReactGA.send({
-          hitType: "pageview",
-          page: url,
-          title: pageTitle
-        });
+        // Skip ReactGA calls in development to prevent authentication errors
+        if (process.env.NODE_ENV === 'development') {
+          if (this.debug) console.log('ReactGA page view skipped in development:', pageTitle);
+        } else {
+          ReactGA.send({
+            hitType: "pageview",
+            page: url,
+            title: pageTitle
+          });
 
-        if (this.debug) console.log('Google Analytics page view tracked:', pageTitle);
+          if (this.debug) console.log('Google Analytics page view tracked:', pageTitle);
+        }
       } catch (error) {
-        console.error('Error tracking Google Analytics page view:', error);
+        console.error('Error tracking Google Analytics page view (non-fatal):', error);
       }
     }
 
@@ -171,17 +187,22 @@ class AnalyticsService {
     // Track in Google Analytics
     if (this.gaInitialized) {
       try {
-        ReactGA.event({
-          category: params.category,
-          action: params.action,
-          label: params.label,
-          value: params.value,
-          ...params
-        });
+        // Skip ReactGA calls in development to prevent authentication errors
+        if (process.env.NODE_ENV === 'development') {
+          if (this.debug) console.log('ReactGA event skipped in development:', params.action);
+        } else {
+          ReactGA.event({
+            category: params.category,
+            action: params.action,
+            label: params.label,
+            value: params.value,
+            ...params
+          });
 
-        if (this.debug) console.log('Google Analytics event tracked:', params.action);
+          if (this.debug) console.log('Google Analytics event tracked:', params.action);
+        }
       } catch (error) {
-        console.error('Error tracking Google Analytics event:', error);
+        console.error('Error tracking Google Analytics event (non-fatal):', error);
       }
     }
 

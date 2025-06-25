@@ -10,7 +10,7 @@ import dynamic from "next/dynamic";
 import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
 import { AuthContext } from "../../providers/AuthProvider";
-import TokenPledgeBar from "../payments/TokenPledgeBar";
+
 
 import EmptyContentState from './EmptyContentState';
 import { UserBioSkeleton } from "../ui/page-skeleton";
@@ -262,14 +262,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
         isSaving={isLoading || isHandlingNavigation}
       />
 
-      {/* Token Pledge Bar for supporting user bio content */}
-      {!isEditing && (
-        <TokenPledgeBar
-          pageId={`user_bio_${profile.uid}`}
-          pageTitle={`${profile.username || profile.displayName || 'User'}'s Bio`}
-          authorId={profile.uid}
-        />
-      )}
+
 
     </div>
   );

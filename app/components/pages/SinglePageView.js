@@ -38,10 +38,8 @@ import PublicLayout from "../layout/PublicLayout";
 import PageHeader from "./PageHeader.tsx";
 import PageFooter from "./PageFooter";
 
-import TokenPledgeBar from "../payments/TokenPledgeBar";
-import RelatedPages from "../features/RelatedPages";
-// Import BacklinksSection with dynamic import to avoid SSR issues
-const BacklinksSection = dynamic(() => import("../features/BacklinksSection"), { ssr: false });
+import TokenAllocationBar from "../payments/TokenAllocationBar";
+import CombinedLinksSection from "../features/CombinedLinksSection";
 import Link from "next/link";
 import Head from "next/head";
 import { Button } from "../ui/button";
@@ -347,15 +345,16 @@ function SinglePageView({ params, initialEditMode = false }) {
 
       // CRITICAL FIX: Add page to recent pages list for immediate UI updates
       try {
-        const { addRecentPage } = await import('../../utils/recentPages');
-        await addRecentPage(user.uid, {
-          id: page.id,
-          title: title,
-          lastModified: now,
-          userId: page.userId,
-          username: page.username || user.displayName || user.username
-        });
-        console.log('✅ Added page to recent pages list');
+        if (addRecentPage) {
+          await addRecentPage({
+            id: page.id,
+            title: title,
+            lastModified: now,
+            userId: page.userId,
+            username: page.username || user.displayName || user.username
+          });
+          console.log('✅ Added page to recent pages list');
+        }
       } catch (recentError) {
         console.error('⚠️ Error adding to recent pages (non-fatal):', recentError);
         // Don't fail the save if recent pages tracking fails
@@ -386,13 +385,13 @@ function SinglePageView({ params, initialEditMode = false }) {
         }
       }
 
-      // SIMPLIFIED: Always create a new version when saving
+      // ENHANCED: Enable no-op detection to prevent unnecessary versions
       try {
         const result = await saveNewVersion(page.id, {
           content: editorStateJSON,
           userId: user.uid,
           username: user.displayName || user.username,
-          skipIfUnchanged: false // Always create version
+          skipIfUnchanged: true // Skip version creation for no-op edits
         });
 
         if (result && result.success) {
@@ -1569,18 +1568,11 @@ function SinglePageView({ params, initialEditMode = false }) {
         </PageProvider>
         </div>
 
-      {/* Backlinks and Related Pages - positioned outside main content container */}
+      {/* Combined Links Section - positioned outside main content container */}
       {!isEditing && (
         <div className="mt-4 px-4">
-          {/* What Links Here section */}
-          <BacklinksSection
+          <CombinedLinksSection
             page={page}
-            linkedPageIds={memoizedLinkedPageIds}
-          />
-
-          {/* Related Pages section - Using pre-computed memoized values */}
-          <RelatedPages
-            page={memoizedPage}
             linkedPageIds={memoizedLinkedPageIds}
           />
         </div>
@@ -1607,11 +1599,12 @@ function SinglePageView({ params, initialEditMode = false }) {
           hasUnsavedChanges={hasUnsavedChanges}
         />
       </PageProvider>
+      {console.log('🔥 SinglePageView: isEditing =', isEditing, 'typeof =', typeof isEditing)}
       {!isEditing && (
-        <TokenPledgeBar
-          pageId={page.id}
-          pageTitle={page.title}
-          authorId={page.userId}
+        <TokenAllocationBar
+          pageId={params.id}
+          pageTitle={page?.title}
+          authorId={page?.userId}
         />
       )}
 

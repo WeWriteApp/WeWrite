@@ -22,7 +22,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import PayoutDashboard from './PayoutDashboard';
-import { realPledgeService } from '../../services/realPledgeService';
+import { TokenEarningsService } from '../../services/tokenEarningsService';
 
 interface EarningsTransaction {
   id: string;
@@ -31,7 +31,7 @@ interface EarningsTransaction {
   sourcePageId?: string;
   sourcePageTitle?: string;
   date: string;
-  type: 'pledge' | 'donation' | 'tip';
+  type: 'token' | 'donation' | 'tip';
   status: 'completed' | 'pending';
 }
 
@@ -74,11 +74,19 @@ export function PayoutsManager() {
     if (!user?.uid) return;
 
     try {
-      // Get real user earnings
-      const userEarnings = await realPledgeService.getUserEarnings(user.uid);
-      setRealEarnings(userEarnings);
+      // Get token earnings
+      const tokenBalance = await TokenEarningsService.getWriterTokenBalance(user.uid);
+      if (tokenBalance) {
+        setRealEarnings({
+          totalEarnings: tokenBalance.totalUsdEarned,
+          availableBalance: tokenBalance.availableUsdValue,
+          pendingBalance: tokenBalance.pendingUsdValue,
+          totalPlatformFees: 0,
+          currency: 'usd'
+        });
+      }
     } catch (error) {
-      console.error('Error loading real earnings data:', error);
+      console.error('Error loading token earnings data:', error);
     }
   };
 
@@ -520,8 +528,8 @@ export function PayoutsManager() {
         <div className="p-4 bg-muted/30 rounded-lg">
           <h4 className="font-medium mb-2">How it works:</h4>
           <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• Supporters pledge monthly amounts to your content</li>
-            <li>• You earn 93% of pledges (7% platform fee)</li>
+            <li>• Supporters allocate monthly tokens to your content</li>
+            <li>• You earn from token allocations (no platform fee)</li>
             <li>• Payouts processed monthly on the 1st</li>
             <li>• Minimum payout threshold: $25</li>
             <li>• International payouts supported</li>
