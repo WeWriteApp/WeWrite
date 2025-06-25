@@ -26,8 +26,7 @@ export async function setupFeatureManagement() {
         payments: false,
         map_view: false,
         calendar_view: false,
-        groups: true, // Groups is now enabled by default
-        link_functionality: true // Link functionality enabled by default
+        inactive_subscription: false // Admin testing flag
       });
     }
 

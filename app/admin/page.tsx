@@ -81,25 +81,7 @@ export default function AdminPage() {
       description: 'Admin testing: Show subscription as inactive for UI testing (admin only)',
       enabled: false
     },
-    {
-      id: 'groups',
-      name: 'groups',
-      description: 'Enable group functionality for organizing pages and collaboration',
-      enabled: true
-    },
 
-    {
-      id: 'link_functionality',
-      name: 'link_functionality',
-      description: 'Enable link creation and editing in page editors. When disabled, shows a modal with social media follow prompt',
-      enabled: true
-    },
-    {
-      id: 'daily_notes',
-      name: 'daily_notes',
-      description: 'Enable daily notes section on home page with calendar day cards for quick note creation and access',
-      enabled: false
-    }
   ]);
 
   // Load filter state from session storage

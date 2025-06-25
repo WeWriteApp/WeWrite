@@ -67,7 +67,7 @@ export default function EditorActionButtons({
               console.log("🔵 [DEBUG] Event currentTarget:", e.currentTarget);
               console.log("🔵 [DEBUG] Button ID:", e.currentTarget.id);
               console.log("🔵 [DEBUG] EditorActionButtons Insert Link button clicked");
-              console.log("🔵 [DEBUG] linkFunctionalityEnabled: true (permanently enabled)");
+              console.log("🔵 [DEBUG] Link functionality: enabled (permanently)");
               console.log("🔵 [DEBUG] isSaving:", isSaving);
               console.log("🔵 [DEBUG] About to call onInsertLink from EditorActionButtons");
 

@@ -536,7 +536,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
   // Debug: Log when component renders
   useEffect(() => {
     console.log("🔵 [DEBUG] PageEditor component rendered/updated");
-    console.log("🔵 [DEBUG] linkFunctionalityEnabled: true (permanently enabled)");
+    console.log("🔵 [DEBUG] Link functionality: enabled (permanently)");
     console.log("🔵 [DEBUG] isSaving:", isSaving);
 
     // Check if button exists in DOM
@@ -659,7 +659,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
   //   hasOnSave: !!onSave,
   //   hasOnDelete: !!onDelete,
   //   isSaving,
-  //   linkFunctionalityEnabled
+  //   linkFunctionality: true
   // });
 
   return (
@@ -672,7 +672,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
       onSave={onSave}
       onDelete={onDelete}
       isSaving={isSaving}
-      linkFunctionalityEnabled={linkFunctionalityEnabled}
+      linkFunctionalityEnabled={true}
     >
       {/* CRITICAL: NO extra containers - match view mode exactly */}
       <div className="editor-container w-full max-w-none">
@@ -816,7 +816,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
               console.log("🔵 [DEBUG] Event currentTarget:", e.currentTarget);
               console.log("🔵 [DEBUG] Button ID:", e.currentTarget.id);
               console.log("🔵 [DEBUG] PageEditor Insert Link button clicked - ONLY implementation");
-              console.log("🔵 [DEBUG] linkFunctionalityEnabled: true (permanently enabled)");
+              console.log("🔵 [DEBUG] Link functionality: enabled (permanently)");
               console.log("🔵 [DEBUG] isSaving:", isSaving);
               console.log("🔵 [DEBUG] About to call handleInsertLink from PageEditor");
 
