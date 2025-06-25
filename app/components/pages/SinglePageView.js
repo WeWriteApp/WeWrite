@@ -803,15 +803,17 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   // Add a timeout ref to prevent infinite loading
   const loadingTimeoutRef = useRef(null);
+  const emergencyTimeoutRef = useRef(null); // Track emergency timeout separately
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
   const maxLoadAttempts = 3;
 
   useEffect(() => {
     if (params.id) {
-      // Emergency timeout to prevent infinite loading
-      const emergencyTimeout = setTimeout(() => {
+      // Emergency timeout to prevent infinite loading - INCREASED to 10 seconds to prevent premature override
+      emergencyTimeoutRef.current = setTimeout(() => {
         if (isMountedRef.current) {
+          console.warn("SinglePageView: Emergency timeout triggered after 10 seconds");
           setIsLoading(false);
           // Set some basic content to show something
           if (!page) {
@@ -829,12 +831,15 @@ function SinglePageView({ params, initialEditMode = false }) {
             }]);
           }
         }
-      }, 2000); // 2 second emergency timeout
+      }, 10000); // INCREASED to 10 seconds to prevent content disappearing
 
       // Wait for authentication to complete before setting up listener
       // This prevents permission denied errors when checking group access
       if (authLoading) {
-        clearTimeout(emergencyTimeout); // Clear emergency timeout if we're waiting for auth
+        if (emergencyTimeoutRef.current) {
+          clearTimeout(emergencyTimeoutRef.current); // Clear emergency timeout if we're waiting for auth
+          emergencyTimeoutRef.current = null;
+        }
         return;
       }
 
@@ -885,6 +890,11 @@ function SinglePageView({ params, initialEditMode = false }) {
           if (loadingTimeoutRef.current) {
             clearTimeout(loadingTimeoutRef.current);
             loadingTimeoutRef.current = null;
+          }
+          // CRITICAL: Clear emergency timeout when page loads successfully
+          if (emergencyTimeoutRef.current) {
+            clearTimeout(emergencyTimeoutRef.current);
+            emergencyTimeoutRef.current = null;
           }
           setLoadingTimedOut(false);
           setLoadAttempts(0);
@@ -948,6 +958,11 @@ function SinglePageView({ params, initialEditMode = false }) {
         if (loadingTimeoutRef.current) {
           clearTimeout(loadingTimeoutRef.current);
           loadingTimeoutRef.current = null;
+        }
+        // CRITICAL: Clear emergency timeout on cleanup
+        if (emergencyTimeoutRef.current) {
+          clearTimeout(emergencyTimeoutRef.current);
+          emergencyTimeoutRef.current = null;
         }
 
         // Reset state to prevent memory leaks
