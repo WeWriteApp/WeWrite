@@ -81,11 +81,7 @@ export default function SyncFeatureFlagsButton() {
           lastModified: timestamp,
           description: 'Enable calendar view for activity tracking and temporal organization.'
         },
-        groups: {
-          createdAt: timestamp,
-          lastModified: timestamp,
-          description: 'Enable group functionality for organizing pages and collaboration.'
-        },
+        // groups feature removed
         notifications: {
           createdAt: timestamp,
           lastModified: timestamp,

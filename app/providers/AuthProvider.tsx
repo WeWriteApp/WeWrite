@@ -12,6 +12,7 @@ import Cookies from 'js-cookie';
 import { setAnalyticsUserInfo } from "../utils/analytics-user-tracking";
 import { checkEmailVerificationOnStartup } from "../services/emailVerificationNotifications";
 import { visitorTrackingService } from "../services/VisitorTrackingService";
+import { clearLoggedOutAccount } from "../components/auth/AccountSwitcher";
 
 /**
  * User data interface
@@ -265,6 +266,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // User is signed in
         localStorage.setItem('authState', 'authenticated');
         localStorage.setItem('isAuthenticated', 'true');
+
+        // Clear this user from the logged-out accounts list since they're now logged in
+        clearLoggedOutAccount(user.uid);
 
         // Check if we're adding a new account
         const addingNewAccount = localStorage.getItem('addingNewAccount') === 'true';

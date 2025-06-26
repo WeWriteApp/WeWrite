@@ -3,6 +3,7 @@
 import React, { Component, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '../ui/button';
+import { CopyErrorButton } from '../ui/CopyErrorButton';
 
 interface Props {
   children: ReactNode;
@@ -13,6 +14,7 @@ interface Props {
 interface State {
   hasError: boolean;
   error?: Error;
+  errorInfo?: React.ErrorInfo;
 }
 
 export class DashboardErrorBoundary extends Component<Props, State> {
@@ -27,7 +29,10 @@ export class DashboardErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Dashboard Error Boundary caught an error:', error, errorInfo);
-    
+
+    // Store error info in state for the copy button
+    this.setState({ errorInfo });
+
     // Call the onError callback if provided
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
@@ -35,7 +40,7 @@ export class DashboardErrorBoundary extends Component<Props, State> {
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, error: undefined });
+    this.setState({ hasError: false, error: undefined, errorInfo: undefined });
   };
 
   render() {
@@ -64,10 +69,18 @@ export class DashboardErrorBoundary extends Component<Props, State> {
                 </pre>
               </details>
             )}
-            <Button onClick={this.handleRetry} className="gap-2">
-              <RefreshCw className="h-4 w-4" />
-              Try Again
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={this.handleRetry} className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Try Again
+              </Button>
+              {this.state.error && (
+                <CopyErrorButton
+                  error={this.state.error}
+                  errorInfo={this.state.errorInfo}
+                />
+              )}
+            </div>
           </div>
         </div>
       );
@@ -83,34 +96,66 @@ interface WidgetErrorBoundaryProps {
   widgetName: string;
 }
 
-export function WidgetErrorBoundary({ children, widgetName }: WidgetErrorBoundaryProps) {
-  return (
-    <DashboardErrorBoundary
-      fallback={
+// Create a custom widget error boundary that can capture error info
+class WidgetErrorBoundaryInternal extends Component<
+  { children: ReactNode; widgetName: string },
+  { hasError: boolean; error?: Error; errorInfo?: React.ErrorInfo }
+> {
+  constructor(props: { children: ReactNode; widgetName: string }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error(`Error in ${this.props.widgetName} widget:`, error, errorInfo);
+    this.setState({ errorInfo });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
         <div className="wewrite-card">
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <AlertTriangle className="h-8 w-8 text-destructive mb-3" />
-            <h4 className="font-medium mb-2">Error loading {widgetName}</h4>
+            <h4 className="font-medium mb-2">Error loading {this.props.widgetName}</h4>
             <p className="text-sm text-muted-foreground mb-3">
               Unable to load this widget. Please try refreshing the page.
             </p>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={() => window.location.reload()}
-              className="gap-2"
-            >
-              <RefreshCw className="h-3 w-3" />
-              Refresh
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.location.reload()}
+                className="gap-2"
+              >
+                <RefreshCw className="h-3 w-3" />
+                Refresh
+              </Button>
+              {this.state.error && (
+                <CopyErrorButton
+                  error={this.state.error}
+                  errorInfo={this.state.errorInfo}
+                  size="sm"
+                />
+              )}
+            </div>
           </div>
         </div>
-      }
-      onError={(error) => {
-        console.error(`Error in ${widgetName} widget:`, error);
-      }}
-    >
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+export function WidgetErrorBoundary({ children, widgetName }: WidgetErrorBoundaryProps) {
+  return (
+    <WidgetErrorBoundaryInternal widgetName={widgetName}>
       {children}
-    </DashboardErrorBoundary>
+    </WidgetErrorBoundaryInternal>
   );
 }

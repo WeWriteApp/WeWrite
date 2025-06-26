@@ -65,9 +65,24 @@ interface LegacyCacheItem<T = any> {
   expiry: number;
 }
 
-// Default TTL (time-to-live) in milliseconds (15 minutes)
-// Increased from 5 minutes to reduce Firestore reads and improve cost efficiency
-const DEFAULT_TTL = (15 * 60 * 1000);
+// OPTIMIZED TTL values for different data types to maximize cost savings
+const DEFAULT_TTL = (15 * 60 * 1000); // 15 minutes - general purpose
+const STATIC_DATA_TTL = (60 * 60 * 1000); // 1 hour - for rarely changing data
+const USER_DATA_TTL = (30 * 60 * 1000); // 30 minutes - for user profiles
+const PAGE_METADATA_TTL = (45 * 60 * 1000); // 45 minutes - for page metadata
+const SUBSCRIPTION_DATA_TTL = (20 * 60 * 1000); // 20 minutes - for subscription data
+const ANALYTICS_DATA_TTL = (10 * 60 * 1000); // 10 minutes - for analytics
+
+// Smart TTL mapping based on data type
+const TTL_MAP: Record<string, number> = {
+  'user_profile': USER_DATA_TTL,
+  'page_metadata': PAGE_METADATA_TTL,
+  'subscription': SUBSCRIPTION_DATA_TTL,
+  'analytics': ANALYTICS_DATA_TTL,
+  'static': STATIC_DATA_TTL,
+  'config': STATIC_DATA_TTL,
+  'feature_flags': STATIC_DATA_TTL,
+};
 
 /**
  * Generate a consistent cache key
@@ -88,10 +103,20 @@ export const generateCacheKey = (
 };
 
 /**
- * Set an item in cache with TTL
+ * Get smart TTL based on cache key prefix
+ */
+export const getSmartTTL = (key: string): number => {
+  const prefix = key.split('_')[1]; // Extract prefix from wewrite_prefix_identifier
+  return TTL_MAP[prefix] || DEFAULT_TTL;
+};
+
+/**
+ * Set an item in cache with smart TTL based on data type
  * Supports both new format (with timestamp/ttl) and legacy format (with expiry)
  */
-export const setCacheItem = <T>(key: string, data: T, ttl: number = DEFAULT_TTL): void => {
+export const setCacheItem = <T>(key: string, data: T, ttl?: number): void => {
+  // Use smart TTL if not provided
+  const finalTTL = ttl || getSmartTTL(key);
   try {
     // Check if we're in a browser environment
     if (typeof window === 'undefined') return;
@@ -99,10 +124,15 @@ export const setCacheItem = <T>(key: string, data: T, ttl: number = DEFAULT_TTL)
     const cacheItem: CacheItem<T> = {
       data,
       timestamp: Date.now(),
-      ttl
+      ttl: finalTTL
     };
 
     localStorage.setItem(key, JSON.stringify(cacheItem));
+
+    // Log cache optimization for monitoring
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Cache] Set ${key} with TTL ${finalTTL}ms (${Math.round(finalTTL / 60000)}min)`);
+    }
   } catch (error) {
     console.warn('Error setting cache item:', error);
     // Handle localStorage quota exceeded or other errors
@@ -381,3 +411,113 @@ export class BatchCache<T> {
     clearCacheByPrefix(this.prefix);
   }
 }
+
+/**
+ * Cache warming service for preloading frequently accessed data
+ * Reduces database reads by proactively caching data before it's needed
+ */
+export class CacheWarmingService {
+  private static instance: CacheWarmingService;
+  private warmingQueue: Array<{ key: string; fetcher: () => Promise<any>; priority: number }> = [];
+  private isWarming = false;
+
+  static getInstance(): CacheWarmingService {
+    if (!CacheWarmingService.instance) {
+      CacheWarmingService.instance = new CacheWarmingService();
+    }
+    return CacheWarmingService.instance;
+  }
+
+  /**
+   * Add a cache warming task
+   */
+  addWarmingTask(key: string, fetcher: () => Promise<any>, priority: number = 1): void {
+    // Don't add if already cached and not expired
+    const cached = getCacheItem(key);
+    if (cached) return;
+
+    this.warmingQueue.push({ key, fetcher, priority });
+    this.warmingQueue.sort((a, b) => b.priority - a.priority); // Higher priority first
+
+    if (!this.isWarming) {
+      this.processWarmingQueue();
+    }
+  }
+
+  /**
+   * Process the warming queue
+   */
+  private async processWarmingQueue(): Promise<void> {
+    if (this.warmingQueue.length === 0) {
+      this.isWarming = false;
+      return;
+    }
+
+    this.isWarming = true;
+    const task = this.warmingQueue.shift()!;
+
+    try {
+      const data = await task.fetcher();
+      setCacheItem(task.key, data);
+      console.log(`[CacheWarming] Preloaded ${task.key}`);
+    } catch (error) {
+      console.warn(`[CacheWarming] Failed to preload ${task.key}:`, error);
+    }
+
+    // Process next task with a small delay to avoid overwhelming the system
+    setTimeout(() => this.processWarmingQueue(), 100);
+  }
+
+  /**
+   * Warm cache for user-specific data
+   */
+  warmUserCache(userId: string): void {
+    this.addWarmingTask(
+      generateCacheKey('user_profile', userId),
+      async () => {
+        // This would be replaced with actual user fetching logic
+        const { getUserById } = await import('../firebase/database/users');
+        return getUserById(userId);
+      },
+      3 // High priority
+    );
+
+    this.addWarmingTask(
+      generateCacheKey('subscription', userId),
+      async () => {
+        // This would be replaced with actual subscription fetching logic
+        const { getUserSubscription } = await import('../firebase/subscription');
+        return getUserSubscription(userId);
+      },
+      2 // Medium priority
+    );
+  }
+
+  /**
+   * Warm cache for page data
+   */
+  warmPageCache(pageId: string): void {
+    this.addWarmingTask(
+      generateCacheKey('page_metadata', pageId),
+      async () => {
+        // This would be replaced with actual page fetching logic
+        const { getPageById } = await import('../firebase/database/pages');
+        return getPageById(pageId);
+      },
+      2 // Medium priority
+    );
+  }
+
+  /**
+   * Get cache warming statistics
+   */
+  getStats(): { queueSize: number; isWarming: boolean } {
+    return {
+      queueSize: this.warmingQueue.length,
+      isWarming: this.isWarming
+    };
+  }
+}
+
+// Export singleton instance
+export const cacheWarmingService = CacheWarmingService.getInstance();

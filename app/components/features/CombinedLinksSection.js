@@ -283,8 +283,8 @@ export default function CombinedLinksSection({ page, linkedPageIds = [] }) {
   const isLoading = backlinksLoading || relatedLoading;
 
   return (
-    <div className="mt-8 pt-6">
-      {/* Single seamless text block combining both sections */}
+    <div className="mt-8 pt-6 w-full max-w-none box-border overflow-hidden">
+      {/* Backlinks section - separate row */}
       <div className="text-base font-normal" style={{lineHeight: '2rem'}}>
         <span className="inline">Backlinks</span>
         <HelpCircle
@@ -316,7 +316,7 @@ export default function CombinedLinksSection({ page, linkedPageIds = [] }) {
                       <span className={page.isAlreadyLinked ? "opacity-60" : ""}>
                         <PillLink
                           href={`/${page.id}`}
-                          className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px] truncate"
+                          className="max-w-[150px] sm:max-w-[200px] md:max-w-[250px] lg:max-w-[300px] truncate"
                           style={{verticalAlign: 'middle'}}
                         >
                           {page.title && isExactDateFormat(page.title)
@@ -340,8 +340,11 @@ export default function CombinedLinksSection({ page, linkedPageIds = [] }) {
             No pages link here
           </span>
         )}
+      </div>
 
-        <span className="inline ml-6">Related Pages</span>
+      {/* Related Pages section - separate row, closely butted up */}
+      <div className="text-base font-normal" style={{lineHeight: '2rem'}}>
+        <span className="inline">Related Pages</span>
         <HelpCircle
           className={`h-4 w-4 cursor-pointer transition-all duration-200 inline ml-1 mr-1 ${
             relatedExpanded
@@ -371,7 +374,7 @@ export default function CombinedLinksSection({ page, linkedPageIds = [] }) {
                       <span className={page.isAlreadyLinked ? "opacity-60" : ""}>
                         <PillLink
                           href={`/${page.id}`}
-                          className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px] truncate"
+                          className="max-w-[150px] sm:max-w-[200px] md:max-w-[250px] lg:max-w-[300px] truncate"
                           style={{verticalAlign: 'middle'}}
                         >
                           {page.title && isDailyNoteFormat(page.title)

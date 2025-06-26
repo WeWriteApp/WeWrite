@@ -40,8 +40,16 @@ const CardTitle = React.forwardRef<
     ref={ref}
     className={cn(
       "text-2xl font-semibold leading-none tracking-tight",
+      // Prevent unnecessary hyphenation in card titles
+      "hyphens-none overflow-wrap-break-word word-break-normal",
       className
     )}
+    style={{
+      hyphens: 'none',
+      wordBreak: 'normal',
+      overflowWrap: 'break-word',
+      ...((props as any).style || {})
+    }}
     {...props}
   />
 ))

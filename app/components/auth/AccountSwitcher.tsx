@@ -11,7 +11,7 @@ import { IconButton } from '../ui/icon-button';
 import { useAuth } from '../../providers/AuthProvider';
 import { logoutUser } from '../../firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { db, auth } from '../../firebase/config';
 
 interface Account {
   uid: string;
@@ -51,74 +51,95 @@ export function AccountSwitcher() {
 
   // Load accounts from localStorage on component mount
   useEffect(() => {
-    const accountsList: Account[] = [];
+    const loadAccounts = async () => {
+      const accountsList: Account[] = [];
 
-    // Try to load saved accounts from localStorage first
-    try {
-      const savedAccounts = localStorage.getItem('savedAccounts');
-      if (savedAccounts) {
-        const parsedAccounts: Account[] = JSON.parse(savedAccounts);
+      // Try to load saved accounts from localStorage first
+      try {
+        const savedAccounts = localStorage.getItem('savedAccounts');
+        const loggedOutAccounts = localStorage.getItem('loggedOutAccounts');
+        const loggedOutAccountsSet = new Set(loggedOutAccounts ? JSON.parse(loggedOutAccounts) : []);
 
-        // If we have a current user, ensure they are marked as current in the saved accounts
-        if (user) {
-          const updatedAccounts = parsedAccounts.map(account => ({
-            ...account,
-            isCurrent: account.uid === user.uid
-          }));
+        if (savedAccounts) {
+          const parsedAccounts: Account[] = JSON.parse(savedAccounts);
 
-          // Check if current user exists in saved accounts
-          const currentUserExists = updatedAccounts.some(account => account.uid === user.uid);
+          // Filter out accounts that have been explicitly logged out
+          const validAccounts = parsedAccounts.filter(account => !loggedOutAccountsSet.has(account.uid));
 
-          if (!currentUserExists) {
-            // Add current user to the list if not already present
-            updatedAccounts.unshift({
-              uid: user.uid,
-              email: user.email || '',
-              username: user.username || '',
-              isCurrent: true
-            });
+          // If we have a current user, ensure they are marked as current in the saved accounts
+          if (user) {
+            // Check if current user was explicitly logged out
+            if (loggedOutAccountsSet.has(user.uid)) {
+              console.log('AccountSwitcher: Current user was previously logged out, not adding to accounts list');
+              // Don't add the current user to accounts if they were explicitly logged out
+              const updatedAccounts = validAccounts.map(account => ({
+                ...account,
+                isCurrent: false
+              }));
+              accountsList.push(...updatedAccounts);
+            } else {
+              const updatedAccounts = validAccounts.map(account => ({
+                ...account,
+                isCurrent: account.uid === user.uid
+              }));
+
+              // Check if current user exists in valid saved accounts
+              const currentUserExists = updatedAccounts.some(account => account.uid === user.uid);
+
+              if (!currentUserExists) {
+                // Add current user to the list if not already present and not logged out
+                updatedAccounts.unshift({
+                  uid: user.uid,
+                  email: user.email || '',
+                  username: user.username || '',
+                  isCurrent: true
+                });
+              }
+
+              accountsList.push(...updatedAccounts);
+
+              // Update localStorage with corrected current user status
+              localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
+            }
+          } else {
+            // No current user, mark all valid accounts as not current
+            const updatedAccounts = validAccounts.map(account => ({
+              ...account,
+              isCurrent: false
+            }));
+            accountsList.push(...updatedAccounts);
           }
+        } else if (user && !loggedOutAccountsSet.has(user.uid)) {
+          // No saved accounts, but we have a current user who wasn't logged out
+          const currentUserAccount = {
+            uid: user.uid,
+            email: user.email || '',
+            username: user.username || '',
+            isCurrent: true
+          };
+          accountsList.push(currentUserAccount);
 
-          accountsList.push(...updatedAccounts);
-
-          // Update localStorage with corrected current user status
-          localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
-        } else {
-          // No current user, mark all accounts as not current
-          const updatedAccounts = parsedAccounts.map(account => ({
-            ...account,
-            isCurrent: false
-          }));
-          accountsList.push(...updatedAccounts);
+          // Save to localStorage
+          localStorage.setItem('savedAccounts', JSON.stringify([currentUserAccount]));
         }
-      } else if (user) {
-        // No saved accounts, but we have a current user
-        const currentUserAccount = {
-          uid: user.uid,
-          email: user.email || '',
-          username: user.username || '',
-          isCurrent: true
-        };
-        accountsList.push(currentUserAccount);
+      } catch (error) {
+        console.error('Error loading saved accounts:', error);
 
-        // Save to localStorage
-        localStorage.setItem('savedAccounts', JSON.stringify([currentUserAccount]));
+        // Fallback: if there's an error and we have a current user, just show them
+        if (user) {
+          accountsList.push({
+            uid: user.uid,
+            email: user.email || '',
+            username: user.username || '',
+            isCurrent: true
+          });
+        }
       }
-    } catch (error) {
-      console.error('Error loading saved accounts:', error);
 
-      // Fallback: if there's an error and we have a current user, just show them
-      if (user) {
-        accountsList.push({
-          uid: user.uid,
-          email: user.email || '',
-          username: user.username || '',
-          isCurrent: true
-        });
-      }
-    }
+      setAccounts(accountsList);
+    };
 
-    setAccounts(accountsList);
+    loadAccounts();
   }, [user]);
 
   const handleAccountClick = async (account: Account) => {
@@ -200,8 +221,22 @@ export function AccountSwitcher() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsOpen(false);
+
+    const currentAccount = accounts.find(acc => acc.isCurrent);
+    if (!currentAccount) {
+      console.error('AccountSwitcher: No current account found for logout');
+      return;
+    }
+
+    // Track this account as logged out to prevent it from reappearing
+    const loggedOutAccounts = localStorage.getItem('loggedOutAccounts');
+    const loggedOutAccountsSet = new Set(loggedOutAccounts ? JSON.parse(loggedOutAccounts) : []);
+    loggedOutAccountsSet.add(currentAccount.uid);
+    localStorage.setItem('loggedOutAccounts', JSON.stringify([...loggedOutAccountsSet]));
+
+    console.log('AccountSwitcher: Marked account as logged out:', currentAccount.email, currentAccount.uid);
 
     if (accounts.length > 1) {
       // If there are multiple accounts, remove only the current account
@@ -215,6 +250,13 @@ export function AccountSwitcher() {
         // Update localStorage
         localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
         sessionStorage.setItem('wewrite_accounts', JSON.stringify(updatedAccounts));
+
+        // Clear Firebase Auth state for the logged-out account
+        try {
+          await clearFirebaseAuthForAccount(currentAccount.uid);
+        } catch (error) {
+          console.error('Error clearing Firebase auth for account:', error);
+        }
 
         // Emit account switch event to update authentication context
         const accountSwitchEvent = new CustomEvent('accountSwitch', {
@@ -236,6 +278,13 @@ export function AccountSwitcher() {
     localStorage.removeItem('savedAccounts');
     sessionStorage.removeItem('wewrite_accounts');
     sessionStorage.removeItem('wewrite_switch_to');
+
+    // Clear Firebase Auth state for the logged-out account
+    try {
+      await clearFirebaseAuthForAccount(currentAccount.uid);
+    } catch (error) {
+      console.error('Error clearing Firebase auth for account:', error);
+    }
 
     // Log out the user completely
     logoutUser().then(() => {
@@ -380,3 +429,126 @@ export function AccountSwitcher() {
     </>
   );
 }
+
+/**
+ * Clear Firebase Auth state for a specific account in PWA
+ * This helps prevent the logged-out account from reappearing
+ */
+async function clearFirebaseAuthForAccount(accountUid: string): Promise<void> {
+  try {
+    // In PWAs, Firebase uses IndexedDB for persistence
+    // We need to clear the specific account's auth state
+
+    // Check if we're in a PWA environment
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                  (window.navigator as any).standalone === true;
+
+    if (isPWA) {
+      console.log('PWA detected: Clearing IndexedDB auth state for account:', accountUid);
+
+      // Clear IndexedDB entries for this specific account
+      try {
+        // Open the Firebase Auth IndexedDB
+        const dbRequest = indexedDB.open('firebaseLocalStorageDb');
+
+        dbRequest.onsuccess = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+
+          if (db.objectStoreNames.contains('firebaseLocalStorage')) {
+            const transaction = db.transaction(['firebaseLocalStorage'], 'readwrite');
+            const store = transaction.objectStore('firebaseLocalStorage');
+
+            // Get all keys and remove entries related to this account
+            const getAllRequest = store.getAllKeys();
+
+            getAllRequest.onsuccess = () => {
+              const keys = getAllRequest.result;
+              keys.forEach((key) => {
+                if (typeof key === 'string' && key.includes(accountUid)) {
+                  store.delete(key);
+                  console.log('Cleared IndexedDB entry for logged-out account:', key);
+                }
+              });
+            };
+          }
+        };
+      } catch (indexedDBError) {
+        console.warn('Could not clear IndexedDB auth state:', indexedDBError);
+      }
+    }
+
+    // Also clear any localStorage entries related to this account
+    const keysToCheck = [
+      `firebase:authUser:${auth.app.options.apiKey}:[DEFAULT]`,
+      `firebase:host:${auth.app.options.authDomain}`,
+      `wewrite_user_${accountUid}`,
+      `wewrite_session_${accountUid}`
+    ];
+
+    keysToCheck.forEach(key => {
+      try {
+        const value = localStorage.getItem(key);
+        if (value && value.includes(accountUid)) {
+          localStorage.removeItem(key);
+          console.log('Cleared localStorage entry for logged-out account:', key);
+        }
+      } catch (error) {
+        console.warn('Could not clear localStorage entry:', key, error);
+      }
+    });
+
+    // Clear sessionStorage entries
+    keysToCheck.forEach(key => {
+      try {
+        const value = sessionStorage.getItem(key);
+        if (value && value.includes(accountUid)) {
+          sessionStorage.removeItem(key);
+          console.log('Cleared sessionStorage entry for logged-out account:', key);
+        }
+      } catch (error) {
+        console.warn('Could not clear sessionStorage entry:', key, error);
+      }
+    });
+
+  } catch (error) {
+    console.error('Error clearing Firebase auth state for account:', accountUid, error);
+  }
+}
+
+/**
+ * Clear a user from the logged-out accounts list when they log back in
+ * This should be called when a user successfully logs in
+ */
+export function clearLoggedOutAccount(accountUid: string): void {
+  try {
+    const loggedOutAccounts = localStorage.getItem('loggedOutAccounts');
+    if (loggedOutAccounts) {
+      const loggedOutAccountsSet = new Set(JSON.parse(loggedOutAccounts));
+      if (loggedOutAccountsSet.has(accountUid)) {
+        loggedOutAccountsSet.delete(accountUid);
+        localStorage.setItem('loggedOutAccounts', JSON.stringify([...loggedOutAccountsSet]));
+        console.log('Cleared logged-out status for account:', accountUid);
+      }
+    }
+  } catch (error) {
+    console.error('Error clearing logged-out account status:', error);
+  }
+}
+
+/**
+ * Check if an account was explicitly logged out
+ */
+export function isAccountLoggedOut(accountUid: string): boolean {
+  try {
+    const loggedOutAccounts = localStorage.getItem('loggedOutAccounts');
+    if (loggedOutAccounts) {
+      const loggedOutAccountsSet = new Set(JSON.parse(loggedOutAccounts));
+      return loggedOutAccountsSet.has(accountUid);
+    }
+  } catch (error) {
+    console.error('Error checking logged-out account status:', error);
+  }
+  return false;
+}
+
+export default AccountSwitcher;

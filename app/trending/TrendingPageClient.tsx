@@ -7,7 +7,7 @@ import { ChevronLeft, Flame, Loader } from 'lucide-react';
 import Link from 'next/link';
 import PillLink from '../components/utils/PillLink';
 import SimpleSparkline from '../components/utils/SimpleSparkline';
-import { getTrendingPages, getPageViewsLast24Hours } from "../firebase/pageViews";
+// // import { getTrendingPages } from "../firebase/pageViews";
 import { useDateFormat } from "../contexts/DateFormatContext";
 import { isExactDateFormat } from "../utils/dailyNoteNavigation";
 
@@ -34,8 +34,12 @@ export default function TrendingPageClient() {
         setLoading(true);
         console.log('TrendingPageClient: Fetching trending pages with limit: 50');
 
-        // Get trending pages for the last 24 hours
-        const response = await getTrendingPages(50);
+        // Get trending pages for the last 24 hours using API endpoint
+        const apiResponse = await fetch('/api/trending?limit=50');
+        if (!apiResponse.ok) {
+          throw new Error(`API request failed: ${apiResponse.status}`);
+        }
+        const response = await apiResponse.json();
 
         // Check if we got the expected response format
         if (!response || typeof response !== 'object') {
@@ -59,36 +63,9 @@ export default function TrendingPageClient() {
           return;
         }
 
-        // Check if pages already have hourlyViews data
-        const needsHourlyData = !pages[0].hourlyViews;
-
-        if (needsHourlyData) {
-          console.log('TrendingPageClient: Fetching hourly view data for pages');
-          // For each page, get the hourly view data for sparklines
-          const pagesWithSparklines = await Promise.all(
-            pages.map(async (page) => {
-              try {
-                const viewData = await getPageViewsLast24Hours(page.id);
-                return {
-                  ...page,
-                  hourlyViews: viewData.hourly || Array(24).fill(0)
-                };
-              } catch (err) {
-                console.error(`Error fetching view data for page ${page.id}:`, err);
-                return {
-                  ...page,
-                  hourlyViews: Array(24).fill(0)
-                };
-              }
-            })
-          );
-
-          console.log('TrendingPageClient: Setting trending pages with sparklines');
-          setTrendingPages(pagesWithSparklines);
-        } else {
-          console.log('TrendingPageClient: Pages already have hourly data');
-          setTrendingPages(pages);
-        }
+        // The API now provides hourlyViews data for all pages, so we can use it directly
+        console.log('TrendingPageClient: Using hourly data from API');
+        setTrendingPages(pages);
       } catch (err) {
         console.error('Error fetching trending pages:', err);
         setError(`Failed to load trending pages: ${err.message}`);
@@ -205,6 +182,7 @@ export default function TrendingPageClient() {
                           data={page.hourlyViews}
                           height={32}
                           strokeWidth={1.5}
+                          title={page.title}
                         />
                       </div>
                     </td>
@@ -265,6 +243,7 @@ export default function TrendingPageClient() {
                         data={page.hourlyViews}
                         height={48}
                         strokeWidth={2}
+                        title={page.title}
                       />
                     </div>
                   </div>

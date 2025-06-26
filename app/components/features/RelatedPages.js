@@ -863,7 +863,7 @@ export default function RelatedPages({ page, linkedPageIds = [], maxPages = 20 }
                       <PillLink
                         key={page.id}
                         href={`/${page.id}`}
-                        className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px] truncate"
+                        className="max-w-[150px] sm:max-w-[200px] md:max-w-[250px] lg:max-w-[300px] truncate"
                       >
                         {page.title && isDailyNoteFormat(page.title)
                           ? formatDateString(page.title)

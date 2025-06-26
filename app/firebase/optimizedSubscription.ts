@@ -64,6 +64,10 @@ interface SubscriptionData {
   tier?: string | null;
   stripeSubscriptionId?: string | null;
   currentPeriodEnd?: any;
+  cancelAtPeriodEnd?: boolean;
+  billingCycleEnd?: string;
+  currentPeriodStart?: any;
+  canceledAt?: string;
 }
 
 interface PledgeData {
@@ -200,7 +204,11 @@ export const getOptimizedUserSubscription = async (
         pledgedAmount: rawData.pledgedAmount || 0,
         tier: rawData.tier || null,
         stripeSubscriptionId: rawData.stripeSubscriptionId || null,
-        currentPeriodEnd: rawData.currentPeriodEnd
+        currentPeriodEnd: rawData.currentPeriodEnd,
+        cancelAtPeriodEnd: rawData.cancelAtPeriodEnd || false,
+        billingCycleEnd: rawData.billingCycleEnd || rawData.currentPeriodEnd,
+        currentPeriodStart: rawData.currentPeriodStart,
+        canceledAt: rawData.canceledAt
       };
       
       // Cache the result

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { PillLink } from '../PillLink';
 import { Sparkline } from '../ui/sparkline';
-import { getPageViewsLast24Hours, getTrendingPages } from '../../firebase/pageViews';
+// import { getTrendingPages } from '../../firebase/pageViews';
 import Link from 'next/link';
 import { getUsernameById } from '../../utils/userUtils';
 import ContentCarousel from './ContentCarousel';
@@ -34,9 +34,14 @@ export default function TrendingCarousel({ limit = 10 }) {
         setLoading(true);
         setError(null); // Clear any previous errors
 
-        // Get trending pages for the last 24 hours
+        // Get trending pages for the last 24 hours using API endpoint
         console.log('Fetching trending pages with limit:', limit);
-        const pages = await getTrendingPages(limit);
+        const apiResponse = await fetch(`/api/trending?limit=${limit}`);
+        if (!apiResponse.ok) {
+          throw new Error(`API request failed: ${apiResponse.status}`);
+        }
+        const response = await apiResponse.json();
+        const pages = response.trendingPages || [];
 
         if (!pages || pages.length === 0) {
           console.log('No trending pages returned');
@@ -47,16 +52,14 @@ export default function TrendingCarousel({ limit = 10 }) {
 
         console.log(`Fetched ${pages.length} trending pages`);
 
-        // For each page, get the hourly view data for sparklines and username
-        const pagesWithSparklines = await Promise.all(
+        // For each page, get the username (hourly view data already included from trending API)
+        const pagesWithUsernames = await Promise.all(
           pages.map(async (page) => {
             try {
               if (!page || !page.id) {
                 console.error('Invalid page object:', page);
                 return null;
               }
-
-              const viewData = await getPageViewsLast24Hours(page.id);
 
               // Get username if userId exists
               let username = "Anonymous";
@@ -70,14 +73,15 @@ export default function TrendingCarousel({ limit = 10 }) {
 
               return {
                 ...page,
-                hourlyViews: viewData.hourly || Array(24).fill(0),
+                // Use hourlyViews from trending API if available, otherwise fallback to empty array
+                hourlyViews: page.hourlyViews || Array(24).fill(0),
                 username: username || "Anonymous"
               };
             } catch (err) {
-              console.error(`Error fetching view data for page ${page.id}:`, err);
+              console.error(`Error processing page ${page.id}:`, err);
               return {
                 ...page,
-                hourlyViews: Array(24).fill(0),
+                hourlyViews: page.hourlyViews || Array(24).fill(0),
                 username: page.username || "Anonymous"
               };
             }
@@ -85,7 +89,7 @@ export default function TrendingCarousel({ limit = 10 }) {
         );
 
         // Filter out any null values
-        const validPages = pagesWithSparklines.filter(page => page !== null);
+        const validPages = pagesWithUsernames.filter(page => page !== null);
         console.log(`Processed ${validPages.length} valid trending pages`);
 
         setTrendingPages(validPages);

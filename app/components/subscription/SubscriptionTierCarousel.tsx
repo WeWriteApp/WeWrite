@@ -11,19 +11,52 @@ interface SubscriptionTierCarouselProps {
   onTierSelect: (tierId: string) => void;
   customAmount?: number;
   onCustomAmountChange?: (amount: number) => void;
+  currentSubscription?: {
+    amount: number;
+    tier?: string;
+  } | null;
+  showCurrentOption?: boolean;
 }
 
 export default function SubscriptionTierCarousel({
   selectedTier,
   onTierSelect,
   customAmount = CUSTOM_TIER_CONFIG.minAmount,
-  onCustomAmountChange
+  onCustomAmountChange,
+  currentSubscription,
+  showCurrentOption = false
 }: SubscriptionTierCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [customAmountInput, setCustomAmountInput] = useState(customAmount.toString());
   const [customAmountError, setCustomAmountError] = useState<string | null>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  // Create tiers array with optional current subscription option
+  const availableTiers = React.useMemo(() => {
+    const tiers = [...SUBSCRIPTION_TIERS];
+
+    if (showCurrentOption && currentSubscription) {
+      const currentTier = {
+        id: 'current',
+        name: 'Current Subscription',
+        amount: currentSubscription.amount,
+        tokens: calculateTokensForAmount(currentSubscription.amount),
+        description: `Reactivate your ${currentSubscription.tier || 'custom'} subscription`,
+        isCurrent: true
+      };
+
+      // Add current tier at the beginning
+      tiers.unshift(currentTier);
+    }
+
+    return tiers;
+  }, [showCurrentOption, currentSubscription]);
+
+  // Update customAmountInput when customAmount prop changes
+  useEffect(() => {
+    setCustomAmountInput(customAmount.toString());
+  }, [customAmount]);
 
   const handleCustomAmountChange = (value: string) => {
     setCustomAmountInput(value);
@@ -45,11 +78,11 @@ export default function SubscriptionTierCarousel({
   };
 
   const nextSlide = () => {
-    setCurrentIndex((prev) => (prev + 1) % SUBSCRIPTION_TIERS.length);
+    setCurrentIndex((prev) => (prev + 1) % availableTiers.length);
   };
 
   const prevSlide = () => {
-    setCurrentIndex((prev) => (prev - 1 + SUBSCRIPTION_TIERS.length) % SUBSCRIPTION_TIERS.length);
+    setCurrentIndex((prev) => (prev - 1 + availableTiers.length) % availableTiers.length);
   };
 
   const goToSlide = (index: number) => {
@@ -105,6 +138,7 @@ export default function SubscriptionTierCarousel({
 
   const renderTierCard = (tier: any, index: number) => {
     const isCustomTier = tier.isCustom;
+    const isCurrentTier = tier.isCurrent;
     const displayAmount = isCustomTier ? customAmount : tier.amount;
     const displayTokens = isCustomTier ? calculateTokensForAmount(customAmount) : tier.tokens;
 
@@ -118,10 +152,18 @@ export default function SubscriptionTierCarousel({
         } ${tier.popular ? 'ring-2 ring-primary/30' : ''}`}
         onClick={() => onTierSelect(tier.id)}
       >
-        {tier.popular && (
+        {tier.popular && !isCurrentTier && (
           <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
             <span className="bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full">
               Most Popular
+            </span>
+          </div>
+        )}
+
+        {isCurrentTier && (
+          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+            <span className="bg-blue-500 text-white text-xs font-medium px-3 py-1 rounded-full">
+              Your Current Plan
             </span>
           </div>
         )}
@@ -195,7 +237,7 @@ export default function SubscriptionTierCarousel({
                 className="flex transition-transform duration-300 ease-in-out"
                 style={{ transform: `translateX(-${currentIndex * 100}%)` }}
               >
-                {SUBSCRIPTION_TIERS.map((tier, index) => (
+                {availableTiers.map((tier, index) => (
                   <div key={tier.id} className="w-full flex-shrink-0 px-2">
                     {renderTierCard(tier, index)}
                   </div>
@@ -222,7 +264,7 @@ export default function SubscriptionTierCarousel({
           
           {/* Pagination Dots */}
           <div className="flex justify-center gap-2 mt-4">
-            {SUBSCRIPTION_TIERS.map((_, index) => (
+            {availableTiers.map((_, index) => (
               <button
                 key={index}
                 onClick={() => goToSlide(index)}
@@ -237,7 +279,7 @@ export default function SubscriptionTierCarousel({
 
         {/* Desktop Grid - Only show on large screens */}
         <div className="hidden lg:grid lg:grid-cols-3 gap-6">
-          {SUBSCRIPTION_TIERS.map((tier, index) => renderTierCard(tier, index))}
+          {availableTiers.map((tier, index) => renderTierCard(tier, index))}
         </div>
       </div>
     </div>

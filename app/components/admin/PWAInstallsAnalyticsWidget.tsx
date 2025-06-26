@@ -22,7 +22,7 @@ export function PWAInstallsAnalyticsWidget({ dateRange, granularity, className =
 
   // Calculate summary statistics only if we have data
   const totalInstalls = hasData ? data.reduce((sum, item) => sum + item.count, 0) : 0;
-  const averagePerDay = hasData ? (totalInstalls / data.length).toFixed(1) : '0';
+  const averagePerDay = hasData && data.length > 0 ? (totalInstalls / data.length).toFixed(1) : '0';
   const peakDay = hasData ? Math.max(...data.map(d => d.count)) : 0;
   
   // Calculate trend

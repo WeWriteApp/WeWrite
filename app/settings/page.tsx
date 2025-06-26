@@ -31,37 +31,7 @@ export default function SettingsIndexPage() {
   // Token system is enabled by payments feature flag
   const tokenSystemEnabled = paymentsEnabled;
 
-  // Debug logging
-  useEffect(() => {
-    console.log('🔥 Settings page feature flags:', {
-      user: !!user,
-      userEmail: user?.email,
-      userUid: user?.uid,
-      paymentsEnabled,
-      tokenSystemEnabled
-    });
-  }, [user, paymentsEnabled, tokenSystemEnabled]);
-
-  useEffect(() => {
-    if (!user) {
-      router.push('/auth/login');
-      return;
-    }
-
-    // On desktop, redirect to first available settings page (profile)
-    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-      router.push('/settings/profile');
-      return;
-    }
-  }, [user, router]);
-
   const settingsSections: SettingsSection[] = [
-    {
-      id: 'profile',
-      title: 'Profile',
-      icon: User,
-      href: '/settings/profile'
-    },
     {
       id: 'subscription',
       title: 'Subscription',
@@ -78,6 +48,12 @@ export default function SettingsIndexPage() {
       requiresPayments: true
     },
     {
+      id: 'profile',
+      title: 'Profile',
+      icon: User,
+      href: '/settings/profile'
+    },
+    {
       id: 'deleted',
       title: 'Recently deleted',
       icon: Trash2,
@@ -90,6 +66,45 @@ export default function SettingsIndexPage() {
       href: '/settings/advanced'
     }
   ];
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/auth/login');
+      return;
+    }
+
+    // Filter sections based on feature flags to get available sections
+    const availableSections = settingsSections.filter(section => {
+      if (section.requiresPayments && !paymentsEnabled) {
+        return false;
+      }
+      if (section.requiresTokenSystem && !tokenSystemEnabled) {
+        return false;
+      }
+      return true;
+    });
+
+    // On desktop, always redirect to first available settings page
+    // Use a more robust check for desktop vs mobile
+    const checkAndRedirect = () => {
+      if (typeof window !== 'undefined') {
+        const isDesktop = window.innerWidth >= 1024;
+        if (isDesktop && availableSections.length > 0) {
+          router.push(availableSections[0].href);
+        }
+      }
+    };
+
+    // Check immediately
+    checkAndRedirect();
+
+    // Also check on resize to handle window size changes
+    const handleResize = () => checkAndRedirect();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [user, router, paymentsEnabled, tokenSystemEnabled]);
 
   // Filter sections based on feature flags
   const availableSections = settingsSections.filter(section => {
@@ -136,33 +151,7 @@ export default function SettingsIndexPage() {
         </div>
       </div>
 
-      {/* Desktop Welcome Content */}
-      <div className="hidden lg:block p-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Settings</h2>
-          <p className="text-muted-foreground mb-8">
-            Manage your account and preferences using the sidebar navigation.
-          </p>
-
-          <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-            {availableSections.slice(0, 4).map((section) => {
-              const IconComponent = section.icon;
-              return (
-                <button
-                  key={section.id}
-                  onClick={() => handleSectionClick(section.href)}
-                  className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors text-center"
-                >
-                  <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 mx-auto mb-2">
-                    <IconComponent className="h-5 w-5 text-primary" />
-                  </div>
-                  <span className="text-sm font-medium">{section.title}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      {/* Desktop should never see this page - it redirects automatically */}
     </div>
   );
 }

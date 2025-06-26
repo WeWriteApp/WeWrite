@@ -7,7 +7,7 @@ import { Sparkline } from '../ui/sparkline';
 import Link from 'next/link';
 import ContentCarousel from './ContentCarousel';
 import { Loader } from 'lucide-react';
-import { getTrendingPages } from '../../firebase/pageViews';
+// import { getTrendingPages } from '../../firebase/pageViews';
 
 interface TrendingPage {
   id: string;
@@ -35,8 +35,12 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
         setLoading(true);
         console.log('SimpleTrendingCarousel: Fetching trending pages with limit', limit);
 
-        // Use the same function as the logged-in home page to get REAL trending pages
-        const response = await getTrendingPages(limit);
+        // Use the API endpoint to get REAL trending pages
+        const apiResponse = await fetch(`/api/trending?limit=${limit}`);
+        if (!apiResponse.ok) {
+          throw new Error(`API request failed: ${apiResponse.status}`);
+        }
+        const response = await apiResponse.json();
 
         // Handle different response formats
         let pages = [];

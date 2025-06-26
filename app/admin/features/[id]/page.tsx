@@ -11,6 +11,7 @@ import { db } from '../../../firebase/config';
 import { Button } from '../../../components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { ErrorCard } from '../../../components/ui/ErrorCard';
 
 export default function FeatureDetail() {
   const router = useRouter();
@@ -96,10 +97,13 @@ export default function FeatureDetail() {
             Back to Admin Panel
           </Button>
         </Link>
-        <div className="p-6 bg-destructive/10 rounded-2xl text-center">
-          <h2 className="text-xl font-semibold text-destructive">Error</h2>
-          <p className="mt-2">{error}</p>
-        </div>
+        <ErrorCard
+          title="Error Loading Feature"
+          message="Unable to load the requested feature details."
+          error={error}
+          onRetry={() => window.location.reload()}
+          retryLabel="Retry"
+        />
       </div>
     );
   }

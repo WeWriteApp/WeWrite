@@ -72,7 +72,7 @@ export const extractLinksFromNodes = (nodes: SlateContent[]): LinkData[] => {
       else if (node.isExternal) {
         linkData.type = 'external';
       }
-      // Fallback: Check URL patterns
+      // Fallback: Check URL patterns for internal WeWrite links
       else if (linkData.url.startsWith('/') || linkData.url.includes('/pages/')) {
         linkData.type = 'page';
         // Extract page ID from URL
@@ -94,6 +94,35 @@ export const extractLinksFromNodes = (nodes: SlateContent[]): LinkData[] => {
         const userIdMatch = linkData.url.match(/\/users?\/([^\/\?#]+)/);
         if (userIdMatch) {
           linkData.userId = userIdMatch[1];
+        }
+      }
+      // Check for WeWrite domain links (should be treated as internal)
+      else if (linkData.url.includes('wewrite.app') || linkData.url.includes('localhost:3000')) {
+        // This is an internal WeWrite link with full domain
+        if (linkData.url.includes('/user/') || linkData.url.includes('/users/')) {
+          linkData.type = 'user';
+          const userIdMatch = linkData.url.match(/\/users?\/([^\/\?#]+)/);
+          if (userIdMatch) {
+            linkData.userId = userIdMatch[1];
+          }
+        } else {
+          // Assume it's a page link
+          linkData.type = 'page';
+          // Try to extract page ID from various URL patterns
+          const pageIdMatch = linkData.url.match(/\/pages\/([^\/\?#]+)/) ||
+                             linkData.url.match(/wewrite\.app\/([^\/\?#]+)/) ||
+                             linkData.url.match(/localhost:3000\/([^\/\?#]+)/);
+          if (pageIdMatch) {
+            linkData.pageId = pageIdMatch[1];
+          }
+        }
+      }
+      // Only keep as external if it's truly external (has protocol and not WeWrite domain)
+      else if (!linkData.url.startsWith('http://') && !linkData.url.startsWith('https://')) {
+        // No protocol, likely internal - treat as page link
+        linkData.type = 'page';
+        if (linkData.url.length > 0) {
+          linkData.pageId = linkData.url;
         }
       }
 
@@ -420,18 +449,18 @@ export const findPagesLinkingToExternalUrl = async (
  */
 export const extractUserMentions = (content: string | SlateContent[]): string[] => {
   const userIds: string[] = [];
-  
+
   try {
     let nodes: SlateContent[] = [];
-    
+
     if (typeof content === 'string') {
       nodes = JSON.parse(content);
     } else if (Array.isArray(content)) {
       nodes = content;
     }
-    
+
     const links = extractLinksFromNodes(nodes);
-    
+
     links.forEach(link => {
       if (link.type === 'user' && link.userId) {
         userIds.push(link.userId);
@@ -440,9 +469,182 @@ export const extractUserMentions = (content: string | SlateContent[]): string[] 
   } catch (error) {
     console.error("Error extracting user mentions:", error);
   }
-  
+
   // Remove duplicates
   return [...new Set(userIds)];
+};
+
+/**
+ * Find pages by a specific user that link to a specific external URL
+ */
+export const findUserPagesLinkingToExternalUrl = async (
+  externalUrl: string,
+  userId: string,
+  currentUserId: string | null = null
+): Promise<Array<{
+  id: string;
+  title: string;
+  username?: string;
+  lastModified: any;
+}>> => {
+  try {
+    // Import required functions
+    const { getUserPages } = await import('./users');
+
+    // Determine if we should include private pages
+    const includePrivate = currentUserId === userId;
+
+    // Get all user's pages
+    const { pages } = await getUserPages(userId, includePrivate, currentUserId);
+
+    const matchingPages: Array<{
+      id: string;
+      title: string;
+      username?: string;
+      lastModified: any;
+    }> = [];
+
+    // Process each page to find ones that contain the external URL
+    for (const page of pages) {
+      // Skip pages without content
+      if (!page.content) continue;
+
+      try {
+        let content: SlateContent[] = [];
+
+        // Parse content if it's a string
+        if (typeof page.content === 'string') {
+          content = JSON.parse(page.content);
+        } else if (Array.isArray(page.content)) {
+          content = page.content;
+        }
+
+        // Extract links from the page content
+        const links = extractLinksFromNodes(content);
+
+        // Check if any link matches our external URL
+        const hasMatchingLink = links.some(link =>
+          link.type === 'external' && link.url === externalUrl
+        );
+
+        if (hasMatchingLink) {
+          matchingPages.push({
+            id: page.id,
+            title: page.title || 'Untitled',
+            username: page.username,
+            lastModified: page.lastModified
+          });
+        }
+      } catch (error) {
+        console.error(`Error processing page ${page.id} for external URL:`, error);
+        continue;
+      }
+    }
+
+    return matchingPages;
+  } catch (error) {
+    console.error("Error finding user pages linking to external URL:", error);
+    return [];
+  }
+};
+
+/**
+ * Get all external links from a user's pages
+ */
+export const getUserExternalLinks = async (
+  userId: string,
+  currentUserId: string | null = null
+): Promise<Array<{
+  url: string;
+  text: string;
+  pageId: string;
+  pageTitle: string;
+}>> => {
+  try {
+    // Import required functions
+    const { getUserPages } = await import('./users');
+
+    // Determine if we should include private pages
+    const includePrivate = currentUserId === userId;
+
+    // Get all user's pages
+    const { pages } = await getUserPages(userId, includePrivate, currentUserId);
+
+    // Array to store individual external link entries
+    const externalLinkEntries: Array<{
+      url: string;
+      text: string;
+      pageId: string;
+      pageTitle: string;
+    }> = [];
+
+    // Process each page to extract external links
+    for (const page of pages) {
+      // Skip pages without content
+      if (!page.content) continue;
+
+      try {
+        let content: SlateContent[] = [];
+
+        // Parse content if it's a string
+        if (typeof page.content === 'string') {
+          content = JSON.parse(page.content);
+        } else if (Array.isArray(page.content)) {
+          content = page.content;
+        }
+
+        // Extract links from the page content
+        const links = extractLinksFromNodes(content);
+
+        // Filter for external links only - be extra strict
+        const externalLinks = links.filter(link => {
+          if (link.type !== 'external') return false;
+          if (!link.url) return false;
+
+          // Additional checks to ensure it's truly external
+          const url = link.url.toLowerCase();
+
+          // Must have a protocol
+          if (!url.startsWith('http://') && !url.startsWith('https://')) return false;
+
+          // Must not be a WeWrite domain
+          if (url.includes('wewrite.app') || url.includes('localhost:3000') || url.includes('localhost')) return false;
+
+          // Must not be a relative path that somehow got through
+          if (url.startsWith('/')) return false;
+
+          return true;
+        });
+
+        // Add each external link as a separate entry
+        externalLinks.forEach(link => {
+          if (!link.url) return;
+
+          externalLinkEntries.push({
+            url: link.url,
+            text: link.text || link.url,
+            pageId: page.id,
+            pageTitle: page.title || 'Untitled'
+          });
+        });
+      } catch (error) {
+        console.error(`Error processing page ${page.id} for external links:`, error);
+        continue;
+      }
+    }
+
+    // Sort by URL first, then by page title for consistent ordering
+    externalLinkEntries.sort((a, b) => {
+      const urlComparison = a.url.localeCompare(b.url);
+      if (urlComparison !== 0) return urlComparison;
+      return a.pageTitle.localeCompare(b.pageTitle);
+    });
+
+    return externalLinkEntries;
+  } catch (error) {
+    console.error("Error getting user external links:", error);
+    return [];
+  }
 };
 
 /**

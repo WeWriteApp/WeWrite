@@ -55,6 +55,10 @@ const ConstructionBanner = dynamic(() => import('./components/utils/Construction
   ssr: false
 });
 
+const TestModeAlertBar = dynamic(() => import('./components/admin/TestModeAlertBar'), {
+  ssr: false
+});
+
 
 
 
@@ -94,6 +98,9 @@ export default function ClientLayout({ children }) {
                                     {/* Handle pending replies after authentication */}
                                     <PendingReplyHandler />
 
+                                    {/* Test Mode Alert Bar - appears at very top when test modes are active */}
+                                    <TestModeAlertBar />
+
                                     <FeatureFlagCookieManager />
                                     <main className="flex-grow">
                                       <AdminFeaturesWrapper>
@@ -115,6 +122,9 @@ export default function ClientLayout({ children }) {
                                       <div className="flex flex-col bg-background">
                                         {/* Handle pending replies after authentication */}
                                         <PendingReplyHandler />
+
+                                        {/* Test Mode Alert Bar - appears at very top when test modes are active */}
+                                        <TestModeAlertBar />
 
                                         {!isAuthPage && !isAdminPage && <UsernameWarningBanner />}
                                         {!isAuthPage && !isAdminPage && <UsernameEnforcementBanner />}

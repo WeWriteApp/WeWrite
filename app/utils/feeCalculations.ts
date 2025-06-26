@@ -87,6 +87,7 @@ export const STRIPE_PAYOUT_FEES = {
 
 /**
  * Calculate comprehensive fee breakdown for a payout
+ * @deprecated Use calculateFeeBreakdownAsync for dynamic fee structure
  */
 export function calculateFeeBreakdown(
   grossEarnings: number,
@@ -94,7 +95,7 @@ export function calculateFeeBreakdown(
   payoutMethod: 'standard' | 'instant' = 'standard',
   isNewAccount: boolean = false
 ): FeeBreakdown {
-  // WeWrite platform fee (currently 0%)
+  // WeWrite platform fee (using static fallback - use calculateFeeBreakdownAsync for dynamic fees)
   const wewritePlatformFee = grossEarnings * WEWRITE_FEE_STRUCTURE.platformFeePercentage;
   
   // Stripe processing fee (already deducted from gross earnings in most cases)
@@ -139,6 +140,63 @@ export function calculateFeeBreakdown(
 }
 
 /**
+ * Calculate comprehensive fee breakdown for a payout with dynamic fee structure
+ * This version fetches the current platform fee from the database
+ */
+export async function calculateFeeBreakdownAsync(
+  grossEarnings: number,
+  currency: string = 'USD',
+  payoutMethod: 'standard' | 'instant' = 'standard',
+  isNewAccount: boolean = false
+): Promise<FeeBreakdown> {
+  // Get current fee structure from database
+  const currentFeeStructure = await getCurrentFeeStructure();
+
+  // WeWrite platform fee (dynamic from database)
+  const wewritePlatformFee = grossEarnings * currentFeeStructure.platformFeePercentage;
+
+  // Stripe processing fee (already deducted from gross earnings in most cases)
+  // This is for transparency display only
+  const stripeProcessingFee = 0; // Already deducted from token allocations
+
+  // Stripe payout fee
+  let stripePayoutFee = 0;
+  const payoutFeeStructure = STRIPE_PAYOUT_FEES[currency as keyof typeof STRIPE_PAYOUT_FEES];
+
+  if (payoutFeeStructure) {
+    const feeConfig = payoutFeeStructure[payoutMethod];
+    stripePayoutFee = Math.max(
+      grossEarnings * feeConfig.percentage,
+      feeConfig.minimumFee || 0
+    );
+
+    // Add fixed fee if applicable
+    if ('fixedFee' in feeConfig) {
+      stripePayoutFee += feeConfig.fixedFee;
+    }
+  }
+
+  // Tax withholding (placeholder - would need proper tax calculation)
+  const taxWithholding = 0; // To be implemented based on user's tax status
+
+  // Calculate net payout amount
+  const netPayoutAmount = Math.max(
+    0,
+    grossEarnings - wewritePlatformFee - stripeProcessingFee - stripePayoutFee - taxWithholding
+  );
+
+  return {
+    grossEarnings,
+    wewritePlatformFee,
+    stripeProcessingFee,
+    stripePayoutFee,
+    taxWithholding,
+    netPayoutAmount,
+    currency
+  };
+}
+
+/**
  * Check if payout amount meets minimum threshold after fees
  */
 export function meetsMinimumThreshold(
@@ -152,6 +210,7 @@ export function meetsMinimumThreshold(
 
 /**
  * Calculate the minimum gross earnings needed to meet payout threshold
+ * @deprecated Use calculateMinimumGrossEarningsAsync for dynamic fee structure
  */
 export function calculateMinimumGrossEarnings(
   currency: string = 'USD',
@@ -159,17 +218,41 @@ export function calculateMinimumGrossEarnings(
 ): number {
   const threshold = WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold;
   const payoutFeeStructure = STRIPE_PAYOUT_FEES[currency as keyof typeof STRIPE_PAYOUT_FEES];
-  
+
   if (!payoutFeeStructure) {
     return threshold;
   }
-  
+
   const feeConfig = payoutFeeStructure[payoutMethod];
-  
+
   // Calculate minimum gross needed: (threshold + fixed_fee) / (1 - percentage_fee - platform_fee)
   const fixedFee = 'fixedFee' in feeConfig ? feeConfig.fixedFee : (feeConfig.minimumFee || 0);
   const percentageFee = feeConfig.percentage + WEWRITE_FEE_STRUCTURE.platformFeePercentage;
-  
+
+  return (threshold + fixedFee) / (1 - percentageFee);
+}
+
+/**
+ * Calculate the minimum gross earnings needed to meet payout threshold with dynamic fee structure
+ */
+export async function calculateMinimumGrossEarningsAsync(
+  currency: string = 'USD',
+  payoutMethod: 'standard' | 'instant' = 'standard'
+): Promise<number> {
+  const currentFeeStructure = await getCurrentFeeStructure();
+  const threshold = WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold;
+  const payoutFeeStructure = STRIPE_PAYOUT_FEES[currency as keyof typeof STRIPE_PAYOUT_FEES];
+
+  if (!payoutFeeStructure) {
+    return threshold;
+  }
+
+  const feeConfig = payoutFeeStructure[payoutMethod];
+
+  // Calculate minimum gross needed: (threshold + fixed_fee) / (1 - percentage_fee - platform_fee)
+  const fixedFee = 'fixedFee' in feeConfig ? feeConfig.fixedFee : (feeConfig.minimumFee || 0);
+  const percentageFee = feeConfig.percentage + currentFeeStructure.platformFeePercentage;
+
   return (threshold + fixedFee) / (1 - percentageFee);
 }
 
@@ -237,6 +320,7 @@ export interface PayoutRiskAssessment {
 
 /**
  * Assess payout risk and apply financial protection measures
+ * @deprecated Use assessPayoutRiskAsync for dynamic fee structure
  */
 export function assessPayoutRisk(
   grossEarnings: number,
@@ -249,7 +333,7 @@ export function assessPayoutRisk(
   let riskLevel: 'low' | 'medium' | 'high' = 'low';
   let canPayout = true;
 
-  // Check minimum threshold after fees
+  // Check minimum threshold after fees (using static fallback)
   const breakdown = calculateFeeBreakdown(grossEarnings, currency, payoutMethod);
   if (breakdown.netPayoutAmount < WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold) {
     canPayout = false;
@@ -321,7 +405,88 @@ export function assessPayoutRisk(
 }
 
 /**
+ * Assess payout risk and apply financial protection measures with dynamic fee structure
+ */
+export async function assessPayoutRiskAsync(
+  grossEarnings: number,
+  accountCreatedDate: Date,
+  recentPayouts: Array<{ amount: number; date: Date }> = [],
+  currency: string = 'USD',
+  payoutMethod: 'standard' | 'instant' = 'standard'
+): Promise<PayoutRiskAssessment> {
+  const reasons: string[] = [];
+  let riskLevel: 'low' | 'medium' | 'high' = 'low';
+  let canPayout = true;
+
+  // Check minimum threshold after fees (using dynamic fee structure)
+  const breakdown = await calculateFeeBreakdownAsync(grossEarnings, currency, payoutMethod);
+  if (breakdown.netPayoutAmount < WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold) {
+    canPayout = false;
+    reasons.push(`Net payout amount (${formatCurrency(breakdown.netPayoutAmount)}) is below minimum threshold (${formatCurrency(WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold)})`);
+  }
+
+  // Check for negative payout (should never happen, but safety check)
+  if (breakdown.netPayoutAmount <= 0) {
+    canPayout = false;
+    riskLevel = 'high';
+    reasons.push('Payout would result in negative or zero amount after fees');
+  }
+
+  // Check account age for new account protection
+  const accountAgeMs = Date.now() - accountCreatedDate.getTime();
+  const accountAgeDays = accountAgeMs / (1000 * 60 * 60 * 24);
+
+  if (accountAgeDays < WEWRITE_FEE_STRUCTURE.newAccountReservePeriod) {
+    riskLevel = 'medium';
+    reasons.push(`Account is ${Math.floor(accountAgeDays)} days old (reserve period: ${WEWRITE_FEE_STRUCTURE.newAccountReservePeriod} days)`);
+  }
+
+  // Check for unusual payout patterns
+  const last30Days = recentPayouts.filter(p =>
+    Date.now() - p.date.getTime() < 30 * 24 * 60 * 60 * 1000
+  );
+
+  if (last30Days.length > 10) {
+    riskLevel = 'medium';
+    reasons.push('High frequency of recent payouts detected');
+  }
+
+  // Check for large amounts relative to recent history
+  const recentTotal = last30Days.reduce((sum, p) => sum + p.amount, 0);
+  if (grossEarnings > recentTotal * 2 && recentTotal > 0) {
+    riskLevel = 'medium';
+    reasons.push('Payout amount significantly higher than recent history');
+  }
+
+  // Flag large instant payouts
+  if (payoutMethod === 'instant' && grossEarnings > 1000) {
+    riskLevel = 'medium';
+    reasons.push('Large instant payout amount detected');
+  }
+
+  // Determine recommended action
+  let recommendedAction = 'Payout approved';
+  if (!canPayout) {
+    if (riskLevel === 'high') {
+      recommendedAction = 'Payout blocked - contact support';
+    } else {
+      recommendedAction = 'Payout delayed - requirements not met';
+    }
+  } else if (riskLevel === 'medium') {
+    recommendedAction = 'Payout approved with monitoring';
+  }
+
+  return {
+    canPayout,
+    riskLevel,
+    reasons,
+    recommendedAction
+  };
+}
+
+/**
  * Calculate safe payout amount that accounts for all fees and protections
+ * @deprecated Use calculateSafePayoutAmountAsync for dynamic fee structure
  */
 export function calculateSafePayoutAmount(
   grossEarnings: number,
@@ -329,6 +494,20 @@ export function calculateSafePayoutAmount(
   payoutMethod: 'standard' | 'instant' = 'standard'
 ): number {
   const breakdown = calculateFeeBreakdown(grossEarnings, currency, payoutMethod);
+
+  // Ensure we never return a negative amount
+  return Math.max(0, breakdown.netPayoutAmount);
+}
+
+/**
+ * Calculate safe payout amount that accounts for all fees and protections with dynamic fee structure
+ */
+export async function calculateSafePayoutAmountAsync(
+  grossEarnings: number,
+  currency: string = 'USD',
+  payoutMethod: 'standard' | 'instant' = 'standard'
+): Promise<number> {
+  const breakdown = await calculateFeeBreakdownAsync(grossEarnings, currency, payoutMethod);
 
   // Ensure we never return a negative amount
   return Math.max(0, breakdown.netPayoutAmount);

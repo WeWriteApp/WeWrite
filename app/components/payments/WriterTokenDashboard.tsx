@@ -46,22 +46,22 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
 
   const loadWriterData = async () => {
     if (!user?.uid) return;
-    
+
     try {
       setLoading(true);
-      
+
       const [balanceData, earningsData, payoutData] = await Promise.all([
         TokenEarningsService.getWriterTokenBalance(user.uid),
         TokenEarningsService.getWriterEarningsHistory(user.uid, 6),
         TokenEarningsService.getPayoutHistory(user.uid, 10)
       ]);
-      
+
       setBalance(balanceData);
       setEarnings(earningsData);
       setPayouts(payoutData);
-      
+
     } catch (error) {
-      console.error('Error loading writer data:', error);
+      console.error('[WriterTokenDashboard] Error loading writer data:', error);
       toast({
         title: "Error",
         description: "Failed to load earnings data",

@@ -47,7 +47,6 @@ const FEATURE_FLAGS = [
   'payments',           // Subscription and payment functionality (includes token system)
   'map_view',          // Geographic visualization features
   'calendar_view',     // Temporal organization and calendar features
-  'inactive_subscription', // Admin testing: Show subscription as inactive
 ] as const;
 
 type FeatureFlagKey = typeof FEATURE_FLAGS[number];

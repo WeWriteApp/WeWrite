@@ -106,7 +106,7 @@ export default function DatabaseStats() {
                 />
                 <StatCard
                   title="Avg Pages Per User"
-                  value={(stats.avgPagesPerUser || 0).toFixed(2)}
+                  value={isNaN(stats.avgPagesPerUser) ? '0.00' : (stats.avgPagesPerUser || 0).toFixed(2)}
                   description="Average number of pages per user"
                 />
                 <StatCard
@@ -146,7 +146,7 @@ export default function DatabaseStats() {
                     {queryStats.map((stat, index) => (
                       <tr key={index} className="border-b hover:bg-muted/50">
                         <td className="py-2 px-4">{stat.name}</td>
-                        <td className="py-2 px-4">{stat.duration.toFixed(2)}</td>
+                        <td className="py-2 px-4">{isNaN(stat.duration) ? '0.00' : stat.duration.toFixed(2)}</td>
                         <td className="py-2 px-4">{new Date(stat.timestamp).toLocaleTimeString()}</td>
                         <td className="py-2 px-4">
                           {stat.error ? (

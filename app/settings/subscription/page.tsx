@@ -28,6 +28,7 @@ interface Subscription {
   stripeCustomerId?: string;
   stripePriceId?: string;
   stripeSubscriptionId?: string | null;
+  cancelAtPeriodEnd?: boolean;
   createdAt?: any; // Firebase Timestamp
   updatedAt?: any; // Firebase Timestamp
 }
@@ -49,9 +50,11 @@ export default function SubscriptionPage() {
   const [tokenBalance, setTokenBalance] = useState(null);
   const [processingCheckout, setProcessingCheckout] = useState(false);
   const [customAmount, setCustomAmount] = useState(CUSTOM_TIER_CONFIG.minAmount);
+  const [previousCustomAmount, setPreviousCustomAmount] = useState<number | null>(null);
   const [processingStartTime, setProcessingStartTime] = useState<number | null>(null);
   const [showCancelOption, setShowCancelOption] = useState<boolean>(false);
   const [processingTimeElapsed, setProcessingTimeElapsed] = useState<number>(0);
+  const [showInlineTierSelector, setShowInlineTierSelector] = useState(false);
 
   // Custom modal hooks
   const { alertState, showError, closeAlert } = useAlert();
@@ -121,11 +124,11 @@ export default function SubscriptionPage() {
 
     async function fetchData() {
       try {
-        // Force fresh data fetch if returning from successful checkout
+        // Always force fresh data fetch on initial page load to prevent stale subscription status
         const { getOptimizedUserSubscription } = await import('../../firebase/optimizedSubscription');
         const subscriptionData = await getOptimizedUserSubscription(user.uid, {
-          useCache: !isSuccess, // Don't use cache if returning from successful checkout
-          cacheTTL: isSuccess ? 0 : 10 * 60 * 1000 // Force immediate refresh on success
+          useCache: false, // Always fetch fresh data to ensure accurate subscription status
+          cacheTTL: 0 // Force immediate refresh
         });
 
         console.log('DEBUG: Subscription data fetched:', subscriptionData);
@@ -155,6 +158,16 @@ export default function SubscriptionPage() {
           const tier = SUBSCRIPTION_TIERS.find(t => t.amount === subscription.amount);
           if (tier) {
             setSelectedTier(tier.id);
+            // If it's a custom tier, set the custom amount
+            if (tier.id === 'custom') {
+              setCustomAmount(subscription.amount);
+              setPreviousCustomAmount(subscription.amount);
+            }
+          } else {
+            // If no matching tier found, it's likely a custom amount
+            setSelectedTier('custom');
+            setCustomAmount(subscription.amount);
+            setPreviousCustomAmount(subscription.amount);
           }
 
           // Show success message if returning from successful checkout
@@ -218,6 +231,7 @@ export default function SubscriptionPage() {
         const result = await response.json();
         console.log('🔄 Auto-sync result:', result);
         console.log('🔄 Stripe subscription status:', result.subscription?.status);
+        console.log('🔄 Stripe cancelAtPeriodEnd:', result.subscription?.cancelAtPeriodEnd);
 
         if (result.success) {
           // Clear cache and fetch fresh data after sync
@@ -280,12 +294,23 @@ export default function SubscriptionPage() {
 
       if (subscriptionData) {
         const subscription = subscriptionData as Subscription;
+
         setCurrentSubscription(subscription);
 
         // Update selected tier based on subscription changes
         const tier = SUBSCRIPTION_TIERS.find(t => t.amount === subscription.amount);
         if (tier) {
           setSelectedTier(tier.id);
+          // If it's a custom tier, set the custom amount
+          if (tier.id === 'custom') {
+            setCustomAmount(subscription.amount);
+            setPreviousCustomAmount(subscription.amount);
+          }
+        } else {
+          // If no matching tier found, it's likely a custom amount
+          setSelectedTier('custom');
+          setCustomAmount(subscription.amount);
+          setPreviousCustomAmount(subscription.amount);
         }
 
         // Show notification for status changes
@@ -743,6 +768,49 @@ export default function SubscriptionPage() {
     }
   };
 
+  // Handle showing tier selector for reactivation
+  const handleShowReactivationOptions = () => {
+    setSelectedTier('current'); // Default to current subscription
+    setShowInlineTierSelector(true);
+  };
+
+  // Handle reactivating subscription with current tier
+  const handleReactivateCurrentSubscription = async () => {
+    if (!user || !currentSubscription) return;
+
+    try {
+      setProcessingCheckout(true);
+
+      const result = await SubscriptionService.reactivateSubscription(user.uid);
+
+      if (result.success) {
+        toast({
+          title: "Subscription Reactivated",
+          description: "Your subscription has been reactivated and will continue at the end of your current billing period",
+        });
+
+        // Refresh subscription data to show updated status
+        await refreshSubscriptionData();
+        setShowInlineTierSelector(false);
+      } else {
+        toast({
+          title: "Reactivation Failed",
+          description: result.error || 'Failed to reactivate subscription',
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error reactivating subscription:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reactivate subscription",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingCheckout(false);
+    }
+  };
+
   // Helper function to refresh subscription data without page reload
   const refreshSubscriptionData = async () => {
     try {
@@ -756,12 +824,23 @@ export default function SubscriptionPage() {
       });
 
       if (subscriptionData) {
-        setCurrentSubscription(subscriptionData as Subscription);
+        const subscription = subscriptionData as Subscription;
+        setCurrentSubscription(subscription);
 
         // Update selected tier
-        const tier = SUBSCRIPTION_TIERS.find(t => t.amount === subscriptionData.amount);
+        const tier = SUBSCRIPTION_TIERS.find(t => t.amount === subscription.amount);
         if (tier) {
           setSelectedTier(tier.id);
+          // If it's a custom tier, set the custom amount
+          if (tier.id === 'custom') {
+            setCustomAmount(subscription.amount);
+            setPreviousCustomAmount(subscription.amount);
+          }
+        } else {
+          // If no matching tier found, it's likely a custom amount
+          setSelectedTier('custom');
+          setCustomAmount(subscription.amount);
+          setPreviousCustomAmount(subscription.amount);
         }
 
         // Token balance will be updated via real-time listener
@@ -772,6 +851,20 @@ export default function SubscriptionPage() {
       console.error('Error refreshing subscription data:', error);
     }
   };
+
+  // Helper to get relative time (e.g., "in 3 days", "tomorrow")
+  function getRelativeTime(targetDateString: string) {
+    if (!targetDateString) return null;
+    const now = new Date();
+    const target = new Date(targetDateString);
+    const diffMs = target.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'today';
+    if (diffDays === 1) return 'tomorrow';
+    if (diffDays < 0) return `${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? '' : 's'} ago`;
+    return `in ${diffDays} day${diffDays === 1 ? '' : 's'}`;
+  }
 
   return (
     <div>
@@ -825,8 +918,13 @@ export default function SubscriptionPage() {
                     </h2>
                     <p className="text-card-foreground">
                       <strong>${currentSubscription.amount}/month</strong>
-                      {currentSubscription.status === 'active' && (
+                      {currentSubscription.status === 'active' && !currentSubscription.cancelAtPeriodEnd && (
                         <span className="text-green-500 ml-2 font-medium">Active</span>
+                      )}
+                      {currentSubscription.status === 'active' && currentSubscription.cancelAtPeriodEnd && currentSubscription.billingCycleEnd && (
+                        <span className="text-orange-500 ml-2 font-medium">
+                          Cancels {getRelativeTime(currentSubscription.billingCycleEnd)}
+                        </span>
                       )}
                       {(currentSubscription.status === 'incomplete' || currentSubscription.status === 'pending') && (
                         <span className="text-yellow-500 ml-2 font-medium">Processing Payment</span>
@@ -844,51 +942,126 @@ export default function SubscriptionPage() {
                     {currentSubscription.billingCycleEnd && (
                       <p className="mt-2 text-sm text-muted-foreground">
                         {currentSubscription.status === 'active' || currentSubscription.status === 'trialing'
-                          ? `Next billing ${new Date(currentSubscription.billingCycleEnd).toLocaleDateString()}`
+                          ? `Next billing ${new Date(currentSubscription.billingCycleEnd).toLocaleDateString()} `
                           : currentSubscription.status === 'canceled' || currentSubscription.status === 'cancelled'
-                          ? `Ends ${new Date(currentSubscription.billingCycleEnd).toLocaleDateString()}`
-                          : `Next billing ${new Date(currentSubscription.billingCycleEnd).toLocaleDateString()}`
+                          ? `Ends ${new Date(currentSubscription.billingCycleEnd).toLocaleDateString()} `
+                          : `Next billing ${new Date(currentSubscription.billingCycleEnd).toLocaleDateString()} `
                         }
+                        <span className="ml-2 text-xs text-primary-600 font-semibold">
+                          {getRelativeTime(currentSubscription.billingCycleEnd)}
+                        </span>
                       </p>
                     )}
 
                     {currentSubscription.status === 'active' && (
                       <div className="flex gap-3 mt-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleEditSubscription}
-                          disabled={processingCheckout}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleCancelSubscription}
-                          disabled={processingCheckout}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={handleAddTen}
-                          disabled={processingCheckout}
-                        >
-                          Add $10
-                        </Button>
+                        {currentSubscription.cancelAtPeriodEnd ? (
+                          // Show reactivation buttons when subscription is set to cancel
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleEditSubscription}
+                              disabled={processingCheckout}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={handleShowReactivationOptions}
+                              disabled={processingCheckout}
+                            >
+                              Reactivate Subscription
+                            </Button>
+                          </>
+                        ) : (
+                          // Show normal buttons when subscription is active
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleEditSubscription}
+                              disabled={processingCheckout}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCancelSubscription}
+                              disabled={processingCheckout}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={handleAddTen}
+                              disabled={processingCheckout}
+                            >
+                              Add $10
+                            </Button>
+                          </>
+                        )}
                       </div>
                     )}
 
 
                   </div>
                 </div>
-                {currentSubscription.status !== 'active' && (
+                {currentSubscription.status !== 'active' && !showInlineTierSelector && (
                   <p className="mt-4 text-sm text-muted-foreground">
                     Please select a subscription tier below to continue.
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Inline Tier Selector for Reactivation */}
+            {showInlineTierSelector && currentSubscription && (
+              <div className="mt-6 animate-in slide-in-from-top-2 duration-300">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold">Choose Your Subscription</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Select a tier to reactivate your subscription
+                  </p>
+                </div>
+
+                <SubscriptionTierCarousel
+                  selectedTier={selectedTier}
+                  onTierSelect={setSelectedTier}
+                  customAmount={customAmount}
+                  onCustomAmountChange={setCustomAmount}
+                  currentSubscription={currentSubscription}
+                  showCurrentOption={true}
+                />
+
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowInlineTierSelector(false)}
+                    disabled={processingCheckout}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="default"
+                    onClick={selectedTier === 'current' ? handleReactivateCurrentSubscription : handleCreateSubscription}
+                    disabled={processingCheckout}
+                  >
+                    {processingCheckout ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : selectedTier === 'current' ? (
+                      'Reactivate Current Subscription'
+                    ) : (
+                      'Reactivate with New Tier'
+                    )}
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -986,33 +1159,73 @@ export default function SubscriptionPage() {
                   )}
                 </div>
               </div>
-            ) : (!currentSubscription || currentSubscription.status !== 'active') && (
+            ) : (!currentSubscription || currentSubscription.status !== 'active' || currentSubscription.cancelAtPeriodEnd) && !showInlineTierSelector && (
               <div>
                 <SubscriptionTierCarousel
                   selectedTier={selectedTier}
                   onTierSelect={handleTierSelect}
-                  customAmount={customAmount}
+                  customAmount={previousCustomAmount || customAmount}
                   onCustomAmountChange={setCustomAmount}
                 />
 
                 <div className="mt-8">
-                  <Button
-                    onClick={handleSubscribe}
-                    disabled={processingCheckout || !selectedTier}
-                    className="w-full h-12 text-lg font-medium"
-                  >
-                    {processingCheckout ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        {currentSubscription?.status === 'active' ? 'Update Subscription' : 'Start Subscription'}
-                        <ArrowRight className="ml-2 h-5 w-5" />
-                      </>
-                    )}
-                  </Button>
+                  {currentSubscription?.cancelAtPeriodEnd ? (
+                    <div className="space-y-3">
+                      <Button
+                        onClick={handleReactivateCurrentSubscription}
+                        disabled={processingCheckout}
+                        className="w-full h-12 text-lg font-medium"
+                      >
+                        {processingCheckout ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
+                            Processing...
+                          </>
+                        ) : (
+                          'Reactivate Current Subscription'
+                        )}
+                      </Button>
+                      <div className="text-center text-sm text-muted-foreground">
+                        or choose a different tier below and subscribe
+                      </div>
+                      <Button
+                        onClick={handleSubscribe}
+                        disabled={processingCheckout || !selectedTier}
+                        variant="outline"
+                        className="w-full h-12 text-lg font-medium"
+                      >
+                        {processingCheckout ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            Subscribe to {SUBSCRIPTION_TIERS.find(t => t.id === selectedTier)?.name || 'Selected Tier'}
+                            <ArrowRight className="ml-2 h-5 w-5" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={handleSubscribe}
+                      disabled={processingCheckout || !selectedTier}
+                      className="w-full h-12 text-lg font-medium"
+                    >
+                      {processingCheckout ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          {currentSubscription?.status === 'active' ? 'Update Subscription' : 'Start Subscription'}
+                          <ArrowRight className="ml-2 h-5 w-5" />
+                        </>
+                      )}
+                    </Button>
+                  )}
 
                   {selectedTier && (
                     <div className="mt-4 text-center text-sm text-muted-foreground">

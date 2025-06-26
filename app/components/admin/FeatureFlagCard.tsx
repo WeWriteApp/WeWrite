@@ -199,89 +199,122 @@ export default function FeatureFlagCard({
 
   return (
     <>
-      <div className="relative flex items-center justify-between p-4 border-border border rounded-lg hover:bg-muted/50 transition-colors">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-1">
-            <h3 className="font-medium">{flag.name}</h3>
-            <div className="flex items-center gap-2">
-              {flag.enabled ? (
-                <Badge variant="default" className="text-xs">ON</Badge>
-              ) : (
-                <Badge variant="secondary" className="text-xs">OFF</Badge>
-              )}
-              {personalEnabled !== null && personalEnabled !== flag.enabled && (
-                <Badge variant="outline" className="text-xs">PERSONAL</Badge>
-              )}
+      <div className="relative p-4 sm:p-6 border-border border rounded-lg hover:bg-muted/50 transition-colors">
+        {/* Header Section */}
+        <div className="flex flex-col gap-4 mb-4">
+          <div className="flex flex-col gap-3">
+            {/* Title and Badges Row */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <h3 className="font-medium text-base sm:text-lg break-words">{flag.name}</h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                {flag.enabled ? (
+                  <Badge variant="default" className="text-xs px-2 py-1">ON</Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-xs px-2 py-1">OFF</Badge>
+                )}
+                {personalEnabled !== null && personalEnabled !== flag.enabled && (
+                  <Badge variant="outline" className="text-xs px-2 py-1">PERSONAL</Badge>
+                )}
+              </div>
             </div>
+
+            {/* Description */}
+            <p className="text-sm text-muted-foreground leading-relaxed break-words">{flag.description}</p>
           </div>
-          <p className="text-sm text-muted-foreground">{flag.description}</p>
+
+          {/* Advanced Options - Desktop Only */}
+          <div className="hidden sm:block sm:absolute sm:top-4 sm:right-4">
+            <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="px-3 py-2 h-8 w-8">
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+
+              <CollapsibleContent className="absolute right-0 top-full mt-2 bg-background border-border border rounded-lg shadow-lg p-3 z-20 min-w-48 max-w-64">
+                {loadingStats ? (
+                  <div className="flex justify-center py-2">
+                    <Loader className="h-4 w-4 animate-spin" />
+                  </div>
+                ) : userStats ? (
+                  <div className="space-y-3">
+                    <div className="text-xs text-muted-foreground">
+                      {userStats.usersWithAccess}/{userStats.totalUsers} users have access
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-8 flex-1"
+                        onClick={() => setShowUserModal(true)}
+                      >
+                        Manage Users
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-8 px-3"
+                        onClick={() => window.open(`/admin/features/${flag.id}`, '_blank')}
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground">Failed to load stats</div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
         </div>
 
+        {/* Controls Section - Mobile Optimized */}
+        <div className="space-y-4">
+          {/* Toggle Controls */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            {/* Global Toggle */}
+            <div className="flex items-center justify-between p-3 sm:p-0 bg-muted/30 sm:bg-transparent rounded-lg sm:rounded-none">
+              <span className="text-sm font-medium text-foreground">Global</span>
+              <Switch
+                checked={flag.enabled}
+                onCheckedChange={(checked) => onToggle(flag.id, checked)}
+                disabled={isLoading}
+                className="data-[state=checked]:bg-primary"
+              />
+            </div>
 
-        <div className="flex items-center gap-3">
-          {/* Global Toggle */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Global:</span>
-            <Switch
-              checked={flag.enabled}
-              onCheckedChange={(checked) => onToggle(flag.id, checked)}
-              disabled={isLoading}
-            />
+            {/* Personal Toggle */}
+            <div className="flex items-center justify-between p-3 sm:p-0 bg-muted/30 sm:bg-transparent rounded-lg sm:rounded-none">
+              <span className="text-sm font-medium text-foreground">Personal</span>
+              <Switch
+                checked={personalEnabled ?? flag.enabled}
+                onCheckedChange={handlePersonalToggle}
+                disabled={loadingPersonal || !user}
+                className="data-[state=checked]:bg-primary"
+              />
+            </div>
           </div>
 
-          {/* Personal Toggle */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Personal:</span>
-            <Switch
-              checked={personalEnabled ?? flag.enabled}
-              onCheckedChange={handlePersonalToggle}
-              disabled={loadingPersonal || !user}
-            />
+          {/* Mobile Actions */}
+          <div className="flex gap-3 sm:hidden">
+            <Button
+              variant="outline"
+              size="default"
+              className="flex-1 h-11 text-sm font-medium"
+              onClick={() => setShowUserModal(true)}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Manage Users
+            </Button>
+            <Button
+              variant="outline"
+              size="default"
+              className="h-11 px-4"
+              onClick={() => window.open(`/admin/features/${flag.id}`, '_blank')}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
           </div>
-
-
-          {/* Advanced Options */}
-          <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="px-2">
-                <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
-
-            <CollapsibleContent className="absolute right-0 top-full mt-1 bg-background border-border border rounded-lg shadow-lg p-3 z-10 min-w-48">
-              {loadingStats ? (
-                <div className="flex justify-center py-2">
-                  <Loader className="h-4 w-4 animate-spin" />
-                </div>
-              ) : userStats ? (
-                <div className="space-y-2">
-                  <div className="text-xs text-muted-foreground">
-                    {userStats.usersWithAccess}/{userStats.totalUsers} users have access
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-7"
-                      onClick={() => setShowUserModal(true)}
-                    >
-                      Manage Users
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-7 px-2"
-                      onClick={() => window.open(`/admin/features/${flag.id}`, '_blank')}
-                    >
-                      <Eye className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground">Failed to load stats</div>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
         </div>
       </div>
 

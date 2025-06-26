@@ -134,7 +134,7 @@ export default function EarningsChart({ earnings, className }: EarningsChartProp
             <div className="flex items-center gap-1 text-sm">
               {getTrendIcon()}
               <span className={getTrendColor()}>
-                {Math.abs(trendPercentage).toFixed(1)}%
+                {isNaN(trendPercentage) ? '0.0' : Math.abs(trendPercentage).toFixed(1)}%
               </span>
               <span className="text-muted-foreground">vs last month</span>
             </div>

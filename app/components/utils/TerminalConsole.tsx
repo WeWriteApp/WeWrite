@@ -84,9 +84,11 @@ export default function TerminalConsole() {
     function connect() {
       // DISABLED: WebSocket console streaming causes performance issues
       // Only enable in development when explicitly needed
-      if (process.env.NODE_ENV === 'development' && process.env.ENABLE_CONSOLE_STREAMING === 'true') {
+      if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_ENABLE_CONSOLE_STREAMING === 'true') {
         try {
-          ws = new WebSocket('ws://localhost:3001');
+          // Use the same port as the current application
+          const currentPort = window.location.port || '3000';
+          ws = new WebSocket(`ws://localhost:${currentPort}`);
 
           ws.onopen = () => {
             isConnected = true;
@@ -127,8 +129,10 @@ export default function TerminalConsole() {
     window.addEventListener('error', handleError);
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
 
-    // Initial connection
-    connect();
+    // Initial connection (only if console streaming is enabled)
+    if (process.env.NEXT_PUBLIC_ENABLE_CONSOLE_STREAMING === 'true') {
+      connect();
+    }
 
     // Cleanup
     return () => {

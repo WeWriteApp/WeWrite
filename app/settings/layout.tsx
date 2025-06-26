@@ -53,12 +53,6 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
   const settingsSections: SettingsSection[] = [
     {
-      id: 'profile',
-      title: 'Profile',
-      icon: User,
-      href: '/settings/profile'
-    },
-    {
       id: 'subscription',
       title: 'Subscription',
       icon: CreditCard,
@@ -71,6 +65,12 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
       icon: Coins,
       href: '/settings/earnings',
       requiresPayments: true
+    },
+    {
+      id: 'profile',
+      title: 'Profile',
+      icon: User,
+      href: '/settings/profile'
     },
     {
       id: 'deleted',

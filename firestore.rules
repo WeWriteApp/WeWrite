@@ -160,6 +160,20 @@ service cloud.firestore {
         allow write: if isOwner(userId) || isAdmin();
       }
 
+      // User pledges subcollection - User's pledges to pages
+      match /pledges/{pageId} {
+        // Users can only read their own pledges or admins
+        allow read: if isOwner(userId) || isAdmin();
+
+        // Users can create, update, and delete their own pledges
+        allow create: if isOwner(userId) &&
+          request.resource.data.keys().hasAll(['amount', 'pageId']) &&
+          request.resource.data.pageId == pageId;
+
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
+
       // User payment methods subcollection - Payment data
       match /paymentMethods/{paymentMethodDoc} {
         // Only allow users to read their own payment methods or admins
@@ -264,11 +278,31 @@ service cloud.firestore {
 
     // Subscriptions collection - User-specific financial data
     match /subscriptions/{subscriptionId} {
-      // Only allow users to read their own subscription data
-      allow read: if isOwner(subscriptionId);
+      // Only allow users to read their own subscription data or admins
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
 
       // Only allow users to write their own subscription data or admins
-      allow write: if isOwner(subscriptionId) || isAdmin();
+      allow write: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+    }
+
+    // Financial transactions collection - Payment and subscription transaction data
+    match /financial_transactions/{transactionId} {
+      // Only allow users to read their own transactions or admins
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+
+      // Only allow system/admin to create financial transactions
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     // User notifications subcollection - User-specific
@@ -316,13 +350,13 @@ service cloud.firestore {
     match /userFollowers/{userId} {
       // Only allow the user to read their own followers
       allow read: if isOwner(userId);
-      allow write: if isAuthenticated();
+      allow write: if isOwner(userId);
     }
 
     match /userFollowing/{userId} {
       // Only allow the user to read who they're following
       allow read: if isOwner(userId);
-      allow write: if isAuthenticated();
+      allow write: if isOwner(userId);
     }
 
     match /follows/{followId} {
@@ -521,8 +555,8 @@ service cloud.firestore {
       // Allow updating visitor sessions (for interaction tracking)
       allow update: if true;
 
-      // Allow reading visitor data for analytics (authenticated users only)
-      allow read: if isAuthenticated();
+      // Allow reading visitor data for analytics (admins only)
+      allow read: if isAdmin();
 
       // Allow deletion for cleanup (admins only)
       allow delete: if isAdmin();
@@ -533,8 +567,8 @@ service cloud.firestore {
       // Allow anyone to create analytics events (for anonymous tracking)
       allow create: if true;
 
-      // Allow reading analytics data for dashboard (authenticated users only)
-      allow read: if isAuthenticated();
+      // Allow reading analytics data for dashboard (admins only)
+      allow read: if isAdmin();
 
       // Allow updating analytics events (for event completion tracking)
       allow update: if true;

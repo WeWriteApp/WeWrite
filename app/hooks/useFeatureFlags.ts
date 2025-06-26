@@ -12,16 +12,8 @@ export interface FeatureFlag {
 }
 
 // Define all available feature flags
+// Note: Groups feature flag has been removed as the groups feature has been completely removed
 const DEFAULT_FEATURE_FLAGS: FeatureFlag[] = [
-  {
-    id: 'groups',
-    name: 'Groups',
-    description: 'Enable group functionality for organizing pages and collaboration.',
-    enabled: true,
-    createdAt: new Date().toISOString(),
-    lastModified: new Date().toISOString()
-  },
-
   {
     id: 'payments',
     name: 'Payments',

@@ -25,7 +25,8 @@ export default function Error({ error, reset }) {
 
   useEffect(() => {
     // Log the error to an error reporting service
-    console.error("Application error:", error);
+    // Use console.warn instead of console.error to avoid triggering the ConsoleErrorLogger infinite loop
+    console.warn("Application error:", error);
 
     // Attempt to log to backend error service if available
     try {
@@ -42,9 +43,9 @@ export default function Error({ error, reset }) {
             url: window.location.href,
           }
         }),
-      }).catch(e => console.error("Failed to log error to backend:", e));
+      }).catch(e => console.warn("Failed to log error to backend:", e));
     } catch (e) {
-      console.error("Error logging to backend:", e);
+      console.warn("Error logging to backend:", e);
     }
   }, [error]);
 

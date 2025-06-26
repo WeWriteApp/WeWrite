@@ -209,12 +209,15 @@ export const getPageById = async (pageId: string, userId: string | null = null):
         }
 
       // Check cache first (only for public pages or if user is the owner)
-      const cacheKey = generateCacheKey('page', pageId, userId || 'public');
-      const cachedData = getCacheItem(cacheKey);
+      // Skip caching on server-side (e.g., during generateMetadata)
+      if (typeof window !== 'undefined') {
+        const cacheKey = generateCacheKey('page', pageId, userId || 'public');
+        const cachedData = getCacheItem(cacheKey);
 
-      if (cachedData) {
-        console.log(`Using cached data for page ${pageId}`);
-        return cachedData;
+        if (cachedData) {
+          console.log(`Using cached data for page ${pageId}`);
+          return cachedData;
+        }
       }
 
       // Get the page document with only the fields we need
@@ -272,7 +275,9 @@ export const getPageById = async (pageId: string, userId: string | null = null):
             const result = { pageData, versionData, links };
 
             // Cache the result (only for public pages or if user is the owner)
-            if (pageData.isPublic || (userId && pageData.userId === userId)) {
+            // Skip caching on server-side
+            if (typeof window !== 'undefined' && (pageData.isPublic || (userId && pageData.userId === userId))) {
+              const cacheKey = generateCacheKey('page', pageId, userId || 'public');
               setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
             }
 
@@ -341,7 +346,9 @@ export const getPageById = async (pageId: string, userId: string | null = null):
           const result = { pageData, versionData, links };
 
           // Cache the result (only for public pages or if user is the owner)
-          if (pageData.isPublic || (userId && pageData.userId === userId)) {
+          // Skip caching on server-side
+          if (typeof window !== 'undefined' && (pageData.isPublic || (userId && pageData.userId === userId))) {
+            const cacheKey = generateCacheKey('page', pageId, userId || 'public');
             setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
           }
 

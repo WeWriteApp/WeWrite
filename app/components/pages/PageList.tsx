@@ -256,7 +256,7 @@ export default function PageList({
                   <FileText className="h-5 w-5" />
                 </div>
                 <div className="flex-grow">
-                  <h3 className="font-medium truncate">{page.title}</h3>
+                  <h3 className="font-medium truncate hyphens-none">{page.title}</h3>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <span>
                       {new Date(page.lastModified || page.createdAt).toLocaleDateString()}

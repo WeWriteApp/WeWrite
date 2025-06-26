@@ -1,0 +1,7 @@
+{
+  "disabledAt": "2025-01-27T10:00:00.000Z",
+  "reason": "Disabled due to duplicate webhook handling - replaced by /api/webhooks/stripe-subscription",
+  "disabledBy": "production-readiness-audit",
+  "severity": "critical",
+  "description": "This legacy webhook handler was causing duplicate event processing which could lead to data corruption. All webhook events are now handled by the comprehensive handler at /api/webhooks/stripe-subscription/route.ts"
+}

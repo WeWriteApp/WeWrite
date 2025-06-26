@@ -660,17 +660,13 @@ div.unified-paragraph {
 }
 
 /* ADDED: Ensure all page content containers have proper width constraints */
-.page-content,
 .unified-editor,
 .editor-content {
-  /* Prevent any container from adding excessive left padding */
-  padding-left: 0 !important;
-  padding-right: 0 !important;
   /* Ensure content uses full available width */
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
-  /* CRITICAL: Remove any margins that might be causing the 20px issue */
+  /* CRITICAL: Remove any margins that might be causing issues */
   margin: 0 !important;
   /* Allow dynamic top padding to be set by inline styles */
   padding-top: unset !important;

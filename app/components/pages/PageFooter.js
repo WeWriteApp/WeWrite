@@ -63,12 +63,20 @@ export default function PageFooter({
   const [changeData, setChangeData] = useState({ count: 0, hourly: [] });
   const [isLoading, setIsLoading] = useState(true);
 
+  // Use a ref to track if we've already fetched data for this page
+  const dataFetched = React.useRef(new Set());
+
   useEffect(() => {
     if (!page || !page.id) return;
+
+    // Skip if we've already fetched data for this page
+    if (dataFetched.current.has(page.id)) return;
 
     const fetchData = async () => {
       setIsLoading(true);
       try {
+        // Mark that we're fetching data for this page
+        dataFetched.current.add(page.id);
         // Fetch view data
         const views = await getPageViewsLast24Hours(page.id);
         if (views.total === 0) {

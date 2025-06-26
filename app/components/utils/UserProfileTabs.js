@@ -3,7 +3,7 @@ import React, { useState, useContext, useRef } from "react";
 import { PillLink } from "./PillLink";
 import { Button } from "../ui/button";
 import SupporterBadge from "../payments/SupporterBadge";
-import { User, Clock, FileText, Plus, Loader, Info, Users, BookText, Heart, ArrowUpDown, Check, ChevronUp, ChevronDown } from "lucide-react";
+import { User, Clock, FileText, Plus, Loader, Info, Users, BookText, Heart, ArrowUpDown, Check, ChevronUp, ChevronDown, ExternalLink, Link as LinkIcon } from "lucide-react";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { AuthContext } from "../../providers/AuthProvider";
 import Link from "next/link";
@@ -18,6 +18,7 @@ import SearchResults from "../search/SearchResults";
 import UserBioTab from './UserBioTab';
 import { useFeatureFlag } from "../../utils/feature-flags";
 import FollowingTabContent from './FollowingTabContent';
+import ExternalLinksTab from './ExternalLinksTab';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,7 +66,7 @@ export default function UserProfileTabs({ profile }) {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.slice(1);
       // Define basic valid tabs (we'll validate against full list in useEffect)
-      const basicValidTabs = ["bio", "pages", "activity", "groups", "following"];
+      const basicValidTabs = ["bio", "pages", "activity", "groups", "following", "external-links"];
       if (hash && basicValidTabs.includes(hash)) {
         return hash;
       }
@@ -96,8 +97,8 @@ export default function UserProfileTabs({ profile }) {
     return "desc";
   });
 
-  // Check if groups feature is enabled
-  const groupsEnabled = useFeatureFlag('groups', user?.email);
+  // Groups feature has been removed - no longer needed
+  // const groupsEnabled = useFeatureFlag('groups', user?.email);
 
   // Analytics tracking
   const { trackSortingInteraction, trackInteractionEvent, events } = useWeWriteAnalytics();
@@ -194,10 +195,10 @@ export default function UserProfileTabs({ profile }) {
   const visibleTabs = React.useMemo(() => {
     const tabs = ["bio", "pages", "activity"];
 
-    // Add groups tab only if the feature is enabled
-    if (groupsEnabled) {
-      tabs.push("groups");
-    }
+    // Add external links tab for all users
+    tabs.push("external-links");
+
+    // Groups tab removed - groups feature has been completely removed
 
     // Add following tab only for the current user (privacy restriction)
     if (isCurrentUser) {
@@ -205,7 +206,7 @@ export default function UserProfileTabs({ profile }) {
     }
 
     return tabs;
-  }, [groupsEnabled, isCurrentUser]);
+  }, [isCurrentUser]);
 
   // Handle browser navigation (back/forward) for hash-based tab navigation
   React.useEffect(() => {
@@ -488,17 +489,17 @@ export default function UserProfileTabs({ profile }) {
                 <span>Activity</span>
               </TabsTrigger>
 
-              {/* Groups tab - only if feature is enabled */}
-              {groupsEnabled && (
-                <TabsTrigger
-                  value="groups"
-                  data-value="groups"
-                  className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
-                >
-                  <Users className="h-4 w-4" />
-                  <span>Groups</span>
-                </TabsTrigger>
-              )}
+              {/* External Links tab */}
+              <TabsTrigger
+                value="external-links"
+                data-value="external-links"
+                className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
+              >
+                <LinkIcon className="h-4 w-4" />
+                <span>External Links</span>
+              </TabsTrigger>
+
+              {/* Groups tab removed - groups feature has been completely removed */}
 
               {/* Following tab - only for current user */}
               {isCurrentUser && (
@@ -631,6 +632,22 @@ export default function UserProfileTabs({ profile }) {
             )}
           </TabsContent>
 
+          {/* External Links tab content */}
+          <TabsContent
+            value="external-links"
+            className={`mt-0 transition-all duration-300 ${
+              activeTab === "external-links"
+                ? "block"
+                : "hidden"
+            }`}
+          >
+            <ExternalLinksTab
+              userId={profile?.uid}
+              username={profile?.username || 'this user'}
+              currentUserId={user?.uid}
+            />
+          </TabsContent>
+
           {isCurrentUser && (
             <TabsContent
               value="following"
@@ -644,21 +661,7 @@ export default function UserProfileTabs({ profile }) {
             </TabsContent>
           )}
 
-          {/* Groups tab content - only shown if feature is enabled */}
-          {groupsEnabled && (
-            <TabsContent
-              value="groups"
-              className={`mt-0 transition-all duration-300 ${
-                activeTab === "groups"
-                  ? "block"
-                  : "hidden"
-              }`}
-            >
-              <div className="text-center text-muted-foreground py-8">
-                Groups feature coming soon!
-              </div>
-            </TabsContent>
-          )}
+          {/* Groups tab content removed - groups feature has been completely removed */}
 
 
         </div>

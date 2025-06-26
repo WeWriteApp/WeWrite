@@ -34,7 +34,7 @@ class FeeService {
    */
   private initializeListener() {
     const feeDocRef = doc(db, 'systemConfig', 'feeStructure');
-    
+
     this.unsubscribe = onSnapshot(feeDocRef, (doc) => {
       if (doc.exists()) {
         const data = doc.data();
@@ -60,6 +60,23 @@ class FeeService {
       });
     }, (error) => {
       console.error('Error listening to fee structure changes:', error);
+
+      // Fallback to default structure on permission error
+      if (error.code === 'permission-denied') {
+        console.warn('Permission denied for fee structure, using default values');
+        this.currentFeeStructure = {
+          platformFeePercentage: 0.0,
+          lastUpdated: new Date(),
+          updatedBy: 'system-fallback'
+        };
+
+        // Notify listeners with fallback data
+        this.listeners.forEach(listener => {
+          if (this.currentFeeStructure) {
+            listener(this.currentFeeStructure);
+          }
+        });
+      }
     });
   }
 
@@ -107,19 +124,26 @@ class FeeService {
    * Update fee structure
    */
   public async updateFeeStructure(
-    platformFeePercentage: number, 
+    platformFeePercentage: number,
     updatedBy: string = 'admin'
   ): Promise<void> {
-    const feeStructure: FeeStructure = {
-      platformFeePercentage: platformFeePercentage / 100, // Convert percentage to decimal
-      lastUpdated: new Date(),
-      updatedBy
-    };
+    try {
+      const feeStructure: FeeStructure = {
+        platformFeePercentage: platformFeePercentage / 100, // Convert percentage to decimal
+        lastUpdated: new Date(),
+        updatedBy
+      };
 
-    await setDoc(doc(db, 'systemConfig', 'feeStructure'), {
-      ...feeStructure,
-      lastUpdated: new Date() // Firestore timestamp
-    });
+      await setDoc(doc(db, 'systemConfig', 'feeStructure'), {
+        ...feeStructure,
+        lastUpdated: new Date() // Firestore timestamp
+      });
+    } catch (error: any) {
+      if (error.code === 'permission-denied') {
+        throw new Error('Admin permissions required to update fee structure. Please ensure you are logged in as an admin user.');
+      }
+      throw error;
+    }
   }
 
   /**

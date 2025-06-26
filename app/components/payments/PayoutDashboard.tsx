@@ -12,11 +12,13 @@ import { useToast } from '../ui/use-toast';
 import { TokenEarningsService } from '../../services/tokenEarningsService';
 import {
   calculateFeeBreakdown,
+  calculateFeeBreakdownAsync,
   meetsMinimumThreshold,
   formatCurrency,
   getFeeExplanation,
   WEWRITE_FEE_STRUCTURE,
   assessPayoutRisk,
+  assessPayoutRiskAsync,
   getPayoutProtectionWarnings,
   type FeeBreakdown,
   type PayoutRiskAssessment
@@ -83,26 +85,49 @@ export default function PayoutDashboard() {
   }, [user, isPaymentsEnabled]);
 
   // Calculate fee breakdown and risk assessment when earnings change
-  const updateFeeBreakdown = (availableBalance: number) => {
+  const updateFeeBreakdown = async (availableBalance: number) => {
     if (availableBalance > 0) {
-      const breakdown = calculateFeeBreakdown(availableBalance, 'usd', payoutMethod);
-      setFeeBreakdown(breakdown);
+      try {
+        // Use async version to get dynamic fee structure
+        const breakdown = await calculateFeeBreakdownAsync(availableBalance, 'usd', payoutMethod);
+        setFeeBreakdown(breakdown);
 
-      // Assess payout risk (using mock data for account creation date and recent payouts)
-      const accountCreatedDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
-      const recentPayouts = payouts.map(p => ({
-        amount: p.amount,
-        date: new Date(p.scheduledAt)
-      }));
+        // Assess payout risk (using mock data for account creation date and recent payouts)
+        const accountCreatedDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
+        const recentPayouts = payouts.map(p => ({
+          amount: p.amount,
+          date: new Date(p.scheduledAt)
+        }));
 
-      const risk = assessPayoutRisk(
-        availableBalance,
-        accountCreatedDate,
-        recentPayouts,
-        'usd',
-        payoutMethod
-      );
-      setRiskAssessment(risk);
+        const risk = await assessPayoutRiskAsync(
+          availableBalance,
+          accountCreatedDate,
+          recentPayouts,
+          'usd',
+          payoutMethod
+        );
+        setRiskAssessment(risk);
+      } catch (error) {
+        console.error('Error calculating fee breakdown:', error);
+        // Fallback to static calculation
+        const breakdown = calculateFeeBreakdown(availableBalance, 'usd', payoutMethod);
+        setFeeBreakdown(breakdown);
+
+        const accountCreatedDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const recentPayouts = payouts.map(p => ({
+          amount: p.amount,
+          date: new Date(p.scheduledAt)
+        }));
+
+        const risk = assessPayoutRisk(
+          availableBalance,
+          accountCreatedDate,
+          recentPayouts,
+          'usd',
+          payoutMethod
+        );
+        setRiskAssessment(risk);
+      }
     } else {
       setFeeBreakdown(null);
       setRiskAssessment(null);

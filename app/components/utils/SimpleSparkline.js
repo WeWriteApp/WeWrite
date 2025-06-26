@@ -19,6 +19,7 @@ export default function SimpleSparkline({
   strokeWidth = 1.5,
   title = "Edit activity in the last 24 hours"
 }) {
+
   // Use the accent color from CSS variables if no color is provided
   // If currentColor is passed, use the primary theme color instead for better consistency
   const effectiveColor = color === "currentColor" ? "hsl(var(--primary))" : (color || "hsl(var(--primary))");
@@ -51,6 +52,8 @@ export default function SimpleSparkline({
       const numVal = Number(val);
       return isNaN(numVal) ? 0 : Math.max(0, numVal);
     });
+
+
 
     return processedData;
   }, [data]);

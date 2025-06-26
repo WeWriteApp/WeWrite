@@ -7,7 +7,7 @@ import { Flame, Loader } from 'lucide-react';
 import SimpleSparkline from "../utils/SimpleSparkline.js";
 import Link from 'next/link';
 import { Button } from '../ui/button';
-import { getPageViewsLast24Hours, getTrendingPages } from '../../firebase/pageViews';
+// import { getTrendingPages } from '../../firebase/pageViews';
 
 interface TrendingPage {
   id: string;
@@ -35,8 +35,12 @@ export default function TrendingPages({ limit = 5 }) {
         setLoading(true);
         console.log('TrendingPages: Fetching trending pages with limit:', limit);
 
-        // Get trending pages for the last 24 hours
-        const response = await getTrendingPages(limit) as TrendingPagesResponse | TrendingPage[];
+        // Get trending pages for the last 24 hours using API endpoint
+        const apiResponse = await fetch(`/api/trending?limit=${limit}`);
+        if (!apiResponse.ok) {
+          throw new Error(`API request failed: ${apiResponse.status}`);
+        }
+        const response = await apiResponse.json();
 
         // Check if we got the expected response format
         if (!response || typeof response !== 'object') {
@@ -74,38 +78,22 @@ export default function TrendingPages({ limit = 5 }) {
         const needsHourlyData = !pages[0].hourlyViews;
 
         if (needsHourlyData) {
-          console.log('TrendingPages: Fetching hourly view data for pages');
-          // For each page, get the hourly view data for sparklines
-          const pagesWithSparklines = await Promise.all(
-            pages.map(async (page) => {
-              try {
-                const viewData = await getPageViewsLast24Hours(page.id);
-                return {
-                  ...page,
-                  hourlyViews: viewData.hourly || Array(24).fill(0)
-                };
-              } catch (err) {
-                console.error(`Error fetching view data for page ${page.id}:`, err);
-                // Create a smooth distribution of views for the sparkline
-                // This ensures we still show something visually appealing even if we can't get real data
-                const totalViews = page.views || page.views24h || 0;
-                const smoothDistribution = Array(24).fill(0).map((_, i) => {
-                  // Create a bell curve distribution with some randomness
-                  const center = 12; // Middle of the day
-                  const distance = Math.abs(i - center);
-                  const factor = Math.max(0, 1 - (distance / center) * 0.8);
-                  return Math.max(1, Math.floor(totalViews / 24 * factor * (0.8 + Math.random() * 0.4)));
-                });
+          console.log('TrendingPages: Adding fallback hourly data for pages without sparklines');
+          // For pages without hourly data, add fallback
+          const pagesWithSparklines = pages.map((page) => {
+            if (!page.hourlyViews || page.hourlyViews.length === 0) {
+              console.log(`Adding fallback hourly data for page ${page.id}`);
+              // Use empty array for pages without real hourly data
+              // This ensures consistent behavior - if there's no real data, show flat line
+              return {
+                ...page,
+                hourlyViews: Array(24).fill(0)
+              };
+            }
+            return page;
+          });
 
-                return {
-                  ...page,
-                  hourlyViews: smoothDistribution
-                };
-              }
-            })
-          );
-
-          console.log('TrendingPages: Setting trending pages with sparklines');
+          console.log('TrendingPages: Setting trending pages with consistent hourly data');
           setTrendingPages(pagesWithSparklines);
         } else {
           console.log('TrendingPages: Pages already have hourly data');

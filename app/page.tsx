@@ -245,11 +245,20 @@ const Home = React.memo(function Home() {
         <Header />
         <PWABanner />
         <UnverifiedUserBanner />
-        <main className="p-6 bg-background" data-component-name="Home">
+        <main
+          className="p-6 bg-background"
+          data-component-name="Home"
+          data-component="main-content"
+          data-testid="main-content"
+        >
           {/* Critical above-the-fold content - load immediately */}
           <AddUsername />
 
-          <div className="w-full mb-6">
+          <div
+            className="w-full mb-6"
+            data-component="search-section"
+            data-testid="search-section"
+          >
             <SearchButton placeholder="Search all pages..." />
           </div>
 

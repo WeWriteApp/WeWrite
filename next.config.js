@@ -2,6 +2,8 @@
 const nextConfig = {
   // Only enable StrictMode in development to prevent double rendering in production
   reactStrictMode: process.env.NODE_ENV === 'development',
+  // Completely disable all Next.js development overlays and indicators
+  devIndicators: false,
   typescript: {
     ignoreBuildErrors: true,
   },

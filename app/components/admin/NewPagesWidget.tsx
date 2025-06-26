@@ -6,6 +6,7 @@ import { FileText, TrendingUp, TrendingDown, Plus, Minus } from 'lucide-react';
 import { useCompositePagesMetrics, useTotalPagesEverCreated } from '../../hooks/useDashboardAnalytics';
 import { type DateRange } from '../../services/dashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
+import { ErrorCard } from '../ui/ErrorCard';
 
 interface NewPagesWidgetProps {
   dateRange: DateRange;
@@ -17,6 +18,8 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
   const { data, loading, error } = useCompositePagesMetrics(dateRange, granularity);
   const { data: totalPagesEverCreated, loading: totalLoading } = useTotalPagesEverCreated();
   const chartConfig = useResponsiveChart(data.length, data);
+
+
 
   // Transform data for chart display (make deleted values negative)
   const chartData = data.map(item => ({
@@ -95,15 +98,14 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
 
   if (error) {
     return (
-      <div className={`wewrite-card ${className}`}>
-        <div className="flex items-center gap-2 mb-4">
-          <FileText className="h-5 w-5 text-destructive" />
-          <h3 className="text-lg font-semibold">Pages Created & Deleted</h3>
-        </div>
-        <div className="h-48 flex items-center justify-center text-destructive">
-          Error loading data: {error}
-        </div>
-      </div>
+      <ErrorCard
+        title="Error loading Pages Analytics"
+        message="Unable to load pages created and deleted data."
+        error={error}
+        className={className}
+        onRetry={() => window.location.reload()}
+        retryLabel="Refresh Page"
+      />
     );
   }
 

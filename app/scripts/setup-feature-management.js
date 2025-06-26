@@ -57,11 +57,7 @@ export async function setupFeatureManagement() {
           lastModified: now,
           description: 'Enable calendar view for activity tracking'
         },
-        groups: {
-          createdAt: now,
-          lastModified: now,
-          description: 'Enable groups functionality and UI'
-        },
+        // groups feature removed
         link_functionality: {
           createdAt: now,
           lastModified: now,
@@ -152,8 +148,8 @@ function getDefaultDescription(flagId) {
   const descriptions = {
     subscription_management: 'Enable subscription functionality and UI',
     map_view: 'Enable map view for pages with location data',
-    calendar_view: 'Enable calendar view for activity tracking',
-    groups: 'Enable groups functionality and UI'
+    calendar_view: 'Enable calendar view for activity tracking'
+    // groups feature removed
   };
 
   return descriptions[flagId] || `Feature flag for ${flagId}`;

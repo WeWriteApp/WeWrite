@@ -8,6 +8,7 @@ import { useEffect } from 'react'
  */
 export default function ConsoleErrorLogger() {
   useEffect(() => {
+    // FORCE BROWSER CACHE REFRESH - v2.0.1 - SUBSCRIPTION ERROR LOGGING DISABLED
     // Only run in development mode and in browser environment
     if (process.env.NODE_ENV !== 'development' || typeof window === 'undefined') {
       return
@@ -164,6 +165,9 @@ export default function ConsoleErrorLogger() {
 
       // Send ALL errors to server for terminal logging
       const errorMessage = formatArgs(args)
+
+      // TEMPORARILY DISABLED: Skip all enhanced error processing to prevent infinite loops
+      // TODO: Re-enable once the root cause of the temporal dead zone error is fixed
       sendToServer('error', errorMessage)
     }
 
@@ -285,6 +289,42 @@ export default function ConsoleErrorLogger() {
         throw error
       }
     }
+
+    // Helper function to detect errors from the error logging system itself
+    const isErrorLoggingSystemError = (message: string, args: any[]): boolean => {
+      const errorLoggingKeywords = [
+        'ConsoleErrorLogger',
+        'sendEnhancedSubscriptionError',
+        'captureReactComponentInfo',
+        'captureSubscriptionStates',
+        'LoggingProvider',
+        'Error logging system',
+        'Failed to log subscription error',
+        'Failed to send enhanced subscription error log'
+      ]
+
+      return errorLoggingKeywords.some(keyword =>
+        message.toLowerCase().includes(keyword.toLowerCase())
+      ) || args.some(arg =>
+        typeof arg === 'string' && errorLoggingKeywords.some(keyword =>
+          arg.toLowerCase().includes(keyword.toLowerCase())
+        )
+      )
+    }
+
+    // Helper function to detect subscription-related errors
+    // TEMPORARILY DISABLED to prevent infinite loops
+    const isSubscriptionError = (message: string, args: any[]): boolean => {
+      return false; // Disabled
+    }
+
+    // Removed helper functions for enhanced subscription error logging
+
+    // Removed unused helper functions
+
+    // Removed unused helper functions for subscription state and timing capture
+
+    // Removed enhanced subscription error logging to prevent infinite loops
 
     // Add event listeners
     window.addEventListener('error', handleUnhandledError)

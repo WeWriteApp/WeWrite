@@ -1,0 +1,291 @@
+"use client";
+
+import React from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Coins, TrendingUp, TrendingDown, Users, Target, Activity } from 'lucide-react';
+import { useTokenAllocationMetrics } from '../../hooks/usePaymentAnalytics';
+import { type DateRange } from '../../services/dashboardAnalytics';
+import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
+import { ErrorCard } from '../ui/ErrorCard';
+
+interface TokenAllocationWidgetProps {
+  dateRange: DateRange;
+  granularity?: number;
+  className?: string;
+}
+
+export function TokenAllocationWidget({ 
+  dateRange, 
+  granularity, 
+  className = "" 
+}: TokenAllocationWidgetProps) {
+  const { data, loading, error } = useTokenAllocationMetrics(dateRange, granularity);
+  const chartConfig = useResponsiveChart(data.length, data);
+
+  // Handle loading state
+  if (loading) {
+    return (
+      <div className={`wewrite-card ${className}`}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Coins className="h-5 w-5 text-primary animate-pulse" />
+            <h3 className="text-lg font-semibold">Token Allocation Rate</h3>
+          </div>
+          <div className="text-right">
+            <div className="h-8 w-16 bg-muted rounded animate-pulse mb-1"></div>
+            <div className="h-3 w-20 bg-muted rounded animate-pulse"></div>
+          </div>
+        </div>
+        <div className="h-64 bg-muted rounded animate-pulse"></div>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <ErrorCard 
+        title="Error loading token allocation data"
+        message={error}
+        className={className}
+      />
+    );
+  }
+
+  // Check if we have any data
+  const hasData = data && data.length > 0;
+
+  // Calculate summary statistics only if we have data
+  const totalSubscribers = hasData ? Math.max(...data.map(item => item.totalSubscribers)) : 0;
+  const subscribersWithAllocations = hasData ? Math.max(...data.map(item => item.subscribersWithAllocations)) : 0;
+  const overallAllocationRate = totalSubscribers > 0 ? (subscribersWithAllocations / totalSubscribers) * 100 : 0;
+  
+  const totalTokensAllocated = hasData ? data.reduce((sum, item) => sum + item.totalTokensAllocated, 0) : 0;
+  const totalTokensAvailable = hasData ? data.reduce((sum, item) => sum + item.totalTokensAvailable, 0) : 0;
+  const overallTokenUtilization = totalTokensAvailable > 0 ? (totalTokensAllocated / totalTokensAvailable) * 100 : 0;
+
+  // Calculate trend
+  let trendPercentage = 0;
+  let isPositiveTrend = false;
+  if (hasData && data.length >= 2) {
+    const firstHalf = data.slice(0, Math.floor(data.length / 2));
+    const secondHalf = data.slice(Math.floor(data.length / 2));
+    
+    const firstHalfAvg = firstHalf.reduce((sum, item) => sum + item.allocationPercentage, 0) / firstHalf.length;
+    const secondHalfAvg = secondHalf.reduce((sum, item) => sum + item.allocationPercentage, 0) / secondHalf.length;
+    
+    if (firstHalfAvg > 0) {
+      trendPercentage = ((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100;
+      isPositiveTrend = trendPercentage > 0;
+    }
+  }
+
+  // Prepare pie chart data for allocation breakdown
+  const pieData = [
+    {
+      name: 'Subscribers with Allocations',
+      value: subscribersWithAllocations,
+      color: 'hsl(var(--primary))'
+    },
+    {
+      name: 'Subscribers without Allocations',
+      value: totalSubscribers - subscribersWithAllocations,
+      color: 'hsl(var(--muted))'
+    }
+  ];
+
+  // Get engagement level color
+  const getEngagementColor = (rate: number) => {
+    if (rate >= 80) return 'text-green-600';
+    if (rate >= 60) return 'text-blue-600';
+    if (rate >= 40) return 'text-amber-600';
+    return 'text-red-600';
+  };
+
+  const getEngagementLabel = (rate: number) => {
+    if (rate >= 80) return 'Excellent';
+    if (rate >= 60) return 'Good';
+    if (rate >= 40) return 'Fair';
+    return 'Needs Improvement';
+  };
+
+  return (
+    <div className={`wewrite-card ${className}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Coins className="h-5 w-5 text-primary" />
+          <h3 className="text-lg font-semibold">Token Allocation Rate</h3>
+        </div>
+        
+        {/* Summary Stats */}
+        <div className="text-right">
+          <div className={`text-2xl font-bold ${getEngagementColor(overallAllocationRate)}`}>
+            {isNaN(overallAllocationRate) ? '0.0' : overallAllocationRate.toFixed(1)}%
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Allocation rate
+          </div>
+        </div>
+      </div>
+
+      {/* Engagement Level Indicator */}
+      <div className="flex items-center gap-2 mb-4 p-3 bg-muted/50 rounded-lg">
+        <Target className={`h-4 w-4 ${getEngagementColor(overallAllocationRate)}`} />
+        <div className="text-sm">
+          <span className="font-medium">Engagement Level:</span> 
+          <span className={`ml-1 ${getEngagementColor(overallAllocationRate)}`}>
+            {getEngagementLabel(overallAllocationRate)}
+          </span>
+          {overallAllocationRate < 60 && (
+            <span className="text-muted-foreground ml-2">
+              • Consider improving onboarding flow
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Trend Indicator */}
+      <div className="flex items-center gap-2 mb-4">
+        {isPositiveTrend ? (
+          <TrendingUp className="h-4 w-4 text-green-600" />
+        ) : (
+          <TrendingDown className="h-4 w-4 text-red-600" />
+        )}
+        <span className={`text-sm font-medium ${isPositiveTrend ? 'text-green-600' : 'text-red-600'}`}>
+          {Math.abs(trendPercentage).toFixed(1)}% {isPositiveTrend ? 'increase' : 'decrease'}
+        </span>
+        <span className="text-sm text-muted-foreground">vs previous period</span>
+      </div>
+
+      {/* Chart */}
+      <div className="h-64 w-full">
+        {hasData ? (
+          <div className="grid grid-cols-2 gap-4 h-full">
+            {/* Line Chart for Allocation Rate Over Time */}
+            <div className="h-full">
+              <h4 className="text-sm font-medium mb-2 text-center">Allocation Rate Trend</h4>
+              <ResponsiveContainer width="100%" height="90%">
+                <LineChart
+                  data={data}
+                  margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis 
+                    dataKey="label"
+                    tick={{ fontSize: 10 }}
+                    interval="preserveStartEnd"
+                    tickFormatter={(value) => value.split(' ')[0]}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 10 }}
+                    domain={[0, 100]}
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => [`${value.toFixed(1)}%`, 'Allocation Rate']}
+                    labelFormatter={(label) => `Period: ${label}`}
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--background))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '6px',
+                      fontSize: '12px'
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="allocationPercentage" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 3 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Pie Chart for Subscriber Breakdown */}
+            <div className="h-full">
+              <h4 className="text-sm font-medium mb-2 text-center">Subscriber Breakdown</h4>
+              <ResponsiveContainer width="100%" height="90%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={30}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value: number, name: string) => [
+                      `${value} subscribers`,
+                      name
+                    ]}
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--background))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '6px',
+                      fontSize: '12px'
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <Coins className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No token allocation data available</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Data will appear when subscribers start allocating tokens
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer Summary */}
+      {hasData && (
+        <div className="mt-4 pt-4 border-t border-border">
+          <div className="grid grid-cols-4 gap-4 text-center">
+            <div>
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Users className="h-3 w-3 text-blue-600" />
+                <span className="text-xs text-muted-foreground">Total Subs</span>
+              </div>
+              <div className="text-lg font-bold text-blue-600">{totalSubscribers}</div>
+            </div>
+            <div>
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Activity className="h-3 w-3 text-green-600" />
+                <span className="text-xs text-muted-foreground">Active</span>
+              </div>
+              <div className="text-lg font-bold text-green-600">{subscribersWithAllocations}</div>
+            </div>
+            <div>
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Coins className="h-3 w-3 text-primary" />
+                <span className="text-xs text-muted-foreground">Tokens Used</span>
+              </div>
+              <div className="text-lg font-bold text-primary">
+                {overallTokenUtilization.toFixed(1)}%
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">Total Allocated</div>
+              <div className="text-lg font-bold text-amber-600">
+                {totalTokensAllocated.toLocaleString()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

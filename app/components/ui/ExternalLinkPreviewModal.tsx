@@ -16,6 +16,10 @@ interface ExternalLinkPreviewModalProps {
   url: string;
   displayText?: string;
   className?: string;
+  // Optional: Show only pages by a specific user
+  filterByUserId?: string;
+  filterByUsername?: string;
+  currentUserId?: string | null;
 }
 
 interface RelatedPage {
@@ -30,7 +34,10 @@ export function ExternalLinkPreviewModal({
   onClose,
   url,
   displayText,
-  className
+  className,
+  filterByUserId,
+  filterByUsername,
+  currentUserId
 }: ExternalLinkPreviewModalProps) {
   const [mounted, setMounted] = useState(false);
   const [relatedPages, setRelatedPages] = useState<RelatedPage[]>([]);
@@ -47,15 +54,22 @@ export function ExternalLinkPreviewModal({
     if (isOpen && url) {
       loadRelatedPages();
     }
-  }, [isOpen, url]);
+  }, [isOpen, url, filterByUserId]);
 
   const loadRelatedPages = async () => {
     setLoadingRelated(true);
     try {
-      // Import the function dynamically to avoid SSR issues
-      const { findPagesLinkingToExternalUrl } = await import('../../firebase/database/links');
-      const pages = await findPagesLinkingToExternalUrl(url, 5);
-      setRelatedPages(pages);
+      if (filterByUserId) {
+        // Import the user-specific function for filtered results
+        const { findUserPagesLinkingToExternalUrl } = await import('../../firebase/database/links');
+        const pages = await findUserPagesLinkingToExternalUrl(url, filterByUserId, currentUserId);
+        setRelatedPages(pages);
+      } else {
+        // Import the general function for all pages
+        const { findPagesLinkingToExternalUrl } = await import('../../firebase/database/links');
+        const pages = await findPagesLinkingToExternalUrl(url, 5);
+        setRelatedPages(pages);
+      }
     } catch (error) {
       console.error('Error loading related pages:', error);
       setRelatedPages([]);
@@ -183,7 +197,12 @@ export function ExternalLinkPreviewModal({
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  <h4 className="text-sm font-medium">Other WeWrite pages linking here</h4>
+                  <h4 className="text-sm font-medium">
+                    {filterByUserId && filterByUsername
+                      ? `${filterByUsername}'s pages linking here`
+                      : "Other WeWrite pages linking here"
+                    }
+                  </h4>
                 </div>
                 
                 {loadingRelated ? (
@@ -212,7 +231,10 @@ export function ExternalLinkPreviewModal({
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    No other WeWrite pages link to this URL yet.
+                    {filterByUserId && filterByUsername
+                      ? `${filterByUsername} hasn't linked to this URL in any other pages.`
+                      : "No other WeWrite pages link to this URL yet."
+                    }
                   </p>
                 )}
               </div>

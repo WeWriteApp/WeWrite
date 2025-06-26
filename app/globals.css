@@ -115,6 +115,33 @@
     pointer-events: auto !important;
   }
 
+  /* Hide specific container while preserving children visibility */
+  body > div.flex.min-h-screen > div.flex-1.min-w-0 > div > main > div > div > div.w-full.max-w-none.box-border > div > div.mt-4 > div > div {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    /* Keep layout and text properties intact */
+    display: inherit !important;
+    position: inherit !important;
+    width: inherit !important;
+    height: inherit !important;
+    margin: inherit !important;
+    padding: inherit !important;
+  }
+
+  /* Reset any inherited transparency for children - be very specific */
+  body > div.flex.min-h-screen > div.flex-1.min-w-0 > div > main > div > div > div.w-full.max-w-none.box-border > div > div.mt-4 > div > div > * {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  /* Specifically restore text visibility for all text elements */
+  body > div.flex.min-h-screen > div.flex-1.min-w-0 > div > main > div > div > div.w-full.max-w-none.box-border > div > div.mt-4 > div > div span,
+  body > div.flex.min-h-screen > div.flex-1.min-w-0 > div > main > div > div > div.w-full.max-w-none.box-border > div > div.mt-4 > div > div button,
+  body > div.flex.min-h-screen > div.flex-1.min-w-0 > div > main > div > div > div.w-full.max-w-none.box-border > div > div.mt-4 > div > div div {
+    color: revert !important;
+  }
+
   /* Override any global pointer-events: none for pledge bar elements */
   [data-pledge-bar] * {
     pointer-events: auto !important;
@@ -161,6 +188,114 @@ input, textarea, select {
   pointer-events: auto !important;
 }
 
+/* Mobile-specific pledge bar optimizations */
+@media (max-width: 767px) {
+  /* Ensure pledge bar fits within mobile viewport with proper spacing */
+  [data-component="pledge-bar-card"] {
+    max-width: calc(100vw - 16px) !important; /* Account for proper padding */
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  /* Optimize button touch targets on mobile */
+  [data-pledge-bar] button {
+    min-height: 40px !important; /* Ensure good touch target size */
+    min-width: 40px !important;
+  }
+
+  /* Ensure horizontal layout is maintained on mobile */
+  [data-pledge-bar] .flex.items-center {
+    flex-direction: row !important; /* Force horizontal layout */
+    flex-wrap: nowrap !important;
+  }
+
+  /* Ensure composition bar takes available space */
+  [data-pledge-bar] .flex-1 {
+    min-width: 0 !important; /* Allow flex item to shrink */
+  }
+
+  /* Ensure text remains readable on mobile */
+  [data-pledge-bar] .text-xs {
+    font-size: 0.75rem !important; /* 12px */
+  }
+
+  [data-pledge-bar] .text-sm {
+    font-size: 0.875rem !important; /* 14px */
+  }
+
+  /* Prevent horizontal overflow on mobile */
+  [data-pledge-bar] {
+    overflow-x: hidden !important;
+  }
+
+  /* Ensure token text is properly sized on mobile */
+  [data-pledge-bar] .text-center span {
+    word-break: break-word !important;
+    hyphens: none !important;
+  }
+
+  /* Ensure token allocation bar is properly sized on mobile */
+  [data-component="token-allocation-bar"] {
+    min-height: 40px !important;
+  }
+
+  /* Prevent unnecessary hyphenation in titles and headings */
+  h1, h2, h3, h4, h5, h6,
+  .card-title,
+  [class*="title"],
+  [class*="heading"] {
+    hyphens: none !important;
+    /* Only allow hyphenation for extremely long words that would overflow */
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  /* Allow hyphenation only for very long single words as absolute last resort */
+  h1, h2, h3, h4, h5, h6,
+  .card-title,
+  [class*="title"],
+  [class*="heading"] {
+    /* Use manual hyphenation only when a single word exceeds container width */
+    word-break: break-word;
+    hyphens: manual;
+  }
+
+  /* Utility classes for hyphenation control */
+  .hyphens-none {
+    hyphens: none !important;
+  }
+
+  .hyphens-manual {
+    hyphens: manual !important;
+  }
+
+  .hyphens-auto {
+    hyphens: auto !important;
+  }
+
+  .word-break-normal {
+    word-break: normal !important;
+  }
+
+  .word-break-break-word {
+    word-break: break-word !important;
+  }
+
+  .overflow-wrap-break-word {
+    overflow-wrap: break-word !important;
+  }
+
+  /* Ensure proper spacing between elements on mobile */
+  [data-component="token-allocation-controls"] {
+    gap: 0.5rem !important; /* 8px gap on mobile */
+  }
+
+  /* Ensure pledge bar content has adequate padding on mobile */
+  [data-pledge-bar] {
+    padding: 0.75rem !important; /* 12px padding on mobile */
+  }
+}
+
 /* Additional zoom prevention for WebKit browsers */
 @media screen and (-webkit-min-device-pixel-ratio: 0) {
   input, textarea, select {
@@ -170,23 +305,41 @@ input, textarea, select {
 
 /* Basic responsive styles */
 @media (max-width: 640px) {
-  .page-content {
+  /* Only target specific page content elements, not the main container */
+  .unified-editor .page-content,
+  .editor-content .page-content {
     width: 100%;
     max-width: 100%;
     overflow-wrap: break-word;
-    /* ADDED: Ensure no excessive padding on mobile */
-    padding-left: 0 !important;
-    padding-right: 0 !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
     box-sizing: border-box !important;
   }
 
-  /* Ensure text doesn't overflow */
-  p, h1, h2, h3, h4, h5, h6, span, div {
+  /* Ensure text doesn't overflow - but preserve title hyphenation rules */
+  p, span, div {
     max-width: 100%;
     overflow-wrap: break-word;
     word-break: break-word;
+  }
+
+  /* Headings get special treatment to prevent unnecessary hyphenation */
+  h1, h2, h3, h4, h5, h6 {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: normal; /* Don't break words unless absolutely necessary */
+    hyphens: none; /* No automatic hyphenation */
+  }
+
+  /* Ensure all containers respect mobile width */
+  * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Prevent horizontal scrolling */
+  html, body {
+    overflow-x: hidden;
   }
 
   /* ADDED: Ensure all content containers are properly sized on mobile */
@@ -1845,6 +1998,17 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
 @media (max-width: 767px) {
   body {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Add bottom spacing to page content to account for mobile bottom nav */
+  main {
+    padding-bottom: 120px; /* Space for bottom nav + safe area */
+  }
+
+  /* Specific spacing for page content containers */
+  .page-content,
+  #combined-links-section {
+    margin-bottom: 20px;
   }
 }
 

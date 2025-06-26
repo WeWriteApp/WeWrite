@@ -1,3 +1,13 @@
+/**
+ * DEPRECATED: This endpoint has been replaced by the comprehensive payout system
+ *
+ * Use the following endpoints instead:
+ * - POST /api/payouts/earnings - For manual payout requests
+ * - Automated payouts are handled by the PayoutSchedulerService
+ *
+ * This endpoint is kept for backward compatibility but will redirect to the new system.
+ */
+
 import { NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 
@@ -5,15 +15,25 @@ import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 const admin = getFirebaseAdmin();
 
 export async function POST(request) {
+  console.warn('⚠️ DEPRECATED ENDPOINT: /api/initiate-payout is deprecated. Redirecting to new payout system.');
+
   try {
     const { userId, amount } = await request.json();
 
     if (!userId || !amount) {
-      return NextResponse.json({ error: 'User ID and amount are required' }, { status: 400 });
+      return NextResponse.json({
+        error: 'User ID and amount are required',
+        deprecated: true,
+        newEndpoint: '/api/payouts/earnings'
+      }, { status: 400 });
     }
 
     if (amount <= 0) {
-      return NextResponse.json({ error: 'Amount must be greater than 0' }, { status: 400 });
+      return NextResponse.json({
+        error: 'Amount must be greater than 0',
+        deprecated: true,
+        newEndpoint: '/api/payouts/earnings'
+      }, { status: 400 });
     }
 
     // Verify the user exists in Firebase
@@ -21,77 +41,63 @@ export async function POST(request) {
       await admin.auth().getUser(userId);
     } catch (error) {
       console.error('Error verifying user:', error);
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({
+        error: 'Unauthorized',
+        deprecated: true,
+        newEndpoint: '/api/payouts/earnings'
+      }, { status: 401 });
     }
 
-    const db = admin.firestore();
-    
+    // Redirect to the new payout system
+    console.log('Redirecting payout request to new system:', { userId, amount });
+
     try {
-      // Check user's available balance
-      const balanceDocRef = db.collection('userBalances').doc(userId);
-      const balanceDoc = await balanceDocRef.get();
-      
-      if (!balanceDoc.exists) {
-        return NextResponse.json({ error: 'No balance found for user' }, { status: 400 });
-      }
-
-      const balanceData = balanceDoc.data();
-      const availableBalance = balanceData.available || 0;
-
-      if (amount > availableBalance) {
-        return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
-      }
-
-      // Check if user has a connected account
-      const userDocRef = db.collection('users').doc(userId);
-      const userDoc = await userDocRef.get();
-      
-      if (!userDoc.exists || !userDoc.data().stripeConnectedAccountId) {
-        return NextResponse.json({ error: 'No connected bank account found' }, { status: 400 });
-      }
-
-      // Create payout record
-      const payoutData = {
-        userId: userId,
-        amount: amount,
-        status: 'pending',
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        estimatedArrival: new Date(Date.now() + (2 * 24 * 60 * 60 * 1000)), // 2 days from now
-        bankAccount: userDoc.data().bankAccountLast4 || '****'
-      };
-
-      const payoutRef = await db.collection('payouts').add(payoutData);
-
-      // Update user balance (deduct the payout amount from available)
-      await balanceDocRef.update({
-        available: admin.firestore.FieldValue.increment(-amount),
-        pending: admin.firestore.FieldValue.increment(amount)
+      // Make internal request to the new payout endpoint
+      const newPayoutResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/payouts/earnings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Request': 'true',
+          'X-Deprecated-Endpoint': '/api/initiate-payout'
+        },
+        body: JSON.stringify({
+          action: 'request_payout',
+          userId: userId,
+          amount: amount,
+          source: 'legacy_endpoint'
+        })
       });
 
-      // In a real implementation, you would integrate with Stripe Connect
-      // to actually initiate the payout to the user's connected account
-      // For now, we'll just create the record and mark it as processing
+      if (newPayoutResponse.ok) {
+        const result = await newPayoutResponse.json();
+        return NextResponse.json({
+          ...result,
+          deprecated: true,
+          message: 'Payout processed via new system (legacy endpoint used)',
+          newEndpoint: '/api/payouts/earnings',
+          migration: 'Please update your client to use the new endpoint'
+        });
+      } else {
+        const error = await newPayoutResponse.json();
+        return NextResponse.json({
+          error: error.error || 'Failed to process payout via new system',
+          deprecated: true,
+          newEndpoint: '/api/payouts/earnings',
+          details: error
+        }, { status: newPayoutResponse.status });
+      }
 
-      // Simulate processing delay
-      setTimeout(async () => {
-        try {
-          await payoutRef.update({
-            status: 'processing'
-          });
-        } catch (error) {
-          console.error('Error updating payout status:', error);
-        }
-      }, 5000);
+    } catch (redirectError) {
+      console.error('Error redirecting to new payout system:', redirectError);
 
-      return NextResponse.json({ 
-        success: true, 
-        payoutId: payoutRef.id,
-        message: 'Payout initiated successfully'
-      });
-
-    } catch (firestoreError) {
-      console.error('Error processing payout:', firestoreError);
-      return NextResponse.json({ error: 'Failed to process payout' }, { status: 500 });
+      // Fallback: Return deprecation notice
+      return NextResponse.json({
+        error: 'This endpoint is deprecated and the new payout system is not available',
+        deprecated: true,
+        newEndpoint: '/api/payouts/earnings',
+        message: 'Please use the new payout system endpoint',
+        fallback: true
+      }, { status: 503 });
     }
 
   } catch (error) {

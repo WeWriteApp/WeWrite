@@ -770,7 +770,7 @@ export default function PageHeader({
                             display: 'block',
                             wordWrap: 'break-word',
                             overflowWrap: 'break-word',
-                            hyphens: 'auto'
+                            hyphens: 'none'
                           }}
                           onClick={handleTitleClick}
                           title={

@@ -25,7 +25,7 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
   const totalSuccessful = hasData ? data.reduce((sum, item) => sum + item.successful, 0) : 0;
   const totalAborted = hasData ? data.reduce((sum, item) => sum + item.aborted, 0) : 0;
   const successRate = totalShares > 0 ? (totalSuccessful / totalShares * 100) : 0;
-  const averagePerDay = hasData ? (totalShares / data.length).toFixed(1) : '0';
+  const averagePerDay = hasData && data.length > 0 ? (totalShares / data.length).toFixed(1) : '0';
 
   // Calculate trend for success rate only if we have data
   let trendPercentage = 0;
@@ -132,7 +132,7 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4 text-green-500" />
-            <span className="text-sm font-medium">{successRate.toFixed(1)}% Success Rate</span>
+            <span className="text-sm font-medium">{isNaN(successRate) ? '0.0' : successRate.toFixed(1)}% Success Rate</span>
           </div>
           <div className="flex items-center gap-2">
             <XCircle className="h-4 w-4 text-red-500" />
@@ -149,7 +149,7 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
               <TrendingDown className="h-4 w-4 text-red-500" />
             )}
             <span className={isPositiveTrend ? 'text-green-500' : 'text-red-500'}>
-              {Math.abs(trendPercentage).toFixed(1)}% {isPositiveTrend ? 'better' : 'worse'}
+              {isNaN(trendPercentage) ? '0.0' : Math.abs(trendPercentage).toFixed(1)}% {isPositiveTrend ? 'better' : 'worse'}
             </span>
           </div>
         )}

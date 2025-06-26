@@ -26,6 +26,7 @@ import { LineSettingsProvider } from "./contexts/LineSettingsContext"
 import ConsoleErrorLogger from "./components/utils/ConsoleErrorLogger"
 import DoubleClickZoomPrevention from "./components/utils/DoubleClickZoomPrevention"
 import TerminalConsole from "./components/utils/TerminalConsole"
+import PWADebugInitializer from "./components/utils/PWADebugInitializer"
 
 
 
@@ -299,6 +300,7 @@ export default function RootLayout({
                                         <ConsoleErrorLogger />
                                         <TerminalConsole />
                                         <DoubleClickZoomPrevention />
+                                        <PWADebugInitializer />
                                         <FeatureFlagListener>
                                           <ErrorBoundary name="layout" resetOnPropsChange={true}>
                                             <ClientLayout>

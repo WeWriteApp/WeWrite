@@ -117,11 +117,12 @@ export const FirebaseReadMonitor: React.FC = () => {
     : 0;
 
   const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0 || isNaN(bytes)) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    const result = (bytes / Math.pow(k, i));
+    return (isNaN(result) ? '0' : parseFloat(result.toFixed(2))) + ' ' + sizes[i];
   };
 
   const getCacheHitRateColor = (rate: number) => {
@@ -192,7 +193,7 @@ export const FirebaseReadMonitor: React.FC = () => {
               <div>
                 <p className="text-sm text-gray-600">Cache Hit Rate</p>
                 <p className={`text-2xl font-bold ${getCacheHitRateColor(overallCacheHitRate)}`}>
-                  {overallCacheHitRate.toFixed(1)}%
+                  {isNaN(overallCacheHitRate) ? '0.0' : overallCacheHitRate.toFixed(1)}%
                 </p>
               </div>
               {overallCacheHitRate >= 80 ? (
@@ -391,7 +392,7 @@ export const FirebaseReadMonitor: React.FC = () => {
           <CardContent>
             <div className="space-y-2 text-yellow-800">
               {overallCacheHitRate < 60 && (
-                <p>• Cache hit rate is low ({overallCacheHitRate.toFixed(1)}%). Consider increasing cache TTL or improving cache strategies.</p>
+                <p>• Cache hit rate is low ({isNaN(overallCacheHitRate) ? '0.0' : overallCacheHitRate.toFixed(1)}%). Consider increasing cache TTL or improving cache strategies.</p>
               )}
               {totalFirestoreReads > 1000 && (
                 <p>• High number of Firestore reads detected. Consider implementing more aggressive caching.</p>

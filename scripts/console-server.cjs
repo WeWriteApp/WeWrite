@@ -2,6 +2,20 @@
 
 const WebSocket = require('ws');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+// Create log directory if it doesn't exist
+const logDir = path.join(__dirname, '../logs');
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir);
+}
+
+// Create write streams for logs
+const logFile = path.join(logDir, 'console.log');
+const errorLogFile = path.join(logDir, 'console-errors.log');
+const logStream = fs.createWriteStream(logFile, { flags: 'a' });
+const errorLogStream = fs.createWriteStream(errorLogFile, { flags: 'a' });
 
 // Create HTTP server for WebSocket upgrade
 const server = http.createServer();
@@ -16,7 +30,7 @@ wss.on('connection', (ws, req) => {
   const clientId = Math.random().toString(36).substr(2, 9);
   clients.add(ws);
   
-  console.log(`📱 Browser connected [${clientId}] - Total clients: ${clients.size}`);
+  console.log(`[${clientId}] Browser connected - Total clients: ${clients.size}`);
   
   ws.on('message', (data) => {
     try {
@@ -27,11 +41,11 @@ wss.on('connection', (ws, req) => {
       
       // Color codes for different log levels
       const colors = {
-        error: '\x1b[31m',   // Red
-        warn: '\x1b[33m',    // Yellow
-        info: '\x1b[36m',    // Cyan
-        debug: '\x1b[90m',   // Gray
-        log: '\x1b[37m'      // White
+        error: '\x1b[31m',
+        warn: '\x1b[33m',
+        info: '\x1b[36m',
+        debug: '\x1b[90m',
+        log: '\x1b[37m'
       };
       
       const reset = '\x1b[0m';
@@ -41,6 +55,13 @@ wss.on('connection', (ws, req) => {
       const prefix = `${color}[${timestamp}] ${logData.type.toUpperCase()}:${reset}`;
       console.log(`${prefix} ${logData.message}`);
       
+      // Write to log files
+      const logEntry = `[${logData.timestamp}] [${logData.type.toUpperCase()}] ${logData.message}\n`;
+      logStream.write(logEntry);
+      if (logData.type === 'error') {
+        errorLogStream.write(logEntry);
+      }
+      
     } catch (error) {
       console.error('Failed to parse log data:', error);
     }
@@ -48,11 +69,11 @@ wss.on('connection', (ws, req) => {
   
   ws.on('close', () => {
     clients.delete(ws);
-    console.log(`📱 Browser disconnected [${clientId}] - Total clients: ${clients.size}`);
+    console.log(`[${clientId}] Browser disconnected - Total clients: ${clients.size}`);
   });
   
   ws.on('error', (error) => {
-    console.error(`WebSocket error [${clientId}]:`, error);
+    console.error(`[${clientId}] WebSocket error:`, error);
     clients.delete(ws);
   });
 });
@@ -62,6 +83,8 @@ const PORT = 3001;
 server.listen(PORT, () => {
   console.log(`🚀 Console Stream Server running on ws://localhost:${PORT}`);
   console.log('📡 Waiting for browser connections...');
+  console.log(`📝 Logging to: ${logFile}`);
+  console.log(`🚨 Errors logged to: ${errorLogFile}`);
   console.log('');
   console.log('💡 To use: Open WeWrite in browser, console logs will appear here');
   console.log('⏹️  To stop: Press Ctrl+C');
@@ -69,21 +92,17 @@ server.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on('SIGINT', () => {
+function shutdown() {
   console.log('\n🛑 Shutting down console stream server...');
   wss.close(() => {
+    logStream.end();
+    errorLogStream.end();
     server.close(() => {
       console.log('✅ Server stopped');
       process.exit(0);
     });
   });
-});
+}
 
-process.on('SIGTERM', () => {
-  console.log('\n🛑 Received SIGTERM, shutting down...');
-  wss.close(() => {
-    server.close(() => {
-      process.exit(0);
-    });
-  });
-});
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
