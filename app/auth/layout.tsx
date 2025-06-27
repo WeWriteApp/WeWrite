@@ -1,6 +1,4 @@
-import { Metadata } from 'next';
-
-export const metadata: Metadata = {
+export const metadata = {
   title: 'WeWrite - Account Access',
   description: 'Sign in or create an account for WeWrite collaborative writing platform',
 };

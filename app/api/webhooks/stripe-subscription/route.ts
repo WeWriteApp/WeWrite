@@ -10,6 +10,7 @@ import { headers } from 'next/headers';
 import { doc, updateDoc, getDoc, setDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/stripeConfig';
+import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { TokenService } from '../../../services/tokenService';
 import { calculateTokensForAmount } from '../../../utils/subscriptionTiers';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   try {
     // Only handle subscription mode sessions
     if (session.mode !== 'subscription' || !session.subscription) {
@@ -123,7 +124,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   }
 }
 
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+export async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   try {
     const userId = subscription.metadata.firebaseUID;
     if (!userId) {
@@ -148,7 +149,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     }
 
     // Update subscription in Firestore
-    const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionRef = doc(db, parentPath, subCollectionName, 'current');
 
     // Check if subscription document exists
     const subscriptionDoc = await getDoc(subscriptionRef);
@@ -208,7 +210,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   }
 }
 
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+export async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   try {
     const userId = subscription.metadata.firebaseUID;
     if (!userId) {
@@ -219,7 +221,8 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     console.log(`[SUBSCRIPTION WEBHOOK] Processing subscription deletion for user ${userId}, subscription ${subscription.id}`);
 
     // Update subscription status in Firestore
-    const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionRef = doc(db, parentPath, subCollectionName, 'current');
     await updateDoc(subscriptionRef, {
       status: 'cancelled',
       canceledAt: new Date().toISOString(),
@@ -237,7 +240,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   }
 }
 
-async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
+export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   try {
     if (!invoice.subscription) {
       return;
@@ -352,7 +355,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   }
 }
 
-async function handlePaymentFailed(invoice: Stripe.Invoice) {
+export async function handlePaymentFailed(invoice: Stripe.Invoice) {
   try {
     if (!invoice.subscription) return;
 

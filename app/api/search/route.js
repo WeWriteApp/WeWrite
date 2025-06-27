@@ -313,7 +313,7 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
             allUserPages.set(doc.id, {
               id: doc.id,
               title: pageTitle,
-              type: 'user',
+              type: 'page',
               isOwned: true,
               isEditable: true,
               userId: data.userId,

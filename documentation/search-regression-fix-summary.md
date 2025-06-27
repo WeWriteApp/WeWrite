@@ -187,6 +187,38 @@ The search regression was caused by **artificial result limits** across multiple
 - Comprehensive test suite for regression prevention
 - Performance benchmarks for optimization validation
 
+## Recent Quality Improvements (2024)
+
+### Issue: Irrelevant Search Results
+**Problem**: Search was returning irrelevant results that didn't match the query, causing user confusion.
+
+**Root Cause**: The scoring function had fallback logic that returned a score of 50 for non-matching content:
+```javascript
+// BROKEN - returned 50 for irrelevant results
+const baseScore = Math.max(0, 50 - (isContentMatch ? 20 : 0));
+return baseScore;
+```
+
+**Fix Applied**: Changed to return 0 for no match, ensuring only relevant results are included:
+```javascript
+// FIXED - returns 0 for irrelevant results
+return 0;
+```
+
+**Impact**: Eliminates "hallucinations" and random fallback content from search results.
+
+### Issue: Missing Username Display
+**Problem**: Many search results show "Missing username" instead of actual usernames.
+
+**Root Cause**: Search API doesn't populate usernames for page results, relying on frontend fallback logic.
+
+**Status**: Identified and documented. Fix pending implementation.
+
+### Search Quality Standards
+- **Precision over Recall**: Better to show fewer relevant results than many irrelevant ones
+- **Zero Tolerance for Irrelevant Results**: If something doesn't match, it scores 0
+- **No Fallback Padding**: Don't pad results with random content when few matches exist
+
 ## Conclusion
 
 The WeWrite search regression has been successfully resolved through a comprehensive architectural overhaul. The new unified search system:
@@ -196,5 +228,6 @@ The WeWrite search regression has been successfully resolved through a comprehen
 3. **Improves performance** by 50% while handling larger result sets
 4. **Simplifies maintenance** with a single source of truth
 5. **Ensures reliability** through comprehensive testing
+6. **Maintains search quality** with strict relevance filtering
 
 The solution is production-ready, thoroughly tested, and provides a solid foundation for future search enhancements. Users will now find all relevant content in their searches, with improved performance and consistency across all search interfaces.

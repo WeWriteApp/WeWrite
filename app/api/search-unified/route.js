@@ -120,10 +120,9 @@ function calculateSearchScore(text, searchTerm, isTitle = false, isContentMatch 
   if (normalizedText.includes(normalizedSearch)) {
     return isTitle ? 75 : 55;
   }
-  
-  // Apply content match penalty
-  const baseScore = Math.max(0, 50 - (isContentMatch ? 20 : 0));
-  return baseScore;
+
+  // No match found - return 0 to exclude irrelevant results
+  return 0;
 }
 
 /**
@@ -147,23 +146,24 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
     const finalTitleOnly = titleOnly !== undefined ? titleOnly : contextDefaults.titleOnly;
 
     console.log(`🔍 UNIFIED SEARCH: "${searchTerm}" (context: ${context}, maxResults: ${finalMaxResults})`);
-    
+
     const isEmptySearch = !searchTerm || searchTerm.trim().length === 0;
     const searchTermLower = searchTerm?.toLowerCase().trim() || '';
-    
+
     // Import Firestore modules
-    const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
+    const { collection, query, where, orderBy, limit, getDocs, doc, getDoc } = await import('firebase/firestore');
     const { db } = await import('../../firebase/database');
-    
+
     const allResults = [];
     const processedIds = new Set();
+    const usernameCache = new Map(); // Cache usernames to avoid duplicate fetches
     
     // STEP 1: Search user's own pages (no limits on database query)
     if (userId) {
       const targetUserId = filterByUserId || userId;
       
-      // Use larger batch size to ensure we get all relevant results
-      const batchSize = 500;
+      // Use smaller batch size for better performance
+      const batchSize = 100;
       let lastDoc = null;
       let hasMore = true;
       
@@ -230,7 +230,7 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
             allResults.push({
               id: doc.id,
               title: pageTitle,
-              type: 'user',
+              type: 'page',
               isOwned: true,
               isEditable: true,
               userId: data.userId,
@@ -254,7 +254,7 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
     
     // STEP 2: Search public pages (if not filtering by specific user)
     if (!filterByUserId && allResults.length < finalMaxResults) {
-      const batchSize = 500;
+      const batchSize = 100;
       let lastDoc = null;
       let hasMore = true;
       
@@ -555,6 +555,25 @@ export async function GET(request) {
       includeUsers ? searchUsersComprehensive(searchTerm, 10) : Promise.resolve([])
     ]);
 
+    // Fetch missing usernames for pages
+    const pagesWithUsernames = await Promise.all((pages || []).map(async (page) => {
+      if (!page.username && page.userId) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', page.userId));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            page.username = userData.username || userData.displayName || 'Anonymous';
+          } else {
+            page.username = 'Anonymous';
+          }
+        } catch (error) {
+          console.error(`Error fetching username for user ${page.userId}:`, error);
+          page.username = 'Anonymous';
+        }
+      }
+      return page;
+    }));
+
     const searchTime = Date.now() - startTime;
 
     console.log(`✅ Unified search completed in ${searchTime}ms:`, {
@@ -565,14 +584,14 @@ export async function GET(request) {
     });
 
     return NextResponse.json({
-      pages: pages || [],
+      pages: pagesWithUsernames || [],
       users: users || [],
       source: 'unified_search',
       searchTerm,
       context,
       performance: {
         searchTimeMs: searchTime,
-        pagesFound: pages?.length || 0,
+        pagesFound: pagesWithUsernames?.length || 0,
         usersFound: users?.length || 0,
         maxResults: maxResults || 'unlimited'
       }

@@ -56,32 +56,68 @@ export async function GET(request: NextRequest) {
     const allocationsSnapshot = await allocationsQuery.get();
     const pledges: any[] = [];
 
-    for (const doc of allocationsSnapshot.docs) {
+    // PERFORMANCE OPTIMIZATION: Batch fetch page and user data
+    const pageIds = new Set<string>();
+    const userIds = new Set<string>();
+
+    // Collect all unique page IDs
+    allocationsSnapshot.docs.forEach(doc => {
       const data = doc.data();
-      
-      // Get page metadata
-      let pageTitle = 'Unknown Page';
-      let authorUsername = 'Unknown Author';
-      
+      if (data.resourceId) pageIds.add(data.resourceId);
+    });
+
+    // Batch fetch pages
+    const pagePromises = Array.from(pageIds).map(async (pageId) => {
       try {
-        const pageRef = db.collection('pages').doc(data.resourceId);
-        const pageDoc = await pageRef.get();
-        
+        const pageDoc = await db.collection('pages').doc(pageId).get();
         if (pageDoc.exists) {
           const pageData = pageDoc.data();
-          pageTitle = pageData?.title || pageTitle;
-          
-          if (pageData?.userId) {
-            const authorRef = db.collection('users').doc(pageData.userId);
-            const authorDoc = await authorRef.get();
-            if (authorDoc.exists) {
-              authorUsername = authorDoc.data()?.username || authorUsername;
-            }
-          }
+          if (pageData?.userId) userIds.add(pageData.userId);
+          return { id: pageId, data: pageData };
         }
       } catch (error) {
-        console.warn('Error loading page metadata:', error);
+        console.warn(`Error fetching page ${pageId}:`, error);
       }
+      return { id: pageId, data: null };
+    });
+
+    const pageResults = await Promise.all(pagePromises);
+
+    // Batch fetch users
+    const userPromises = Array.from(userIds).map(async (userId) => {
+      try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+          return { id: userId, data: userDoc.data() };
+        }
+      } catch (error) {
+        console.warn(`Error fetching user ${userId}:`, error);
+      }
+      return { id: userId, data: null };
+    });
+
+    const userResults = await Promise.all(userPromises);
+
+    // Create lookup maps
+    const pageMap = new Map();
+    const userMap = new Map();
+
+    pageResults.forEach(result => {
+      pageMap.set(result.id, result.data);
+    });
+
+    userResults.forEach(result => {
+      userMap.set(result.id, result.data);
+    });
+
+    // Process pledges using lookup maps
+    for (const doc of allocationsSnapshot.docs) {
+      const data = doc.data();
+
+      const pageData = pageMap.get(data.resourceId);
+      const pageTitle = pageData?.title || 'Unknown Page';
+      const authorData = userMap.get(pageData?.userId);
+      const authorUsername = authorData?.username || 'Unknown Author';
 
       pledges.push({
         id: doc.id,

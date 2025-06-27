@@ -322,7 +322,7 @@ export const getPageById = async (pageId: string, userId: string | null = null):
 
         // Validate that we have a current version ID
         if (!currentVersionId) {
-          console.error(`Page ${pageId} has no currentVersion ID`);
+          console.warn(`Page ${pageId} has no currentVersion ID, attempting recovery`);
 
           // Try to recover by creating a version if the page has content
           if (pageData.content) {
@@ -490,7 +490,7 @@ export const listenToPageById = (
 
         // Validate that we have a current version ID
         if (!currentVersionId) {
-          console.error(`Page ${pageId} has no currentVersion ID`);
+          console.warn(`Page ${pageId} has no currentVersion ID, attempting recovery`);
 
           // Try to recover by creating a version if the page has content
           if (pageData.content) {

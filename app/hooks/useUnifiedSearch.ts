@@ -23,7 +23,7 @@ export interface PageResult {
   title?: string;
   username?: string;
   userId?: string;
-  type?: 'user' | 'public';
+  type?: 'page' | 'public';
   isOwned?: boolean;
   isEditable?: boolean;
   isPublic?: boolean;

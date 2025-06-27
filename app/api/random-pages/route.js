@@ -35,14 +35,16 @@ export async function GET(request) {
       }, { headers });
     }
 
-    // Get a larger pool of public pages to randomize from
-    // We'll fetch more than needed and then randomize client-side for better distribution
-    const poolSize = Math.max(limitCount * 5, 50); // Get at least 50 pages to choose from
+    // PERFORMANCE OPTIMIZATION: Use smaller pool size and add server-side filtering
+    const poolSize = Math.max(limitCount * 2, 20); // Reduced pool size for better performance
 
-    // Query for public pages only (filter out deleted pages in code to avoid index issues)
+    // Query for public pages only with server-side filtering for deleted pages
     const pagesQuery = query(
       collection(db, 'pages'),
       where('isPublic', '==', true),
+      where('deleted', '!=', true), // Server-side filtering to reduce data transfer
+      orderBy('deleted'), // Required for != queries
+      orderBy('lastModified', 'desc'), // Add ordering for better distribution
       limit(poolSize)
     );
 
@@ -56,15 +58,10 @@ export async function GET(request) {
       }, { headers });
     }
 
-    // Convert to array and add page data, filtering out deleted pages
+    // Convert to array (deleted pages already filtered server-side)
     let pages = [];
     pagesSnapshot.forEach((doc) => {
       const pageData = doc.data();
-
-      // Skip deleted pages
-      if (pageData.deleted === true) {
-        return;
-      }
 
       pages.push({
         id: doc.id,

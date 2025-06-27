@@ -168,7 +168,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   const convertSlateToHTML = useCallback((slateContent: any): string => {
     try {
       if (!slateContent || !Array.isArray(slateContent)) {
-        return "<div>&nbsp;</div>";
+        return "<div><br></div>";
       }
 
       let result = "";
@@ -183,10 +183,8 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
             try {
               if (child.text !== undefined) {
                 if (child.text === "") {
-                  if (!hasContent) {
-                    result += "&nbsp;";
-                    hasContent = true;
-                  }
+                  // Don't add &nbsp; for empty text - let the div remain empty
+                  // This prevents the browser from converting &nbsp; to a space when user starts typing
                 } else {
                   result += child.text.replace(/\n/g, '<br>');
                   hasContent = true;
@@ -221,17 +219,17 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
           }
 
           if (!hasContent) {
-            result += "&nbsp;";
+            result += "<br>";
           }
 
           result += "</div>";
         }
       }
 
-      return result || "<div>&nbsp;</div>";
+      return result || "<div><br></div>";
     } catch (error) {
       console.error("Editor: Error in Slate to HTML conversion:", error);
-      return "<div>&nbsp;</div>";
+      return "<div><br></div>";
     }
   }, [pillStyleClasses]);
 
@@ -559,12 +557,12 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       }
 
       // CRITICAL FIX: Use proper empty paragraph structure for contentEditable
-      // Empty divs with just <br> don't accept input properly, especially as the last element
-      let htmlContent = "<div>&nbsp;</div>";
+      // Use <br> instead of &nbsp; to prevent leading spaces when user starts typing
+      let htmlContent = "<div><br></div>";
 
       if (typeof initialContent === 'string' && initialContent.trim()) {
         const lines = initialContent.split('\n');
-        htmlContent = lines.map(line => `<div>${line || '&nbsp;'}</div>`).join('');
+        htmlContent = lines.map(line => `<div>${line || '<br>'}</div>`).join('');
       } else if (initialContent && Array.isArray(initialContent) && initialContent.length > 0) {
         const hasContent = initialContent.some(node =>
           node.children && node.children.some(child => child.text && child.text.trim())
@@ -590,8 +588,8 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       // More robust error recovery
       requestAnimationFrame(() => {
         if (editorRef.current && editorRef.current.isConnected) {
-          editorRef.current.innerHTML = "<div>&nbsp;</div>";
-          lastContentRef.current = "<div>&nbsp;</div>";
+          editorRef.current.innerHTML = "<div><br></div>";
+          lastContentRef.current = "<div><br></div>";
         }
       });
     }
@@ -773,7 +771,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       // CRITICAL FIX: Ensure editor always has at least one paragraph with proper structure
       if (editorRef.current.children.length === 0 ||
           (editorRef.current.children.length === 1 && editorRef.current.textContent?.trim() === '')) {
-        editorRef.current.innerHTML = '<div>&nbsp;</div>';
+        editorRef.current.innerHTML = '<div><br></div>';
       }
 
       const htmlContent = editorRef.current.innerHTML;
@@ -844,7 +842,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       console.error("Editor: Error in handleContentChange:", error);
       // Ensure editor has valid content even on error
       if (editorRef.current) {
-        editorRef.current.innerHTML = '<div>&nbsp;</div>';
+        editorRef.current.innerHTML = '<div><br></div>';
       }
     }
   }, [isClient, onChange, onEmptyLinesChange, convertHTMLToSlate, addParagraphNumbers]);

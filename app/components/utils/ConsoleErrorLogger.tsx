@@ -93,13 +93,42 @@ export default function ConsoleErrorLogger() {
         // Ensure message is a string and not too long
         const safeMessage = String(message || '').substring(0, 1000);
 
+        // ENHANCED FILTERING: Skip messages that would create feedback loops
+        const skipPatterns = [
+          'RequestMonitor', // Skip request monitor warnings
+          'High request volume detected', // Skip request volume warnings
+          'Skipping auto-scroll behavior', // Skip scroll warnings
+          'Firebase Activity: Deduplication', // Skip Firebase activity logs
+          'Firebase Read', // Skip Firebase read logs
+          'ReactGA disabled', // Skip analytics warnings
+          'User data from Firestore', // Skip user data logs
+          '/api/log-console-error', // Skip self-referential errors
+          'POST /api/log-console-error', // Skip API logging messages
+          'Console Stream Server', // Skip console server messages
+          'Browser connected', // Skip browser connection messages
+          'Browser disconnected', // Skip browser disconnection messages
+          'TerminalConsole:', // Skip terminal console messages
+          'TrendingPages: Throttling', // Skip throttling messages
+          'RandomPages: Throttling', // Skip throttling messages
+          'WebSocket streaming disabled', // Skip WebSocket messages
+          'Session cookie verification failed', // Skip session cookie fallback messages
+          'Using userId from session cookie', // Skip auth helper messages
+          'Compiled in', // Skip Next.js compilation messages
+          'next" should not be imported directly', // Skip Next.js import warnings
+        ];
+
+        // Check if message matches any skip pattern
+        if (skipPatterns.some(pattern => safeMessage.includes(pattern))) {
+          return;
+        }
+
         // Create a hash of the error message for deduplication
         const errorKey = `${level}:${safeMessage.substring(0, 100)}`;
         const now = Date.now();
 
         // Check if we've seen this error recently
         const lastSeen = errorCache.get(errorKey) || 0;
-        if (now - lastSeen < 5000) { // Don't log same error within 5 seconds
+        if (now - lastSeen < 10000) { // Increased to 10 seconds to reduce spam
           return;
         }
 

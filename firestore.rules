@@ -151,6 +151,17 @@ service cloud.firestore {
         allow write: if isOwner(userId) || isAdmin();
       }
 
+      // Environment-specific subscription subcollections (dev_subscriptions, preview_subscriptions)
+      match /{envSubscriptions}/{subscriptionDoc} {
+        // Only allow users to read their own subscription data or admins
+        allow read: if (envSubscriptions.matches('.*subscriptions') || envSubscriptions == 'subscriptions') &&
+                       (isOwner(userId) || isAdmin());
+
+        // Only allow users to write their own subscription data or admins
+        allow write: if (envSubscriptions.matches('.*subscriptions') || envSubscriptions == 'subscriptions') &&
+                        (isOwner(userId) || isAdmin());
+      }
+
       // User token allocation subcollection - Token economy data
       match /tokens/{tokenDoc} {
         // Only allow users to read their own token data or admins
@@ -622,6 +633,47 @@ service cloud.firestore {
 
       // Allow admins full access for maintenance
       allow read, write: if isAdmin();
+    }
+
+    // Environment-specific user collections (dev_users, preview_users)
+    match /{envUsers}/{userId} {
+      // Allow reading basic profile info by everyone (for public pages)
+      allow read: if envUsers.matches('.*users') || envUsers == 'users';
+
+      // Allow writing only to own profile with data validation
+      allow create: if (envUsers.matches('.*users') || envUsers == 'users') &&
+                       isOwner(userId) &&
+                       request.resource.data.keys().hasAll(['email', 'uid', 'created']) &&
+                       request.resource.data.email is string &&
+                       request.resource.data.uid == userId;
+
+      allow update: if (envUsers.matches('.*users') || envUsers == 'users') &&
+                       isOwner(userId) &&
+                       request.resource.data.uid == resource.data.uid; // Prevent UID changes
+
+      allow delete: if (envUsers.matches('.*users') || envUsers == 'users') && isOwner(userId);
+
+      // Environment-specific subscription subcollections
+      match /{envSubscriptions}/{subscriptionDoc} {
+        // Only allow users to read their own subscription data or admins
+        allow read: if (envSubscriptions.matches('.*subscriptions') || envSubscriptions == 'subscriptions') &&
+                       (isOwner(userId) || isAdmin());
+
+        // Only allow users to write their own subscription data or admins
+        allow write: if (envSubscriptions.matches('.*subscriptions') || envSubscriptions == 'subscriptions') &&
+                        (isOwner(userId) || isAdmin());
+      }
+
+      // Environment-specific token subcollections
+      match /{envTokens}/{tokenDoc} {
+        // Only allow users to read their own token data or admins
+        allow read: if (envTokens.matches('.*tokens') || envTokens == 'tokens') &&
+                       (isOwner(userId) || isAdmin());
+
+        // Only allow users to write their own token data or admins
+        allow write: if (envTokens.matches('.*tokens') || envTokens == 'tokens') &&
+                        (isOwner(userId) || isAdmin());
+      }
     }
 
     // SECURITY: All collections must have explicit rules defined above

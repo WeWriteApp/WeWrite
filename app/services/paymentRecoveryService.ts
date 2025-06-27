@@ -6,6 +6,7 @@
 import { doc, getDoc, setDoc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import Stripe from 'stripe';
+import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../utils/environmentConfig';
 import { getStripeSecretKey } from '../utils/stripeConfig';
 import { FinancialUtils, CorrelationId } from '../types/financial';
 
@@ -335,7 +336,8 @@ export class PaymentRecoveryService {
     failureCount: number, 
     nextRetryAt: Date | null
   ): Promise<void> {
-    const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionRef = doc(db, parentPath, subCollectionName, 'current');
     
     await updateDoc(subscriptionRef, {
       status: 'past_due',

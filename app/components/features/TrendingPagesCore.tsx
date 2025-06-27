@@ -32,6 +32,18 @@ export default function TrendingPages({ limit = 5 }) {
   useEffect(() => {
     const fetchTrendingPages = async () => {
       try {
+        // Prevent excessive API calls - throttle to max once per 30 seconds
+        const now = Date.now();
+        const lastFetchKey = 'trendingPages_lastFetch';
+        const lastFetch = parseInt(localStorage.getItem(lastFetchKey) || '0');
+
+        if ((now - lastFetch) < 30000) {
+          console.log('TrendingPages: Throttling API call, too recent');
+          return;
+        }
+
+        localStorage.setItem(lastFetchKey, now.toString());
+
         setLoading(true);
         console.log('TrendingPages: Fetching trending pages with limit:', limit);
 

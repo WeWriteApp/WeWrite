@@ -8,6 +8,7 @@
 import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { getCurrentMonth, calculateTokensForAmount } from '../utils/subscriptionTiers';
 import type { TokenBalance } from '../types/database';
+import { getCollectionName, PAYMENT_COLLECTIONS } from '../utils/environmentConfig';
 
 // Initialize Firebase Admin
 const admin = getFirebaseAdmin();
@@ -29,7 +30,7 @@ export class ServerTokenService {
       const tokens = calculateTokensForAmount(subscriptionAmount);
       const currentMonth = getCurrentMonth();
 
-      const balanceRef = db.collection('tokenBalances').doc(userId);
+      const balanceRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES)).doc(userId);
       const balanceDoc = await balanceRef.get();
 
       if (balanceDoc.exists) {
@@ -72,7 +73,7 @@ export class ServerTokenService {
     }
 
     try {
-      const balanceRef = db.collection('tokenBalances').doc(userId);
+      const balanceRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES)).doc(userId);
       const balanceDoc = await balanceRef.get();
 
       if (!balanceDoc.exists) {
@@ -108,7 +109,7 @@ export class ServerTokenService {
 
     try {
       const currentMonth = getCurrentMonth();
-      const allocationsRef = db.collection('tokenAllocations');
+      const allocationsRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS));
       const query = allocationsRef
         .where('userId', '==', userId)
         .where('resourceId', '==', pageId)
@@ -184,7 +185,7 @@ export class ServerTokenService {
       if (newPageAllocation > 0) {
         // Create or update allocation record
         const allocationId = `${userId}_${pageId}_${currentMonth}`;
-        const allocationRef = db.collection('tokenAllocations').doc(allocationId);
+        const allocationRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS)).doc(allocationId);
 
         batch.set(allocationRef, {
           id: allocationId,
@@ -201,7 +202,7 @@ export class ServerTokenService {
       } else {
         // Remove allocation if tokens are 0
         const allocationId = `${userId}_${pageId}_${currentMonth}`;
-        const allocationRef = db.collection('tokenAllocations').doc(allocationId);
+        const allocationRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS)).doc(allocationId);
         batch.delete(allocationRef);
       }
 
@@ -225,7 +226,7 @@ export class ServerTokenService {
 
     try {
       const currentMonth = getCurrentMonth();
-      const allocationsRef = db.collection('tokenAllocations');
+      const allocationsRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS));
       const query = allocationsRef
         .where('userId', '==', userId)
         .where('month', '==', currentMonth)

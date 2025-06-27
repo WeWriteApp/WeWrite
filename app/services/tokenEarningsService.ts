@@ -23,6 +23,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { WriterTokenEarnings, WriterTokenBalance, TokenPayout, TokenAllocation } from '../types/database';
+import { getCollectionName, PAYMENT_COLLECTIONS } from '../utils/environmentConfig';
 import { getCurrentMonth, getPreviousMonth } from '../utils/subscriptionTiers';
 import {
   FinancialOperationResult,
@@ -46,7 +47,7 @@ export class TokenEarningsService {
    */
   static async getWriterTokenBalance(userId: string): Promise<WriterTokenBalance | null> {
     try {
-      const balanceRef = doc(db, 'writerTokenBalances', userId);
+      const balanceRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_BALANCES), userId);
       const balanceDoc = await getDoc(balanceRef);
       
       if (balanceDoc.exists()) {
@@ -85,7 +86,7 @@ export class TokenEarningsService {
   static async getWriterEarningsHistory(userId: string, limitCount: number = 12): Promise<WriterTokenEarnings[]> {
     try {
       const earningsQuery = query(
-        collection(db, 'writerTokenEarnings'),
+        collection(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_EARNINGS)),
         where('userId', '==', userId),
         orderBy('month', 'desc'),
         limit(limitCount)
@@ -176,8 +177,8 @@ export class TokenEarningsService {
       // Use transaction to ensure atomicity
       await runTransaction(db, async (transaction) => {
         const earningsId = `${recipientUserId}_${month}`;
-        const earningsRef = doc(db, 'writerTokenEarnings', earningsId);
-        const balanceRef = doc(db, 'writerTokenBalances', recipientUserId);
+        const earningsRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_EARNINGS), earningsId);
+        const balanceRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_BALANCES), recipientUserId);
 
         // Read current state within transaction
         const earningsDoc = await transaction.get(earningsRef);
@@ -329,7 +330,7 @@ export class TokenEarningsService {
   static async updateWriterBalance(userId: string): Promise<void> {
     try {
       await runTransaction(db, async (transaction) => {
-        const balanceRef = doc(db, 'writerTokenBalances', userId);
+        const balanceRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_BALANCES), userId);
         const balanceDoc = await transaction.get(balanceRef);
 
         await this.updateWriterBalanceInTransaction(transaction, userId, balanceRef, balanceDoc);
@@ -355,7 +356,7 @@ export class TokenEarningsService {
 
     // Get all earnings for this writer within the transaction
     const earningsQuery = query(
-      collection(db, 'writerTokenEarnings'),
+      collection(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_EARNINGS)),
       where('userId', '==', userId)
     );
 
@@ -443,7 +444,7 @@ export class TokenEarningsService {
 
       // Get all earnings for the specified month
       const earningsQuery = query(
-        collection(db, 'writerTokenEarnings'),
+        collection(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_EARNINGS)),
         where('month', '==', month),
         where('status', '==', 'pending')
       );
@@ -577,7 +578,7 @@ export class TokenEarningsService {
         correlationId: corrId
       };
 
-      await setDoc(doc(db, 'tokenPayouts', payoutId), {
+      await setDoc(doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_PAYOUTS), payoutId), {
         id: payoutId,
         ...payout
       });
@@ -623,7 +624,7 @@ export class TokenEarningsService {
   static async getPayoutHistory(userId: string, limitCount: number = 10): Promise<TokenPayout[]> {
     try {
       const payoutsQuery = query(
-        collection(db, 'tokenPayouts'),
+        collection(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_PAYOUTS)),
         where('userId', '==', userId),
         orderBy('requestedAt', 'desc'),
         limit(limitCount)

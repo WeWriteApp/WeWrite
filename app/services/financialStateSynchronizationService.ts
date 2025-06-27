@@ -41,6 +41,7 @@ import type {
   WriterTokenEarnings,
   TokenPayout
 } from '../types/database';
+import { getCollectionName, PAYMENT_COLLECTIONS } from '../utils/environmentConfig';
 
 const stripe = new Stripe(getStripeSecretKey());
 
@@ -264,7 +265,7 @@ export class FinancialStateSynchronizationService {
 
       // Get payout records
       const payoutsQuery = query(
-        collection(db, 'tokenPayouts'),
+        collection(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_PAYOUTS)),
         where('userId', '==', userId)
       );
       const payoutsSnapshot = await getDocs(payoutsQuery);
@@ -275,7 +276,7 @@ export class FinancialStateSynchronizationService {
 
       // Get earnings records
       const earningsQuery = query(
-        collection(db, 'writerTokenEarnings'),
+        collection(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_EARNINGS)),
         where('userId', '==', userId)
       );
       const earningsSnapshot = await getDocs(earningsQuery);
@@ -286,7 +287,7 @@ export class FinancialStateSynchronizationService {
 
       // Get allocations
       const allocationsQuery = query(
-        collection(db, 'tokenAllocations'),
+        collection(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS)),
         where('recipientUserId', '==', userId)
       );
       const allocationsSnapshot = await getDocs(allocationsQuery);

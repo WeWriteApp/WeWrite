@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { getFirebaseAdmin } from '../../../firebase/admin';
 import { handleSubscriptionStatusChange } from '../../../services/pledgeBudgetService';
+import { getCollectionName, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
 /**
  * Handle subscription-related webhook events
  */
-async function handleSubscriptionEvent(event: Stripe.Event) {
+export async function handleSubscriptionEvent(event: Stripe.Event) {
   try {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
@@ -98,7 +99,7 @@ async function handleSubscriptionEvent(event: Stripe.Event) {
     }
 
     // Find the user associated with this Stripe customer
-    const usersQuery = await db.collection('users')
+    const usersQuery = await db.collection(getCollectionName(PAYMENT_COLLECTIONS.USERS))
       .where('stripeCustomerId', '==', customerId)
       .limit(1)
       .get();
@@ -115,7 +116,7 @@ async function handleSubscriptionEvent(event: Stripe.Event) {
     console.log(`Processing subscription event for user: ${userId}`);
 
     // Get current subscription data from Firestore
-    const subscriptionRef = db.collection('users').doc(userId).collection('subscription').doc('current');
+    const subscriptionRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.USERS)).doc(userId).collection(getCollectionName(PAYMENT_COLLECTIONS.SUBSCRIPTIONS)).doc('current');
     const currentSubDoc = await subscriptionRef.get();
     
     let oldStatus = 'none';

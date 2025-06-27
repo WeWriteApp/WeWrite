@@ -388,24 +388,19 @@ const FilteredSearchResults = forwardRef(({
     // Navigate if not prevented and not in link editor mode
     if (!preventRedirect && !isLinkEditor) {
       try {
-        // Check if we have cached page data
-        let pageData = pageDataCache.get(item.id);
+        // Use the search result data directly instead of fetching again
+        const pageData = {
+          id: item.id,
+          userId: item.userId,
+          isPublic: item.isPublic,
+          title: item.title,
+          username: item.username
+        };
 
-        if (!pageData) {
-          // Fetch page data for permission checking
-          const pageRef = doc(db, 'pages', item.id);
-          const pageDoc = await getDoc(pageRef);
-          if (pageDoc.exists()) {
-            pageData = { id: item.id, ...pageDoc.data() };
-            // Cache the page data
-            setPageDataCache(prev => new Map(prev).set(item.id, pageData));
-          }
-        }
-
-        // Use click-to-edit navigation
+        // Use click-to-edit navigation with search result data
         navigateToPage(item.id, user, pageData, user?.groups, router);
       } catch (error) {
-        console.error('Error fetching page data for navigation:', error);
+        console.error('Error with page navigation:', error);
         // Fallback to regular navigation
         router.push(`/${item.id}`);
       }

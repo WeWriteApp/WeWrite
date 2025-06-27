@@ -58,12 +58,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    // CRITICAL FIX: Use proper database-level sorting with correct direction
-    // No client-side reversal needed since we handle direction at database level
-    // CRITICAL FIX: Increase query limit to handle Firestore indexing delays for new pages
+    // PERFORMANCE OPTIMIZATION: Use reasonable query limits and server-side filtering
     let pagesQuery;
     let actualSortField; // Track what field we're actually using
-    let queryLimit = Math.max(limitCount * 3, 500); // Increased limit to catch new pages
+    let queryLimit = Math.max(limitCount * 2, 200); // Reduced limit for better performance
 
     if (sortBy === 'lastModified' || sortBy === 'recently-edited') {
       // CRITICAL FIX: Use proper lastModified index with deleted filter
