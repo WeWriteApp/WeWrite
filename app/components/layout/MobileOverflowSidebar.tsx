@@ -2,17 +2,14 @@
 
 import * as React from "react"
 import { useState, useEffect, useContext } from "react"
-import { X, ChevronLeft, Palette, Settings, Check, User, Users, Shield, Globe, Lock, Link as LinkIcon, Trash2, Clock, Shuffle } from "lucide-react"
+import { X, ChevronLeft, Settings, Check, User, Users, Shield, Globe, Lock, Link as LinkIcon, Trash2, Clock, Shuffle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { auth } from "../../firebase/config"
 import { signOut } from "firebase/auth"
 import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
 import { Switch } from "../ui/switch"
-import { useTheme } from "next-themes"
 import { AccountSwitcher } from "../auth/AccountSwitcher"
-import { AccentColorSwitcher } from "../utils/AccentColorSwitcher"
-import PillStyleToggle from "../utils/PillStyleToggle"
 
 import { AuthContext } from "../../providers/AuthProvider"
 import { useFeatureFlag } from "../../utils/feature-flags"
@@ -40,7 +37,6 @@ interface SidebarProps {
 
 export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarProps) {
   const router = useRouter()
-  const { theme, setTheme } = useTheme()
   const [currentSection, setCurrentSection] = useState<string | null>(null)
   const [isRandomMenuOpen, setIsRandomMenuOpen] = useState(false)
   const { user } = useContext(AuthContext)
@@ -82,131 +78,12 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
     setCurrentSection(null)
   }
 
-  const themeOptions = [
-    {
-      value: "light",
-      label: "Light",
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          width="24"
-          height="24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="mr-2 h-5 w-5 text-foreground"
-        >
-          <circle cx="12" cy="12" r="5"></circle>
-          <line x1="12" y1="1" x2="12" y2="3"></line>
-          <line x1="12" y1="21" x2="12" y2="23"></line>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-          <line x1="1" y1="12" x2="3" y2="12"></line>
-          <line x1="21" y1="12" x2="23" y2="12"></line>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-        </svg>
-      )
-    },
-    {
-      value: "dark",
-      label: "Dark",
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          width="24"
-          height="24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="mr-2 h-5 w-5 text-foreground"
-        >
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-        </svg>
-      )
-    },
-    {
-      value: "system",
-      label: "System",
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          width="24"
-          height="24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="mr-2 h-5 w-5 text-foreground"
-        >
-          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-          <line x1="8" y1="21" x2="16" y2="21"></line>
-          <line x1="12" y1="17" x2="12" y2="21"></line>
-        </svg>
-      )
-    }
-  ]
+
 
   // Render the appropriate section based on currentSection
   const renderSection = () => {
     switch (currentSection) {
-      case 'appearance':
-        return (
-          <div className="animate-in slide-in-from-right-4 duration-300 ease-out">
-            <div className="flex items-center mb-6">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={goBackToMain}
-                className="mr-2 hover:bg-neutral-alpha-2 dark:hover:bg-muted"
-                aria-label="Go back"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <h3 className="text-lg font-semibold">Appearance</h3>
-            </div>
 
-            <div className="flex flex-col space-y-4">
-              {/* Theme Options */}
-              <div className="mb-6">
-                <h3 className="text-sm font-medium text-muted-foreground mb-3 px-2">Theme</h3>
-                {themeOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => setTheme(option.value)}
-                    className={cn(
-                      "flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors mb-1",
-                      "hover:bg-muted",
-                      theme === option.value && "bg-muted"
-                    )}
-                  >
-                    <div className="flex items-center">
-                      {option.icon}
-                      {option.label}
-                    </div>
-                    {theme === option.value && (
-                      <Check className="h-4 w-4 text-primary" />
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* Accent Color Switcher */}
-              <AccentColorSwitcher />
-
-              {/* Pill Style Toggle */}
-              <PillStyleToggle />
-            </div>
-          </div>
-        );
       default:
         return (
           <div className="flex flex-col space-y-6 animate-in fade-in-50 duration-300 ease-out">
@@ -256,13 +133,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
 
               {/* Groups functionality removed */}
 
-              <button
-                onClick={() => navigateToSection('appearance')}
-                className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
-              >
-                <Palette className="h-5 w-5 mr-2" />
-                <span>Appearance</span>
-              </button>
+
 
               <button
                 onClick={() => {

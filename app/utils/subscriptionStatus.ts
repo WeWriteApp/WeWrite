@@ -251,7 +251,7 @@ export const getSubscriptionNavigationPath = (
   const statusInfo = getSubscriptionStatusInfo(status, cancelAtPeriodEnd, currentPeriodEnd);
 
   if (statusInfo.showManageButton) {
-    return '/settings/subscription/manage';
+    return '/settings/spend-tokens';
   }
 
   return '/settings/subscription';

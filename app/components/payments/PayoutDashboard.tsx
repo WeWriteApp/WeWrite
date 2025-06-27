@@ -812,8 +812,7 @@ export default function PayoutDashboard() {
                       Automatic Payouts Enabled
                     </div>
                     <div className="text-sm text-green-700 dark:text-green-300">
-                      Your earnings will be automatically processed for payout on the 1st of each month
-                      when your balance reaches ${preferences.minimumThreshold} or more.
+                      Automatic monthly payouts when balance ≥ ${preferences.minimumThreshold}
                     </div>
                   </div>
                 </>
@@ -825,7 +824,7 @@ export default function PayoutDashboard() {
                       Manual Payouts Only
                     </div>
                     <div className="text-sm text-yellow-700 dark:text-yellow-300">
-                      You'll need to manually request payouts using the "Request Payout" button above.
+                      Request payouts manually when ready
                     </div>
                   </div>
                 </>
@@ -835,101 +834,48 @@ export default function PayoutDashboard() {
         </Card>
       )}
 
-      {/* Detailed Tables */}
-      <Tabs defaultValue="earnings" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="earnings">Recent Earnings</TabsTrigger>
-          <TabsTrigger value="payouts">Payout History</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="earnings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Earnings</CardTitle>
-              <CardDescription>
-                Your latest earnings from token allocations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {earnings.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground">
-                  No earnings yet
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {earnings.map((earning) => (
-                    <div key={earning.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">
-                            {earning.pageId ? 'Token Allocation' : 'Token Earnings'}
-                          </span>
-                          <Badge variant="outline" className="text-xs">
-                            tokens
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(earning.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">{formatCurrency(earning.netAmount)}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Fee: {formatCurrency(earning.platformFee)}
-                        </p>
-                      </div>
+      {/* Recent Earnings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Earnings</CardTitle>
+          <CardDescription>
+            Latest token earnings
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {earnings.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              No earnings yet
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {earnings.map((earning) => (
+                <div key={earning.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium">
+                        {earning.pageId ? 'Token Allocation' : 'Token Earnings'}
+                      </span>
+                      <Badge variant="outline" className="text-xs">
+                        tokens
+                      </Badge>
                     </div>
-                  ))}
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(earning.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">{formatCurrency(earning.netAmount)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Fee: {formatCurrency(earning.platformFee)}
+                    </p>
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="payouts">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payout History</CardTitle>
-              <CardDescription>
-                Track your completed and pending payouts
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {payouts.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground">
-                  No payouts yet
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {payouts.map((payout) => (
-                    <div key={payout.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">
-                            {new Date(payout.scheduledAt).toLocaleDateString()}
-                          </span>
-                          {getStatusBadge(payout.status)}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Period: {payout.period}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">{formatCurrency(payout.amount)}</p>
-                        {payout.completedAt && (
-                          <p className="text-xs text-muted-foreground">
-                            Completed: {new Date(payout.completedAt).toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

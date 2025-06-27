@@ -23,6 +23,8 @@ import { Label } from '../ui/label';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import PayoutDashboard from './PayoutDashboard';
 import { TokenEarningsService } from '../../services/tokenEarningsService';
+import { TokenPayout } from '../../types/database';
+import { formatCurrency } from '../../utils/formatCurrency';
 
 interface EarningsTransaction {
   id: string;
@@ -61,12 +63,14 @@ export function PayoutsManager() {
   const [realEarnings, setRealEarnings] = useState<any>(null);
   const [bankAccountConnected, setBankAccountConnected] = useState(false);
   const [stripeAccountStatus, setStripeAccountStatus] = useState<any>(null);
+  const [payouts, setPayouts] = useState<TokenPayout[]>([]);
 
   useEffect(() => {
     if (user && isPaymentsEnabled) {
       loadPayoutSetup();
       loadRealEarningsData();
       checkBankAccountStatus();
+      loadPayoutHistory();
     }
   }, [user, isPaymentsEnabled]);
 
@@ -88,6 +92,29 @@ export function PayoutsManager() {
     } catch (error) {
       console.error('Error loading token earnings data:', error);
     }
+  };
+
+  const loadPayoutHistory = async () => {
+    if (!user?.uid) return;
+
+    try {
+      const payoutHistory = await TokenEarningsService.getPayoutHistory(user.uid, 10);
+      setPayouts(payoutHistory);
+    } catch (error) {
+      console.error('Error loading payout history:', error);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      pending: { variant: 'secondary' as const, label: 'Pending' },
+      processing: { variant: 'default' as const, label: 'Processing' },
+      completed: { variant: 'default' as const, label: 'Completed' },
+      failed: { variant: 'destructive' as const, label: 'Failed' }
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
   // Helper function to refresh session cookie
@@ -326,6 +353,7 @@ export function PayoutsManager() {
         });
         loadPayoutSetup(); // Refresh data
         loadRealEarningsData(); // Refresh earnings data
+        loadPayoutHistory(); // Refresh payout history
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to request payout');
@@ -358,9 +386,9 @@ export function PayoutsManager() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wallet className="h-5 w-5" />
-            Creator Payouts
+            Payouts
           </CardTitle>
-          <CardDescription>Manage your earnings and payouts</CardDescription>
+          <CardDescription>Manage earnings and payouts</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex justify-center items-center py-8">
@@ -381,7 +409,7 @@ export function PayoutsManager() {
             Payouts
           </CardTitle>
           <CardDescription>
-            Manage your creator earnings and payout settings
+            Manage earnings and payout settings
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -405,7 +433,7 @@ export function PayoutsManager() {
           Payouts
         </CardTitle>
         <CardDescription>
-          Manage your creator earnings and payout settings
+          Manage earnings and payout settings
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -448,7 +476,7 @@ export function PayoutsManager() {
             <div>
               <h3 className="font-medium">Bank Account Setup</h3>
               <p className="text-sm text-muted-foreground">
-                Connect your bank account to receive payments from supporters
+                Connect bank account to receive payments
               </p>
             </div>
             <Button
@@ -489,8 +517,8 @@ export function PayoutsManager() {
               <h3 className="font-medium">Request Payout</h3>
               <p className="text-sm text-muted-foreground">
                 {canRequestPayout
-                  ? "You can request a payout of your current earnings"
-                  : `Minimum payout amount is $${minimumThreshold}. Current balance: $${currentEarnings.toFixed(2)}`
+                  ? "Ready to request payout"
+                  : `Need $${minimumThreshold} minimum (current: $${currentEarnings.toFixed(2)})`
                 }
               </p>
             </div>
@@ -518,22 +546,41 @@ export function PayoutsManager() {
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Bank Account Required</AlertTitle>
               <AlertDescription>
-                You need to connect a bank account before you can request payouts.
+                Connect bank account to request payouts
               </AlertDescription>
             </Alert>
           )}
         </div>
 
-        {/* How it Works */}
-        <div className="p-4 bg-muted/30 rounded-lg">
-          <h4 className="font-medium mb-2">How it works:</h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• Supporters allocate monthly tokens to your content</li>
-            <li>• You earn from token allocations (no platform fee)</li>
-            <li>• Payouts processed monthly on the 1st</li>
-            <li>• Minimum payout threshold: $25</li>
-            <li>• International payouts supported</li>
-          </ul>
+        {/* Payout History */}
+        <div className="border-theme-strong rounded-lg p-4">
+          <h3 className="font-medium mb-4">Payout History</h3>
+          {payouts.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              No payouts yet
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {payouts.map((payout) => (
+                <div key={payout.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium">
+                        {new Date(payout.requestedAt as any).toLocaleDateString()}
+                      </span>
+                      {getStatusBadge(payout.status)}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {payout.tokens} tokens
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold">{formatCurrency(payout.amount)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Badge } from '../ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
-import { Plus, Minus, ExternalLink, DollarSign, ArrowUpDown, Trash2 } from 'lucide-react';
+import { Plus, Minus, ExternalLink, DollarSign, ArrowUpDown, Trash2, Clock } from 'lucide-react';
 import { TokenBalance } from '../../types/database';
 import { useAuth } from '../../providers/AuthProvider';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -469,9 +470,13 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
         <CardTitle className="flex items-center gap-2">
           <DollarSign className="h-5 w-5" />
           Token Allocation Breakdown
+          <Badge variant="secondary" className="ml-2 text-xs">
+            <Clock className="h-3 w-3 mr-1" />
+            Pending
+          </Badge>
         </CardTitle>
         <CardDescription>
-          Manage your monthly token allocations to creators
+          Manage your pending monthly token allocations to creators
         </CardDescription>
       </CardHeader>
       <CardContent>

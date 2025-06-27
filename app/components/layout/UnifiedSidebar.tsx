@@ -6,19 +6,16 @@ import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import {
   Home, Search, User, Settings, ChevronLeft, ChevronRight, Bell, Plus,
-  Globe, Lock, Link as LinkIcon, X, Check, Trash2, MapPin, Palette, Shield,
-  Sun, Moon, Laptop, ArrowLeft, Clock, Shuffle
+  Globe, Lock, Link as LinkIcon, X, Check, Trash2, MapPin, Shield,
+  Clock, Shuffle
 } from "lucide-react";
 import { useAuth } from "../../providers/AuthProvider";
 import { useRouter, usePathname } from "next/navigation";
 import { useFeatureFlag } from "../../utils/feature-flags";
-import { useTheme } from "next-themes";
 import { navigateToRandomPage, RandomPageFilters } from "../../utils/randomPageNavigation";
 import MapEditor from "../editor/MapEditor";
 import RandomPageFilterMenu from "../ui/RandomPageFilterMenu";
 import { AccountSwitcher } from "../auth/AccountSwitcher";
-import AccentColorSwitcher from "../utils/AccentColorSwitcher";
-import PillStyleToggle from "../utils/PillStyleToggle";
 import { cn } from "../../lib/utils";
 
 // Context for sidebar state management
@@ -171,10 +168,8 @@ function UnifiedSidebarContent({
   const router = useRouter();
   const pathname = usePathname();
   const editorContext = useContext(EditorContext);
-  const { theme, setTheme } = useTheme();
 
-  // Appearance settings state
-  const [showAppearanceSettings, setShowAppearanceSettings] = useState(false);
+
 
   // Check if map feature is enabled
   const mapFeatureEnabled = useFeatureFlag('map_view', user?.email);
@@ -201,7 +196,6 @@ function UnifiedSidebarContent({
     { icon: Bell, label: 'Notifications', href: '/notifications' },
     { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/login' },
     { icon: Settings, label: 'Settings', href: '/settings' },
-    { icon: Palette, label: 'Appearance', action: () => setShowAppearanceSettings(true) },
     // Admin Dashboard - only for admin users
     ...(isAdmin ? [{ icon: Shield, label: 'Admin Dashboard', href: '/admin' }] : []),
   ];
@@ -235,12 +229,7 @@ function UnifiedSidebarContent({
     }
   };
 
-  // Theme options for appearance settings
-  const themeOptions = [
-    { value: "light", label: "Light", icon: <Sun className="h-4 w-4 mr-2" /> },
-    { value: "dark", label: "Dark", icon: <Moon className="h-4 w-4 mr-2" /> },
-    { value: "system", label: "System", icon: <Laptop className="h-4 w-4 mr-2" /> },
-  ];
+
 
 
 
@@ -468,62 +457,7 @@ function UnifiedSidebarContent({
             </>
           )}
 
-          {/* Appearance Settings Panel */}
-          {showAppearanceSettings && showContent && !isEditMode && (
-            <div className="absolute inset-0 bg-background border-r border-border z-10 flex flex-col">
-              {/* Appearance Settings Header */}
-              <div className="flex items-center justify-between p-4 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowAppearanceSettings(false)}
-                    className="h-8 w-8"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                  <h3 className="text-lg font-semibold">Appearance</h3>
-                </div>
-              </div>
 
-              {/* Appearance Settings Content */}
-              <div className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-6">
-                  {/* Theme Options */}
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-3">Theme</h4>
-                    <div className="space-y-1">
-                      {themeOptions.map((option) => (
-                        <button
-                          key={option.value}
-                          onClick={() => setTheme(option.value)}
-                          className={cn(
-                            "flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors",
-                            "hover:bg-muted",
-                            theme === option.value && "bg-muted"
-                          )}
-                        >
-                          <div className="flex items-center">
-                            {option.icon}
-                            {option.label}
-                          </div>
-                          {theme === option.value && (
-                            <Check className="h-4 w-4 text-primary" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Accent Color Switcher */}
-                  <AccentColorSwitcher />
-
-                  {/* Pill Style Toggle */}
-                  <PillStyleToggle />
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Account Switcher - sticky at bottom for non-edit mode */}
           {!isEditMode && (

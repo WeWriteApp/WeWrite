@@ -131,10 +131,25 @@ export default function AllocationCountdownTimer({
         </div>
       </div>
 
-      <p className="text-sm mt-2">
-        You can adjust your token allocations until the end of this month. 
-        After the deadline, your tokens will be sent to writers.
+      <p className="text-sm mt-2 font-medium">
+        You have {timeRemaining.days > 0 && (
+          <span>{timeRemaining.days} day{timeRemaining.days !== 1 ? 's' : ''}</span>
+        )}
+        {timeRemaining.days > 0 && timeRemaining.hours > 0 && <span>, </span>}
+        {timeRemaining.hours > 0 && (
+          <span>{timeRemaining.hours} hour{timeRemaining.hours !== 1 ? 's' : ''}</span>
+        )}
+        {timeRemaining.hours > 0 && timeRemaining.minutes > 0 && <span>, </span>}
+        {(timeRemaining.days === 0 || timeRemaining.hours === 0) && (
+          <span>{timeRemaining.minutes} minute{timeRemaining.minutes !== 1 ? 's' : ''}</span>
+        )} to allocate all your tokens before they're sent to writers.
       </p>
+
+      <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
+        <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
+          ⚠️ Tokens you don't allocate will be lost, so use them all up!
+        </p>
+      </div>
 
       {showExplanation && (
         <div className="mt-3 text-xs opacity-75">

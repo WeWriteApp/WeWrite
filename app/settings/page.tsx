@@ -10,7 +10,10 @@ import {
   Settings as SettingsIcon,
   Trash2,
   ChevronRight,
-  AlertTriangle
+  AlertTriangle,
+  ShoppingCart,
+  Coins,
+  Palette
 } from 'lucide-react';
 import { useFeatureFlag } from '../utils/feature-flags';
 import { getOptimizedUserSubscription } from '../firebase/optimizedSubscription';
@@ -39,8 +42,16 @@ export default function SettingsIndexPage() {
     {
       id: 'subscription',
       title: 'Subscription',
-      icon: CreditCard,
+      icon: ShoppingCart,
       href: '/settings/subscription',
+      requiresPayments: true,
+      requiresTokenSystem: true
+    },
+    {
+      id: 'spend-tokens',
+      title: 'Spend Tokens',
+      icon: Coins,
+      href: '/settings/spend-tokens',
       requiresPayments: true,
       requiresTokenSystem: true
     },
@@ -56,6 +67,12 @@ export default function SettingsIndexPage() {
       title: 'Profile',
       icon: User,
       href: '/settings/profile'
+    },
+    {
+      id: 'appearance',
+      title: 'Appearance',
+      icon: Palette,
+      href: '/settings/appearance'
     },
     {
       id: 'deleted',
@@ -170,8 +187,8 @@ export default function SettingsIndexPage() {
           {availableSections.map((section) => {
             const IconComponent = section.icon;
 
-            // Show warning icon for subscription if no active subscription
-            const showWarning = section.id === 'subscription' &&
+            // Show warning icon for buy-tokens if no active subscription
+            const showWarning = section.id === 'buy-tokens' &&
               paymentsEnabled &&
               hasActiveSubscription === false;
 

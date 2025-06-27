@@ -12,7 +12,10 @@ import {
   DollarSign,
   Settings as SettingsIcon,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  ShoppingCart,
+  Coins,
+  Palette
 } from 'lucide-react';
 import { useFeatureFlag } from '../utils/feature-flags';
 import { cn } from '../lib/utils';
@@ -92,8 +95,15 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
     {
       id: 'subscription',
       title: 'Subscription',
-      icon: CreditCard,
+      icon: ShoppingCart,
       href: '/settings/subscription',
+      requiresPayments: true
+    },
+    {
+      id: 'spend-tokens',
+      title: 'Spend Tokens',
+      icon: Coins,
+      href: '/settings/spend-tokens',
       requiresPayments: true
     },
     {
@@ -108,6 +118,12 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
       title: 'Profile',
       icon: User,
       href: '/settings/profile'
+    },
+    {
+      id: 'appearance',
+      title: 'Appearance',
+      icon: Palette,
+      href: '/settings/appearance'
     },
     {
       id: 'deleted',
