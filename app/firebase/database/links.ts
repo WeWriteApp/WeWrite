@@ -164,7 +164,8 @@ export const extractLinksFromNodes = (nodes: SlateContent[]): LinkData[] => {
 };
 
 /**
- * Find backlinks to a specific page
+ * Find backlinks to a specific page (DEPRECATED - use getBacklinks from backlinks.ts)
+ * This function is kept for backward compatibility but will be removed in the future.
  */
 export const findBacklinks = async (pageId: string, limitCount: number = 10): Promise<Array<{
   id: string;
@@ -173,6 +174,16 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
   lastModified: any;
   isPublic: boolean;
 }>> => {
+  console.warn('⚠️ findBacklinks is deprecated. Use getBacklinks from backlinks.ts for better performance.');
+
+  // Use the new efficient backlinks system
+  try {
+    const { getBacklinks } = await import('./backlinks');
+    return await getBacklinks(pageId, limitCount);
+  } catch (error) {
+    console.error('Error using new backlinks system, falling back to old method:', error);
+    // Fall back to the old inefficient method if the new one fails
+  }
   try {
     console.log(`Finding backlinks for page ${pageId} (limit: ${limitCount})`);
 
@@ -251,8 +262,16 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
 
         // Check if any link points to our target page
         const hasLinkToTarget = links.some(link => {
+          // Debug logging for link matching
+          if (links.length > 0 && pagesProcessed <= 5) { // Only log for first few pages to avoid spam
+            console.log(`    Checking link: type=${link.type}, url=${link.url}, pageId=${link.pageId}, target=${pageId}`);
+          }
+
           // Check for page links that match our target
           if (link.type === 'page' && link.pageId === pageId) {
+            if (pagesProcessed <= 5) {
+              console.log(`    ✅ Match found via pageId: ${link.pageId} === ${pageId}`);
+            }
             return true;
           }
 
@@ -261,7 +280,12 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
             // Handle /pages/pageId format
             if (link.url.startsWith('/pages/')) {
               const urlPageId = link.url.replace('/pages/', '').split(/[\/\?#]/)[0];
-              return urlPageId === pageId;
+              if (urlPageId === pageId) {
+                if (pagesProcessed <= 5) {
+                  console.log(`    ✅ Match found via /pages/ URL: ${urlPageId} === ${pageId}`);
+                }
+                return true;
+              }
             }
 
             // Handle /pageId format (direct page links)
@@ -269,6 +293,9 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
               const urlPageId = link.url.substring(1).split(/[\/\?#]/)[0];
               // Only match if it's a simple page ID (no additional path segments)
               if (!urlPageId.includes('/') && urlPageId === pageId) {
+                if (pagesProcessed <= 5) {
+                  console.log(`    ✅ Match found via direct URL: ${urlPageId} === ${pageId}`);
+                }
                 return true;
               }
             }
@@ -297,7 +324,12 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
       }
     }
 
-    console.log(`Found ${backlinks.length} backlinks for page ${pageId}`);
+    console.log(`Backlinks search completed for page ${pageId}:`);
+    console.log(`  - Pages processed: ${pagesProcessed}`);
+    console.log(`  - Pages with content: ${pagesWithContent}`);
+    console.log(`  - Pages with links: ${pagesWithLinks}`);
+    console.log(`  - Backlinks found: ${backlinks.length}`);
+
     return backlinks;
   } catch (error) {
     console.error("Error finding backlinks:", error);

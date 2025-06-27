@@ -12,12 +12,12 @@ import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
-import { 
-  Coins, 
-  TrendingUp, 
-  Users, 
-  FileText, 
-  Plus, 
+import {
+  DollarSign,
+  TrendingUp,
+  Users,
+  FileText,
+  Plus,
   Minus,
   Calendar,
   Target
@@ -173,7 +173,7 @@ export function TokenAllocationDashboard({ userId }: TokenAllocationDashboardPro
       <Card>
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">
-            <Coins className="h-5 w-5" />
+            <DollarSign className="h-5 w-5" />
             Token Allocation
           </CardTitle>
           <CardDescription>
@@ -207,7 +207,7 @@ export function TokenAllocationDashboard({ userId }: TokenAllocationDashboardPro
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Coins className="h-5 w-5" />
+            <DollarSign className="h-5 w-5" />
             Token Balance - {currentMonth}
           </CardTitle>
           <CardDescription>

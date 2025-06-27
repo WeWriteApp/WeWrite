@@ -5,10 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { 
-  Coins, 
-  DollarSign, 
-  TrendingUp, 
+import {
+  DollarSign,
+  TrendingUp,
   Calendar,
   Wallet,
   Clock,
@@ -136,7 +135,7 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
       <Card className={className}>
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">
-            <Coins className="h-5 w-5" />
+            <DollarSign className="h-5 w-5" />
             Writer Earnings
           </CardTitle>
           <CardDescription>

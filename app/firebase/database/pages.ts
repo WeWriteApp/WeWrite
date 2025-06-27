@@ -165,6 +165,34 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
           // Don't fail page creation if counter update fails
         }
 
+        // Update backlinks index for the new page
+        try {
+          const { updateBacklinksIndex } = await import('./backlinks');
+
+          // Parse content to extract links
+          let contentNodes = [];
+          if (versionData.content && typeof versionData.content === 'string') {
+            try {
+              contentNodes = JSON.parse(versionData.content);
+            } catch (parseError) {
+              console.warn('Could not parse content for backlinks indexing:', parseError);
+            }
+          }
+
+          await updateBacklinksIndex(
+            pageRef.id,
+            pageData.title,
+            pageData.username,
+            contentNodes,
+            pageData.isPublic,
+            pageData.lastModified
+          );
+
+          console.log('✅ Backlinks index updated for new page');
+        } catch (backlinkError) {
+          console.error('⚠️ Error updating backlinks index (non-fatal):', backlinkError);
+        }
+
         return pageRef.id;
       } catch (versionError) {
         console.error("Error creating version:", versionError);

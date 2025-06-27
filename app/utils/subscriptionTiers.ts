@@ -83,14 +83,28 @@ export const CUSTOM_TIER_CONFIG: CustomTierConfig = {
   tokensPerDollar: 10 // Token conversion rate
 };
 
-// Token economy constants
+// Token economy constants - Start-of-Month Processing Model
 export const TOKEN_ECONOMY = {
   TOKENS_PER_DOLLAR: 10,
-  MONTHLY_DISTRIBUTION_DAY: 1, // 1st of each month
-  ALLOCATION_DEADLINE_DAY: 28, // 28th of each month
+
+  // Start-of-Month Processing (all on 1st of month)
+  MONTHLY_PROCESSING_DAY: 1, // 1st: All monthly processing happens
+  PROCESSING_HOUR: 9, // 9 AM UTC
+  PROCESSING_MINUTE: 0,
+
+  // Processing order on the 1st:
+  // 1. Finalize previous month's token allocations → send to writers
+  // 2. Process payouts for writers
+  // 3. Bill subscriptions for new month → users get new tokens immediately
+  // 4. Users can start allocating new tokens (no dead zone!)
+
   WEWRITE_PLATFORM_ALLOCATION: 'wewrite', // ID for platform allocation
   MIN_ALLOCATION_TOKENS: 1,
-  MAX_ALLOCATION_PERCENTAGE: 100
+  MAX_ALLOCATION_PERCENTAGE: 100,
+
+  // Timing configuration
+  ALLOCATION_ADJUSTMENT_CUTOFF_HOUR: 23, // 11 PM UTC on last day of month
+  PROCESSING_TIMEZONE: 'UTC'
 } as const;
 
 /**
@@ -178,17 +192,89 @@ export const getNextMonth = (): string => {
 };
 
 /**
- * Check if it's time for monthly token distribution
+ * Start-of-Month Processing Model Functions
  */
-export const isDistributionTime = (): boolean => {
+
+/**
+ * Check if it's time for monthly processing (1st of month)
+ */
+export const isMonthlyProcessingTime = (): boolean => {
   const today = new Date();
-  return today.getDate() === TOKEN_ECONOMY.MONTHLY_DISTRIBUTION_DAY;
+  return today.getDate() === TOKEN_ECONOMY.MONTHLY_PROCESSING_DAY;
 };
 
 /**
- * Check if allocation deadline has passed
+ * Check if monthly processing should run (considering hour)
  */
+export const shouldRunMonthlyProcessing = (): boolean => {
+  const now = new Date();
+  const isCorrectDay = now.getDate() === TOKEN_ECONOMY.MONTHLY_PROCESSING_DAY;
+  const isCorrectHour = now.getHours() >= TOKEN_ECONOMY.PROCESSING_HOUR;
+  return isCorrectDay && isCorrectHour;
+};
+
+/**
+ * Get time remaining until allocation deadline (end of current month)
+ */
+export const getTimeUntilAllocationDeadline = (): {
+  days: number;
+  hours: number;
+  minutes: number;
+  totalMs: number;
+  hasExpired: boolean;
+} => {
+  const now = new Date();
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
+  endOfMonth.setHours(TOKEN_ECONOMY.ALLOCATION_ADJUSTMENT_CUTOFF_HOUR, 59, 59, 999);
+
+  const totalMs = endOfMonth.getTime() - now.getTime();
+  const hasExpired = totalMs <= 0;
+
+  if (hasExpired) {
+    return { days: 0, hours: 0, minutes: 0, totalMs: 0, hasExpired: true };
+  }
+
+  const days = Math.floor(totalMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((totalMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((totalMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  return { days, hours, minutes, totalMs, hasExpired };
+};
+
+/**
+ * Get the next monthly processing date
+ */
+export const getNextMonthlyProcessingDate = (): Date => {
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const currentDay = now.getDate();
+
+  // If we've passed the processing day this month, move to next month
+  const targetDate = new Date(
+    currentYear,
+    currentMonth,
+    TOKEN_ECONOMY.MONTHLY_PROCESSING_DAY,
+    TOKEN_ECONOMY.PROCESSING_HOUR,
+    TOKEN_ECONOMY.PROCESSING_MINUTE,
+    0
+  );
+
+  if (currentDay >= TOKEN_ECONOMY.MONTHLY_PROCESSING_DAY) {
+    targetDate.setMonth(currentMonth + 1);
+  }
+
+  return targetDate;
+};
+
+/**
+ * Legacy functions (for backward compatibility)
+ */
+export const isDistributionTime = (): boolean => {
+  return isMonthlyProcessingTime();
+};
+
 export const isAllocationDeadlinePassed = (): boolean => {
-  const today = new Date();
-  return today.getDate() > TOKEN_ECONOMY.ALLOCATION_DEADLINE_DAY;
+  const { hasExpired } = getTimeUntilAllocationDeadline();
+  return hasExpired;
 };

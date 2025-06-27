@@ -4,7 +4,7 @@ import { useAuth } from "../../providers/AuthProvider";
 import { useRouter } from 'next/navigation';
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
-import { ChevronLeft, Coins, Wallet } from 'lucide-react';
+import { ChevronLeft, DollarSign, Wallet } from 'lucide-react';
 import WriterTokenDashboard from '../../components/payments/WriterTokenDashboard';
 import WriterEarningsFeatureGuard from '../../components/payments/WriterEarningsFeatureGuard';
 import { PayoutsManager } from '../../components/payments/PayoutsManager';
@@ -61,7 +61,7 @@ export default function EarningsPage() {
             <Tabs defaultValue="earnings" className="space-y-6" urlNavigation="hash">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="earnings" className="flex items-center gap-2">
-                  <Coins className="h-4 w-4" />
+                  <DollarSign className="h-4 w-4" />
                   Earnings
                 </TabsTrigger>
                 <TabsTrigger value="payouts" className="flex items-center gap-2">

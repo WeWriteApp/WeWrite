@@ -39,7 +39,8 @@ import PageHeader from "./PageHeader.tsx";
 import PageFooter from "./PageFooter";
 
 import PledgeBar from "../payments/PledgeBar";
-import CombinedLinksSection from "../features/CombinedLinksSection";
+import BacklinksSection from "../features/BacklinksSection";
+import RelatedPagesSection from "../features/RelatedPagesSection.tsx";
 import Link from "next/link";
 import { Button } from "../ui/button";
 // Removed EditorContent import - ReplyEditor was replaced with Editor
@@ -1567,10 +1568,14 @@ function SinglePageView({ params, initialEditMode = false }) {
         </PageProvider>
         </div>
 
-      {/* Combined Links Section - positioned outside main content container */}
+      {/* Backlinks and Related Pages Sections - positioned outside main content container */}
       {!isEditing && (
-        <div className="mt-4 px-4 sm:px-6 md:px-8 w-full max-w-none box-border" id="combined-links-section">
-          <CombinedLinksSection
+        <div className="mt-4 px-4 sm:px-6 md:px-8 w-full max-w-none box-border space-y-6" id="links-sections">
+          <BacklinksSection
+            page={page}
+            linkedPageIds={memoizedLinkedPageIds}
+          />
+          <RelatedPagesSection
             page={page}
             linkedPageIds={memoizedLinkedPageIds}
           />

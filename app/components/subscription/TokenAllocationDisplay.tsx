@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Progress } from '../ui/progress';
-import { Coins } from 'lucide-react';
+import { DollarSign } from 'lucide-react';
 import { TokenBalance } from '../../types/database';
 import { calculateTokensForAmount, getCurrentMonth } from '../../utils/subscriptionTiers';
 
@@ -38,7 +38,7 @@ export default function TokenAllocationDisplay({
     <Card className={`${className}`}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <Coins className="h-5 w-5 text-primary" />
+          <DollarSign className="h-5 w-5 text-primary" />
           Monthly Token Allocation
         </CardTitle>
         <CardDescription>

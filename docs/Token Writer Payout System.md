@@ -123,12 +123,19 @@ interface TokenPayout {
 - Protected by API key
 - Moves pending tokens to available status
 
-### Monthly Processing Schedule
+### Start-of-Month Processing Schedule
 
-#### End of Month (Automated)
-1. **Token Distribution Processing**: Run existing token distribution
-2. **Writer Earnings Processing**: Move pending tokens to available
-3. **Notification**: Notify writers of available funds
+#### 1st of Month (Automated - All Steps Together)
+1. **Finalize Token Allocations**: Convert pending allocations to writer earnings
+2. **Process Writer Payouts**: Enable writers to request payouts
+3. **Bill New Subscriptions**: Renew subscriptions and allocate new tokens
+4. **Enable New Allocations**: Users can immediately start allocating new tokens
+
+**Key Benefits:**
+- **No dead zones**: Users can allocate tokens immediately after renewal
+- **Predictable timing**: Everything happens on the same day each month
+- **Flexible adjustments**: Users can change allocations throughout the month
+- **Clean accounting**: Clear monthly cycles for all users
 
 #### Processing Steps
 1. Query all `WriterTokenEarnings` with status 'pending' for target month

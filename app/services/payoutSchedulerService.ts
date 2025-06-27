@@ -66,7 +66,7 @@ export interface ScheduledPayoutRun {
 const DEFAULT_SCHEDULE_CONFIG: PayoutScheduleConfig = {
   enabled: true,
   frequency: 'monthly',
-  dayOfMonth: 1, // 1st of each month
+  dayOfMonth: 1, // 1st of each month (start-of-month processing)
   hour: 9, // 9 AM
   minute: 0,
   timezone: 'UTC',

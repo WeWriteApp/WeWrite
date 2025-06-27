@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from "../../providers/AuthProvider";
-import { ArrowLeft, ArrowRight, Coins, CreditCard } from 'lucide-react';
+import { ArrowLeft, ArrowRight, DollarSign, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { listenToUserSubscription } from "../../firebase/subscription";
 import { Button } from '../../components/ui/button';
@@ -17,6 +17,11 @@ import SubscriptionTierCarousel from '../../components/subscription/Subscription
 import TokenAllocationDisplay from '../../components/subscription/TokenAllocationDisplay';
 import TokenAllocationBreakdown from '../../components/subscription/TokenAllocationBreakdown';
 import { useFeatureFlag } from '../../utils/feature-flags';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import AllocationCountdownTimer from '../../components/AllocationCountdownTimer';
+import StartOfMonthExplainer from '../../components/StartOfMonthExplainer';
+import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
+import { NAVIGATION_EVENTS } from '../../constants/analytics-events';
 
 // Define the Subscription interface
 interface Subscription {
@@ -59,6 +64,7 @@ export default function SubscriptionPage() {
   // Custom modal hooks
   const { alertState, showError, closeAlert } = useAlert();
   const { toast } = useToast();
+  const { trackInteractionEvent } = useWeWriteAnalytics();
 
   // Effect to track when feature flags are loaded
   useEffect(() => {
@@ -853,7 +859,7 @@ export default function SubscriptionPage() {
   };
 
   // Helper to get relative time (e.g., "in 3 days", "tomorrow")
-  function getRelativeTime(targetDateString: string) {
+  const getRelativeTime = (targetDateString: string) => {
     if (!targetDateString) return null;
     const now = new Date();
     const target = new Date(targetDateString);
@@ -864,7 +870,7 @@ export default function SubscriptionPage() {
     if (diffDays === 1) return 'tomorrow';
     if (diffDays < 0) return `${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? '' : 's'} ago`;
     return `in ${diffDays} day${diffDays === 1 ? '' : 's'}`;
-  }
+  };
 
   return (
     <div>
@@ -907,7 +913,32 @@ export default function SubscriptionPage() {
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
           </div>
         ) : (
-          <>
+          <Tabs
+            defaultValue="buy-tokens"
+            urlNavigation="hash"
+            className="space-y-6"
+            onValueChange={(value) => {
+              // Track tab changes for analytics
+              trackInteractionEvent(NAVIGATION_EVENTS.TAB_SWITCHED, {
+                tab_name: value,
+                page_section: 'subscription',
+                feature_context: 'payments'
+              });
+            }}
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="buy-tokens" className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Buy Tokens
+              </TabsTrigger>
+              <TabsTrigger value="spend-tokens" className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Spend Tokens
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="buy-tokens" className="space-y-6">
+              {/* Buy Tokens Tab Content */}
             {currentSubscription && (
               <div className="mb-8 p-6 bg-card rounded-lg border border-border">
                 <div className="flex items-start justify-between">
@@ -1065,37 +1096,7 @@ export default function SubscriptionPage() {
               </div>
             )}
 
-            {/* Token Allocation Display - Show for active subscriptions */}
-            {currentSubscription && currentSubscription.status === 'active' && (
-              <TokenAllocationDisplay
-                subscriptionAmount={currentSubscription.amount}
-                tokenBalance={tokenBalance}
-                billingCycleEnd={currentSubscription.billingCycleEnd}
-                className="mb-8"
-              />
-            )}
 
-            {/* Token Allocation Breakdown - Show for active subscriptions */}
-            {currentSubscription && currentSubscription.status === 'active' && (
-              <TokenAllocationBreakdown className="mb-8" />
-            )}
-
-            {/* Preview Token Allocation for pending subscriptions */}
-            {currentSubscription && (currentSubscription.status === 'incomplete' || currentSubscription.status === 'pending') && (
-              <div className="mb-8">
-                <TokenAllocationDisplay
-                  subscriptionAmount={currentSubscription.amount}
-                  tokenBalance={null} // No actual balance yet
-                  billingCycleEnd={currentSubscription.billingCycleEnd}
-                  className="opacity-75"
-                />
-                <div className="mt-2 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    ⏳ Preview of your token allocation once payment is confirmed
-                  </p>
-                </div>
-              </div>
-            )}
 
             {/* Show different UI based on subscription status */}
             {currentSubscription && (currentSubscription.status === 'incomplete' || currentSubscription.status === 'pending') ? (
@@ -1244,7 +1245,87 @@ export default function SubscriptionPage() {
                 </div>
               </div>
             )}
-          </>
+            </TabsContent>
+
+            <TabsContent value="spend-tokens" className="space-y-6">
+              {/* Spend Tokens Tab Content */}
+              {currentSubscription && currentSubscription.status === 'active' ? (
+                <>
+                  {/* Allocation Countdown Timer */}
+                  <AllocationCountdownTimer className="mb-6" />
+
+                  {/* Token Allocation Display */}
+                  <TokenAllocationDisplay
+                    subscriptionAmount={currentSubscription.amount}
+                    tokenBalance={tokenBalance}
+                    billingCycleEnd={currentSubscription.billingCycleEnd}
+                    className="mb-6"
+                  />
+
+                  {/* Token Allocation Breakdown */}
+                  <TokenAllocationBreakdown className="mb-6" />
+
+                  {/* Start-of-Month Processing Explanation */}
+                  <StartOfMonthExplainer variant="compact" className="mb-6" />
+                </>
+              ) : currentSubscription && (currentSubscription.status === 'incomplete' || currentSubscription.status === 'pending') ? (
+                <>
+                  {/* Preview for pending subscriptions */}
+                  <div className="text-center py-8">
+                    <DollarSign className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Token Allocation Preview</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Your token allocation will be available once your payment is confirmed.
+                    </p>
+                  </div>
+
+                  <TokenAllocationDisplay
+                    subscriptionAmount={currentSubscription.amount}
+                    tokenBalance={null} // No actual balance yet
+                    billingCycleEnd={currentSubscription.billingCycleEnd}
+                    className="opacity-75 mb-6"
+                  />
+
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground">
+                      ⏳ Preview of your token allocation once payment is confirmed
+                    </p>
+                  </div>
+
+                  {/* Start-of-Month Processing Explanation */}
+                  <StartOfMonthExplainer variant="compact" className="mt-6" />
+                </>
+              ) : (
+                <>
+                  {/* No subscription state */}
+                  <div className="text-center py-12">
+                    <DollarSign className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-medium mb-2">Start Allocating Tokens</h3>
+                    <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                      Subscribe to get monthly tokens that you can allocate to your favorite creators and content.
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-6">
+                      <strong>$1 = 10 tokens</strong> • Support writers with every dollar of your subscription
+                    </p>
+                    <Button asChild size="lg">
+                      <a href="#buy-tokens" onClick={() => {
+                        // Switch to buy-tokens tab
+                        if (typeof window !== 'undefined') {
+                          window.location.hash = 'buy-tokens';
+                        }
+                      }}>
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        Get Started with Subscription
+                      </a>
+                    </Button>
+                  </div>
+
+                  {/* Start-of-Month Processing Explanation */}
+                  <StartOfMonthExplainer variant="full" />
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
         )}
       </div>
 

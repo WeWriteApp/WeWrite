@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Coins, TrendingUp, TrendingDown, Users, Target, Activity } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Users, Target, Activity } from 'lucide-react';
 import { useTokenAllocationMetrics } from '../../hooks/usePaymentAnalytics';
 import { type DateRange } from '../../services/dashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
@@ -28,7 +28,7 @@ export function TokenAllocationWidget({
       <div className={`wewrite-card ${className}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Coins className="h-5 w-5 text-primary animate-pulse" />
+            <DollarSign className="h-5 w-5 text-primary animate-pulse" />
             <h3 className="text-lg font-semibold">Token Allocation Rate</h3>
           </div>
           <div className="text-right">
@@ -114,7 +114,7 @@ export function TokenAllocationWidget({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Coins className="h-5 w-5 text-primary" />
+          <DollarSign className="h-5 w-5 text-primary" />
           <h3 className="text-lg font-semibold">Token Allocation Rate</h3>
         </div>
         
@@ -240,7 +240,7 @@ export function TokenAllocationWidget({
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <Coins className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground">No token allocation data available</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Data will appear when subscribers start allocating tokens
@@ -270,7 +270,7 @@ export function TokenAllocationWidget({
             </div>
             <div>
               <div className="flex items-center justify-center gap-1 mb-1">
-                <Coins className="h-3 w-3 text-primary" />
+                <DollarSign className="h-3 w-3 text-primary" />
                 <span className="text-xs text-muted-foreground">Tokens Used</span>
               </div>
               <div className="text-lg font-bold text-primary">

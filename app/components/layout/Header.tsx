@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AuthNav from "../auth/AuthNav";
 import { Button } from "../ui/button";
-import { Heart, DollarSign, Coins } from "lucide-react";
+import { Heart, DollarSign } from "lucide-react";
 import { openExternalLink } from "../../utils/pwa-detection";
 import { useSidebarContext } from "./UnifiedSidebar";
 import { useAuth } from "../../providers/AuthProvider";
@@ -42,7 +42,7 @@ export default function Header() {
         onClick={() => router.push('/settings/subscription/manage')}
         title={`${tokenBalance.allocatedTokens} tokens allocated out of ${tokenBalance.totalTokens} total monthly tokens`}
       >
-        <Coins className="h-4 w-4 text-white" />
+        <DollarSign className="h-4 w-4 text-white" />
         <span>
           {tokenBalance.allocatedTokens}/{tokenBalance.totalTokens}
         </span>
@@ -236,7 +236,7 @@ export default function Header() {
                         className="gap-1 bg-primary hover:bg-primary/90 text-white border-0"
                         disabled
                       >
-                        <Coins className="h-4 w-4 text-white animate-spin" />
+                        <DollarSign className="h-4 w-4 text-white animate-spin" />
                         <span>Loading...</span>
                       </Button>
                     )

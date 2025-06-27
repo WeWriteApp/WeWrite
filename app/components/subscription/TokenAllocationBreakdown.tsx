@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
-import { Plus, Minus, ExternalLink, Coins, ArrowUpDown, Trash2 } from 'lucide-react';
+import { Plus, Minus, ExternalLink, DollarSign, ArrowUpDown, Trash2 } from 'lucide-react';
 import { TokenBalance } from '../../types/database';
 import { useAuth } from '../../providers/AuthProvider';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -180,7 +180,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
       const currentTokens = currentAllocation?.tokens || 0;
       const totalChange = finalTokens - currentTokens;
 
-      const response = await fetch('/api/tokens/pledge', {
+      const response = await fetch('/api/tokens/page-allocation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -422,7 +422,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Coins className="h-5 w-5" />
+            <DollarSign className="h-5 w-5" />
             Token Allocation Breakdown
           </CardTitle>
           <CardDescription>
@@ -443,7 +443,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Coins className="h-5 w-5" />
+            <DollarSign className="h-5 w-5" />
             Token Allocation Breakdown
           </CardTitle>
           <CardDescription>
@@ -467,7 +467,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Coins className="h-5 w-5" />
+          <DollarSign className="h-5 w-5" />
           Token Allocation Breakdown
         </CardTitle>
         <CardDescription>

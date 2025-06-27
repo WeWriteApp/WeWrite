@@ -604,6 +604,26 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Backlinks - Efficient backlinks index for fast retrieval
+    match /backlinks/{backlinkId} {
+      // Allow reading public backlinks for anyone (needed for backlinks display)
+      allow read: if resource.data.isPublic == true;
+
+      // Allow authenticated users to create/update backlinks for their own pages
+      allow create, update: if isAuthenticated() && (
+        // User can create backlinks from their own pages
+        get(/databases/$(database)/documents/pages/$(resource.data.sourcePageId)).data.userId == request.auth.uid
+      );
+
+      // Allow users to delete backlinks from their own pages
+      allow delete: if isAuthenticated() && (
+        get(/databases/$(database)/documents/pages/$(resource.data.sourcePageId)).data.userId == request.auth.uid
+      );
+
+      // Allow admins full access for maintenance
+      allow read, write: if isAdmin();
+    }
+
     // SECURITY: All collections must have explicit rules defined above
     // This ensures the principle of least privilege is enforced
     // NO DEFAULT ALLOW-ALL RULES - Each collection has specific access controls

@@ -2,16 +2,19 @@
 
 import { useAuth } from "../providers/AuthProvider";
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   User,
   CreditCard,
-  Coins,
+  DollarSign,
   Settings as SettingsIcon,
   Trash2,
-  ChevronRight
+  ChevronRight,
+  AlertTriangle
 } from 'lucide-react';
 import { useFeatureFlag } from '../utils/feature-flags';
+import { getOptimizedUserSubscription } from '../firebase/optimizedSubscription';
+import { isActiveSubscription } from '../utils/subscriptionStatus';
 
 interface SettingsSection {
   id: string;
@@ -25,6 +28,7 @@ interface SettingsSection {
 export default function SettingsIndexPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
 
   // Check feature flags with proper user ID for real-time updates
   const paymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
@@ -42,8 +46,8 @@ export default function SettingsIndexPage() {
     },
     {
       id: 'earnings',
-      title: 'Earnings',
-      icon: Coins,
+      title: 'Get paid',
+      icon: DollarSign,
       href: '/settings/earnings',
       requiresPayments: true
     },
@@ -106,6 +110,39 @@ export default function SettingsIndexPage() {
     }
   }, [user, router, paymentsEnabled, tokenSystemEnabled]);
 
+  // Check subscription status when payments are enabled and user is available
+  useEffect(() => {
+    if (!user || !paymentsEnabled) {
+      setHasActiveSubscription(null);
+      return;
+    }
+
+    const checkSubscriptionStatus = async () => {
+      try {
+        const subscription = await getOptimizedUserSubscription(user.uid, {
+          useCache: true,
+          cacheTTL: 5 * 60 * 1000 // 5 minute cache
+        });
+
+        if (subscription) {
+          const isActive = isActiveSubscription(
+            subscription.status,
+            subscription.cancelAtPeriodEnd,
+            subscription.currentPeriodEnd
+          );
+          setHasActiveSubscription(isActive);
+        } else {
+          setHasActiveSubscription(false);
+        }
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+        setHasActiveSubscription(false);
+      }
+    };
+
+    checkSubscriptionStatus();
+  }, [user, paymentsEnabled]);
+
   // Filter sections based on feature flags
   const availableSections = settingsSections.filter(section => {
     if (section.requiresPayments && !paymentsEnabled) {
@@ -132,6 +169,12 @@ export default function SettingsIndexPage() {
         <div className="divide-y divide-border">
           {availableSections.map((section) => {
             const IconComponent = section.icon;
+
+            // Show warning icon for subscription if no active subscription
+            const showWarning = section.id === 'subscription' &&
+              paymentsEnabled &&
+              hasActiveSubscription === false;
+
             return (
               <button
                 key={section.id}
@@ -144,7 +187,12 @@ export default function SettingsIndexPage() {
                   </div>
                   <span className="font-medium">{section.title}</span>
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <div className="flex items-center">
+                  {showWarning && (
+                    <AlertTriangle className="h-4 w-4 text-amber-500 mr-2" />
+                  )}
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </div>
               </button>
             );
           })}

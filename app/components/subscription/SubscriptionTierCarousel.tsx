@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Coins, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SUBSCRIPTION_TIERS, CUSTOM_TIER_CONFIG, validateCustomAmount, calculateTokensForAmount } from '../../utils/subscriptionTiers';
 
 interface SubscriptionTierCarouselProps {
@@ -171,7 +171,7 @@ export default function SubscriptionTierCarousel({
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">{tier.name}</h3>
           <div className="flex items-center gap-1">
-            <Coins className="h-4 w-4 text-primary" />
+            <DollarSign className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium">{displayTokens}</span>
           </div>
         </div>

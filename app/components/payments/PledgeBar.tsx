@@ -1,11 +1,11 @@
 "use client";
-import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
+import React, { useState, useEffect, useContext, useCallback, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
 import { AuthContext } from "../../providers/AuthProvider";
 import { TokenService } from "../../services/tokenService";
 import { Button } from "../ui/button";
-import { Plus, Minus, Coins, Users, AlertTriangle, AlertCircle, Settings } from "lucide-react";
+import { Plus, Minus, DollarSign, Users, AlertTriangle, AlertCircle, Settings } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 import { useFeatureFlag } from "../../utils/feature-flags";
@@ -125,8 +125,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   // Optimistic UI state
   const [pendingChanges, setPendingChanges] = useState(0);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-
+  const baseAllocationRef = useRef<number>(0); // Track the server-confirmed allocation
 
   // Helper functions for segment selection
   const handleSegmentClick = (segmentName: string) => {
@@ -260,6 +259,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
               if (allocationResponse.ok) {
                 const allocationData = await allocationResponse.json();
                 setCurrentTokenAllocation(allocationData.currentAllocation);
+                baseAllocationRef.current = allocationData.currentAllocation;
               }
             } else {
               // Automatically initialize token balance if user has active subscription
@@ -317,6 +317,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
         if (allocationResponse.ok) {
           const allocationData = await allocationResponse.json();
           setCurrentTokenAllocation(allocationData.currentAllocation);
+          baseAllocationRef.current = allocationData.currentAllocation;
         }
       } else {
         throw new Error(result.error || 'Failed to initialize token balance');
@@ -344,7 +345,9 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     if (!user || !canAllocateTokens(subscription) || !tokenBalance) return;
 
     try {
-      const totalChange = finalAllocation - (currentTokenAllocation - pendingChanges);
+      // Calculate the total change needed to reach the final allocation
+      // Use the base allocation (server-confirmed) as the baseline
+      const totalChange = finalAllocation - baseAllocationRef.current;
 
       const response = await fetch('/api/tokens/page-allocation', {
         method: 'POST',
@@ -365,17 +368,28 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
       const result = await response.json();
 
       if (result.success) {
-        // Update local state with the response data
+        // Update token balance and base allocation reference
         setTokenBalance(result.balance);
-        setCurrentTokenAllocation(result.currentAllocation);
+        baseAllocationRef.current = result.currentAllocation;
+
+        // Only update currentTokenAllocation if there's a significant discrepancy
+        // This prevents the "jumping numbers" issue while allowing for corrections
+        if (Math.abs(result.currentAllocation - currentTokenAllocation) > 0.1) {
+          console.warn('PledgeBar: Server allocation differs from optimistic state', {
+            server: result.currentAllocation,
+            optimistic: currentTokenAllocation
+          });
+          setCurrentTokenAllocation(result.currentAllocation);
+        }
+
         setPendingChanges(0); // Clear pending changes after successful update
       } else {
         throw new Error(result.error || 'Failed to allocate tokens');
       }
     } catch (error) {
       console.error('PledgeBar: Error allocating tokens:', error);
-      // Revert optimistic update on error
-      setCurrentTokenAllocation(prev => prev - pendingChanges);
+      // Revert optimistic update on error - go back to server-confirmed allocation
+      setCurrentTokenAllocation(baseAllocationRef.current);
       setPendingChanges(0);
     }
   }, [user, subscription, tokenBalance, pageId, currentTokenAllocation, pendingChanges]);
@@ -394,17 +408,18 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     // For active subscribers, validate against actual token balance
     if (!tokenBalance) return;
 
-    // Calculate new allocation with pending changes
-    const currentWithPending = currentTokenAllocation + pendingChanges;
-    const newAllocation = Math.max(0, currentWithPending + change);
-    const maxAllocation = tokenBalance.availableTokens + (currentTokenAllocation - pendingChanges);
+    // Calculate new allocation - use current displayed value for immediate feedback
+    const newAllocation = Math.max(0, currentTokenAllocation + change);
+    const maxAllocation = tokenBalance.availableTokens + currentTokenAllocation;
 
     if (newAllocation > maxAllocation) {
       return;
     }
 
-    // Update UI immediately (optimistic update)
+    // Update UI immediately (optimistic update) - this is the source of truth for display
     setCurrentTokenAllocation(newAllocation);
+
+    // Track the cumulative pending changes for the API call
     setPendingChanges(prev => prev + change);
 
     // Clear existing timer
@@ -499,7 +514,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
           <div className="text-center p-3 sm:p-4 bg-background/40 backdrop-blur-sm border border-white/10 dark:border-white/5 rounded-xl shadow-sm">
             <div className="flex items-center justify-center gap-1 mb-1">
-              <Coins className="h-3 w-3 text-muted-foreground" />
+              <DollarSign className="h-3 w-3 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">Total Pledged</span>
             </div>
             <div className="text-lg font-semibold">
@@ -542,10 +557,16 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
   const totalTokens = effectiveTokenBalance.totalTokens || 0;
   const allocatedTokens = effectiveTokenBalance.allocatedTokens || 0;
-  const availableTokens = effectiveTokenBalance.availableTokens || 0;
-  const otherPagesTokens = allocatedTokens - currentTokenAllocation;
 
-  // Calculate percentages for progress bar
+  // Calculate available tokens using the base allocation to prevent shifts during optimistic updates
+  const baseAvailableTokens = effectiveTokenBalance.availableTokens || 0;
+  const optimisticChange = currentTokenAllocation - baseAllocationRef.current;
+  const availableTokens = Math.max(0, baseAvailableTokens - optimisticChange);
+
+  // Calculate other pages tokens using the base allocation for consistency
+  const otherPagesTokens = allocatedTokens - baseAllocationRef.current;
+
+  // Calculate percentages for progress bar using optimistic current allocation
   const currentPagePercentage = totalTokens > 0 ? (currentTokenAllocation / totalTokens) * 100 : 0;
   const otherPagesPercentage = totalTokens > 0 ? (otherPagesTokens / totalTokens) * 100 : 0;
   const availablePercentage = totalTokens > 0 ? (availableTokens / totalTokens) * 100 : 0;
@@ -680,7 +701,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                           padding: '0 2px'
                         }}
                       >
-                        {otherPagesTokens}
+                        {Math.round(otherPagesTokens)}
                       </span>
                     </div>
                   )}
@@ -701,7 +722,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                           padding: '0 2px'
                         }}
                       >
-                        {currentTokenAllocation}
+                        {Math.round(currentTokenAllocation)}
                       </span>
                     </div>
                   )}
@@ -722,7 +743,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                           padding: '0 2px'
                         }}
                       >
-                        {availableTokens}
+                        {Math.round(availableTokens)}
                       </span>
                     </div>
                   )}

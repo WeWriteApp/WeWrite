@@ -69,18 +69,25 @@ payouts/
 
 ## Monthly Processing
 
-### Automated Schedule
-- **Processing Date**: 1st of each month
+### Start-of-Month Processing Schedule
+- **Processing Date**: 1st of each month at 9 AM UTC
 - **Minimum Threshold**: $25 USD
-- **Processing Time**: 2-5 business days
-- **Cron Job**: `scripts/process-monthly-payouts.js`
+- **Processing Time**: 2-5 business days for bank transfers
+- **Cron Job**: `scripts/process-monthly-payouts.cjs`
 
-### Processing Steps
-1. **Calculate Earnings**: Process all active pledges for previous month
-2. **Distribute Revenue**: Apply revenue splits to each earning
-3. **Create Payouts**: Generate payout records for eligible recipients
-4. **Process Transfers**: Execute Stripe Connect transfers
-5. **Update Balances**: Adjust recipient available/pending balances
+### Processing Steps (All on 1st of Month)
+1. **Finalize Allocations**: Convert pending token allocations to writer earnings
+2. **Calculate Earnings**: Process all finalized allocations for previous month
+3. **Distribute Revenue**: Apply revenue splits and fee deductions
+4. **Create Payouts**: Generate payout records for eligible recipients
+5. **Process Transfers**: Execute Stripe Connect transfers from escrow
+6. **Bill Subscriptions**: Renew user subscriptions and allocate new tokens
+7. **Update Balances**: Adjust recipient and escrow account balances
+
+### Fund Segregation (Stripe Escrow)
+- **User Funds**: Held in separate escrow account until payout
+- **Platform Revenue**: Fees and unallocated tokens in revenue account
+- **Clean Reporting**: Platform income only from legitimate revenue sources
 
 ## API Endpoints
 

@@ -20,6 +20,7 @@ import {
   extractLinkDataFromElement,
   canUserEditPage
 } from '../../utils/linkModalUtils';
+import { handlePaste, insertProcessedContent } from "../../utils/pasteHandler";
 
 // Types
 interface EditorProps {
@@ -972,6 +973,26 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     // Let the browser handle delete operations naturally
     // This prevents conflicts with React's DOM management
   }, []);
+
+  // Handle paste events with formatting removal
+  const handlePasteEvent = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    if (readOnly) return;
+
+    const result = handlePaste(e.nativeEvent);
+
+    if (result.preventDefault && result.content) {
+      e.preventDefault();
+
+      // Insert the processed content
+      insertProcessedContent(result.content);
+
+      // Trigger content change to update the editor state
+      setTimeout(() => {
+        handleContentChange();
+      }, 0);
+    }
+    // If preventDefault is false, let the browser handle the paste normally
+  }, [readOnly, handleContentChange]);
 
   // SIMPLIFIED: Let browser handle keyboard navigation naturally
   const handleKeyboardNavigation = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -1929,6 +1950,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                 onMouseUp={readOnly ? undefined : undefined}
                 onKeyUp={readOnly ? undefined : undefined}
                 onSelect={readOnly ? undefined : undefined}
+                onPaste={readOnly ? undefined : handlePasteEvent}
                 onClick={readOnly ? (canEdit ? handleViewModeClick : undefined) : (e) => {
                   // SIMPLIFIED: Only handle link clicks, let browser handle cursor positioning naturally
                   const target = e.target as HTMLElement;
