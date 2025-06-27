@@ -291,7 +291,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     await TokenService.updateMonthlyTokenAllocation(userId, amount);
 
     // Track the subscription payment transaction - MANDATORY for audit compliance
-    const correlationId = FinancialUtils.generateCorrelationId();
+    // Reuse the correlationId from the sync operation above
     let trackingAttempts = 0;
     const maxTrackingAttempts = 3;
     let trackingSuccess = false;

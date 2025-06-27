@@ -38,21 +38,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const { userEmail } = await request.json();
+    const { userEmail: targetUserEmail } = await request.json();
 
-    if (!userEmail) {
-      return NextResponse.json({ 
-        error: 'Missing required field: userEmail' 
+    if (!targetUserEmail) {
+      return NextResponse.json({
+        error: 'Missing required field: userEmail'
       }, { status: 400 });
     }
 
     // Find target user by email
-    const targetUserQuery = query(collection(db, 'users'), where('email', '==', userEmail));
+    const targetUserQuery = query(collection(db, 'users'), where('email', '==', targetUserEmail));
     const targetUserSnapshot = await getDocs(targetUserQuery);
     
     if (targetUserSnapshot.empty) {
-      return NextResponse.json({ 
-        error: `User with email ${userEmail} not found` 
+      return NextResponse.json({
+        error: `User with email ${targetUserEmail} not found`
       }, { status: 404 });
     }
 
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const targetUserId = targetUser.uid;
 
     const testResults = {
-      userEmail,
+      userEmail: targetUserEmail,
       targetUserId,
       steps: [] as Array<{ step: string; success: boolean; data?: any; error?: string }>,
       overallSuccess: true
