@@ -120,7 +120,10 @@ export function ModernRegisterForm({
       console.error("Error checking username:", error)
       setIsAvailable(false)
       setValidationError("CHECK_FAILED")
-      setValidationMessage("Could not verify username availability")
+      setValidationMessage("Could not verify username availability. Please try again.")
+
+      // Prevent infinite loops by not retrying automatically
+      // User can manually retry by changing the username
     } finally {
       setIsChecking(false)
     }
