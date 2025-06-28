@@ -1,6 +1,16 @@
 // WeWrite Service Worker - Optimized for poor network connections
 // Version 2.1 - Enhanced caching and offline support
 
+// Safety check: Only run in service worker context
+if (typeof self === 'undefined' || typeof importScripts === 'undefined') {
+  // Not in a service worker context, exit gracefully
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {};
+  }
+  // Stop execution
+  throw new Error('This script must run in a service worker context');
+}
+
 const CACHE_NAME = 'wewrite-v2.1';
 const STATIC_CACHE = 'wewrite-static-v2.1';
 const DYNAMIC_CACHE = 'wewrite-dynamic-v2.1';

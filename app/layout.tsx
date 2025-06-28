@@ -1,3 +1,7 @@
+// Import polyfills first
+import "../global-polyfill"
+import "./polyfills"
+
 import "./globals.css"
 import "./styles/scrollbar-hide.css"
 import "./styles/loader.css"
@@ -33,8 +37,11 @@ import OptimisticNavigationProvider from "./providers/OptimisticNavigationProvid
 
 
 
-// Import polyfills for browser compatibility
-import "intl-segmenter-polyfill"
+// Import polyfills for browser compatibility (only in browser)
+// Temporarily disabled to debug build issue
+// if (typeof window !== 'undefined') {
+//   import("intl-segmenter-polyfill");
+// }
 
 // Dynamic imports for better code splitting
 const ClientLayout = dynamic(() => import("./ClientLayout"), {
