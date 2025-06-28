@@ -63,9 +63,21 @@ const RandomPages = React.memo(function RandomPages({
     }
   }, []);
 
-  // Fetch random pages from API
+  // Fetch random pages from API with throttling
   const fetchRandomPages = useCallback(async (isShuffling = false, includePrivate = includePrivatePages, excludeOwn = excludeOwnPages) => {
     try {
+      // Prevent excessive API calls - throttle to max once per 2 seconds
+      const now = Date.now();
+      const lastFetchKey = `randomPages_${user?.uid || 'anonymous'}`;
+      const lastFetch = parseInt(localStorage.getItem(lastFetchKey) || '0');
+
+      if (!isShuffling && (now - lastFetch) < 2000) {
+        console.log('RandomPages: Throttling API call, too recent');
+        return;
+      }
+
+      localStorage.setItem(lastFetchKey, now.toString());
+
       if (isShuffling) {
         setShuffling(true);
       } else {
@@ -183,11 +195,8 @@ const RandomPages = React.memo(function RandomPages({
   }, []);
 
   // Re-fetch when dense mode changes to get appropriate number of results
-  useEffect(() => {
-    if (randomPages.length > 0) {
-      fetchRandomPages(false, includePrivatePages, excludeOwnPages);
-    }
-  }, [denseMode, fetchRandomPages, includePrivatePages, excludeOwnPages, randomPages.length]);
+  // Removed automatic re-fetch to prevent excessive API calls
+  // Users can manually shuffle to get more results in dense mode
 
   // Show loading skeleton on initial load
   if (loading && !shuffling) {

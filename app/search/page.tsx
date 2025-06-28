@@ -8,7 +8,7 @@ import { Share2, Search, X, Pin } from 'lucide-react';
 import { toast } from '../components/ui/use-toast';
 import Link from 'next/link';
 import { saveSearchQuery } from "../utils/savedSearches";
-import { useSearchState } from "../hooks/useSearchState";
+import { useUnifiedSearch, SEARCH_CONTEXTS } from "../hooks/useUnifiedSearch";
 
 // Import the new separated components
 import SearchResultsDisplay from '../components/search/SearchResultsDisplay';
@@ -191,8 +191,13 @@ const SearchPage = React.memo(() => {
   const userEmail = useMemo(() => user?.email || null, [user?.email]);
   // Groups functionality removed
 
-  // Use isolated search state to prevent re-renders
-  const { currentQuery, results, isLoading, performSearch, clearSearch } = useSearchState(userId, []);
+  // Use unified search system - single source of truth
+  const { currentQuery, results, isLoading, performSearch, clearSearch, error, searchStats } = useUnifiedSearch(userId, {
+    context: SEARCH_CONTEXTS.MAIN,
+    includeContent: true,
+    includeUsers: true,
+    maxResults: 200
+  });
 
   // Groups functionality removed
   const groupsEnabled = false;
@@ -419,6 +424,8 @@ const SearchPage = React.memo(() => {
         groupsEnabled={groupsEnabled}
         userId={userId}
         onSave={handleSave}
+        error={error}
+        searchStats={searchStats}
       />
     </div>
   );

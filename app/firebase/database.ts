@@ -22,6 +22,7 @@ export * from './database/versions';
 export * from './database/access';
 export * from './database/search';
 export * from './database/links';
+export * from './database/backlinks';
 export * from './database/users';
 export * from './database/analytics';
 
@@ -34,7 +35,44 @@ import { getPageById } from './database/pages';
  */
 export const updatePage = async (pageId: string, data: any): Promise<boolean> => {
   try {
-    return await updateDoc('pages', pageId, data);
+    const result = await updateDoc('pages', pageId, data);
+
+    // If the update includes content changes, update the backlinks index
+    if (result && data.content) {
+      try {
+        // Get the current page data to get title, username, etc.
+        const pageData = await getPageById(pageId);
+
+        if (pageData.pageData) {
+          const { updateBacklinksIndex } = await import('./database/backlinks');
+
+          // Parse content to extract links
+          let contentNodes = [];
+          if (data.content && typeof data.content === 'string') {
+            try {
+              contentNodes = JSON.parse(data.content);
+            } catch (parseError) {
+              console.warn('Could not parse content for backlinks indexing:', parseError);
+            }
+          }
+
+          await updateBacklinksIndex(
+            pageId,
+            pageData.pageData.title,
+            pageData.pageData.username,
+            contentNodes,
+            pageData.pageData.isPublic,
+            data.lastModified || pageData.pageData.lastModified
+          );
+
+          console.log('✅ Backlinks index updated for page update');
+        }
+      } catch (backlinkError) {
+        console.error('⚠️ Error updating backlinks index (non-fatal):', backlinkError);
+      }
+    }
+
+    return result;
   } catch (error) {
     console.error('Error updating page:', error);
     return false;

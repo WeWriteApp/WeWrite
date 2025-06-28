@@ -8,6 +8,7 @@ import { useEffect } from 'react'
  */
 export default function ConsoleErrorLogger() {
   useEffect(() => {
+    // FORCE BROWSER CACHE REFRESH - v2.0.1 - SUBSCRIPTION ERROR LOGGING DISABLED
     // Only run in development mode and in browser environment
     if (process.env.NODE_ENV !== 'development' || typeof window === 'undefined') {
       return
@@ -92,13 +93,42 @@ export default function ConsoleErrorLogger() {
         // Ensure message is a string and not too long
         const safeMessage = String(message || '').substring(0, 1000);
 
+        // ENHANCED FILTERING: Skip messages that would create feedback loops
+        const skipPatterns = [
+          'RequestMonitor', // Skip request monitor warnings
+          'High request volume detected', // Skip request volume warnings
+          'Skipping auto-scroll behavior', // Skip scroll warnings
+          'Firebase Activity: Deduplication', // Skip Firebase activity logs
+          'Firebase Read', // Skip Firebase read logs
+          'ReactGA disabled', // Skip analytics warnings
+          'User data from Firestore', // Skip user data logs
+          '/api/log-console-error', // Skip self-referential errors
+          'POST /api/log-console-error', // Skip API logging messages
+          'Console Stream Server', // Skip console server messages
+          'Browser connected', // Skip browser connection messages
+          'Browser disconnected', // Skip browser disconnection messages
+          'TerminalConsole:', // Skip terminal console messages
+          'TrendingPages: Throttling', // Skip throttling messages
+          'RandomPages: Throttling', // Skip throttling messages
+          'WebSocket streaming disabled', // Skip WebSocket messages
+          'Session cookie verification failed', // Skip session cookie fallback messages
+          'Using userId from session cookie', // Skip auth helper messages
+          'Compiled in', // Skip Next.js compilation messages
+          'next" should not be imported directly', // Skip Next.js import warnings
+        ];
+
+        // Check if message matches any skip pattern
+        if (skipPatterns.some(pattern => safeMessage.includes(pattern))) {
+          return;
+        }
+
         // Create a hash of the error message for deduplication
         const errorKey = `${level}:${safeMessage.substring(0, 100)}`;
         const now = Date.now();
 
         // Check if we've seen this error recently
         const lastSeen = errorCache.get(errorKey) || 0;
-        if (now - lastSeen < 5000) { // Don't log same error within 5 seconds
+        if (now - lastSeen < 10000) { // Increased to 10 seconds to reduce spam
           return;
         }
 
@@ -164,6 +194,9 @@ export default function ConsoleErrorLogger() {
 
       // Send ALL errors to server for terminal logging
       const errorMessage = formatArgs(args)
+
+      // TEMPORARILY DISABLED: Skip all enhanced error processing to prevent infinite loops
+      // TODO: Re-enable once the root cause of the temporal dead zone error is fixed
       sendToServer('error', errorMessage)
     }
 
@@ -285,6 +318,42 @@ export default function ConsoleErrorLogger() {
         throw error
       }
     }
+
+    // Helper function to detect errors from the error logging system itself
+    const isErrorLoggingSystemError = (message: string, args: any[]): boolean => {
+      const errorLoggingKeywords = [
+        'ConsoleErrorLogger',
+        'sendEnhancedSubscriptionError',
+        'captureReactComponentInfo',
+        'captureSubscriptionStates',
+        'LoggingProvider',
+        'Error logging system',
+        'Failed to log subscription error',
+        'Failed to send enhanced subscription error log'
+      ]
+
+      return errorLoggingKeywords.some(keyword =>
+        message.toLowerCase().includes(keyword.toLowerCase())
+      ) || args.some(arg =>
+        typeof arg === 'string' && errorLoggingKeywords.some(keyword =>
+          arg.toLowerCase().includes(keyword.toLowerCase())
+        )
+      )
+    }
+
+    // Helper function to detect subscription-related errors
+    // TEMPORARILY DISABLED to prevent infinite loops
+    const isSubscriptionError = (message: string, args: any[]): boolean => {
+      return false; // Disabled
+    }
+
+    // Removed helper functions for enhanced subscription error logging
+
+    // Removed unused helper functions
+
+    // Removed unused helper functions for subscription state and timing capture
+
+    // Removed enhanced subscription error logging to prevent infinite loops
 
     // Add event listeners
     window.addEventListener('error', handleUnhandledError)

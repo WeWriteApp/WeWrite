@@ -158,12 +158,12 @@ export const monitorRequestPatterns = () => {
 
   window.fetch = async (...args) => {
     requestCount++;
-    
+
     // Log warning if too many requests in a short time
     const now = Date.now();
-    if (now - lastLogTime > 30000) { // Every 30 seconds (reduced frequency)
-      if (requestCount > 100) { // Higher threshold
-        console.warn(`[RequestMonitor] High request volume detected: ${requestCount} requests in 30 seconds`);
+    if (now - lastLogTime > 60000) { // Every 60 seconds (reduced frequency further)
+      if (requestCount > 200) { // Much higher threshold to reduce noise
+        console.warn(`[RequestMonitor] High request volume detected: ${requestCount} requests in 60 seconds`);
       }
       requestCount = 0;
       lastLogTime = now;

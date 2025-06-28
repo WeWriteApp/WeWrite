@@ -15,7 +15,11 @@ export interface SubscriptionStatusInfo {
 /**
  * Get standardized subscription status information
  */
-export const getSubscriptionStatusInfo = (status: string | null | undefined): SubscriptionStatusInfo => {
+export const getSubscriptionStatusInfo = (
+  status: string | null | undefined,
+  cancelAtPeriodEnd?: boolean,
+  currentPeriodEnd?: string
+): SubscriptionStatusInfo => {
   if (!status) {
     return {
       status: 'none',
@@ -30,6 +34,25 @@ export const getSubscriptionStatusInfo = (status: string | null | undefined): Su
 
   switch (status.toLowerCase()) {
     case 'active':
+      // Check if active subscription is set to cancel at period end
+      if (cancelAtPeriodEnd && currentPeriodEnd) {
+        const periodEndDate = new Date(currentPeriodEnd);
+        const now = new Date();
+        const daysUntilEnd = Math.ceil((periodEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysUntilEnd > 0) {
+          return {
+            status: 'cancelling',
+            displayText: `Cancels in ${daysUntilEnd} day${daysUntilEnd === 1 ? '' : 's'}`,
+            variant: 'destructive',
+            color: 'text-orange-600',
+            isActive: true, // Still active until period end
+            showActivateButton: false,
+            showManageButton: true,
+          };
+        }
+      }
+
       return {
         status: 'active',
         displayText: 'Active',
@@ -87,6 +110,25 @@ export const getSubscriptionStatusInfo = (status: string | null | undefined): Su
 
     case 'canceled':
     case 'cancelled':
+      // Check if subscription is cancelled but still active until period end
+      if (cancelAtPeriodEnd && currentPeriodEnd) {
+        const periodEndDate = new Date(currentPeriodEnd);
+        const now = new Date();
+        const daysUntilEnd = Math.ceil((periodEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysUntilEnd > 0) {
+          return {
+            status: 'cancelling',
+            displayText: `Cancels in ${daysUntilEnd} day${daysUntilEnd === 1 ? '' : 's'}`,
+            variant: 'destructive',
+            color: 'text-orange-600',
+            isActive: true, // Still active until period end
+            showActivateButton: false,
+            showManageButton: true,
+          };
+        }
+      }
+
       return {
         status: 'canceled',
         displayText: 'Canceled',
@@ -135,38 +177,81 @@ export const getSubscriptionStatusInfo = (status: string | null | undefined): Su
 /**
  * Check if subscription status indicates an active subscription
  */
-export const isActiveSubscription = (status: string | null | undefined): boolean => {
-  return getSubscriptionStatusInfo(status).isActive;
+export const isActiveSubscription = (
+  status: string | null | undefined,
+  cancelAtPeriodEnd?: boolean,
+  currentPeriodEnd?: string
+): boolean => {
+  return getSubscriptionStatusInfo(status, cancelAtPeriodEnd, currentPeriodEnd).isActive;
+};
+
+/**
+ * Get formatted cancellation date for tooltip display
+ */
+export const getCancellationTooltip = (
+  status: string | null | undefined,
+  cancelAtPeriodEnd?: boolean,
+  currentPeriodEnd?: string
+): string | null => {
+  // Show tooltip for both cancelled subscriptions and active subscriptions set to cancel
+  if (cancelAtPeriodEnd && currentPeriodEnd &&
+      (status === 'canceled' || status === 'cancelled' || status === 'active')) {
+    const periodEndDate = new Date(currentPeriodEnd);
+    const now = new Date();
+
+    if (periodEndDate > now) {
+      return `Subscription will end on ${periodEndDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })} at ${periodEndDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })}`;
+    }
+  }
+
+  return null;
 };
 
 /**
  * Get the appropriate button text based on subscription status
  */
-export const getSubscriptionButtonText = (status: string | null | undefined): string => {
-  const statusInfo = getSubscriptionStatusInfo(status);
-  
+export const getSubscriptionButtonText = (
+  status: string | null | undefined,
+  cancelAtPeriodEnd?: boolean,
+  currentPeriodEnd?: string
+): string => {
+  const statusInfo = getSubscriptionStatusInfo(status, cancelAtPeriodEnd, currentPeriodEnd);
+
   if (statusInfo.showManageButton) {
     return 'Manage Subscription';
   }
-  
+
   if (statusInfo.showActivateButton) {
     if (status === 'canceled' || status === 'cancelled') {
       return 'Reactivate Subscription';
     }
     return 'Activate Subscription';
   }
-  
+
   return 'View Subscription';
 };
 
 /**
  * Get the appropriate navigation path based on subscription status
  */
-export const getSubscriptionNavigationPath = (status: string | null | undefined): string => {
-  const statusInfo = getSubscriptionStatusInfo(status);
+export const getSubscriptionNavigationPath = (
+  status: string | null | undefined,
+  cancelAtPeriodEnd?: boolean,
+  currentPeriodEnd?: string
+): string => {
+  const statusInfo = getSubscriptionStatusInfo(status, cancelAtPeriodEnd, currentPeriodEnd);
 
   if (statusInfo.showManageButton) {
-    return '/settings/subscription/manage';
+    return '/settings/spend-tokens';
   }
 
   return '/settings/subscription';

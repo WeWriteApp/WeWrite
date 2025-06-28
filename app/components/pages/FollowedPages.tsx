@@ -100,10 +100,12 @@ export default function FollowedPages({
       // Check if there are more pages to load
       setHasMore(followedPageIds.length > endIndex);
 
-      // Fetch details for each page using proper access control
+      // Use batch loading to reduce individual requests
       const pagePromises = paginatedIds.map(async (pageId) => {
         try {
-          const result = await getPageById(pageId, user?.uid);
+          // Use cached version to reduce database calls
+          const { getCachedPageById } = await import('../../utils/requestCache');
+          const result = await getCachedPageById(pageId, user?.uid);
           if (result.pageData && !result.error) {
             return result.pageData;
           }

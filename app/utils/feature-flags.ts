@@ -58,8 +58,7 @@ const initializeFeatureFlags = async (): Promise<void> => {
       globalFeatureFlags = {
         payments: false,
         map_view: false,
-        calendar_view: false,
-        inactive_subscription: false
+        calendar_view: false
       };
       isInitialized = true;
     }
@@ -70,8 +69,7 @@ const initializeFeatureFlags = async (): Promise<void> => {
     globalFeatureFlags = {
       payments: false,
       map_view: false,
-      calendar_view: false,
-      inactive_subscription: false
+      calendar_view: false
     };
     isInitialized = true;
   }
@@ -161,6 +159,20 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null, use
     const checkFeatureFlag = async () => {
       try {
         console.log(`[FeatureFlags] useFeatureFlag called for ${flag} with userId: ${userId}, userEmail: ${userEmail}`);
+
+        // Special case for inactive_subscription - check localStorage testing tool
+        if (flag === 'inactive_subscription') {
+          if (typeof window !== 'undefined') {
+            const testingEnabled = localStorage.getItem('admin-inactive-subscription-test');
+            const enabled = testingEnabled ? JSON.parse(testingEnabled) : false;
+            console.log(`[FeatureFlags] Inactive subscription testing tool result: ${enabled}`);
+            if (isMounted) {
+              setIsEnabled(enabled);
+              setInitialized(true);
+            }
+            return;
+          }
+        }
 
         // If userId is provided, check user-specific overrides
         if (userId) {

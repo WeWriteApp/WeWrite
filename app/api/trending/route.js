@@ -92,22 +92,24 @@ export async function GET(request) {
       // This gives us a rolling 24-hour window
       const currentHour = now.getHours();
 
-      // Calculate views from yesterday (only hours after current hour)
+      // Initialize hourly data array (24 hours) - using same logic as getPageViewsLast24Hours
+      const hourlyViews = Array(24).fill(0);
       let viewsFromYesterday = 0;
-      const yesterdayHourlyViews = [];
 
+      // Add hours from yesterday that are within our 24-hour window
+      // Use same positioning logic as getPageViewsLast24Hours
       for (let hour = currentHour + 1; hour < 24; hour++) {
         const hourViews = data.hours?.[hour] || 0;
+        hourlyViews[hour - (currentHour + 1)] = hourViews;
         viewsFromYesterday += hourViews;
-        yesterdayHourlyViews.push(hourViews);
       }
 
-      // Fill remaining hours with zeros for today's hours
-      const hourlyViews = [...yesterdayHourlyViews, ...Array(currentHour + 1).fill(0)];
-
+      // CRITICAL FIX: Ensure views24h always matches the sum of hourlyViews
+      const hourlySum = hourlyViews.reduce((sum, val) => sum + val, 0);
       pageViewsMap.set(pageId, {
         id: pageId,
-        views: viewsFromYesterday,
+        views: hourlySum, // Use hourly sum as source of truth
+        views24h: hourlySum, // Ensure consistency with components that use views24h
         hourlyViews: hourlyViews
       });
     });
@@ -123,49 +125,51 @@ export async function GET(request) {
 
       // Calculate views from today (only hours up to current hour)
       let viewsFromToday = 0;
-      const todayHourlyViews = [];
-
-      for (let hour = 0; hour <= currentHour; hour++) {
-        const hourViews = data.hours?.[hour] || 0;
-        viewsFromToday += hourViews;
-        todayHourlyViews.push(hourViews);
-      }
 
       if (pageViewsMap.has(pageId)) {
-        // Update existing entry
+        // Update existing entry - use same positioning logic as getPageViewsLast24Hours
         const existingData = pageViewsMap.get(pageId);
         const updatedHourlyViews = [...existingData.hourlyViews];
 
-        // Update the hourly views for today's hours
-        // Today's hours go at the end of the array (after yesterday's remaining hours)
-        const yesterdayHoursCount = 24 - (currentHour + 1);
-        for (let i = 0; i <= currentHour; i++) {
-          updatedHourlyViews[yesterdayHoursCount + i] = data.hours?.[i] || 0;
+        // Add hours from today using same logic as getPageViewsLast24Hours
+        for (let hour = 0; hour <= currentHour; hour++) {
+          const hourViews = data.hours?.[hour] || 0;
+          updatedHourlyViews[hour + (24 - (currentHour + 1))] = hourViews;
+          viewsFromToday += hourViews;
         }
 
+        const totalViews = existingData.views + viewsFromToday;
+        // CRITICAL FIX: Ensure views24h always matches the sum of hourlyViews
+        const hourlySum = updatedHourlyViews.reduce((sum, val) => sum + val, 0);
         pageViewsMap.set(pageId, {
           ...existingData,
-          views: existingData.views + viewsFromToday,
+          views: hourlySum, // Use hourly sum as source of truth
+          views24h: hourlySum, // Ensure consistency with components that use views24h
           hourlyViews: updatedHourlyViews
         });
       } else {
-        // Create new entry
+        // Create new entry - use same positioning logic as getPageViewsLast24Hours
         const hourlyViews = Array(24).fill(0);
-        // Today's hours start at position (24 - (currentHour + 1))
-        const startPosition = 24 - (currentHour + 1);
-        for (let i = 0; i <= currentHour; i++) {
-          hourlyViews[startPosition + i] = data.hours?.[i] || 0;
+
+        // Add hours from today using same logic as getPageViewsLast24Hours
+        for (let hour = 0; hour <= currentHour; hour++) {
+          const hourViews = data.hours?.[hour] || 0;
+          hourlyViews[hour + (24 - (currentHour + 1))] = hourViews;
+          viewsFromToday += hourViews;
         }
 
+        // CRITICAL FIX: Ensure views24h always matches the sum of hourlyViews
+        const hourlySum = hourlyViews.reduce((sum, val) => sum + val, 0);
         pageViewsMap.set(pageId, {
           id: pageId,
-          views: viewsFromToday,
+          views: hourlySum, // Use hourly sum as source of truth
+          views24h: hourlySum, // Ensure consistency with components that use views24h
           hourlyViews: hourlyViews
         });
       }
     });
 
-    // Convert to array and sort by views
+    // Convert to array and sort by 24-hour views (prioritize real activity)
     let trendingPages = Array.from(pageViewsMap.values())
       .sort((a, b) => b.views - a.views)
       .slice(0, limitCount);
@@ -195,13 +199,29 @@ export async function GET(request) {
           trendingPages.push({
             id: pageId,
             views: pageViews,
-            hourlyViews: Array(24).fill(Math.floor(pageViews / 24)) // Distribute views evenly for visualization
+            views24h: 0, // These are total views, not 24-hour views
+            hourlyViews: Array(24).fill(0) // No real 24-hour data available, show flat line
           });
         }
       });
 
       // Sort again after adding additional pages
-      trendingPages.sort((a, b) => b.views - a.views);
+      // Prioritize pages with real 24-hour activity over fallback pages
+      trendingPages.sort((a, b) => {
+        // First, prioritize pages with actual 24-hour views
+        const aHas24hViews = (a.views24h || 0) > 0;
+        const bHas24hViews = (b.views24h || 0) > 0;
+
+        if (aHas24hViews && !bHas24hViews) return -1;
+        if (!aHas24hViews && bHas24hViews) return 1;
+
+        // If both have 24-hour views or both don't, sort by the appropriate metric
+        if (aHas24hViews && bHas24hViews) {
+          return (b.views24h || 0) - (a.views24h || 0); // Sort by 24-hour views
+        } else {
+          return (b.views || 0) - (a.views || 0); // Sort by total views for fallback pages
+        }
+      });
     }
 
     // Fetch page titles and user info for the trending pages

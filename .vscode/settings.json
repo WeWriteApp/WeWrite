@@ -4,5 +4,6 @@
     },
     "accessibility.signals.taskCompleted": {
         "sound": "on"
-    }
+    },
+    "git.ignoreLimitWarning": true
 }

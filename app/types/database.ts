@@ -137,6 +137,54 @@ export interface TokenAllocation {
   updatedAt: string | Timestamp;
 }
 
+// Payment Analytics Types
+export interface SubscriptionConversionFunnelData {
+  stage: string;
+  stageName: string;
+  count: number;
+  conversionRate: number;
+  dropOffRate: number;
+  description: string;
+}
+
+export interface SubscriptionMetrics {
+  date: string;
+  subscriptionsCreated: number;
+  subscriptionsCancelled: number;
+  netSubscriptions: number;
+  cumulativeActive: number;
+  label: string;
+}
+
+export interface RevenueMetrics {
+  date: string;
+  activeRevenue: number;
+  cancelledRevenue: number;
+  netRevenue: number;
+  cumulativeRevenue: number;
+  averageRevenuePerUser: number;
+  churnRate: number;
+  label: string;
+}
+
+export interface TokenAllocationMetrics {
+  date: string;
+  totalSubscribers: number;
+  subscribersWithAllocations: number;
+  allocationPercentage: number;
+  averageAllocationPercentage: number;
+  totalTokensAllocated: number;
+  totalTokensAvailable: number;
+  label: string;
+}
+
+export interface PaymentAnalyticsData {
+  conversionFunnel: SubscriptionConversionFunnelData[];
+  subscriptionMetrics: SubscriptionMetrics[];
+  revenueMetrics: RevenueMetrics[];
+  tokenAllocationMetrics: TokenAllocationMetrics[];
+}
+
 // Writer Token Earnings Types
 export interface WriterTokenEarnings {
   id: string;

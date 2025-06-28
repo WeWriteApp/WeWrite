@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Inactive Subscription Mode</title>
+</head>
+<body>
+    <h1>Test Inactive Subscription Mode</h1>
+    <p>This page will enable the inactive subscription test mode and redirect to a test page.</p>
+    
+    <script>
+        // Enable inactive subscription test mode
+        localStorage.setItem('admin-inactive-subscription-test', 'true');
+        console.log('Inactive subscription test mode enabled');
+        
+        // Redirect to test page after a short delay
+        setTimeout(() => {
+            window.location.href = 'http://localhost:3000/test-page';
+        }, 1000);
+    </script>
+    
+    <p>Enabling test mode and redirecting...</p>
+</body>
+</html>

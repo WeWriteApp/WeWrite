@@ -27,6 +27,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { TokenBalance, TokenAllocation, MonthlyTokenDistribution } from '../types/database';
+import { getCollectionName, PAYMENT_COLLECTIONS } from '../utils/environmentConfig';
 import {
   getCurrentMonth,
   getNextMonth,
@@ -41,7 +42,7 @@ export class TokenService {
    */
   static async getUserTokenBalance(userId: string): Promise<TokenBalance | null> {
     try {
-      const balanceRef = doc(db, 'tokenBalances', userId);
+      const balanceRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES), userId);
       const balanceDoc = await getDoc(balanceRef);
 
       if (!balanceDoc.exists()) {
@@ -81,7 +82,7 @@ export class TokenService {
     userId: string,
     callback: (balance: TokenBalance | null) => void
   ): Unsubscribe {
-    const balanceRef = doc(db, 'tokenBalances', userId);
+    const balanceRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES), userId);
 
     return onSnapshot(balanceRef, (doc) => {
       if (doc.exists()) {
@@ -101,7 +102,7 @@ export class TokenService {
   static async getCurrentPageAllocation(userId: string, pageId: string): Promise<number> {
     try {
       const currentMonth = getCurrentMonth();
-      const allocationsRef = collection(db, 'tokenAllocations');
+      const allocationsRef = collection(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS));
       const q = query(
         allocationsRef,
         where('userId', '==', userId),
@@ -139,7 +140,7 @@ export class TokenService {
       const currentMonth = getCurrentMonth();
 
       // Get current token balance
-      const balanceRef = doc(db, 'tokenBalances', userId);
+      const balanceRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES), userId);
       const balanceDoc = await getDoc(balanceRef);
 
       if (!balanceDoc.exists()) {
@@ -175,7 +176,7 @@ export class TokenService {
       if (newPageAllocation > 0) {
         // Create or update allocation record
         const allocationId = `${userId}_${pageId}_${currentMonth}`;
-        const allocationRef = doc(db, 'tokenAllocations', allocationId);
+        const allocationRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS), allocationId);
 
         batch.set(allocationRef, {
           id: allocationId,
@@ -192,7 +193,7 @@ export class TokenService {
       } else {
         // Remove allocation if tokens are 0
         const allocationId = `${userId}_${pageId}_${currentMonth}`;
-        const allocationRef = doc(db, 'tokenAllocations', allocationId);
+        const allocationRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS), allocationId);
         batch.delete(allocationRef);
       }
 
@@ -211,7 +212,7 @@ export class TokenService {
   static async getUserTokenAllocations(userId: string): Promise<TokenAllocation[]> {
     try {
       const currentMonth = getCurrentMonth();
-      const allocationsRef = collection(db, 'tokenAllocations');
+      const allocationsRef = collection(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS));
       const q = query(
         allocationsRef,
         where('userId', '==', userId),
@@ -241,7 +242,7 @@ export class TokenService {
       const tokens = calculateTokensForAmount(subscriptionAmount);
       const currentMonth = getCurrentMonth();
 
-      const balanceRef = doc(db, 'tokenBalances', userId);
+      const balanceRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES), userId);
       const balanceDoc = await getDoc(balanceRef);
 
       if (balanceDoc.exists()) {
@@ -303,7 +304,7 @@ export class TokenService {
       const allocationId = `${userId}_${resourceType}_${resourceId}_${currentMonth}`;
       
       // Check if allocation already exists for this month
-      const existingAllocationRef = doc(db, 'tokenAllocations', allocationId);
+      const existingAllocationRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS), allocationId);
       const existingAllocation = await getDoc(existingAllocationRef);
       
       const batch = writeBatch(db);
@@ -320,7 +321,7 @@ export class TokenService {
         });
         
         // Update user's token balance
-        batch.update(doc(db, 'tokenBalances', userId), {
+        batch.update(doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES), userId), {
           allocatedTokens: increment(tokenDifference),
           availableTokens: increment(-tokenDifference),
           updatedAt: serverTimestamp()
@@ -351,7 +352,7 @@ export class TokenService {
         batch.set(existingAllocationRef, { id: allocationId, ...allocationData });
         
         // Update user's token balance
-        batch.update(doc(db, 'tokenBalances', userId), {
+        batch.update(doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES), userId), {
           allocatedTokens: increment(tokens),
           availableTokens: increment(-tokens),
           updatedAt: serverTimestamp()
@@ -397,7 +398,7 @@ export class TokenService {
       const currentMonth = getCurrentMonth();
       const allocationId = `${userId}_${resourceType}_${resourceId}_${currentMonth}`;
       
-      const allocationRef = doc(db, 'tokenAllocations', allocationId);
+      const allocationRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS), allocationId);
       const allocationDoc = await getDoc(allocationRef);
       
       if (!allocationDoc.exists()) {
@@ -415,7 +416,7 @@ export class TokenService {
       });
       
       // Return tokens to user's available balance
-      batch.update(doc(db, 'tokenBalances', userId), {
+      batch.update(doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES), userId), {
         allocatedTokens: increment(-allocation.tokens),
         availableTokens: increment(allocation.tokens),
         updatedAt: serverTimestamp()
@@ -438,7 +439,7 @@ export class TokenService {
       const currentMonth = getCurrentMonth();
       
       const allocationsQuery = query(
-        collection(db, 'tokenAllocations'),
+        collection(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS)),
         where('userId', '==', userId),
         where('month', '==', currentMonth),
         where('status', '==', 'active')
@@ -462,7 +463,7 @@ export class TokenService {
       
       // Get all active allocations for the month
       const allocationsQuery = query(
-        collection(db, 'tokenAllocations'),
+        collection(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS)),
         where('month', '==', month),
         where('status', '==', 'active')
       );
@@ -477,7 +478,7 @@ export class TokenService {
       
       // Get all user balances for the month to calculate unallocated tokens
       const balancesQuery = query(
-        collection(db, 'tokenBalances'),
+        collection(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES)),
         where('lastAllocationDate', '==', month)
       );
       

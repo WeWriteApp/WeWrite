@@ -24,7 +24,7 @@ export function VisitorAnalyticsWidget({ dateRange, granularity, className = "" 
   const totalVisitors = hasData ? data.reduce((sum, item) => sum + item.total, 0) : 0;
   const totalAuthenticated = hasData ? data.reduce((sum, item) => sum + item.authenticated, 0) : 0;
   const totalAnonymous = hasData ? data.reduce((sum, item) => sum + item.anonymous, 0) : 0;
-  const averagePerDay = hasData ? (totalVisitors / data.length).toFixed(1) : '0';
+  const averagePerDay = hasData && data.length > 0 ? (totalVisitors / data.length).toFixed(1) : '0';
   const authenticationRate = totalVisitors > 0 ? (totalAuthenticated / totalVisitors * 100) : 0;
 
   // Calculate trend (compare first half vs second half of period)
@@ -111,7 +111,7 @@ export function VisitorAnalyticsWidget({ dateRange, granularity, className = "" 
             <TrendingDown className="h-4 w-4 text-red-500" />
           )}
           <span className={isPositiveTrend ? 'text-green-500' : 'text-red-500'}>
-            {Math.abs(trendPercentage).toFixed(1)}% {isPositiveTrend ? 'increase' : 'decrease'}
+            {isNaN(trendPercentage) ? '0.0' : Math.abs(trendPercentage).toFixed(1)}% {isPositiveTrend ? 'increase' : 'decrease'}
           </span>
           <span className="text-muted-foreground">vs previous period</span>
         </div>
@@ -181,7 +181,7 @@ export function VisitorAnalyticsWidget({ dateRange, granularity, className = "" 
       {!loading && hasData && (
         <div className="mt-4 pt-4 border-t border-border">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Authentication rate: {authenticationRate.toFixed(1)}%</span>
+            <span>Authentication rate: {isNaN(authenticationRate) ? '0.0' : authenticationRate.toFixed(1)}%</span>
             <span>Peak: {Math.max(...data.map(d => d.total))} visitors</span>
           </div>
         </div>

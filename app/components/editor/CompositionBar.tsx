@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ActionModal from '../utils/ActionModal';
 import { createPortal } from 'react-dom';
 import { cn } from '../../lib/utils';
+import { Loader2 } from 'lucide-react';
 import './ui/tooltip.css';
 
 interface Pledge {
@@ -51,12 +52,122 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
   const [activePledgeId, setActivePledgeId] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState<boolean>(false);
 
+  // Optimistic updates state
+  const [optimisticAmounts, setOptimisticAmounts] = useState<Record<string, number>>({});
+  const [pendingUpdates, setPendingUpdates] = useState<Record<string, boolean>>({});
+  const [errorStates, setErrorStates] = useState<Record<string, string>>({});
+
+  // Debounce refs
+  const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
+  const pendingChanges = useRef<Record<string, number>>({});
+
   // Ensure component is mounted before rendering portals
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(debounceTimers.current).forEach(timer => clearTimeout(timer));
+    };
+  }, []);
 
+  // Debounced database update function
+  const debouncedUpdatePledge = useCallback(async (pledgeId: string, totalChange: number) => {
+    setPendingUpdates(prev => ({ ...prev, [pledgeId]: true }));
+    setErrorStates(prev => ({ ...prev, [pledgeId]: '' }));
+
+    try {
+      const response = await fetch('/api/tokens/pledge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pageId: pledgeId,
+          tokenChange: totalChange
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update pledge');
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Clear optimistic state on successful update
+        setOptimisticAmounts(prev => {
+          const newState = { ...prev };
+          delete newState[pledgeId];
+          return newState;
+        });
+
+        // Call the parent's onPledgeChange to refresh data if needed
+        if (onPledgeChange) {
+          onPledgeChange(pledgeId, 0); // 0 change to trigger refresh
+        }
+      } else {
+        throw new Error(result.error || 'Failed to update pledge');
+      }
+    } catch (error) {
+      console.error('Error updating pledge:', error);
+
+      // Revert optimistic update on error
+      setOptimisticAmounts(prev => {
+        const newState = { ...prev };
+        delete newState[pledgeId];
+        return newState;
+      });
+
+      setErrorStates(prev => ({
+        ...prev,
+        [pledgeId]: error instanceof Error ? error.message : 'Update failed'
+      }));
+
+      // Clear error after 3 seconds
+      setTimeout(() => {
+        setErrorStates(prev => ({ ...prev, [pledgeId]: '' }));
+      }, 3000);
+    } finally {
+      setPendingUpdates(prev => ({ ...prev, [pledgeId]: false }));
+      // Clear pending changes for this pledge
+      delete pendingChanges.current[pledgeId];
+    }
+  }, [onPledgeChange]);
+
+  // Handle optimistic pledge change with debouncing
+  const handleOptimisticPledgeChange = useCallback((pledgeId: string, change: number) => {
+    // Update optimistic state immediately
+    setOptimisticAmounts(prev => {
+      const currentOptimistic = prev[pledgeId] || 0;
+      const pledge = pledges.find(p => p.id === pledgeId);
+      const currentAmount = pledge ? pledge.amount : 0;
+      const newOptimisticAmount = Math.max(0, currentAmount + currentOptimistic + change);
+      const newOptimisticChange = newOptimisticAmount - currentAmount;
+
+      return { ...prev, [pledgeId]: newOptimisticChange };
+    });
+
+    // Accumulate pending changes
+    pendingChanges.current[pledgeId] = (pendingChanges.current[pledgeId] || 0) + change;
+
+    // Clear existing timer
+    if (debounceTimers.current[pledgeId]) {
+      clearTimeout(debounceTimers.current[pledgeId]);
+    }
+
+    // Set new debounced timer (700ms)
+    debounceTimers.current[pledgeId] = setTimeout(() => {
+      const totalChange = pendingChanges.current[pledgeId];
+      if (totalChange !== 0) {
+        debouncedUpdatePledge(pledgeId, totalChange);
+      }
+      delete debounceTimers.current[pledgeId];
+    }, 700);
+  }, [pledges, debouncedUpdatePledge]);
 
   // Handle safer percentage calculations to avoid NaN
   const calculatePercentage = (amount: number, total: number): number => {
@@ -66,25 +177,36 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
     return percentage;
   };
 
-  // Check if total spending exceeds subscription amount
-  const totalSpending = pledges.reduce((acc, pledge) =>
-    acc + (Number(pledge.amount) || 0), 0);
+  // Check if total spending exceeds subscription amount (including optimistic changes)
+  const totalSpending = pledges.reduce((acc, pledge) => {
+    const baseAmount = Number(pledge.amount) || 0;
+    const optimisticChange = optimisticAmounts[pledge.id] || 0;
+    return acc + Math.max(0, baseAmount + optimisticChange);
+  }, 0);
   const isExceeded = subscriptionAmount > 0 && totalSpending > subscriptionAmount;
 
-  // Group other pledges for visualization
+  // Group other pledges for visualization (including optimistic changes)
   const otherPledgesData: Record<string, OtherPledge[]> = pledges.reduce((acc, currentPledge) => {
     // Skip the current pledge when calculating others
     const otherPledges = pledges
       .filter(pledge => pledge.id !== currentPledge.id)
       // Sort by amount (highest first) for consistent visualization
-      .sort((a, b) => b.amount - a.amount);
+      .sort((a, b) => {
+        const aAmount = Math.max(0, (Number(a.amount) || 0) + (optimisticAmounts[a.id] || 0));
+        const bAmount = Math.max(0, (Number(b.amount) || 0) + (optimisticAmounts[b.id] || 0));
+        return bAmount - aAmount;
+      });
 
-    acc[currentPledge.id] = otherPledges.map(pledge => ({
-      id: pledge.id,
-      pageId: pledge.pageId,
-      title: pledge.title || 'Untitled Page',
-      amount: Number(pledge.amount) || 0
-    }));
+    acc[currentPledge.id] = otherPledges.map(pledge => {
+      const baseAmount = Number(pledge.amount) || 0;
+      const optimisticChange = optimisticAmounts[pledge.id] || 0;
+      return {
+        id: pledge.id,
+        pageId: pledge.pageId,
+        title: pledge.title || 'Untitled Page',
+        amount: Math.max(0, baseAmount + optimisticChange)
+      };
+    });
 
     return acc;
   }, {} as Record<string, OtherPledge[]>);
@@ -95,9 +217,13 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
     <div className={cn("w-full relative cursor-pointer", className)} onClick={() => onPledgeChange && onPledgeChange(pledges[0]?.id || '', 0)}>
       <div className="w-full flex flex-col gap-4">
         {pledges.map((pledge) => {
-          const pledgeAmount = Number(pledge.amount || 0);
+          const baseAmount = Number(pledge.amount || 0);
+          const optimisticChange = optimisticAmounts[pledge.id] || 0;
+          const pledgeAmount = Math.max(0, baseAmount + optimisticChange);
           const isZero = pledgeAmount === 0;
           const percentage = calculatePercentage(pledgeAmount, max);
+          const isPending = pendingUpdates[pledge.id] || false;
+          const errorMessage = errorStates[pledge.id] || '';
 
           // Calculate remaining budget percentage
           const currentPledgeAmount = pledgeAmount;
@@ -197,21 +323,26 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
                 {/* Controls */}
                 <div className="flex justify-between items-center h-full relative z-10 p-0">
                   <div
-                    className="h-full w-[56px] flex items-center justify-center transition-colors hover:bg-muted/80 dark:hover:bg-gray-900 text-foreground dark:text-white cursor-pointer rounded-l-lg"
+                    className="h-full w-[56px] flex items-center justify-center transition-colors hover:bg-muted/80 dark:hover:bg-gray-900 text-foreground dark:text-white cursor-pointer rounded-l-lg relative"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (onPledgeChange) {
-                        onPledgeChange(pledge.id, -1);
+                      if (pledgeAmount > 0) {
+                        handleOptimisticPledgeChange(pledge.id, -1);
                       }
                     }}
                   >
+                    {isPending && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-muted/50 rounded-l-lg">
+                        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M5 12h14"></path>
                     </svg>
                   </div>
 
                   <div
-                    className="flex-1 flex justify-center items-center cursor-pointer text-foreground dark:text-white group transition-all hover:bg-muted/50 dark:hover:bg-gray-900"
+                    className="flex-1 flex justify-center items-center cursor-pointer text-foreground dark:text-white group transition-all hover:bg-muted/50 dark:hover:bg-gray-900 relative"
                     onClick={(e) => {
                       e.stopPropagation();
                       if (onPledgeCustomAmount) {
@@ -222,16 +353,24 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
                     <span className="text-sm text-foreground dark:text-white mr-1">$</span>
                     <span className={cn(
                       "text-3xl font-normal transition-all group-hover:scale-105 text-foreground dark:text-white",
-                      isExceeded ? "text-orange-600 dark:text-orange-400" : ""
+                      isExceeded ? "text-orange-600 dark:text-orange-400" : "",
+                      optimisticChange !== 0 ? "text-blue-600 dark:text-blue-400" : ""
                     )}>
                       {isNaN(pledgeAmount) ? '0.00' : Number(pledgeAmount).toFixed(2)}
                     </span>
                     <span className="text-sm text-foreground dark:text-white ml-1">/mo</span>
+
+                    {/* Show optimistic change indicator */}
+                    {optimisticChange !== 0 && (
+                      <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs px-1 py-0.5 rounded-full">
+                        {optimisticChange > 0 ? '+' : ''}{optimisticChange.toFixed(2)}
+                      </div>
+                    )}
                   </div>
 
                   <div
                     className={cn(
-                      "h-full w-[56px] flex items-center justify-center transition-colors hover:bg-muted/80 dark:hover:bg-gray-900 cursor-pointer rounded-r-lg",
+                      "h-full w-[56px] flex items-center justify-center transition-colors hover:bg-muted/80 dark:hover:bg-gray-900 cursor-pointer rounded-r-lg relative",
                       wouldExceedLimit ? "text-orange-600/70 dark:text-orange-500/70" : "text-foreground dark:text-white"
                     )}
                     onClick={(e) => {
@@ -239,11 +378,16 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
                       if (wouldExceedLimit && subscriptionAmount > 0) {
                         setActivePledgeId(pledge.id);
                         setShowSubscriptionLimitModal(true);
-                      } else if (onPledgeChange) {
-                        onPledgeChange(pledge.id, 1);
+                      } else {
+                        handleOptimisticPledgeChange(pledge.id, 1);
                       }
                     }}
                   >
+                    {isPending && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-muted/50 rounded-r-lg">
+                        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 5v14"></path>
                       <path d="M5 12h14"></path>
@@ -251,6 +395,13 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Error message */}
+              {errorMessage && (
+                <div className="mt-2 text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
+                  {errorMessage}
+                </div>
+              )}
 
               {/* Remove button */}
               {showRemoveButton && onDeletePledge && (

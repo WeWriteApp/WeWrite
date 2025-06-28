@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Enable Payments Feature Flag</title>
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js';
+        import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js';
+        
+        // Firebase config (using the same config as the app)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ", // This will need to be the actual API key
+            authDomain: "wewrite-app.firebaseapp.com",
+            projectId: "wewrite-app",
+            storageBucket: "wewrite-app.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdefghijklmnop"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        async function enablePaymentsFlag() {
+            try {
+                console.log('Attempting to enable payments feature flag...');
+                
+                // Get current feature flags
+                const featureFlagsRef = doc(db, 'config', 'featureFlags');
+                const featureFlagsDoc = await getDoc(featureFlagsRef);
+                
+                let currentFlags = {};
+                if (featureFlagsDoc.exists()) {
+                    currentFlags = featureFlagsDoc.data();
+                    console.log('Current feature flags:', currentFlags);
+                } else {
+                    console.log('No feature flags document found, creating new one');
+                }
+                
+                // Enable payments flag
+                const updatedFlags = {
+                    ...currentFlags,
+                    payments: true
+                };
+                
+                // Update the document
+                await setDoc(featureFlagsRef, updatedFlags);
+                
+                console.log('Successfully enabled payments feature flag!');
+                console.log('Updated flags:', updatedFlags);
+                
+                document.getElementById('status').innerHTML = `
+                    <div style="color: green; font-weight: bold;">
+                        ✅ Successfully enabled payments feature flag!
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <strong>Updated flags:</strong>
+                        <pre>${JSON.stringify(updatedFlags, null, 2)}</pre>
+                    </div>
+                `;
+                
+                // Redirect to test page after success
+                setTimeout(() => {
+                    window.location.href = 'http://localhost:3000/test-page';
+                }, 3000);
+                
+            } catch (error) {
+                console.error('Error enabling payments flag:', error);
+                document.getElementById('status').innerHTML = `
+                    <div style="color: red; font-weight: bold;">
+                        ❌ Error enabling payments feature flag: ${error.message}
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <p>You may need to enable the payments flag through the admin interface at:</p>
+                        <a href="http://localhost:3000/admin" target="_blank">http://localhost:3000/admin</a>
+                    </div>
+                `;
+            }
+        }
+        
+        // Run when page loads
+        window.addEventListener('load', enablePaymentsFlag);
+    </script>
+</head>
+<body>
+    <h1>Enable Payments Feature Flag</h1>
+    <div id="status">
+        <p>Attempting to enable payments feature flag...</p>
+        <p>This will allow the TokenAllocationBar component to render.</p>
+    </div>
+    
+    <div style="margin-top: 20px; padding: 10px; background-color: #f0f0f0; border-radius: 5px;">
+        <p><strong>Note:</strong> If this fails due to Firebase security rules, you can manually enable the payments feature flag by:</p>
+        <ol>
+            <li>Going to <a href="http://localhost:3000/admin" target="_blank">http://localhost:3000/admin</a></li>
+            <li>Navigating to the "Feature Flags" tab</li>
+            <li>Enabling the "payments" feature flag</li>
+        </ol>
+    </div>
+</body>
+</html>

@@ -79,7 +79,7 @@ export function SectionTitle({
           <Icon className={cn("h-5 w-5 text-muted-foreground flex-shrink-0", iconClassName)} />
         )}
         <div className="flex flex-col min-w-0">
-          <h2 className={cn("text-lg font-semibold leading-tight", titleClassName)}>
+          <h2 className={cn("text-lg font-semibold leading-tight hyphens-none", titleClassName)}>
             {title}
           </h2>
           {description && (

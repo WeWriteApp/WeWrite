@@ -159,8 +159,8 @@ const TextView: React.FC<TextViewProps> = ({
   const { user } = useAuth();
   const { page } = usePage();
 
-  // Debug: Check if context is working
-  console.log('🔍 TextView: Full context:', lineSettingsContext);
+  // Debug: Check if context is working (disabled to prevent spam)
+  // console.log('🔍 TextView: Full context:', lineSettingsContext);
 
   // Check if current user can edit this page (enhanced for group support)
   // Use prop value if provided, otherwise calculate
@@ -191,18 +191,12 @@ const TextView: React.FC<TextViewProps> = ({
 
   // Force re-render when lineMode changes
   useEffect(() => {
-    console.log('TextView: lineMode changed to:', lineMode);
     // Force a re-render by updating the loaded paragraphs
     if (parsedContents && Array.isArray(parsedContents)) {
       const paragraphCount = parsedContents.filter(node => node.type === nodeTypes.PARAGRAPH).length;
       setLoadedParagraphs(Array.from({ length: paragraphCount }, (_, i) => i));
     }
   }, [lineMode, parsedContents]);
-
-  // Additional effect to force re-render when context changes
-  useEffect(() => {
-    console.log('TextView: Context changed, lineMode:', lineMode);
-  }, [lineSettingsContext, lineMode]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -238,13 +232,7 @@ const TextView: React.FC<TextViewProps> = ({
 
     let contents;
     try {
-      // CRITICAL FIX: Add more detailed logging to track content changes
-      console.log("TextView: Content changed, parsing content", {
-        contentType: typeof content,
-        contentLength: content ? (typeof content === 'string' ? content.length : Array.isArray(content) ? content.length : 'unknown') : 0,
-        contentSample: typeof content === 'string' ? content.substring(0, 50) + '...' : 'not a string',
-        timestamp: new Date().toISOString()
-      });
+      // Content parsing (logging disabled to prevent spam)
 
       // Handle different content types
       if (typeof content === "string") {
@@ -429,10 +417,8 @@ const TextView: React.FC<TextViewProps> = ({
     // Set initial load state
     setIsInitialLoad(true);
 
-    // CRITICAL FIX: Force a re-render to ensure the content is displayed
+    // Force a re-render to ensure the content is displayed
     window.requestAnimationFrame(() => {
-      console.log("TextView: Forcing re-render after content update");
-
       // Mark as complete after a short delay
       setTimeout(() => {
         setIsInitialLoad(false);
@@ -459,8 +445,7 @@ const TextView: React.FC<TextViewProps> = ({
       // Get total number of nodes
       const totalNodes = paragraphNodes.length;
 
-      // Log the total number of paragraphs for debugging
-      console.log("TextView: Total paragraphs to load:", totalNodes);
+      // Total paragraphs to load (logging disabled)
 
       // Use normal mode loading delay (dense mode removed)
       const loadingDelay = ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY;

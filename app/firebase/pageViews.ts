@@ -59,6 +59,149 @@ interface TrendingPage {
 // Keep track of pages we've already recorded views for in this session
 const viewedPages = new Set<string>();
 
+// OPTIMIZATION: Client-side aggregation to reduce database writes
+interface PendingPageView {
+  pageId: string;
+  userId: string | null;
+  timestamp: number;
+  hour: number;
+  date: string;
+}
+
+class PageViewBatcher {
+  private pendingViews: Map<string, PendingPageView> = new Map();
+  private batchInterval: NodeJS.Timeout | null = null;
+  private readonly BATCH_DELAY = 30000; // 30 seconds
+  private readonly MAX_BATCH_SIZE = 10;
+
+  constructor() {
+    this.startBatchProcessor();
+  }
+
+  addView(pageId: string, userId: string | null): void {
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const hour = now.getHours();
+    const key = `${pageId}_${dateStr}_${hour}`;
+
+    // Only add if not already pending for this hour
+    if (!this.pendingViews.has(key)) {
+      this.pendingViews.set(key, {
+        pageId,
+        userId,
+        timestamp: now.getTime(),
+        hour,
+        date: dateStr
+      });
+
+      // Process immediately if batch is full
+      if (this.pendingViews.size >= this.MAX_BATCH_SIZE) {
+        this.processBatch();
+      }
+    }
+  }
+
+  private startBatchProcessor(): void {
+    this.batchInterval = setInterval(() => {
+      this.processBatch();
+    }, this.BATCH_DELAY);
+  }
+
+  private async processBatch(): Promise<void> {
+    if (this.pendingViews.size === 0) return;
+
+    const viewsToProcess = Array.from(this.pendingViews.values());
+    this.pendingViews.clear();
+
+    console.log(`[PageViews] Processing batch of ${viewsToProcess.length} page views`);
+
+    // Group by page and date for efficient updates
+    const groupedViews = new Map<string, PendingPageView[]>();
+
+    for (const view of viewsToProcess) {
+      const groupKey = `${view.pageId}_${view.date}`;
+      if (!groupedViews.has(groupKey)) {
+        groupedViews.set(groupKey, []);
+      }
+      groupedViews.get(groupKey)!.push(view);
+    }
+
+    // Process each group
+    for (const [groupKey, views] of groupedViews.entries()) {
+      try {
+        await this.processViewGroup(views);
+      } catch (error) {
+        console.error(`Error processing view group ${groupKey}:`, error);
+      }
+    }
+  }
+
+  private async processViewGroup(views: PendingPageView[]): Promise<void> {
+    if (views.length === 0) return;
+
+    const firstView = views[0];
+    const viewsDocId = `${firstView.pageId}_${firstView.date}`;
+    const viewsDocRef = doc(db, "pageViews", viewsDocId);
+
+    // Aggregate views by hour
+    const hourlyAggregation: Record<number, number> = {};
+    for (const view of views) {
+      hourlyAggregation[view.hour] = (hourlyAggregation[view.hour] || 0) + 1;
+    }
+
+    // Check if document exists
+    const viewsDoc = await getDoc(viewsDocRef);
+
+    if (viewsDoc.exists()) {
+      // Build update object for multiple hours
+      const updates: Record<string, any> = {
+        totalViews: increment(views.length),
+        lastUpdated: Timestamp.now()
+      };
+
+      for (const [hour, count] of Object.entries(hourlyAggregation)) {
+        updates[`hours.${hour}`] = increment(count);
+      }
+
+      await updateDoc(viewsDocRef, updates);
+    } else {
+      // Create new document
+      const hours: Record<number, number> = {};
+      for (let i = 0; i < 24; i++) {
+        hours[i] = hourlyAggregation[i] || 0;
+      }
+
+      await setDoc(viewsDocRef, {
+        pageId: firstView.pageId,
+        date: firstView.date,
+        hours,
+        totalViews: views.length,
+        lastUpdated: Timestamp.now()
+      } as PageViewData);
+    }
+
+    // Update page document with total view count (less frequently)
+    if (Math.random() < 0.1) { // Only 10% of the time to reduce writes
+      const pageDocRef = doc(db, "pages", firstView.pageId);
+      await updateDoc(pageDocRef, {
+        views: increment(views.length)
+      });
+    }
+  }
+
+  cleanup(): void {
+    if (this.batchInterval) {
+      clearInterval(this.batchInterval);
+      this.batchInterval = null;
+    }
+    // Process remaining views
+    this.processBatch();
+  }
+}
+
+// Create singleton batcher
+const pageViewBatcher = new PageViewBatcher();
+
 export const recordPageView = async (pageId: string, userId: string | null = null): Promise<void> => {
   try {
     if (!pageId) return;
@@ -92,57 +235,10 @@ export const recordPageView = async (pageId: string, userId: string | null = nul
     // Mark this page as viewed in this session
     viewedPages.add(sessionKey);
 
-    // Get current timestamp
-    const now = new Date();
+    // OPTIMIZATION: Use batcher instead of immediate database writes
+    pageViewBatcher.addView(pageId, userId);
 
-    // Format date as YYYY-MM-DD
-    const dateStr = now.toISOString().split('T')[0];
-
-    // Get current hour (0-23)
-    const hour = now.getHours();
-
-    // Create a document ID that includes the page ID and date
-    const viewsDocId = `${pageId}_${dateStr}`;
-
-    // Reference to the page views document
-    const viewsDocRef = doc(db, "pageViews", viewsDocId);
-
-    // Check if document exists
-    const viewsDoc = await getDoc(viewsDocRef);
-
-    if (viewsDoc.exists()) {
-      // Document exists, update the count for the current hour
-      await updateDoc(viewsDocRef, {
-        [`hours.${hour}`]: increment(1),
-        totalViews: increment(1),
-        lastUpdated: Timestamp.now()
-      });
-    } else {
-      // Document doesn't exist, create it with initial data
-      // Initialize all hours to 0
-      const hours: Record<number, number> = {};
-      for (let i = 0; i < 24; i++) {
-        hours[i] = 0;
-      }
-      // Set the current hour to 1
-      hours[hour] = 1;
-
-      await setDoc(viewsDocRef, {
-        pageId,
-        date: dateStr,
-        hours,
-        totalViews: 1,
-        lastUpdated: Timestamp.now()
-      } as PageViewData);
-    }
-
-    // Also update the total view count on the page document
-    const pageDocRef = doc(db, "pages", pageId);
-    await updateDoc(pageDocRef, {
-      views: increment(1)
-    });
-
-    console.log(`Recorded view for page ${pageId}`);
+    console.log(`Page view queued for batching: ${pageId}`);
   } catch (error) {
     console.error("Error recording page view:", error);
   }

@@ -151,6 +151,17 @@ service cloud.firestore {
         allow write: if isOwner(userId) || isAdmin();
       }
 
+      // Environment-specific subscription subcollections (dev_subscriptions, preview_subscriptions)
+      match /{envSubscriptions}/{subscriptionDoc} {
+        // Only allow users to read their own subscription data or admins
+        allow read: if (envSubscriptions.matches('.*subscriptions') || envSubscriptions == 'subscriptions') &&
+                       (isOwner(userId) || isAdmin());
+
+        // Only allow users to write their own subscription data or admins
+        allow write: if (envSubscriptions.matches('.*subscriptions') || envSubscriptions == 'subscriptions') &&
+                        (isOwner(userId) || isAdmin());
+      }
+
       // User token allocation subcollection - Token economy data
       match /tokens/{tokenDoc} {
         // Only allow users to read their own token data or admins
@@ -158,6 +169,20 @@ service cloud.firestore {
 
         // Only allow users to write their own token data or admins
         allow write: if isOwner(userId) || isAdmin();
+      }
+
+      // User pledges subcollection - User's pledges to pages
+      match /pledges/{pageId} {
+        // Users can only read their own pledges or admins
+        allow read: if isOwner(userId) || isAdmin();
+
+        // Users can create, update, and delete their own pledges
+        allow create: if isOwner(userId) &&
+          request.resource.data.keys().hasAll(['amount', 'pageId']) &&
+          request.resource.data.pageId == pageId;
+
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
       }
 
       // User payment methods subcollection - Payment data
@@ -264,11 +289,31 @@ service cloud.firestore {
 
     // Subscriptions collection - User-specific financial data
     match /subscriptions/{subscriptionId} {
-      // Only allow users to read their own subscription data
-      allow read: if isOwner(subscriptionId);
+      // Only allow users to read their own subscription data or admins
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
 
       // Only allow users to write their own subscription data or admins
-      allow write: if isOwner(subscriptionId) || isAdmin();
+      allow write: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+    }
+
+    // Financial transactions collection - Payment and subscription transaction data
+    match /financial_transactions/{transactionId} {
+      // Only allow users to read their own transactions or admins
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+
+      // Only allow system/admin to create financial transactions
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     // User notifications subcollection - User-specific
@@ -316,13 +361,13 @@ service cloud.firestore {
     match /userFollowers/{userId} {
       // Only allow the user to read their own followers
       allow read: if isOwner(userId);
-      allow write: if isAuthenticated();
+      allow write: if isOwner(userId);
     }
 
     match /userFollowing/{userId} {
       // Only allow the user to read who they're following
       allow read: if isOwner(userId);
-      allow write: if isAuthenticated();
+      allow write: if isOwner(userId);
     }
 
     match /follows/{followId} {
@@ -521,8 +566,8 @@ service cloud.firestore {
       // Allow updating visitor sessions (for interaction tracking)
       allow update: if true;
 
-      // Allow reading visitor data for analytics (authenticated users only)
-      allow read: if isAuthenticated();
+      // Allow reading visitor data for analytics (admins only)
+      allow read: if isAdmin();
 
       // Allow deletion for cleanup (admins only)
       allow delete: if isAdmin();
@@ -533,8 +578,8 @@ service cloud.firestore {
       // Allow anyone to create analytics events (for anonymous tracking)
       allow create: if true;
 
-      // Allow reading analytics data for dashboard (authenticated users only)
-      allow read: if isAuthenticated();
+      // Allow reading analytics data for dashboard (admins only)
+      allow read: if isAdmin();
 
       // Allow updating analytics events (for event completion tracking)
       allow update: if true;
@@ -568,6 +613,67 @@ service cloud.firestore {
 
       // Only admins can write hourly aggregations
       allow write: if isAdmin();
+    }
+
+    // Backlinks - Efficient backlinks index for fast retrieval
+    match /backlinks/{backlinkId} {
+      // Allow reading public backlinks for anyone (needed for backlinks display)
+      allow read: if resource.data.isPublic == true;
+
+      // Allow authenticated users to create/update backlinks for their own pages
+      allow create, update: if isAuthenticated() && (
+        // User can create backlinks from their own pages
+        get(/databases/$(database)/documents/pages/$(resource.data.sourcePageId)).data.userId == request.auth.uid
+      );
+
+      // Allow users to delete backlinks from their own pages
+      allow delete: if isAuthenticated() && (
+        get(/databases/$(database)/documents/pages/$(resource.data.sourcePageId)).data.userId == request.auth.uid
+      );
+
+      // Allow admins full access for maintenance
+      allow read, write: if isAdmin();
+    }
+
+    // Environment-specific user collections (dev_users, preview_users)
+    match /{envUsers}/{userId} {
+      // Allow reading basic profile info by everyone (for public pages)
+      allow read: if envUsers.matches('.*users') || envUsers == 'users';
+
+      // Allow writing only to own profile with data validation
+      allow create: if (envUsers.matches('.*users') || envUsers == 'users') &&
+                       isOwner(userId) &&
+                       request.resource.data.keys().hasAll(['email', 'uid', 'created']) &&
+                       request.resource.data.email is string &&
+                       request.resource.data.uid == userId;
+
+      allow update: if (envUsers.matches('.*users') || envUsers == 'users') &&
+                       isOwner(userId) &&
+                       request.resource.data.uid == resource.data.uid; // Prevent UID changes
+
+      allow delete: if (envUsers.matches('.*users') || envUsers == 'users') && isOwner(userId);
+
+      // Environment-specific subscription subcollections
+      match /{envSubscriptions}/{subscriptionDoc} {
+        // Only allow users to read their own subscription data or admins
+        allow read: if (envSubscriptions.matches('.*subscriptions') || envSubscriptions == 'subscriptions') &&
+                       (isOwner(userId) || isAdmin());
+
+        // Only allow users to write their own subscription data or admins
+        allow write: if (envSubscriptions.matches('.*subscriptions') || envSubscriptions == 'subscriptions') &&
+                        (isOwner(userId) || isAdmin());
+      }
+
+      // Environment-specific token subcollections
+      match /{envTokens}/{tokenDoc} {
+        // Only allow users to read their own token data or admins
+        allow read: if (envTokens.matches('.*tokens') || envTokens == 'tokens') &&
+                       (isOwner(userId) || isAdmin());
+
+        // Only allow users to write their own token data or admins
+        allow write: if (envTokens.matches('.*tokens') || envTokens == 'tokens') &&
+                        (isOwner(userId) || isAdmin());
+      }
     }
 
     // SECURITY: All collections must have explicit rules defined above

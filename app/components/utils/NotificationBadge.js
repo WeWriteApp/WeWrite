@@ -25,6 +25,9 @@ export default function NotificationBadge({ className }) {
         "flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-xs font-medium",
         className
       )}
+      data-component="notification-badge"
+      data-testid="notification-badge"
+      data-count={unreadCount}
     >
       {unreadCount > 99 ? '99+' : unreadCount}
     </div>

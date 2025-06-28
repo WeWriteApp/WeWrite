@@ -2,16 +2,22 @@
 
 import { useAuth } from "../providers/AuthProvider";
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   User,
   CreditCard,
-  Coins,
+  DollarSign,
   Settings as SettingsIcon,
   Trash2,
-  ChevronRight
+  ChevronRight,
+  AlertTriangle,
+  ShoppingCart,
+  Coins,
+  Palette
 } from 'lucide-react';
 import { useFeatureFlag } from '../utils/feature-flags';
+import { getOptimizedUserSubscription } from '../firebase/optimizedSubscription';
+import { isActiveSubscription } from '../utils/subscriptionStatus';
 
 interface SettingsSection {
   id: string;
@@ -25,37 +31,37 @@ interface SettingsSection {
 export default function SettingsIndexPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
 
   // Check feature flags with proper user ID for real-time updates
   const paymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
   // Token system is enabled by payments feature flag
   const tokenSystemEnabled = paymentsEnabled;
 
-  // Debug logging
-  useEffect(() => {
-    console.log('🔥 Settings page feature flags:', {
-      user: !!user,
-      userEmail: user?.email,
-      userUid: user?.uid,
-      paymentsEnabled,
-      tokenSystemEnabled
-    });
-  }, [user, paymentsEnabled, tokenSystemEnabled]);
-
-  useEffect(() => {
-    if (!user) {
-      router.push('/auth/login');
-      return;
-    }
-
-    // On desktop, redirect to first available settings page (profile)
-    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-      router.push('/settings/profile');
-      return;
-    }
-  }, [user, router]);
-
   const settingsSections: SettingsSection[] = [
+    {
+      id: 'subscription',
+      title: 'Subscription',
+      icon: ShoppingCart,
+      href: '/settings/subscription',
+      requiresPayments: true,
+      requiresTokenSystem: true
+    },
+    {
+      id: 'spend-tokens',
+      title: 'Spend Tokens',
+      icon: Coins,
+      href: '/settings/spend-tokens',
+      requiresPayments: true,
+      requiresTokenSystem: true
+    },
+    {
+      id: 'earnings',
+      title: 'Get paid',
+      icon: DollarSign,
+      href: '/settings/earnings',
+      requiresPayments: true
+    },
     {
       id: 'profile',
       title: 'Profile',
@@ -63,19 +69,10 @@ export default function SettingsIndexPage() {
       href: '/settings/profile'
     },
     {
-      id: 'subscription',
-      title: 'Subscription',
-      icon: CreditCard,
-      href: '/settings/subscription',
-      requiresPayments: true,
-      requiresTokenSystem: true
-    },
-    {
-      id: 'earnings',
-      title: 'Earnings',
-      icon: Coins,
-      href: '/settings/earnings',
-      requiresPayments: true
+      id: 'appearance',
+      title: 'Appearance',
+      icon: Palette,
+      href: '/settings/appearance'
     },
     {
       id: 'deleted',
@@ -90,6 +87,78 @@ export default function SettingsIndexPage() {
       href: '/settings/advanced'
     }
   ];
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/auth/login');
+      return;
+    }
+
+    // Filter sections based on feature flags to get available sections
+    const availableSections = settingsSections.filter(section => {
+      if (section.requiresPayments && !paymentsEnabled) {
+        return false;
+      }
+      if (section.requiresTokenSystem && !tokenSystemEnabled) {
+        return false;
+      }
+      return true;
+    });
+
+    // On desktop, always redirect to first available settings page
+    // Use a more robust check for desktop vs mobile
+    const checkAndRedirect = () => {
+      if (typeof window !== 'undefined') {
+        const isDesktop = window.innerWidth >= 1024;
+        if (isDesktop && availableSections.length > 0) {
+          router.push(availableSections[0].href);
+        }
+      }
+    };
+
+    // Check immediately
+    checkAndRedirect();
+
+    // Also check on resize to handle window size changes
+    const handleResize = () => checkAndRedirect();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [user, router, paymentsEnabled, tokenSystemEnabled]);
+
+  // Check subscription status when payments are enabled and user is available
+  useEffect(() => {
+    if (!user || !paymentsEnabled) {
+      setHasActiveSubscription(null);
+      return;
+    }
+
+    const checkSubscriptionStatus = async () => {
+      try {
+        const subscription = await getOptimizedUserSubscription(user.uid, {
+          useCache: true,
+          cacheTTL: 5 * 60 * 1000 // 5 minute cache
+        });
+
+        if (subscription) {
+          const isActive = isActiveSubscription(
+            subscription.status,
+            subscription.cancelAtPeriodEnd,
+            subscription.currentPeriodEnd
+          );
+          setHasActiveSubscription(isActive);
+        } else {
+          setHasActiveSubscription(false);
+        }
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+        setHasActiveSubscription(false);
+      }
+    };
+
+    checkSubscriptionStatus();
+  }, [user, paymentsEnabled]);
 
   // Filter sections based on feature flags
   const availableSections = settingsSections.filter(section => {
@@ -117,6 +186,12 @@ export default function SettingsIndexPage() {
         <div className="divide-y divide-border">
           {availableSections.map((section) => {
             const IconComponent = section.icon;
+
+            // Show warning icon for buy-tokens if no active subscription
+            const showWarning = section.id === 'buy-tokens' &&
+              paymentsEnabled &&
+              hasActiveSubscription === false;
+
             return (
               <button
                 key={section.id}
@@ -129,40 +204,19 @@ export default function SettingsIndexPage() {
                   </div>
                   <span className="font-medium">{section.title}</span>
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                <div className="flex items-center">
+                  {showWarning && (
+                    <AlertTriangle className="h-4 w-4 text-amber-500 mr-2" />
+                  )}
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </div>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Desktop Welcome Content */}
-      <div className="hidden lg:block p-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Settings</h2>
-          <p className="text-muted-foreground mb-8">
-            Manage your account and preferences using the sidebar navigation.
-          </p>
-
-          <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-            {availableSections.slice(0, 4).map((section) => {
-              const IconComponent = section.icon;
-              return (
-                <button
-                  key={section.id}
-                  onClick={() => handleSectionClick(section.href)}
-                  className="p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors text-center"
-                >
-                  <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 mx-auto mb-2">
-                    <IconComponent className="h-5 w-5 text-primary" />
-                  </div>
-                  <span className="text-sm font-medium">{section.title}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      {/* Desktop should never see this page - it redirects automatically */}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from 'next/navigation';
 import { AuthContext } from "../providers/AuthProvider";
 import { PageLoader } from "../components/ui/page-loader";
@@ -9,12 +9,18 @@ import {
   ChevronLeft,
   User,
   CreditCard,
-  Coins,
+  DollarSign,
   Settings as SettingsIcon,
-  Trash2
+  Trash2,
+  AlertTriangle,
+  ShoppingCart,
+  Coins,
+  Palette
 } from 'lucide-react';
 import { useFeatureFlag } from '../utils/feature-flags';
 import { cn } from '../lib/utils';
+import { getOptimizedUserSubscription } from '../firebase/optimizedSubscription';
+import { isActiveSubscription } from '../utils/subscriptionStatus';
 
 interface SettingsSection {
   id: string;
@@ -32,6 +38,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
   const { user, loading } = useContext(AuthContext);
   const router = useRouter();
   const pathname = usePathname();
+  const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
 
   // Check payments feature flag with proper user ID for real-time updates
   const paymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
@@ -43,6 +50,39 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
     }
   }, [user, loading, router]);
 
+  // Check subscription status when payments are enabled and user is available
+  useEffect(() => {
+    if (!user || !paymentsEnabled) {
+      setHasActiveSubscription(null);
+      return;
+    }
+
+    const checkSubscriptionStatus = async () => {
+      try {
+        const subscription = await getOptimizedUserSubscription(user.uid, {
+          useCache: true,
+          cacheTTL: 5 * 60 * 1000 // 5 minute cache
+        });
+
+        if (subscription) {
+          const isActive = isActiveSubscription(
+            subscription.status,
+            subscription.cancelAtPeriodEnd,
+            subscription.currentPeriodEnd
+          );
+          setHasActiveSubscription(isActive);
+        } else {
+          setHasActiveSubscription(false);
+        }
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+        setHasActiveSubscription(false);
+      }
+    };
+
+    checkSubscriptionStatus();
+  }, [user, paymentsEnabled]);
+
   if (loading) {
     return <PageLoader message="Loading settings..." />;
   }
@@ -53,24 +93,37 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
   const settingsSections: SettingsSection[] = [
     {
+      id: 'subscription',
+      title: 'Subscription',
+      icon: ShoppingCart,
+      href: '/settings/subscription',
+      requiresPayments: true
+    },
+    {
+      id: 'spend-tokens',
+      title: 'Spend Tokens',
+      icon: Coins,
+      href: '/settings/spend-tokens',
+      requiresPayments: true
+    },
+    {
+      id: 'earnings',
+      title: 'Get paid',
+      icon: DollarSign,
+      href: '/settings/earnings',
+      requiresPayments: true
+    },
+    {
       id: 'profile',
       title: 'Profile',
       icon: User,
       href: '/settings/profile'
     },
     {
-      id: 'subscription',
-      title: 'Subscription',
-      icon: CreditCard,
-      href: '/settings/subscription',
-      requiresPayments: true
-    },
-    {
-      id: 'earnings',
-      title: 'Earnings',
-      icon: Coins,
-      href: '/settings/earnings',
-      requiresPayments: true
+      id: 'appearance',
+      title: 'Appearance',
+      icon: Palette,
+      href: '/settings/appearance'
     },
     {
       id: 'deleted',
@@ -132,6 +185,11 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                   const isActive = pathname === section.href ||
                     (pathname.startsWith(section.href + '/') && section.href !== '/settings');
 
+                  // Show warning icon for subscription if no active subscription
+                  const showWarning = section.id === 'subscription' &&
+                    paymentsEnabled &&
+                    hasActiveSubscription === false;
+
                   return (
                     <button
                       key={section.id}
@@ -147,7 +205,10 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                         "h-5 w-5 mr-3",
                         isActive ? "text-primary" : "text-muted-foreground"
                       )} />
-                      {section.title}
+                      <span className="flex-1 text-left">{section.title}</span>
+                      {showWarning && (
+                        <AlertTriangle className="h-4 w-4 text-amber-500 ml-2" />
+                      )}
                     </button>
                   );
                 })}

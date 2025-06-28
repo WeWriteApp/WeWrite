@@ -311,6 +311,55 @@ export class SubscriptionService {
   }
 
   /**
+   * Reactivate subscription (remove cancellation)
+   */
+  static async reactivateSubscription(userId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const subscription = await this.getUserSubscription(userId);
+      if (!subscription) {
+        return { success: false, error: 'No subscription found' };
+      }
+
+      if (!subscription.cancelAtPeriodEnd) {
+        return { success: false, error: 'Subscription is not set to cancel' };
+      }
+
+      // Get authentication token
+      const user = auth.currentUser;
+      if (!user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      const token = await user.getIdToken();
+
+      // Reactivate via API
+      const response = await fetch('/api/subscription/reactivate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId,
+          subscriptionId: subscription.stripeSubscriptionId
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { success: false, error: errorData.error || 'Failed to reactivate subscription' };
+      }
+
+      const result = await response.json();
+      return { success: true };
+
+    } catch (error) {
+      console.error('Error reactivating subscription:', error);
+      return { success: false, error: 'Failed to reactivate subscription' };
+    }
+  }
+
+  /**
    * Add amount to existing subscription (bypasses tier validation)
    */
   static async addToSubscription(

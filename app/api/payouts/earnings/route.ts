@@ -16,8 +16,33 @@ import {
   startAfter,
   doc,
   getDoc,
-  setDoc
+  setDoc,
+  serverTimestamp
 } from 'firebase/firestore';
+import { StripePayoutService } from '../../../services/stripePayoutService';
+import { TransactionTrackingService } from '../../../services/transactionTrackingService';
+import { FinancialUtils } from '../../../types/financial';
+
+// Fee calculation function (should match PayoutFeeBreakdown component)
+function calculatePayoutFees(grossAmount: number) {
+  const stripeFeePercentage = 2.9; // 2.9%
+  const stripeFeeFixed = 0.30; // $0.30
+  const platformFeePercentage = 7; // 7%
+
+  const stripeFee = (grossAmount * stripeFeePercentage) / 100;
+  const platformFee = (grossAmount * platformFeePercentage) / 100;
+  const totalFees = stripeFee + stripeFeeFixed + platformFee;
+  const netAmount = Math.max(0, grossAmount - totalFees);
+
+  return {
+    grossAmount,
+    stripeFee,
+    stripeFeeFixed,
+    platformFee,
+    totalFees,
+    netAmount
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -95,6 +120,8 @@ export async function GET(request: NextRequest) {
       const payoutsSnapshot = await getDocs(payoutsQuery);
       payouts = payoutsSnapshot.docs.map(payoutDoc => {
         const payout = payoutDoc.data();
+        const feeBreakdown = calculatePayoutFees(payout.amount);
+
         return {
           id: payout.id,
           amount: payout.amount,
@@ -105,7 +132,8 @@ export async function GET(request: NextRequest) {
           processedAt: payout.processedAt?.toDate?.()?.toISOString() || payout.processedAt,
           completedAt: payout.completedAt?.toDate?.()?.toISOString() || payout.completedAt,
           failureReason: payout.failureReason,
-          retryCount: payout.retryCount || 0
+          retryCount: payout.retryCount || 0,
+          feeBreakdown
         };
       });
     }
@@ -159,7 +187,8 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
       }
 
-      // Create manual payout
+      // Create manual payout with proper tracking
+      const correlationId = FinancialUtils.generateCorrelationId();
       const payoutId = `payout_${userId}_${Date.now()}`;
       const currentPeriod = new Date().toISOString().slice(0, 7); // YYYY-MM
 
@@ -171,17 +200,79 @@ export async function POST(request: NextRequest) {
         status: 'pending',
         earningIds: [], // Would need to fetch relevant earnings
         period: period || currentPeriod,
-        scheduledAt: new Date(),
-        retryCount: 0
+        scheduledAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        retryCount: 0,
+        metadata: {
+          source: 'manual_request',
+          correlationId,
+          requestedBy: userId
+        }
       };
 
+      // Save payout record
       await setDoc(doc(db, 'payouts', payoutId), payout);
 
-      return NextResponse.json({
-        success: true,
-        data: payout,
-        message: 'Payout requested successfully'
-      });
+      // Track the payout request
+      const trackingResult = await TransactionTrackingService.trackPayoutRequest(
+        payoutId,
+        `recipient_${userId}`,
+        recipient.availableBalance,
+        undefined,
+        correlationId
+      );
+
+      if (!trackingResult.success) {
+        console.error('Failed to track payout request:', trackingResult.error);
+        // Continue processing but log the error
+      }
+
+      // Process the payout through Stripe immediately for manual requests
+      try {
+        const stripePayoutService = StripePayoutService.getInstance();
+        const stripeResult = await stripePayoutService.processPayout(payoutId);
+
+        if (stripeResult.success) {
+          const feeBreakdown = calculatePayoutFees(payout.amount);
+
+          return NextResponse.json({
+            success: true,
+            data: {
+              ...payout,
+              status: 'processing',
+              stripeTransferId: stripeResult.data?.id,
+              feeBreakdown
+            },
+            message: 'Payout initiated and processing through Stripe',
+            correlationId
+          });
+        } else {
+          // Payout failed, but record was created for retry
+          const feeBreakdown = calculatePayoutFees(payout.amount);
+
+          return NextResponse.json({
+            success: false,
+            error: stripeResult.error,
+            data: {
+              ...payout,
+              feeBreakdown
+            },
+            message: 'Payout request created but Stripe processing failed. Will retry automatically.',
+            correlationId
+          }, { status: 202 }); // Accepted but not processed
+        }
+      } catch (stripeError: any) {
+        console.error('Error processing payout through Stripe:', stripeError);
+
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to process payout through Stripe',
+          data: payout,
+          message: 'Payout request created but processing failed. Will retry automatically.',
+          correlationId,
+          details: stripeError.message
+        }, { status: 202 }); // Accepted but not processed
+      }
     }
 
     return NextResponse.json({

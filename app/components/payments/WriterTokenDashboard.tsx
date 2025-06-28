@@ -4,11 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { 
-  Coins, 
-  DollarSign, 
-  TrendingUp, 
+
+import {
+  DollarSign,
+  TrendingUp,
   Calendar,
   Wallet,
   Clock,
@@ -20,9 +19,10 @@ import {
 import { useToast } from '../ui/use-toast';
 import { useAuth } from '../../providers/AuthProvider';
 import { TokenEarningsService } from '../../services/tokenEarningsService';
-import { WriterTokenBalance, WriterTokenEarnings, TokenPayout } from '../../types/database';
+import { WriterTokenBalance, WriterTokenEarnings } from '../../types/database';
 import { formatCurrency } from '../../utils/formatCurrency';
 import EarningsChart from './EarningsChart';
+import { CompactAllocationTimer } from '../AllocationCountdownTimer';
 
 interface WriterTokenDashboardProps {
   className?: string;
@@ -34,7 +34,6 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
   
   const [balance, setBalance] = useState<WriterTokenBalance | null>(null);
   const [earnings, setEarnings] = useState<WriterTokenEarnings[]>([]);
-  const [payouts, setPayouts] = useState<TokenPayout[]>([]);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
 
@@ -46,22 +45,20 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
 
   const loadWriterData = async () => {
     if (!user?.uid) return;
-    
+
     try {
       setLoading(true);
-      
-      const [balanceData, earningsData, payoutData] = await Promise.all([
+
+      const [balanceData, earningsData] = await Promise.all([
         TokenEarningsService.getWriterTokenBalance(user.uid),
-        TokenEarningsService.getWriterEarningsHistory(user.uid, 6),
-        TokenEarningsService.getPayoutHistory(user.uid, 10)
+        TokenEarningsService.getWriterEarningsHistory(user.uid, 6)
       ]);
-      
+
       setBalance(balanceData);
       setEarnings(earningsData);
-      setPayouts(payoutData);
-      
+
     } catch (error) {
-      console.error('Error loading writer data:', error);
+      console.error('[WriterTokenDashboard] Error loading writer data:', error);
       toast({
         title: "Error",
         description: "Failed to load earnings data",
@@ -136,7 +133,7 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
       <Card className={className}>
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">
-            <Coins className="h-5 w-5" />
+            <DollarSign className="h-5 w-5" />
             Writer Earnings
           </CardTitle>
           <CardDescription>
@@ -169,9 +166,13 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
               <CardTitle className="flex items-center gap-2">
                 <Wallet className="h-5 w-5" />
                 Token Earnings
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Estimated
+                </Badge>
               </CardTitle>
               <CardDescription>
-                Your earnings from token allocations
+                Estimated earnings from token allocations
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -206,12 +207,12 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
               </div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">
+              <div className="text-2xl font-bold text-yellow-600 border-2 border-dashed border-yellow-300 rounded-lg p-2">
                 {formatCurrency(balance.pendingUsdValue)}
               </div>
               <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
                 <Clock className="h-3 w-3" />
-                Pending
+                Estimated (Pending)
               </div>
             </div>
             <div className="text-center">
@@ -233,7 +234,21 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
               </div>
             </div>
           </div>
-          
+
+          {/* Pending Earnings Disclaimer */}
+          {balance.pendingUsdValue > 0 && (
+            <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
+                    Pending earnings may change until <CompactAllocationTimer className="inline" />
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {!canRequestPayout && (
             <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
               <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
@@ -248,92 +263,44 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
         </CardContent>
       </Card>
 
-      {/* Detailed Tables */}
-      <Tabs defaultValue="earnings" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="earnings">Monthly Earnings</TabsTrigger>
-          <TabsTrigger value="payouts">Payout History</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="earnings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Monthly Earnings</CardTitle>
-              <CardDescription>
-                Your token earnings by month
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {earnings.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground">
-                  No earnings yet
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {earnings.map((earning) => (
-                    <div key={earning.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">{earning.month}</span>
-                          {getStatusBadge(earning.status)}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {earning.totalTokensReceived} tokens from {earning.allocations.length} allocation(s)
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold">{formatCurrency(earning.totalUsdValue)}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {earning.totalTokensReceived} tokens
-                        </div>
-                      </div>
+      {/* Monthly Earnings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Monthly Earnings</CardTitle>
+          <CardDescription>
+            Monthly token earnings
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {earnings.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              No earnings yet
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {earnings.map((earning) => (
+                <div key={earning.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium">{earning.month}</span>
+                      {getStatusBadge(earning.status)}
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="payouts">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payout History</CardTitle>
-              <CardDescription>
-                Track your completed and pending payouts
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {payouts.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground">
-                  No payouts yet
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {payouts.map((payout) => (
-                    <div key={payout.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">
-                            {new Date(payout.requestedAt as any).toLocaleDateString()}
-                          </span>
-                          {getStatusBadge(payout.status)}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {payout.tokens} tokens
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold">{formatCurrency(payout.amount)}</div>
-                      </div>
+                    <p className="text-sm text-muted-foreground">
+                      {earning.totalTokensReceived} tokens from {earning.allocations.length} allocation(s)
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold">{formatCurrency(earning.totalUsdValue)}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {earning.totalTokensReceived} tokens
                     </div>
-                  ))}
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -264,6 +264,30 @@
         { "fieldPath": "requestedAt", "order": "DESCENDING" },
         { "fieldPath": "__name__", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "backlinks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "targetPageId", "order": "ASCENDING" },
+        { "fieldPath": "isPublic", "order": "ASCENDING" },
+        { "fieldPath": "lastModified", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "backlinks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "sourcePageId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "backlinks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "targetPageId", "order": "ASCENDING" },
+        { "fieldPath": "isPublic", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -7,13 +7,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
-import { doc, updateDoc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, setDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/stripeConfig';
+import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { TokenService } from '../../../services/tokenService';
 import { calculateTokensForAmount } from '../../../utils/subscriptionTiers';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
-import { FinancialUtils } from '../../../types/financial';
+import { PaymentRecoveryService } from '../../../services/paymentRecoveryService';
+import { SubscriptionSynchronizationService } from '../../../services/subscriptionSynchronizationService';
+import { FinancialUtils, CorrelationId } from '../../../types/financial';
 
 // Initialize Stripe
 const stripe = new Stripe(getStripeSecretKey() || '', {
@@ -92,7 +95,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   try {
     // Only handle subscription mode sessions
     if (session.mode !== 'subscription' || !session.subscription) {
@@ -121,7 +124,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   }
 }
 
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+export async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   try {
     const userId = subscription.metadata.firebaseUID;
     if (!userId) {
@@ -146,7 +149,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     }
 
     // Update subscription in Firestore
-    const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionRef = doc(db, parentPath, subCollectionName, 'current');
 
     // Check if subscription document exists
     const subscriptionDoc = await getDoc(subscriptionRef);
@@ -206,7 +210,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   }
 }
 
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+export async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   try {
     const userId = subscription.metadata.firebaseUID;
     if (!userId) {
@@ -217,7 +221,8 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     console.log(`[SUBSCRIPTION WEBHOOK] Processing subscription deletion for user ${userId}, subscription ${subscription.id}`);
 
     // Update subscription status in Firestore
-    const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionRef = doc(db, parentPath, subCollectionName, 'current');
     await updateDoc(subscriptionRef, {
       status: 'cancelled',
       canceledAt: new Date().toISOString(),
@@ -235,7 +240,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   }
 }
 
-async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
+export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   try {
     if (!invoice.subscription) {
       return;
@@ -249,49 +254,99 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
       return;
     }
 
-    // Update subscription status to active and reset failure tracking
-    const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
+    // Use synchronization service to prevent race conditions
+    const syncService = SubscriptionSynchronizationService.getInstance();
+    const correlationId = FinancialUtils.generateCorrelationId();
 
-    // Get current subscription data to preserve existing fields
-    const currentDoc = await getDoc(subscriptionRef);
-    const currentData = currentDoc.exists() ? currentDoc.data() : {};
-
-    const updateData = {
-      ...currentData, // Preserve existing subscription data first
-      status: 'active', // Always set to active on successful payment
-      lastPaymentAt: new Date(invoice.created * 1000).toISOString(),
-      failureCount: 0, // Reset failure count on successful payment
-      lastFailedPaymentAt: null, // Clear failed payment timestamp
-      lastFailedInvoiceId: null, // Clear failed invoice ID
-      updatedAt: serverTimestamp(),
+    const syncOperation = {
+      type: 'webhook' as const,
+      source: 'invoice.payment_succeeded',
+      timestamp: new Date(),
+      correlationId,
+      subscriptionData: {
+        stripeSubscriptionId: subscription.id,
+        status: 'active', // Always set to active on successful payment
+        currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        lastPaymentAt: new Date(invoice.created * 1000).toISOString(),
+        failureCount: 0, // Reset failure count on successful payment
+        lastFailedPaymentAt: null, // Clear failed payment timestamp
+        lastFailedInvoiceId: null, // Clear failed invoice ID
+        updatedAt: serverTimestamp(),
+      }
     };
 
-    await updateDoc(subscriptionRef, updateData);
+    const syncResult = await syncService.synchronizeSubscription(userId, subscription.id, syncOperation);
+
+    if (!syncResult.success) {
+      console.error(`[SUBSCRIPTION WEBHOOK] Failed to synchronize subscription for user ${userId}:`, syncResult.message);
+      if (syncResult.conflict) {
+        console.warn(`[SUBSCRIPTION WEBHOOK] Sync conflict detected, will be resolved automatically`);
+      }
+    } else {
+      console.log(`[SUBSCRIPTION WEBHOOK] Successfully synchronized subscription for user ${userId}`);
+    }
 
     // Ensure token allocation is up to date
     const price = subscription.items.data[0].price;
     const amount = price.unit_amount ? price.unit_amount / 100 : 0;
     await TokenService.updateMonthlyTokenAllocation(userId, amount);
 
-    // Track the subscription payment transaction
-    try {
-      const correlationId = FinancialUtils.generateCorrelationId();
-      await TransactionTrackingService.trackSubscriptionPayment(
-        invoice.id,
-        subscription.id,
-        userId,
-        amount,
-        correlationId
-      );
-      console.log(`[SUBSCRIPTION WEBHOOK] Tracked payment transaction [${correlationId}]`, {
-        invoiceId: invoice.id,
-        subscriptionId: subscription.id,
-        userId,
-        amount
-      });
-    } catch (trackingError) {
-      // Log tracking error but don't fail the webhook
-      console.warn('[SUBSCRIPTION WEBHOOK] Failed to track payment transaction:', trackingError);
+    // Track the subscription payment transaction - MANDATORY for audit compliance
+    // Reuse the correlationId from the sync operation above
+    let trackingAttempts = 0;
+    const maxTrackingAttempts = 3;
+    let trackingSuccess = false;
+
+    while (trackingAttempts < maxTrackingAttempts && !trackingSuccess) {
+      try {
+        trackingAttempts++;
+        const trackingResult = await TransactionTrackingService.trackSubscriptionPayment(
+          invoice.id,
+          subscription.id,
+          userId,
+          amount,
+          correlationId
+        );
+
+        if (trackingResult.success) {
+          trackingSuccess = true;
+          console.log(`[SUBSCRIPTION WEBHOOK] Successfully tracked payment transaction [${correlationId}] on attempt ${trackingAttempts}`, {
+            invoiceId: invoice.id,
+            subscriptionId: subscription.id,
+            userId,
+            amount,
+            transactionId: trackingResult.data?.id
+          });
+        } else {
+          throw new Error(trackingResult.error?.message || 'Transaction tracking failed');
+        }
+      } catch (trackingError: any) {
+        console.error(`[SUBSCRIPTION WEBHOOK] Transaction tracking attempt ${trackingAttempts} failed:`, {
+          error: trackingError.message,
+          correlationId,
+          invoiceId: invoice.id,
+          userId
+        });
+
+        if (trackingAttempts >= maxTrackingAttempts) {
+          // Critical: Transaction tracking failed after all retries
+          // Create a fallback tracking record for manual reconciliation
+          try {
+            await createFallbackTransactionRecord(invoice.id, subscription.id, userId, amount, correlationId, trackingError.message);
+            console.error(`[SUBSCRIPTION WEBHOOK] CRITICAL: Created fallback transaction record for manual reconciliation [${correlationId}]`);
+          } catch (fallbackError) {
+            console.error(`[SUBSCRIPTION WEBHOOK] CRITICAL: Failed to create fallback transaction record [${correlationId}]:`, fallbackError);
+          }
+
+          // Log to monitoring system for immediate attention
+          await logCriticalTrackingFailure(correlationId, invoice.id, userId, trackingError.message);
+        } else {
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, trackingAttempts) * 1000));
+        }
+      }
     }
 
   } catch (error) {
@@ -300,7 +355,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   }
 }
 
-async function handlePaymentFailed(invoice: Stripe.Invoice) {
+export async function handlePaymentFailed(invoice: Stripe.Invoice) {
   try {
     if (!invoice.subscription) return;
 
@@ -312,32 +367,49 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
       return;
     }
 
-    // Get current failure count
-    const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
-    const subscriptionDoc = await getDoc(subscriptionRef);
-    const currentData = subscriptionDoc.data();
-    const failureCount = (currentData?.failureCount || 0) + 1;
+    // Use enhanced payment recovery service for intelligent retry scheduling
+    const paymentRecoveryService = PaymentRecoveryService.getInstance();
+    const correlationId = FinancialUtils.generateCorrelationId();
 
-    // Update subscription status with failure tracking
-    await updateDoc(subscriptionRef, {
-      status: 'past_due',
-      lastFailedPaymentAt: new Date(invoice.created * 1000).toISOString(),
-      failureCount: failureCount,
-      lastFailedInvoiceId: invoice.id,
-      updatedAt: serverTimestamp(),
+    // Extract failure reason from invoice
+    const failureReason = invoice.last_finalization_error?.message ||
+                         invoice.charge?.failure_message ||
+                         'Payment failed - reason unknown';
+
+    const amount = invoice.amount_due / 100; // Convert from cents
+
+    // Record failure and schedule intelligent retries
+    const failureRecord = await paymentRecoveryService.recordPaymentFailure(
+      userId,
+      subscription.id,
+      invoice.id,
+      failureReason,
+      amount,
+      invoice.currency.toUpperCase(),
+      correlationId
+    );
+
+    // Create enhanced notification with retry information
+    await createFailedPaymentNotification(userId, failureRecord.failureCount, invoice, failureRecord);
+
+    console.log(`[ENHANCED PAYMENT RECOVERY] Payment failed for user ${userId}`, {
+      failureCount: failureRecord.failureCount,
+      failureType: failureRecord.failureType,
+      nextRetryAt: failureRecord.nextRetryAt?.toISOString(),
+      correlationId
     });
-
-    // Create notification for failed payment
-    await createFailedPaymentNotification(userId, failureCount, invoice);
-
-    console.log(`Payment failed for user ${userId}, failure count: ${failureCount}`);
 
   } catch (error) {
     console.error('Error handling payment failed:', error);
   }
 }
 
-async function createFailedPaymentNotification(userId: string, failureCount: number, invoice: Stripe.Invoice) {
+async function createFailedPaymentNotification(
+  userId: string,
+  failureCount: number,
+  invoice: Stripe.Invoice,
+  failureRecord?: any
+) {
   try {
     // Import notification function
     const { createNotification } = await import('../../../firebase/notifications');
@@ -385,5 +457,81 @@ export async function GET() {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
     webhookSecret: getStripeWebhookSecret() ? 'configured' : 'missing'
+  });
+}
+
+/**
+ * Create a fallback transaction record for manual reconciliation
+ * when primary transaction tracking fails
+ */
+async function createFallbackTransactionRecord(
+  invoiceId: string,
+  subscriptionId: string,
+  userId: string,
+  amount: number,
+  correlationId: CorrelationId,
+  errorMessage: string
+): Promise<void> {
+  const fallbackRecord = {
+    type: 'FALLBACK_TRANSACTION_RECORD',
+    originalType: 'SUBSCRIPTION_PAYMENT',
+    status: 'REQUIRES_MANUAL_RECONCILIATION',
+    invoiceId,
+    subscriptionId,
+    userId,
+    amount,
+    currency: 'usd',
+    correlationId,
+    trackingFailureReason: errorMessage,
+    createdAt: serverTimestamp(),
+    requiresAttention: true,
+    reconciled: false,
+    metadata: {
+      source: 'webhook_tracking_failure',
+      severity: 'critical',
+      requiresManualReview: true
+    }
+  };
+
+  await addDoc(collection(db, 'fallbackTransactionRecords'), fallbackRecord);
+}
+
+/**
+ * Log critical tracking failures to monitoring system
+ */
+async function logCriticalTrackingFailure(
+  correlationId: CorrelationId,
+  invoiceId: string,
+  userId: string,
+  errorMessage: string
+): Promise<void> {
+  const criticalAlert = {
+    type: 'CRITICAL_TRACKING_FAILURE',
+    severity: 'critical',
+    correlationId,
+    invoiceId,
+    userId,
+    errorMessage,
+    timestamp: serverTimestamp(),
+    requiresImmediateAttention: true,
+    impact: 'audit_trail_gap',
+    resolution: 'manual_reconciliation_required',
+    metadata: {
+      source: 'stripe_webhook',
+      component: 'transaction_tracking',
+      alertLevel: 'critical'
+    }
+  };
+
+  // Log to critical alerts collection for monitoring dashboard
+  await addDoc(collection(db, 'criticalAlerts'), criticalAlert);
+
+  // Also log to console for immediate visibility
+  console.error('🚨 CRITICAL TRACKING FAILURE LOGGED:', {
+    correlationId,
+    invoiceId,
+    userId,
+    errorMessage,
+    timestamp: new Date().toISOString()
   });
 }

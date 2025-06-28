@@ -4,6 +4,7 @@
  */
 
 import { db } from '../firebase/config';
+import { UnifiedFeeCalculationService } from './unifiedFeeCalculationService';
 import {
   doc,
   getDoc,
@@ -33,6 +34,7 @@ import type {
   EarningsBreakdown,
   PayoutApiResponse
 } from '../types/payout';
+import { getCurrentFeeStructure } from '../utils/feeCalculations';
 
 class PayoutService {
   private static instance: PayoutService;
@@ -49,22 +51,38 @@ class PayoutService {
 
   // Configuration management
   async getPayoutConfig(): Promise<PayoutConfig> {
-    if (this.config) return this.config;
-
-    try {
-      const configDoc = await getDoc(doc(db, 'config', 'payouts'));
-      if (configDoc.exists()) {
-        this.config = configDoc.data() as PayoutConfig;
-      } else {
-        // Create default configuration
+    if (!this.config) {
+      try {
+        const configDoc = await getDoc(doc(db, 'config', 'payouts'));
+        if (configDoc.exists()) {
+          this.config = configDoc.data() as PayoutConfig;
+        } else {
+          // Create default configuration
+          this.config = this.getDefaultConfig();
+          await setDoc(doc(db, 'config', 'payouts'), this.config);
+        }
+      } catch (error) {
+        console.error('Error loading payout config:', error);
         this.config = this.getDefaultConfig();
-        await setDoc(doc(db, 'config', 'payouts'), this.config);
       }
-      return this.config;
-    } catch (error) {
-      console.error('Error loading payout config:', error);
-      return this.getDefaultConfig();
     }
+
+    // Always get the latest fee structure from the unified service
+    try {
+      const feeService = UnifiedFeeCalculationService.getInstance();
+      const feeStructure = await feeService.getFeeStructure();
+
+      // Update config with current fee structure (convert to percentage for consistency)
+      this.config.platformFeePercentage = feeStructure.platformFeePercentage * 100;
+      this.config.stripeFeePercentage = feeStructure.stripeProcessingFeePercentage * 100;
+      this.config.stripeFeeFixed = feeStructure.stripeProcessingFeeFixed;
+      this.config.minimumPayoutThreshold = feeStructure.minimumPayoutThreshold;
+    } catch (feeError) {
+      console.warn('Could not fetch unified fee structure, using static config:', feeError);
+      // Keep the existing config value as fallback
+    }
+
+    return this.config;
   }
 
   private getDefaultConfig(): PayoutConfig {
@@ -323,17 +341,26 @@ class PayoutService {
       return;
     }
 
-    const config = await this.getPayoutConfig();
+    // Use unified fee calculation service for accurate fee breakdown
+    const feeService = UnifiedFeeCalculationService.getInstance();
     const grossAmount = pledge.amount;
-    const stripeFee = (grossAmount * config.stripeFeePercentage / 100) + config.stripeFeeFixed;
-    const netAmount = grossAmount - stripeFee;
+
+    // Calculate comprehensive fee breakdown for this payment
+    const feeBreakdown = await feeService.calculateFees(
+      grossAmount,
+      'payment', // This is an incoming payment
+      'USD'
+    );
 
     for (const split of revenueSplit.splits) {
       if (split.recipientType === 'platform') continue;
-      
-      const earningAmount = (netAmount * split.percentage) / 100;
-      const platformFee = (grossAmount * config.platformFeePercentage) / 100;
-      
+
+      // Calculate earning amount based on net amount after processing fees
+      const earningAmount = (feeBreakdown.netAfterProcessing * split.percentage) / 100;
+
+      // Platform fee is calculated proportionally for this split
+      const platformFeeForSplit = (feeBreakdown.platformFee * split.percentage) / 100;
+
       const earning: Earning = {
         id: `${pledge.id}_${split.recipientId}_${period}`,
         recipientId: split.recipientId,
@@ -342,8 +369,8 @@ class PayoutService {
         resourceType: 'page',
         resourceId: pledge.pageId,
         amount: earningAmount,
-        platformFee,
-        netAmount: earningAmount - platformFee,
+        platformFee: platformFeeForSplit,
+        netAmount: earningAmount - platformFeeForSplit,
         currency: 'usd',
         period,
         status: 'available',

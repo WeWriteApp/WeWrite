@@ -12,6 +12,7 @@ import Cookies from 'js-cookie';
 import { setAnalyticsUserInfo } from "../utils/analytics-user-tracking";
 import { checkEmailVerificationOnStartup } from "../services/emailVerificationNotifications";
 import { visitorTrackingService } from "../services/VisitorTrackingService";
+import { clearLoggedOutAccount } from "../components/auth/AccountSwitcher";
 
 /**
  * User data interface
@@ -266,6 +267,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         localStorage.setItem('authState', 'authenticated');
         localStorage.setItem('isAuthenticated', 'true');
 
+        // Clear this user from the logged-out accounts list since they're now logged in
+        clearLoggedOutAccount(user.uid);
+
         // Check if we're adding a new account
         const addingNewAccount = localStorage.getItem('addingNewAccount') === 'true';
         const previousUserSession = localStorage.getItem('previousUserSession');
@@ -408,11 +412,30 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             lastLogin: new Date().toISOString(),
           });
 
-          // Set session cookie with fresh token
-          const token = await user.getIdToken(true); // Force refresh
-          Cookies.set('session', token, { expires: 7 }); // 7 days expiry
+          // Create proper session cookie via API endpoint
+          try {
+            const token = await user.getIdToken(true); // Force refresh
+            const response = await fetch('/api/create-session-cookie', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ idToken: token }),
+            });
+
+            if (response.ok) {
+              console.log('Created proper session cookie for user:', user.uid);
+            } else {
+              console.warn('Failed to create session cookie, falling back to ID token');
+              Cookies.set('session', token, { expires: 7 }); // Fallback to ID token
+            }
+          } catch (sessionError) {
+            console.warn('Error creating session cookie, falling back to ID token:', sessionError);
+            const token = await user.getIdToken(true);
+            Cookies.set('session', token, { expires: 7 }); // Fallback to ID token
+          }
+
           Cookies.set('authenticated', 'true', { expires: 7 });
-          console.log('Set fresh session cookie for user:', user.uid);
         } catch (error) {
           console.error("Error loading user data:", error);
           setUser({

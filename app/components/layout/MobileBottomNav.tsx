@@ -32,6 +32,9 @@ export default function MobileBottomNav() {
   const [lastScrollY, setLastScrollY] = useState(0);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Determine if we're in edit mode (editor functions are available)
+  const isEditMode = !!(editorContext.onSave && editorContext.onCancel);
+
   // Check if current route is an individual page (should hide mobile nav)
   const isIndividualPageRoute = useCallback(() => {
     // Pattern: /[pageId] where pageId is a dynamic route parameter
@@ -151,6 +154,11 @@ export default function MobileBottomNav() {
   const isNewPageActive = pathname === '/new';
   const isNotificationsActive = pathname === '/notifications';
   const isMenuActive = sidebarOpen;
+
+  // Don't render mobile nav in edit mode
+  if (isEditMode) {
+    return null;
+  }
 
   return (
     <>
@@ -308,7 +316,11 @@ export default function MobileBottomNav() {
             aria-pressed={isNotificationsActive}
           >
             <Bell className="h-5 w-5 flex-shrink-0" />
-            <NotificationBadge className="absolute -top-1 -right-1" />
+            <NotificationBadge
+              className="absolute -top-1 -right-1"
+              data-component="mobile-notification-badge"
+              data-testid="mobile-notification-badge"
+            />
           </Button>
 
           {/* New Page Button - Only show when authenticated */}

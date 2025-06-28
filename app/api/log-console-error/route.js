@@ -24,7 +24,164 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 })
     }
 
-    const { level, message, timestamp, url, userAgent, filename, lineno, colno, stack, stackAnalysis, isGoogleApiError, scriptTags, type } = body
+    const {
+      level,
+      message,
+      timestamp,
+      url,
+      userAgent,
+      filename,
+      lineno,
+      colno,
+      stack,
+      stackAnalysis,
+      isGoogleApiError,
+      scriptTags,
+      type,
+      // Enhanced subscription error fields
+      errorType,
+      originalArgs,
+      stackTrace,
+      reactInfo,
+      subscriptionStates,
+      timingInfo,
+      // Additional enhanced fields
+      enhancedStack,
+      componentInfo,
+      sourceMapInfo,
+      componentContext,
+      errorName,
+      additionalContext
+    } = body
+
+    // Check if this is a subscription error for enhanced logging
+    const isSubscriptionError = [
+      'SUBSCRIPTION_TEMPORAL_DEAD_ZONE',
+      'SUBSCRIPTION_TEMPORAL_DEAD_ZONE_ENHANCED',
+      'SUBSCRIPTION_COMPONENT_ERROR',
+      'SUBSCRIPTION_VARIABLE_ACCESS_ERROR',
+      'SUBSCRIPTION_EFFECT_EXECUTION_ERROR'
+    ].includes(errorType) || (message && (
+      message.includes('subscription') ||
+      message.includes('Cannot access') ||
+      message.includes('before initialization') ||
+      message.includes('temporal dead zone')
+    ))
+
+    if (isSubscriptionError && level === 'error') {
+      console.log('\n🔴 SUBSCRIPTION ERROR DETECTED - ENHANCED DEBUGGING:');
+      console.log('═'.repeat(100));
+      console.log('📍 Error Type:', errorType || 'SUBSCRIPTION_ERROR');
+      console.log('📍 Error Message:', message);
+      console.log('📍 URL:', url);
+      console.log('📍 Timestamp:', timestamp);
+
+      if (originalArgs && originalArgs.length > 0) {
+        console.log('📍 Original Arguments:');
+        originalArgs.forEach((arg, index) => {
+          console.log(`   [${index}]:`, arg);
+        });
+      }
+
+      if (reactInfo) {
+        console.log('📍 React Component Info:');
+        console.log('   Component Name:', reactInfo.componentName);
+        console.log('   Component Stack:', reactInfo.componentStack);
+        if (reactInfo.props) {
+          console.log('   Props:', JSON.stringify(reactInfo.props, null, 4));
+        }
+        if (reactInfo.state) {
+          console.log('   State:', JSON.stringify(reactInfo.state, null, 4));
+        }
+        if (reactInfo.error) {
+          console.log('   React Info Error:', reactInfo.error);
+        }
+      }
+
+      if (subscriptionStates) {
+        console.log('📍 Subscription Variable States:');
+        Object.entries(subscriptionStates).forEach(([key, value]) => {
+          console.log(`   ${key}:`, value);
+        });
+      }
+
+      if (timingInfo) {
+        console.log('📍 Timing Information:');
+        console.log('   Performance Now:', timingInfo.performanceNow);
+        console.log('   Document Ready State:', timingInfo.documentReadyState);
+        console.log('   Window Loaded:', timingInfo.windowLoaded);
+        console.log('   DOM Content Loaded:', timingInfo.domContentLoaded);
+        if (timingInfo.navigationTiming) {
+          console.log('   Navigation Timing:', JSON.stringify(timingInfo.navigationTiming, null, 4));
+        }
+        if (timingInfo.componentLifecycle) {
+          console.log('   Component Lifecycle:', timingInfo.componentLifecycle);
+        }
+        if (timingInfo.error) {
+          console.log('   Timing Info Error:', timingInfo.error);
+        }
+      }
+
+      if (stackTrace) {
+        console.log('📍 Enhanced Stack Trace:');
+        console.log(stackTrace);
+      }
+
+      if (enhancedStack && enhancedStack.length > 0) {
+        console.log('📍 Enhanced Stack Analysis:');
+        enhancedStack.forEach((frame, index) => {
+          console.log(`   [${index}] ${frame.functionName} at ${frame.fileName}:${frame.lineNumber}:${frame.columnNumber}`);
+          if (frame.originalPosition) {
+            console.log(`       → Original: ${frame.originalPosition.source}:${frame.originalPosition.line}:${frame.originalPosition.column}`);
+          }
+        });
+      }
+
+      if (componentInfo) {
+        console.log('📍 Enhanced Component Info:');
+        console.log('   Component Name:', componentInfo.componentName);
+        console.log('   Component Type:', componentInfo.componentType);
+        if (componentInfo.propsKeys) {
+          console.log('   Props Keys:', componentInfo.propsKeys);
+        }
+        if (componentInfo.error) {
+          console.log('   Component Info Error:', componentInfo.error);
+        }
+      }
+
+      if (sourceMapInfo) {
+        console.log('📍 Source Map Info:');
+        console.log('   Development Mode:', sourceMapInfo.development);
+        console.log('   Has Source Maps:', sourceMapInfo.hasSourceMaps);
+      }
+
+      if (componentContext) {
+        console.log('📍 Component Context:');
+        console.log('   Component Name:', componentContext.componentName);
+        if (componentContext.timing) {
+          console.log('   Timing:', JSON.stringify(componentContext.timing, null, 4));
+        }
+        if (componentContext.variableAccessLog) {
+          console.log('   Variable Access Log:', JSON.stringify(componentContext.variableAccessLog, null, 4));
+        }
+        if (componentContext.effectExecutionLog) {
+          console.log('   Effect Execution Log:', JSON.stringify(componentContext.effectExecutionLog, null, 4));
+        }
+      }
+
+      if (additionalContext) {
+        console.log('📍 Additional Context:');
+        console.log(JSON.stringify(additionalContext, null, 4));
+      }
+
+      if (filename) {
+        console.log('📍 File Location:', `${filename}:${lineno}:${colno}`);
+      }
+
+      console.log('📍 User Agent:', userAgent);
+      console.log('📍 Full Body:', JSON.stringify(body, null, 2));
+      console.log('═'.repeat(100));
+    }
 
     // Enhanced logging for Google API errors
     const isGoogleError = isGoogleApiError || (message && (

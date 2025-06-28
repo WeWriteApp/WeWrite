@@ -12,6 +12,8 @@ import { useAuth } from "../../providers/AuthProvider";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { listenToUserSubscription } from "../../firebase/subscription";
 import { getSubscriptionButtonText, getSubscriptionNavigationPath, isActiveSubscription } from "../../utils/subscriptionStatus";
+import { TokenService } from "../../services/tokenService";
+import { TokenBalance } from "../../types/database";
 
 export default function Header() {
   const router = useRouter();
@@ -22,10 +24,33 @@ export default function Header() {
   const [headerHeight, setHeaderHeight] = React.useState(80); // Start at 80px (h-20)
 
   const [subscription, setSubscription] = React.useState(null);
+  const [tokenBalance, setTokenBalance] = React.useState<TokenBalance | null>(null);
   const headerRef = React.useRef<HTMLDivElement>(null);
 
   // Check if payments feature is enabled
   const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+
+  // Helper function to render token allocation display
+  const renderTokenAllocationDisplay = () => {
+    if (!tokenBalance) return null;
+
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-1 bg-primary hover:bg-primary/90 text-white border-0"
+        onClick={() => router.push('/settings/subscription/manage')}
+        title={`${tokenBalance.allocatedTokens} tokens allocated out of ${tokenBalance.totalTokens} total monthly tokens`}
+      >
+        <DollarSign className="h-4 w-4 text-white" />
+        <span>
+          {tokenBalance.allocatedTokens}/{tokenBalance.totalTokens}
+        </span>
+      </Button>
+    );
+  };
+
+
 
   // Calculate header positioning width - only respond to persistent expanded state, not hover
   // Hover state should overlay without affecting header positioning
@@ -57,6 +82,41 @@ export default function Header() {
       if (unsubscribe) unsubscribe();
     };
   }, [user, isPaymentsEnabled]);
+
+  // Listen to user token balance changes
+  React.useEffect(() => {
+    if (!user || !isPaymentsEnabled) {
+      setTokenBalance(null);
+      return;
+    }
+
+    // Only listen to token balance if user has an active subscription
+    if (subscription && isActiveSubscription(subscription.status, subscription.cancelAtPeriodEnd, subscription.currentPeriodEnd)) {
+      const unsubscribe = TokenService.listenToTokenBalance(user.uid, (balance) => {
+        setTokenBalance(balance);
+
+        // If no token balance exists for an active subscription, try to initialize it
+        if (!balance && subscription.amount) {
+          fetch('/api/tokens/balance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'initialize',
+              subscriptionAmount: subscription.amount
+            })
+          }).catch(error => {
+            console.error('Failed to initialize token balance:', error);
+          });
+        }
+      });
+
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
+    } else {
+      setTokenBalance(null);
+    }
+  }, [user, isPaymentsEnabled, subscription]);
 
   // Calculate and update header height
   React.useEffect(() => {
@@ -128,6 +188,8 @@ export default function Header() {
           right: '0px',
           width: '100%' // Always full width like the editor
         }}
+        data-component="main-header"
+        data-testid="main-header"
       >
         <div
           className="relative header-border-transition border-visible bg-background transition-all duration-300 ease-in-out"
@@ -159,18 +221,39 @@ export default function Header() {
                 </Link>
               </div>
 
-              {/* Support Us / Manage Subscription button (right side) */}
+              {/* Support Us / Manage Subscription / Token Allocation button (right side) */}
               <div className="flex-1 flex justify-end">
                 {isPaymentsEnabled ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1 bg-primary hover:bg-primary/90 text-white border-0"
-                    onClick={() => router.push(getSubscriptionNavigationPath(subscription?.status))}
-                  >
-                    <DollarSign className="h-4 w-4 text-white" />
-                    <span className="hidden sm:inline">Set up subscription</span>
-                  </Button>
+                  // Show token allocation display for active subscriptions with token balance
+                  subscription && isActiveSubscription(subscription.status, subscription.cancelAtPeriodEnd, subscription.currentPeriodEnd) ? (
+                    tokenBalance ? (
+                      renderTokenAllocationDisplay()
+                    ) : (
+                      // Show loading state for active subscription without token balance yet
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 bg-primary hover:bg-primary/90 text-white border-0"
+                        disabled
+                      >
+                        <DollarSign className="h-4 w-4 text-white animate-spin" />
+                        <span>Loading...</span>
+                      </Button>
+                    )
+                  ) : (
+                    // Show subscription setup/management button for inactive or no subscriptions
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1 bg-primary hover:bg-primary/90 text-white border-0"
+                      onClick={() => router.push(getSubscriptionNavigationPath(subscription?.status))}
+                    >
+                      <DollarSign className="h-4 w-4 text-white" />
+                      <span>
+                        {getSubscriptionButtonText(subscription?.status, subscription?.cancelAtPeriodEnd, subscription?.currentPeriodEnd)}
+                      </span>
+                    </Button>
+                  )
                 ) : (
                   <Button
                     variant="outline"
@@ -179,7 +262,7 @@ export default function Header() {
                     onClick={() => openExternalLink('https://opencollective.com/wewrite-app', 'Header Support Button')}
                   >
                     <Heart className="h-4 w-4 text-white fill-white" />
-                    <span className="hidden sm:inline">Support Us</span>
+                    <span>Support Us</span>
                   </Button>
                 )}
               </div>

@@ -43,29 +43,73 @@ export function getFirebaseAdmin(): typeof admin | null {
       // For development environment, use a service account or default credentials
       if (process.env.NODE_ENV === 'development') {
         try {
-          const serviceAccount: CustomServiceAccount = {
-            type: 'service_account',
-            project_id: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-ccd82',
-            private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID || 'dev-key-id',
-            private_key: process.env.FIREBASE_PRIVATE_KEY ?
-              process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') :
-              'dummy-key',
-            client_email: process.env.FIREBASE_CLIENT_EMAIL || 'dummy@example.com',
-            client_id: process.env.FIREBASE_CLIENT_ID || 'dummy-client-id',
-            auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-            token_uri: 'https://oauth2.googleapis.com/token',
-            auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-            client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL || 'https://www.googleapis.com/robot/v1/metadata/x509/dummy'
-          };
+          // Try to use the same service account JSON parsing logic as production
+          if (process.env.GOOGLE_CLOUD_KEY_JSON || process.env.LOGGING_CLOUD_KEY_JSON) {
+            let jsonString = process.env.GOOGLE_CLOUD_KEY_JSON || process.env.LOGGING_CLOUD_KEY_JSON;
+            let keySource = process.env.GOOGLE_CLOUD_KEY_JSON ? 'GOOGLE_CLOUD_KEY_JSON' : 'LOGGING_CLOUD_KEY_JSON';
 
-          admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount as ServiceAccount),
-            databaseURL: process.env.FIREBASE_DATABASE_URL || process.env.NEXT_PUBLIC_FIREBASE_DB_URL || "https://wewrite-ccd82-default-rtdb.firebaseio.com"
-          });
+            console.log(`[Development] Attempting to use ${keySource} for Firebase Admin`);
+
+            // Handle different service account formats
+            if (keySource === 'LOGGING_CLOUD_KEY_JSON') {
+              // Remove actual newline characters that break JSON parsing
+              jsonString = jsonString.replace(/\n/g, '');
+              // Also remove carriage returns if present
+              jsonString = jsonString.replace(/\r/g, '');
+            }
+
+            // Check if the string is base64 encoded
+            if (!jsonString.includes(' ') && !jsonString.startsWith('{')) {
+              try {
+                jsonString = Buffer.from(jsonString, 'base64').toString('utf-8');
+                console.log(`[Development] Decoded base64-encoded ${keySource}`);
+              } catch (decodeError) {
+                console.warn(`[Development] Failed to decode ${keySource} as base64, using original string:`, decodeError.message);
+              }
+            }
+
+            const serviceAccount = JSON.parse(jsonString);
+
+            // Validate that the service account has the required fields
+            if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
+              throw new Error(`Invalid service account in ${keySource}: missing required fields`);
+            }
+
+            admin.initializeApp({
+              credential: admin.credential.cert(serviceAccount as ServiceAccount),
+              databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DB_URL || "https://wewrite-ccd82-default-rtdb.firebaseio.com"
+            });
+
+            console.log(`[Development] Firebase Admin initialized successfully with ${keySource}: ${serviceAccount.client_email}`);
+          } else {
+            // Fallback to individual environment variables
+            const serviceAccount: CustomServiceAccount = {
+              type: 'service_account',
+              project_id: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PID || 'wewrite-ccd82',
+              private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID || 'dev-key-id',
+              private_key: process.env.FIREBASE_PRIVATE_KEY ?
+                process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') :
+                'dummy-key',
+              client_email: process.env.FIREBASE_CLIENT_EMAIL || 'dummy@example.com',
+              client_id: process.env.FIREBASE_CLIENT_ID || 'dummy-client-id',
+              auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+              token_uri: 'https://oauth2.googleapis.com/token',
+              auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
+              client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL || 'https://www.googleapis.com/robot/v1/metadata/x509/dummy'
+            };
+
+            admin.initializeApp({
+              credential: admin.credential.cert(serviceAccount as ServiceAccount),
+              databaseURL: process.env.FIREBASE_DATABASE_URL || process.env.NEXT_PUBLIC_FIREBASE_DB_URL || "https://wewrite-ccd82-default-rtdb.firebaseio.com"
+            });
+
+            console.log('[Development] Firebase Admin initialized with individual environment variables');
+          }
         } catch (e: any) {
-          console.warn('Using fallback Firebase Admin initialization for development:', e.message);
+          console.error('[Development] Error initializing Firebase Admin with service account:', e.message);
+          console.warn('[Development] Using fallback Firebase Admin initialization without credentials');
           admin.initializeApp({
-            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'wewrite-ccd82'
+            projectId: process.env.NEXT_PUBLIC_FIREBASE_PID || 'wewrite-ccd82'
           });
         }
       } else {

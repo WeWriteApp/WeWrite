@@ -138,12 +138,12 @@ const SearchResults = ({
         const isFilteringByUser = !!userId;
         const encodedSearch = encodeURIComponent(searchTerm.trim());
 
-        // CRITICAL FIX: Use optimized search API for better performance
+        // Use unified search API for better performance and consistency
         let queryUrl;
         if (isFilteringByUser) {
-          queryUrl = `/api/search-optimized?userId=${selectedUserId}&searchTerm=${encodedSearch}&filterByUserId=${userId}&groupIds=${groupIds}&titleOnly=false&maxResults=50`;
+          queryUrl = `/api/search-unified?userId=${selectedUserId}&searchTerm=${encodedSearch}&filterByUserId=${userId}&context=main&titleOnly=false&maxResults=50&includeContent=true&includeUsers=false`;
         } else {
-          queryUrl = `/api/search-optimized?userId=${selectedUserId}&searchTerm=${encodedSearch}&groupIds=${groupIds}&titleOnly=false&maxResults=50`;
+          queryUrl = `/api/search-unified?userId=${selectedUserId}&searchTerm=${encodedSearch}&context=main&titleOnly=false&maxResults=50&includeContent=true&includeUsers=false`;
         }
 
         const userSearchUrl = isFilteringByUser ? null : `/api/search-users?searchTerm=${encodedSearch}`;
@@ -240,26 +240,21 @@ const SearchResults = ({
       if (item.type === 'user') {
         router.push(`/user/${item.id}`);
       } else {
-        // For page items, use click-to-edit functionality
+        // For page items, use optimized navigation
         try {
-          // Check if we have cached page data
-          let pageData = pageDataCache.get(item.id);
+          // Use the search result data directly instead of fetching again
+          const pageData = {
+            id: item.id,
+            userId: item.userId,
+            isPublic: item.isPublic,
+            title: item.title,
+            username: item.username
+          };
 
-          if (!pageData) {
-            // Fetch page data for permission checking
-            const pageRef = doc(db, 'pages', item.id);
-            const pageDoc = await getDoc(pageRef);
-            if (pageDoc.exists()) {
-              pageData = { id: item.id, ...pageDoc.data() };
-              // Cache the page data
-              setPageDataCache(prev => new Map(prev).set(item.id, pageData));
-            }
-          }
-
-          // Use click-to-edit navigation
+          // Use click-to-edit navigation with search result data
           navigateToPage(item.id, user, pageData, user?.groups, router);
         } catch (error) {
-          console.error('Error fetching page data for navigation:', error);
+          console.error('Error with page navigation:', error);
           // Fallback to regular navigation
           router.push(`/${item.id}`);
         }

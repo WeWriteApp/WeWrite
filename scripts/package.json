@@ -1,12 +1,23 @@
 {
-  "name": "wewrite-cleanup-scripts",
+  "name": "wewrite-database-scripts",
   "version": "1.0.0",
-  "description": "Scripts to clean up mock data in WeWrite",
+  "description": "Database maintenance and backfill scripts for WeWrite",
   "type": "module",
   "scripts": {
-    "cleanup": "node cleanup-mock-data-client.js"
+    "cleanup": "node cleanup-mock-data-client.js",
+    "backfill": "node comprehensive-backfill.js",
+    "backfill:dry-run": "node comprehensive-backfill.js --dry-run",
+    "backfill:verbose": "node comprehensive-backfill.js --verbose",
+    "backfill:analytics": "node comprehensive-backfill.js --analytics-only",
+    "backfill:activity": "node comprehensive-backfill.js --activity-only",
+    "backfill:notifications": "node comprehensive-backfill.js --notifications-only",
+    "backfill:integrity": "node comprehensive-backfill.js --integrity-only"
   },
   "dependencies": {
-    "firebase": "^10.7.0"
+    "firebase": "^10.7.1",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

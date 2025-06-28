@@ -80,38 +80,13 @@ export default function TerminalConsole() {
       sendToTerminal('debug', formatArgs(args));
     };
 
-    // Connect to WebSocket server (disabled for performance)
+    // DEPRECATED: WebSocket console streaming - replaced with HTTP-based ConsoleErrorLogger
     function connect() {
-      // DISABLED: WebSocket console streaming causes performance issues
-      // Only enable in development when explicitly needed
-      if (process.env.NODE_ENV === 'development' && process.env.ENABLE_CONSOLE_STREAMING === 'true') {
-        try {
-          ws = new WebSocket('ws://localhost:3001');
-
-          ws.onopen = () => {
-            isConnected = true;
-            sendToTerminal('info', '🔗 Browser console connected to terminal');
-          };
-
-          ws.onclose = () => {
-            isConnected = false;
-            // Attempt to reconnect after 2 seconds
-            if (!reconnectTimeout) {
-              reconnectTimeout = setTimeout(() => {
-                reconnectTimeout = null;
-                connect();
-              }, 2000);
-            }
-          };
-
-          ws.onerror = () => {
-            isConnected = false;
-          };
-
-        } catch (error) {
-          // WebSocket not available, continue without terminal streaming
-        }
-      }
+      // COMPLETELY DISABLED: This WebSocket implementation is deprecated
+      // We now use the HTTP-based ConsoleErrorLogger.tsx for terminal logging
+      // which is more reliable and doesn't cause connection errors
+      console.log('TerminalConsole: WebSocket streaming disabled - using HTTP-based logging instead');
+      return;
     }
 
     // Intercept unhandled errors
@@ -127,8 +102,8 @@ export default function TerminalConsole() {
     window.addEventListener('error', handleError);
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
 
-    // Initial connection
-    connect();
+    // DEPRECATED: Initial connection disabled
+    // WebSocket console streaming has been replaced with HTTP-based ConsoleErrorLogger
 
     // Cleanup
     return () => {

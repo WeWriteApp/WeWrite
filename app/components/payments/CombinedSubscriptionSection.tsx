@@ -7,6 +7,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useFeatureFlag } from '../../utils/feature-flags';
+// Removed enhanced subscription error logging imports
 import { 
   CreditCard, 
   Plus, 
@@ -35,6 +36,8 @@ interface Subscription {
   currentPeriodEnd: any;
   pledgedAmount?: number;
   stripeSubscriptionId?: string;
+  cancelAtPeriodEnd?: boolean;
+  cancelledAt?: string;
 }
 
 interface PaymentMethod {
@@ -56,9 +59,11 @@ interface Pledge {
   authorDisplayName?: string;
 }
 
-export function CombinedSubscriptionSection() {
+function CombinedSubscriptionSectionInner() {
   const { user } = useAuth();
   const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+
+  // Removed enhanced error tracking
 
   // Always declare all hooks - this prevents the hooks order from changing
   // Subscription state
@@ -79,29 +84,8 @@ export function CombinedSubscriptionSection() {
   // Payment method setup state
   const [showPaymentMethodSetup, setShowPaymentMethodSetup] = useState(false);
 
-  // CRITICAL: All hooks must be called before any early returns
-  useEffect(() => {
-    if (user?.uid && isPaymentsEnabled) {
-      const unsubscribeSubscription = setupSubscriptionListener();
-      fetchPaymentMethods();
-      fetchPledges();
-
-      // Cleanup function
-      return () => {
-        if (unsubscribeSubscription) {
-          unsubscribeSubscription();
-        }
-      };
-    }
-  }, [user, isPaymentsEnabled]);
-
-  // If payments feature flag is disabled, don't render anything
-  // But do this AFTER all hooks are declared
-  if (!isPaymentsEnabled) {
-    return null;
-  }
-
-  const setupSubscriptionListener = () => {
+  // CRITICAL: Function declarations are hoisted and avoid temporal dead zone issues
+  function setupSubscriptionListener() {
     try {
       setSubscriptionLoading(true);
       setSubscriptionError(null);
@@ -127,10 +111,11 @@ export function CombinedSubscriptionSection() {
       console.error('Error setting up subscription listener:', error);
       setSubscriptionError('Failed to load subscription');
       setSubscriptionLoading(false);
+      return () => {}; // Return empty cleanup function
     }
-  };
+  }
 
-  const fetchPaymentMethods = async () => {
+  async function fetchPaymentMethods() {
     try {
       setPaymentMethodsLoading(true);
       setPaymentMethodsError(null);
@@ -150,9 +135,9 @@ export function CombinedSubscriptionSection() {
     } finally {
       setPaymentMethodsLoading(false);
     }
-  };
+  }
 
-  const fetchPledges = async () => {
+  async function fetchPledges() {
     try {
       setPledgesLoading(true);
       setPledgesError(null);
@@ -207,13 +192,37 @@ export function CombinedSubscriptionSection() {
       setPledgesError('Failed to load pledges');
       setPledgesLoading(false);
     }
-  };
+  }
 
-  const handlePaymentMethodAdded = () => {
+  // CRITICAL: All hooks must be called before any early returns
+  useEffect(() => {
+    return trackEffect('subscriptionAndPaymentSetup', () => {
+      if (user?.uid && isPaymentsEnabled) {
+        const unsubscribeSubscription = setupSubscriptionListener();
+        fetchPaymentMethods();
+        fetchPledges();
+
+        // Cleanup function
+        return () => {
+          if (unsubscribeSubscription) {
+            unsubscribeSubscription();
+          }
+        };
+      }
+    });
+  }, [user, isPaymentsEnabled, trackEffect]);
+
+  // If payments feature flag is disabled, don't render anything
+  // But do this AFTER all hooks are declared
+  if (!isPaymentsEnabled) {
+    return null;
+  }
+
+  function handlePaymentMethodAdded() {
     setShowPaymentMethodSetup(false);
     // Refresh payment methods
     fetchPaymentMethods();
-  };
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -222,8 +231,12 @@ export function CombinedSubscriptionSection() {
     }).format(amount);
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusInfo = getSubscriptionStatusInfo(status);
+  const getStatusBadge = (subscription: Subscription) => {
+    const statusInfo = getSubscriptionStatusInfo(
+      subscription.status,
+      subscription.cancelAtPeriodEnd,
+      subscription.currentPeriodEnd
+    );
 
     return (
       <Badge variant={statusInfo.variant}>
@@ -240,7 +253,6 @@ export function CombinedSubscriptionSection() {
 
   const primaryMethod = paymentMethods.find(method => method.isPrimary);
   const totalPledged = pledges.reduce((sum, pledge) => sum + pledge.amount, 0);
-  const availableAmount = subscription ? Math.max(0, subscription.amount - (subscription.pledgedAmount || 0)) : 0;
 
   return (
     <Card className="wewrite-card">
@@ -290,24 +302,26 @@ export function CombinedSubscriptionSection() {
             ) : (
               <div className="space-y-4">
                 {/* Failed Payment Recovery - Show first if payment failed */}
-                <FailedPaymentRecovery
-                  subscription={subscription}
-                  onPaymentSuccess={() => {
-                    // Refresh subscription data after successful payment
-                    setupSubscriptionListener();
-                  }}
-                />
+                {subscription && (
+                  <FailedPaymentRecovery
+                    subscription={subscription}
+                    onPaymentSuccess={() => {
+                      // Refresh subscription data after successful payment
+                      setupSubscriptionListener();
+                    }}
+                  />
+                )}
 
                 {/* Subscription Status */}
                 <div className="flex items-center justify-between p-4 border-theme-strong rounded-lg">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-medium">Monthly Subscription</h4>
-                      {getStatusBadge(subscription.status)}
+                      {subscription?.status && getStatusBadge(subscription)}
                     </div>
-                    <p className="text-2xl font-bold">{formatCurrency(subscription.amount)}</p>
+                    <p className="text-2xl font-bold">{formatCurrency(subscription?.amount || 0)}</p>
                     <p className="text-sm text-muted-foreground">
-                      {formatCurrency(subscription.pledgedAmount || 0)} pledged • {formatCurrency(availableAmount)} available
+                      {formatCurrency(subscription?.pledgedAmount || 0)} pledged • {formatCurrency(subscription && subscription.amount !== undefined ? Math.max(0, subscription.amount - (subscription.pledgedAmount || 0)) : 0)} available
                     </p>
                   </div>
                   <Button variant="outline" asChild>
@@ -572,4 +586,9 @@ export function CombinedSubscriptionSection() {
       </CardContent>
     </Card>
   );
+}
+
+// Export the component directly (removed error boundary wrapper)
+export function CombinedSubscriptionSection() {
+  return <CombinedSubscriptionSectionInner />;
 }

@@ -93,7 +93,7 @@ export default function PWABanner() {
             className="h-9 text-xs text-foreground"
             onClick={handleDontRemind}
           >
-            Don't remind me
+            Never
           </Button>
           <Button
             variant="outline"
@@ -101,7 +101,7 @@ export default function PWABanner() {
             className="h-9 text-xs text-foreground"
             onClick={handleMaybeLater}
           >
-            Maybe later
+            Later
           </Button>
           <Button
             variant="default"
@@ -109,7 +109,7 @@ export default function PWABanner() {
             className="h-9 text-xs"
             onClick={handleShowInstructions}
           >
-            Show me how
+            Yes!
           </Button>
         </div>
       </div>

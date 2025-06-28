@@ -27,6 +27,7 @@ import {
 
 import app from "./config";
 import { db } from "./database";
+import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from "../utils/environmentConfig";
 
 // Type definitions for subscription operations
 interface SubscriptionData {
@@ -55,7 +56,8 @@ interface SubscriptionOptions {
 // Create a user subscription
 export const createSubscription = async (userId: string, subscriptionData: Partial<SubscriptionData>): Promise<boolean> => {
   try {
-    const subscriptionRef = doc(db, "users", userId, "subscription", "current");
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionRef = doc(db, parentPath, subCollectionName, "current");
     await setDoc(subscriptionRef, {
       ...subscriptionData,
       status: "inactive", // inactive until payment is processed
@@ -72,7 +74,8 @@ export const createSubscription = async (userId: string, subscriptionData: Parti
 // Update a user's subscription
 export const updateSubscription = async (userId: string, subscriptionData: Partial<SubscriptionData>): Promise<boolean> => {
   try {
-    const subscriptionRef = doc(db, "users", userId, "subscription", "current");
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionRef = doc(db, parentPath, subCollectionName, "current");
     await setDoc(subscriptionRef, {
       ...subscriptionData,
       updatedAt: serverTimestamp(),
@@ -98,7 +101,8 @@ export const getUserSubscription = async (userId: string, options: SubscriptionO
     }
 
     // Check the primary location (user path)
-    const subscriptionRef = doc(db, "users", userId, "subscription", "current");
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionRef = doc(db, parentPath, subCollectionName, "current");
     const subscriptionSnap = await getDoc(subscriptionRef);
 
     // If no subscription found, return null
@@ -227,7 +231,8 @@ export const listenToUserSubscription = (userId: string, callback: (data: Subscr
   }
 
   // Set up listener for the user path only
-  const userSubRef = doc(db, "users", userId, "subscription", "current");
+  const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+  const userSubRef = doc(db, parentPath, subCollectionName, "current");
 
   // Set up listener for the user path
   const unsubscribe = onSnapshot(userSubRef, async (doc) => {

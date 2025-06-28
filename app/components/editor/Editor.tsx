@@ -20,6 +20,7 @@ import {
   extractLinkDataFromElement,
   canUserEditPage
 } from '../../utils/linkModalUtils';
+import { handlePaste, insertProcessedContent } from "../../utils/pasteHandler";
 
 // Types
 interface EditorProps {
@@ -167,7 +168,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   const convertSlateToHTML = useCallback((slateContent: any): string => {
     try {
       if (!slateContent || !Array.isArray(slateContent)) {
-        return "<div>&nbsp;</div>";
+        return "<div><br></div>";
       }
 
       let result = "";
@@ -182,10 +183,8 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
             try {
               if (child.text !== undefined) {
                 if (child.text === "") {
-                  if (!hasContent) {
-                    result += "&nbsp;";
-                    hasContent = true;
-                  }
+                  // Don't add &nbsp; for empty text - let the div remain empty
+                  // This prevents the browser from converting &nbsp; to a space when user starts typing
                 } else {
                   result += child.text.replace(/\n/g, '<br>');
                   hasContent = true;
@@ -220,17 +219,17 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
           }
 
           if (!hasContent) {
-            result += "&nbsp;";
+            result += "<br>";
           }
 
           result += "</div>";
         }
       }
 
-      return result || "<div>&nbsp;</div>";
+      return result || "<div><br></div>";
     } catch (error) {
       console.error("Editor: Error in Slate to HTML conversion:", error);
-      return "<div>&nbsp;</div>";
+      return "<div><br></div>";
     }
   }, [pillStyleClasses]);
 
@@ -558,12 +557,12 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       }
 
       // CRITICAL FIX: Use proper empty paragraph structure for contentEditable
-      // Empty divs with just <br> don't accept input properly, especially as the last element
-      let htmlContent = "<div>&nbsp;</div>";
+      // Use <br> instead of &nbsp; to prevent leading spaces when user starts typing
+      let htmlContent = "<div><br></div>";
 
       if (typeof initialContent === 'string' && initialContent.trim()) {
         const lines = initialContent.split('\n');
-        htmlContent = lines.map(line => `<div>${line || '&nbsp;'}</div>`).join('');
+        htmlContent = lines.map(line => `<div>${line || '<br>'}</div>`).join('');
       } else if (initialContent && Array.isArray(initialContent) && initialContent.length > 0) {
         const hasContent = initialContent.some(node =>
           node.children && node.children.some(child => child.text && child.text.trim())
@@ -589,8 +588,8 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       // More robust error recovery
       requestAnimationFrame(() => {
         if (editorRef.current && editorRef.current.isConnected) {
-          editorRef.current.innerHTML = "<div>&nbsp;</div>";
-          lastContentRef.current = "<div>&nbsp;</div>";
+          editorRef.current.innerHTML = "<div><br></div>";
+          lastContentRef.current = "<div><br></div>";
         }
       });
     }
@@ -772,7 +771,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       // CRITICAL FIX: Ensure editor always has at least one paragraph with proper structure
       if (editorRef.current.children.length === 0 ||
           (editorRef.current.children.length === 1 && editorRef.current.textContent?.trim() === '')) {
-        editorRef.current.innerHTML = '<div>&nbsp;</div>';
+        editorRef.current.innerHTML = '<div><br></div>';
       }
 
       const htmlContent = editorRef.current.innerHTML;
@@ -843,7 +842,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       console.error("Editor: Error in handleContentChange:", error);
       // Ensure editor has valid content even on error
       if (editorRef.current) {
-        editorRef.current.innerHTML = '<div>&nbsp;</div>';
+        editorRef.current.innerHTML = '<div><br></div>';
       }
     }
   }, [isClient, onChange, onEmptyLinesChange, convertHTMLToSlate, addParagraphNumbers]);
@@ -972,6 +971,26 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     // Let the browser handle delete operations naturally
     // This prevents conflicts with React's DOM management
   }, []);
+
+  // Handle paste events with formatting removal
+  const handlePasteEvent = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    if (readOnly) return;
+
+    const result = handlePaste(e.nativeEvent);
+
+    if (result.preventDefault && result.content) {
+      e.preventDefault();
+
+      // Insert the processed content
+      insertProcessedContent(result.content);
+
+      // Trigger content change to update the editor state
+      setTimeout(() => {
+        handleContentChange();
+      }, 0);
+    }
+    // If preventDefault is false, let the browser handle the paste normally
+  }, [readOnly, handleContentChange]);
 
   // SIMPLIFIED: Let browser handle keyboard navigation naturally
   const handleKeyboardNavigation = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -1929,6 +1948,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                 onMouseUp={readOnly ? undefined : undefined}
                 onKeyUp={readOnly ? undefined : undefined}
                 onSelect={readOnly ? undefined : undefined}
+                onPaste={readOnly ? undefined : handlePasteEvent}
                 onClick={readOnly ? (canEdit ? handleViewModeClick : undefined) : (e) => {
                   // SIMPLIFIED: Only handle link clicks, let browser handle cursor positioning naturally
                   const target = e.target as HTMLElement;

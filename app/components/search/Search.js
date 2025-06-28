@@ -109,58 +109,35 @@ const Search = () => {
           groupIds = Object.keys(user.groups);
         }
 
-        // CRITICAL FIX: Use optimized search API for better performance
-        const pagesUrl = `/api/search-optimized?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&groupIds=${groupIds}&titleOnly=false&maxResults=50`;
-        const usersUrl = `/api/search-users?searchTerm=${encodeURIComponent(searchTerm)}`;
+        // Use unified search API for comprehensive results
+        const searchUrl = `/api/search-unified?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&context=main&maxResults=50&includeContent=true&includeUsers=true`;
 
-        console.log('Making optimized API requests to:', { pagesUrl, usersUrl });
+        console.log('Making unified API request to:', searchUrl);
 
-        // Use Promise.allSettled to handle partial failures
-        const [pagesResponse, usersResponse] = await Promise.allSettled([
-          fetch(pagesUrl),
-          fetch(usersUrl)
-        ]);
+        // Use unified search API
+        const response = await fetch(searchUrl);
 
         // Initialize empty arrays for results
         let pages = [];
         let users = [];
 
-        // Process pages results if successful
-        if (pagesResponse.status === 'fulfilled' && pagesResponse.value.ok) {
-          const data = await pagesResponse.value.json();
-          console.log('Pages API response:', data);
+        // Process unified search response
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Unified search API response:', data);
 
           if (data.pages && Array.isArray(data.pages)) {
             pages = data.pages;
           }
 
-          // Also get users from the pages API if available
           if (data.users && Array.isArray(data.users)) {
-            users = [...users, ...data.users];
+            users = data.users;
           }
         } else {
-          console.error('Pages API request failed:',
-            pagesResponse.status === 'rejected' ? pagesResponse.reason :
-            `HTTP ${pagesResponse.value.status}`);
+          console.error('Unified search API request failed:', response.status);
         }
 
-        // Process users results if successful
-        if (usersResponse.status === 'fulfilled' && usersResponse.value.ok) {
-          const data = await usersResponse.value.json();
-          console.log('Users API response:', data);
-
-          if (data.users && Array.isArray(data.users)) {
-            // Combine with any users we already have, avoiding duplicates
-            const existingUserIds = new Set(users.map(u => u.id));
-            const newUsers = data.users.filter(u => !existingUserIds.has(u.id));
-            users = [...users, ...newUsers];
-            console.log('Combined users after API call:', users);
-          }
-        } else {
-          console.error('Users API request failed:',
-            usersResponse.status === 'rejected' ? usersResponse.reason :
-            `HTTP ${usersResponse.value.status}`);
-        }
+        // No additional processing needed - unified API returns everything
 
         // Combine all pages and format them for ReactSearchAutocomplete
         let combinedPages = [];

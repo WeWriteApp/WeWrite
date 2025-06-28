@@ -165,6 +165,34 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
           // Don't fail page creation if counter update fails
         }
 
+        // Update backlinks index for the new page
+        try {
+          const { updateBacklinksIndex } = await import('./backlinks');
+
+          // Parse content to extract links
+          let contentNodes = [];
+          if (versionData.content && typeof versionData.content === 'string') {
+            try {
+              contentNodes = JSON.parse(versionData.content);
+            } catch (parseError) {
+              console.warn('Could not parse content for backlinks indexing:', parseError);
+            }
+          }
+
+          await updateBacklinksIndex(
+            pageRef.id,
+            pageData.title,
+            pageData.username,
+            contentNodes,
+            pageData.isPublic,
+            pageData.lastModified
+          );
+
+          console.log('✅ Backlinks index updated for new page');
+        } catch (backlinkError) {
+          console.error('⚠️ Error updating backlinks index (non-fatal):', backlinkError);
+        }
+
         return pageRef.id;
       } catch (versionError) {
         console.error("Error creating version:", versionError);
@@ -209,12 +237,15 @@ export const getPageById = async (pageId: string, userId: string | null = null):
         }
 
       // Check cache first (only for public pages or if user is the owner)
-      const cacheKey = generateCacheKey('page', pageId, userId || 'public');
-      const cachedData = getCacheItem(cacheKey);
+      // Skip caching on server-side (e.g., during generateMetadata)
+      if (typeof window !== 'undefined') {
+        const cacheKey = generateCacheKey('page', pageId, userId || 'public');
+        const cachedData = getCacheItem(cacheKey);
 
-      if (cachedData) {
-        console.log(`Using cached data for page ${pageId}`);
-        return cachedData;
+        if (cachedData) {
+          console.log(`Using cached data for page ${pageId}`);
+          return cachedData;
+        }
       }
 
       // Get the page document with only the fields we need
@@ -272,7 +303,9 @@ export const getPageById = async (pageId: string, userId: string | null = null):
             const result = { pageData, versionData, links };
 
             // Cache the result (only for public pages or if user is the owner)
-            if (pageData.isPublic || (userId && pageData.userId === userId)) {
+            // Skip caching on server-side
+            if (typeof window !== 'undefined' && (pageData.isPublic || (userId && pageData.userId === userId))) {
+              const cacheKey = generateCacheKey('page', pageId, userId || 'public');
               setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
             }
 
@@ -289,7 +322,7 @@ export const getPageById = async (pageId: string, userId: string | null = null):
 
         // Validate that we have a current version ID
         if (!currentVersionId) {
-          console.error(`Page ${pageId} has no currentVersion ID`);
+          console.warn(`Page ${pageId} has no currentVersion ID, attempting recovery`);
 
           // Try to recover by creating a version if the page has content
           if (pageData.content) {
@@ -341,7 +374,9 @@ export const getPageById = async (pageId: string, userId: string | null = null):
           const result = { pageData, versionData, links };
 
           // Cache the result (only for public pages or if user is the owner)
-          if (pageData.isPublic || (userId && pageData.userId === userId)) {
+          // Skip caching on server-side
+          if (typeof window !== 'undefined' && (pageData.isPublic || (userId && pageData.userId === userId))) {
+            const cacheKey = generateCacheKey('page', pageId, userId || 'public');
             setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
           }
 
@@ -455,7 +490,7 @@ export const listenToPageById = (
 
         // Validate that we have a current version ID
         if (!currentVersionId) {
-          console.error(`Page ${pageId} has no currentVersion ID`);
+          console.warn(`Page ${pageId} has no currentVersion ID, attempting recovery`);
 
           // Try to recover by creating a version if the page has content
           if (pageData.content) {

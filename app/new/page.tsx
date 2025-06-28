@@ -21,7 +21,7 @@ import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../components/utils/UnsavedChangesDialog";
 import { PageProvider } from "../contexts/PageContext";
 
-import TokenAllocationBar from "../components/payments/TokenAllocationBar";
+import PledgeBar from "../components/payments/PledgeBar";
 import { shouldUseQueue, addToQueue, checkOperationAllowed } from "../utils/syncQueue";
 import { useSyncQueue } from "../contexts/SyncQueueContext";
 import SlideUpPage from "../components/ui/slide-up-page";
@@ -806,7 +806,7 @@ export default function NewPage() {
           </div>
         </div>
         {!isEditing && (
-          <TokenAllocationBar
+          <PledgeBar
             pageId="new-page"
             pageTitle="New Page"
             authorId={user?.uid}

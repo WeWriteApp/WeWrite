@@ -111,6 +111,8 @@ export async function POST(request: NextRequest) {
 
     const stripeSubscription = activeSubscription || subscriptions.data[0];
     console.log(`[SYNC STATUS] Using subscription ${stripeSubscription.id}, status: ${stripeSubscription.status}`);
+    console.log(`[SYNC STATUS] Subscription cancel_at_period_end: ${stripeSubscription.cancel_at_period_end}`);
+    console.log(`[SYNC STATUS] Subscription current_period_end: ${new Date(stripeSubscription.current_period_end * 1000).toISOString()}`);
 
     // Get or create subscription record
     const subscriptionRef = db.collection('users').doc(userId).collection('subscription').doc('current');

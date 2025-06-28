@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui
 import { PillLink } from '../PillLink';
 import { Flame, Loader } from 'lucide-react';
 import { Sparkline } from '../ui/sparkline';
-import { getPageViewsLast24Hours, getTrendingPages } from '../../firebase/pageViews';
+// import { getTrendingPages } from '../../firebase/pageViews';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { getUsernameById } from '../../utils/userUtils';
@@ -29,15 +29,18 @@ export default function TrendingPagesSection({ limit = 3 }) {
       try {
         setLoading(true);
 
-        // Get trending pages for the last 24 hours
-        const pages = await getTrendingPages(limit);
+        // Get trending pages for the last 24 hours using API endpoint
+        const apiResponse = await fetch(`/api/trending?limit=${limit}`);
+        if (!apiResponse.ok) {
+          throw new Error(`API request failed: ${apiResponse.status}`);
+        }
+        const response = await apiResponse.json();
+        const pages = response.trendingPages || [];
 
-        // For each page, get the hourly view data for sparklines and username
-        const pagesWithSparklines = await Promise.all(
+        // For each page, get the username (hourly view data already included from trending API)
+        const pagesWithUsernames = await Promise.all(
           pages.map(async (page) => {
             try {
-              const viewData = await getPageViewsLast24Hours(page.id);
-
               // Get username if userId exists
               let username = "Anonymous";
               if (page.userId) {
@@ -50,21 +53,22 @@ export default function TrendingPagesSection({ limit = 3 }) {
 
               return {
                 ...page,
-                hourlyViews: viewData.hourly || Array(24).fill(0),
+                // Use hourlyViews from trending API if available, otherwise fallback to empty array
+                hourlyViews: page.hourlyViews || Array(24).fill(0),
                 username: username || "Anonymous"
               };
             } catch (err) {
-              console.error(`Error fetching view data for page ${page.id}:`, err);
+              console.error(`Error processing page ${page.id}:`, err);
               return {
                 ...page,
-                hourlyViews: Array(24).fill(0),
+                hourlyViews: page.hourlyViews || Array(24).fill(0),
                 username: page.username || "Anonymous"
               };
             }
           })
         );
 
-        setTrendingPages(pagesWithSparklines);
+        setTrendingPages(pagesWithUsernames);
       } catch (err) {
         console.error('Error fetching trending pages:', err);
         setError('Failed to load trending pages');

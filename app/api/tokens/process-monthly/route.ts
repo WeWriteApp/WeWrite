@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { TokenService } from '../../../services/tokenService';
+import { PendingTokenAllocationService } from '../../../services/pendingTokenAllocationService';
 import { getCurrentMonth, getPreviousMonth } from '../../../utils/subscriptionTiers';
 
 // This endpoint should be protected by API key or admin auth in production
@@ -26,8 +27,20 @@ export async function POST(request: NextRequest) {
     
     console.log(`Processing monthly token distribution for period: ${targetPeriod} (dry run: ${dryRun})`);
 
+    let finalizationResult = { processedCount: 0, totalTokens: 0 };
+
     if (!dryRun) {
-      // Process the monthly distribution
+      // Step 1: Finalize pending allocations from the previous month
+      console.log('Finalizing pending token allocations...');
+      finalizationResult = await PendingTokenAllocationService.finalizeMonthlyAllocations(targetPeriod);
+
+      if (!finalizationResult.success) {
+        return NextResponse.json({
+          error: `Failed to finalize allocations: ${finalizationResult.error}`
+        }, { status: 500 });
+      }
+
+      // Step 2: Process the monthly distribution (existing logic)
       await TokenService.processMonthlyDistribution(targetPeriod);
     }
 
@@ -40,12 +53,16 @@ export async function POST(request: NextRequest) {
       data: {
         period: targetPeriod,
         dryRun,
+        pendingAllocationsFinalized: finalizationResult.processedCount,
+        totalTokensFinalized: finalizationResult.totalTokens,
         totalTokensDistributed: currentDistribution?.totalTokensDistributed || 0,
         totalUsersParticipating: currentDistribution?.totalUsersParticipating || 0,
         wewriteTokens: currentDistribution?.wewriteTokens || 0,
         status: currentDistribution?.status || 'pending'
       },
-      message: `Monthly token distribution ${dryRun ? 'simulated' : 'completed'} for ${targetPeriod}`
+      message: dryRun ?
+        `Dry run completed for ${targetPeriod}` :
+        `Monthly processing completed: ${finalizationResult.processedCount} allocations finalized (${finalizationResult.totalTokens} tokens)`
     });
 
   } catch (error) {

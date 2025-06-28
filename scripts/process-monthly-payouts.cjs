@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * Monthly payout processing script
- * This script should be run on the 1st of each month via cron job
+ * Monthly processing script for Start-of-Month Model
+ *
+ * 1st of month (all processing happens together):
+ *   1. Finalize token allocations from previous month → send to writers
+ *   2. Process payouts for writers
+ *   3. Bill subscriptions for new month → users get new tokens immediately
+ *   4. Users can start allocating new tokens (no dead zone!)
  *
  * Usage:
  * node scripts/process-monthly-payouts.cjs [--dry-run] [--period=YYYY-MM]
@@ -26,9 +31,10 @@ const dryRun = args.includes('--dry-run');
 const periodArg = args.find(arg => arg.startsWith('--period='));
 const period = periodArg ? periodArg.split('=')[1] : null;
 
-console.log('🚀 Starting monthly payout processing...');
+console.log('🚀 Starting monthly processing (Start-of-Month Model)...');
 console.log(`📅 Period: ${period || 'auto (previous month)'}`);
 console.log(`🧪 Dry run: ${dryRun ? 'YES' : 'NO'}`);
+console.log('📋 Processing: All steps (allocations → payouts → billing)');
 console.log('');
 
 async function makeRequest(url, data) {
@@ -181,18 +187,28 @@ async function checkProcessingStatus() {
 // Main execution
 async function main() {
   try {
-    console.log('🚀 Starting monthly processing...');
+    console.log('🚀 Starting start-of-month processing...');
     console.log('');
 
-    // Process monthly token distribution first
+    // Step 1: Finalize token allocations from previous month
+    console.log('📋 STEP 1: Finalizing token allocations from previous month...');
     await processMonthlyTokens();
 
     console.log('');
     console.log('⏳ Waiting 2 seconds before processing payouts...');
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Process monthly payouts
+    // Step 2: Process payouts for writers
+    console.log('💰 STEP 2: Processing payouts for writers...');
     await processMonthlyPayouts();
+
+    console.log('');
+    console.log('⏳ Waiting 2 seconds before billing subscriptions...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Step 3: Bill subscriptions for new month (users get tokens immediately)
+    console.log('💳 STEP 3: Billing subscriptions for new month...');
+    await processNewSubscriptionBilling();
 
     // Wait a moment then check status
     console.log('');
@@ -202,7 +218,8 @@ async function main() {
     await checkProcessingStatus();
 
     console.log('');
-    console.log('🎉 Monthly processing completed!');
+    console.log('🎉 Start-of-month processing completed!');
+    console.log('💡 Users can now allocate their new tokens throughout the month.');
 
   } catch (error) {
     console.error('❌ Fatal error:', error.message);

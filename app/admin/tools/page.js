@@ -8,8 +8,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
 import { Loader, AlertCircle, CheckCircle2, RefreshCw, Bell, Flame, Calendar, DollarSign, ChevronLeft } from 'lucide-react';
 import { calculatePastStreaks } from '../../scripts/calculatePastStreaks';
-import { backfillNotifications } from '../../scripts/backfillNotifications';
-import { backfillActivityCalendar } from '../../scripts/backfillActivityCalendar';
+
+// Temporary stub functions for missing scripts
+const backfillNotifications = async () => {
+  console.warn('backfillNotifications not implemented yet');
+  return { success: false, error: 'Function not implemented' };
+};
+
+const backfillActivityCalendar = async () => {
+  console.warn('backfillActivityCalendar not implemented yet');
+  return { success: false, error: 'Function not implemented' };
+};
 import { useRouter } from 'next/navigation';
 import { useConfirmation } from '../../hooks/useConfirmation';
 import ConfirmationModal from '../../components/utils/ConfirmationModal';

@@ -7,49 +7,52 @@ import { getPageById } from "../firebase/database/pages";
 import { getDatabase, ref, get } from "firebase/database";
 import { app } from "../firebase/config";
 import ClientPage from '../pages/[id]/client-page.tsx';
-import { Loader } from '../components/utils/Loader';
+import { SmartLoader } from '../components/ui/smart-loader';
 import { ErrorDisplay } from '../components/ui/error-display';
 import { Button } from '../components/ui/button';
-import { SmartLoader } from '../components/ui/smart-loader';
-import { use } from "react";
 
 export default function GlobalIDPage({ params }) {
-  // Extract the ID from params and handle potential slashes
-  // Check if params is a Promise or already an object
-  // Note: use() hook cannot be called inside try/catch blocks
-  let unwrappedParams;
-
-  // If params is a Promise, use React.use() to unwrap it
-  if (params && typeof params.then === 'function') {
-    unwrappedParams = use(params);
-  } else {
-    // If params is already an object, use it directly
-    unwrappedParams = params || {};
-  }
-
-  let { id } = unwrappedParams;
-
-  // Ensure id is defined before processing
-  if (!id) {
-    console.error("ID is undefined in GlobalIDPage");
-    id = '';
-  }
-
-  // If the ID contains encoded slashes, decode them
-  if (id && id.includes('%2F')) {
-    id = decodeURIComponent(id);
-  }
-
-  // If the ID contains slashes, extract the first part
-  if (id && id.includes('/')) {
-    id = id.split('/')[0];
-  }
-
   const router = useRouter();
   const [contentType, setContentType] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [id, setId] = useState('');
 
   useEffect(() => {
+    async function processParams() {
+      try {
+        // Handle params Promise or direct object
+        let unwrappedParams;
+        if (params && typeof params.then === 'function') {
+          unwrappedParams = await params;
+        } else {
+          unwrappedParams = params || {};
+        }
+
+        let extractedId = unwrappedParams.id || '';
+
+        // If the ID contains encoded slashes, decode them
+        if (extractedId && extractedId.includes('%2F')) {
+          extractedId = decodeURIComponent(extractedId);
+        }
+
+        // If the ID contains slashes, extract the first part
+        if (extractedId && extractedId.includes('/')) {
+          extractedId = extractedId.split('/')[0];
+        }
+
+        setId(extractedId);
+      } catch (error) {
+        console.error('Error processing params:', error);
+        setId('');
+      }
+    }
+
+    processParams();
+  }, [params]);
+
+  useEffect(() => {
+    if (!id) return;
+
     async function determineContentType() {
       try {
         // Validate the ID before making Firestore calls
@@ -74,8 +77,6 @@ export default function GlobalIDPage({ params }) {
         const isPreviewingDeleted = urlParams.get('preview') === 'deleted';
 
         if (isPreviewingDeleted) {
-          // For deleted page previews, we'll let the SinglePageView component handle the access control
-          // since it has the user context and can properly check ownership
           console.log('Deleted page preview requested, allowing page component to handle access control');
           setContentType('page');
           setIsLoading(false);
@@ -83,15 +84,12 @@ export default function GlobalIDPage({ params }) {
         }
 
         // First, check if it's a page using proper access control
-        const pageResult = await getPageById(cleanId, null); // No user context for initial check
+        const pageResult = await getPageById(cleanId, null);
         if (pageResult.pageData && !pageResult.error) {
-          // Page exists and is accessible
           setContentType('page');
           setIsLoading(false);
           return;
         } else if (pageResult.error && pageResult.error !== "Page not found") {
-          // Page exists but access is denied (e.g., private page)
-          // Still treat as a page but let the page component handle access control
           setContentType('page');
           setIsLoading(false);
           return;
@@ -103,15 +101,10 @@ export default function GlobalIDPage({ params }) {
         const userSnapshot = await get(userRef);
 
         if (userSnapshot.exists()) {
-          // Redirect to the user page using direct navigation
           window.location.href = `/user/${cleanId}`;
           return;
         }
 
-        // Groups functionality removed
-
-        // If we get here, the ID doesn't match any content
-        // Use our wrapper component to trigger the not-found.tsx page
         setContentType('not-found');
         setIsLoading(false);
       } catch (error) {
@@ -128,28 +121,13 @@ export default function GlobalIDPage({ params }) {
     return (
       <SmartLoader
         isLoading={isLoading}
-        message="Determining content type..."
-        timeoutMs={15000} // Increased timeout for slow networks
-        initialLoadTimeoutMs={5000} // Shorter initial timeout
-        autoRecover={false} // Disable auto-recovery to prevent loops
-        onRetry={() => {
-          setIsLoading(true);
-          // Add a small delay before retrying to prevent rapid requests
-          setTimeout(() => {
-            determineContentType();
-          }, 500);
-        }}
+        message="Loading content..."
+        timeoutMs={10000}
+        autoRecover={true}
+        onRetry={() => window.location.reload()}
         fallbackContent={
           <div>
-            <p>We're having trouble determining the content type. This could be due to:</p>
-            <ul className="list-disc list-inside text-left mt-2 mb-2">
-              <li>Slow network connection</li>
-              <li>Server issues</li>
-              <li>The content may not exist</li>
-            </ul>
-            <p className="text-sm text-muted-foreground mt-2">
-              Try refreshing the page or check your internet connection.
-            </p>
+            <p>Loading page content...</p>
           </div>
         }
       />
@@ -161,7 +139,6 @@ export default function GlobalIDPage({ params }) {
   }
 
   if (contentType === 'not-found') {
-    // Import the NotFoundWrapper component
     const NotFoundWrapper = dynamic(() => import('../not-found-wrapper'), { ssr: false });
     return <NotFoundWrapper />;
   }
@@ -176,17 +153,7 @@ export default function GlobalIDPage({ params }) {
             title="Content Error"
             showDetails={false}
             showRetry={true}
-            onRetry={() => {
-              // Use the error recovery utility to reset application state
-              import('../utils/error-recovery').then(({ resetApplicationState }) => {
-                resetApplicationState({
-                  forceReload: true
-                });
-              }).catch(() => {
-                // Fallback if import fails
-                window.location.reload();
-              });
-            }}
+            onRetry={() => window.location.reload()}
             className="mb-6"
           />
           <div className="flex justify-center">
@@ -208,12 +175,7 @@ export default function GlobalIDPage({ params }) {
       onRetry={() => window.location.reload()}
       fallbackContent={
         <div>
-          <p>We're having trouble loading this content. This could be due to:</p>
-          <ul className="list-disc list-inside text-left mt-2 mb-2">
-            <li>Slow network connection</li>
-            <li>Server issues</li>
-            <li>The content may not exist</li>
-          </ul>
+          <p>We're having trouble loading this content.</p>
         </div>
       }
     />

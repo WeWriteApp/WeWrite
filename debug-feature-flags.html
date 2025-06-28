@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Feature Flags</title>
+</head>
+<body>
+    <h1>Debug Feature Flags</h1>
+    <div id="status"></div>
+    
+    <script>
+        const statusDiv = document.getElementById('status');
+        
+        // Check localStorage values
+        const testModeValue = localStorage.getItem('admin-inactive-subscription-test');
+        
+        // Set the test mode to true
+        localStorage.setItem('admin-inactive-subscription-test', 'true');
+        
+        // Also check if there are any other relevant localStorage keys
+        const allKeys = Object.keys(localStorage);
+        const relevantKeys = allKeys.filter(key => 
+            key.includes('feature') || 
+            key.includes('flag') || 
+            key.includes('payment') || 
+            key.includes('subscription') ||
+            key.includes('admin')
+        );
+        
+        statusDiv.innerHTML = `
+            <h2>localStorage Debug Info:</h2>
+            <p><strong>admin-inactive-subscription-test:</strong> ${localStorage.getItem('admin-inactive-subscription-test')}</p>
+            <h3>All relevant localStorage keys:</h3>
+            <ul>
+                ${relevantKeys.map(key => `<li><strong>${key}:</strong> ${localStorage.getItem(key)}</li>`).join('')}
+            </ul>
+            <h3>All localStorage keys:</h3>
+            <ul>
+                ${allKeys.map(key => `<li><strong>${key}:</strong> ${localStorage.getItem(key)}</li>`).join('')}
+            </ul>
+        `;
+        
+        console.log('Debug info:');
+        console.log('admin-inactive-subscription-test:', localStorage.getItem('admin-inactive-subscription-test'));
+        console.log('All localStorage keys:', allKeys);
+        console.log('Relevant keys:', relevantKeys);
+        
+        // Redirect to test page
+        setTimeout(() => {
+            window.location.href = 'http://localhost:3000/test-page';
+        }, 5000);
+    </script>
+    
+    <p>Checking localStorage and redirecting to test page in 5 seconds...</p>
+</body>
+</html>

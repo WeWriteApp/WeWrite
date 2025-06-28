@@ -38,10 +38,10 @@ import PublicLayout from "../layout/PublicLayout";
 import PageHeader from "./PageHeader.tsx";
 import PageFooter from "./PageFooter";
 
-import TokenAllocationBar from "../payments/TokenAllocationBar";
-import CombinedLinksSection from "../features/CombinedLinksSection";
+import PledgeBar from "../payments/PledgeBar";
+import BacklinksSection from "../features/BacklinksSection";
+import RelatedPagesSection from "../features/RelatedPagesSection.tsx";
 import Link from "next/link";
-import Head from "next/head";
 import { Button } from "../ui/button";
 // Removed EditorContent import - ReplyEditor was replaced with Editor
 import Editor from "../editor/Editor";
@@ -1282,9 +1282,6 @@ function SinglePageView({ params, initialEditMode = false }) {
 
     return (
       <Layout>
-        <Head>
-          <title>Page Not Found - WeWrite</title>
-        </Head>
         <PageHeader />
         <div className="min-h-[400px] w-full">
           {isLoading || loadingTimedOut ? (
@@ -1349,9 +1346,6 @@ function SinglePageView({ params, initialEditMode = false }) {
   if (isLoading) {
     return (
       <Layout>
-        <Head>
-          <title>Loading... - WeWrite</title>
-        </Head>
         <PageHeader />
         <SmartLoader
           isLoading={isLoading}
@@ -1405,9 +1399,6 @@ function SinglePageView({ params, initialEditMode = false }) {
   if (error) {
     return (
       <Layout>
-        <Head>
-          <title>Error - WeWrite</title>
-        </Head>
         <PageHeader />
         <div className="p-4 max-w-4xl mx-auto">
           <h1 className="text-2xl font-semibold mb-4">
@@ -1449,9 +1440,6 @@ function SinglePageView({ params, initialEditMode = false }) {
       // For non-owners or logged-out users, show private page message
       return (
         <Layout>
-          <Head>
-            <title>Private Page - WeWrite</title>
-          </Head>
           <PageHeader />
           <div className="p-4">
             <h1 className="text-2xl font-semibold text-text">
@@ -1489,9 +1477,6 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   return (
     <Layout>
-      <Head>
-        <title>{title} - WeWrite</title>
-      </Head>
       <PageHeader
         title={title}
         username={page?.username || "Anonymous"}
@@ -1583,10 +1568,14 @@ function SinglePageView({ params, initialEditMode = false }) {
         </PageProvider>
         </div>
 
-      {/* Combined Links Section - positioned outside main content container */}
+      {/* Backlinks and Related Pages Sections - positioned outside main content container */}
       {!isEditing && (
-        <div className="mt-4 px-4">
-          <CombinedLinksSection
+        <div className="mt-4 px-4 sm:px-6 md:px-8 w-full max-w-none box-border space-y-6" id="links-sections">
+          <BacklinksSection
+            page={page}
+            linkedPageIds={memoizedLinkedPageIds}
+          />
+          <RelatedPagesSection
             page={page}
             linkedPageIds={memoizedLinkedPageIds}
           />
@@ -1614,14 +1603,6 @@ function SinglePageView({ params, initialEditMode = false }) {
           hasUnsavedChanges={hasUnsavedChanges}
         />
       </PageProvider>
-      {console.log('🔥 SinglePageView: isEditing =', isEditing, 'typeof =', typeof isEditing)}
-      {!isEditing && (
-        <TokenAllocationBar
-          pageId={params.id}
-          pageTitle={page?.title}
-          authorId={page?.userId}
-        />
-      )}
 
     </Layout>
   );
@@ -1694,7 +1675,7 @@ const PageContentWithLineSettings = ({
 
   return (
     <div
-      className={`animate-in fade-in-0 duration-300 w-full pb-1 max-w-none box-border px-0`}
+      className={`animate-in fade-in-0 duration-300 w-full pb-1 max-w-none box-border px-4 sm:px-6 md:px-8`}
       style={{
         paddingTop: 'var(--page-header-height, 80px)', // Use dynamic header height with fallback
         transition: 'padding-top 300ms ease-in-out' // Smooth transition when header height changes
@@ -1772,6 +1753,17 @@ const PageContentWithLineSettings = ({
               className="transition-all duration-200 ease-in-out"
             />
           </div>
+        </div>
+      )}
+
+      {/* Pledge Bar - simple fixed position at bottom */}
+      {!isEditing && page?.id && (
+        <div className="fixed bottom-4 left-4 right-4 z-40">
+          <PledgeBar
+            pageId={page.id}
+            pageTitle={page?.title}
+            authorId={page?.userId}
+          />
         </div>
       )}
     </div>

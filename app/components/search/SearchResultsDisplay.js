@@ -8,6 +8,7 @@ import PerformanceMonitor from '../utils/PerformanceMonitor';
 import { Pin } from 'lucide-react';
 import { useDateFormat } from "../../contexts/DateFormatContext";
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
+import { useAuth } from "../../providers/AuthProvider";
 
 /**
  * SearchResultsDisplay Component
@@ -29,9 +30,14 @@ const SearchResultsDisplay = React.memo(({
   groupsEnabled,
   userId,
   onSave,
-  error = null
+  error = null,
+  searchStats = {}
 }) => {
   const { formatDateString } = useDateFormat();
+  const { user } = useAuth();
+
+  // Check if user is admin for debug features
+  const isAdmin = user?.email === 'jamiegray2234@gmail.com';
   // Memoize the combined results to prevent unnecessary recalculations
   const combinedResults = useMemo(() => {
     if (!results) {
@@ -97,13 +103,21 @@ const SearchResultsDisplay = React.memo(({
           resultsCount: totalResults
         }}
       />
-      {/* Search Results Summary */}
+      {/* Search Results Summary with Performance Metrics */}
       <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {isLoading
-            ? "Searching..."
-            : `${totalResults} results`}
-        </p>
+        <div className="flex flex-col gap-1">
+          <p className="text-sm text-muted-foreground">
+            {isLoading
+              ? "Searching..."
+              : `${totalResults} results`}
+          </p>
+          {!isLoading && searchStats.searchTimeMs && isAdmin && (
+            <p className="text-xs text-muted-foreground">
+              Found in {searchStats.searchTimeMs}ms
+              {searchStats.source && ` • ${searchStats.source}`}
+            </p>
+          )}
+        </div>
         {!isLoading && query && onSave && (
           <Button
             variant="outline"

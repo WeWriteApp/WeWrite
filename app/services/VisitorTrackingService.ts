@@ -50,10 +50,16 @@ class VisitorTrackingService {
   private interactionTracking: boolean = false;
   private sessionStartTime: number = 0;
 
-  // Session management constants
+  // Cost optimization: batch updates to reduce Firestore writes
+  private pendingUpdates: Partial<VisitorSession> = {};
+  private updateCount: number = 0;
+  private lastBatchUpdate: number = 0;
+
+  // Session management constants - OPTIMIZED for cost reduction
   private static readonly SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
-  private static readonly HEARTBEAT_INTERVAL = 15 * 1000; // 15 seconds
-  private static readonly INTERACTION_DEBOUNCE = 1000; // 1 second
+  private static readonly HEARTBEAT_INTERVAL = 60 * 1000; // 60 seconds (increased from 15s to reduce writes by 75%)
+  private static readonly INTERACTION_DEBOUNCE = 5000; // 5 seconds (increased to reduce noise)
+  private static readonly BATCH_UPDATE_THRESHOLD = 3; // Batch updates when we have 3+ changes
 
   constructor() {
     this.activeSubscriptions = new Map();
@@ -318,7 +324,8 @@ class VisitorTrackingService {
   }
 
   /**
-   * Enhanced heartbeat with interaction validation and bot behavior analysis
+   * Enhanced heartbeat with interaction validation, bot behavior analysis, and batching
+   * OPTIMIZED: Reduced frequency and implemented batching to cut Firestore writes by 75%
    */
   private setupHeartbeat(): void {
     // Clear existing heartbeat
@@ -363,9 +370,8 @@ class VisitorTrackingService {
           console.log('🚨 Suspicious behavior detected:', behaviorValidation.reasons);
         }
 
-        // Update session in Firestore
-        const sessionRef = doc(db, 'siteVisitors', this.currentSession.id);
-        await updateDoc(sessionRef, {
+        // OPTIMIZATION: Batch updates to reduce Firestore writes
+        this.addToPendingUpdates({
           lastSeen: this.currentSession.lastSeen,
           sessionDuration: this.currentSession.sessionDuration,
           interactions: this.currentSession.interactions,
@@ -374,10 +380,49 @@ class VisitorTrackingService {
           botCategory: this.currentSession.botCategory || 'unknown'
         });
 
+        // Process batch if threshold reached or enough time has passed
+        const now = Date.now();
+        const timeSinceLastBatch = now - this.lastBatchUpdate;
+
+        if (this.updateCount >= VisitorTrackingService.BATCH_UPDATE_THRESHOLD ||
+            timeSinceLastBatch > 5 * 60 * 1000) { // Force update every 5 minutes
+          await this.processBatchUpdate();
+        }
+
       } catch (error) {
         console.error('Error updating visitor heartbeat:', error);
       }
     }, VisitorTrackingService.HEARTBEAT_INTERVAL);
+  }
+
+  /**
+   * Add updates to pending batch
+   */
+  private addToPendingUpdates(updates: Partial<VisitorSession>): void {
+    Object.assign(this.pendingUpdates, updates);
+    this.updateCount++;
+  }
+
+  /**
+   * Process batched updates to reduce Firestore writes
+   */
+  private async processBatchUpdate(): Promise<void> {
+    if (!this.currentSession || Object.keys(this.pendingUpdates).length === 0) return;
+
+    try {
+      const sessionRef = doc(db, 'siteVisitors', this.currentSession.id);
+      await updateDoc(sessionRef, this.pendingUpdates);
+
+      console.log(`[VisitorTracking] Batched ${this.updateCount} updates for session ${this.currentSession.id}`);
+
+      // Clear pending updates
+      this.pendingUpdates = {};
+      this.updateCount = 0;
+      this.lastBatchUpdate = Date.now();
+
+    } catch (error) {
+      console.error('Error processing batch update:', error);
+    }
   }
 
   /**

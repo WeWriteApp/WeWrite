@@ -98,33 +98,72 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Normal cancellation at period end for active subscriptions
-      const subscription = await stripe.subscriptions.update(subscriptionId, {
-        cancel_at_period_end: true,
-      });
+      try {
+        // First, try to update the subscription directly
+        const subscription = await stripe.subscriptions.update(subscriptionId, {
+          cancel_at_period_end: true,
+        });
 
-      // Update subscription status in Firestore
-      await subscriptionRef.update({
-        status: 'cancelled',
-        cancelAtPeriodEnd: true,
-        updatedAt: new Date(),
-      });
+        // Update subscription status in Firestore
+        await subscriptionRef.update({
+          status: 'cancelled',
+          cancelAtPeriodEnd: true,
+          updatedAt: new Date(),
+        });
 
-      return NextResponse.json({
-        success: true,
-        message: 'Subscription will be cancelled at the end of the current period',
-        cancelAtPeriodEnd: subscription.cancel_at_period_end,
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-      });
+        return NextResponse.json({
+          success: true,
+          message: 'Subscription will be cancelled at the end of the current period',
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+          currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+        });
+
+      } catch (stripeError: any) {
+        console.log(`[CANCEL SUBSCRIPTION] Direct subscription update failed: ${stripeError.message}`);
+
+        // Check if this is a subscription schedule error
+        if (stripeError.message && stripeError.message.includes('subscription schedule')) {
+          console.log(`[CANCEL SUBSCRIPTION] Subscription is managed by a schedule, attempting schedule cancellation`);
+
+          try {
+            // Get the subscription to find the schedule ID
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+            if (subscription.schedule) {
+              console.log(`[CANCEL SUBSCRIPTION] Found schedule ID: ${subscription.schedule}`);
+
+              // Cancel the subscription schedule
+              const cancelledSchedule = await stripe.subscriptionSchedules.cancel(subscription.schedule as string);
+
+              // Update subscription status in Firestore
+              await subscriptionRef.update({
+                status: 'cancelled',
+                cancelledAt: new Date(),
+                cancelReason: 'user_cancelled_via_schedule',
+                scheduleId: subscription.schedule,
+                updatedAt: new Date(),
+              });
+
+              return NextResponse.json({
+                success: true,
+                message: 'Subscription schedule cancelled successfully',
+                cancelledAt: new Date().toISOString(),
+                scheduleId: subscription.schedule,
+              });
+            } else {
+              throw new Error('No schedule found for subscription');
+            }
+
+          } catch (scheduleError: any) {
+            console.error('[CANCEL SUBSCRIPTION] Schedule cancellation failed:', scheduleError);
+            throw scheduleError;
+          }
+        } else {
+          // Re-throw the original error if it's not schedule-related
+          throw stripeError;
+        }
+      }
     }
-
-    console.log(`Subscription cancelled for user ${userId}: ${subscriptionId}`);
-
-    return NextResponse.json({
-      success: true,
-      message: 'Subscription cancelled successfully',
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-    });
 
   } catch (error) {
     console.error('Error cancelling subscription:', error);
