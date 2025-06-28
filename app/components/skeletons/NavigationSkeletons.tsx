@@ -13,7 +13,7 @@ import { cn } from '../../lib/utils';
 /**
  * Home page skeleton
  */
-export function HomeSkeleton({ className }: { className?: string }) {
+function HomeSkeleton({ className }: { className?: string }) {
   return (
     <div className={cn("p-6 bg-background animate-pulse", className)}>
       {/* Header skeleton */}
@@ -75,7 +75,7 @@ export function HomeSkeleton({ className }: { className?: string }) {
 /**
  * Notifications page skeleton
  */
-export function NotificationsSkeleton({ className }: { className?: string }) {
+function NotificationsSkeleton({ className }: { className?: string }) {
   return (
     <div className={cn("p-6 bg-background animate-pulse", className)}>
       {/* Header */}
@@ -109,7 +109,7 @@ export function NotificationsSkeleton({ className }: { className?: string }) {
 /**
  * New page creation skeleton
  */
-export function NewPageSkeleton({ className }: { className?: string }) {
+function NewPageSkeleton({ className }: { className?: string }) {
   return (
     <div className={cn("p-6 bg-background animate-pulse", className)}>
       {/* Header */}
@@ -154,7 +154,7 @@ export function NewPageSkeleton({ className }: { className?: string }) {
 /**
  * Generic page skeleton for unknown routes
  */
-export function GenericPageSkeleton({ className }: { className?: string }) {
+function GenericPageSkeleton({ className }: { className?: string }) {
   return (
     <div className={cn("p-6 bg-background animate-pulse", className)}>
       {/* Header */}
@@ -194,7 +194,7 @@ export function GenericPageSkeleton({ className }: { className?: string }) {
 /**
  * Navigation transition skeleton - shows during route changes
  */
-export function NavigationTransitionSkeleton({ 
+function NavigationTransitionSkeleton({
   className,
   progress = 0 
 }: { 
@@ -227,7 +227,7 @@ export function NavigationTransitionSkeleton({
 /**
  * Hook to get the appropriate skeleton for a route
  */
-export function useNavigationSkeleton(route: string) {
+function useNavigationSkeleton(route: string) {
   if (route === '/') return HomeSkeleton;
   if (route === '/notifications') return NotificationsSkeleton;
   if (route === '/new' || route.includes('/new?')) return NewPageSkeleton;
@@ -241,4 +241,5 @@ export {
   NewPageSkeleton,
   GenericPageSkeleton,
   NavigationTransitionSkeleton,
+  useNavigationSkeleton,
 };
