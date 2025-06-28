@@ -154,11 +154,12 @@ export class TaxInformationService {
       if (!validation.isValid) {
         return {
           success: false,
-          error: new FinancialError(
+          error: FinancialUtils.createError(
             FinancialErrorCode.VALIDATION_ERROR,
             `W-9 form validation failed: ${validation.errors.join(', ')}`,
+            corrId,
             false,
-            { correlationId: corrId, userId, errors: validation.errors }
+            { userId, errors: validation.errors }
           ),
           correlationId: corrId
         };
@@ -230,12 +231,7 @@ export class TaxInformationService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `W-9 form submission failed: ${error.message}`,
-        true,
-        { correlationId: corrId, userId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `W-9 form submission failed: ${error.message}`, corrId, true, {  userId, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -272,11 +268,12 @@ export class TaxInformationService {
       if (!validation.isValid) {
         return {
           success: false,
-          error: new FinancialError(
+          error: FinancialUtils.createError(
             FinancialErrorCode.VALIDATION_ERROR,
             `W-8 form validation failed: ${validation.errors.join(', ')}`,
+            corrId,
             false,
-            { correlationId: corrId, userId, errors: validation.errors }
+            { userId, errors: validation.errors }
           ),
           correlationId: corrId
         };
@@ -347,12 +344,7 @@ export class TaxInformationService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `W-8 form submission failed: ${error.message}`,
-        true,
-        { correlationId: corrId, userId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `W-8 form submission failed: ${error.message}`, corrId, true, {  userId, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -455,12 +447,7 @@ export class TaxInformationService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Tax compliance validation failed: ${error.message}`,
-        true,
-        { correlationId: corrId, userId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Tax compliance validation failed: ${error.message}`, corrId, true, {  userId, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 

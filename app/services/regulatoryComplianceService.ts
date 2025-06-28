@@ -269,12 +269,7 @@ export class RegulatoryComplianceService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Compliance check failed: ${error.message}`,
-        true,
-        { correlationId: corrId, userId, frameworks, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Compliance check failed: ${error.message}`, corrId, true, {  userId, frameworks, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -364,12 +359,7 @@ export class RegulatoryComplianceService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `KYC update failed: ${error.message}`,
-        true,
-        { correlationId: corrId, userId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `KYC update failed: ${error.message}`, corrId, true, {  userId, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -778,12 +768,7 @@ export class RegulatoryComplianceService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Failed to get compliance status: ${error.message}`,
-        true,
-        { correlationId: corrId, userId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Failed to get compliance status: ${error.message}`, corrId, true, {  userId, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -850,12 +835,7 @@ export class RegulatoryComplianceService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Failed to schedule compliance review: ${error.message}`,
-        true,
-        { correlationId: corrId, userId, framework, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Failed to schedule compliance review: ${error.message}`, corrId, true, {  userId, framework, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 

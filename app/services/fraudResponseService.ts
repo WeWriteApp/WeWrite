@@ -183,12 +183,7 @@ export class FraudResponseService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Fraud response execution failed: ${error.message}`,
-        true,
-        { correlationId: corrId, userId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Fraud response execution failed: ${error.message}`, corrId, true, {  userId, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -263,12 +258,7 @@ export class FraudResponseService {
     } catch (error: any) {
       result.error = error.message;
       FinancialLogger.logError(
-        new FinancialError(
-          FinancialErrorCode.PROCESSING_ERROR,
-          `Fraud action ${action} failed: ${error.message}`,
-          true,
-          { correlationId, userId, action, originalError: error }
-        ),
+        FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Fraud action ${action} failed: ${error.message}`, { correlationId, userId, action, originalError: error }, true),
         correlationId
       );
     }
@@ -676,12 +666,7 @@ export class FraudResponseService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Failed to remove restrictions: ${error.message}`,
-        true,
-        { correlationId: corrId, userId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Failed to remove restrictions: ${error.message}`, corrId, true, {  userId, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 

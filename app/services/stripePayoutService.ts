@@ -411,4 +411,5 @@ class StripePayoutService {
   }
 }
 
+export { StripePayoutService };
 export const stripePayoutService = StripePayoutService.getInstance();

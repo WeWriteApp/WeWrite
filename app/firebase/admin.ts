@@ -111,6 +111,11 @@ export const initAdmin = () => {
 // Export admin instance
 export { admin };
 
+// Export getFirebaseAdmin function for compatibility
+export const getFirebaseAdmin = () => {
+  return initAdmin();
+};
+
 // Auto-initialize if in server environment, but not during build time
 if (typeof window === 'undefined' && process.env.NODE_ENV !== 'production' || process.env.VERCEL_ENV === 'production') {
   try {
