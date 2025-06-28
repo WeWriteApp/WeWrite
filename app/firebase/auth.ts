@@ -22,6 +22,7 @@ import {
 import Cookies from 'js-cookie';
 import type { User } from '../types/database';
 import { getAnalyticsService } from '../utils/analytics-service';
+import { getCollectionName } from '../utils/environmentConfig';
 
 export const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
@@ -58,8 +59,8 @@ export const loginUser = async (emailOrUsername: string, password: string): Prom
 
     // Check if the input is a username (doesn't contain @)
     if (!emailOrUsername.includes('@')) {
-      // Look up the email by username
-      const usernameDoc = await getDoc(doc(db, 'usernames', emailOrUsername.toLowerCase()));
+      // Look up the email by username using environment-specific collection
+      const usernameDoc = await getDoc(doc(db, getCollectionName('usernames'), emailOrUsername.toLowerCase()));
 
       if (!usernameDoc.exists()) {
         return {
@@ -72,8 +73,8 @@ export const loginUser = async (emailOrUsername: string, password: string): Prom
       const userData = usernameDoc.data();
       const userId = userData.uid;
 
-      // Get the user's email from the users collection
-      const userDoc = await getDoc(doc(db, 'users', userId));
+      // Get the user's email from the users collection using environment-specific collection
+      const userDoc = await getDoc(doc(db, getCollectionName('users'), userId));
       if (!userDoc.exists()) {
         return {
           code: "auth/user-not-found",
@@ -235,8 +236,8 @@ export const addUsername = async (userId: string, username: string): Promise<Aut
       throw new Error('Username is already taken');
     }
 
-    // Update the username in Firestore users collection
-    const userDocRef = doc(db, 'users', userId);
+    // Update the username in Firestore users collection using environment-specific collection
+    const userDocRef = doc(db, getCollectionName('users'), userId);
     await updateDoc(userDocRef, {
       username: username
     });
@@ -248,8 +249,8 @@ export const addUsername = async (userId: string, username: string): Promise<Aut
       });
     }
 
-    // Reserve the username in the usernames collection
-    const usernameDocRef = doc(db, 'usernames', username.toLowerCase());
+    // Reserve the username in the usernames collection using environment-specific collection
+    const usernameDocRef = doc(db, getCollectionName('usernames'), username.toLowerCase());
     await setDoc(usernameDocRef, {
       uid: userId,
       createdAt: new Date().toISOString()
@@ -266,8 +267,8 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
   if (!userId) return null;
 
   try {
-    // Try to get user from Firestore users collection
-    const userDocRef = doc(db, 'users', userId);
+    // Try to get user from Firestore users collection using environment-specific collection
+    const userDocRef = doc(db, getCollectionName('users'), userId);
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {
@@ -330,7 +331,7 @@ export const checkUsernameAvailability = async (username: string): Promise<Usern
       };
     }
 
-    const userDoc = doc(db, 'usernames', username.toLowerCase());
+    const userDoc = doc(db, getCollectionName('usernames'), username.toLowerCase());
     const docSnap = await getDoc(userDoc);
 
     const isAvailable = !docSnap.exists();
@@ -401,7 +402,7 @@ const checkSuggestionsAvailability = async (suggestions: string[]): Promise<stri
 
   for (const suggestion of suggestions) {
     try {
-      const userDoc = doc(db, 'usernames', suggestion.toLowerCase());
+      const userDoc = doc(db, getCollectionName('usernames'), suggestion.toLowerCase());
       const docSnap = await getDoc(userDoc);
 
       if (!docSnap.exists()) {
