@@ -1,7 +1,7 @@
 "use client";
 
 // Removed Slate patches - no longer needed with SimpleEditor
-import MobileBottomNav from "./components/layout/MobileBottomNav";
+import EnhancedMobileBottomNav from "./components/layout/EnhancedMobileBottomNav";
 import { SidebarProvider } from "./components/layout/UnifiedSidebar";
 import SidebarLayout from "./components/layout/SidebarLayout";
 
@@ -149,8 +149,8 @@ export default function ClientLayout({ children }) {
                                         {/* Construction Banner */}
                                         {!isAuthPage && !isAdminPage && <ConstructionBanner />}
 
-                                        {/* Mobile Bottom Navigation */}
-                                        {!isAuthPage && !isAdminPage && <MobileBottomNav />}
+                                        {/* Enhanced Mobile Bottom Navigation */}
+                                        {!isAuthPage && !isAdminPage && <EnhancedMobileBottomNav />}
                                       </div>
                                     </SidebarLayout>
                                   </SidebarProvider>

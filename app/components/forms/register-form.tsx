@@ -16,6 +16,7 @@ import { AuthRedirectOverlay } from "../auth/AuthRedirectOverlay"
 // reCAPTCHA functionality removed
 import { Alert, AlertDescription } from "../ui/alert"
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics"
+import { validateUsernameFormat, generateUsernameSuggestions } from "../../utils/usernameValidation"
 
 export function RegisterForm({
   className,
@@ -48,6 +49,23 @@ export function RegisterForm({
       setValidationMessage("")
       setValidationError(null)
       setUsernameSuggestions([])
+      return
+    }
+
+    // First, validate format client-side
+    const formatValidation = validateUsernameFormat(username)
+    if (!formatValidation.isValid) {
+      setIsAvailable(false)
+      setValidationError(formatValidation.error)
+      setValidationMessage(formatValidation.message || "")
+
+      // If it contains whitespace, suggest cleaned versions
+      if (formatValidation.error === "CONTAINS_WHITESPACE") {
+        const suggestions = generateUsernameSuggestions(username)
+        setUsernameSuggestions(suggestions)
+      } else {
+        setUsernameSuggestions([])
+      }
       return
     }
 

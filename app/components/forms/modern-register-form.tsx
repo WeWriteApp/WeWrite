@@ -7,12 +7,12 @@ import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { Label } from "../ui/label"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { createUser, addUsername, checkUsernameAvailability, loginAnonymously } from "../../firebase/auth"
 import { Check, Loader2, X } from "lucide-react"
 import { debounce } from "lodash"
 import { Separator } from "../ui/separator"
-import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername } from "../../utils/usernameValidation"
+import { validateUsernameFormat, getUsernameErrorMessage, generateUsernameSuggestions } from "../../utils/usernameValidation"
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics"
 
 export function ModernRegisterForm({
@@ -47,87 +47,88 @@ export function ModernRegisterForm({
     setIsFormValid(isEmailValid && isPasswordValid && isUsernameValid)
   }, [email, password, username, isAvailable, validationError])
 
-  // Username validation
-  const checkUsername = debounce(async (value: string) => {
-    // Reset validation state
-    setValidationError(null)
-    setValidationMessage(null)
-    setUsernameSuggestions([])
+  // Username validation function (memoized to prevent infinite re-renders)
+  const checkUsername = useCallback(
+    debounce(async (value: string) => {
+      // Reset validation state
+      setValidationError(null)
+      setValidationMessage(null)
+      setUsernameSuggestions([])
 
-    // Skip validation for empty usernames
-    if (!value) {
-      setIsAvailable(null)
-      return
-    }
-
-    // First, validate format client-side
-    const formatValidation = validateUsernameFormat(value)
-    if (!formatValidation.isValid) {
-      setIsAvailable(false)
-      setValidationError(formatValidation.error)
-      setValidationMessage(formatValidation.message)
-
-      // If it contains whitespace, suggest a cleaned version
-      if (formatValidation.error === "CONTAINS_WHITESPACE") {
-        const cleanSuggestion = suggestCleanUsername(value)
-        if (cleanSuggestion && cleanSuggestion !== value) {
-          setUsernameSuggestions([cleanSuggestion])
-        }
+      // Skip validation for empty usernames
+      if (!value) {
+        setIsAvailable(null)
+        return
       }
-      return
-    }
 
-    // Special handling for known test case
-    if (value.toLowerCase() === 'jamie') {
+      // First, validate format client-side
+      const formatValidation = validateUsernameFormat(value)
+      if (!formatValidation.isValid) {
+        setIsAvailable(false)
+        setValidationError(formatValidation.error)
+        setValidationMessage(formatValidation.message)
+
+        // If it contains whitespace, suggest cleaned versions
+        if (formatValidation.error === "CONTAINS_WHITESPACE") {
+          const suggestions = generateUsernameSuggestions(value)
+          setUsernameSuggestions(suggestions)
+        }
+        return
+      }
+
+      // Special handling for known test case
+      if (value.toLowerCase() === 'jamie') {
+        setIsChecking(true)
+
+        // Force a small delay to simulate network request
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        setIsAvailable(false)
+        setValidationError("USERNAME_TAKEN")
+        setValidationMessage("Username already taken")
+        // Generate some test suggestions for 'jamie'
+        setUsernameSuggestions(['jamie123', 'jamie_2023', 'jamie2024'])
+        setIsChecking(false)
+        return
+      }
+
+      // Check availability
       setIsChecking(true)
+      try {
+        const result = await checkUsernameAvailability(value)
 
-      // Force a small delay to simulate network request
-      await new Promise(resolve => setTimeout(resolve, 500))
+        if (typeof result === 'boolean') {
+          // Handle legacy boolean response
+          setIsAvailable(result)
+          if (!result) {
+            setValidationError("USERNAME_TAKEN")
+            setValidationMessage("Username already taken")
+          }
+        } else {
+          // Handle new object response
+          setIsAvailable(result.isAvailable)
+          setValidationMessage(result.message || null)
+          setValidationError(result.error || null)
 
-      setIsAvailable(false)
-      setValidationError("USERNAME_TAKEN")
-      setValidationMessage("Username already taken")
-      // Generate some test suggestions for 'jamie'
-      setUsernameSuggestions(['jamie123', 'jamie_2023', 'jamie2024'])
-      setIsChecking(false)
-      return
-    }
-
-    // Check availability
-    setIsChecking(true)
-    try {
-      const result = await checkUsernameAvailability(value)
-
-      if (typeof result === 'boolean') {
-        // Handle legacy boolean response
-        setIsAvailable(result)
-        if (!result) {
-          setValidationError("USERNAME_TAKEN")
-          setValidationMessage("Username already taken")
+          // Set username suggestions if available
+          if (result.suggestions && Array.isArray(result.suggestions)) {
+            setUsernameSuggestions(result.suggestions)
+          }
         }
-      } else {
-        // Handle new object response
-        setIsAvailable(result.isAvailable)
-        setValidationMessage(result.message || null)
-        setValidationError(result.error || null)
+      } catch (error) {
+        console.error("Error checking username:", error)
+        setIsAvailable(false)
+        setValidationError("CHECK_FAILED")
+        setValidationMessage("Could not verify username availability. Please try again.")
 
-        // Set username suggestions if available
-        if (result.suggestions && Array.isArray(result.suggestions)) {
-          setUsernameSuggestions(result.suggestions)
-        }
+        // Prevent infinite loops by not retrying automatically
+        // User can manually retry by changing the username
+      } finally {
+        setIsChecking(false)
       }
-    } catch (error) {
-      console.error("Error checking username:", error)
-      setIsAvailable(false)
-      setValidationError("CHECK_FAILED")
-      setValidationMessage("Could not verify username availability. Please try again.")
-
-      // Prevent infinite loops by not retrying automatically
-      // User can manually retry by changing the username
-    } finally {
-      setIsChecking(false)
-    }
-  }, 500)
+    }, 500),
+    [] // Empty dependency array since we don't want this to change
+  )
 
   // Trigger username validation when username changes
   useEffect(() => {
