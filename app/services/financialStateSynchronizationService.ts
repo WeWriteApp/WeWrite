@@ -213,12 +213,7 @@ export class FinancialStateSynchronizationService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Financial state synchronization failed: ${error.message}`,
-        true,
-        { correlationId: corrId, userId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Financial state synchronization failed: ${error.message}`, corrId, true, {  userId, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -659,12 +654,7 @@ export class FinancialStateSynchronizationService {
           if (this.config.conflictResolutionStrategy === 'conservative') {
             return {
               success: false,
-              error: new FinancialError(
-                FinancialErrorCode.VALIDATION_ERROR,
-                `Cannot auto-resolve conflict type: ${conflict.type}`,
-                false,
-                { correlationId, conflictType: conflict.type }
-              ),
+              error: FinancialUtils.createError(FinancialErrorCode.VALIDATION_ERROR, `Cannot auto-resolve conflict type: ${conflict.type}`, { correlationId, conflictType: conflict.type }, false),
               correlationId
             };
           }
@@ -673,12 +663,7 @@ export class FinancialStateSynchronizationService {
       }
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Failed to resolve conflict: ${error.message}`,
-        true,
-        { correlationId, conflictType: conflict.type, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Failed to resolve conflict: ${error.message}`, { correlationId, conflictType: conflict.type, originalError: error }, true);
 
       FinancialLogger.logError(financialError, correlationId);
 
@@ -722,12 +707,7 @@ export class FinancialStateSynchronizationService {
         if (!allAmountsMatch) {
           return {
             success: false,
-            error: new FinancialError(
-              FinancialErrorCode.VALIDATION_ERROR,
-              'Cannot auto-resolve duplicates with different amounts in conservative mode',
-              false,
-              { correlationId, conflictType: conflict.type }
-            ),
+            error: FinancialUtils.createError(FinancialErrorCode.VALIDATION_ERROR, 'Cannot auto-resolve duplicates with different amounts in conservative mode', { correlationId, conflictType: conflict.type }, false),
             correlationId
           };
         }
@@ -810,12 +790,7 @@ export class FinancialStateSynchronizationService {
       // Conservative mode - don't auto-resolve balance mismatches
       return {
         success: false,
-        error: new FinancialError(
-          FinancialErrorCode.VALIDATION_ERROR,
-          'Balance mismatch requires manual review in conservative mode',
-          false,
-          { correlationId, conflictType: conflict.type }
-        ),
+        error: FinancialUtils.createError(FinancialErrorCode.VALIDATION_ERROR, 'Balance mismatch requires manual review in conservative mode', { correlationId, conflictType: conflict.type }, false),
         correlationId
       };
 
@@ -837,12 +812,7 @@ export class FinancialStateSynchronizationService {
       if (this.config.conflictResolutionStrategy !== 'aggressive') {
         return {
           success: false,
-          error: new FinancialError(
-            FinancialErrorCode.VALIDATION_ERROR,
-            'Missing record conflicts require manual review',
-            false,
-            { correlationId, conflictType: conflict.type }
-          ),
+          error: FinancialUtils.createError(FinancialErrorCode.VALIDATION_ERROR, 'Missing record conflicts require manual review', { correlationId, conflictType: conflict.type }, false),
           correlationId
         };
       }
@@ -883,12 +853,7 @@ export class FinancialStateSynchronizationService {
 
       return {
         success: false,
-        error: new FinancialError(
-          FinancialErrorCode.VALIDATION_ERROR,
-          'Insufficient data to create missing record',
-          false,
-          { correlationId, conflictType: conflict.type }
-        ),
+        error: FinancialUtils.createError(FinancialErrorCode.VALIDATION_ERROR, 'Insufficient data to create missing record', { correlationId, conflictType: conflict.type }, false),
         correlationId
       };
 

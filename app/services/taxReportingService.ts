@@ -246,12 +246,7 @@ export class TaxReportingService {
       if (!userTaxInfo) {
         return {
           success: false,
-          error: new FinancialError(
-            FinancialErrorCode.NOT_FOUND,
-            'User tax information not found',
-            false,
-            { correlationId: corrId, userId }
-          ),
+          error: FinancialUtils.createError(FinancialErrorCode.NOT_FOUND, 'User tax information not found', corrId, false, {  userId  }),
           correlationId: corrId
         };
       }
@@ -338,12 +333,7 @@ export class TaxReportingService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Failed to generate tax summary: ${error.message}`,
-        true,
-        { correlationId: corrId, userId, taxYear, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Failed to generate tax summary: ${error.message}`, corrId, true, {  userId, taxYear, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -373,12 +363,7 @@ export class TaxReportingService {
       if (!userTaxInfo || !taxSummary) {
         return {
           success: false,
-          error: new FinancialError(
-            FinancialErrorCode.NOT_FOUND,
-            'Required tax information not found',
-            false,
-            { correlationId: corrId, userId, taxYear }
-          ),
+          error: FinancialUtils.createError(FinancialErrorCode.NOT_FOUND, 'Required tax information not found', corrId, false, {  userId, taxYear  }),
           correlationId: corrId
         };
       }
@@ -387,12 +372,7 @@ export class TaxReportingService {
       if (!userTaxInfo.isUSPerson || taxSummary.totalEarnings < this.config.reportingThresholds.domestic1099) {
         return {
           success: false,
-          error: new FinancialError(
-            FinancialErrorCode.VALIDATION_ERROR,
-            '1099-NEC not required for this user/amount',
-            false,
-            { correlationId: corrId, userId, taxYear, earnings: taxSummary.totalEarnings }
-          ),
+          error: FinancialUtils.createError(FinancialErrorCode.VALIDATION_ERROR, '1099-NEC not required for this user/amount', corrId, false, {  userId, taxYear, earnings: taxSummary.totalEarnings  }),
           correlationId: corrId
         };
       }
@@ -445,12 +425,7 @@ export class TaxReportingService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Failed to generate 1099-NEC: ${error.message}`,
-        true,
-        { correlationId: corrId, userId, taxYear, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Failed to generate 1099-NEC: ${error.message}`, corrId, true, {  userId, taxYear, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -479,12 +454,7 @@ export class TaxReportingService {
       if (!userTaxInfo || !taxSummary) {
         return {
           success: false,
-          error: new FinancialError(
-            FinancialErrorCode.NOT_FOUND,
-            'Required tax information not found',
-            false,
-            { correlationId: corrId, userId, taxYear }
-          ),
+          error: FinancialUtils.createError(FinancialErrorCode.NOT_FOUND, 'Required tax information not found', corrId, false, {  userId, taxYear  }),
           correlationId: corrId
         };
       }
@@ -493,12 +463,7 @@ export class TaxReportingService {
       if (userTaxInfo.isUSPerson) {
         return {
           success: false,
-          error: new FinancialError(
-            FinancialErrorCode.VALIDATION_ERROR,
-            '1042-S not required for US persons',
-            false,
-            { correlationId: corrId, userId, taxYear }
-          ),
+          error: FinancialUtils.createError(FinancialErrorCode.VALIDATION_ERROR, '1042-S not required for US persons', corrId, false, {  userId, taxYear  }),
           correlationId: corrId
         };
       }
@@ -564,12 +529,7 @@ export class TaxReportingService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Failed to generate 1042-S: ${error.message}`,
-        true,
-        { correlationId: corrId, userId, taxYear, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Failed to generate 1042-S: ${error.message}`, corrId, true, {  userId, taxYear, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -669,12 +629,7 @@ export class TaxReportingService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Bulk tax generation failed: ${error.message}`,
-        true,
-        { correlationId: corrId, taxYear, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Bulk tax generation failed: ${error.message}`, corrId, true, {  taxYear, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -749,12 +704,7 @@ export class TaxReportingService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Withholding calculation failed: ${error.message}`,
-        true,
-        { correlationId: corrId, userId, amount, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Withholding calculation failed: ${error.message}`, corrId, true, {  userId, amount, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 

@@ -278,3 +278,12 @@ export const isAllocationDeadlinePassed = (): boolean => {
   const { hasExpired } = getTimeUntilAllocationDeadline();
   return hasExpired;
 };
+
+/**
+ * Get the previous month in YYYY-MM format
+ */
+export function getPreviousMonth(): string {
+  const now = new Date();
+  const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return previousMonth.toISOString().slice(0, 7); // YYYY-MM format
+}

@@ -155,12 +155,7 @@ export class PayoutMonitoringService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.INITIALIZATION_ERROR,
-        `Failed to initialize payout monitoring: ${error.message}`,
-        true,
-        { correlationId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.INITIALIZATION_ERROR, `Failed to initialize payout monitoring: ${error.message}`, { correlationId, originalError: error }, true);
 
       FinancialLogger.logError(financialError, correlationId);
 
@@ -254,12 +249,7 @@ export class PayoutMonitoringService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Failed to calculate payout metrics: ${error.message}`,
-        true,
-        { correlationId: corrId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Failed to calculate payout metrics: ${error.message}`, corrId, true, {  originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -357,12 +347,7 @@ export class PayoutMonitoringService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Failed to check alert conditions: ${error.message}`,
-        true,
-        { correlationId: corrId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Failed to check alert conditions: ${error.message}`, corrId, true, {  originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -433,12 +418,7 @@ export class PayoutMonitoringService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Failed to get health status: ${error.message}`,
-        true,
-        { correlationId: corrId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Failed to get health status: ${error.message}`, corrId, true, {  originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -582,12 +562,7 @@ export class PayoutMonitoringService {
       if (!alert) {
         return {
           success: false,
-          error: new FinancialError(
-            FinancialErrorCode.NOT_FOUND,
-            `Alert ${alertId} not found`,
-            false,
-            { correlationId: corrId, alertId }
-          ),
+          error: FinancialUtils.createError(FinancialErrorCode.NOT_FOUND, `Alert ${alertId} not found`, corrId, false, {  alertId  }),
           correlationId: corrId
         };
       }
@@ -611,12 +586,7 @@ export class PayoutMonitoringService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Failed to acknowledge alert: ${error.message}`,
-        true,
-        { correlationId: corrId, alertId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Failed to acknowledge alert: ${error.message}`, corrId, true, {  alertId, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -642,12 +612,7 @@ export class PayoutMonitoringService {
       if (!alert) {
         return {
           success: false,
-          error: new FinancialError(
-            FinancialErrorCode.NOT_FOUND,
-            `Alert ${alertId} not found`,
-            false,
-            { correlationId: corrId, alertId }
-          ),
+          error: FinancialUtils.createError(FinancialErrorCode.NOT_FOUND, `Alert ${alertId} not found`, corrId, false, {  alertId  }),
           correlationId: corrId
         };
       }
@@ -670,12 +635,7 @@ export class PayoutMonitoringService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Failed to resolve alert: ${error.message}`,
-        true,
-        { correlationId: corrId, alertId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Failed to resolve alert: ${error.message}`, corrId, true, {  alertId, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -718,12 +678,7 @@ export class PayoutMonitoringService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.CONFIGURATION_ERROR,
-        `Failed to update alert configuration: ${error.message}`,
-        true,
-        { correlationId: corrId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.CONFIGURATION_ERROR, `Failed to update alert configuration: ${error.message}`, corrId, true, {  originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 

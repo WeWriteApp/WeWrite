@@ -127,12 +127,7 @@ export class PayoutSchedulerService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.INITIALIZATION_ERROR,
-        `Failed to initialize payout scheduler: ${error.message}`,
-        true,
-        { correlationId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.INITIALIZATION_ERROR, `Failed to initialize payout scheduler: ${error.message}`, { correlationId, originalError: error }, true);
 
       FinancialLogger.logError(financialError, correlationId);
 
@@ -175,12 +170,7 @@ export class PayoutSchedulerService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.CONFIGURATION_ERROR,
-        `Failed to update scheduler configuration: ${error.message}`,
-        true,
-        { correlationId: corrId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.CONFIGURATION_ERROR, `Failed to update scheduler configuration: ${error.message}`, corrId, true, {  originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -264,12 +254,7 @@ export class PayoutSchedulerService {
     if (this.isRunning) {
       return {
         success: false,
-        error: new FinancialError(
-          FinancialErrorCode.OPERATION_IN_PROGRESS,
-          'Scheduled payout processing already in progress',
-          false,
-          { correlationId: corrId }
-        ),
+        error: FinancialUtils.createError(FinancialErrorCode.OPERATION_IN_PROGRESS, 'Scheduled payout processing already in progress', corrId , false),
         correlationId: corrId
       };
     }
@@ -366,12 +351,7 @@ export class PayoutSchedulerService {
         });
       }
 
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Scheduled payout processing failed: ${error.message}`,
-        true,
-        { correlationId: corrId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Scheduled payout processing failed: ${error.message}`, corrId, true, {  originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 

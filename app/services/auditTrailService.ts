@@ -277,11 +277,12 @@ export class AuditTrailService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
+      const financialError = FinancialUtils.createError(
         FinancialErrorCode.PROCESSING_ERROR,
         `Failed to log audit event: ${error.message}`,
+        corrId,
         true,
-        { correlationId: corrId, eventType, originalError: error }
+        { eventType, originalError: error }
       );
 
       // Even if audit logging fails, we should log to console
@@ -370,11 +371,12 @@ export class AuditTrailService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
+      const financialError = FinancialUtils.createError(
         FinancialErrorCode.PROCESSING_ERROR,
         `Failed to query audit events: ${error.message}`,
+        corrId,
         true,
-        { correlationId: corrId, filters, originalError: error }
+        { filters, originalError: error }
       );
 
       return {
@@ -462,11 +464,12 @@ export class AuditTrailService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
+      const financialError = FinancialUtils.createError(
         FinancialErrorCode.PROCESSING_ERROR,
         `Failed to generate compliance report: ${error.message}`,
+        corrId,
         true,
-        { correlationId: corrId, config, originalError: error }
+        { config, originalError: error }
       );
 
       return {
@@ -555,11 +558,12 @@ export class AuditTrailService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
+      const financialError = FinancialUtils.createError(
         FinancialErrorCode.PROCESSING_ERROR,
         `Failed to verify audit trail integrity: ${error.message}`,
+        corrId,
         true,
-        { correlationId: corrId, originalError: error }
+        { originalError: error }
       );
 
       return {

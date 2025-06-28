@@ -138,12 +138,7 @@ export class AutomatedPayoutService {
       if (this.isProcessing) {
         return {
           success: false,
-          error: new FinancialError(
-            FinancialErrorCode.OPERATION_IN_PROGRESS,
-            'Automated payout processing already in progress',
-            false,
-            { correlationId: corrId }
-          ),
+          error: FinancialUtils.createError(FinancialErrorCode.OPERATION_IN_PROGRESS, 'Automated payout processing already in progress', corrId , false),
           correlationId: corrId
         };
       }
@@ -192,12 +187,7 @@ export class AutomatedPayoutService {
       this.isProcessing = false;
       this.processingStatus.isProcessing = false;
       
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Automated payout processing failed: ${error.message}`,
-        true,
-        { correlationId: corrId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Automated payout processing failed: ${error.message}`, corrId, true, {  originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -254,12 +244,7 @@ export class AutomatedPayoutService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Failed to schedule payout processing: ${error.message}`,
-        true,
-        { correlationId: corrId, payoutId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Failed to schedule payout processing: ${error.message}`, corrId, true, {  payoutId, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
@@ -345,12 +330,7 @@ export class AutomatedPayoutService {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.DATABASE_ERROR,
-        `Failed to retrieve pending payouts: ${error.message}`,
-        true,
-        { correlationId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.DATABASE_ERROR, `Failed to retrieve pending payouts: ${error.message}`, { correlationId, originalError: error }, true);
 
       FinancialLogger.logError(financialError, correlationId);
 
@@ -405,12 +385,7 @@ export class AutomatedPayoutService {
         })
         .catch(error => {
           FinancialLogger.logError(
-            new FinancialError(
-              FinancialErrorCode.PROCESSING_ERROR,
-              `Batch ${batchIndex} processing failed: ${error.message}`,
-              true,
-              { correlationId, batchIndex, originalError: error }
-            ),
+            FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Batch ${batchIndex} processing failed: ${error.message}`, { correlationId, batchIndex, originalError: error }, true),
             correlationId
           );
 
@@ -507,12 +482,7 @@ export class AutomatedPayoutService {
         });
 
         FinancialLogger.logError(
-          new FinancialError(
-            FinancialErrorCode.PROCESSING_ERROR,
-            `Payout ${payout.id} processing failed: ${error.message}`,
-            true,
-            { correlationId, payoutId: payout.id, originalError: error }
-          ),
+          FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Payout ${payout.id} processing failed: ${error.message}`, { correlationId, payoutId: payout.id, originalError: error }, true),
           correlationId
         );
       }
@@ -594,11 +564,12 @@ export class AutomatedPayoutService {
 
         return {
           success: false,
-          error: new FinancialError(
+          error: FinancialUtils.createError(
             FinancialErrorCode.EXTERNAL_SERVICE_ERROR,
             stripeResult.error || 'Stripe payout processing failed',
+            correlationId,
             shouldRetry,
-            { correlationId, payoutId: payout.id, retryCount }
+            { payoutId: payout.id, retryCount }
           ),
           correlationId
         };
@@ -639,22 +610,12 @@ export class AutomatedPayoutService {
         updatedAt: serverTimestamp()
       }).catch(updateError => {
         FinancialLogger.logError(
-          new FinancialError(
-            FinancialErrorCode.DATABASE_ERROR,
-            `Failed to update payout status: ${updateError.message}`,
-            true,
-            { correlationId, payoutId: payout.id, originalError: updateError }
-          ),
+          FinancialUtils.createError(FinancialErrorCode.DATABASE_ERROR, `Failed to update payout status: ${updateError.message}`, { correlationId, payoutId: payout.id, originalError: updateError }, true),
           correlationId
         );
       });
 
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Payout processing failed: ${error.message}`,
-        false,
-        { correlationId, payoutId: payout.id, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Payout processing failed: ${error.message}`, { correlationId, payoutId: payout.id, originalError: error }, false);
 
       FinancialLogger.logError(financialError, correlationId);
 

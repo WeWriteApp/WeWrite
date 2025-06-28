@@ -328,12 +328,7 @@ export class FraudDetectionEngine {
       };
 
     } catch (error: any) {
-      const financialError = new FinancialError(
-        FinancialErrorCode.PROCESSING_ERROR,
-        `Fraud analysis failed: ${error.message}`,
-        true,
-        { correlationId: corrId, userId: context.userId, originalError: error }
-      );
+      const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Fraud analysis failed: ${error.message}`, corrId, true, {  userId: context.userId, originalError: error  });
 
       FinancialLogger.logError(financialError, corrId);
 
