@@ -37,6 +37,7 @@ import SearchResults from '../search/SearchResults';
 import FollowButton from '../utils/FollowButton';
 import { useConfirmation } from "../../hooks/useConfirmation";
 import ConfirmationModal from '../utils/ConfirmationModal';
+import { navigateAfterPageDeletion } from "../../utils/postDeletionNavigation";
 
 // Dynamically import AddToPageButton to avoid SSR issues
 const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
@@ -134,8 +135,11 @@ export function PageActions({
     const confirmed = await confirmDelete("this page");
     if (confirmed) {
       try {
-        // CRITICAL FIX: Delete the page first, then redirect
-        // This prevents 404 errors and ensures proper cleanup
+        // CRITICAL: Navigate IMMEDIATELY before deletion to prevent 404
+        // Use graceful navigation with proper browser history handling
+        await navigateAfterPageDeletion(page, user, router);
+
+        // Delete the page after navigation has started
         await deletePage(page.id);
 
         // Trigger success event
@@ -144,12 +148,6 @@ export function PageActions({
             detail: { pageId: page.id }
           }));
         }
-
-        // Redirect after successful deletion with a small delay
-        setTimeout(() => {
-          // Use replace to prevent back button issues
-          router.replace("/");
-        }, 500);
 
       } catch (error) {
         console.error("Error deleting page:", error);

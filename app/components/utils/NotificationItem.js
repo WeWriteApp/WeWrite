@@ -297,62 +297,8 @@ export default function NotificationItem({ notification }) {
        * - Continues operation even if individual actions fail
        */
       case 'group_invite':
-        return (
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center mb-1">
-              <UserBadge uid={notification.sourceUserId} showUsername={true} />
-            </div>
-            <p className="text-sm text-foreground font-medium mb-1">
-              You've been invited to join{' '}
-              <span className="font-semibold">
-                {notification.groupName || 'a group'}
-              </span>
-            </p>
-            <p className="text-sm text-muted-foreground mb-3">
-              Join this group to collaborate and share content with other members.
-            </p>
-            <div className="flex gap-2">
-              {/* Accept Invitation Button */}
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  try {
-                    // Import the accept function dynamically to reduce bundle size
-                    const { acceptGroupInvitation } = await import('../../firebase/notifications');
-                    await acceptGroupInvitation(notification.userId, notification.id, notification.groupId);
-                    // Navigate to the group page after successful acceptance
-                    router.push(`/group/${notification.groupId}`);
-                  } catch (error) {
-                    console.error('Error accepting group invitation:', error);
-                    // Error handling for group invitation acceptance
-                  }
-                }}
-                className="inline-flex items-center px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
-              >
-                Join Group
-              </button>
-              {/* Reject Invitation Button */}
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  try {
-                    // Import the reject function dynamically
-                    const { rejectGroupInvitation } = await import('../../firebase/notifications');
-                    await rejectGroupInvitation(notification.userId, notification.id);
-                  } catch (error) {
-                    console.error('Error rejecting group invitation:', error);
-                    // Error handling for group invitation rejection
-                  }
-                }}
-                className="inline-flex items-center px-3 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors"
-              >
-                Ignore Invite
-              </button>
-            </div>
-          </div>
-        );
+        // Groups functionality removed - group invitations no longer supported
+        return null;
 
       case 'payment_failed':
       case 'payment_failed_warning':
@@ -487,7 +433,16 @@ export default function NotificationItem({ notification }) {
 
         <div className="flex items-center gap-2">
           <div className="text-xs text-foreground opacity-70 whitespace-nowrap">
-            {notification.createdAt && formatDistanceToNow(notification.createdAt, { addSuffix: true }).replace('about ', '')}
+            {notification.createdAt && (() => {
+              try {
+                const date = new Date(notification.createdAt);
+                if (isNaN(date.getTime())) return '';
+                return formatDistanceToNow(date, { addSuffix: true }).replace('about ', '');
+              } catch (error) {
+                console.error('Error formatting notification time:', error);
+                return '';
+              }
+            })()}
           </div>
 
           {/* Context Menu Button */}

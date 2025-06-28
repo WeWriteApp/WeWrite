@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { MoreHorizontal, Lock, UserX } from 'lucide-react';
+import { MoreHorizontal, UserX } from 'lucide-react';
 import { Button } from './button';
 import { Switch } from './switch';
 import {
@@ -30,17 +30,11 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
   className = '',
   size = 'md'
 }) => {
-  const [includePrivatePages, setIncludePrivatePages] = useState(false);
   const [excludeOwnPages, setExcludeOwnPages] = useState(false);
 
   // Load preferences from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedPrivacyPreference = localStorage.getItem('randomPages_includePrivate');
-      if (savedPrivacyPreference === 'true') {
-        setIncludePrivatePages(true);
-      }
-
       const savedExcludeOwnPreference = localStorage.getItem('randomPages_excludeOwnPages');
       if (savedExcludeOwnPreference === 'true') {
         setExcludeOwnPages(true);
@@ -48,24 +42,7 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
     }
   }, []);
 
-  // Handle privacy toggle change
-  const handlePrivacyToggle = () => {
-    const newValue = !includePrivatePages;
-    setIncludePrivatePages(newValue);
 
-    // Persist to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('randomPages_includePrivate', String(newValue));
-    }
-
-    // Notify parent component of filter changes
-    if (onFiltersChange) {
-      onFiltersChange({
-        includePrivate: newValue,
-        excludeOwnPages: excludeOwnPages
-      });
-    }
-  };
 
   // Handle "Not mine" toggle change
   const handleExcludeOwnToggle = () => {
@@ -80,7 +57,7 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
     // Notify parent component of filter changes
     if (onFiltersChange) {
       onFiltersChange({
-        includePrivate: includePrivatePages,
+        includePrivate: false,
         excludeOwnPages: newValue
       });
     }
@@ -103,34 +80,7 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            handlePrivacyToggle();
-          }}
-          className="flex items-center justify-between cursor-pointer py-3"
-        >
-          <div className="flex items-center gap-3">
-            <Lock className="h-4 w-4 text-muted-foreground" />
-            <div className="flex flex-col">
-              <span className="font-medium">Include private pages</span>
-              <span className="text-xs text-muted-foreground">
-                Show private pages you have access to
-              </span>
-            </div>
-          </div>
-          <Switch
-            checked={includePrivatePages}
-            onCheckedChange={(checked) => {
-              if (checked !== includePrivatePages) {
-                handlePrivacyToggle();
-              }
-            }}
-            aria-label="Toggle private pages inclusion"
-          />
-        </DropdownMenuItem>
 
-        <DropdownMenuSeparator />
 
         <DropdownMenuItem
           onClick={(e) => {

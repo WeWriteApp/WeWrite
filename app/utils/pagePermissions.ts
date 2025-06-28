@@ -12,7 +12,7 @@ export interface User {
 
 export interface Page {
   userId?: string;
-  groupId?: string;
+  // Groups functionality removed
   [key: string]: any;
 }
 
@@ -32,21 +32,8 @@ export const canUserEditPage = (
     return false;
   }
 
-  // User is the page owner
-  if (page.userId && user.uid === page.userId) {
-    return true;
-  }
-
-  // Page belongs to a group and user is a member of that group
-  if (page.groupId) {
-    // Check if user has group memberships
-    const groups = userGroups || user.groups;
-    if (groups && groups[page.groupId]) {
-      return true;
-    }
-  }
-
-  return false;
+  // Only the page owner can edit
+  return page.userId && user.uid === page.userId;
 };
 
 /**
@@ -83,9 +70,7 @@ export const navigateToPage = (
     url,
     canEdit: page ? canUserEditPage(user, page, userGroups) : 'unknown',
     userId: user?.uid,
-    pageUserId: page?.userId,
-    pageGroupId: page?.groupId,
-    userGroups: userGroups || user?.groups
+    pageUserId: page?.userId
   });
 
   // Navigate without scrolling the current page

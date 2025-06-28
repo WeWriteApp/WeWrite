@@ -9,11 +9,12 @@ import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface PWAInstallsAnalyticsWidgetProps {
   dateRange: DateRange;
+  granularity?: number;
   className?: string;
 }
 
-export function PWAInstallsAnalyticsWidget({ dateRange, className = "" }: PWAInstallsAnalyticsWidgetProps) {
-  const { data, loading, error } = usePWAInstallsMetrics(dateRange);
+export function PWAInstallsAnalyticsWidget({ dateRange, granularity, className = "" }: PWAInstallsAnalyticsWidgetProps) {
+  const { data, loading, error } = usePWAInstallsMetrics(dateRange, granularity);
   const chartConfig = useResponsiveChart(data.length, data);
 
   // Check if we have any data
@@ -171,6 +172,7 @@ export function PWAInstallsAnalyticsWidget({ dateRange, className = "" }: PWAIns
                 fill="#a855f7"
                 name="Installs"
                 radius={[2, 2, 0, 0]}
+                maxBarSize={60}
               />
             </BarChart>
           </ResponsiveContainer>

@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/colla
 import { Loader, ChevronDown, Users, Settings, Eye, User, Globe } from 'lucide-react';
 import { FeatureFlag } from '../../utils/feature-flags';
 import { collection, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../firebase/database';
+import { db } from '../../firebase/config';
 import { useAuth } from '../../providers/AuthProvider';
 import { useToast } from '../ui/use-toast';
 import UserAccessModal from './UserAccessModal';
@@ -199,143 +199,91 @@ export default function FeatureFlagCard({
 
   return (
     <>
-      <Card className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{flag.name}</span>
-            {flag.enabled ? (
-              <span className="px-2 py-1 text-xs bg-success/10 text-success border border-success/20 rounded-full">
-                GLOBALLY ENABLED
-              </span>
-            ) : (
-              <span className="px-2 py-1 text-xs bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 rounded-full">
-                GLOBALLY DISABLED
-              </span>
-            )}
-            {personalEnabled !== null && personalEnabled !== flag.enabled && (
-              <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
-                PERSONAL OVERRIDE
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Personal Toggle Section */}
-        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-          <div className="flex items-center justify-between">
+      <div className="relative flex items-center justify-between p-4 border-border border rounded-lg hover:bg-muted/50 transition-colors">
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-1">
+            <h3 className="font-medium">{flag.name}</h3>
             <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              <div>
-                <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Personal Access</span>
-                <p className="text-xs text-blue-700 dark:text-blue-300">Controls this feature for you only</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {loadingPersonal && (
-                <Loader className="h-4 w-4 animate-spin text-blue-600" />
+              {flag.enabled ? (
+                <Badge variant="default" className="text-xs">ON</Badge>
+              ) : (
+                <Badge variant="secondary" className="text-xs">OFF</Badge>
               )}
-              <Switch
-                checked={personalEnabled ?? flag.enabled}
-                onCheckedChange={handlePersonalToggle}
-                disabled={loadingPersonal || !user}
-              />
+              {personalEnabled !== null && personalEnabled !== flag.enabled && (
+                <Badge variant="outline" className="text-xs">PERSONAL</Badge>
+              )}
             </div>
           </div>
+          <p className="text-sm text-muted-foreground">{flag.description}</p>
         </div>
 
-        <p className="text-sm text-muted-foreground mb-3">{flag.description}</p>
 
-        <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-between p-2 h-auto"
-              onClick={handleExpandToggle}
-            >
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                <span className="text-sm">User Access Control</span>
-              </div>
-              <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-            </Button>
-          </CollapsibleTrigger>
+        <div className="flex items-center gap-3">
+          {/* Global Toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Global:</span>
+            <Switch
+              checked={flag.enabled}
+              onCheckedChange={(checked) => onToggle(flag.id, checked)}
+              disabled={isLoading}
+            />
+          </div>
 
-          <CollapsibleContent className="space-y-3 pt-3">
-            {/* Global Toggle Section */}
-            <div className="p-4 bg-yellow-500/10 rounded-lg border-theme-medium">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                  <div>
-                    <span className="text-sm font-medium text-orange-900 dark:text-orange-100">Global Access Control</span>
-                    <p className="text-xs text-orange-700 dark:text-orange-300">Controls this feature for ALL users in the system</p>
+          {/* Personal Toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Personal:</span>
+            <Switch
+              checked={personalEnabled ?? flag.enabled}
+              onCheckedChange={handlePersonalToggle}
+              disabled={loadingPersonal || !user}
+            />
+          </div>
+
+
+          {/* Advanced Options */}
+          <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="px-2">
+                <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+
+            <CollapsibleContent className="absolute right-0 top-full mt-1 bg-background border-border border rounded-lg shadow-lg p-3 z-10 min-w-48">
+              {loadingStats ? (
+                <div className="flex justify-center py-2">
+                  <Loader className="h-4 w-4 animate-spin" />
+                </div>
+              ) : userStats ? (
+                <div className="space-y-2">
+                  <div className="text-xs text-muted-foreground">
+                    {userStats.usersWithAccess}/{userStats.totalUsers} users have access
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => setShowUserModal(true)}
+                    >
+                      Manage Users
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7 px-2"
+                      onClick={() => window.open(`/admin/features/${flag.id}`, '_blank')}
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {isLoading && (
-                    <Loader className="h-4 w-4 animate-spin text-orange-600" />
-                  )}
-                  <Switch
-                    checked={flag.enabled}
-                    onCheckedChange={(checked) => onToggle(flag.id, checked)}
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-              <div className="text-xs text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/50 p-2 rounded">
-                ⚠️ <strong>Warning:</strong> This affects all users. Individual user overrides will still apply.
-              </div>
-            </div>
-
-            {loadingStats ? (
-              <div className="flex justify-center py-4">
-                <Loader className="h-4 w-4 animate-spin text-muted-foreground" />
-              </div>
-            ) : userStats ? (
-              <>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="p-2 bg-muted/50 rounded">
-                    <div className="text-lg font-semibold">{userStats.totalUsers}</div>
-                    <div className="text-xs text-muted-foreground">Total Users</div>
-                  </div>
-                  <div className="p-2 bg-muted/50 rounded">
-                    <div className="text-lg font-semibold text-green-600">{userStats.usersWithAccess}</div>
-                    <div className="text-xs text-muted-foreground">With Access</div>
-                  </div>
-                  <div className="p-2 bg-muted/50 rounded">
-                    <div className="text-lg font-semibold text-blue-600">{userStats.customOverrides}</div>
-                    <div className="text-xs text-muted-foreground">Overrides</div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setShowUserModal(true)}
-                  >
-                    <Settings className="h-4 w-4 mr-1" />
-                    Manage Users
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(`/admin/features/${flag.id}`, '_blank')}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-4 text-muted-foreground text-sm">
-                Failed to load user statistics
-              </div>
-            )}
-          </CollapsibleContent>
-        </Collapsible>
-      </Card>
+              ) : (
+                <div className="text-xs text-muted-foreground">Failed to load stats</div>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      </div>
 
       {showUserModal && (
         <UserAccessModal

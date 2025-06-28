@@ -8,13 +8,10 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { CreditCard, Plus, AlertTriangle, CheckCircle } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { getStripePublishableKey } from '../../utils/stripeConfig';
 
 // Initialize Stripe
-const stripePromise = loadStripe(
-  process.env.NODE_ENV === 'development'
-    ? process.env.NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
-    : process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
-);
+const stripePromise = loadStripe(getStripePublishableKey() || '');
 
 interface PaymentMethodSetupProps {
   onSuccess?: () => void;

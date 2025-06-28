@@ -233,28 +233,38 @@ async function createMonthlyPayouts(period: string, dryRun: boolean) {
 
 async function processScheduledPayouts(period: string): Promise<number> {
   console.log(`Processing scheduled payouts for period: ${period}`);
-  
-  const payoutsQuery = query(
-    collection(db, 'payouts'),
-    where('period', '==', period),
-    where('status', '==', 'pending')
-  );
-  
-  const payoutsSnapshot = await getDocs(payoutsQuery);
-  let processedCount = 0;
-  
-  for (const payoutDoc of payoutsSnapshot.docs) {
-    try {
-      const result = await stripePayoutService.processPayout(payoutDoc.id);
-      if (result.success) {
-        processedCount++;
-      }
-    } catch (error) {
-      console.error(`Error processing payout ${payoutDoc.id}:`, error);
+
+  // Use the new automated payout service for processing
+  const { AutomatedPayoutService } = await import('../../../services/automatedPayoutService');
+  const { FinancialUtils } = await import('../../../types/financial');
+
+  const correlationId = FinancialUtils.generateCorrelationId();
+  const payoutService = AutomatedPayoutService.getInstance({
+    batchSize: 20, // Larger batch size for monthly processing
+    maxRetries: 5,
+    minimumThreshold: 25
+  });
+
+  try {
+    const result = await payoutService.processAllPendingPayouts(correlationId);
+
+    if (result.success && result.data) {
+      console.log(`Automated payout processing completed:`, {
+        totalProcessed: result.data.totalProcessed,
+        successful: result.data.successful,
+        failed: result.data.failed,
+        correlationId
+      });
+
+      return result.data.successful;
+    } else {
+      console.error(`Automated payout processing failed:`, result.error?.message);
+      return 0;
     }
+  } catch (error) {
+    console.error(`Error in automated payout processing:`, error);
+    return 0;
   }
-  
-  return processedCount;
 }
 
 function getPreviousMonth(): string {

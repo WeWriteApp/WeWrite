@@ -1,4 +1,21 @@
-// This is a temporary file to fix the issue
+/**
+ * SinglePageView Component
+ *
+ * Main component for displaying and editing individual pages in WeWrite.
+ *
+ * Key Features:
+ * - Real-time page loading with Firebase listeners
+ * - Seamless view/edit mode switching
+ * - Comprehensive error handling and loading states
+ * - Support for both public and private pages
+ * - Integrated link insertion and page management
+ *
+ * Recent Fixes:
+ * - Fixed 404 errors by properly handling data.pageData vs direct data formats
+ * - Removed problematic mounted checks that were blocking data updates
+ * - Simplified callback logic for better maintainability
+ * - Cleaned up excessive debug logging
+ */
 "use client";
 import React, { useEffect, useState, useContext, useRef, useCallback, useMemo } from "react";
 import { TextSelectionProvider } from "../../providers/TextSelectionProvider";
@@ -21,10 +38,8 @@ import PublicLayout from "../layout/PublicLayout";
 import PageHeader from "./PageHeader.tsx";
 import PageFooter from "./PageFooter";
 
-import TokenPledgeBar from "../payments/TokenPledgeBar";
-import RelatedPages from "../features/RelatedPages";
-// Import BacklinksSection with dynamic import to avoid SSR issues
-const BacklinksSection = dynamic(() => import("../features/BacklinksSection"), { ssr: false });
+import TokenAllocationBar from "../payments/TokenAllocationBar";
+import CombinedLinksSection from "../features/CombinedLinksSection";
 import Link from "next/link";
 import Head from "next/head";
 import { Button } from "../ui/button";
@@ -76,10 +91,10 @@ import UnsavedChangesDialog from "../utils/UnsavedChangesDialog";
 import { useConfirmation } from "../../hooks/useConfirmation";
 import ConfirmationModal from "../utils/ConfirmationModal";
 import { useLogging } from "../../providers/LoggingProvider";
-import { GroupsContext } from "../../providers/GroupsProvider";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { detectPageChanges } from "../../utils/contentNormalization";
 import { ContentChangesTrackingService } from "../../services/contentChangesTracking";
+import { navigateAfterPageDeletion } from "../../utils/postDeletionNavigation";
 
 // Username handling is now done directly in this component
 
@@ -107,12 +122,9 @@ function SinglePageView({ params, initialEditMode = false }) {
   const [editorState, setEditorState] = useState([]);
   const [editorError, setEditorError] = useState(null);
   const [isDeleted, setIsDeleted] = useState(false);
+  const [isDeletingPage, setIsDeletingPage] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isPublic, setIsPublic] = useState(false);
-  const [groupId, setGroupId] = useState(null);
-  const [groupName, setGroupName] = useState(null);
-  const [groupIsPrivate, setGroupIsPrivate] = useState(false);
-  const [hasGroupAccess, setHasGroupAccess] = useState(true);
   const [scrollDirection, setScrollDirection] = useState('none');
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -136,12 +148,14 @@ function SinglePageView({ params, initialEditMode = false }) {
   // CRITICAL FIX: Add ref to access editor content
   const editorRef = useRef(null);
 
+  // CRITICAL FIX: Add ref to track if component is mounted to prevent state updates after unmounting
+  const isMountedRef = useRef(true);
+
   // Deleted page preview state
   const [isPreviewingDeleted, setIsPreviewingDeleted] = useState(false);
   const [deletedPageData, setDeletedPageData] = useState(null);
 
-  const { user } = useContext(AuthContext);
-  const groups = useContext(GroupsContext);
+  const { user, loading: authLoading } = useContext(AuthContext);
   const { recentPages = [], addRecentPage } = useContext(RecentPagesContext) || {};
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -167,17 +181,8 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   // Handle content changes from editor
   const handleContentChange = (content) => {
-    console.log("🔵 SinglePageView handleContentChange called with:", {
-      content,
-      contentType: typeof content,
-      isArray: Array.isArray(content),
-      length: Array.isArray(content) ? content.length : 0,
-      firstItem: Array.isArray(content) && content.length > 0 ? content[0] : null
-    });
-
     setEditorContent(content);
     setHasContentChanged(true);
-    console.log("🔵 SinglePageView: hasContentChanged set to TRUE");
   };
 
   // Handle visibility changes
@@ -197,29 +202,8 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   // Handle save action - comprehensive save logic moved from EditPage
   const handleSave = useCallback(async (inputContent, saveMethod = 'button') => {
-    console.log("🔵 SinglePageView handleSave called with:", {
-      inputContent,
-      contentType: typeof inputContent,
-      isArray: Array.isArray(inputContent),
-      length: Array.isArray(inputContent) ? inputContent.length : 0,
-      saveMethod,
-      hasUser: !!user,
-      hasPage: !!page,
-      pageId: page?.id,
-      userId: user?.uid,
-      currentEditorContent: editorContent,
-      currentEditorState: editorState,
-      hasContentChanged,
-      hasTitleChanged
-    });
 
-    console.log("🔵 SAVE DEBUG: Current state before save:", {
-      editorContent,
-      editorState,
-      hasContentChanged,
-      hasTitleChanged,
-      title
-    });
+
 
     if (!user) {
       setError("User not authenticated");
@@ -241,8 +225,6 @@ function SinglePageView({ params, initialEditMode = false }) {
 
     // If content is empty but the page should have content, show warning
     if (isContentEmpty && page && !page.isNewPage) {
-      console.warn("🚨 DATA LOSS PREVENTION: Attempting to save empty content for existing page");
-
       // Show confirmation dialog for potentially destructive save
       const confirmSave = window.confirm(
         "⚠️ WARNING: You are about to save empty content.\n\n" +
@@ -252,10 +234,7 @@ function SinglePageView({ params, initialEditMode = false }) {
       );
 
       if (!confirmSave) {
-        console.log("🛡️ DATA LOSS PREVENTED: User cancelled empty content save");
         return false;
-      } else {
-        console.log("⚠️ User confirmed saving empty content");
       }
     }
 
@@ -347,22 +326,39 @@ function SinglePageView({ params, initialEditMode = false }) {
       // SIMPLIFIED: Update the page document directly
       console.log(`💾 Updating page ${page.id} with new content`);
 
-      // Import serverTimestamp for proper Firestore timestamp
-      const { serverTimestamp } = await import('firebase/firestore');
+      // CRITICAL FIX: Use ISO string instead of serverTimestamp for consistent format
+      // This ensures lastModified is always stored as an ISO string, not a Firestore Timestamp
+      const now = new Date().toISOString();
 
       // Prepare update data - always update everything
       const updateData = {
         title: title,
         isPublic: isPublic,
-        groupId: groupId,
         location: location,
         content: editorStateJSON,
-        lastModified: serverTimestamp()
+        lastModified: now
       };
 
       await updateDoc("pages", page.id, updateData);
 
       console.log('Page metadata and content updated successfully');
+
+      // CRITICAL FIX: Add page to recent pages list for immediate UI updates
+      try {
+        if (addRecentPage) {
+          await addRecentPage({
+            id: page.id,
+            title: title,
+            lastModified: now,
+            userId: page.userId,
+            username: page.username || user.displayName || user.username
+          });
+          console.log('✅ Added page to recent pages list');
+        }
+      } catch (recentError) {
+        console.error('⚠️ Error adding to recent pages (non-fatal):', recentError);
+        // Don't fail the save if recent pages tracking fails
+      }
 
       // Track content changes for analytics
       try {
@@ -389,13 +385,13 @@ function SinglePageView({ params, initialEditMode = false }) {
         }
       }
 
-      // SIMPLIFIED: Always create a new version when saving
+      // ENHANCED: Enable no-op detection to prevent unnecessary versions
       try {
         const result = await saveNewVersion(page.id, {
           content: editorStateJSON,
           userId: user.uid,
           username: user.displayName || user.username,
-          skipIfUnchanged: false // Always create version
+          skipIfUnchanged: true // Skip version creation for no-op edits
         });
 
         if (result && result.success) {
@@ -431,6 +427,21 @@ function SinglePageView({ params, initialEditMode = false }) {
         console.error('⚠️ Error invalidating caches (non-fatal):', cacheError);
       }
 
+      // Add the edited page to recent pages tracking
+      try {
+        if (addRecentPage) {
+          await addRecentPage({
+            id: page.id,
+            title: title,
+            userId: page.userId,
+            username: page.username || user.displayName || user.username || 'Anonymous'
+          });
+          console.log('Added edited page to recent pages tracking');
+        }
+      } catch (recentPagesError) {
+        console.error('Error adding edited page to recent pages (non-fatal):', recentPagesError);
+      }
+
       // Reset all change tracking states
       setHasContentChanged(false);
       setHasTitleChanged(false);
@@ -460,7 +471,7 @@ function SinglePageView({ params, initialEditMode = false }) {
       logError(error, { context: 'SinglePageView.handleSave', pageId: page?.id });
       return false;
     }
-  }, [user, page, editorContent, editorState, title, isPublic, groupId, location, logError]);
+  }, [user, page, editorContent, editorState, title, isPublic, location, logError]);
 
   // Handle cancel action
   const handleCancel = () => {
@@ -494,7 +505,6 @@ function SinglePageView({ params, initialEditMode = false }) {
       // trackEditingFlow.started(params.id, {
       //   page_title: page?.title,
       //   is_public: page?.isPublic,
-      //   has_group: !!page?.groupId,
       //   click_position: position ? 'click' : 'keyboard'
       // });
     } else if (!editing) {
@@ -513,18 +523,21 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   // Handle delete action
   const handleDelete = async () => {
-    if (!page) return;
+    if (!page || isDeleted) return;
 
     // Use the correct confirmDelete API - it expects just the item name
     const confirmed = await confirmDelete(`"${page.title || 'this page'}"`);
 
     if (confirmed) {
       try {
-        // Set deleting state to prevent listener from processing "not found" errors
-        setIsDeleted(true);
+        // Set flag to prevent page listener from updating state during deletion
+        setIsDeletingPage(true);
 
-        // CRITICAL FIX: Delete the page first, then redirect
-        // This prevents 404 errors and ensures proper cleanup
+        // CRITICAL: Navigate IMMEDIATELY before deletion to prevent 404
+        // Use graceful navigation with proper browser history handling
+        await navigateAfterPageDeletion(page, user, router);
+
+        // Delete the page after navigation has started
         await deletePage(page.id);
 
         // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
@@ -532,11 +545,8 @@ function SinglePageView({ params, initialEditMode = false }) {
         // trackContentEvent(events.PAGE_DELETED, {
         //   page_id: page.id,
         //   page_title: page.title,
-        //   was_public: page.isPublic,
-        //   had_group: !!page.groupId
+        //   was_public: page.isPublic
         // });
-
-
 
         // Trigger success event
         if (typeof window !== 'undefined') {
@@ -545,16 +555,8 @@ function SinglePageView({ params, initialEditMode = false }) {
           }));
         }
 
-        // Redirect after successful deletion with a small delay
-        setTimeout(() => {
-          // Use replace to prevent back button issues
-          router.replace('/');
-        }, 500);
-
       } catch (error) {
         console.error("Error deleting page:", error);
-        // Reset deleted state if deletion failed
-        setIsDeleted(false);
         const errorMessage = `Failed to delete page: ${error.message}`;
         setError(errorMessage);
         toast.error("Failed to delete page");
@@ -565,11 +567,8 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   // Handle link insertion for existing pages
   const handleInsertLink = useCallback(() => {
-    console.log("🔵 [DEBUG] SinglePageView handleInsertLink called");
-    console.log("🔵 [DEBUG] editorRef.current:", editorRef.current);
-
     if (!editorRef.current) {
-      console.error("🔴 [DEBUG] Editor ref not available");
+      console.error("Editor ref not available");
       return;
     }
 
@@ -670,7 +669,6 @@ function SinglePageView({ params, initialEditMode = false }) {
   useEffect(() => {
     if (page) {
       setLocation(page.location || null);
-      setGroupId(page.groupId || null);
     }
   }, [page]);
 
@@ -713,7 +711,6 @@ function SinglePageView({ params, initialEditMode = false }) {
   // Override the cancel handler to check for unsaved changes
   const handleCancelWithCheck = () => {
     const returnUrl = page && page.id ? `/${page.id}` : '/';
-    console.log('[DEBUG] SinglePageView - handleCancelWithCheck called, returnUrl:', returnUrl);
 
     if (hasUnsavedChangesComputed) {
       handleNavigation(returnUrl);
@@ -762,12 +759,8 @@ function SinglePageView({ params, initialEditMode = false }) {
       !isDeleted &&
       !isPreviewingDeleted &&
       user?.uid &&
-      (
-        // User is the page owner
-        (page?.userId && user.uid === page.userId) ||
-        // OR page belongs to a group and user is a member of that group
-        (page?.groupId && hasGroupAccess)
-      )
+      // User is the page owner
+      (page?.userId && user.uid === page.userId)
     ),
     handleSave: isEditing ? handleKeyboardSave : null
   });
@@ -793,10 +786,8 @@ function SinglePageView({ params, initialEditMode = false }) {
       //   // If we already have a title, use it as a starting point
       //   let initialTitle;
 
-      //   // Format title based on whether the page belongs to a group
-      //   if (page.groupId && page.groupName) {
-      //     initialTitle = `Page: ${page.title} in ${page.groupName}`;
-      //   } else if (page.username) {
+      //   // Format title based on page author
+      //   if (page.username) {
       //     initialTitle = `Page: ${page.title} by ${page.username}`;
       //   } else {
       //     initialTitle = `Page: ${page.title}`;
@@ -812,12 +803,46 @@ function SinglePageView({ params, initialEditMode = false }) {
 
   // Add a timeout ref to prevent infinite loading
   const loadingTimeoutRef = useRef(null);
+  const emergencyTimeoutRef = useRef(null); // Track emergency timeout separately
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
   const maxLoadAttempts = 3;
 
   useEffect(() => {
     if (params.id) {
+      // Emergency timeout to prevent infinite loading - INCREASED to 10 seconds to prevent premature override
+      emergencyTimeoutRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          console.warn("SinglePageView: Emergency timeout triggered after 10 seconds");
+          setIsLoading(false);
+          // Set some basic content to show something
+          if (!page) {
+            setPage({
+              id: params.id,
+              title: "Loading...",
+              username: "Unknown",
+              isPublic: true
+            });
+          }
+          if (!editorState || editorState.length === 0) {
+            setEditorState([{
+              type: "paragraph",
+              children: [{ text: "Content is loading..." }]
+            }]);
+          }
+        }
+      }, 10000); // INCREASED to 10 seconds to prevent content disappearing
+
+      // Wait for authentication to complete before setting up listener
+      // This prevents permission denied errors when checking group access
+      if (authLoading) {
+        if (emergencyTimeoutRef.current) {
+          clearTimeout(emergencyTimeoutRef.current); // Clear emergency timeout if we're waiting for auth
+          emergencyTimeoutRef.current = null;
+        }
+        return;
+      }
+
       setIsLoading(true);
       setLoadingTimedOut(false);
 
@@ -854,238 +879,75 @@ function SinglePageView({ params, initialEditMode = false }) {
 
       // Make sure we pass the user ID to the listenToPageById function
       const currentUserId = user?.uid || null;
-      console.log(`Setting up page listener with user ID: ${currentUserId || 'anonymous'} (attempt ${loadAttempts + 1}/${maxLoadAttempts})`);
+      // Set up page listener
 
-      const unsubscribe = listenToPageById(params.id, async (data) => {
-        // Clear the timeout since we got a response
-        if (loadingTimeoutRef.current) {
-          clearTimeout(loadingTimeoutRef.current);
-          loadingTimeoutRef.current = null;
-        }
-
-        // Reset the timeout flag and load attempts if we got a successful response
-        setLoadingTimedOut(false);
-        setLoadAttempts(0);
-
-        // Log the received data for debugging
-        console.log("SinglePageView: Data received from listenToPageById", {
-          hasError: !!data.error,
-          hasPageData: !!data.pageData,
-          hasVersionData: !!data.versionData,
-          timestamp: new Date().toISOString()
-        });
-
-        // Force a re-render to ensure the page content is displayed
-        window.requestAnimationFrame(() => {
-          console.log("SinglePageView: Forcing re-render after data received");
-        });
-
-        if (data.error) {
-          console.error("SinglePageView: Error loading page:", data.error);
-          // Don't show error if page is being deleted - user is already redirected
-          if (!isDeleted) {
-            setError(data.error);
-          }
+      const unsubscribe = listenToPageById(params.id, (data) => {
+        try {
+          // Stop loading immediately when data is received
           setIsLoading(false);
-          return;
-        }
 
-        let pageData = data.pageData || data;
+          // Clear timeout and reset attempts
+          if (loadingTimeoutRef.current) {
+            clearTimeout(loadingTimeoutRef.current);
+            loadingTimeoutRef.current = null;
+          }
+          // CRITICAL: Clear emergency timeout when page loads successfully
+          if (emergencyTimeoutRef.current) {
+            clearTimeout(emergencyTimeoutRef.current);
+            emergencyTimeoutRef.current = null;
+          }
+          setLoadingTimedOut(false);
+          setLoadAttempts(0);
 
-        // Make sure pageData has a username
-        if (!pageData.username) {
-          pageData.username = "Anonymous";
-        }
-
-        // Check if this is a deleted page
-        if (pageData.deleted) {
-          console.log(`Page ${pageData.id} is marked as deleted`);
-          // Only set isDeleted if we're not in preview mode
-          if (!isPreviewingDeleted) {
-            setIsDeleted(true);
-            setIsLoading(false);
+          // Handle errors
+          if (data.error) {
+            console.error("SinglePageView: Error loading page:", data.error);
+            if (!isDeleted && isMountedRef.current) {
+              setError(data.error);
+            }
             return;
           }
-        }
 
-        setPage(pageData);
-        setIsPublic(pageData.isPublic || false);
+          // Extract page data (handle both data.pageData and direct data formats)
+          const pageData = data.pageData || data;
 
-        // Check if the page belongs to a group
-        if (pageData.groupId) {
-          setGroupId(pageData.groupId);
+          if (pageData && pageData.id && !isDeletingPage) {
+            setPage(pageData);
+            setIsPublic(pageData.isPublic || false);
+            setIsDeleted(pageData.deleted || false);
 
-          // If groupName is already in the page data, use it
-          if (pageData.groupName) {
-            setGroupName(pageData.groupName);
-          } else {
-            // Otherwise, fetch the group name from the database
-            const db = getDatabase(app);
-            const groupRef = ref(db, `groups/${pageData.groupId}`);
-
-            onValue(groupRef, (snapshot) => {
-              if (snapshot.exists()) {
-                const groupData = snapshot.val();
-                setGroupName(groupData.name);
-
-                // Check if the group is private
-                setGroupIsPrivate(!groupData.isPublic);
-
-                // Check if the user is a member of the group
-                const isMember = user?.uid && groupData.members && groupData.members[user.uid];
-                setHasGroupAccess(isMember);
-              } else {
-                // Group doesn't exist
-                setGroupName(null);
-                setGroupIsPrivate(false);
-                setHasGroupAccess(false);
-              }
-            }, {
-              onlyOnce: true
-            });
-          }
-        } else {
-          // Reset group state if the page doesn't belong to a group
-          setGroupId(null);
-          setGroupName(null);
-          setGroupIsPrivate(false);
-          setHasGroupAccess(false);
-        }
-
-        // Set page title for document title
-        if (pageData.title) {
-          // If the page has a title of "Untitled", add a more descriptive suffix
-          if (pageData.title === "Untitled") {
-            setTitle(`Untitled (${pageData.id.substring(0, 6)})`);
-          } else {
-            setTitle(pageData.title);
-          }
-
-          // If the page is already marked as viewed, update analytics with the better title
-          if (viewRecorded.current && isPublic) {
-            // Track with improved title now that we have it
-            let analyticsTitle;
-
-            // Format title based on whether the page belongs to a group
-            if (pageData.groupId && pageData.groupName) {
-              analyticsTitle = `Page: ${pageData.title} in ${pageData.groupName}`;
-            } else if (pageData.username) {
-              analyticsTitle = `Page: ${pageData.title} by ${pageData.username}`;
-            } else {
-              analyticsTitle = `Page: ${pageData.title}`;
+            // Set page title
+            if (pageData.title) {
+              setTitle(pageData.title === "Untitled"
+                ? `Untitled (${pageData.id.substring(0, 6)})`
+                : pageData.title
+              );
             }
-
-            trackPageViewWhenReady(params.id, analyticsTitle);
           }
-        }
 
-        if (data.versionData) {
-          try {
-            const contentString = data.versionData.content;
-            console.log("SinglePageView: Received content update", {
-              contentLength: contentString ? contentString.length : 0,
-              isString: typeof contentString === 'string',
-              contentSample: typeof contentString === 'string' ? contentString.substring(0, 50) + '...' : 'not a string',
-              timestamp: new Date().toISOString()
-            });
-
-            let parsedContent;
-
-            // Handle different content formats
-            if (typeof contentString === 'string') {
-              try {
-                // Check if content is already parsed (double parsing issue)
-                if (contentString.startsWith('[{"type":"paragraph"') || contentString.startsWith('[{\\\"type\\\":\\\"paragraph\\\"')) {
-                  parsedContent = JSON.parse(contentString);
-                  console.log("SinglePageView: Successfully parsed string content");
-                } else {
-                  // Content might be double-stringified, try to parse twice
-                  try {
-                    const firstParse = JSON.parse(contentString);
-                    if (typeof firstParse === 'string' &&
-                        (firstParse.startsWith('[{"type":"paragraph"') ||
-                         firstParse.startsWith('[{\\\"type\\\":\\\"paragraph\\\"'))) {
-                      parsedContent = JSON.parse(firstParse);
-                      console.log("SinglePageView: Successfully parsed double-stringified content");
-                    } else {
-                      parsedContent = firstParse;
-                      console.log("SinglePageView: Using first-level parsed content");
-                    }
-                  } catch (doubleParseError) {
-                    console.error("SinglePageView: Error parsing potentially double-stringified content:", doubleParseError);
-                    // Fall back to original parsing
-                    parsedContent = JSON.parse(contentString);
-                  }
-                }
-              } catch (parseError) {
-                console.error("SinglePageView: Error parsing string content:", parseError);
-                console.error("SinglePageView: Content that failed to parse:", contentString?.substring(0, 200) + "...");
-
-                // Create a more helpful fallback content structure
-                parsedContent = [{
-                  type: "paragraph",
-                  children: [{ text: "Unable to load page content. The page data may be corrupted. Try refreshing the page, and if the problem persists, contact support." }]
-                }];
+          // Set content
+          if (data.versionData?.content) {
+            try {
+              let content = data.versionData.content;
+              if (typeof content === 'string') {
+                content = JSON.parse(content);
               }
-            } else if (Array.isArray(contentString)) {
-              // Content is already an array, use it directly
-              parsedContent = contentString;
-              console.log("SinglePageView: Using array content directly");
-            } else if (contentString && typeof contentString === 'object') {
-              // Content is an object, convert to array if needed
-              parsedContent = [contentString];
-              console.log("SinglePageView: Converted object content to array");
-            } else {
-              // Fallback for null or undefined content
-              parsedContent = [{
+              setEditorState(Array.isArray(content) ? content : [content]);
+            } catch (error) {
+              console.error("Error parsing content:", error);
+              setEditorState([{
                 type: "paragraph",
-                children: [{ text: "No content available." }]
-              }];
-              console.log("SinglePageView: Using fallback empty content");
+                children: [{ text: "Error loading content." }]
+              }]);
             }
-
-            // Ensure content is an array
-            if (!Array.isArray(parsedContent)) {
-              parsedContent = parsedContent ? [parsedContent] : [];
-            }
-
-            // Deduplicate content items that might be duplicated in development environment
-            if (parsedContent.length > 0) {
-              const uniqueItems = [];
-              const seen = new Set();
-
-              parsedContent.forEach(item => {
-                // Create a simple hash of the item to detect duplicates
-                const itemHash = JSON.stringify(item);
-                if (!seen.has(itemHash)) {
-                  seen.add(itemHash);
-                  uniqueItems.push(item);
-                } else {
-                  console.log("SinglePageView: Filtered out duplicate content item");
-                }
-              });
-
-              parsedContent = uniqueItems;
-            }
-
-            // Update editor state without comparing to avoid circular dependencies
-            console.log("SinglePageView: Updating editor state with new content, items:", parsedContent.length);
-            setEditorState(parsedContent);
-            setEditorError(null); // Clear any previous errors
-          } catch (error) {
-            console.error("SinglePageView: Error processing content:", error);
-            console.error("SinglePageView: Content processing error details:", {
-              pageId: params.id,
-              contentType: typeof data.versionData?.content,
-              hasVersionData: !!data.versionData,
-              errorMessage: error.message,
-              errorStack: error.stack
-            });
-            setEditorError("Unable to load page content. This may be due to corrupted data or a temporary issue. Please try refreshing the page.");
+          }
+        } catch (error) {
+          console.error("SinglePageView: Error in callback:", error);
+          if (isMountedRef.current) {
+            setIsLoading(false);
+            setError("An unexpected error occurred while loading the page. Please try refreshing.");
           }
         }
-
-        setIsLoading(false);
       }, currentUserId); // Pass the user ID here
 
       return () => {
@@ -1097,6 +959,11 @@ function SinglePageView({ params, initialEditMode = false }) {
           clearTimeout(loadingTimeoutRef.current);
           loadingTimeoutRef.current = null;
         }
+        // CRITICAL: Clear emergency timeout on cleanup
+        if (emergencyTimeoutRef.current) {
+          clearTimeout(emergencyTimeoutRef.current);
+          emergencyTimeoutRef.current = null;
+        }
 
         // Reset state to prevent memory leaks
         setIsLoading(false);
@@ -1104,53 +971,49 @@ function SinglePageView({ params, initialEditMode = false }) {
         setLoadAttempts(0);
       };
     }
-  }, [params.id, user?.uid, loadAttempts]); // Added loadAttempts to dependencies to trigger retries
+  }, [params.id, user?.uid, loadAttempts, authLoading, isDeletingPage]); // Added authLoading to wait for auth completion
+
+
 
   // Handle initial edit mode from URL or initialEditMode prop
   useEffect(() => {
     if (!isLoading && page && user) {
       // Check if user has edit permissions
-      const canEdit = user.uid === page.userId || (page.groupId && hasGroupAccess);
+      const canEdit = user.uid === page.userId;
 
       if (canEdit) {
         // Check for edit=true URL parameter (legacy support)
         if (searchParams && searchParams.get('edit') === 'true') {
-          console.log('Setting edit mode from URL parameter');
           setIsEditing(true);
         }
         // Check for initialEditMode prop (from /[id]/edit route)
         else if (initialEditMode) {
-          // CRITICAL FIX: Wait for content to load before entering edit mode
+          // Wait for content to load before entering edit mode
           // This prevents the race condition where editor initializes with empty content
           if (editorState && editorState.length > 0) {
-            console.log('Setting edit mode from initialEditMode prop - content loaded');
             setIsEditing(true);
-          } else {
-            console.log('Waiting for content to load before entering edit mode...');
-            // Content will trigger edit mode when it loads (see content loading effect below)
           }
+          // Content will trigger edit mode when it loads (see content loading effect below)
         }
       } else {
-        console.log('User does not have edit permissions for this page');
         // If user doesn't have permissions and they're on edit URL, redirect to normal view
         if (initialEditMode) {
           router.replace(`/${params.id}`);
         }
       }
     }
-  }, [searchParams, isLoading, page, user, hasGroupAccess, initialEditMode, params.id, router, editorState]);
+  }, [searchParams, isLoading, page, user, initialEditMode, params.id, router, editorState]);
 
-  // CRITICAL FIX: Separate effect to handle edit mode when content loads
+  // Handle edit mode when content loads
   useEffect(() => {
     // If we're waiting for content to load for initial edit mode
     if (!isLoading && page && user && initialEditMode && !isEditing && editorState && editorState.length > 0) {
-      const canEdit = user.uid === page.userId || (page.groupId && hasGroupAccess);
+      const canEdit = user.uid === page.userId;
       if (canEdit) {
-        console.log('Content loaded, now entering edit mode');
         setIsEditing(true);
       }
     }
-  }, [isLoading, page, user, initialEditMode, isEditing, editorState, hasGroupAccess]);
+  }, [isLoading, page, user, initialEditMode, isEditing, editorState]);
 
   // Handle browser back button navigation
   useEffect(() => {
@@ -1162,7 +1025,7 @@ function SinglePageView({ params, initialEditMode = false }) {
       }
       // Check if we're navigating to edit mode
       else if (!isEditing && window.location.pathname.includes('/edit')) {
-        if (user && page && (user.uid === page.userId || (page.groupId && hasGroupAccess))) {
+        if (user && page && (user.uid === page.userId)) {
           setIsEditing(true);
         }
       }
@@ -1170,7 +1033,7 @@ function SinglePageView({ params, initialEditMode = false }) {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [isEditing, user, page, hasGroupAccess]);
+  }, [isEditing, user, page]);
 
 
 
@@ -1179,16 +1042,12 @@ function SinglePageView({ params, initialEditMode = false }) {
     const handlePageUpdated = async (event) => {
       // Only refresh if this is the page that was updated
       if (event.detail && event.detail.pageId === params.id) {
-        console.log('Page updated event received, refreshing page data');
-
-        // CRITICAL FIX: Ensure caches are cleared before refetching
+        // Clear caches before refetching
         try {
-          // Additional cache invalidation to ensure fresh data
           const { invalidatePageCache } = await import('../../utils/requestCache');
           invalidatePageCache(params.id);
-          console.log('✅ Cache invalidated in page-updated event handler');
         } catch (cacheError) {
-          console.error('⚠️ Error invalidating cache in event handler:', cacheError);
+          console.error('Error invalidating cache in event handler:', cacheError);
         }
 
         // Force a fresh fetch by creating a new listener
@@ -1199,25 +1058,13 @@ function SinglePageView({ params, initialEditMode = false }) {
               setError(data.error);
             }
           } else {
-            console.log('📄 Received fresh page data after update:', {
-              hasPageData: !!data.pageData,
-              hasVersionData: !!data.versionData,
-              pageTitle: data.pageData?.title,
-              versionId: data.versionData?.id || data.pageData?.currentVersion
-            });
-
             setPage(data.pageData || data);
 
             // Update editor state with the new content
             try {
-              // CRITICAL FIX: Prioritize content from versionData which is more reliable
+              // Prioritize content from versionData which is more reliable
               const content = data.versionData?.content || data.pageData?.content || data.content;
               if (content) {
-                console.log('SinglePageView: Updating editor state with content from page-updated event', {
-                  contentLength: content ? (typeof content === 'string' ? content.length : Array.isArray(content) ? content.length : 'unknown') : 0,
-                  contentType: typeof content
-                });
-
                 let parsedContent;
 
                 // Handle different content formats
@@ -1226,7 +1073,6 @@ function SinglePageView({ params, initialEditMode = false }) {
                     // Check if content is already parsed (double parsing issue)
                     if (content.startsWith('[{"type":"paragraph"') || content.startsWith('[{\\\"type\\\":\\\"paragraph\\\"')) {
                       parsedContent = JSON.parse(content);
-                      console.log("SinglePageView: Successfully parsed string content from event");
                     } else {
                       // Content might be double-stringified, try to parse twice
                       try {
@@ -1235,40 +1081,30 @@ function SinglePageView({ params, initialEditMode = false }) {
                             (firstParse.startsWith('[{"type":"paragraph"') ||
                              firstParse.startsWith('[{\\\"type\\\":\\\"paragraph\\\"'))) {
                           parsedContent = JSON.parse(firstParse);
-                          console.log("SinglePageView: Successfully parsed double-stringified content from event");
                         } else {
                           parsedContent = firstParse;
-                          console.log("SinglePageView: Using first-level parsed content from event");
                         }
                       } catch (doubleParseError) {
-                        console.error("SinglePageView: Error parsing potentially double-stringified content from event:", doubleParseError);
-                        // Fall back to original parsing
+                        console.error("Error parsing potentially double-stringified content:", doubleParseError);
                         parsedContent = JSON.parse(content);
                       }
                     }
                   } catch (parseError) {
-                    console.error("SinglePageView: Error parsing string content from event:", parseError);
-                    // Create a fallback content structure with the error message
+                    console.error("Error parsing string content:", parseError);
                     parsedContent = [{
                       type: "paragraph",
                       children: [{ text: "Error loading content. Please try refreshing the page." }]
                     }];
                   }
                 } else if (Array.isArray(content)) {
-                  // Content is already an array, use it directly
                   parsedContent = content;
-                  console.log("SinglePageView: Using array content directly from event");
                 } else if (content && typeof content === 'object') {
-                  // Content is an object, convert to array if needed
                   parsedContent = [content];
-                  console.log("SinglePageView: Converted object content to array from event");
                 } else {
-                  // Fallback for null or undefined content
                   parsedContent = [{
                     type: "paragraph",
                     children: [{ text: "No content available." }]
                   }];
-                  console.log("SinglePageView: Using fallback empty content from event");
                 }
 
                 // Ensure content is an array
@@ -1282,13 +1118,10 @@ function SinglePageView({ params, initialEditMode = false }) {
                   const seen = new Set();
 
                   parsedContent.forEach(item => {
-                    // Create a simple hash of the item to detect duplicates
                     const itemHash = JSON.stringify(item);
                     if (!seen.has(itemHash)) {
                       seen.add(itemHash);
                       uniqueItems.push(item);
-                    } else {
-                      console.log("SinglePageView: Filtered out duplicate content item from event");
                     }
                   });
 
@@ -1296,17 +1129,11 @@ function SinglePageView({ params, initialEditMode = false }) {
                 }
 
                 setEditorState(parsedContent);
-
-                // Force a re-render to ensure the content is displayed
-                window.requestAnimationFrame(() => {
-                  console.log("SinglePageView: Forcing re-render after content update from event");
-                });
               }
             } catch (error) {
-              console.error('SinglePageView: Error parsing updated content from event:', error);
+              console.error('Error parsing updated content:', error);
             }
           }
-          // setIsLoading(false);
         }, user?.uid || null);
       }
     };
@@ -1422,6 +1249,13 @@ function SinglePageView({ params, initialEditMode = false }) {
     [pageFullyRendered, editorState]
   );
 
+  // CRITICAL FIX: Cleanup effect to prevent state updates after unmounting
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const Layout = user ? React.Fragment : PublicLayout;
 
   // If the page is deleted and we're not previewing it, use NotFoundWrapper
@@ -1437,22 +1271,7 @@ function SinglePageView({ params, initialEditMode = false }) {
     return <NotFoundWrapper />;
   }
 
-  // If the page belongs to a private group and user doesn't have access
-  if (groupIsPrivate && !hasGroupAccess) {
-    return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center py-12">
-          <Lock className="h-12 w-12 text-muted-foreground mb-4" />
-          <h1 className="text-2xl font-bold mb-4">Private Group Content</h1>
-          <p className="text-muted-foreground mb-2">This page belongs to a private group.</p>
-          <p className="text-muted-foreground mb-6">You need to be a member of the group to access this content.</p>
-          <Link href="/">
-            <Button>Go Home</Button>
-          </Link>
-        </div>
-      </Layout>
-    );
-  }
+
 
   if (!page) {
     // If the page is not loading and there's no error, use NotFoundWrapper
@@ -1620,8 +1439,8 @@ function SinglePageView({ params, initialEditMode = false }) {
     );
   }
 
-  // Check if this is a private page that doesn't belong to a group
-  if (!isPublic && !groupId) {
+  // Check if this is a private page
+  if (!isPublic) {
     // If user is logged in and is the owner, allow access
     if (user && user.uid === page.userId) {
       // Continue to render the page for the owner
@@ -1666,8 +1485,7 @@ function SinglePageView({ params, initialEditMode = false }) {
     }
   }
 
-  // For private pages in groups, access is handled by the groupIsPrivate check above
-  // and by the checkPageAccess function in the database.js file
+  // All pages are now public by default, with only ownership-based editing permissions
 
   return (
     <Layout>
@@ -1679,8 +1497,6 @@ function SinglePageView({ params, initialEditMode = false }) {
         username={page?.username || "Anonymous"}
         userId={page?.userId}
         isLoading={isLoading}
-        groupId={groupId}
-        groupName={groupName}
         scrollDirection={scrollDirection}
         isPrivate={!isPublic}
         isEditing={isEditing}
@@ -1691,9 +1507,7 @@ function SinglePageView({ params, initialEditMode = false }) {
         canEdit={
           user?.uid && !isPreviewingDeleted && (
             // User is the page owner
-            user.uid === page?.userId ||
-            // OR page belongs to a group and user is a member of that group
-            (page?.groupId && hasGroupAccess)
+            user.uid === page?.userId
           )
         }
       />
@@ -1717,7 +1531,6 @@ function SinglePageView({ params, initialEditMode = false }) {
                 isEditing={isEditing}
                 page={page}
                 user={user}
-                hasGroupAccess={hasGroupAccess}
                 editorState={editorState}
                 handlePageFullyRendered={handlePageFullyRendered}
                 handleSetIsEditing={handleSetIsEditing}
@@ -1726,7 +1539,6 @@ function SinglePageView({ params, initialEditMode = false }) {
                 contentRef={contentRef}
                 title={title}
                 isPublic={isPublic}
-                groupId={groupId}
                 location={location}
                 handleTitleChange={handleTitleChange}
                 handleContentChange={handleContentChange}
@@ -1771,18 +1583,11 @@ function SinglePageView({ params, initialEditMode = false }) {
         </PageProvider>
         </div>
 
-      {/* Backlinks and Related Pages - positioned outside main content container */}
+      {/* Combined Links Section - positioned outside main content container */}
       {!isEditing && (
         <div className="mt-4 px-4">
-          {/* What Links Here section */}
-          <BacklinksSection
+          <CombinedLinksSection
             page={page}
-            linkedPageIds={memoizedLinkedPageIds}
-          />
-
-          {/* Related Pages section - Using pre-computed memoized values */}
-          <RelatedPages
-            page={memoizedPage}
             linkedPageIds={memoizedLinkedPageIds}
           />
         </div>
@@ -1796,9 +1601,7 @@ function SinglePageView({ params, initialEditMode = false }) {
           isOwner={
             user?.uid && !isPreviewingDeleted && (
               // User is the page owner
-              user.uid === page.userId ||
-              // OR page belongs to a group and user is a member of that group
-              (page.groupId && hasGroupAccess)
+              user.uid === page.userId
             )
           }
           isEditing={isEditing}
@@ -1811,11 +1614,12 @@ function SinglePageView({ params, initialEditMode = false }) {
           hasUnsavedChanges={hasUnsavedChanges}
         />
       </PageProvider>
+      {console.log('🔥 SinglePageView: isEditing =', isEditing, 'typeof =', typeof isEditing)}
       {!isEditing && (
-        <TokenPledgeBar
-          pageId={page.id}
-          pageTitle={page.title}
-          authorId={page.userId}
+        <TokenAllocationBar
+          pageId={params.id}
+          pageTitle={page?.title}
+          authorId={page?.userId}
         />
       )}
 
@@ -1828,7 +1632,6 @@ const PageContentWithLineSettings = ({
   isEditing,
   page,
   user,
-  hasGroupAccess,
   editorState,
   handlePageFullyRendered,
   handleSetIsEditing,
@@ -1837,7 +1640,6 @@ const PageContentWithLineSettings = ({
   contentRef,
   title,
   isPublic,
-  groupId,
   location,
   handleTitleChange,
   handleContentChange,
@@ -1885,8 +1687,7 @@ const PageContentWithLineSettings = ({
 
   // Calculate user edit permissions
   const canEdit = user?.uid && !isPreviewingDeleted && (
-    user.uid === page.userId ||
-    (page.groupId && hasGroupAccess)
+    user.uid === page.userId
   );
 
 

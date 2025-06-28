@@ -92,7 +92,7 @@ export function useDashboardAnalytics(dateRange: DateRange): UseDashboardAnalyti
 /**
  * Hook for fetching individual metric types
  */
-export function useAccountsMetrics(dateRange: DateRange) {
+export function useAccountsMetrics(dateRange: DateRange, granularity?: number) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +104,7 @@ export function useAccountsMetrics(dateRange: DateRange) {
     try {
       setLoading(true);
       setError(null);
-      const result = await DashboardAnalyticsService.getNewAccountsCreated(debouncedDateRange);
+      const result = await DashboardAnalyticsService.getNewAccountsCreated(debouncedDateRange, granularity);
       setData(result);
     } catch (err) {
       console.error('Error fetching accounts metrics:', err);
@@ -112,7 +112,7 @@ export function useAccountsMetrics(dateRange: DateRange) {
     } finally {
       setLoading(false);
     }
-  }, [debouncedDateRange]);
+  }, [debouncedDateRange, granularity]);
 
   useEffect(() => {
     fetchData();
@@ -121,7 +121,7 @@ export function useAccountsMetrics(dateRange: DateRange) {
   return { data, loading, error, refetch: fetchData };
 }
 
-export function usePagesMetrics(dateRange: DateRange) {
+export function usePagesMetrics(dateRange: DateRange, granularity?: number) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -133,7 +133,7 @@ export function usePagesMetrics(dateRange: DateRange) {
     try {
       setLoading(true);
       setError(null);
-      const result = await DashboardAnalyticsService.getNewPagesCreated(debouncedDateRange);
+      const result = await DashboardAnalyticsService.getNewPagesCreated(debouncedDateRange, granularity);
       setData(result);
     } catch (err) {
       console.error('Error fetching pages metrics:', err);
@@ -141,7 +141,7 @@ export function usePagesMetrics(dateRange: DateRange) {
     } finally {
       setLoading(false);
     }
-  }, [debouncedDateRange]);
+  }, [debouncedDateRange, granularity]);
 
   useEffect(() => {
     fetchData();
@@ -150,7 +150,7 @@ export function usePagesMetrics(dateRange: DateRange) {
   return { data, loading, error, refetch: fetchData };
 }
 
-export function useSharesMetrics(dateRange: DateRange) {
+export function useSharesMetrics(dateRange: DateRange, granularity?: number) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -162,7 +162,7 @@ export function useSharesMetrics(dateRange: DateRange) {
     try {
       setLoading(true);
       setError(null);
-      const result = await DashboardAnalyticsService.getSharesAnalytics(debouncedDateRange);
+      const result = await DashboardAnalyticsService.getSharesAnalytics(debouncedDateRange, granularity);
       setData(result);
     } catch (err) {
       console.error('Error fetching shares metrics:', err);
@@ -170,7 +170,7 @@ export function useSharesMetrics(dateRange: DateRange) {
     } finally {
       setLoading(false);
     }
-  }, [debouncedDateRange]);
+  }, [debouncedDateRange, granularity]);
 
   useEffect(() => {
     fetchData();
@@ -179,7 +179,7 @@ export function useSharesMetrics(dateRange: DateRange) {
   return { data, loading, error, refetch: fetchData };
 }
 
-export function useEditsMetrics(dateRange: DateRange) {
+export function useEditsMetrics(dateRange: DateRange, granularity?: number) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -196,7 +196,7 @@ export function useEditsMetrics(dateRange: DateRange) {
     try {
       setLoading(true);
       setError(null);
-      const result = await DashboardAnalyticsService.getEditsAnalytics(debouncedDateRange);
+      const result = await DashboardAnalyticsService.getEditsAnalytics(debouncedDateRange, granularity);
       console.log('✅ [useEditsMetrics] Received edits data:', result);
       setData(result);
     } catch (err) {
@@ -205,7 +205,7 @@ export function useEditsMetrics(dateRange: DateRange) {
     } finally {
       setLoading(false);
     }
-  }, [debouncedDateRange]);
+  }, [debouncedDateRange, granularity]);
 
   useEffect(() => {
     fetchData();
@@ -214,7 +214,7 @@ export function useEditsMetrics(dateRange: DateRange) {
   return { data, loading, error, refetch: fetchData };
 }
 
-export function useContentChangesMetrics(dateRange: DateRange) {
+export function useContentChangesMetrics(dateRange: DateRange, granularity?: number) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -226,7 +226,7 @@ export function useContentChangesMetrics(dateRange: DateRange) {
     try {
       setLoading(true);
       setError(null);
-      const result = await DashboardAnalyticsService.getContentChangesAnalytics(debouncedDateRange);
+      const result = await DashboardAnalyticsService.getContentChangesAnalytics(debouncedDateRange, granularity);
       setData(result);
     } catch (err) {
       console.error('Error fetching content changes metrics:', err);
@@ -234,7 +234,7 @@ export function useContentChangesMetrics(dateRange: DateRange) {
     } finally {
       setLoading(false);
     }
-  }, [debouncedDateRange]);
+  }, [debouncedDateRange, granularity]);
 
   useEffect(() => {
     fetchData();
@@ -243,7 +243,7 @@ export function useContentChangesMetrics(dateRange: DateRange) {
   return { data, loading, error, refetch: fetchData };
 }
 
-export function usePWAInstallsMetrics(dateRange: DateRange) {
+export function usePWAInstallsMetrics(dateRange: DateRange, granularity?: number) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -255,7 +255,7 @@ export function usePWAInstallsMetrics(dateRange: DateRange) {
     try {
       setLoading(true);
       setError(null);
-      const result = await DashboardAnalyticsService.getPWAInstallsAnalytics(debouncedDateRange);
+      const result = await DashboardAnalyticsService.getPWAInstallsAnalytics(debouncedDateRange, granularity);
       setData(result);
     } catch (err) {
       console.error('Error fetching PWA installs metrics:', err);
@@ -263,7 +263,7 @@ export function usePWAInstallsMetrics(dateRange: DateRange) {
     } finally {
       setLoading(false);
     }
-  }, [debouncedDateRange]);
+  }, [debouncedDateRange, granularity]);
 
   useEffect(() => {
     fetchData();
@@ -275,7 +275,7 @@ export function usePWAInstallsMetrics(dateRange: DateRange) {
 /**
  * Hook for fetching visitor analytics metrics
  */
-export function useVisitorMetrics(dateRange: DateRange) {
+export function useVisitorMetrics(dateRange: DateRange, granularity?: number) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -287,7 +287,7 @@ export function useVisitorMetrics(dateRange: DateRange) {
     try {
       setLoading(true);
       setError(null);
-      const result = await DashboardAnalyticsService.getVisitorAnalytics(debouncedDateRange);
+      const result = await DashboardAnalyticsService.getVisitorAnalytics(debouncedDateRange, granularity);
       setData(result);
     } catch (err) {
       console.error('Error fetching visitor metrics:', err);
@@ -295,7 +295,91 @@ export function useVisitorMetrics(dateRange: DateRange) {
     } finally {
       setLoading(false);
     }
-  }, [debouncedDateRange]);
+  }, [debouncedDateRange, granularity]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+export function useCompositePagesMetrics(dateRange: DateRange, granularity?: number) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await DashboardAnalyticsService.getCompositePagesData(debouncedDateRange, granularity);
+      setData(result);
+    } catch (err) {
+      console.error('Error fetching composite pages metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch composite pages data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, granularity]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+export function useCumulativePagesMetrics(dateRange: DateRange, granularity?: number) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await DashboardAnalyticsService.getCumulativePagesData(debouncedDateRange, granularity);
+      setData(result);
+    } catch (err) {
+      console.error('Error fetching cumulative pages metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch cumulative pages data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, granularity]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+export function useTotalPagesEverCreated() {
+  const [data, setData] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await DashboardAnalyticsService.getTotalPagesEverCreated();
+      setData(result);
+    } catch (err) {
+      console.error('Error fetching total pages count:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch total pages count');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchData();

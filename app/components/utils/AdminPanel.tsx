@@ -8,7 +8,7 @@ import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronRight, Database } from "lucide-react";
-import { db } from "../../firebase/database";
+import { db } from "../../firebase/config";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from "../ui/use-toast";
 import { FeatureFlag, isAdmin } from "../../utils/feature-flags";
@@ -59,10 +59,9 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
     {
       id: 'payments',
       name: 'payments',
-      description: 'Enable subscription functionality and UI',
+      description: 'Enable subscription functionality, UI, and token-based payment system',
       enabled: false
     },
-
     {
       id: 'map_view',
       name: 'map_view',
@@ -76,9 +75,9 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       enabled: false
     },
     {
-      id: 'groups',
-      name: 'groups',
-      description: 'Enable groups functionality and UI',
+      id: 'inactive_subscription',
+      name: 'inactive_subscription',
+      description: 'Admin testing: Show subscription as inactive for UI testing',
       enabled: false
     },
     {

@@ -45,8 +45,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
   const [isRandomMenuOpen, setIsRandomMenuOpen] = useState(false)
   const { user } = useContext(AuthContext)
 
-  // Groups feature is now always enabled for all users
-  const groupsEnabled = true;
+  // Groups functionality removed
 
   // Check if map feature is enabled
   const mapFeatureEnabled = useFeatureFlag('map_view', user?.email);
@@ -255,20 +254,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
                 </div>
               </div>
 
-              {/* Groups navigation item - now always visible for all users */}
-              <button
-                onClick={() => {
-                  console.log('[DEBUG] Sidebar - Groups button clicked, navigating to /groups');
-                  // Close the sidebar first
-                  onClose();
-                  // Use window.location for more reliable navigation
-                  window.location.href = '/groups';
-                }}
-                className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
-              >
-                <Users className="h-5 w-5 mr-2" />
-                <span>Groups</span>
-              </button>
+              {/* Groups functionality removed */}
 
               <button
                 onClick={() => navigateToSection('appearance')}

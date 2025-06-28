@@ -21,18 +21,18 @@ import { getDatabase, type Database } from "firebase/database";
 
 // Firebase configuration interface
 interface FirebaseConfig {
-  apiKey: string | undefined;
-  authDomain: string | undefined;
-  databaseURL: string | undefined;
-  projectId: string | undefined;
-  storageBucket: string | undefined;
-  messagingSenderId: string | undefined;
-  appId: string | undefined;
-  measurementId: string | undefined;
+  apiKey: string;
+  authDomain: string;
+  databaseURL: string;
+  projectId: string;
+  storageBucket: string;
+  messagingSenderId: string;
+  appId: string;
+  measurementId?: string;
 }
 
-// Firebase configuration
-const newConfig: FirebaseConfig = {
+// Validate required environment variables
+const requiredEnvVars = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_DOMAIN,
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DB_URL,
@@ -40,6 +40,27 @@ const newConfig: FirebaseConfig = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MSNGR_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
+
+// Check for missing environment variables
+const missingVars = Object.entries(requiredEnvVars)
+  .filter(([key, value]) => !value)
+  .map(([key]) => key);
+
+if (missingVars.length > 0) {
+  console.error('Missing required Firebase environment variables:', missingVars);
+  throw new Error(`Missing Firebase configuration: ${missingVars.join(', ')}`);
+}
+
+// Firebase configuration
+const newConfig: FirebaseConfig = {
+  apiKey: requiredEnvVars.apiKey!,
+  authDomain: requiredEnvVars.authDomain!,
+  databaseURL: requiredEnvVars.databaseURL!,
+  projectId: requiredEnvVars.projectId!,
+  storageBucket: requiredEnvVars.storageBucket!,
+  messagingSenderId: requiredEnvVars.messagingSenderId!,
+  appId: requiredEnvVars.appId!,
   // Use the GA measurement ID for Firebase Analytics to ensure events go to the same property
   measurementId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };

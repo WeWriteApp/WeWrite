@@ -10,7 +10,6 @@
     //
     // 🔒 Security Improvements:
     // - User Profiles: Authentication required for all access, owner-only write
-    // - Groups: Public/private access properly enforced, member management with roles
     // - Admin Data: Super restricted access for config and admin users
     // - Privacy-Sensitive Data: User-specific access for activity and notifications
     //
@@ -54,46 +53,7 @@
           ".write": "auth !== null && auth.uid === $uid"
         },
 
-        // User groups - allow authenticated users to read their own groups
-        "groups": {
-          ".read": "auth !== null && auth.uid === $uid",
-          ".write": "auth !== null && auth.uid === $uid"
-        }
-      }
-    },
-    "groups": {
-      "$groupId": {
-        // Allow everyone to read public groups, authenticated users to read private groups they're members of
-        ".read": "data.child('isPublic').val() === true || (auth !== null && data.child('members').child(auth.uid).exists())",
-        // Allow only group owners and admins to update group settings
-        ".write": "auth !== null && (data.child('owner').val() === auth.uid || (data.child('members').child(auth.uid).exists() && data.child('members').child(auth.uid).child('role').val() === 'admin'))",
-        // About section can be edited by any group member
-        "about": {
-          ".read": "data.parent().child('isPublic').val() === true || (auth !== null && data.parent().child('members').child(auth.uid).exists())",
-          ".write": "auth !== null && data.parent().child('members').child(auth.uid).exists()"
-        },
-        "aboutLastEditor": {
-          ".read": "auth !== null && (data.parent().child('isPublic').val() === true || data.parent().child('members').child(auth.uid).exists())",
-          ".write": "auth !== null && data.parent().child('members').child(auth.uid).exists()"
-        },
-        "aboutLastEditTime": {
-          ".read": "auth !== null && (data.parent().child('isPublic').val() === true || data.parent().child('members').child(auth.uid).exists())",
-          ".write": "auth !== null && data.parent().child('members').child(auth.uid).exists()"
-        },
-        "aboutHistory": {
-          ".read": "auth !== null && data.parent().child('members').child(auth.uid).exists()",
-          ".write": "auth !== null && data.parent().child('members').child(auth.uid).exists()"
-        },
-        // Members management - require authentication for all access
-        "members": {
-          ".read": "auth !== null && (data.parent().child('isPublic').val() === true || data.parent().child('members').child(auth.uid).exists())",
-          ".write": "auth !== null && (data.parent().child('owner').val() === auth.uid || (data.parent().child('members').child(auth.uid).exists() && data.parent().child('members').child(auth.uid).child('role').val() === 'admin'))"
-        },
-        // Pages in groups - require authentication
-        "pages": {
-          ".read": "auth !== null && (data.parent().child('isPublic').val() === true || data.parent().child('members').child(auth.uid).exists())",
-          ".write": "auth !== null && data.parent().child('members').child(auth.uid).exists()"
-        }
+        // Groups functionality removed
       }
     },
 

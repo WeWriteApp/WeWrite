@@ -108,17 +108,7 @@ export default function GlobalIDPage({ params }) {
           return;
         }
 
-        // If not a page or user, check if it's a group
-        const groupRef = ref(rtdb, `groups/${cleanId}`);
-        const groupSnapshot = await get(groupRef);
-
-        if (groupSnapshot.exists()) {
-          // Redirect to the group page using direct navigation
-          console.log('Group found, redirecting to group page');
-          // Use direct navigation to avoid scroll issues with sticky headers
-          window.location.href = `/group/${cleanId}`;
-          return;
-        }
+        // Groups functionality removed
 
         // If we get here, the ID doesn't match any content
         // Use our wrapper component to trigger the not-found.tsx page

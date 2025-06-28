@@ -79,10 +79,10 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
       href: '/settings/deleted'
     },
     {
-      id: 'account',
-      title: 'Account',
+      id: 'advanced',
+      title: 'Advanced',
       icon: SettingsIcon,
-      href: '/settings/account'
+      href: '/settings/advanced'
     }
   ];
 
@@ -100,34 +100,28 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile Header */}
-      <div className="lg:hidden">
-        <div className="flex items-center px-4 py-3 border-b border-border">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push('/')}
-            className="mr-3"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-lg font-semibold">Settings</h1>
+      {/* Mobile Header - Only show on main settings page */}
+      {pathname === '/settings' && (
+        <div className="lg:hidden">
+          <div className="flex items-center px-4 py-3 border-b border-border">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push('/')}
+              className="mr-3"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-lg font-semibold">Settings</h1>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="lg:flex">
         {/* Desktop Persistent Sidebar */}
         <div className="hidden lg:block lg:w-64 lg:fixed lg:inset-y-0 lg:border-r lg:border-border lg:bg-background lg:z-10">
           <div className="flex flex-col h-full">
-            <div className="flex items-center px-6 py-4 border-b border-border">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.push('/')}
-                className="mr-3"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
+            <div className="flex items-center justify-center px-6 py-4 border-b border-border">
               <h1 className="text-xl font-semibold">Settings</h1>
             </div>
 

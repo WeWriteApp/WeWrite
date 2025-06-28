@@ -943,33 +943,16 @@ div[contenteditable="true"].editor-content > div {
 span.page-link,
 span.user-link,
 span.external-link {
-  /* Apply pill styling to span elements used in editor */
-  display: inline-block !important;
-  font-size: 0.875rem !important; /* text-sm */
-  font-weight: 500 !important; /* font-medium */
-  border-radius: 0.5rem !important; /* rounded-lg */
-  transition: all 0.2s ease !important;
-  white-space: nowrap !important;
+  /* Apply only essential editor-specific styling - let PillStyleContext handle appearance */
   text-decoration: none !important;
   cursor: pointer !important;
   vertical-align: baseline !important;
 
-  /* Default filled pill styling - will be overridden by PillStyleContext classes */
-  background-color: hsl(var(--primary)) !important;
-  color: white !important;
-  border: 1.5px solid hsl(var(--primary) / 0.2) !important;
-  padding: 0.125rem 0.5rem !important; /* py-0.5 px-2 */
-}
+  /* Essential properties for editor functionality only */
+  white-space: nowrap !important;
 
-/* Hover effects for pill links */
-[contenteditable] span.page-link:hover,
-[contenteditable] span.user-link:hover,
-[contenteditable] span.external-link:hover,
-span.page-link:hover,
-span.user-link:hover,
-span.external-link:hover {
-  background-color: hsl(var(--primary) / 0.9) !important;
-  border-color: hsl(var(--primary) / 0.3) !important;
+  /* Remove hardcoded styling - let PillStyleContext classes control appearance */
+  /* This ensures pill link type settings (filled/outline/classic) are respected */
 }
 
 /* Dense mode removed */

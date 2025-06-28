@@ -34,6 +34,9 @@ export * from './search';
 // User operations
 export * from './users';
 
+// Analytics operations
+export * from './analytics';
+
 // Additional functions that need to be added to complete the migration
 // These would be extracted from the remaining parts of the original database.ts file
 
@@ -146,23 +149,7 @@ export const appendPageReference = async (
       lastModified: new Date().toISOString()
     });
 
-    // Create a notification for the source page owner
-    if (sourcePageData.userId && sourcePageData.userId !== (userId || pageData.userId)) {
-      try {
-        const { createAppendNotification } = await import('../notifications');
-        await createAppendNotification(
-          sourcePageData.userId, // Target user (owner of the source page)
-          userId || pageData.userId, // Source user (person doing the append)
-          sourcePageData.id, // Source page ID
-          sourcePageData.title, // Source page title
-          targetPageId, // Target page ID
-          pageData.title // Target page title
-        );
-      } catch (notificationError) {
-        console.error("Error creating append notification:", notificationError);
-        // Don't fail the append operation if notification creation fails
-      }
-    }
+    // Notifications functionality removed
 
     return true;
   } catch (error) {
@@ -193,7 +180,12 @@ export const getPageMetadata = async (pageId: string): Promise<any> => {
     }
     return null;
   } catch (error) {
-    console.error('Error getting page metadata:', error);
+    // Handle permission denied errors gracefully - this is expected for private pages
+    if (error?.code === 'permission-denied') {
+      console.log('Permission denied getting page metadata - this is expected for private pages');
+    } else {
+      console.error('Error getting page metadata:', error);
+    }
     return null;
   }
 };

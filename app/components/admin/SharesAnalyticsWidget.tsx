@@ -9,11 +9,12 @@ import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface SharesAnalyticsWidgetProps {
   dateRange: DateRange;
+  granularity?: number;
   className?: string;
 }
 
-export function SharesAnalyticsWidget({ dateRange, className = "" }: SharesAnalyticsWidgetProps) {
-  const { data, loading, error } = useSharesMetrics(dateRange);
+export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }: SharesAnalyticsWidgetProps) {
+  const { data, loading, error } = useSharesMetrics(dateRange, granularity);
   const chartConfig = useResponsiveChart(data.length, data);
 
   // Check if we have any data
@@ -202,6 +203,7 @@ export function SharesAnalyticsWidget({ dateRange, className = "" }: SharesAnaly
                 fill="#22c55e"
                 name="Successful"
                 radius={[0, 0, 0, 0]}
+                maxBarSize={60}
               />
               <Bar
                 dataKey="aborted"
@@ -209,6 +211,7 @@ export function SharesAnalyticsWidget({ dateRange, className = "" }: SharesAnaly
                 fill="#ef4444"
                 name="Aborted"
                 radius={[2, 2, 0, 0]}
+                maxBarSize={60}
               />
             </BarChart>
           </ResponsiveContainer>

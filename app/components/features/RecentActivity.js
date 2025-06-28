@@ -85,8 +85,10 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
   // For activity page or user profile, use the regular hook with pagination
   const [localError, setLocalError] = useState(null);
 
-  // Call the hook at the top level (React hooks rule)
-  const activityData = useRecentActivity(limit, userId, viewMode === 'following', viewMode === 'mine');
+  // Call the appropriate hook at the top level (React hooks rule)
+  const activityData = isHomepage
+    ? useHomeRecentActivity(limit, userId, viewMode === 'following', viewMode === 'mine')
+    : useRecentActivity(limit, userId, viewMode === 'following', viewMode === 'mine');
 
   const { activities = [], loading = false, error = null, hasMore = false, loadingMore = false, loadMore = () => {} } = activityData;
   const { user } = useContext(AuthContext);

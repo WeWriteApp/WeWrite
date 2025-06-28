@@ -76,11 +76,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [relatedPages, setRelatedPages] = useState([]);
   const [isLoadingRelated, setIsLoadingRelated] = useState(true);
-  const [showOwnerMenu, setShowOwnerMenu] = useState(false);
-  const ownerMenuRef = useRef(null);
-  const [selectedOwner, setSelectedOwner] = useState('myself');
-  const [groups, setGroups] = useState([]);
-  const [isLoadingGroups, setIsLoadingGroups] = useState(true);
+  // Groups functionality removed
 
   // Add click outside handler
   useEffect(() => {
@@ -111,53 +107,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
   const [followerCount, setFollowerCount] = useState(0);
   const [followerHistory, setFollowerHistory] = useState([]);
 
-  // Fetch user's groups
-  useEffect(() => {
-    const fetchGroups = async () => {
-      if (!user?.groups) {
-        setGroups([]);
-        setIsLoadingGroups(false);
-        return;
-      }
-
-      try {
-        const rtdb = getDatabase();
-        const groupsRef = ref(rtdb, 'groups');
-        const snapshot = await get(groupsRef);
-        const groupsData = snapshot.val();
-
-        if (!groupsData) {
-          setGroups([]);
-          setIsLoadingGroups(false);
-          return;
-        }
-
-        const userGroups = Object.entries(groupsData)
-          .filter(([id]) => user.groups[id])
-          .map(([id, data]) => ({
-            id,
-            name: data.name,
-            memberCount: Object.keys(data.members || {}).length
-          }));
-
-        setGroups(userGroups);
-
-        // If the page belongs to a group, select it
-        if (page.groupId && userGroups.find(g => g.id === page.groupId)) {
-          setSelectedOwner(`group-${page.groupId}`);
-        } else if (user.uid === page.userId) {
-          setSelectedOwner('myself');
-        }
-      } catch (error) {
-        console.error('Error fetching groups:', error);
-        setGroups([]);
-      }
-
-      setIsLoadingGroups(false);
-    };
-
-    fetchGroups();
-  }, [user, page]);
+  // Groups functionality removed
 
   // Initialize live readers tracking
   useEffect(() => {
@@ -304,66 +254,17 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
       </div>
 
       <div className={`space-y-6 overflow-hidden transition-all duration-300 ${isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[5000px] opacity-100'}`}>
-        {/* Skip the page owner section if hidePageOwner is true */}
+        {/* Page owner section simplified - no group ownership */}
         {!hidePageOwner && (
-          <div ref={ownerMenuRef}>
-            <div
-              onClick={() => setShowOwnerMenu(!showOwnerMenu)}
-              className="cursor-pointer"
-            >
-              <MetadataItem
-                label="Page owner"
-                value={
-                  <div className="flex items-center gap-2">
-                    <User uid={page.userId} />
-                  </div>
-                }
-                showChart={false}
-              />
-            </div>
-            {showOwnerMenu && (
-              <div className="absolute mt-2 bg-background--light dark:bg-background rounded-2xl p-2 shadow-lg z-50">
-                <div className="space-y-2">
-                  <div
-                    className={`p-2 rounded-xl flex items-center gap-2 ${selectedOwner === 'myself' ? 'bg-[#0066FF]' : 'hover:bg-background--lighter dark:hover:bg-background--light'}`}
-                    onClick={() => {
-                      setSelectedOwner('myself');
-                      setShowOwnerMenu(false);
-                    }}
-                  >
-                    <User uid={user.uid} />
-                    {selectedOwner === 'myself' && (
-                      <Check className="h-5 w-5 text-white ml-auto" />
-                    )}
-                  </div>
-                  {groups.length > 0 && (
-                    <>
-                      <div className="text-text-secondary text-sm px-2">One of my groups:</div>
-                      {groups.map(group => (
-                        <div
-                          key={group.id}
-                          className={`p-2 rounded-xl flex items-center gap-2 ${
-                            selectedOwner === `group-${group.id}` ? 'bg-[#0066FF]' : 'hover:bg-background--lighter dark:hover:bg-background--light'
-                          }`}
-                          onClick={() => {
-                            setSelectedOwner(`group-${group.id}`);
-                            setShowOwnerMenu(false);
-                          }}
-                        >
-                          <Users className="h-5 w-5 text-foreground" />
-                          <span className="text-text">{group.name}</span>
-                          <span className="text-text-secondary ml-1">∾ {group.memberCount}</span>
-                          {selectedOwner === `group-${group.id}` && (
-                            <Check className="h-5 w-5 text-white ml-auto" />
-                          )}
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </div>
+          <MetadataItem
+            label="Page owner"
+            value={
+              <div className="flex items-center gap-2">
+                <User uid={page.userId} />
               </div>
-            )}
-          </div>
+            }
+            showChart={false}
+          />
         )}
 
         {/* Related pages */}

@@ -21,12 +21,13 @@ import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../components/utils/UnsavedChangesDialog";
 import { PageProvider } from "../contexts/PageContext";
 
-import TokenPledgeBar from "../components/payments/TokenPledgeBar";
+import TokenAllocationBar from "../components/payments/TokenAllocationBar";
 import { shouldUseQueue, addToQueue, checkOperationAllowed } from "../utils/syncQueue";
 import { useSyncQueue } from "../contexts/SyncQueueContext";
 import SlideUpPage from "../components/ui/slide-up-page";
 import { NewPageSkeleton } from "../components/skeletons/PageEditorSkeleton";
 import { toast } from "../components/ui/use-toast";
+
 
 /**
  * Editor content node interface
@@ -79,6 +80,8 @@ export default function NewPage() {
   // const { trackPageCreationFlow, trackEditingFlow } = useWeWriteAnalytics();
   const { refreshState } = useSyncQueue();
   const { addRecentPage } = useRecentPages();
+
+  // RUTHLESS SIMPLIFICATION: No cache invalidation at all - just use short TTLs and browser refresh
   const { formatDateString } = useDateFormat();
 
   // State that mimics SinglePageView
@@ -102,9 +105,8 @@ export default function NewPage() {
   const [hasTitleChanged, setHasTitleChanged] = useState<boolean>(false);
   const [titleError, setTitleError] = useState<boolean>(false);
 
-  // Group ownership state
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [selectedGroupName, setSelectedGroupName] = useState<string | null>(null);
+  // Groups functionality removed - but keep selectedGroupId for compatibility
+  const selectedGroupId = null;
 
   // Determine page type
   const isReply = searchParams?.has('replyTo') || false;
@@ -301,11 +303,26 @@ export default function NewPage() {
 
   // Handle save
   const handleSave = async (content: EditorNode[], saveMethod: 'keyboard' | 'button' = 'button'): Promise<boolean> => {
+    console.log('🔵 DEBUG: handleSave called with:', {
+      saveMethod,
+      hasTitle: !!(title && title.trim()),
+      hasContent: !!(content && content.length),
+      isReply,
+      userId: user?.uid
+    });
+
     // CRITICAL FIX: Enhanced title validation with visual feedback
     if (!title || title.trim() === '') {
       if (!isReply) {
-        setError("Please add a title before saving");
+        console.error('🔴 DEBUG: Save failed - missing title');
+        const errorMsg = "Please add a title before saving";
+        setError(errorMsg);
         setTitleError(true);
+        toast({
+          title: "Missing Title",
+          description: errorMsg,
+          variant: "destructive",
+        });
         return false;
       }
     }
@@ -315,10 +332,18 @@ export default function NewPage() {
 
     // Validate user authentication
     if (!user || !user.uid) {
-      setError("You must be logged in to create a page");
+      console.error('🔴 DEBUG: Save failed - user not authenticated');
+      const errorMsg = "You must be logged in to create a page";
+      setError(errorMsg);
+      toast({
+        title: "Authentication Required",
+        description: errorMsg,
+        variant: "destructive",
+      });
       return false;
     }
 
+    console.log('🔵 DEBUG: Starting save process...');
     setIsSaving(true);
     setError(null);
 
@@ -455,18 +480,91 @@ export default function NewPage() {
         return true;
       } else {
         // Normal page creation for verified users
+        console.log('🔵 DEBUG: About to call createPage with data:', { ...data, content: '(content omitted)' });
         const res = await createPage(data);
+        console.log('🔵 DEBUG: createPage returned:', res);
 
         if (res) {
+          // res is the page ID string returned by createPage
+          const pageId = res;
+          console.log('🔵 PAGE CREATION: Page creation successful, pageId:', pageId, 'userId:', userId);
+          console.error('🔵 PAGE CREATION: Page creation successful, pageId:', pageId, 'userId:', userId);
+
+          // CRITICAL DEBUG: Immediately try to fetch the page to see if it exists
+          try {
+            console.log('🔍 DEBUG: Attempting to fetch newly created page...');
+            const { getPageById } = await import('../firebase/database');
+            const fetchResult = await getPageById(pageId, userId);
+            console.log('🔍 DEBUG: Fetch result:', fetchResult);
+            if (fetchResult.pageData) {
+              console.log('✅ DEBUG: Page exists in database immediately after creation');
+            } else {
+              console.error('❌ DEBUG: Page does NOT exist in database after creation!', fetchResult.error);
+            }
+          } catch (fetchError) {
+            console.error('❌ DEBUG: Error fetching newly created page:', fetchError);
+          }
+
+          // Invalidate caches to ensure new page appears in UI immediately
+          console.log('✅ DEBUG: Page created successfully, ID:', pageId);
+          console.error('✅ DEBUG: Page created successfully, ID:', pageId);
+
+          // CRITICAL FIX: Immediate cache invalidation to ensure new page appears in profile
+          // Clear caches immediately to prevent stale data from showing
+          try {
+            const { invalidatePageCreationCaches } = await import('../utils/cacheInvalidation');
+            invalidatePageCreationCaches(userId);
+            console.log('✅ Immediate cache invalidation triggered for user:', userId);
+          } catch (cacheError) {
+            console.error('Error triggering immediate cache invalidation (non-fatal):', cacheError);
+          }
+
+          // CRITICAL FIX: Dispatch event with new page data to immediately update UI
+          // This bypasses Firestore indexing delays by directly updating the local state
+          try {
+            const newPageData = {
+              id: pageId,
+              title: title || 'Untitled',
+              userId: userId,
+              username: username,
+              lastModified: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              isPublic: isPublic,
+              deleted: false
+            };
+
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('page-created-immediate', {
+                detail: { pageData: newPageData, userId }
+              }));
+              console.log('✅ Immediate page-created event dispatched with page data');
+            }
+          } catch (eventError) {
+            console.error('Error dispatching immediate page-created event (non-fatal):', eventError);
+          }
+
+          // CRITICAL FIX: Additional delayed cache invalidation to handle Firestore indexing delays
+          setTimeout(async () => {
+            try {
+              const { invalidatePageCreationCaches } = await import('../utils/cacheInvalidation');
+              invalidatePageCreationCaches(userId);
+              console.log('✅ Delayed cache invalidation triggered for user:', userId);
+            } catch (cacheError) {
+              console.error('Error triggering delayed cache invalidation (non-fatal):', cacheError);
+            }
+          }, 3000); // 3s delay to handle Firestore indexing delays
+
           // Track content changes for new page creation
           try {
+            console.log('🔵 Tracking content changes with pageId:', pageId);
             await ContentChangesTrackingService.trackContentChangeAdvanced(
-              res.id,
+              pageId,
               userId,
               username,
               null, // No previous content for new pages
               finalContent
             );
+            console.log('🔵 Content tracking completed successfully');
           } catch (trackingError) {
             console.error('Error tracking content changes for new page (non-fatal):', trackingError);
           }
@@ -474,7 +572,7 @@ export default function NewPage() {
           // Add the new page to recent pages tracking
           try {
             await addRecentPage({
-              id: res.id,
+              id: pageId,
               title: title || 'Untitled',
               userId: userId,
               username: username
@@ -483,6 +581,10 @@ export default function NewPage() {
           } catch (recentPagesError) {
             console.error('Error adding page to recent pages (non-fatal):', recentPagesError);
           }
+
+          // Cache invalidation has been triggered above
+
+
 
           // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
           // Track analytics (non-blocking) - now handled by UnifiedAnalyticsProvider
@@ -510,20 +612,44 @@ export default function NewPage() {
           // This prevents 404 errors when navigating to newly created pages
           setTimeout(() => {
             // Use replace instead of push to prevent back button issues
-            router.replace(`/${res}`);
+            router.replace(`/${pageId}`);
           }, 1000);
 
           return true;
         } else {
-          console.error('Page creation failed: createPage returned null/false');
+          console.error('🔴 DEBUG: Page creation failed - createPage returned null/false');
           setIsSaving(false);
-          setError("Failed to create page. Please try again.");
+          const errorMsg = "Failed to create page. Please try again.";
+          setError(errorMsg);
+
+          toast({
+            title: "Creation Failed",
+            description: errorMsg,
+            variant: "destructive",
+          });
+
           return false;
         }
       }
     } catch (error: any) {
+      console.error('🔴 DEBUG: Save failed with error:', error);
+      console.error('🔴 DEBUG: Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        cause: error.cause
+      });
+
       setIsSaving(false);
-      setError("Failed to create page: " + (error.message || 'Unknown error'));
+      const errorMsg = "Failed to create page: " + (error.message || 'Unknown error');
+      setError(errorMsg);
+
+      toast({
+        title: "Save Failed",
+        description: error.message || 'Unknown error occurred while creating the page',
+        variant: "destructive",
+      });
+
       return false;
     }
   };
@@ -606,8 +732,6 @@ export default function NewPage() {
           username={username}
           userId={user?.uid}
           isLoading={isLoading}
-          groupId={selectedGroupId}
-          groupName={selectedGroupName}
           scrollDirection="none"
           isPrivate={!isPublic}
           isEditing={isEditing}
@@ -644,7 +768,22 @@ export default function NewPage() {
                     isReply={isReply}
                     replyToId={searchParams?.get('replyTo') || ""}
                     clickPosition={null}
-                    onSave={(capturedContent) => handleSave(capturedContent || editorContent || editorState, 'button')}
+                    onSave={(capturedContent) => {
+                      console.log('🔵 DEBUG: Save button clicked, calling handleSave');
+                      console.log('🔵 DEBUG: Current state:', {
+                        title,
+                        hasContent: !!(capturedContent || editorContent || editorState),
+                        userId: user?.uid,
+                        isReply
+                      });
+
+                      // Add a simple test to see if this function is being called
+                      if (typeof window !== 'undefined') {
+                        console.log('🔵 DEBUG: About to call handleSave...');
+                      }
+
+                      return handleSave(capturedContent || editorContent || editorState, 'button');
+                    }}
                     onKeyboardSave={(capturedContent) => handleSave(capturedContent || editorContent || editorState, 'keyboard')}
                     onCancel={handleBackWithCheck}
 
@@ -667,7 +806,7 @@ export default function NewPage() {
           </div>
         </div>
         {!isEditing && (
-          <TokenPledgeBar
+          <TokenAllocationBar
             pageId="new-page"
             pageTitle="New Page"
             authorId={user?.uid}

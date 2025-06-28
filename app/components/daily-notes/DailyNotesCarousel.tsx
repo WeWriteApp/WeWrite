@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import DayCard from './DayCard';
 import { useAuth } from '../../providers/AuthProvider';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../firebase/database';
+import { db } from '../../firebase/config';
 import { format, subDays, addDays } from 'date-fns';
 import { Button } from '../ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';

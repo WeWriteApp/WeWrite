@@ -12,7 +12,7 @@ import {
   type Unsubscribe
 } from "firebase/database";
 import { app } from "./config";
-import type { Group, User } from "../types/database";
+import type { User } from "../types/database";
 
 export const rtdb: Database = getDatabase(app);
 
@@ -49,22 +49,7 @@ export const listen = (path: string, callback: (snapshot: DataSnapshot) => void)
   return onValue(dbRef, callback);
 };
 
-export const fetchGroupFromFirebase = async (groupId: string): Promise<Group | null> => {
-  try {
-    const groupRef = ref(rtdb, `groups/${groupId}`);
-    const snapshot = await get(groupRef);
-    if (!snapshot.exists()) {
-      return null;
-    }
-    return {
-      id: snapshot.key as string,
-      ...snapshot.val(),
-    } as Group;
-  } catch (error) {
-    console.error("Error fetching group from Firebase", error);
-    return null;
-  }
-};
+
 
 export const fetchProfileFromFirebase = async (userId: string): Promise<User | null> => {
   try {

@@ -2,39 +2,23 @@
 
 import { useEffect, useState, createContext, useContext, ReactNode } from "react";
 import { AuthContext } from "./AuthProvider";
+// Import real notification service functions
 import {
   getNotifications,
   getUnreadNotificationsCount,
   markNotificationAsRead,
   markNotificationAsUnread,
   markAllNotificationsAsRead,
-  fixUnreadNotificationsCount
+  fixUnreadNotificationsCount,
+  type Notification
 } from "../firebase/notifications";
 import { checkEmailVerificationPeriodically } from "../services/emailVerificationNotifications";
-
-/**
- * Notification data interface
- */
-interface NotificationData {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  read: boolean;
-  createdAt: any;
-  userId: string;
-  fromUserId?: string;
-  fromUsername?: string;
-  pageId?: string;
-  pageTitle?: string;
-  [key: string]: any;
-}
 
 /**
  * Notification context interface
  */
 interface NotificationContextType {
-  notifications: NotificationData[];
+  notifications: Notification[];
   unreadCount: number;
   loading: boolean;
   hasMore: boolean;
@@ -61,7 +45,7 @@ export const NotificationContext = createContext<NotificationContextType | undef
  */
 export const NotificationProvider = ({ children }: NotificationProviderProps) => {
   const { user } = useContext(AuthContext);
-  const [notifications, setNotifications] = useState<NotificationData[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [lastDoc, setLastDoc] = useState<any>(null);
@@ -82,17 +66,21 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         setLoading(true);
 
         // Get notifications first
-        const { notifications: notificationData, lastDoc: lastVisible } = await getNotifications(user.uid);
+        const result = await getNotifications(user.uid);
+        const notificationData = result?.notifications || [];
+        const lastVisible = result?.lastDoc || null;
 
-        console.log('NotificationProvider - fetched notifications:', notificationData.map(n => ({ id: n.id, read: n.read, type: n.type })));
+        console.log('NotificationProvider - fetched notifications:', Array.isArray(notificationData) ? notificationData.map(n => ({ id: n.id, read: n.read, type: n.type })) : []);
 
         // Extract unique user IDs from notifications for batch fetching
         const userIds = new Set<string>();
-        notificationData.forEach(notification => {
-          if (notification.sourceUserId) {
-            userIds.add(notification.sourceUserId);
-          }
-        });
+        if (Array.isArray(notificationData)) {
+          notificationData.forEach(notification => {
+            if (notification.sourceUserId) {
+              userIds.add(notification.sourceUserId);
+            }
+          });
+        }
 
         // Preload user data for all users mentioned in notifications
         if (userIds.size > 0) {
@@ -108,7 +96,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         }
 
         // Count actual unread notifications from the fetched data
-        const actualUnreadCount = notificationData.filter(n => !n.read).length;
+        const actualUnreadCount = Array.isArray(notificationData) ? notificationData.filter(n => !n.read).length : 0;
         console.log('NotificationProvider - actual unread count from data:', actualUnreadCount);
 
         // Get stored unread count
@@ -124,9 +112,9 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
           setUnreadCount(storedCount);
         }
 
-        setNotifications(notificationData);
+        setNotifications(Array.isArray(notificationData) ? notificationData : []);
         setLastDoc(lastVisible);
-        setHasMore(notificationData.length === 20); // Assuming pageSize is 20
+        setHasMore(Array.isArray(notificationData) && notificationData.length === 20); // Assuming pageSize is 20
 
         // Check for email verification notifications after fetching notifications
         checkEmailVerificationPeriodically();

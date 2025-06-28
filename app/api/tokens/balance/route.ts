@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { TokenService } from '../../../services/tokenService';
+import { ServerTokenService } from '../../../services/tokenService.server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,8 +18,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Get token balance
-    const balance = await TokenService.getUserTokenBalance(userId);
-    
+    const balance = await ServerTokenService.getUserTokenBalance(userId);
+
     if (!balance) {
       return NextResponse.json({
         balance: null,
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get current allocations
-    const allocations = await TokenService.getUserAllocations(userId);
+    const allocations = await ServerTokenService.getUserTokenAllocations(userId);
 
     return NextResponse.json({
       balance,
@@ -50,9 +51,54 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST() {
-  return NextResponse.json(
-    { error: 'Method not allowed' },
-    { status: 405 }
-  );
+export async function POST(request: NextRequest) {
+  try {
+    // Get authenticated user
+    const userId = await getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { action, subscriptionAmount } = body;
+
+    if (action === 'initialize') {
+      // Initialize token balance for user with active subscription
+      if (!subscriptionAmount || subscriptionAmount <= 0) {
+        return NextResponse.json({
+          error: 'Valid subscription amount is required for initialization'
+        }, { status: 400 });
+      }
+
+      // Initialize the token balance using server-side service with admin permissions
+      await ServerTokenService.updateMonthlyTokenAllocation(userId, subscriptionAmount);
+
+      // Get the newly created balance
+      const balance = await ServerTokenService.getUserTokenBalance(userId);
+
+      if (!balance) {
+        return NextResponse.json({
+          error: 'Failed to initialize token balance'
+        }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        balance,
+        message: 'Token balance initialized successfully'
+      });
+    }
+
+    return NextResponse.json(
+      { error: 'Invalid action. Supported actions: initialize' },
+      { status: 400 }
+    );
+
+  } catch (error) {
+    console.error('Error in token balance POST:', error);
+    return NextResponse.json(
+      { error: 'Failed to process token balance request' },
+      { status: 500 }
+    );
+  }
 }

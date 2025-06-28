@@ -23,6 +23,7 @@ export * from './database/access';
 export * from './database/search';
 export * from './database/links';
 export * from './database/users';
+export * from './database/analytics';
 
 // Import required functions for additional exports
 import { db, updateDoc, getDoc, doc } from './database/core';
@@ -69,6 +70,16 @@ export const deletePage = async (pageId: string): Promise<boolean> => {
     if (deleteResult) {
       console.log(`Successfully soft deleted page ${pageId}`);
 
+      // Update user page count
+      try {
+        const { decrementUserPageCount } = await import('./counters');
+        await decrementUserPageCount(pageData.userId, pageData.isPublic);
+        console.log("Updated user page count for deletion");
+      } catch (counterError) {
+        console.error("Error updating user page count for deletion:", counterError);
+        // Don't fail page deletion if counter update fails
+      }
+
       // TODO: In the future, we could also mark versions as deleted
       // For now, we keep versions for potential recovery
 
@@ -109,7 +120,12 @@ export const getPageMetadata = async (pageId: string): Promise<any> => {
     }
     return null;
   } catch (error) {
-    console.error('Error getting page metadata:', error);
+    // Handle permission denied errors gracefully - this is expected for private pages
+    if (error?.code === 'permission-denied') {
+      console.log('Permission denied getting page metadata - this is expected for private pages');
+    } else {
+      console.error('Error getting page metadata:', error);
+    }
     return null;
   }
 };
@@ -250,23 +266,7 @@ export const appendPageReference = async (
       console.error('⚠️ Error invalidating caches after append (non-fatal):', cacheError);
     }
 
-    // Create a notification for the source page owner
-    if (sourcePageData.userId && sourcePageData.userId !== (userId || pageData.userId)) {
-      try {
-        const { createAppendNotification } = await import('./notifications');
-        await createAppendNotification(
-          sourcePageData.userId, // Target user (owner of the source page)
-          userId || pageData.userId, // Source user (person doing the append)
-          sourcePageData.id, // Source page ID
-          sourcePageData.title, // Source page title
-          targetPageId, // Target page ID
-          pageData.title // Target page title
-        );
-      } catch (notificationError) {
-        console.error("Error creating append notification:", notificationError);
-        // Don't fail the append operation if notification creation fails
-      }
-    }
+    // Notifications functionality removed
 
     return true;
   } catch (error) {

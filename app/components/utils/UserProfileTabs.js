@@ -3,7 +3,7 @@ import React, { useState, useContext, useRef } from "react";
 import { PillLink } from "./PillLink";
 import { Button } from "../ui/button";
 import SupporterBadge from "../payments/SupporterBadge";
-import { User, Clock, FileText, Lock, Plus, Loader, Info, Users, BookText, Heart, ArrowUpDown, Check, ChevronUp, ChevronDown } from "lucide-react";
+import { User, Clock, FileText, Plus, Loader, Info, Users, BookText, Heart, ArrowUpDown, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { AuthContext } from "../../providers/AuthProvider";
 import Link from "next/link";
@@ -11,12 +11,11 @@ import { useRouter } from "next/navigation";
 import { ProfilePagesContext } from "../../providers/ProfilePageProvider";
 import RecentActivity from "../features/RecentActivity";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import usePages from "../../hooks/usePages";
+import useSimplePages from "../../hooks/useSimplePages";
 import UsernameHistory from "../auth/UsernameHistory";
 import FollowingList from './FollowingList';
 import SearchResults from "../search/SearchResults";
 import UserBioTab from './UserBioTab';
-import UserGroupsTab from './UserGroupsTab';
 import { useFeatureFlag } from "../../utils/feature-flags";
 import FollowingTabContent from './FollowingTabContent';
 import {
@@ -66,7 +65,7 @@ export default function UserProfileTabs({ profile }) {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.slice(1);
       // Define basic valid tabs (we'll validate against full list in useEffect)
-      const basicValidTabs = ["bio", "pages", "activity", "groups", "following", "private"];
+      const basicValidTabs = ["bio", "pages", "activity", "groups", "following"];
       if (hash && basicValidTabs.includes(hash)) {
         return hash;
       }
@@ -103,52 +102,18 @@ export default function UserProfileTabs({ profile }) {
   // Analytics tracking
   const { trackSortingInteraction, trackInteractionEvent, events } = useWeWriteAnalytics();
 
-  // Use the usePages hook to get the user's pages
+  // 🚨 CRITICAL FIX: Use database-level sorting API instead of broken Firestore queries
+  // Now includes automatic change detection - no manual refresh needed
   const {
     pages,
-    privatePages,
     loading: isLoading,
-    hasMorePages,
-    hasMorePrivatePages,
-    isMoreLoading,
-    isMorePrivateLoading,
-    fetchMorePages,
-    fetchMorePrivatePages
-  } = usePages(profile?.uid, true, user?.uid, true); // Pass isUserPage=true to use higher limit
+    error: pagesError,
+    fetchWithSort
+  } = useSimplePages(profile?.uid, user?.uid, true, sortBy, sortDirection);
 
-  // Sort pages based on selected sort option and direction
-  const sortedPages = React.useMemo(() => {
-    if (!pages || pages.length === 0) return pages;
-
-    const pagesCopy = [...pages];
-
-    switch (sortBy) {
-      case "recently-created":
-        return pagesCopy.sort((a, b) => {
-          const dateA = new Date(a.createdAt || 0);
-          const dateB = new Date(b.createdAt || 0);
-          const result = dateB - dateA; // Newest first by default
-          return sortDirection === "asc" ? -result : result;
-        });
-
-      case "alphabetical":
-        return pagesCopy.sort((a, b) => {
-          const titleA = (a.title || "Untitled").toLowerCase();
-          const titleB = (b.title || "Untitled").toLowerCase();
-          const result = titleA.localeCompare(titleB); // A-Z by default
-          return sortDirection === "desc" ? -result : result;
-        });
-
-      case "recently-edited":
-      default:
-        return pagesCopy.sort((a, b) => {
-          const dateA = new Date(a.updatedAt || a.createdAt || 0);
-          const dateB = new Date(b.updatedAt || b.createdAt || 0);
-          const result = dateB - dateA; // Newest first by default
-          return sortDirection === "asc" ? -result : result;
-        });
-    }
-  }, [pages, sortBy, sortDirection]);
+  // 🚨 CRITICAL FIX: No local sorting needed - pages come pre-sorted from database
+  // The API now handles sorting at the database level for the entire dataset
+  const sortedPages = pages;
 
   // Helper function to get descriptive sort labels
   const getSortLabel = (sortType, direction) => {
@@ -164,7 +129,7 @@ export default function UserProfileTabs({ profile }) {
     }
   };
 
-  // Helper function to toggle sort direction or change sort type
+  // 🚨 CRITICAL FIX: Helper function to trigger database-level sorting
   const handleSortChange = (newSortBy) => {
     const oldSortBy = sortBy;
     const oldDirection = sortDirection;
@@ -176,6 +141,11 @@ export default function UserProfileTabs({ profile }) {
       if (typeof window !== 'undefined') {
         localStorage.setItem('profile-pages-sort-direction', newDirection);
       }
+
+      // 🚨 CRITICAL FIX: Trigger database-level sort with new direction
+      const dbSortBy = newSortBy === "recently-edited" ? "lastModified" :
+                      newSortBy === "recently-created" ? "createdAt" : "title";
+      fetchWithSort(dbSortBy, newDirection);
 
       // Track direction toggle
       trackSortingInteraction(newSortBy, newDirection, 'profile_pages', {
@@ -206,6 +176,11 @@ export default function UserProfileTabs({ profile }) {
         localStorage.setItem('profile-pages-sort-direction', newDirection);
       }
 
+      // 🚨 CRITICAL FIX: Trigger database-level sort with new sort type
+      const dbSortBy = newSortBy === "recently-edited" ? "lastModified" :
+                      newSortBy === "recently-created" ? "createdAt" : "title";
+      fetchWithSort(dbSortBy, newDirection);
+
       // Track sort type change
       trackSortingInteraction(newSortBy, newDirection, 'profile_pages', {
         previous_sort_type: oldSortBy,
@@ -227,7 +202,6 @@ export default function UserProfileTabs({ profile }) {
     // Add following tab only for the current user (privacy restriction)
     if (isCurrentUser) {
       tabs.push("following");
-      tabs.push("private");
     }
 
     return tabs;
@@ -406,27 +380,12 @@ export default function UserProfileTabs({ profile }) {
     setDragX(0);
   };
 
-  // Load more pages with error handling
+  // 🚨 URGENT FIX: Load more temporarily disabled - simple API doesn't support pagination yet
   const loadMorePages = async () => {
-    try {
-      setLoadingError(null);
-      await fetchMorePages();
-    } catch (err) {
-      console.error("Error loading more pages:", err);
-      setLoadingError("Failed to load more pages. Please try again.");
-    }
+    console.log("Load more temporarily disabled in urgent production fix");
   };
 
-  // Load more private pages with error handling
-  const loadMorePrivatePages = async () => {
-    try {
-      setLoadingError(null);
-      await fetchMorePrivatePages();
-    } catch (err) {
-      console.error("Error loading more private pages:", err);
-      setLoadingError("Failed to load more private pages. Please try again.");
-    }
-  };
+
 
   // Removed unfollow all function
 
@@ -553,17 +512,7 @@ export default function UserProfileTabs({ profile }) {
                 </TabsTrigger>
               )}
 
-              {/* Private tab - only for current user */}
-              {isCurrentUser && (
-                <TabsTrigger
-                  value="private"
-                  data-value="private"
-                  className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
-                >
-                  <Lock className="h-4 w-4" />
-                  <span>Private</span>
-                </TabsTrigger>
-              )}
+
             </TabsList>
           </div>
           <div className="absolute bottom-0 left-0 right-0 h-px bg-border/40"></div>
@@ -618,11 +567,15 @@ export default function UserProfileTabs({ profile }) {
               <div className="text-sm text-muted-foreground">
                 {sortedPages?.length || 0} page{(sortedPages?.length || 0) !== 1 ? 's' : ''}
               </div>
-              <DropdownMenu>
+              <div className="flex items-center gap-2">
+                {/* Automatic change detection enabled - no manual refresh needed */}
+                <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
                     {sortDirection === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     {getSortLabel(sortBy, sortDirection)}
+                    {/* 🚨 DEBUG: Log current sort state */}
+                    {console.log('🔍 Current sort state:', { sortBy, sortDirection, label: getSortLabel(sortBy, sortDirection) }) || ''}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -658,6 +611,7 @@ export default function UserProfileTabs({ profile }) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </div>
             </div>
 
             {isLoading ? (
@@ -672,24 +626,7 @@ export default function UserProfileTabs({ profile }) {
                     {loadingError}
                   </div>
                 )}
-                {hasMorePages && (
-                  <div className="flex justify-center mt-6">
-                    <Button
-                      variant="outline"
-                      size="default"
-                      onClick={loadMorePages}
-                      disabled={isMoreLoading}
-                      className="gap-2 rounded-lg px-4 py-2 shadow-sm hover:shadow transition-all duration-200"
-                    >
-                      {isMoreLoading ? (
-                        <Loader className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Plus className="h-4 w-4" />
-                      )}
-                      Load more pages
-                    </Button>
-                  </div>
-                )}
+                {/* 🚨 URGENT FIX: Load more temporarily disabled - simple API shows all pages at once */}
               </>
             )}
           </TabsContent>
@@ -717,53 +654,13 @@ export default function UserProfileTabs({ profile }) {
                   : "hidden"
               }`}
             >
-              <UserGroupsTab profile={profile} />
+              <div className="text-center text-muted-foreground py-8">
+                Groups feature coming soon!
+              </div>
             </TabsContent>
           )}
 
-          {isCurrentUser && (
-            <TabsContent
-              value="private"
-              className={`mt-0 transition-all duration-300 ${
-                activeTab === "private"
-                  ? "block"
-                  : "hidden"
-              }`}
-            >
-              {isLoading ? (
-                <div className="flex justify-center py-8">
-                  <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <>
-                  <PageList pageList={privatePages} emptyMessage="No private pages yet" isCurrentUserList={true} />
-                  {loadingError && (
-                    <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
-                      {loadingError}
-                    </div>
-                  )}
-                  {hasMorePrivatePages && (
-                    <div className="flex justify-center mt-6">
-                      <Button
-                        variant="outline"
-                        size="default"
-                        onClick={loadMorePrivatePages}
-                        disabled={isMorePrivateLoading}
-                        className="gap-2 rounded-lg px-4 py-2 shadow-sm hover:shadow transition-all duration-200"
-                      >
-                        {isMorePrivateLoading ? (
-                          <Loader className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Plus className="h-4 w-4" />
-                        )}
-                        Load more private pages
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-            </TabsContent>
-          )}
+
         </div>
       </Tabs>
     </div>

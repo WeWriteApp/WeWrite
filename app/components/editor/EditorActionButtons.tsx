@@ -38,8 +38,7 @@ export default function EditorActionButtons({
 }: EditorActionButtonsProps) {
   const { user } = useAuth();
   
-  // Check if link functionality is enabled
-  const linkFunctionalityEnabled = useFeatureFlag('link_functionality', user?.email);
+  // Link functionality is now permanently enabled
 
   return (
     <div className={`w-full ${className}`}>
@@ -56,7 +55,7 @@ export default function EditorActionButtons({
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-center">
         
         {/* Insert Link Button - First */}
-        {showInsertLink && linkFunctionalityEnabled && onInsertLink && (
+        {showInsertLink && onInsertLink && (
           <Button
             id="editor-insert-link-button"
             data-testid="editor-insert-link"
@@ -68,7 +67,7 @@ export default function EditorActionButtons({
               console.log("🔵 [DEBUG] Event currentTarget:", e.currentTarget);
               console.log("🔵 [DEBUG] Button ID:", e.currentTarget.id);
               console.log("🔵 [DEBUG] EditorActionButtons Insert Link button clicked");
-              console.log("🔵 [DEBUG] linkFunctionalityEnabled:", linkFunctionalityEnabled);
+              console.log("🔵 [DEBUG] Link functionality: enabled (permanently)");
               console.log("🔵 [DEBUG] isSaving:", isSaving);
               console.log("🔵 [DEBUG] About to call onInsertLink from EditorActionButtons");
 

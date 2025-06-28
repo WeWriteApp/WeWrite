@@ -30,17 +30,7 @@ interface BioActivityData {
   isPublic: boolean;
 }
 
-interface GroupActivityData {
-  type: string;
-  groupId: string;
-  groupName: string;
-  editorId: string;
-  editorUsername: string;
-  timestamp: any;
-  content: string;
-  previousContent: string;
-  isPublic: boolean;
-}
+// Groups functionality removed
 
 /**
  * Records a bio edit activity in Firestore
@@ -135,25 +125,8 @@ export const recordGroupAboutEditActivity = async (
       return null;
     }
 
-    const groupData = groupSnapshot.val();
-    const groupName = groupData.name || "Unknown Group";
-
-    // Create activity document
-    const activityData: GroupActivityData = {
-      type: "group_about_edit",
-      groupId: groupId,
-      groupName: groupName,
-      editorId: editorId,
-      editorUsername: editorUsername,
-      timestamp: serverTimestamp(),
-      content: JSON.stringify(content),
-      previousContent: JSON.stringify(previousContent || ""),
-      isPublic: isPublic // Respect group privacy setting
-    };
-
-    const activityRef = await addDoc(collection(db, "activities"), activityData);
-    console.log(`Group about edit activity recorded with ID: ${activityRef.id}`);
-    return activityRef.id;
+    // Groups functionality removed
+    return null;
   } catch (error) {
     console.error("Error recording group about edit activity:", error);
     return null;

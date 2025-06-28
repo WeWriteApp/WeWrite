@@ -111,6 +111,24 @@ const Tabs = React.forwardRef<
     }
   }, [isControlled, urlNavigation, updateUrl, controlledOnValueChange]);
 
+  // Set initial hash if none exists and ensure URL is updated on mount
+  React.useEffect(() => {
+    if (urlNavigation === 'hash' && typeof window !== 'undefined') {
+      const currentHash = window.location.hash.slice(1);
+      const valueToUse = currentHash || defaultValue || '';
+
+      // If no hash exists, set the default value as hash
+      if (!currentHash && valueToUse) {
+        updateUrl(valueToUse);
+      }
+
+      // Update internal state if uncontrolled and value differs
+      if (!isControlled && valueToUse !== internalValue) {
+        setInternalValue(valueToUse);
+      }
+    }
+  }, []); // Run only on mount
+
   // Listen for browser navigation (back/forward) for hash strategy
   React.useEffect(() => {
     if (urlNavigation === 'hash' && !isControlled) {

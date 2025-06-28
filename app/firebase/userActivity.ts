@@ -80,21 +80,46 @@ export const getUserComprehensiveActivityLast24Hours = async (userId: string): P
 
       const pagesSnapshot = await getDocs(pagesQuery);
 
-      pagesSnapshot.forEach(doc => {
-        const pageData = doc.data();
+      // Process each page, filtering out no-op edits
+      for (const pageDoc of pagesSnapshot.docs) {
+        const pageData = pageDoc.data();
+        const pageId = pageDoc.id;
+
         if (pageData.lastModified) {
           const lastModified = pageData.lastModified instanceof Timestamp
             ? pageData.lastModified.toDate()
             : new Date(pageData.lastModified);
 
           if (lastModified >= twentyFourHoursAgo) {
+            // Check if the current version is a no-op edit
+            let isNoOpEdit = false;
+            if (pageData.currentVersion) {
+              try {
+                const versionDocRef = doc(db, "pages", pageId, "versions", pageData.currentVersion);
+                const versionDoc = await getDoc(versionDocRef);
+                if (versionDoc.exists()) {
+                  const versionData = versionDoc.data();
+                  isNoOpEdit = versionData.isNoOp === true;
+                }
+              } catch (error) {
+                console.error(`Error checking version for no-op status: ${error}`);
+                // Continue processing if version check fails
+              }
+            }
+
+            // Skip no-op edits from activity counts
+            if (isNoOpEdit) {
+              console.log(`Filtering no-op edit from comprehensive activity sparkline for page ${pageId}`);
+              continue;
+            }
+
             const hoursAgo = Math.floor((now.getTime() - lastModified.getTime()) / (1000 * 60 * 60));
             if (hoursAgo >= 0 && hoursAgo < 24) {
               pageCreationData[23 - hoursAgo]++;
             }
           }
         }
-      });
+      }
     } catch (error) {
       console.error("Error fetching page creation data:", error);
     }
@@ -107,7 +132,7 @@ export const getUserComprehensiveActivityLast24Hours = async (userId: string): P
         where("userId", "==", userId)
       );
       const userPagesSnapshot = await getDocs(userPagesQuery);
-      const pageIds = userPagesSnapshot.docs.map(doc => doc.id);
+      const pageIds = userPagesSnapshot.docs.map(pageDoc => pageDoc.id);
 
       if (pageIds.length > 0) {
         // Get view data for the past 24 hours for all user's pages
@@ -172,8 +197,8 @@ export const getUserComprehensiveActivityLast24Hours = async (userId: string): P
 
       const followsSnapshot = await getDocs(followsQuery);
 
-      followsSnapshot.forEach(doc => {
-        const followData = doc.data();
+      followsSnapshot.forEach(followDoc => {
+        const followData = followDoc.data();
         if (followData.followedAt) {
           const followedAt = followData.followedAt instanceof Timestamp
             ? followData.followedAt.toDate()
@@ -247,9 +272,11 @@ export const getUserActivityLast24Hours = async (userId: string): Promise<Activi
 
     const pagesSnapshot = await getDocs(pagesQuery);
 
-    // Process each page edit/creation
-    pagesSnapshot.forEach(doc => {
-      const pageData = doc.data();
+    // Process each page edit/creation, filtering out no-op edits
+    for (const pageDoc of pagesSnapshot.docs) {
+      const pageData = pageDoc.data();
+      const pageId = pageDoc.id;
+
       if (pageData.lastModified) {
         // Convert to Date if it's a Timestamp
         const lastModified = pageData.lastModified instanceof Timestamp
@@ -258,6 +285,28 @@ export const getUserActivityLast24Hours = async (userId: string): Promise<Activi
 
         // Only count if it's within the last 24 hours
         if (lastModified >= twentyFourHoursAgo) {
+          // Check if the current version is a no-op edit
+          let isNoOpEdit = false;
+          if (pageData.currentVersion) {
+            try {
+              const versionDocRef = doc(db, "pages", pageId, "versions", pageData.currentVersion);
+              const versionDoc = await getDoc(versionDocRef);
+              if (versionDoc.exists()) {
+                const versionData = versionDoc.data();
+                isNoOpEdit = versionData.isNoOp === true;
+              }
+            } catch (error) {
+              console.error(`Error checking version for no-op status: ${error}`);
+              // Continue processing if version check fails
+            }
+          }
+
+          // Skip no-op edits from activity counts
+          if (isNoOpEdit) {
+            console.log(`Filtering no-op edit from user activity sparkline for page ${pageId}`);
+            continue;
+          }
+
           // Calculate hours ago (0-23, where 0 is the most recent hour)
           const hoursAgo = Math.floor((now.getTime() - lastModified.getTime()) / (1000 * 60 * 60));
 
@@ -268,7 +317,7 @@ export const getUserActivityLast24Hours = async (userId: string): Promise<Activi
           }
         }
       }
-    });
+    }
 
     // Also check versions collection for more detailed edit history
     const versionsPromises = pagesSnapshot.docs.map(async (pageDoc) => {
@@ -285,10 +334,17 @@ export const getUserActivityLast24Hours = async (userId: string): Promise<Activi
 
     const versionsSnapshots = await Promise.all(versionsPromises);
 
-    // Process each version
+    // Process each version, filtering out no-op edits
     versionsSnapshots.forEach(snapshot => {
-      snapshot.forEach(doc => {
-        const versionData = doc.data();
+      snapshot.forEach(versionDoc => {
+        const versionData = versionDoc.data();
+
+        // Skip no-op edits from version-based activity counts
+        if (versionData.isNoOp === true) {
+          console.log(`Filtering no-op edit version ${versionDoc.id} from user activity sparkline`);
+          return;
+        }
+
         if (versionData.createdAt) {
           // Convert ISO string to Date
           const createdAt = new Date(versionData.createdAt);
@@ -354,8 +410,8 @@ export const getGroupUserActivityLast24Hours = async (userId: string, groupId: s
     const pagesSnapshot = await getDocs(pagesQuery);
 
     // Process each page edit/creation
-    pagesSnapshot.forEach(doc => {
-      const pageData = doc.data();
+    pagesSnapshot.forEach(pageDoc => {
+      const pageData = pageDoc.data();
       if (pageData.lastModified) {
         // Convert to Date if it's a Timestamp
         const lastModified = pageData.lastModified instanceof Timestamp
@@ -386,73 +442,7 @@ export const getGroupUserActivityLast24Hours = async (userId: string, groupId: s
   }
 };
 
-/**
- * Gets user activity data for multiple users in a specific group
- * This is an optimized version for fetching group-specific activity data for multiple users at once
- *
- * @param userIds - Array of user IDs
- * @param groupId - The group ID to filter activities by
- * @returns Object mapping user IDs to their activity data
- */
-export const getBatchGroupUserActivityLast24Hours = async (userIds: string[], groupId: string): Promise<Record<string, ActivityData>> => {
-  try {
-    if (!userIds || userIds.length === 0 || !groupId) return {};
-
-    // Get current date and time
-    const now = new Date();
-
-    // Calculate 24 hours ago
-    const twentyFourHoursAgo = new Date(now);
-    twentyFourHoursAgo.setHours(now.getHours() - 24);
-
-    // Initialize result object
-    const result = {};
-    userIds.forEach(userId => {
-      result[userId] = { total: 0, hourly: Array(24).fill(0) };
-    });
-
-    // Query for pages edited/created by any of these users in the last 24 hours that belong to the group
-    const pagesQuery = query(
-      collection(db, "pages"),
-      where("userId", "in", userIds.slice(0, 10)), // Firestore limits 'in' queries to 10 values
-      where("groupId", "==", groupId),
-      where("lastModified", ">=", twentyFourHoursAgo),
-      orderBy("lastModified", "desc")
-    );
-
-    const pagesSnapshot = await getDocs(pagesQuery);
-
-    // Process each page edit/creation
-    pagesSnapshot.forEach(doc => {
-      const pageData = doc.data();
-      const userId = pageData.userId;
-
-      if (userId && pageData.lastModified && result[userId]) {
-        // Convert to Date if it's a Timestamp
-        const lastModified = pageData.lastModified instanceof Timestamp
-          ? pageData.lastModified.toDate()
-          : new Date(pageData.lastModified);
-
-        // Only count if it's within the last 24 hours
-        if (lastModified >= twentyFourHoursAgo) {
-          // Calculate hours ago (0-23, where 0 is the most recent hour)
-          const hoursAgo = Math.floor((now.getTime() - lastModified.getTime()) / (1000 * 60 * 60));
-
-          // Make sure the index is within bounds (0-23)
-          if (hoursAgo >= 0 && hoursAgo < 24) {
-            result[userId].hourly[23 - hoursAgo]++;
-            result[userId].total++;
-          }
-        }
-      }
-    });
-
-    return result;
-  } catch (err) {
-    console.error("Error fetching batch group user activity:", err);
-    return {};
-  }
-};
+// Groups functionality removed
 
 export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promise<Record<string, ActivityData>> => {
   try {
@@ -540,8 +530,8 @@ export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promis
       console.log(`getBatchUserActivityLast24Hours: Found ${pagesSnapshot.size} pages for batch`);
 
       // Process each page edit/creation
-      pagesSnapshot.forEach(doc => {
-        const pageData = doc.data();
+      pagesSnapshot.forEach(pageDoc => {
+        const pageData = pageDoc.data();
         const userId = pageData.userId;
 
         if (userId && pageData.lastModified && result[userId]) {
@@ -552,7 +542,7 @@ export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promis
           } else if (typeof pageData.lastModified === 'string') {
             lastModified = new Date(pageData.lastModified);
           } else {
-            console.warn('Invalid lastModified format for page:', doc.id);
+            console.warn('Invalid lastModified format for page:', pageDoc.id);
             return;
           }
 

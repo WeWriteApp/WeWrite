@@ -179,24 +179,7 @@ const SearchResultsDisplay = React.memo(({
           </div>
         )}
 
-        {/* Groups Results */}
-        {!isLoading && groupsEnabled && results?.groups && results.groups.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold mb-4">Groups</h3>
-            {results.groups.map(group => (
-              <div key={`group-${group.id}`} className="flex items-start gap-2 min-w-0">
-                <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-70px)]">
-                  <PillLink href={`/group/${group.id}`} className="max-w-full truncate">
-                    {group.name}
-                  </PillLink>
-                </div>
-                <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
-                  Group
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Groups functionality removed */}
 
         {/* No Results - Only show after search has completed and we have a query */}
         {!isLoading && query && query.trim() && results &&

@@ -12,7 +12,7 @@ import {
 
 import { db } from "./core";
 import { extractLinksFromNodes } from "./links";
-import { createLinkNotification, createAppendNotification } from "../notifications";
+// Notifications functionality removed
 import { recordUserActivity } from "../streaks";
 import { hasContentChanged } from "../../utils/contentNormalization";
 
@@ -173,6 +173,12 @@ export const getPageVersions = async (pageId: string, versionCount: number = 10)
 
       return versions;
     } catch (innerError) {
+      // Handle permission denied errors gracefully - this is expected for private pages
+      if (innerError?.code === 'permission-denied') {
+        console.log(`Permission denied accessing versions for page ${pageId} - this is expected for private pages`);
+        return [];
+      }
+
       console.error("Error with simple version fetch, falling back:", innerError);
 
       // Fallback to the original query (which might still fail if index doesn't exist)
@@ -222,11 +228,21 @@ export const getPageVersions = async (pageId: string, versionCount: number = 10)
 
         return versions;
       } catch (queryError) {
+        // Handle permission denied errors gracefully - this is expected for private pages
+        if (queryError?.code === 'permission-denied') {
+          console.log(`Permission denied accessing versions for page ${pageId} (fallback query) - this is expected for private pages`);
+          return [];
+        }
         console.error("Error with fallback query:", queryError);
         return [];
       }
     }
   } catch (e) {
+    // Handle permission denied errors gracefully - this is expected for private pages
+    if (e?.code === 'permission-denied') {
+      console.log(`Permission denied accessing versions for page ${pageId} - this is expected for private pages`);
+      return [];
+    }
     console.error("Error fetching page versions:", e);
     return [];
   }
@@ -316,50 +332,8 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
         }
       }
 
-      // Extract links from the content to check for page links
-      const links = extractLinksFromNodes(parsedContent);
-
-      // Process links to create notifications
-      if (links.length > 0 && data.userId) {
-        // Get the current page info for the notification
-        const pageDoc = await getDoc(doc(db, "pages", pageId));
-        const sourcePageTitle = pageDoc.exists() ? pageDoc.data().title || "Untitled Page" : "Untitled Page";
-
-        // Process each link
-        for (const link of links) {
-          // Check if it's a page link (internal link to another page)
-          if (link.url && (link.url.startsWith('/') || link.url.startsWith('/pages/'))) {
-            // Extract the page ID from the URL
-            const targetPageId = link.url.replace('/pages/', '/').replace('/', '');
-
-            if (targetPageId && targetPageId !== pageId) { // Don't notify for self-links
-              try {
-                // Get the target page to check its owner
-                const targetPageDoc = await getDoc(doc(db, "pages", targetPageId));
-
-                if (targetPageDoc.exists()) {
-                  const targetPageData = targetPageDoc.data();
-
-                  // Only create notification if the target page owner is different from the link creator
-                  if (targetPageData.userId && targetPageData.userId !== data.userId) {
-                    await createLinkNotification(
-                      targetPageData.userId, // Target user (owner of the linked page)
-                      data.userId, // Source user (person creating the link)
-                      targetPageId, // Target page ID (page being linked TO)
-                      targetPageData.title || "Untitled Page", // Target page title (page being linked TO)
-                      pageId, // Source page ID (page containing the link)
-                      sourcePageTitle // Source page title (page containing the link)
-                    );
-                  }
-                }
-              } catch (linkError) {
-                console.error("Error processing link notification:", linkError);
-                // Don't fail the save operation if notification creation fails
-              }
-            }
-          }
-        }
-      }
+      // Notifications functionality removed - links are still extracted for other purposes
+      // but no notifications are created
 
     } catch (parseError) {
       console.error("Error parsing content JSON:", parseError);
@@ -376,21 +350,30 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
     const pageData = pageDoc.data();
     const currentVersionId = pageData.currentVersion;
 
-    // If skipIfUnchanged is true, check if content has changed using centralized logic
-    if (data.skipIfUnchanged && pageData.content) {
+    // Enhanced no-op detection: Check if content has changed using centralized logic
+    let isNoOpEdit = false;
+    if (pageData.content) {
       console.log('Checking if content has changed before creating version...');
 
       if (!hasContentChanged(contentString, pageData.content)) {
-        console.log('Content unchanged after normalization, skipping version creation');
-        return { success: false, message: 'Content unchanged' };
-      }
+        isNoOpEdit = true;
+        console.log('Content unchanged after normalization - this is a no-op edit');
 
-      console.log('Content has changed, proceeding with version creation');
+        // If skipIfUnchanged is true, skip version creation entirely
+        if (data.skipIfUnchanged) {
+          console.log('Skipping version creation for no-op edit');
+          return { success: false, message: 'Content unchanged' };
+        } else {
+          console.log('Creating version for no-op edit (skipIfUnchanged=false) but marking as no-op');
+        }
+      } else {
+        console.log('Content has changed, proceeding with version creation');
+      }
     }
 
-    // Import Firestore Timestamp for proper timestamp handling
-    const { Timestamp } = await import('firebase/firestore');
-    const now = Timestamp.now();
+    // CRITICAL FIX: Use ISO string instead of Firestore Timestamp for consistent format
+    // This ensures lastModified is always stored as an ISO string across all save operations
+    const now = new Date().toISOString();
 
     // Create the new version data
     const versionData = {
@@ -399,7 +382,8 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
       userId: data.userId,
       username: data.username || "Anonymous",
       groupId: data.groupId || null,
-      previousVersionId: currentVersionId || null // Link to the previous version
+      previousVersionId: currentVersionId || null, // Link to the previous version
+      isNoOp: isNoOpEdit // Flag to identify no-op edits for filtering
     };
 
     // Create the new version document

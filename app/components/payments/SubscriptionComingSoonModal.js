@@ -9,7 +9,7 @@ import Link from "next/link";
 const SubscriptionComingSoonModal = ({ isOpen, onClose }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border border-border dark:border-neutral-700 bg-white dark:bg-neutral-900 animate-in fade-in-0 zoom-in-95 duration-300">
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border-theme-strong bg-card animate-in fade-in-0 zoom-in-95 duration-300">
         <DialogClose asChild>
           <Button variant="outline" size="icon" className="absolute right-4 top-4">
             <X className="h-4 w-4" />

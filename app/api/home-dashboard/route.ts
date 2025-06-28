@@ -7,7 +7,6 @@ import { cachedStatsService } from '../../services/CachedStatsService';
 
 interface DashboardData {
   recentPages: any[];
-  userGroups: any[];
   trendingPages: any[];
   userStats?: any;
   timestamp: number;
@@ -30,12 +29,10 @@ export async function GET(request: NextRequest) {
     // Fetch all data in parallel for maximum performance
     const [
       recentPages,
-      userGroups,
       trendingPages,
       userStats
     ] = await Promise.all([
       getRecentPagesOptimized(20, userId),
-      getUserGroupsOptimized(userId),
       getTrendingPagesOptimized(5, userId),
       userId ? getUserStatsOptimized(userId) : Promise.resolve(null)
     ]);
@@ -45,7 +42,6 @@ export async function GET(request: NextRequest) {
     
     const dashboardData: DashboardData = {
       recentPages,
-      userGroups,
       trendingPages,
       userStats,
       timestamp: Date.now(),
@@ -120,42 +116,8 @@ async function getRecentPagesOptimized(limitCount: number, userId?: string | nul
 
 
 /**
- * Get user groups with optimized queries
+ * Groups functionality removed
  */
-async function getUserGroupsOptimized(userId?: string | null): Promise<any[]> {
-  if (!userId) return [];
-  
-  try {
-    // Fetch user's groups from RTDB
-    const userGroupsSnapshot = await get(ref(rtdb, `userGroups/${userId}`));
-    
-    if (!userGroupsSnapshot.exists()) {
-      return [];
-    }
-    
-    const userGroups = userGroupsSnapshot.val();
-    const groupIds = Object.keys(userGroups);
-    
-    // Batch fetch group data
-    const groupPromises = groupIds.map(async (groupId) => {
-      const groupSnapshot = await get(ref(rtdb, `groups/${groupId}`));
-      if (groupSnapshot.exists()) {
-        return {
-          id: groupId,
-          ...groupSnapshot.val()
-        };
-      }
-      return null;
-    });
-    
-    const groups = await Promise.all(groupPromises);
-    return groups.filter(Boolean).slice(0, 5); // Limit to 5 groups
-    
-  } catch (error) {
-    console.error('Error fetching user groups:', error);
-    return [];
-  }
-}
 
 /**
  * Get trending pages with optimized queries

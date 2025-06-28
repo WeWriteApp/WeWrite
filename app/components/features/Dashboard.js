@@ -3,7 +3,7 @@ import { useContext, useEffect } from "react";
 import Link from "next/link";
 import AllPages from "../components/AllPages";
 
-import HomeGroupsSection from "../components/HomeGroupsSection";
+// Groups functionality removed
 import AddUsername from "../components/AddUsername";
 import SearchResults from "../search/SearchResults";
 import { AuthContext } from "../../providers/AuthProvider";

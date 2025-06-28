@@ -40,8 +40,7 @@ export interface Page {
   linkedPageIds?: string[];
   version?: number;
   currentVersion?: string;
-  groupId?: string;
-  groupName?: string;
+  // Groups functionality removed
   description?: string;
   fundraisingGoal?: number;
   isReply?: boolean;
@@ -49,9 +48,7 @@ export interface Page {
   replyToTitle?: string;
   replyToUsername?: string;
   followerCount?: number;
-  // Pledge-related fields
-  totalPledged?: number;
-  pledgeCount?: number;
+  // Token earnings (subscription-based only)
   monthlyEarnings?: number;
   // Soft delete fields
   deleted?: boolean;
@@ -66,7 +63,7 @@ export interface PageVersion {
   createdAt: string | Timestamp;
   userId: string;
   username?: string;
-  groupId?: string | null;
+  // Groups functionality removed
   previousVersionId?: string;
 }
 
@@ -92,21 +89,7 @@ export interface EditorChild {
 
 export type EditorContent = EditorNode[];
 
-// Group types
-export interface Group {
-  id: string;
-  name: string;
-  description?: string;
-  about?: string | EditorContent;
-  aboutLastEditor?: string;
-  aboutLastEditTime?: string;
-  createdAt: string | Timestamp;
-  createdBy: string;
-  isPublic: boolean;
-  memberCount?: number;
-  pageCount?: number;
-  members?: Record<string, any>;
-}
+// Groups functionality removed
 
 // Activity types
 export interface Activity {
@@ -114,20 +97,16 @@ export interface Activity {
   type: ActivityType;
   userId: string;
   pageId?: string;
-  groupId?: string;
+  // Groups functionality removed
   timestamp: string | Timestamp;
   metadata?: Record<string, any>;
 }
 
-export type ActivityType = 
+export type ActivityType =
   | 'page_created'
   | 'page_updated'
   | 'page_deleted'
-  | 'bio_updated'
-  | 'group_created'
-  | 'group_updated'
-  | 'group_joined'
-  | 'group_left';
+  | 'bio_updated';
 
 // Subscription types
 export type SubscriptionTier = 'tier1' | 'tier2' | 'tier3' | 'custom';
@@ -149,7 +128,7 @@ export interface TokenAllocation {
   id: string;
   userId: string;
   recipientUserId: string;
-  resourceType: 'page' | 'group' | 'user_bio' | 'group_about' | 'wewrite';
+  resourceType: 'page' | 'user_bio' | 'wewrite';
   resourceId: string;
   tokens: number;
   month: string; // YYYY-MM format
@@ -170,7 +149,7 @@ export interface WriterTokenEarnings {
     allocationId: string;
     fromUserId: string;
     fromUsername?: string;
-    resourceType: 'page' | 'group' | 'user_bio' | 'group_about';
+    resourceType: 'page' | 'user_bio';
     resourceId: string;
     resourceTitle?: string;
     tokens: number;
@@ -272,10 +251,9 @@ export interface Notification {
 export type NotificationType =
   | 'page_mention'
   | 'page_follow'
-  | 'group_invite'
   | 'system_announcement'
   | 'email_verification'
-  | 'pledge_received'
+
   | 'payout_processed'
   | 'payment_failed';
 
@@ -289,84 +267,7 @@ export interface FeatureFlag {
   rolloutPercentage?: number;
 }
 
-// Pledge and Payment types
-export interface Pledge {
-  id: string;
-  userId: string; // The user making the pledge
-  pageId: string;
-  groupId?: string;
-  amount: number;
-  currency: string;
-  status: 'active' | 'cancelled' | 'failed' | 'pending';
-  stripePaymentIntentId?: string;
-  stripeSubscriptionId?: string;
-  createdAt: string | Timestamp;
-  updatedAt: string | Timestamp;
-  lastPaymentAt?: string | Timestamp;
-  nextPaymentAt?: string | Timestamp;
-  failureCount?: number;
-  metadata?: {
-    pageTitle?: string;
-    authorUserId?: string;
-    authorUsername?: string;
-  };
-}
-
-export interface PaymentTransaction {
-  id: string;
-  pledgeId: string;
-  userId: string; // Pledger
-  recipientUserId: string; // Page/group owner
-  pageId?: string;
-  groupId?: string;
-  amount: number;
-  platformFee: number;
-  netAmount: number;
-  currency: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
-  stripePaymentIntentId: string;
-  stripeTransferId?: string;
-  createdAt: string | Timestamp;
-  processedAt?: string | Timestamp;
-  failureReason?: string;
-  metadata?: {
-    period?: string; // YYYY-MM for monthly processing
-    retryCount?: number;
-  };
-}
-
-export interface UserEarnings {
-  id: string;
-  userId: string;
-  totalEarnings: number;
-  availableBalance: number;
-  pendingBalance: number;
-  totalPlatformFees: number;
-  currency: string;
-  lastUpdated: string | Timestamp;
-  stripeConnectedAccountId?: string;
-  payoutPreferences?: {
-    minimumThreshold: number;
-    autoPayoutEnabled: boolean;
-    schedule: 'weekly' | 'monthly';
-  };
-}
-
-export interface PayoutRecord {
-  id: string;
-  userId: string;
-  amount: number;
-  currency: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  stripePayoutId?: string;
-  stripeTransferId?: string;
-  createdAt: string | Timestamp;
-  processedAt?: string | Timestamp;
-  completedAt?: string | Timestamp;
-  failureReason?: string;
-  transactionIds: string[]; // References to PaymentTransaction IDs
-  period?: string; // YYYY-MM for monthly payouts
-}
+// Subscription-based token system only - no direct payments or pledges
 
 // API Response types
 export interface ApiResponse<T = any> {

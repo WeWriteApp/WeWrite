@@ -22,6 +22,7 @@ import { setCurrentVersion } from "../../firebase/database";
 import { useToast } from "../ui/use-toast";
 import { Button } from "../ui/button";
 import { RotateCcw } from "lucide-react";
+import { hasContentChanged } from "../../utils/contentNormalization";
 
 /**
  * ActivityCard component displays a single activity card
@@ -141,13 +142,20 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
             setFetchAttempts(maxAttempts); // Stop further attempts
           }
         } catch (error) {
-          console.error('Error fetching page data for permissions:', error);
+          // Only log actual errors, not permission denied which is expected for private pages
+          if (error?.code !== 'permission-denied') {
+            console.error(`Error fetching page data for ${activity.pageId}:`, error);
+            setLastError(error);
+          } else {
+            console.log(`ActivityCard: Permission denied for page ${activity.pageId} - this is expected for private pages`);
+            setLastError(null); // Don't show error to user for permission denied
+          }
+
           setFetchAttempts(prev => prev + 1);
-          setLastError(error);
 
           // Stop retrying on certain error types
           if (error?.code === 'unavailable' || error?.code === 'permission-denied') {
-            console.warn(`ActivityCard: Stopping retries for page ${activity.pageId} due to ${error.code}`);
+            console.log(`ActivityCard: Stopping retries for page ${activity.pageId} due to ${error.code}`);
             setFetchAttempts(maxAttempts); // Stop further attempts
           }
         }
@@ -192,6 +200,16 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
     added = diffResult.added;
     removed = diffResult.removed;
     textDiff = generateTextDiff(activity.currentContent, activity.previousContent);
+  }
+
+  // Safety check: Don't render cards for no-op edits (activities with zero meaningful changes)
+  // This is a final safety net to catch any no-op activities that might have slipped through
+  if (!isNewPage && added === 0 && removed === 0 && activity.currentContent && activity.previousContent) {
+    // Double-check with robust content normalization
+    if (!hasContentChanged(activity.currentContent, activity.previousContent)) {
+      console.log(`ActivityCard: Refusing to render no-op activity card for page ${activity.pageId}`);
+      return null; // Don't render this card
+    }
   }
 
   // Handle card click to navigate to the page

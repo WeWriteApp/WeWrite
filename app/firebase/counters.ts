@@ -5,6 +5,7 @@ import { doc, getDoc, setDoc, updateDoc, increment, collection, query, where, ge
 import { ref, get, set, onValue } from 'firebase/database';
 import { getCacheItem, setCacheItem, generateCacheKey } from "../utils/cacheUtils";
 import type { Counter, MemoryCacheEntry } from '../types/database';
+import { AnalyticsAggregationService } from '../services/analyticsAggregation';
 
 // Cache TTL in milliseconds (5 minutes)
 const CACHE_TTL = (5 * 60 * 1000);
@@ -216,12 +217,18 @@ export const incrementUserPageCount = async (userId: string, isPublic: boolean =
       });
     }
 
+    // Update global analytics counters
+    try {
+      await AnalyticsAggregationService.incrementPageCreated(isPublic);
+    } catch (analyticsError) {
+      console.error('Error updating analytics counters (non-fatal):', analyticsError);
+    }
+
     // Invalidate both localStorage and memory caches
     localStorage.removeItem(`user_page_count_${userId}_owner`);
     localStorage.removeItem(`user_page_count_${userId}_public`);
     pageCountMemoryCache.delete(`user_page_count_${userId}_owner`);
     pageCountMemoryCache.delete(`user_page_count_${userId}_public`);
-
 
   } catch (error: any) {
     // If the document doesn't exist, create it
@@ -241,7 +248,12 @@ export const incrementUserPageCount = async (userId: string, isPublic: boolean =
         });
       }
 
-
+      // Update global analytics counters for new counter creation
+      try {
+        await AnalyticsAggregationService.incrementPageCreated(isPublic);
+      } catch (analyticsError) {
+        console.error('Error updating analytics counters (non-fatal):', analyticsError);
+      }
     } else {
       console.error('Error incrementing user page count:', error);
     }
@@ -272,6 +284,13 @@ export const decrementUserPageCount = async (userId: string, wasPublic: boolean 
         pageCount: increment(-1),
         lastUpdated: new Date()
       });
+    }
+
+    // Update global analytics counters
+    try {
+      await AnalyticsAggregationService.incrementPageDeleted(wasPublic);
+    } catch (analyticsError) {
+      console.error('Error updating analytics counters (non-fatal):', analyticsError);
     }
 
     // Invalidate both localStorage and memory caches

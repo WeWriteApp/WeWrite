@@ -131,7 +131,7 @@ export function UsernameModal({ isOpen, onClose, email, onUsernameSet }: Usernam
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border border-border dark:border-neutral-700 bg-white dark:bg-neutral-900 animate-in fade-in-0 zoom-in-95 duration-300 px-6 py-6">
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col rounded-lg border-theme-strong bg-card animate-in fade-in-0 zoom-in-95 duration-300 px-6 py-6">
         <DialogClose asChild>
           <Button variant="outline" size="icon" className="absolute right-4 top-4">
             <X className="h-4 w-4" />

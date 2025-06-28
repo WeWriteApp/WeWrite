@@ -46,10 +46,7 @@ const TrendingPages = dynamic(() => import("./components/features/TrendingPages"
 
 
 
-const HomeGroupsSection = dynamic(() => import("./components/groups/HomeGroupsSection"), {
-  loading: () => <GroupsSkeleton limit={3} />,
-  ssr: false
-});
+// Groups functionality removed
 
 
 
@@ -135,8 +132,7 @@ const Home = React.memo(function Home() {
   const [loadingRetryCount, setLoadingRetryCount] = useState<number>(0);
   const [initialLoadStartTime, setInitialLoadStartTime] = useState<number | null>(null);
 
-  // Feature flag for daily notes - now includes user ID for user-specific overrides
-  const dailyNotesEnabled = useFeatureFlag('daily_notes', user?.email, user?.uid);
+  // Daily notes are now permanently enabled
 
 
 
@@ -257,12 +253,10 @@ const Home = React.memo(function Home() {
             <SearchButton placeholder="Search all pages..." />
           </div>
 
-          {/* Daily Notes Section - Feature flagged */}
-          {dailyNotesEnabled && (
-            <div data-component="DailyNotesSection">
-              <DailyNotesSection />
-            </div>
-          )}
+          {/* Daily Notes Section - Now permanently enabled */}
+          <div data-component="DailyNotesSection">
+            <DailyNotesSection />
+          </div>
 
 
           {/* 1. Recent Activity - High priority, loads first */}
@@ -280,55 +274,7 @@ const Home = React.memo(function Home() {
             />
           </StickySection>
 
-          {/* 2. Groups Section - Medium priority */}
-          <StickySection
-            sectionId="groups"
-            headerContent={
-              <SectionTitle
-                icon={Users}
-                title="Your Groups"
-                rightContent={
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {/* Desktop: Button with text and icon */}
-                    <Button
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.location.href = '/group/new';
-                      }}
-                      className="hidden sm:flex items-center gap-2 rounded-2xl h-8 px-3"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span className="hidden md:inline">New Group</span>
-                    </Button>
-
-                    {/* Mobile: Icon-only button */}
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.location.href = '/group/new';
-                      }}
-                      className="sm:hidden h-8 w-8 rounded-2xl"
-                      aria-label="Create new group"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                }
-              />
-            }
-          >
-            <LazySection
-              name="groups"
-              priority="medium"
-              minHeight={200}
-              fallback={<GroupsSkeleton limit={3} />}
-            >
-              <HomeGroupsSection hideHeader={true} />
-            </LazySection>
-          </StickySection>
+          {/* Groups functionality removed */}
 
           {/* 3. Trending Pages - Low priority, lazy loaded */}
           <StickySection

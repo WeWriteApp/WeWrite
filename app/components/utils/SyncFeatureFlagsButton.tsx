@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from '../ui/button';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../firebase/database';
+import { db } from '../../firebase/config';
 import { useToast } from '../ui/use-toast';
 import { RefreshCw, CheckCircle } from 'lucide-react';
 
@@ -12,9 +12,7 @@ const COMPLETE_FEATURE_FLAGS = {
   payments: false,
   map_view: false,
   calendar_view: false,
-  groups: true,
-  notifications: false,
-  link_functionality: true
+  inactive_subscription: false
 };
 
 export default function SyncFeatureFlagsButton() {

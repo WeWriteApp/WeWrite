@@ -1,5 +1,6 @@
 import React, { createContext, ReactNode } from "react";
-import usePages from "../hooks/usePages";
+import useSimplePages from "../hooks/useSimplePages";
+import { useAuth } from "./AuthProvider";
 
 // Types
 interface ProfilePagesProviderProps {
@@ -11,7 +12,9 @@ interface ProfilePagesProviderProps {
 export const ProfilePagesContext = createContext<any>(undefined);
 
 export const ProfilePagesProvider = ({ userId, children }: ProfilePagesProviderProps) => {
-  const pagesData = usePages(userId, true, null, true); // Pass isUserPage=true to use higher limit
+  const { user } = useAuth();
+  // 🚨 URGENT PRODUCTION FIX: Use simple API-based hook instead of broken Firestore queries
+  const pagesData = useSimplePages(userId, user?.uid || null, true);
 
   return (
     <ProfilePagesContext.Provider value={pagesData}>

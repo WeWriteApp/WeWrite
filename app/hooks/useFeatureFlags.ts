@@ -32,6 +32,15 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlag[] = [
   },
 
   {
+    id: 'token_system',
+    name: 'Token System',
+    description: 'Enable token-based subscription system for pledge allocation and management.',
+    enabled: false,
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString()
+  },
+
+  {
     id: 'map_view',
     name: 'Map View',
     description: 'Enable map view for pages with location data and geographic visualization.',
@@ -47,14 +56,7 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlag[] = [
     createdAt: new Date().toISOString(),
     lastModified: new Date().toISOString()
   },
-  {
-    id: 'link_functionality',
-    name: 'Link Functionality',
-    description: 'Enable link creation and editing in page editors. When disabled, shows a modal with social media follow prompt.',
-    enabled: true,
-    createdAt: new Date().toISOString(),
-    lastModified: new Date().toISOString()
-  }
+
 ];
 
 export function useFeatureFlags() {

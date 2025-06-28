@@ -121,7 +121,7 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
               )}
 
               <div
-                className="relative h-[56px] rounded-2xl overflow-hidden border border-border/50 dark:border-border/20 bg-background dark:bg-background/30 shadow-md hover:shadow-lg transition-shadow"
+                className="relative h-[56px] rounded-2xl overflow-hidden border-theme-light bg-background dark:bg-background/30 shadow-md hover:shadow-lg transition-shadow"
 
               >
                 {/* Background for visualization */}

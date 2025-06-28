@@ -9,11 +9,12 @@ import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface ContentChangesAnalyticsWidgetProps {
   dateRange: DateRange;
+  granularity?: number;
   className?: string;
 }
 
-export function ContentChangesAnalyticsWidget({ dateRange, className = "" }: ContentChangesAnalyticsWidgetProps) {
-  const { data, loading, error } = useContentChangesMetrics(dateRange);
+export function ContentChangesAnalyticsWidget({ dateRange, granularity, className = "" }: ContentChangesAnalyticsWidgetProps) {
+  const { data, loading, error } = useContentChangesMetrics(dateRange, granularity);
   const chartConfig = useResponsiveChart(data.length, data);
 
   // Check if we have any data
@@ -170,12 +171,14 @@ export function ContentChangesAnalyticsWidget({ dateRange, className = "" }: Con
                 fill="#22c55e"
                 name="Added"
                 radius={[2, 2, 0, 0]}
+                maxBarSize={60}
               />
               <Bar
                 dataKey="charactersDeleted"
                 fill="#ef4444"
                 name="Deleted"
                 radius={[0, 0, 2, 2]}
+                maxBarSize={60}
                 // Make deleted values negative for display
                 transform="scale(1, -1)"
               />

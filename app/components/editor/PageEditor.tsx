@@ -153,8 +153,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
   const editorRef = useRef<any>(null);
   const { lineMode, setLineMode } = useLineSettings();
 
-  // Check if link functionality is enabled
-  const linkFunctionalityEnabled = useFeatureFlag('link_functionality', user?.email);
+  // Link functionality is now permanently enabled
 
   // Custom modal hooks
   const { alertState, showError, closeAlert } = useAlert();
@@ -197,7 +196,22 @@ const PageEditor: React.FC<PageEditorProps> = ({
         let currentContent;
 
         // First, check if there are any pending page links
-        const pendingLinks = editorRef.current ? editorRef.current.querySelectorAll('.pending-page') : [];
+        let pendingLinks = [];
+        try {
+          if (editorRef.current && typeof editorRef.current.querySelectorAll === 'function') {
+            pendingLinks = editorRef.current.querySelectorAll('.pending-page');
+          } else if (editorRef.current && editorRef.current.base && typeof editorRef.current.base.querySelectorAll === 'function') {
+            pendingLinks = editorRef.current.base.querySelectorAll('.pending-page');
+          } else {
+            const editorContainer = document.querySelector('[data-slate-editor="true"]') || document.querySelector('.editor-container');
+            if (editorContainer) {
+              pendingLinks = editorContainer.querySelectorAll('.pending-page');
+            }
+          }
+        } catch (error) {
+          console.warn("🟡 PageEditor: Could not query for pending links (keyboard save):", error);
+          pendingLinks = [];
+        }
         console.log("🔵 PageEditor: Found pending page links (keyboard save):", pendingLinks.length);
 
         if (editorRef.current && editorRef.current.processPendingPageLinks) {
@@ -208,7 +222,22 @@ const PageEditor: React.FC<PageEditorProps> = ({
           await new Promise(resolve => setTimeout(resolve, 100));
 
           // Check if pending links were processed
-          const remainingPendingLinks = editorRef.current.querySelectorAll('.pending-page');
+          let remainingPendingLinks = [];
+          try {
+            if (editorRef.current && typeof editorRef.current.querySelectorAll === 'function') {
+              remainingPendingLinks = editorRef.current.querySelectorAll('.pending-page');
+            } else if (editorRef.current && editorRef.current.base && typeof editorRef.current.base.querySelectorAll === 'function') {
+              remainingPendingLinks = editorRef.current.base.querySelectorAll('.pending-page');
+            } else {
+              const editorContainer = document.querySelector('[data-slate-editor="true"]') || document.querySelector('.editor-container');
+              if (editorContainer) {
+                remainingPendingLinks = editorContainer.querySelectorAll('.pending-page');
+              }
+            }
+          } catch (error) {
+            console.warn("🟡 PageEditor: Could not query for remaining pending links (keyboard save):", error);
+            remainingPendingLinks = [];
+          }
           console.log("🔵 PageEditor: Remaining pending links after processing (keyboard save):", remainingPendingLinks.length);
 
           // Capture content AFTER processing pending links
@@ -507,7 +536,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
   // Debug: Log when component renders
   useEffect(() => {
     console.log("🔵 [DEBUG] PageEditor component rendered/updated");
-    console.log("🔵 [DEBUG] linkFunctionalityEnabled:", linkFunctionalityEnabled);
+    console.log("🔵 [DEBUG] Link functionality: enabled (permanently)");
     console.log("🔵 [DEBUG] isSaving:", isSaving);
 
     // Check if button exists in DOM
@@ -535,12 +564,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
       (window as any).testEditorRef = editorRef;
     }
     try {
-      // Check if link functionality is enabled
-      if (!linkFunctionalityEnabled) {
-        console.log("🟡 [DEBUG] Link functionality disabled, showing modal");
-        setShowDisabledLinkModal(true);
-        return;
-      }
+      // Link functionality is now permanently enabled
 
       console.log("🔵 [DEBUG] Link functionality enabled, checking editor ref");
       console.log("🔵 [DEBUG] editorRef:", editorRef);
@@ -632,7 +656,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
   //   hasOnSave: !!onSave,
   //   hasOnDelete: !!onDelete,
   //   isSaving,
-  //   linkFunctionalityEnabled
+  //   linkFunctionality: true
   // });
 
   return (
@@ -645,7 +669,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
       onSave={onSave}
       onDelete={onDelete}
       isSaving={isSaving}
-      linkFunctionalityEnabled={linkFunctionalityEnabled}
+      linkFunctionalityEnabled={true}
     >
       {/* CRITICAL: NO extra containers - match view mode exactly */}
       <div className="editor-container w-full max-w-none">
@@ -789,7 +813,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
               console.log("🔵 [DEBUG] Event currentTarget:", e.currentTarget);
               console.log("🔵 [DEBUG] Button ID:", e.currentTarget.id);
               console.log("🔵 [DEBUG] PageEditor Insert Link button clicked - ONLY implementation");
-              console.log("🔵 [DEBUG] linkFunctionalityEnabled:", linkFunctionalityEnabled);
+              console.log("🔵 [DEBUG] Link functionality: enabled (permanently)");
               console.log("🔵 [DEBUG] isSaving:", isSaving);
               console.log("🔵 [DEBUG] About to call handleInsertLink from PageEditor");
 
@@ -832,7 +856,25 @@ const PageEditor: React.FC<PageEditorProps> = ({
                   let currentContent;
 
                   // First, check if there are any pending page links
-                  const pendingLinks = editorRef.current ? editorRef.current.querySelectorAll('.pending-page') : [];
+                  // Note: editorRef.current is a React component, not a DOM element
+                  let pendingLinks = [];
+                  try {
+                    if (editorRef.current && typeof editorRef.current.querySelectorAll === 'function') {
+                      pendingLinks = editorRef.current.querySelectorAll('.pending-page');
+                    } else if (editorRef.current && editorRef.current.base && typeof editorRef.current.base.querySelectorAll === 'function') {
+                      // Try accessing the DOM element through .base property
+                      pendingLinks = editorRef.current.base.querySelectorAll('.pending-page');
+                    } else {
+                      // Fallback: try to find the editor container in the DOM
+                      const editorContainer = document.querySelector('[data-slate-editor="true"]') || document.querySelector('.editor-container');
+                      if (editorContainer) {
+                        pendingLinks = editorContainer.querySelectorAll('.pending-page');
+                      }
+                    }
+                  } catch (error) {
+                    console.warn("🟡 PageEditor: Could not query for pending links:", error);
+                    pendingLinks = [];
+                  }
                   console.log("🔵 PageEditor: Found pending page links:", pendingLinks.length);
 
                   if (editorRef.current && editorRef.current.processPendingPageLinks) {
@@ -843,7 +885,22 @@ const PageEditor: React.FC<PageEditorProps> = ({
                     await new Promise(resolve => setTimeout(resolve, 100));
 
                     // Check if pending links were processed
-                    const remainingPendingLinks = editorRef.current.querySelectorAll('.pending-page');
+                    let remainingPendingLinks = [];
+                    try {
+                      if (editorRef.current && typeof editorRef.current.querySelectorAll === 'function') {
+                        remainingPendingLinks = editorRef.current.querySelectorAll('.pending-page');
+                      } else if (editorRef.current && editorRef.current.base && typeof editorRef.current.base.querySelectorAll === 'function') {
+                        remainingPendingLinks = editorRef.current.base.querySelectorAll('.pending-page');
+                      } else {
+                        const editorContainer = document.querySelector('[data-slate-editor="true"]') || document.querySelector('.editor-container');
+                        if (editorContainer) {
+                          remainingPendingLinks = editorContainer.querySelectorAll('.pending-page');
+                        }
+                      }
+                    } catch (error) {
+                      console.warn("🟡 PageEditor: Could not query for remaining pending links:", error);
+                      remainingPendingLinks = [];
+                    }
                     console.log("🔵 PageEditor: Remaining pending links after processing:", remainingPendingLinks.length);
 
                     // Capture content AFTER processing pending links

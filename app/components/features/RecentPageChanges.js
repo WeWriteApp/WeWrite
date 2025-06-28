@@ -183,7 +183,16 @@ export default function RecentPageChanges({ pageId }) {
                 {mostRecentVersion.action || 'Updated'}
               </div>
               <div className="text-sm text-muted-foreground">
-                {mostRecentVersion.username || 'Anonymous'} • {mostRecentVersion.timestamp ? formatDistanceToNow(new Date(mostRecentVersion.timestamp)) : 'some time'} ago
+                {mostRecentVersion.username || 'Anonymous'} • {mostRecentVersion.timestamp ? (() => {
+                  try {
+                    const date = new Date(mostRecentVersion.timestamp);
+                    if (isNaN(date.getTime())) return 'some time';
+                    return formatDistanceToNow(date);
+                  } catch (error) {
+                    console.error('Error formatting recent change time:', error);
+                    return 'some time';
+                  }
+                })() : 'some time'} ago
               </div>
             </div>
           </div>

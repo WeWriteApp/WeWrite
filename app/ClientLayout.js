@@ -62,6 +62,8 @@ const ConstructionBanner = dynamic(() => import('./components/utils/Construction
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith('/auth/');
+  const isAdminPage = pathname?.startsWith('/admin'); // All admin pages
+  const isAdminDashboard = pathname?.startsWith('/admin/dashboard'); // Admin dashboard pages specifically
   const isHomePage = pathname === '/';
 
   // Use scroll restoration hook to ensure pages always start at the top
@@ -87,40 +89,62 @@ export default function ClientLayout({ children }) {
                           <MobileProvider>
                             <DrawerProvider>
                                 <Drawer />
-                                <SidebarProvider>
-                                  <SidebarLayout>
-                                    <div className="flex flex-col bg-background">
-                                      {/* Handle pending replies after authentication */}
-                                      <PendingReplyHandler />
+                                {isAdminDashboard ? (
+                                  <div className="flex flex-col bg-background min-h-screen">
+                                    {/* Handle pending replies after authentication */}
+                                    <PendingReplyHandler />
 
-                                      {!isAuthPage && <UsernameWarningBanner />}
-                                      {!isAuthPage && <UsernameEnforcementBanner />}
-                                      <FeatureFlagCookieManager />
-                                      <main className="flex-grow">
-                                        <AdminFeaturesWrapper>
-                                          <ErrorBoundary>
-                                            <HydrationSafetyWrapper>
-                                              <TextSelectionProvider>
-                                                <PageTransition enableTransitions={!isAuthPage}>
-                                                  {children}
-                                                </PageTransition>
-                                              </TextSelectionProvider>
-                                            </HydrationSafetyWrapper>
-                                          </ErrorBoundary>
-                                        </AdminFeaturesWrapper>
-                                      </main>
+                                    <FeatureFlagCookieManager />
+                                    <main className="flex-grow">
+                                      <AdminFeaturesWrapper>
+                                        <ErrorBoundary>
+                                          <HydrationSafetyWrapper>
+                                            <TextSelectionProvider>
+                                              <PageTransition enableTransitions={!isAuthPage}>
+                                                {children}
+                                              </PageTransition>
+                                            </TextSelectionProvider>
+                                          </HydrationSafetyWrapper>
+                                        </ErrorBoundary>
+                                      </AdminFeaturesWrapper>
+                                    </main>
+                                  </div>
+                                ) : (
+                                  <SidebarProvider>
+                                    <SidebarLayout>
+                                      <div className="flex flex-col bg-background">
+                                        {/* Handle pending replies after authentication */}
+                                        <PendingReplyHandler />
 
-                                      {/* Site Footer */}
-                                      {!isAuthPage && <SiteFooter />}
+                                        {!isAuthPage && !isAdminPage && <UsernameWarningBanner />}
+                                        {!isAuthPage && !isAdminPage && <UsernameEnforcementBanner />}
+                                        <FeatureFlagCookieManager />
+                                        <main className="flex-grow">
+                                          <AdminFeaturesWrapper>
+                                            <ErrorBoundary>
+                                              <HydrationSafetyWrapper>
+                                                <TextSelectionProvider>
+                                                  <PageTransition enableTransitions={!isAuthPage}>
+                                                    {children}
+                                                  </PageTransition>
+                                                </TextSelectionProvider>
+                                              </HydrationSafetyWrapper>
+                                            </ErrorBoundary>
+                                          </AdminFeaturesWrapper>
+                                        </main>
 
-                                      {/* Construction Banner */}
-                                      {!isAuthPage && <ConstructionBanner />}
+                                        {/* Site Footer */}
+                                        {!isAuthPage && !isAdminPage && <SiteFooter />}
 
-                                      {/* Mobile Bottom Navigation */}
-                                      {!isAuthPage && <MobileBottomNav />}
-                                    </div>
-                                  </SidebarLayout>
-                                </SidebarProvider>
+                                        {/* Construction Banner */}
+                                        {!isAuthPage && !isAdminPage && <ConstructionBanner />}
+
+                                        {/* Mobile Bottom Navigation */}
+                                        {!isAuthPage && !isAdminPage && <MobileBottomNav />}
+                                      </div>
+                                    </SidebarLayout>
+                                  </SidebarProvider>
+                                )}
                                 {process.env.NODE_ENV === 'development' && (
                                   <>
                                     {/* <GADebugger /> */}

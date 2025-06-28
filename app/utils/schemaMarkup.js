@@ -142,42 +142,7 @@ function generatePersonSchema(data) {
   };
 }
 
-/**
- * Generates schema.org markup for a group
- *
- * @param {object} data - The group data
- * @returns {object} - The schema markup object
- */
-function generateGroupSchema(data) {
-  const {
-    name,
-    description,
-    url,
-    imageUrl,
-    memberCount,
-    createdAt,
-    createdBy
-  } = data;
-
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: name || 'Unnamed Group',
-    description: description || '',
-    url: url || '',
-    logo: imageUrl ? {
-      '@type': 'ImageObject',
-      url: imageUrl
-    } : undefined,
-    numberOfEmployees: memberCount || 0,
-    foundingDate: createdAt || undefined,
-    founder: createdBy ? {
-      '@type': 'Person',
-      name: createdBy
-    } : undefined,
-    sameAs: url ? [url] : undefined
-  };
-}
+// Groups functionality removed
 
 /**
  * Generates schema.org markup for a WebPage

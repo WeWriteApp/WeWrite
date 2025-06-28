@@ -11,7 +11,8 @@ import { checkPaymentsFeatureFlag } from '../../feature-flag-helper';
 import {
   validateCustomAmount,
   calculateTokensForAmount,
-  getTierById
+  getTierById,
+  CUSTOM_TIER_CONFIG
 } from '../../../utils/subscriptionTiers';
 
 // Initialize Firebase Admin and Stripe
@@ -23,20 +24,20 @@ const stripe = new Stripe(getStripeSecretKey() || '', {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if payments feature is enabled
-    const featureCheckResponse = await checkPaymentsFeatureFlag();
-    if (featureCheckResponse) {
-      return featureCheckResponse;
-    }
-
-    // Get authenticated user
+    // Get authenticated user first
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Check if payments feature is enabled for this user
+    const featureCheckResponse = await checkPaymentsFeatureFlag(userId);
+    if (featureCheckResponse) {
+      return featureCheckResponse;
+    }
+
     const body = await request.json();
-    const { subscriptionId, newTier, newAmount } = body;
+    const { subscriptionId, newTier, newAmount, skipValidation } = body;
 
     if (!subscriptionId || !newTier) {
       return NextResponse.json({ 
@@ -50,14 +51,24 @@ export async function POST(request: NextRequest) {
 
     if (newTier === 'custom') {
       if (!newAmount || newAmount <= 0) {
-        return NextResponse.json({ 
-          error: 'Valid amount is required for custom tier' 
+        return NextResponse.json({
+          error: 'Valid amount is required for custom tier'
         }, { status: 400 });
       }
 
-      const validation = validateCustomAmount(newAmount);
-      if (!validation.valid) {
-        return NextResponse.json({ error: validation.error }, { status: 400 });
+      // Skip minimum validation if skipValidation flag is set (for amount additions like +$10)
+      if (!skipValidation) {
+        const validation = validateCustomAmount(newAmount);
+        if (!validation.valid) {
+          return NextResponse.json({ error: validation.error }, { status: 400 });
+        }
+      } else {
+        // For skipValidation, only check maximum
+        if (newAmount > CUSTOM_TIER_CONFIG.maxAmount) {
+          return NextResponse.json({
+            error: `Amount cannot exceed $${CUSTOM_TIER_CONFIG.maxAmount}`
+          }, { status: 400 });
+        }
       }
 
       finalAmount = newAmount;
@@ -84,7 +95,6 @@ export async function POST(request: NextRequest) {
       },
       product_data: {
         name: `WeWrite ${newTier === 'custom' ? 'Custom' : getTierById(newTier)?.name}`,
-        description: `${finalTokens} tokens per month for supporting WeWrite creators`,
       },
       metadata: {
         tier: newTier,
@@ -119,6 +129,13 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date(),
     });
 
+    // Update user's monthly token allocation
+    const userRef = adminDb.collection('users').doc(userId);
+    await userRef.update({
+      monthlyTokenAllocation: finalAmount, // $1 = 1 token allocation
+      updatedAt: new Date(),
+    });
+
     console.log(`Subscription updated for user ${userId}: ${newTier} - $${finalAmount}/mo - ${finalTokens} tokens`);
 
     return NextResponse.json({
@@ -129,6 +146,7 @@ export async function POST(request: NextRequest) {
         amount: finalAmount,
         tokens: finalTokens,
         currentPeriodEnd: new Date(updatedSubscription.current_period_end * 1000).toISOString(),
+        previousAmount: currentSubscription.items.data[0].price.unit_amount / 100, // Previous amount for comparison
       },
     });
 

@@ -33,7 +33,7 @@ The WeWrite settings page has been reorganized from a single, cluttered page int
 - **Payout Management**: Request payouts and view history
 - **Real-time Updates**: Live balance and earnings tracking
 
-#### 4. Account Settings (`/settings/account`)
+#### 4. Advanced Settings (`/settings/advanced`)
 - **Data Management**: Recently deleted pages with recovery options
 - **Sync Settings**: Offline sync queue management
 - **App Installation**: PWA installation prompts and status
@@ -55,7 +55,7 @@ const paymentsEnabled = useFeatureFlag('payments', user?.email);
 const settingsSections = [
   // Always visible sections
   { id: 'profile', title: 'Profile', ... },
-  { id: 'account', title: 'Account Settings', ... },
+  { id: 'advanced', title: 'Advanced', ... },
   
   // Payment-gated sections
   { 
@@ -137,7 +137,7 @@ All settings pages follow the same layout structure:
 The previous monolithic settings page has been split into:
 - **Profile management** → `/settings/profile`
 - **Payment sections** → `/settings/subscription` and `/settings/earnings`
-- **Account data** → `/settings/account`
+- **Advanced settings** → `/settings/advanced`
 
 ### Earnings & Payouts Combination
 Previously separate "Writer Earnings" and "Creator Payouts" sections are now combined into a single `/settings/earnings` page with tabbed interface:

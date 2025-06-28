@@ -1,21 +1,22 @@
 "use client";
 
-import React, { useState, useContext, useEffect } from 'react';
-import { AuthContext } from "../../providers/AuthProvider";
+import React, { useState, useEffect } from 'react';
+import { useAuth } from "../../providers/AuthProvider";
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
-import { Loader, AlertCircle, CheckCircle2, RefreshCw, Bell, Flame, Calendar } from 'lucide-react';
+import { Loader, AlertCircle, CheckCircle2, RefreshCw, Bell, Flame, Calendar, DollarSign, ChevronLeft } from 'lucide-react';
 import { calculatePastStreaks } from '../../scripts/calculatePastStreaks';
 import { backfillNotifications } from '../../scripts/backfillNotifications';
 import { backfillActivityCalendar } from '../../scripts/backfillActivityCalendar';
 import { useRouter } from 'next/navigation';
 import { useConfirmation } from '../../hooks/useConfirmation';
 import ConfirmationModal from '../../components/utils/ConfirmationModal';
+import FeeManagementSection from '../../components/admin/FeeManagementSection';
 
 export default function AdminToolsPage() {
-  const { user, loading: authLoading } = useContext(AuthContext);
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('streaks');
 
@@ -149,11 +150,12 @@ export default function AdminToolsPage() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-background">
+      <div className="container max-w-4xl mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Admin Tools</h1>
 
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="streaks">
             <Flame className="h-4 w-4 mr-2" />
             Streak Calculation
@@ -165,6 +167,10 @@ export default function AdminToolsPage() {
           <TabsTrigger value="activity">
             <Calendar className="h-4 w-4 mr-2" />
             Activity Calendar
+          </TabsTrigger>
+          <TabsTrigger value="fees">
+            <DollarSign className="h-4 w-4 mr-2" />
+            Fee Management
           </TabsTrigger>
         </TabsList>
 
@@ -381,6 +387,23 @@ export default function AdminToolsPage() {
             </CardFooter>
           </Card>
         </TabsContent>
+
+        <TabsContent value="fees" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <DollarSign className="mr-2 h-5 w-5" />
+                WeWrite Fee Management
+              </CardTitle>
+              <CardDescription>
+                Configure the platform fee percentage for payouts
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FeeManagementSection />
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Custom Modals */}
@@ -396,6 +419,7 @@ export default function AdminToolsPage() {
         icon={confirmationState.icon}
         isLoading={confirmationState.isLoading}
       />
+      </div>
     </div>
   );
 }

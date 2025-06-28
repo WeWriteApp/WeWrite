@@ -9,11 +9,12 @@ import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface VisitorAnalyticsWidgetProps {
   dateRange: DateRange;
+  granularity?: number;
   className?: string;
 }
 
-export function VisitorAnalyticsWidget({ dateRange, className = "" }: VisitorAnalyticsWidgetProps) {
-  const { data, loading, error } = useVisitorMetrics(dateRange);
+export function VisitorAnalyticsWidget({ dateRange, granularity, className = "" }: VisitorAnalyticsWidgetProps) {
+  const { data, loading, error } = useVisitorMetrics(dateRange, granularity);
   const chartConfig = useResponsiveChart(data.length, data);
 
   // Check if we have any data
@@ -161,6 +162,7 @@ export function VisitorAnalyticsWidget({ dateRange, className = "" }: VisitorAna
                 fill="hsl(142, 76%, 36%)"
                 radius={[0, 0, 0, 0]}
                 className="hover:opacity-80 transition-opacity"
+                maxBarSize={60}
               />
               <Bar
                 dataKey="anonymous"
@@ -168,6 +170,7 @@ export function VisitorAnalyticsWidget({ dateRange, className = "" }: VisitorAna
                 fill="hsl(221, 83%, 53%)"
                 radius={[2, 2, 0, 0]}
                 className="hover:opacity-80 transition-opacity"
+                maxBarSize={60}
               />
             </BarChart>
           </ResponsiveContainer>

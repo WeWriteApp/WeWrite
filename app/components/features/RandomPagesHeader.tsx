@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Shuffle, MoreHorizontal, Lock, Grid3X3, UserX } from 'lucide-react';
+import { Shuffle, MoreHorizontal, Grid3X3, UserX } from 'lucide-react';
 import { SectionTitle } from '../ui/section-title';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
@@ -24,18 +24,12 @@ import RandomPageFilterMenu from '../ui/RandomPageFilterMenu';
  * - Persistent toggle state in localStorage
  */
 const RandomPagesHeader = () => {
-  const [includePrivatePages, setIncludePrivatePages] = useState(false);
   const [denseMode, setDenseMode] = useState(false);
   const [excludeOwnPages, setExcludeOwnPages] = useState(false);
 
   // Load preferences from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedPrivacyPreference = localStorage.getItem('randomPages_includePrivate');
-      if (savedPrivacyPreference === 'true') {
-        setIncludePrivatePages(true);
-      }
-
       const savedDenseModePreference = localStorage.getItem('randomPages_denseMode');
       if (savedDenseModePreference === 'true') {
         setDenseMode(true);
@@ -48,25 +42,7 @@ const RandomPagesHeader = () => {
     }
   }, []);
 
-  // Handle privacy toggle change
-  const handlePrivacyToggle = () => {
-    const newValue = !includePrivatePages;
-    setIncludePrivatePages(newValue);
 
-    // Persist to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('randomPages_includePrivate', String(newValue));
-    }
-
-    // Trigger shuffle with new privacy setting
-    const shuffleEvent = new CustomEvent('shuffleRandomPages', {
-      detail: {
-        includePrivate: newValue,
-        excludeOwnPages: excludeOwnPages
-      }
-    });
-    window.dispatchEvent(shuffleEvent);
-  };
 
   // Handle dense mode toggle change
   const handleDenseModeToggle = () => {
@@ -98,7 +74,7 @@ const RandomPagesHeader = () => {
     // Trigger shuffle with new filter setting
     const shuffleEvent = new CustomEvent('shuffleRandomPages', {
       detail: {
-        includePrivate: includePrivatePages,
+        includePrivate: false,
         excludeOwnPages: newValue
       }
     });
@@ -110,7 +86,7 @@ const RandomPagesHeader = () => {
     e.stopPropagation();
     const shuffleEvent = new CustomEvent('shuffleRandomPages', {
       detail: {
-        includePrivate: includePrivatePages,
+        includePrivate: false,
         excludeOwnPages: excludeOwnPages
       }
     });
@@ -132,34 +108,7 @@ const RandomPagesHeader = () => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
           {/* Privacy and "Not mine" filters using reusable component */}
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              handlePrivacyToggle();
-            }}
-            className="flex items-center justify-between cursor-pointer py-3"
-          >
-            <div className="flex items-center gap-3">
-              <Lock className="h-4 w-4 text-muted-foreground" />
-              <div className="flex flex-col">
-                <span className="font-medium">Include private pages</span>
-                <span className="text-xs text-muted-foreground">
-                  Show private pages you have access to
-                </span>
-              </div>
-            </div>
-            <Switch
-              checked={includePrivatePages}
-              onCheckedChange={(checked) => {
-                if (checked !== includePrivatePages) {
-                  handlePrivacyToggle();
-                }
-              }}
-              aria-label="Toggle private pages inclusion"
-            />
-          </DropdownMenuItem>
 
-          <DropdownMenuSeparator />
 
           <DropdownMenuItem
             onClick={(e) => {

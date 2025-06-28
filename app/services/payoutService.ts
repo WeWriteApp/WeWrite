@@ -133,7 +133,7 @@ class PayoutService {
     try {
       const recipientId = `recipient_${userId}`;
       const recipientDoc = await getDoc(doc(db, 'payoutRecipients', recipientId));
-      
+
       if (recipientDoc.exists()) {
         return recipientDoc.data() as PayoutRecipient;
       }
@@ -141,6 +141,52 @@ class PayoutService {
     } catch (error) {
       console.error('Error getting payout recipient:', error);
       return null;
+    }
+  }
+
+  async updatePayoutPreferences(
+    userId: string,
+    preferences: Partial<PayoutPreferences>
+  ): Promise<PayoutApiResponse<PayoutRecipient>> {
+    try {
+      const recipientId = `recipient_${userId}`;
+      const recipientDoc = await getDoc(doc(db, 'payoutRecipients', recipientId));
+
+      if (!recipientDoc.exists()) {
+        return {
+          success: false,
+          error: 'Payout recipient not found'
+        };
+      }
+
+      const currentRecipient = recipientDoc.data() as PayoutRecipient;
+      const updatedPreferences = {
+        ...currentRecipient.payoutPreferences,
+        ...preferences
+      };
+
+      await updateDoc(doc(db, 'payoutRecipients', recipientId), {
+        payoutPreferences: updatedPreferences,
+        updatedAt: serverTimestamp()
+      });
+
+      const updatedRecipient = {
+        ...currentRecipient,
+        payoutPreferences: updatedPreferences,
+        updatedAt: serverTimestamp() as Timestamp
+      };
+
+      return {
+        success: true,
+        data: updatedRecipient,
+        message: 'Payout preferences updated successfully'
+      };
+    } catch (error) {
+      console.error('Error updating payout preferences:', error);
+      return {
+        success: false,
+        error: 'Failed to update payout preferences'
+      };
     }
   }
 

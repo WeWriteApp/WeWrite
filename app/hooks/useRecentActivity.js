@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useCallback } from "react";
+import { useState, useEffect, useContext, useCallback, useRef } from "react";
 import { collection, query, orderBy, limit, getDocs, where, getDoc, doc, startAfter } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { AuthContext } from "../providers/AuthProvider";
@@ -6,10 +6,18 @@ import { getPageVersions } from "../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
 import { getRecentActivity } from "../firebase/activity";
 import { getBatchUserData } from "../firebase/batchUserData";
+import { registerRecentActivityInvalidator, unregisterCacheInvalidator } from "../utils/cacheInvalidation";
+import { registerRecentActivityInvalidation } from "../utils/globalCacheInvalidation";
 
-// Simple cache for recent activity data
+// Simple cache for recent activity data - RUTHLESS SIMPLIFICATION: Very short TTL
 const activityCache = new Map();
-const CACHE_DURATION = 10000; // 10 seconds cache for more frequent updates
+const CACHE_DURATION = 0; // DISABLE CACHE - force fresh queries every time
+
+// Function to clear the activity cache (for cache invalidation)
+export const clearActivityCache = () => {
+  console.log('Clearing activity cache');
+  activityCache.clear();
+};
 
 const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = false, mineOnly = false) => {
   const [loading, setLoading] = useState(true);
@@ -76,49 +84,42 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
     }
   };
 
-  // Helper function to check if a page belongs to a group
-  // and if the current user has access to it based on group settings
+  // Simplified page access check - all pages are now public
   const checkPageGroupAccess = async (pageData) => {
-    try {
-      // If page doesn't belong to a group, it's accessible based on its own privacy setting
-      if (!pageData.groupId) {
-        return pageData.isPublic || (user && pageData.userId === user.uid);
-      }
-
-      // Get the group data
-      const rtdb = getDatabase();
-      const groupRef = ref(rtdb, `groups/${pageData.groupId}`);
-      const snapshot = await get(groupRef);
-
-      if (!snapshot.exists()) {
-        // Group doesn't exist, fall back to page's own privacy setting
-        return pageData.isPublic || (user && pageData.userId === user.uid);
-      }
-
-      const groupData = snapshot.val();
-
-      // If group is public, all pages in the group are accessible to everyone
-      if (groupData.isPublic) return true;
-
-      // For private groups, only members can access
-      if (!user) return false; // Not logged in
-
-      // If user is the page owner, allow access
-      if (pageData.userId === user.uid) return true;
-
-      // If user is the group owner, allow access
-      if (groupData.owner === user.uid) return true;
-
-      // If user is a group member, allow access
-      if (groupData.members && groupData.members[user.uid]) return true;
-
-      // Otherwise, deny access to private group content
-      return false;
-    } catch (err) {
-      console.error("Error checking group access:", err);
-      return false; // Default to denying access on error
-    }
+    // All pages are now public by default, only check ownership for editing
+    return true;
   };
+
+  // Simple refresh trigger state
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // RUTHLESS SIMPLIFICATION: Remove all event listening complexity
+  // Just rely on short TTL (3 seconds) and browser refresh
+
+  // Register global cache invalidation callback (new system)
+  useEffect(() => {
+    console.log('🔵 useRecentActivity: Registering global cache invalidation');
+
+    const unregister = registerRecentActivityInvalidation(() => {
+      console.log('🔵 useRecentActivity: Global cache invalidation triggered');
+
+      // Clear the cache
+      clearActivityCache();
+
+      // Trigger refresh by updating state
+      console.log('🔵 useRecentActivity: Triggering refresh with refreshTrigger update');
+      setRefreshTrigger(prev => {
+        const newValue = prev + 1;
+        console.log('🔵 useRecentActivity: refreshTrigger updated from', prev, 'to', newValue);
+        return newValue;
+      });
+    });
+
+    return () => {
+      console.log('🔵 useRecentActivity: Unregistering global cache invalidation');
+      unregister();
+    };
+  }, []);
 
   useEffect(() => {
     const fetchRecentActivity = async () => {
@@ -186,12 +187,37 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
         }
 
         try {
+          // DEBUG: Log what we're about to query
+          console.log('🔍 DEBUG: About to fetch recent activity with params:', {
+            limitCount,
+            userId: user ? user.uid : null,
+            timestamp: new Date().toISOString()
+          });
+
           // Use getRecentActivity to get activities including bio and about edits
           // Reduced multiplier for better performance
           const { activities: recentActivities } = await getRecentActivity(
             Math.min(limitCount + 5, 20), // Cap at 20 for performance
             user ? user.uid : null
           );
+
+          // DEBUG: Log what we got back
+          console.log('🔍 DEBUG: Recent activity query returned:', {
+            count: recentActivities.length,
+            firstFew: recentActivities.slice(0, 3).map(a => ({
+              pageId: a.pageId,
+              title: a.title,
+              timestamp: a.timestamp,
+              userId: a.userId
+            }))
+          });
+
+          // SPECIFIC DEBUG: Check if test 29 page is in results
+          const test29Page = recentActivities.find(a => a.pageId === 'CoC6ZYyfkFxCGNIPMEBb');
+          console.log('🔍 DEBUG: Test 29 page (CoC6ZYyfkFxCGNIPMEBb) found in recent activity:', !!test29Page);
+          if (test29Page) {
+            console.log('🔍 DEBUG: Test 29 page details:', test29Page);
+          }
 
           // Extract unique user IDs from activities
           const uniqueUserIds = [...new Set(recentActivities.map(activity => activity.userId).filter(Boolean))];
@@ -279,12 +305,20 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
           // We'll need to implement a different pagination strategy for bio/about activities
           setLastVisible(null);
         } catch (err) {
-          console.error("Error with Firestore query:", err);
-          setError({
-            message: "Failed to fetch recent activity",
-            details: err.message || "Unknown database error",
-            code: err.code || "unknown"
-          });
+          // Handle permission denied errors gracefully - this is expected for private pages
+          if (err?.code === 'permission-denied') {
+            console.log("Permission denied in recent activity query - this is expected for private pages");
+            // For permission denied, just show empty results without error
+            setActivities([]);
+            setError(null);
+          } else {
+            console.error("Error with Firestore query:", err);
+            setError({
+              message: "Failed to fetch recent activity",
+              details: err.message || "Unknown database error",
+              code: err.code || "unknown"
+            });
+          }
 
           // For logged-out users, provide empty array instead of showing error
           if (!user) {
@@ -304,7 +338,7 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
     };
 
     fetchRecentActivity();
-  }, [user, limitCount, filterUserId, followedOnly, mineOnly]);
+  }, [user, limitCount, filterUserId, followedOnly, mineOnly, refreshTrigger]);
 
   // Function to load more activities
   const loadMore = useCallback(async () => {

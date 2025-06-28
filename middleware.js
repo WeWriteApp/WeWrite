@@ -121,19 +121,7 @@ export function middleware(request) {
     }
   }
 
-  // For groups paths, allow access for all authenticated users
-  if (isGroupsPath) {
-    // Always set the feature flag cookie to true for groups paths
-    const response = NextResponse.next();
-    response.cookies.set("feature_groups", "true", {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      httpOnly: false,
-      sameSite: "lax"
-    });
-
-    return response;
-  }
+  // Groups functionality removed
 
   return NextResponse.next();
 }

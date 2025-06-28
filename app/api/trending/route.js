@@ -226,7 +226,12 @@ export async function GET(request) {
                 username = userData.username || userData.displayName || "Anonymous";
               }
             } catch (usernameError) {
-              console.error(`Error getting username for user ${pageData.userId}:`, usernameError);
+              // Handle permission denied errors gracefully - this is expected for private user data
+              if (usernameError?.code === 'permission-denied') {
+                console.log(`Permission denied getting username for user ${pageData.userId} - this is expected for private user data`);
+              } else {
+                console.error(`Error getting username for user ${pageData.userId}:`, usernameError);
+              }
             }
           }
 

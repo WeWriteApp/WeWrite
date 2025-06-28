@@ -23,6 +23,12 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Skip Google Analytics in development to prevent authentication errors
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Google Analytics disabled in development to prevent authentication errors');
+    return null;
+  }
+
   // Log initialization attempt
   useEffect(() => {
     console.log('Google Analytics component mounting with ID:', GA_MEASUREMENT_ID);

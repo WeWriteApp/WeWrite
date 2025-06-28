@@ -1,832 +1,496 @@
 "use client";
 
-import { db } from './database';
 import {
   collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
   query,
   where,
   orderBy,
-  limit,
+  limit as firestoreLimit,
+  getDocs,
+  getDoc,
+  doc,
+  addDoc,
+  updateDoc,
+  writeBatch,
   startAfter,
+  QueryDocumentSnapshot,
+  DocumentData,
   serverTimestamp,
   increment,
-  writeBatch,
-  type DocumentSnapshot,
-  type QueryDocumentSnapshot,
-  type WriteBatch
+  Timestamp
 } from 'firebase/firestore';
-import type { Notification } from '../types/database';
+import { db } from './database/core';
 
-// Type definitions for notification operations
-interface NotificationData {
+export interface NotificationData {
   userId: string;
   type: string;
+  title: string;
+  message: string;
   sourceUserId?: string;
   targetPageId?: string;
   targetPageTitle?: string;
-  sourcePageId?: string;
-  sourcePageTitle?: string;
-  groupId?: string;
-  groupName?: string;
+  actionUrl?: string;
+  metadata?: Record<string, any>;
   read?: boolean;
-  createdAt?: any;
 }
 
-interface NotificationResult {
+export interface Notification extends NotificationData {
+  id: string;
+  createdAt: Timestamp | string;
+  read: boolean;
+}
+
+export interface NotificationResult {
   notifications: Notification[];
-  lastDoc?: QueryDocumentSnapshot;
+  lastDoc: QueryDocumentSnapshot<DocumentData> | null;
 }
 
 /**
- * Create a notification
- *
- * @param notificationData - The notification data
- * @returns The ID of the created notification
- */
-export const createNotification = async (notificationData: NotificationData): Promise<string> => {
-  try {
-    // Create a reference to the notifications collection for the user
-    const notificationsRef = collection(db, 'users', notificationData.userId, 'notifications');
-
-    // Create a new document with a generated ID
-    const notificationRef = doc(notificationsRef);
-
-    // Set the notification data
-    await setDoc(notificationRef, {
-      ...notificationData,
-      read: false,
-      createdAt: serverTimestamp()
-    });
-
-    // Update the unread count for the user
-    const userRef = doc(db, 'users', notificationData.userId);
-    await updateDoc(userRef, {
-      unreadNotificationsCount: increment(1)
-    });
-
-    return notificationRef.id;
-  } catch (error) {
-    console.error('Error creating notification:', error);
-    throw error;
-  }
-};
-
-/**
- * Get notifications for a user
- *
- * @param userId - The ID of the user
- * @param pageSize - The number of notifications to fetch
- * @param lastDoc - The last document from the previous batch (for pagination)
- * @returns The notifications and the last document
+ * Get notifications for a user with pagination support
  */
 export const getNotifications = async (
   userId: string,
-  pageSize: number = 20,
-  lastDoc: QueryDocumentSnapshot | null = null
+  limit: number = 20,
+  lastDoc?: QueryDocumentSnapshot<DocumentData> | null
 ): Promise<NotificationResult> => {
   try {
-    // Create a reference to the notifications collection for the user
-    const notificationsRef = collection(db, 'users', userId, 'notifications');
+    console.log('🔔 getNotifications: Fetching notifications for user:', userId, 'limit:', limit);
+    
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
 
-    // Create a query ordered by creation date
-    let notificationsQuery = query(
+    const notificationsRef = collection(db, 'users', userId, 'notifications');
+    
+    // Build query with ordering by createdAt (newest first)
+    let notificationQuery = query(
       notificationsRef,
       orderBy('createdAt', 'desc'),
-      limit(pageSize)
+      firestoreLimit(limit)
     );
 
-    // If we have a last document, start after it
+    // Add pagination if lastDoc is provided
     if (lastDoc) {
-      notificationsQuery = query(
+      notificationQuery = query(
         notificationsRef,
         orderBy('createdAt', 'desc'),
         startAfter(lastDoc),
-        limit(pageSize)
+        firestoreLimit(limit)
       );
     }
 
-    // Execute the query
-    const snapshot = await getDocs(notificationsQuery);
+    const querySnapshot = await getDocs(notificationQuery);
+    console.log('🔔 getNotifications: Found', querySnapshot.docs.length, 'notifications');
 
-    // Extract the notifications
-    const notifications: Notification[] = [];
-    snapshot.forEach(doc => {
-      notifications.push({
+    const notifications: Notification[] = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
         id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date()
-      } as Notification);
+        userId: data.userId || userId,
+        type: data.type || 'unknown',
+        title: data.title || '',
+        message: data.message || '',
+        sourceUserId: data.sourceUserId,
+        targetPageId: data.targetPageId,
+        targetPageTitle: data.targetPageTitle,
+        actionUrl: data.actionUrl,
+        metadata: data.metadata || {},
+        read: data.read || false,
+        createdAt: data.createdAt || serverTimestamp()
+      };
     });
 
-    // Get the last document for pagination
-    const lastVisible = snapshot.docs[snapshot.docs.length - 1];
+    const lastVisible = querySnapshot.docs.length > 0 
+      ? querySnapshot.docs[querySnapshot.docs.length - 1] 
+      : null;
 
+    console.log('🔔 getNotifications: Returning', notifications.length, 'notifications');
     return {
       notifications,
       lastDoc: lastVisible
     };
   } catch (error) {
-    console.error('Error getting notifications:', error);
+    console.error('🔔 getNotifications: Error fetching notifications:', error);
     throw error;
   }
 };
 
 /**
- * Mark a notification as read
- *
- * @param userId - The ID of the user
- * @param notificationId - The ID of the notification
- * @returns True if successful
+ * Get the count of unread notifications for a user
  */
-export const markNotificationAsRead = async (userId: string, notificationId: string): Promise<boolean> => {
+export const getUnreadNotificationsCount = async (userId: string): Promise<number> => {
   try {
-    // Create a reference to the notification
-    const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
-
-    // Get the notification to check if it's already read
-    const notificationDoc = await getDoc(notificationRef);
-    if (!notificationDoc.exists()) {
-      throw new Error('Notification not found');
+    console.log('🔔 getUnreadNotificationsCount: Getting count for user:', userId);
+    
+    if (!userId) {
+      return 0;
     }
 
-    const notificationData = notificationDoc.data();
-
-    // If the notification is already read, don't decrement the counter
-    if (!notificationData?.read) {
-      // Update the notification
-      await updateDoc(notificationRef, {
-        read: true
-      });
-
-      // Decrement the unread count for the user
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        unreadNotificationsCount: increment(-1)
-      });
+    // Check if user document has cached unread count
+    const userDocRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (userDoc.exists() && userDoc.data().unreadNotificationsCount !== undefined) {
+      const cachedCount = userDoc.data().unreadNotificationsCount || 0;
+      console.log('🔔 getUnreadNotificationsCount: Using cached count:', cachedCount);
+      return cachedCount;
     }
 
-    return true;
+    // Fallback: Count unread notifications directly
+    const notificationsRef = collection(db, 'users', userId, 'notifications');
+    const unreadQuery = query(
+      notificationsRef,
+      where('read', '==', false)
+    );
+
+    const querySnapshot = await getDocs(unreadQuery);
+    const count = querySnapshot.docs.length;
+    
+    console.log('🔔 getUnreadNotificationsCount: Counted', count, 'unread notifications');
+    
+    // Update cached count in user document
+    try {
+      await updateDoc(userDocRef, {
+        unreadNotificationsCount: count
+      });
+    } catch (updateError) {
+      console.warn('🔔 getUnreadNotificationsCount: Failed to update cached count:', updateError);
+    }
+
+    return count;
   } catch (error) {
-    console.error('Error marking notification as read:', error);
+    console.error('🔔 getUnreadNotificationsCount: Error getting unread count:', error);
+    return 0;
+  }
+};
+
+/**
+ * Mark a notification as read
+ */
+export const markNotificationAsRead = async (userId: string, notificationId: string): Promise<void> => {
+  try {
+    console.log('🔔 markNotificationAsRead: Marking notification as read:', notificationId);
+    
+    if (!userId || !notificationId) {
+      throw new Error('User ID and notification ID are required');
+    }
+
+    const batch = writeBatch(db);
+    
+    // Update the notification
+    const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
+    batch.update(notificationRef, {
+      read: true,
+      readAt: serverTimestamp()
+    });
+
+    // Decrement unread count in user document
+    const userDocRef = doc(db, 'users', userId);
+    batch.update(userDocRef, {
+      unreadNotificationsCount: increment(-1)
+    });
+
+    await batch.commit();
+    console.log('🔔 markNotificationAsRead: Successfully marked as read');
+  } catch (error) {
+    console.error('🔔 markNotificationAsRead: Error marking notification as read:', error);
     throw error;
   }
 };
 
 /**
  * Mark a notification as unread
- *
- * @param {string} userId - The ID of the user
- * @param {string} notificationId - The ID of the notification
- * @returns {Promise<boolean>} - True if successful
  */
-export const markNotificationAsUnread = async (userId: string, notificationId: string): Promise<boolean> => {
+export const markNotificationAsUnread = async (userId: string, notificationId: string): Promise<void> => {
   try {
-    // Create a reference to the notification
+    console.log('🔔 markNotificationAsUnread: Marking notification as unread:', notificationId);
+    
+    if (!userId || !notificationId) {
+      throw new Error('User ID and notification ID are required');
+    }
+
+    const batch = writeBatch(db);
+    
+    // Update the notification
     const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
+    batch.update(notificationRef, {
+      read: false,
+      readAt: null
+    });
 
-    // Get the notification to check if it's already unread
-    const notificationDoc = await getDoc(notificationRef);
-    if (!notificationDoc.exists()) {
-      throw new Error('Notification not found');
-    }
+    // Increment unread count in user document
+    const userDocRef = doc(db, 'users', userId);
+    batch.update(userDocRef, {
+      unreadNotificationsCount: increment(1)
+    });
 
-    const notificationData = notificationDoc.data();
-
-    // If the notification is already unread, don't increment the counter
-    if (notificationData?.read) {
-      // Update the notification
-      await updateDoc(notificationRef, {
-        read: false
-      });
-
-      // Increment the unread count for the user
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        unreadNotificationsCount: increment(1)
-      });
-    }
-
-    return true;
+    await batch.commit();
+    console.log('🔔 markNotificationAsUnread: Successfully marked as unread');
   } catch (error) {
-    console.error('Error marking notification as unread:', error);
+    console.error('🔔 markNotificationAsUnread: Error marking notification as unread:', error);
     throw error;
   }
 };
 
 /**
  * Mark all notifications as read for a user
- *
- * @param {string} userId - The ID of the user
- * @returns {Promise<boolean>} - True if successful
  */
-export const markAllNotificationsAsRead = async (userId: string): Promise<boolean> => {
+export const markAllNotificationsAsRead = async (userId: string): Promise<void> => {
   try {
-    console.log('markAllNotificationsAsRead called for userId:', userId);
+    console.log('🔔 markAllNotificationsAsRead: Marking all notifications as read for user:', userId);
+    
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
 
-    // Create a reference to the notifications collection for the user
+    // Get all unread notifications
     const notificationsRef = collection(db, 'users', userId, 'notifications');
-
-    // Create a query to get all unread notifications
     const unreadQuery = query(
       notificationsRef,
       where('read', '==', false)
     );
 
-    // Execute the query
-    const snapshot = await getDocs(unreadQuery);
-    console.log('Found unread notifications:', snapshot.size);
+    const querySnapshot = await getDocs(unreadQuery);
+    console.log('🔔 markAllNotificationsAsRead: Found', querySnapshot.docs.length, 'unread notifications');
 
-    // If there are no unread notifications, return
-    if (snapshot.empty) {
-      console.log('No unread notifications found');
-      return true;
+    if (querySnapshot.docs.length === 0) {
+      console.log('🔔 markAllNotificationsAsRead: No unread notifications to update');
+      return;
     }
 
-    // Use a batch to update all notifications
+    // Use batch to update all notifications
     const batch = writeBatch(db);
-
-    // Mark each notification as read
-    snapshot.forEach(doc => {
-      const notificationRef = doc.ref;
-      batch.update(notificationRef, { read: true });
-      console.log('Marking notification as read:', doc.id);
+    
+    querySnapshot.docs.forEach(doc => {
+      batch.update(doc.ref, {
+        read: true,
+        readAt: serverTimestamp()
+      });
     });
 
-    // Commit the batch
-    await batch.commit();
-    console.log('Batch committed successfully');
-
-    // Reset the unread count for the user
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, {
+    // Reset unread count in user document
+    const userDocRef = doc(db, 'users', userId);
+    batch.update(userDocRef, {
       unreadNotificationsCount: 0
     });
-    console.log('User unread count reset to 0');
 
-    return true;
+    await batch.commit();
+    console.log('🔔 markAllNotificationsAsRead: Successfully marked all notifications as read');
   } catch (error) {
-    console.error('Error marking all notifications as read:', error);
+    console.error('🔔 markAllNotificationsAsRead: Error marking all notifications as read:', error);
     throw error;
   }
 };
 
 /**
- * Get the unread notifications count for a user
- *
- * @param {string} userId - The ID of the user
- * @returns {Promise<number>} - The number of unread notifications
+ * Create a new notification
  */
-export const getUnreadNotificationsCount = async (userId: string): Promise<number> => {
+export const createNotification = async (notificationData: NotificationData): Promise<string> => {
   try {
-    // Get the user document
-    const userRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userRef);
+    console.log('🔔 createNotification: Creating notification for user:', notificationData.userId);
 
-    if (!userDoc.exists()) {
+    if (!notificationData.userId) {
+      throw new Error('User ID is required');
+    }
+
+    const batch = writeBatch(db);
+
+    // Create the notification document
+    const notificationsRef = collection(db, 'users', notificationData.userId, 'notifications');
+    const notificationRef = doc(notificationsRef);
+
+    const notification = {
+      ...notificationData,
+      read: notificationData.read || false,
+      createdAt: serverTimestamp()
+    };
+
+    batch.set(notificationRef, notification);
+
+    // Increment unread count if notification is unread
+    if (!notificationData.read) {
+      const userDocRef = doc(db, 'users', notificationData.userId);
+      batch.update(userDocRef, {
+        unreadNotificationsCount: increment(1)
+      });
+    }
+
+    await batch.commit();
+    console.log('🔔 createNotification: Successfully created notification:', notificationRef.id);
+
+    return notificationRef.id;
+  } catch (error) {
+    console.error('🔔 createNotification: Error creating notification:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fix unread notifications count by recalculating from actual data
+ */
+export const fixUnreadNotificationsCount = async (userId: string): Promise<number> => {
+  try {
+    console.log('🔔 fixUnreadNotificationsCount: Fixing unread count for user:', userId);
+
+    if (!userId) {
       return 0;
     }
 
-    // Return the unread count
-    const count = userDoc.data().unreadNotificationsCount || 0;
-    return count;
+    // Count actual unread notifications
+    const notificationsRef = collection(db, 'users', userId, 'notifications');
+    const unreadQuery = query(
+      notificationsRef,
+      where('read', '==', false)
+    );
+
+    const querySnapshot = await getDocs(unreadQuery);
+    const actualCount = querySnapshot.docs.length;
+
+    console.log('🔔 fixUnreadNotificationsCount: Found', actualCount, 'actual unread notifications');
+
+    // Update the cached count in user document
+    const userDocRef = doc(db, 'users', userId);
+    await updateDoc(userDocRef, {
+      unreadNotificationsCount: actualCount
+    });
+
+    console.log('🔔 fixUnreadNotificationsCount: Fixed unread count to:', actualCount);
+    return actualCount;
   } catch (error) {
-    console.error('Error getting unread notifications count:', error);
+    console.error('🔔 fixUnreadNotificationsCount: Error fixing unread count:', error);
     return 0;
   }
 };
 
 /**
- * Recalculate and fix the unread notifications count for a user
- * This function counts actual unread notifications and updates the user document
- *
- * @param {string} userId - The ID of the user
- * @returns {Promise<number>} - The corrected unread count
- */
-export const fixUnreadNotificationsCount = async (userId) => {
-  try {
-    console.log('fixUnreadNotificationsCount called for userId:', userId);
-
-    // Create a reference to the notifications collection for the user
-    const notificationsRef = collection(db, 'users', userId, 'notifications');
-
-    // Create a query to get all unread notifications
-    const unreadQuery = query(
-      notificationsRef,
-      where('read', '==', false)
-    );
-
-    // Execute the query
-    const snapshot = await getDocs(unreadQuery);
-    const actualUnreadCount = snapshot.size;
-
-    console.log('fixUnreadNotificationsCount - actual unread count:', actualUnreadCount);
-
-    // Update the user document with the correct count
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, {
-      unreadNotificationsCount: actualUnreadCount
-    });
-
-    console.log('fixUnreadNotificationsCount - user document updated');
-
-    return actualUnreadCount;
-  } catch (error) {
-    console.error('Error fixing unread notifications count:', error);
-    throw error;
-  }
-};
-
-/**
- * Create a follow notification
- *
- * @param {string} targetUserId - The ID of the user who owns the page
- * @param {string} sourceUserId - The ID of the user who followed the page
- * @param {string} pageId - The ID of the page that was followed
- * @param {string} pageTitle - The title of the page that was followed
- * @returns {Promise<string>} - The ID of the created notification
- */
-export const createFollowNotification = async (
-  targetUserId: string,
-  sourceUserId: string,
-  pageId: string,
-  pageTitle: string
-): Promise<string | null> => {
-  // Don't create notifications for self-follows
-  if (targetUserId === sourceUserId) {
-    return null;
-  }
-
-  return createNotification({
-    userId: targetUserId,
-    type: 'follow',
-    sourceUserId,
-    targetPageId: pageId,
-    targetPageTitle: pageTitle
-  });
-};
-
-/**
- * Create a link notification
- *
- * @param {string} targetUserId - The ID of the user who owns the target page
- * @param {string} sourceUserId - The ID of the user who created the link
- * @param {string} targetPageId - The ID of the page that was linked to
- * @param {string} targetPageTitle - The title of the page that was linked to
- * @param {string} sourcePageId - The ID of the page that contains the link
- * @param {string} sourcePageTitle - The title of the page that contains the link
- * @returns {Promise<string>} - The ID of the created notification
- */
-export const createLinkNotification = async (
-  targetUserId: string,
-  sourceUserId: string,
-  targetPageId: string,
-  targetPageTitle: string,
-  sourcePageId: string,
-  sourcePageTitle: string
-): Promise<string | null> => {
-  // Don't create notifications for self-links
-  if (targetUserId === sourceUserId) {
-    return null;
-  }
-
-  return createNotification({
-    userId: targetUserId,
-    type: 'link',
-    sourceUserId,
-    targetPageId,
-    targetPageTitle,
-    sourcePageId,
-    sourcePageTitle
-  });
-};
-
-/**
- * Create an append notification
- *
- * @param {string} targetUserId - The ID of the user who owns the source page
- * @param {string} sourceUserId - The ID of the user who appended the page
- * @param {string} sourcePageId - The ID of the page that was appended
- * @param {string} sourcePageTitle - The title of the page that was appended
- * @param {string} targetPageId - The ID of the page that the source page was appended to
- * @param {string} targetPageTitle - The title of the page that the source page was appended to
- * @returns {Promise<string>} - The ID of the created notification
- */
-export const createAppendNotification = async (
-  targetUserId,
-  sourceUserId,
-  sourcePageId,
-  sourcePageTitle,
-  targetPageId,
-  targetPageTitle
-) => {
-  // Don't create notifications for self-appends
-  if (targetUserId === sourceUserId) {
-    return null;
-  }
-
-  return createNotification({
-    userId: targetUserId,
-    type: 'append',
-    sourceUserId,
-    sourcePageId,
-    sourcePageTitle,
-    targetPageId,
-    targetPageTitle
-  });
-};
-
-/**
- * Check if an email verification notification already exists for a user
- *
- * @param {string} userId - The ID of the user
- * @returns {Promise<boolean>} - Whether a recent email verification notification exists
- */
-export const hasRecentEmailVerificationNotification = async (userId: string): Promise<boolean> => {
-  try {
-    const notificationsRef = collection(db, 'users', userId, 'notifications');
-
-    // Check for email verification notifications in the last 24 hours
-    const twentyFourHoursAgo = new Date();
-    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
-
-    const recentNotificationQuery = query(
-      notificationsRef,
-      where('type', '==', 'email_verification'),
-      where('createdAt', '>=', twentyFourHoursAgo),
-      limit(1)
-    );
-
-    const snapshot = await getDocs(recentNotificationQuery);
-    return !snapshot.empty;
-  } catch (error) {
-    console.error('Error checking for recent email verification notification:', error);
-    return false; // If there's an error, allow creating the notification
-  }
-};
-
-/**
  * Create an email verification notification
- *
- * @param {string} userId - The ID of the user who needs to verify their email
- * @returns {Promise<string|null>} - The ID of the created notification or null if throttled
  */
 export const createEmailVerificationNotification = async (userId: string): Promise<string | null> => {
   try {
-    // Check if a recent email verification notification already exists
-    const hasRecent = await hasRecentEmailVerificationNotification(userId);
-    if (hasRecent) {
-      console.log('Email verification notification throttled - recent notification exists');
+    console.log('🔔 createEmailVerificationNotification: Creating email verification notification for user:', userId);
+
+    if (!userId) {
       return null;
     }
 
-    return createNotification({
+    const notificationData: NotificationData = {
       userId,
-      type: 'email_verification'
-    });
+      type: 'email_verification',
+      title: 'Verify Your Email',
+      message: 'Please verify your email address to access all features.',
+      actionUrl: '/settings?tab=account',
+      metadata: {
+        priority: 'high',
+        category: 'account'
+      }
+    };
+
+    const notificationId = await createNotification(notificationData);
+    console.log('🔔 createEmailVerificationNotification: Created notification:', notificationId);
+
+    return notificationId;
   } catch (error) {
-    console.error('Error creating email verification notification:', error);
+    console.error('🔔 createEmailVerificationNotification: Error creating email verification notification:', error);
+    return null;
+  }
+};
+
+/**
+ * Delete a notification
+ */
+export const deleteNotification = async (userId: string, notificationId: string): Promise<void> => {
+  try {
+    console.log('🔔 deleteNotification: Deleting notification:', notificationId);
+
+    if (!userId || !notificationId) {
+      throw new Error('User ID and notification ID are required');
+    }
+
+    // Get the notification to check if it was unread
+    const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
+    const notificationDoc = await getDoc(notificationRef);
+
+    if (!notificationDoc.exists()) {
+      console.warn('🔔 deleteNotification: Notification not found:', notificationId);
+      return;
+    }
+
+    const wasUnread = !notificationDoc.data().read;
+
+    const batch = writeBatch(db);
+
+    // Delete the notification
+    batch.delete(notificationRef);
+
+    // Decrement unread count if notification was unread
+    if (wasUnread) {
+      const userDocRef = doc(db, 'users', userId);
+      batch.update(userDocRef, {
+        unreadNotificationsCount: increment(-1)
+      });
+    }
+
+    await batch.commit();
+    console.log('🔔 deleteNotification: Successfully deleted notification');
+  } catch (error) {
+    console.error('🔔 deleteNotification: Error deleting notification:', error);
     throw error;
   }
 };
 
 /**
- * Check if a group invitation notification already exists for a user and group
- *
- * @param {string} userId - The ID of the user
- * @param {string} groupId - The ID of the group
- * @returns {Promise<boolean>} - Whether a group invitation notification exists
+ * Create a test notification for development/testing purposes
  */
-export const hasExistingGroupInviteNotification = async (userId: string, groupId: string): Promise<boolean> => {
+export const createTestNotification = async (userId: string): Promise<string | null> => {
   try {
-    const notificationsRef = collection(db, 'users', userId, 'notifications');
+    console.log('🔔 createTestNotification: Creating test notification for user:', userId);
 
-    const existingInviteQuery = query(
-      notificationsRef,
-      where('type', '==', 'group_invite'),
-      where('groupId', '==', groupId),
-      where('read', '==', false),
-      limit(1)
-    );
-
-    const snapshot = await getDocs(existingInviteQuery);
-    return !snapshot.empty;
-  } catch (error) {
-    console.error('Error checking for existing group invitation notification:', error);
-    return false;
-  }
-};
-
-/**
- * Create a group invitation notification
- *
- * This function implements the core of WeWrite's invitation-based group membership system.
- * Instead of directly adding users to groups, it sends them invitation notifications
- * that they can accept or reject, ensuring user consent and preventing unwanted additions.
- *
- * Key Features:
- * - Prevents self-invitations (users can't invite themselves)
- * - Checks for duplicate invitations to avoid spam
- * - Creates notification with all necessary context for user decision
- * - Integrates with notification system for real-time delivery
- *
- * Database Schema:
- * The created notification includes:
- * - type: 'group_invite'
- * - sourceUserId: ID of user sending invitation
- * - groupId: ID of group being invited to
- * - groupName: Display name of group for user context
- * - userId: ID of user receiving invitation
- *
- * Security Considerations:
- * - Validates that source and target users are different
- * - Prevents duplicate invitations to reduce notification spam
- * - Uses existing notification infrastructure for delivery
- *
- * @param {string} targetUserId - The ID of the user being invited
- * @param {string} sourceUserId - The ID of the user sending the invitation
- * @param {string} groupId - The ID of the group
- * @param {string} groupName - The name of the group for display context
- * @returns {Promise<string|null>} - The ID of the created notification or null if duplicate/invalid
- */
-export const createGroupInviteNotification = async (
-  targetUserId: string,
-  sourceUserId: string,
-  groupId: string,
-  groupName: string
-): Promise<string | null> => {
-  try {
-    // Prevent self-invitations - users cannot invite themselves
-    if (targetUserId === sourceUserId) {
-      console.log('Prevented self-invitation attempt');
+    if (!userId) {
       return null;
     }
 
-    // Check if an invitation already exists to prevent spam
-    const hasExisting = await hasExistingGroupInviteNotification(targetUserId, groupId);
-    if (hasExisting) {
-      console.log('Group invitation notification already exists, skipping duplicate');
-      return null;
-    }
-
-    // Create the invitation notification with all necessary context
-    return createNotification({
-      userId: targetUserId,
-      type: 'group_invite',
-      sourceUserId,
-      groupId,
-      groupName
-    });
-  } catch (error) {
-    console.error('Error creating group invitation notification:', error);
-    throw error;
-  }
-};
-
-/**
- * Accept a group invitation
- *
- * This function handles the user's acceptance of a group invitation, completing
- * the invitation flow by adding them to the group and cleaning up the notification.
- *
- * Process:
- * 1. Adds user to group members in Firebase Realtime Database
- * 2. Sets user role as 'member' with join timestamp
- * 3. Marks the invitation notification as read (removes from UI)
- * 4. Provides success/error feedback
- *
- * Database Operations:
- * - RTDB: Adds user to groups/{groupId}/members/{userId}
- * - Firestore: Marks notification as read in users/{userId}/notifications/{notificationId}
- *
- * Security:
- * - Only the invited user can accept their own invitation
- * - Validates group existence before adding member
- * - Uses atomic operations to ensure data consistency
- *
- * User Experience:
- * - Immediate feedback on acceptance
- * - Automatic navigation to group page (handled by caller)
- * - Notification automatically removed from feed
- *
- * @param {string} userId - The ID of the user accepting the invitation
- * @param {string} notificationId - The ID of the notification to mark as read
- * @param {string} groupId - The ID of the group to join
- * @returns {Promise<boolean>} - True if successful, throws on error
- */
-export const acceptGroupInvitation = async (
-  userId: string,
-  notificationId: string,
-  groupId: string
-): Promise<boolean> => {
-  try {
-    // Import Firebase Realtime Database functions dynamically
-    const { ref, set, get } = await import('firebase/database');
-    const { rtdb } = await import('./rtdb');
-
-    // Add user to group members with member role and join timestamp
-    const groupMemberRef = ref(rtdb, `groups/${groupId}/members/${userId}`);
-    await set(groupMemberRef, {
-      role: "member",                        // Default role for invited users
-      joinedAt: new Date().toISOString()     // Timestamp for audit trail
-    });
-
-    console.log(`User ${userId} successfully joined group ${groupId}`);
-
-    // Mark the notification as read to remove it from the user's notification feed
-    await markNotificationAsRead(userId, notificationId);
-
-    return true;
-  } catch (error) {
-    console.error('Error accepting group invitation:', error);
-    throw error;
-  }
-};
-
-/**
- * Reject a group invitation
- *
- * This function handles the user's rejection of a group invitation by simply
- * removing the notification from their feed without adding them to the group.
- *
- * Process:
- * 1. Marks the invitation notification as read
- * 2. Removes notification from user's notification feed
- * 3. No group membership changes are made
- *
- * Design Philosophy:
- * - Simple rejection mechanism - just remove the notification
- * - No need to track rejections in database (keeps data clean)
- * - User can be re-invited later if needed
- * - Respects user's choice without permanent consequences
- *
- * Database Operations:
- * - Firestore: Marks notification as read in users/{userId}/notifications/{notificationId}
- * - RTDB: No changes to group membership
- *
- * User Experience:
- * - Immediate removal from notification feed
- * - No permanent record of rejection
- * - Can be re-invited by group owners if circumstances change
- *
- * @param {string} userId - The ID of the user rejecting the invitation
- * @param {string} notificationId - The ID of the notification to mark as read
- * @returns {Promise<boolean>} - True if successful, throws on error
- */
-export const rejectGroupInvitation = async (
-  userId: string,
-  notificationId: string
-): Promise<boolean> => {
-  try {
-    // Simply mark the notification as read to remove it from the UI
-    // This is a "soft" rejection - no permanent record is kept
-    await markNotificationAsRead(userId, notificationId);
-
-    console.log(`User ${userId} rejected group invitation (notification ${notificationId})`);
-    return true;
-  } catch (error) {
-    console.error('Error rejecting group invitation:', error);
-    throw error;
-  }
-};
-
-/**
- * Delete all notifications related to a specific page
- * This function is called when a page is deleted to clean up orphaned notifications
- *
- * @param {string} pageId - The ID of the page that was deleted
- * @returns {Promise<number>} - The number of notifications deleted
- */
-export const deleteNotificationsForPage = async (pageId) => {
-  try {
-    console.log(`Starting notification cleanup for deleted page: ${pageId}`);
-
-    if (!pageId) {
-      console.warn('deleteNotificationsForPage called with empty pageId');
-      return 0;
-    }
-
-    // Get all users to check their notifications
-    const usersRef = collection(db, 'users');
-    const usersSnapshot = await getDocs(usersRef);
-
-    let totalDeleted = 0;
-    let totalBatches = 0;
-
-    // Process users in smaller chunks to avoid memory issues
-    const userChunks = [];
-    const chunkSize = 50; // Process 50 users at a time
-
-    for (let i = 0; i < usersSnapshot.docs.length; i += chunkSize) {
-      userChunks.push(usersSnapshot.docs.slice(i, i + chunkSize));
-    }
-
-    for (const userChunk of userChunks) {
-      const batch = writeBatch(db);
-      let batchCount = 0;
-      const maxBatchSize = 450; // Leave some buffer for safety
-
-      // Process each user's notifications in this chunk
-      for (const userDoc of userChunk) {
-        const userId = userDoc.id;
-        const notificationsRef = collection(db, 'users', userId, 'notifications');
-
-        try {
-          // Query for notifications that reference the deleted page as targetPageId
-          const targetPageQuery = query(
-            notificationsRef,
-            where('targetPageId', '==', pageId)
-          );
-
-          // Query for notifications that reference the deleted page as sourcePageId
-          const sourcePageQuery = query(
-            notificationsRef,
-            where('sourcePageId', '==', pageId)
-          );
-
-          // Execute both queries
-          const [targetPageSnapshot, sourcePageSnapshot] = await Promise.all([
-            getDocs(targetPageQuery),
-            getDocs(sourcePageQuery)
-          ]);
-
-          // Combine results and remove duplicates
-          const notificationsToDelete = new Map();
-
-          targetPageSnapshot.docs.forEach(doc => {
-            notificationsToDelete.set(doc.id, doc);
-          });
-
-          sourcePageSnapshot.docs.forEach(doc => {
-            notificationsToDelete.set(doc.id, doc);
-          });
-
-          // Skip if no notifications to delete for this user
-          if (notificationsToDelete.size === 0) {
-            continue;
-          }
-
-          let unreadCount = 0;
-
-          // Add deletions to batch
-          for (const [notificationId, notificationDoc] of Array.from(notificationsToDelete)) {
-            const notificationData = notificationDoc.data();
-
-            // Count unread notifications
-            if (!notificationData.read) {
-              unreadCount++;
-            }
-
-            // Delete the notification
-            batch.delete(notificationDoc.ref);
-            batchCount++;
-            totalDeleted++;
-
-            console.log(`Queued for deletion: ${notificationData.type} notification for user ${userId}`);
-
-            // Check if we're approaching batch limit
-            if (batchCount >= maxBatchSize) {
-              break;
-            }
-          }
-
-          // Update unread count if there were unread notifications
-          if (unreadCount > 0) {
-            const userRef = doc(db, 'users', userId);
-            batch.update(userRef, {
-              unreadNotificationsCount: increment(-unreadCount)
-            });
-            batchCount++;
-          }
-
-          // Break if batch is full
-          if (batchCount >= maxBatchSize) {
-            break;
-          }
-
-        } catch (userError) {
-          console.error(`Error processing notifications for user ${userId}:`, userError);
-          // Continue with other users
+    const testNotifications = [
+      {
+        type: 'page_follow',
+        title: 'New Follower',
+        message: 'Someone followed your page "Test Page"',
+        sourceUserId: 'test-user-123',
+        targetPageId: 'test-page-456',
+        targetPageTitle: 'Test Page'
+      },
+      {
+        type: 'page_mention',
+        title: 'Page Mentioned',
+        message: 'Your page was mentioned in another page',
+        sourceUserId: 'test-user-789',
+        targetPageId: 'test-page-abc',
+        targetPageTitle: 'My Awesome Page'
+      },
+      {
+        type: 'system_announcement',
+        title: 'Welcome to WeWrite!',
+        message: 'Thank you for joining our community. Start creating your first page!',
+        metadata: {
+          priority: 'normal',
+          category: 'welcome'
         }
       }
+    ];
 
-      // Commit batch if there are operations
-      if (batchCount > 0) {
-        await batch.commit();
-        totalBatches++;
-        console.log(`Committed batch ${totalBatches} with ${batchCount} operations`);
-      }
-    }
+    // Pick a random test notification
+    const randomNotification = testNotifications[Math.floor(Math.random() * testNotifications.length)];
 
-    console.log(`Notification cleanup completed. Deleted ${totalDeleted} notifications for page ${pageId} across ${totalBatches} batches`);
-    return totalDeleted;
+    const notificationData: NotificationData = {
+      userId,
+      ...randomNotification
+    };
 
+    const notificationId = await createNotification(notificationData);
+    console.log('🔔 createTestNotification: Created test notification:', notificationId);
+
+    return notificationId;
   } catch (error) {
-    console.error('Error deleting notifications for page:', error);
-    throw error;
+    console.error('🔔 createTestNotification: Error creating test notification:', error);
+    return null;
   }
 };

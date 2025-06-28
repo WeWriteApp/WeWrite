@@ -16,9 +16,7 @@ interface RandomPage {
   lastModified: string;
   createdAt: string;
   isPublic: boolean;
-  groupId?: string;
-  groupName?: string;
-  groupIsPublic?: boolean;
+  // Groups functionality removed
 }
 
 interface RandomPagesProps {

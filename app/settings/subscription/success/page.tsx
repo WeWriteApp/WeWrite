@@ -96,9 +96,28 @@ export default function SubscriptionSuccessPage() {
     handleSubscriptionSuccess();
   }, [user, router, searchParams]);
 
-  // If the modal is closed, redirect to the settings page
+  // If the modal is closed, redirect to the original page or settings
   const handleModalClose = () => {
     setShowModal(false);
+
+    // Check if there's a return_to parameter to redirect back to the original page
+    const returnTo = searchParams?.get('return_to');
+    if (returnTo) {
+      try {
+        const decodedPath = decodeURIComponent(returnTo);
+        // Validate that it's a safe internal path
+        if (decodedPath.startsWith('/') && !decodedPath.startsWith('//')) {
+          console.log('🔥 Redirecting back to original page:', decodedPath);
+          router.push(decodedPath);
+          return;
+        }
+      } catch (error) {
+        console.error('Error decoding return_to parameter:', error);
+      }
+    }
+
+    // Fallback to settings page
+    console.log('🔥 Redirecting to settings page (no return_to found)');
     router.push('/settings');
   };
 

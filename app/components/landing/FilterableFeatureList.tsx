@@ -152,7 +152,7 @@ export function FilterableFeatureList({
             className={`filter-chip px-3 py-1.5 h-auto rounded-full transition-all duration-300 ease-in-out flex-shrink-0 text-xs ${
               filters.comingSoon
                 ? 'bg-gray-500 hover:bg-gray-600 text-white shadow-md'
-                : 'text-muted-foreground border-border hover:bg-muted/50'
+                : 'text-muted-foreground border-theme-medium hover:bg-muted/50'
             }`}
             onClick={() => toggleFilter('comingSoon')}
           >

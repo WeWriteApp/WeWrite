@@ -5,6 +5,7 @@ import { AuthContext } from "../providers/AuthProvider";
 import { getPageVersions } from "../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
 import { getRecentActivity } from "../firebase/activity";
+import { registerStaticActivityInvalidator, unregisterCacheInvalidator } from "../utils/cacheInvalidation";
 
 /**
  * useStaticRecentActivity - A hook that loads recent activity data with optional pagination
@@ -84,48 +85,10 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
     }
   };
 
-  // Helper function to check if a page belongs to a group
-  // and if the current user has access to it based on group settings
+  // Simplified page access check - all pages are now public
   const checkPageGroupAccess = async (pageData) => {
-    try {
-      // If page doesn't belong to a group, it's accessible based on its own privacy setting
-      if (!pageData.groupId) {
-        return pageData.isPublic || (user && pageData.userId === user.uid);
-      }
-
-      // Get the group data
-      const rtdb = getDatabase();
-      const groupRef = ref(rtdb, `groups/${pageData.groupId}`);
-      const snapshot = await get(groupRef);
-
-      if (!snapshot.exists()) {
-        // Group doesn't exist, fall back to page's own privacy setting
-        return pageData.isPublic || (user && pageData.userId === user.uid);
-      }
-
-      const groupData = snapshot.val();
-
-      // If group is public, all pages in the group are accessible to everyone
-      if (groupData.isPublic) return true;
-
-      // For private groups, only members can access
-      if (!user) return false; // Not logged in
-
-      // If user is the page owner, allow access
-      if (pageData.userId === user.uid) return true;
-
-      // If user is the group owner, allow access
-      if (groupData.owner === user.uid) return true;
-
-      // If user is a group member, allow access
-      if (groupData.members && groupData.members[user.uid]) return true;
-
-      // Otherwise, deny access to private group content
-      return false;
-    } catch (err) {
-      console.error("Error checking group access:", err);
-      return false; // Default to denying access on error
-    }
+    // All pages are now public by default, only check ownership for editing
+    return true;
   };
 
   // Track if we've already fetched data to prevent any re-fetches
@@ -134,6 +97,156 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
   const hasRunEffectRef = useRef(false);
   // Store the activities in a ref to prevent re-renders
   const activitiesRef = useRef([]);
+
+  // Function to refresh data (for cache invalidation)
+  const refreshData = useCallback(async () => {
+    console.log('Refreshing static recent activity data');
+    // Reset the fetch flags to allow re-fetching
+    hasFetchedRef.current = false;
+    hasRunEffectRef.current = false;
+    // Clear the activities ref
+    activitiesRef.current = [];
+    // Set loading state
+    setLoading(true);
+    setError(null);
+
+    // Re-run the fetch logic
+    const fetchRecentActivity = async () => {
+      // Mark that we've started fetching
+      hasFetchedRef.current = true;
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Get followed pages if needed
+        let followedPageIds = [];
+        if (followedOnly) {
+          if (!user) {
+            setActivities([]);
+            setLoading(false);
+            return;
+          }
+
+          try {
+            const { getFollowedPages } = await import('../firebase/follows');
+            followedPageIds = await getFollowedPages(user.uid);
+
+            if (followedPageIds.length === 0) {
+              setActivities([]);
+              setLoading(false);
+              return;
+            }
+          } catch (err) {
+            console.error('Error fetching followed pages:', err);
+            setActivities([]);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Use getRecentActivity to get activities including bio and about edits
+        // Fetch more activities if pagination is enabled
+        const fetchLimit = enablePagination ? limitCount * 10 : limitCount * 2;
+        const { activities: recentActivities } = await getRecentActivity(
+          fetchLimit,
+          user ? user.uid : null
+        );
+
+        // Process the activities to add subscription info
+        const activitiesWithSubscriptions = await Promise.all(
+          recentActivities.map(async (activity) => {
+            if (!activity.userId) return activity;
+
+            try {
+              const { tier, subscriptionStatus } = await getUsernameById(activity.userId);
+              return {
+                ...activity,
+                tier,
+                subscriptionStatus
+              };
+            } catch (error) {
+              console.error("Error adding subscription info to activity:", error);
+              return activity;
+            }
+          })
+        );
+
+        // Filter activities based on the current filters
+        let validActivities = Array.isArray(activitiesWithSubscriptions) ? activitiesWithSubscriptions : [];
+
+        // Apply user filter if specified
+        if (filterUserId) {
+          validActivities = validActivities.filter(activity => {
+            // For bio edits, check if it's the user's bio
+            if (activity.activityType === "bio_edit") {
+              return activity.pageId.includes(filterUserId);
+            }
+            // For regular page edits, check the userId
+            return activity.userId === filterUserId;
+          });
+        }
+
+        // Apply followed filter if specified
+        if (followedOnly && Array.isArray(followedPageIds) && followedPageIds.length > 0) {
+          validActivities = validActivities.filter(activity => {
+            // Only include activities for pages the user follows
+            return followedPageIds.includes(activity.pageId);
+          });
+        }
+
+        if (enablePagination) {
+          // Store all activities for pagination
+          setAllActivities(validActivities);
+          // Show first page
+          const firstPageActivities = validActivities.slice(0, limitCount);
+          setActivities(firstPageActivities);
+          setHasMore(validActivities.length > limitCount);
+          activitiesRef.current = firstPageActivities;
+        } else {
+          // Limit the number of activities for non-paginated view
+          validActivities = validActivities.slice(0, actualLimit);
+          // Store in ref first, then update state
+          activitiesRef.current = validActivities;
+          setActivities(validActivities);
+        }
+      } catch (err) {
+        console.error("Error refreshing activity data:", err);
+        setError({
+          message: "Failed to refresh recent activity",
+          details: err.message || "Unknown error",
+          code: err.code || "unknown",
+          canRetry: true
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    await fetchRecentActivity();
+  }, [limitCount, filterUserId, followedOnly, enablePagination, actualLimit, user]);
+
+  // Register cache invalidation function
+  useEffect(() => {
+    registerStaticActivityInvalidator(refreshData);
+
+    // Also listen for global cache invalidation events
+    const handleGlobalInvalidation = () => {
+      console.log('Received global cache invalidation event for static activity');
+      refreshData();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('invalidate-static-activity', handleGlobalInvalidation);
+    }
+
+    // Cleanup function to unregister
+    return () => {
+      unregisterCacheInvalidator('staticActivity', refreshData);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('invalidate-static-activity', handleGlobalInvalidation);
+      }
+    };
+  }, [refreshData]);
 
   // If we already have activities in the ref and we're not loading, use those
   useEffect(() => {
@@ -295,7 +408,15 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
             setActivities(validActivities);
           }
         } catch (err) {
-          console.error("Error with Firestore query:", err);
+          // Handle permission denied errors gracefully - this is expected for private pages
+          if (err?.code === 'permission-denied') {
+            console.log("Permission denied in static recent activity query - this is expected for private pages");
+            // For permission denied, just show empty results without error
+            setActivities([]);
+            setError(null);
+          } else {
+            console.error("Error with Firestore query:", err);
+          }
 
           // Enhanced error handling for permission issues
           if (err.code === 'permission-denied') {
@@ -385,7 +506,8 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
     error,
     hasMore: enablePagination ? hasMore : false,
     loadingMore: enablePagination ? loadingMore : false,
-    loadMore: enablePagination ? loadMore : () => {}
+    loadMore: enablePagination ? loadMore : () => {},
+    refreshData
   };
 };
 

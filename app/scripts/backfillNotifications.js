@@ -14,7 +14,7 @@ import {
   Timestamp,
   serverTimestamp
 } from 'firebase/firestore';
-import { createFollowNotification, createLinkNotification } from "../firebase/notifications";
+// Notifications functionality removed
 
 /**
  * Backfill notifications for past follows and page links

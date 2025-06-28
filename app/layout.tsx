@@ -20,6 +20,7 @@ import { PWAProvider } from "./providers/PWAProvider"
 import FeatureFlagListener from "./components/utils/FeatureFlagListener"
 // Removed SlateEarlyPatch - no longer needed with SimpleEditor
 import CacheInitializer from "./components/utils/CacheInitializer"
+import CacheInvalidationInitializer from "./components/utils/CacheInvalidationInitializer"
 import { SyncQueueProvider } from "./contexts/SyncQueueContext"
 import { LineSettingsProvider } from "./contexts/LineSettingsContext"
 import ConsoleErrorLogger from "./components/utils/ConsoleErrorLogger"
@@ -294,6 +295,7 @@ export default function RootLayout({
                                       <PWAProvider>
                                         <SyncQueueProvider>
                                         <CacheInitializer />
+                                        <CacheInvalidationInitializer />
                                         <ConsoleErrorLogger />
                                         <TerminalConsole />
                                         <DoubleClickZoomPrevention />
@@ -305,11 +307,52 @@ export default function RootLayout({
                                           </ErrorBoundary>
                                         </FeatureFlagListener>
                                         <ErrorBoundary name="vercel_analytics" resetOnPropsChange={false}>
-                                          <Analytics debug={process.env.NODE_ENV === 'development'} />
+                                          {process.env.NODE_ENV !== 'development' && (
+                                            <Analytics debug={false} />
+                                          )}
                                         </ErrorBoundary>
                                         <ErrorBoundary name="speed_insights" resetOnPropsChange={false}>
-                                          <SpeedInsights />
+                                          {process.env.NODE_ENV !== 'development' && (
+                                            <SpeedInsights />
+                                          )}
                                         </ErrorBoundary>
+
+                                        {/* Enhanced error debugging script for development */}
+                                        {process.env.NODE_ENV === 'development' && (
+                                          <script
+                                            dangerouslySetInnerHTML={{
+                                              __html: `
+                                                // Enhanced error debugging for Google API errors
+                                                window.debugGoogleApiErrors = true;
+
+                                                // Override fetch to catch Google API calls
+                                                const originalFetch = window.fetch;
+                                                window.fetch = function(...args) {
+                                                  const url = args[0];
+                                                  if (typeof url === 'string' && url.includes('google')) {
+                                                    console.log('🔍 Google API call detected:', url);
+                                                    console.trace('Call stack for Google API call');
+                                                  }
+                                                  return originalFetch.apply(this, args);
+                                                };
+
+                                                // Monitor script loading
+                                                const observer = new MutationObserver(function(mutations) {
+                                                  mutations.forEach(function(mutation) {
+                                                    mutation.addedNodes.forEach(function(node) {
+                                                      if (node.tagName === 'SCRIPT' && node.src && node.src.includes('google')) {
+                                                        console.log('🔍 Google script loaded:', node.src);
+                                                        console.trace('Script loading stack trace');
+                                                      }
+                                                    });
+                                                  });
+                                                });
+                                                observer.observe(document.head, { childList: true, subtree: true });
+                                                observer.observe(document.body, { childList: true, subtree: true });
+                                              `
+                                            }}
+                                          />
+                                        )}
 
                                       </SyncQueueProvider>
                                       </PWAProvider>

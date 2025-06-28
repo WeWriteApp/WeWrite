@@ -17,9 +17,10 @@ import {
 import { useTheme } from '../../../providers/ThemeProvider';
 import { useFeatureFlag } from '../../../utils/feature-flags';
 import OpenCollectiveSupport from '../../../components/payments/OpenCollectiveSupport';
+import { getStripePublishableKey } from '../../../utils/stripeConfig';
 
 // Initialize Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const stripePromise = loadStripe(getStripePublishableKey() || '');
 
 // Payment Form Component
 function PaymentForm({ clientSecret, amount, onSuccess, onCancel }: {

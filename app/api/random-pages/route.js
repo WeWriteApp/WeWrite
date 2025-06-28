@@ -119,21 +119,7 @@ export async function GET(request) {
       pages.map(async (page) => {
         let updatedPage = { ...page };
 
-        // Fetch group information if page belongs to a group
-        if (page.groupId) {
-          try {
-            const groupRef = ref(rtdb, `groups/${page.groupId}`);
-            const groupSnapshot = await get(groupRef);
-
-            if (groupSnapshot.exists()) {
-              const groupData = groupSnapshot.val();
-              updatedPage.groupName = groupData.name || 'Unknown Group';
-              updatedPage.groupIsPublic = groupData.isPublic || false;
-            }
-          } catch (groupError) {
-            console.error(`Error fetching group ${page.groupId}:`, groupError);
-          }
-        }
+        // Groups functionality removed
 
         // Fetch username from users collection if missing or showing as Anonymous
         if (!page.username || page.username === 'Anonymous') {

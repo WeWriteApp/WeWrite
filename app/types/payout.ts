@@ -192,3 +192,59 @@ export interface InternationalPayoutInfo {
   };
   restrictions?: string[];
 }
+
+// Automated payout processing types
+export interface PayoutBatchResult {
+  totalProcessed: number;
+  successful: number;
+  failed: number;
+  errors: Array<{
+    payoutId: string;
+    error: string;
+    timestamp: Date;
+  }>;
+}
+
+export interface PayoutProcessingResult {
+  payoutId: string;
+  success: boolean;
+  error?: string;
+  processingTime?: number;
+  retryCount?: number;
+}
+
+// Generic API response wrapper
+export interface PayoutApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+// Automated payout processing types
+export interface PayoutBatchResult {
+  totalProcessed: number;
+  successful: number;
+  failed: number;
+  errors: Array<{
+    payoutId: string;
+    error: string;
+    timestamp: Date;
+  }>;
+}
+
+export interface PayoutProcessingResult {
+  payoutId: string;
+  success: boolean;
+  error?: string;
+  processingTime?: number;
+  retryCount?: number;
+}
+
+// Generic API response wrapper
+export interface PayoutApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}

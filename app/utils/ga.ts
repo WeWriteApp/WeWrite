@@ -24,6 +24,12 @@ export const trackPageView = (path: string, title?: string): void => {
     return;
   }
 
+  // Skip ReactGA calls in development to prevent authentication errors
+  if (process.env.NODE_ENV === 'development') {
+    console.log('ReactGA pageview skipped in development:', { path, title });
+    return;
+  }
+
   try {
     ReactGA.send({
       hitType: "pageview",
@@ -35,7 +41,7 @@ export const trackPageView = (path: string, title?: string): void => {
       console.log('Manual GA pageview sent:', { path, title });
     }
   } catch (error) {
-    console.error('Error sending manual GA pageview:', error);
+    console.error('Error sending manual GA pageview (non-fatal):', error);
   }
 };
 
@@ -63,6 +69,12 @@ export const trackEvent = ({ category, action, label, value, nonInteraction = fa
     return;
   }
 
+  // Skip ReactGA calls in development to prevent authentication errors
+  if (process.env.NODE_ENV === 'development') {
+    console.log('ReactGA event skipped in development:', { category, action, label, value });
+    return;
+  }
+
   try {
     ReactGA.event({
       category,
@@ -76,7 +88,7 @@ export const trackEvent = ({ category, action, label, value, nonInteraction = fa
       console.log('GA event tracked:', { category, action, label, value });
     }
   } catch (error) {
-    console.error('Error tracking GA event:', error);
+    console.error('Error tracking GA event (non-fatal):', error);
   }
 };
 
@@ -86,34 +98,43 @@ export const trackEvent = ({ category, action, label, value, nonInteraction = fa
 export const initializeGA = (): boolean => {
   try {
     const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-    
+
     if (!GA_TRACKING_ID) {
       if (process.env.NODE_ENV === 'development') {
         console.warn('Missing Google Analytics Measurement ID');
       }
       return false;
     }
-    
+
     if (window.GA_INITIALIZED) {
       return true;
     }
-    
+
+    // In development, disable ReactGA to prevent authentication errors
+    if (process.env.NODE_ENV === 'development') {
+      console.log('ReactGA disabled in development to prevent authentication errors');
+      window.GA_INITIALIZED = true;
+      return true;
+    }
+
     ReactGA.initialize(GA_TRACKING_ID, {
       gaOptions: {
-        debug_mode: process.env.NODE_ENV === 'development'
+        debug_mode: false // Disable debug mode to prevent API calls
       },
-      testMode: process.env.NODE_ENV !== 'production'
+      testMode: false // Disable test mode to prevent authentication issues
     });
-    
+
     window.GA_INITIALIZED = true;
-    
+
     if (process.env.NODE_ENV === 'development') {
       console.log('Google Analytics initialized successfully');
     }
-    
+
     return true;
   } catch (error) {
-    console.error('Error initializing Google Analytics:', error);
+    console.error('Error initializing Google Analytics (non-fatal):', error);
+    // Mark as initialized even if there's an error to prevent repeated attempts
+    window.GA_INITIALIZED = true;
     return false;
   }
 };

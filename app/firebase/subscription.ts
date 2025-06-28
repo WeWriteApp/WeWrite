@@ -139,103 +139,9 @@ export const getUserSubscription = async (userId: string, options: SubscriptionO
   }
 };
 
-// Create a pledge from a user to a page
-export const createPledge = async (userId: string, pageId: string, pledgeAmount: number): Promise<boolean> => {
-  try {
-    // Round to two decimal places for consistent currency handling
-    const roundedAmount = Math.round(Number(pledgeAmount) * 100) / 100;
+// Pledge functionality removed - WeWrite now uses subscription-based token system only
 
-    // Create the pledge document
-    const pledgeRef = doc(db, "users", userId, "pledges", pageId);
-    await setDoc(pledgeRef, {
-      pageId,
-      amount: roundedAmount,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
 
-    // Update the page's total pledged amount
-    const pageRef = doc(db, "pages", pageId);
-    await fsUpdateDoc(pageRef, {
-      totalPledged: increment(roundedAmount),
-      pledgeCount: increment(1),
-    });
-
-    // Update user's total pledged amount
-    const userSubscriptionRef = doc(db, "users", userId, "subscription", "current");
-    await fsUpdateDoc(userSubscriptionRef, {
-      pledgedAmount: increment(roundedAmount),
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Error creating pledge:", error);
-    return false;
-  }
-};
-
-// Update a pledge amount
-export const updatePledge = async (userId: string, pageId: string, newAmount: number, oldAmount: number): Promise<boolean> => {
-  try {
-    // Round to two decimal places for consistent currency handling
-    const roundedNewAmount = Math.round(Number(newAmount) * 100) / 100;
-    const roundedOldAmount = Math.round(Number(oldAmount) * 100) / 100;
-
-    // Calculate the difference
-    const amountDifference = roundedNewAmount - roundedOldAmount;
-
-    // Update the pledge
-    const pledgeRef = doc(db, "users", userId, "pledges", pageId);
-    await fsUpdateDoc(pledgeRef, {
-      amount: roundedNewAmount,
-      updatedAt: serverTimestamp(),
-    });
-
-    // Update the page's total pledged amount
-    const pageRef = doc(db, "pages", pageId);
-    await fsUpdateDoc(pageRef, {
-      totalPledged: increment(amountDifference),
-    });
-
-    // Update user's total pledged amount
-    const userSubscriptionRef = doc(db, "users", userId, "subscription", "current");
-    await fsUpdateDoc(userSubscriptionRef, {
-      pledgedAmount: increment(amountDifference),
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Error updating pledge:", error);
-    return false;
-  }
-};
-
-// Delete a pledge
-export const deletePledge = async (userId: string, pageId: string, pledgeAmount: number): Promise<boolean> => {
-  try {
-    // Delete the pledge
-    const pledgeRef = doc(db, "users", userId, "pledges", pageId);
-    await deleteDoc(pledgeRef);
-
-    // Update the page's total pledged amount
-    const pageRef = doc(db, "pages", pageId);
-    await fsUpdateDoc(pageRef, {
-      totalPledged: increment(-pledgeAmount),
-      pledgeCount: increment(-1),
-    });
-
-    // Update user's total pledged amount
-    const userSubscriptionRef = doc(db, "users", userId, "subscription", "current");
-    await fsUpdateDoc(userSubscriptionRef, {
-      pledgedAmount: increment(-pledgeAmount),
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Error deleting pledge:", error);
-    return false;
-  }
-};
 
 // Get all pledges for a user
 export const getUserPledges = async (userId: string, options: SubscriptionOptions = {}): Promise<any[]> => {
@@ -364,23 +270,4 @@ export const listenToUserSubscription = (userId: string, callback: (data: Subscr
   return unsubscribe;
 };
 
-// Listen to changes in user's pledges
-export const listenToUserPledges = (userId: string, callback: (pledges: any[]) => void, options: SubscriptionOptions = {}): Unsubscribe => {
-  // Control verbose logging with an option
-  const verbose = options.verbose || false;
 
-  const pledgesRef = collection(db, "users", userId, "pledges");
-
-  return onSnapshot(pledgesRef, (snapshot) => {
-    const pledges = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-
-    if (verbose) {
-      console.log(`[listenToUserPledges] Received ${pledges.length} pledges for user: ${userId}`);
-    }
-
-    callback(pledges);
-  });
-};

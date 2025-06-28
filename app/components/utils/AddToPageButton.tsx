@@ -286,7 +286,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
 
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent
-          className="sm:max-w-md max-h-[80vh] w-[95vw] sm:w-full overflow-hidden flex flex-col rounded-lg border border-border dark:border-neutral-700 bg-white dark:bg-neutral-900 animate-in fade-in-0 zoom-in-95 duration-300 px-4 sm:px-6 py-4 sm:py-6"
+          className="sm:max-w-md max-h-[80vh] w-[95vw] sm:w-full overflow-hidden flex flex-col rounded-lg border-theme-strong bg-card animate-in fade-in-0 zoom-in-95 duration-300 px-4 sm:px-6 py-4 sm:py-6"
           onKeyDown={handleKeyDown}
           aria-describedby="add-to-page-description"
         >

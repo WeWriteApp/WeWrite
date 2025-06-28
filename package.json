@@ -13,6 +13,9 @@
     "console:listen": "node scripts/console-server.cjs",
     "build": "rm -rf .next && SKIP_TYPE_CHECK=1 NODE_OPTIONS='--max_old_space_size=4096' next build",
     "seo:audit": "node scripts/seo-audit.js",
+    "subscription:cleanup": "node scripts/subscription-cleanup.js",
+    "subscription:cleanup:dry": "node scripts/subscription-cleanup.js --dry-run",
+    "subscription:cleanup:execute": "node scripts/subscription-cleanup.js --execute",
     "start": "next start",
     "lint": "next lint",
     "clean": "rm -rf .next node_modules/.cache"
@@ -56,6 +59,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^16.5.0",
     "firebase": "^11.7.1",
+    "firebase-admin": "^13.4.0",
     "firebase-functions": "^6.3.2",
     "framer-motion": "^12.5.0",
     "google-auth-library": "^9.15.1",

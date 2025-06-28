@@ -12,6 +12,8 @@ import { db } from '../../../firebase/config';
 import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/stripeConfig';
 import { TokenService } from '../../../services/tokenService';
 import { calculateTokensForAmount } from '../../../utils/subscriptionTiers';
+import { TransactionTrackingService } from '../../../services/transactionTrackingService';
+import { FinancialUtils } from '../../../types/financial';
 
 // Initialize Stripe
 const stripe = new Stripe(getStripeSecretKey() || '', {
@@ -270,6 +272,27 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     const price = subscription.items.data[0].price;
     const amount = price.unit_amount ? price.unit_amount / 100 : 0;
     await TokenService.updateMonthlyTokenAllocation(userId, amount);
+
+    // Track the subscription payment transaction
+    try {
+      const correlationId = FinancialUtils.generateCorrelationId();
+      await TransactionTrackingService.trackSubscriptionPayment(
+        invoice.id,
+        subscription.id,
+        userId,
+        amount,
+        correlationId
+      );
+      console.log(`[SUBSCRIPTION WEBHOOK] Tracked payment transaction [${correlationId}]`, {
+        invoiceId: invoice.id,
+        subscriptionId: subscription.id,
+        userId,
+        amount
+      });
+    } catch (trackingError) {
+      // Log tracking error but don't fail the webhook
+      console.warn('[SUBSCRIPTION WEBHOOK] Failed to track payment transaction:', trackingError);
+    }
 
   } catch (error) {
     console.error('Error handling payment succeeded:', error);
