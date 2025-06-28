@@ -133,12 +133,12 @@ export default function SpendTokensPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Active Subscription Content */}
           {currentSubscription && currentSubscription.status === 'active' ? (
             <>
               {/* Allocation Countdown Timer */}
-              <AllocationCountdownTimer className="mb-6" />
+              <AllocationCountdownTimer className="mb-6" showExplanation={false} />
 
               {/* Token Allocation Display */}
               <TokenAllocationDisplay

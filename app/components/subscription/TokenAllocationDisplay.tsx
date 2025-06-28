@@ -58,14 +58,14 @@ export default function TokenAllocationDisplay({
       
       <CardContent className="space-y-6">
         {/* Main Allocation Stats */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
           <div className="text-center">
-            <div className="text-2xl font-bold text-primary">{totalTokens}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-muted-foreground">{totalTokens}</div>
             <div className="text-sm text-muted-foreground">Monthly Allocation</div>
           </div>
-          
+
           <div className="text-center">
-            <div className="text-2xl font-bold text-amber-600">
+            <div className="text-2xl sm:text-3xl font-bold text-muted-foreground">
               {isPreviewMode ? '0' : allocatedTokens}
             </div>
             <div className="text-sm text-muted-foreground">Allocated (Pending)</div>
@@ -73,11 +73,10 @@ export default function TokenAllocationDisplay({
           </div>
 
           <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">
+            <div className="text-2xl sm:text-3xl font-bold text-green-600">
               {isPreviewMode ? totalTokens : availableTokens}
             </div>
-            <div className="text-sm text-muted-foreground">Available</div>
-            <div className="text-xs text-muted-foreground">To allocate</div>
+            <div className="text-sm text-muted-foreground">Available to allocate</div>
           </div>
         </div>
 
