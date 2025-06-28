@@ -102,13 +102,13 @@ export default function AllocationCountdownTimer({
 
   return (
     <div className={`${colorClasses[urgencyColor]} border rounded-lg p-4 ${className}`}>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center space-x-2">
           <div className={`w-2 h-2 ${dotClasses[urgencyColor]} rounded-full ${urgencyColor === 'red' ? 'animate-pulse' : ''}`}></div>
           <h3 className="font-semibold">Allocation Deadline</h3>
         </div>
-        <div className="text-right">
-          <div className="font-mono text-lg font-bold">
+        <div className="text-left sm:text-right">
+          <div className="font-mono text-lg sm:text-xl font-bold">
             {timeRemaining.days > 0 && (
               <span>{formatTime(timeRemaining.days, 'day')}</span>
             )}
@@ -131,37 +131,9 @@ export default function AllocationCountdownTimer({
         </div>
       </div>
 
-      <p className="text-sm mt-2 font-medium">
-        You have {timeRemaining.days > 0 && (
-          <span>{timeRemaining.days} day{timeRemaining.days !== 1 ? 's' : ''}</span>
-        )}
-        {timeRemaining.days > 0 && timeRemaining.hours > 0 && <span>, </span>}
-        {timeRemaining.hours > 0 && (
-          <span>{timeRemaining.hours} hour{timeRemaining.hours !== 1 ? 's' : ''}</span>
-        )}
-        {timeRemaining.hours > 0 && timeRemaining.minutes > 0 && <span>, </span>}
-        {(timeRemaining.days === 0 || timeRemaining.hours === 0) && (
-          <span>{timeRemaining.minutes} minute{timeRemaining.minutes !== 1 ? 's' : ''}</span>
-        )} to allocate all your tokens before they're sent to writers.
+      <p className="text-sm mt-3 text-muted-foreground">
+        Allocate all your tokens before they're sent to writers.
       </p>
-
-      <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
-        <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
-          ⚠️ Tokens you don't allocate will be lost, so use them all up!
-        </p>
-      </div>
-
-      {showExplanation && (
-        <div className="mt-3 text-xs opacity-75">
-          <p><strong>Start-of-Month Processing:</strong></p>
-          <ul className="list-disc list-inside mt-1 space-y-1">
-            <li>1st: Your allocations are finalized and sent to writers</li>
-            <li>1st: Writers can request payouts</li>
-            <li>1st: Your subscription renews with new tokens</li>
-            <li>1st onwards: You can allocate new tokens throughout the month</li>
-          </ul>
-        </div>
-      )}
     </div>
   );
 }

@@ -550,7 +550,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
                         y: { duration: 0.3 },
                         delay: index * 0.05 // Stagger effect
                       }}
-                      className={`flex items-center justify-between p-4 border-theme-strong rounded-lg hover:bg-muted/50 hover-border-strong transition-colors ${
+                      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-theme-strong rounded-lg hover:bg-muted/50 hover-border-strong transition-colors ${
                         isZeroAllocation ? 'opacity-50' : ''
                       }`}
                     >
@@ -574,7 +574,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-3 ml-4">
+                      <div className="flex items-center gap-3 sm:ml-4">
                         <div className="text-right">
                           {isEditing ? (
                             <div className="flex flex-col items-end gap-1">
