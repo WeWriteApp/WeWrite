@@ -54,6 +54,8 @@ const nextConfig = {
       fs: false
     }
 
+
+
     // Performance optimizations for production builds
     if (!dev) {
       // Enable tree shaking for better bundle optimization
