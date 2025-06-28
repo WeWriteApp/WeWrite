@@ -1,0 +1,207 @@
+{
+  "timestamp": "2025-06-28T15:02:13.799Z",
+  "summary": {
+    "totalSize": 5749536,
+    "criticalSize": 4852,
+    "chunkCount": 32,
+    "performanceGrade": "F"
+  },
+  "chunks": [
+    {
+      "name": "mapbox.24fa5073e47d0b05.js",
+      "size": 1581737,
+      "sizeFormatted": "1.51 MB",
+      "category": "page"
+    },
+    {
+      "name": "vendors-456b379a79294da0.js",
+      "size": 1454124,
+      "sizeFormatted": "1.39 MB",
+      "category": "vendor"
+    },
+    {
+      "name": "common-cfcf343fc56b431d.js",
+      "size": 694698,
+      "sizeFormatted": "678.42 KB",
+      "category": "page"
+    },
+    {
+      "name": "firebase-1c82a13915233d26.js",
+      "size": 609902,
+      "sizeFormatted": "595.61 KB",
+      "category": "page"
+    },
+    {
+      "name": "charts.2bc0d0d200079e3e.js",
+      "size": 360885,
+      "sizeFormatted": "352.43 KB",
+      "category": "page"
+    },
+    {
+      "name": "9120-1f2041aa3f3c2fc0.js",
+      "size": 297526,
+      "sizeFormatted": "290.55 KB",
+      "category": "page"
+    },
+    {
+      "name": "2559-c067ded509a247a8.js",
+      "size": 248432,
+      "sizeFormatted": "242.61 KB",
+      "category": "page"
+    },
+    {
+      "name": "ui-libs-ab57634435abe6e8.js",
+      "size": 159546,
+      "sizeFormatted": "155.81 KB",
+      "category": "page"
+    },
+    {
+      "name": "polyfills-42372ed130431b0a.js",
+      "size": 112594,
+      "sizeFormatted": "109.96 KB",
+      "category": "page"
+    },
+    {
+      "name": "2834-82477a2ed812f9c4.js",
+      "size": 40181,
+      "sizeFormatted": "39.24 KB",
+      "category": "page"
+    },
+    {
+      "name": "453-95a45d821f610252.js",
+      "size": 40181,
+      "sizeFormatted": "39.24 KB",
+      "category": "page"
+    },
+    {
+      "name": "5215-aba3ef30fcc6a574.js",
+      "size": 40181,
+      "sizeFormatted": "39.24 KB",
+      "category": "page"
+    },
+    {
+      "name": "7596-b9f8f060aefd921c.js",
+      "size": 40181,
+      "sizeFormatted": "39.24 KB",
+      "category": "page"
+    },
+    {
+      "name": "998.39bbb57776e9235e.js",
+      "size": 10220,
+      "sizeFormatted": "9.98 KB",
+      "category": "page"
+    },
+    {
+      "name": "4017.6e54b2ab115e4971.js",
+      "size": 7941,
+      "sizeFormatted": "7.75 KB",
+      "category": "page"
+    },
+    {
+      "name": "3024.df42d37c165c351f.js",
+      "size": 7709,
+      "sizeFormatted": "7.53 KB",
+      "category": "page"
+    },
+    {
+      "name": "7769.c6a90c084aed2dd2.js",
+      "size": 6186,
+      "sizeFormatted": "6.04 KB",
+      "category": "page"
+    },
+    {
+      "name": "9991.26a883c15d10450a.js",
+      "size": 6013,
+      "sizeFormatted": "5.87 KB",
+      "category": "page"
+    },
+    {
+      "name": "7506.1cb20b817cb7ef09.js",
+      "size": 4823,
+      "sizeFormatted": "4.71 KB",
+      "category": "page"
+    },
+    {
+      "name": "webpack-893b0ab6054b2a42.js",
+      "size": 4185,
+      "sizeFormatted": "4.09 KB",
+      "category": "runtime"
+    },
+    {
+      "name": "5848.3b09a66c6ea85eda.js",
+      "size": 4111,
+      "sizeFormatted": "4.01 KB",
+      "category": "page"
+    },
+    {
+      "name": "5029.e0b1be9e9667fa14.js",
+      "size": 3789,
+      "sizeFormatted": "3.7 KB",
+      "category": "page"
+    },
+    {
+      "name": "1552.b331f60f2db2298c.js",
+      "size": 3323,
+      "sizeFormatted": "3.25 KB",
+      "category": "page"
+    },
+    {
+      "name": "8200.8323a375d4944eb7.js",
+      "size": 2984,
+      "sizeFormatted": "2.91 KB",
+      "category": "page"
+    },
+    {
+      "name": "4944.f8d0bb8e689a8c2f.js",
+      "size": 2908,
+      "sizeFormatted": "2.84 KB",
+      "category": "page"
+    },
+    {
+      "name": "7395.a0ac714fc89b9ad0.js",
+      "size": 1547,
+      "sizeFormatted": "1.51 KB",
+      "category": "page"
+    },
+    {
+      "name": "2877.acfcb913e79ed25a.js",
+      "size": 1291,
+      "sizeFormatted": "1.26 KB",
+      "category": "page"
+    },
+    {
+      "name": "3690.2ed1a081bdbe1a12.js",
+      "size": 970,
+      "sizeFormatted": "970 Bytes",
+      "category": "page"
+    },
+    {
+      "name": "main-app-c04a6e03f5cf2548.js",
+      "size": 521,
+      "sizeFormatted": "521 Bytes",
+      "category": "main"
+    },
+    {
+      "name": "6838.72fa76994d54ce32.js",
+      "size": 517,
+      "sizeFormatted": "517 Bytes",
+      "category": "page"
+    },
+    {
+      "name": "8462.0b6f8d6d5b428325.js",
+      "size": 184,
+      "sizeFormatted": "184 Bytes",
+      "category": "page"
+    },
+    {
+      "name": "main-85623b2259bf7dc7.js",
+      "size": 146,
+      "sizeFormatted": "146 Bytes",
+      "category": "main"
+    }
+  ],
+  "recommendations": [
+    "Implement aggressive code splitting",
+    "Split 9 large chunks"
+  ]
+}

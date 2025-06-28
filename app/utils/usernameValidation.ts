@@ -29,7 +29,7 @@ export const validateUsernameFormat = (username: string): UsernameValidationResu
     return {
       isValid: false,
       error: "CONTAINS_WHITESPACE",
-      message: "Usernames cannot contain spaces or whitespace characters"
+      message: "Usernames cannot contain spaces or whitespace characters. Try using underscores (_) instead."
     };
   }
 
@@ -73,24 +73,65 @@ export const containsWhitespace = (username: string): boolean => {
  * @returns Cleaned username suggestion
  */
 export const suggestCleanUsername = (username: string): string => {
-  // Replace whitespace with underscores
+  if (!username) return '';
+
+  // Replace all types of whitespace with underscores (spaces, tabs, newlines, etc.)
   let cleaned = username.replace(/\s+/g, '_');
-  
+
   // Remove any characters that aren't alphanumeric or underscores
   cleaned = cleaned.replace(/[^a-zA-Z0-9_]/g, '');
-  
+
   // Remove multiple consecutive underscores
   cleaned = cleaned.replace(/_+/g, '_');
-  
+
   // Remove leading/trailing underscores
   cleaned = cleaned.replace(/^_+|_+$/g, '');
-  
+
   // Ensure minimum length
   if (cleaned.length < 3) {
-    cleaned = cleaned + '123';
+    // If we have some content, append numbers
+    if (cleaned.length > 0) {
+      cleaned = cleaned + '123';
+    } else {
+      // If no valid characters, suggest a default
+      cleaned = 'user123';
+    }
   }
-  
+
+  // Ensure maximum length
+  if (cleaned.length > 30) {
+    cleaned = cleaned.substring(0, 30);
+    // Remove trailing underscore if truncation created one
+    cleaned = cleaned.replace(/_+$/, '');
+  }
+
   return cleaned;
+};
+
+/**
+ * Generates multiple username suggestions based on the original input
+ * @param username - The original username
+ * @returns Array of suggested usernames
+ */
+export const generateUsernameSuggestions = (username: string): string[] => {
+  const suggestions: string[] = [];
+  const baseClean = suggestCleanUsername(username);
+
+  if (baseClean && baseClean !== username) {
+    suggestions.push(baseClean);
+
+    // Add variations with numbers
+    suggestions.push(baseClean + '2024');
+    suggestions.push(baseClean + '123');
+
+    // Add variation with underscore and year
+    if (!baseClean.endsWith('_')) {
+      suggestions.push(baseClean + '_2024');
+    }
+  }
+
+  // Remove duplicates and return up to 3 suggestions
+  return [...new Set(suggestions)].slice(0, 3);
 };
 
 /**
@@ -103,7 +144,7 @@ export const getUsernameErrorMessage = (error: string | null): string => {
     case "TOO_SHORT":
       return "Username must be at least 3 characters";
     case "CONTAINS_WHITESPACE":
-      return "Usernames cannot contain spaces or whitespace characters. Try using underscores or hyphens instead.";
+      return "Usernames cannot contain spaces or whitespace characters. Try using underscores (_) instead.";
     case "INVALID_CHARACTERS":
       return "Username can only contain letters, numbers, and underscores. Try removing special characters.";
     case "TOO_LONG":

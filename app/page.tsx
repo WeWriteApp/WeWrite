@@ -38,20 +38,25 @@ import performanceMonitor from "./utils/performance-monitor";
 // Icon imports
 import { Plus, FileText, Loader, Clock, Flame, Users, Trophy, RefreshCw, Shuffle } from "lucide-react";
 
-// Lazy load non-critical components
+// Lazy load non-critical components with progressive loading
 const TrendingPages = dynamic(() => import("./components/features/TrendingPages"), {
   loading: () => <TrendingPagesSkeleton limit={5} />,
   ssr: false
 });
 
-
-
-// Groups functionality removed
-
-
-
 const RandomPages = dynamic(() => import("./components/features/RandomPages"), {
   loading: () => <RandomPagesSkeleton limit={10} />,
+  ssr: false
+});
+
+// Heavy components loaded only when needed
+const DynamicFirebaseLoader = dynamic(() => import("./components/firebase/DynamicFirebaseLoader"), {
+  loading: () => <div className="animate-pulse bg-muted/20 h-4 rounded" />,
+  ssr: false
+});
+
+const DynamicChartLoader = dynamic(() => import("./components/charts/DynamicChartLoader"), {
+  loading: () => <div className="animate-pulse bg-muted/20 h-32 rounded" />,
   ssr: false
 });
 

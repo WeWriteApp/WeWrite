@@ -14,6 +14,9 @@
     "subscription:cleanup": "node scripts/subscription-cleanup.js",
     "subscription:cleanup:dry": "node scripts/subscription-cleanup.js --dry-run",
     "subscription:cleanup:execute": "node scripts/subscription-cleanup.js --execute",
+    "username:migrate": "tsx scripts/migrate-usernames-whitespace.ts",
+    "username:migrate:dry": "DRY_RUN=true tsx scripts/migrate-usernames-whitespace.ts",
+    "username:test": "tsx scripts/test-username-migration.ts",
     "start": "next start",
     "lint": "next lint",
     "clean": "rm -rf .next node_modules/.cache",
@@ -23,7 +26,13 @@
     "test:payments": "jest app/tests/payment-system.test.ts",
     "test:payouts": "jest app/tests/payout-system.test.ts",
     "test:production": "ts-node app/scripts/run-production-tests.ts",
-    "production-readiness-check": "ts-node app/scripts/production-readiness-check.ts"
+    "production-readiness-check": "ts-node app/scripts/production-readiness-check.ts",
+    "analyze:bundle": "node scripts/analyze-bundle.js",
+    "analyze:build": "npm run build && npm run analyze:bundle",
+    "perf:audit": "lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-report.html --chrome-flags='--headless'",
+    "perf:test": "npm run build && npm start & sleep 5 && npm run perf:audit && pkill -f 'next start'",
+    "perf:optimize": "node scripts/optimize-performance.js",
+    "perf:full": "npm run build && npm run perf:optimize && npm run analyze:bundle"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -105,6 +114,7 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^10.0.0",
     "vaul": "^1.1.2",
+    "web-vitals": "^5.0.3",
     "ws": "^8.18.2",
     "zod": "^3.24.4"
   },

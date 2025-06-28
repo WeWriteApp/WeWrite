@@ -315,7 +315,7 @@ export const checkUsernameAvailability = async (username: string): Promise<Usern
     if (/\s/.test(username)) {
       return {
         isAvailable: false,
-        message: "Usernames cannot contain spaces or whitespace characters",
+        message: "Usernames cannot contain spaces or whitespace characters. Try using underscores (_) instead.",
         error: "CONTAINS_WHITESPACE",
         suggestions: []
       };

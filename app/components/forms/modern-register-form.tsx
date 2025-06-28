@@ -12,7 +12,7 @@ import { createUser, addUsername, checkUsernameAvailability, loginAnonymously } 
 import { Check, Loader2, X } from "lucide-react"
 import { debounce } from "lodash"
 import { Separator } from "../ui/separator"
-import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername } from "../../utils/usernameValidation"
+import { validateUsernameFormat, getUsernameErrorMessage, generateUsernameSuggestions } from "../../utils/usernameValidation"
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics"
 
 export function ModernRegisterForm({
@@ -68,12 +68,10 @@ export function ModernRegisterForm({
         setValidationError(formatValidation.error)
         setValidationMessage(formatValidation.message)
 
-        // If it contains whitespace, suggest a cleaned version
+        // If it contains whitespace, suggest cleaned versions
         if (formatValidation.error === "CONTAINS_WHITESPACE") {
-          const cleanSuggestion = suggestCleanUsername(value)
-          if (cleanSuggestion && cleanSuggestion !== value) {
-            setUsernameSuggestions([cleanSuggestion])
-          }
+          const suggestions = generateUsernameSuggestions(value)
+          setUsernameSuggestions(suggestions)
         }
         return
       }

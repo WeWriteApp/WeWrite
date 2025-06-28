@@ -2079,3 +2079,75 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
     opacity: 0.7;
   }
 }
+
+/* Mobile Navigation Optimizations */
+@layer components {
+  /* Enhanced touch targets for mobile navigation */
+  .mobile-nav-button {
+    @apply touch-manipulation select-none;
+    min-height: 44px; /* iOS recommended touch target */
+    min-width: 44px;
+  }
+
+  /* Instant feedback animations */
+  .nav-button-pressed {
+    @apply scale-95 bg-primary/20;
+    transition: all 75ms ease-out;
+  }
+
+  /* Page transition animations */
+  .animate-fade-in {
+    animation: fadeIn 200ms ease-out forwards;
+  }
+
+  .animate-fade-out {
+    animation: fadeOut 200ms ease-out forwards;
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 200ms ease-out forwards;
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 200ms ease-out forwards;
+  }
+
+  .animate-slide-out-left {
+    animation: slideOutLeft 200ms ease-out forwards;
+  }
+
+  .animate-slide-out-right {
+    animation: slideOutRight 200ms ease-out forwards;
+  }
+}
+
+/* Additional keyframe animations for mobile navigation */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutLeft {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-100%); opacity: 0; }
+}
+
+@keyframes slideOutRight {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
+}

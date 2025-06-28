@@ -27,13 +27,24 @@ import ConsoleErrorLogger from "./components/utils/ConsoleErrorLogger"
 import DoubleClickZoomPrevention from "./components/utils/DoubleClickZoomPrevention"
 import TerminalConsole from "./components/utils/TerminalConsole"
 import PWADebugInitializer from "./components/utils/PWADebugInitializer"
+import ServiceWorkerRegistration from "./components/performance/ServiceWorkerRegistration"
+import OptimisticNavigationProvider from "./providers/OptimisticNavigationProvider"
+// import WebVitalsMonitor from "./components/performance/web-vitals-monitor"
 
 
 
 // Import polyfills for browser compatibility
 import "intl-segmenter-polyfill"
 
-const ClientLayout = dynamic(() => import("./ClientLayout"), { ssr: true })
+// Dynamic imports for better code splitting
+const ClientLayout = dynamic(() => import("./ClientLayout"), {
+  ssr: true,
+  loading: () => (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="loading-spinner" />
+    </div>
+  )
+})
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -272,6 +283,29 @@ export default function RootLayout({
             });
           `
         }} />
+
+        {/* Critical CSS inline for fastest rendering */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            /* Critical above-the-fold styles */
+            :root{--background:0 0% 100%;--foreground:222 47% 11%;--primary:217 91% 60%;--border:215 20% 85%}
+            .dark{--background:0 0% 0%;--foreground:210 40% 98%;--border:217 33% 25%}
+            html{font-family:Inter,system-ui,-apple-system,sans-serif;line-height:1.5}
+            body{margin:0;background-color:hsl(var(--background));color:hsl(var(--foreground))}
+            .loading-spinner{display:inline-block;width:1rem;height:1rem;border:2px solid transparent;border-top:2px solid currentColor;border-radius:50%;animation:spin 1s linear infinite}
+            @keyframes spin{to{transform:rotate(360deg)}}
+          `
+        }} />
+
+        {/* Resource hints for critical resources */}
+        <link rel="preload" href="/icons/icon-192x192.png" as="image" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+
+        {/* DNS prefetch for external services */}
+        <link rel="dns-prefetch" href="//firebaseapp.com" />
+        <link rel="dns-prefetch" href="//googleapis.com" />
+        <link rel="dns-prefetch" href="//stripe.com" />
       </head>
       <body className={inter.className}>
           <ErrorBoundary name="root" resetOnPropsChange={true}>
@@ -301,12 +335,16 @@ export default function RootLayout({
                                         <TerminalConsole />
                                         <DoubleClickZoomPrevention />
                                         <PWADebugInitializer />
+                                        <ServiceWorkerRegistration />
+                                        {/* <WebVitalsMonitor /> */}
                                         <FeatureFlagListener>
-                                          <ErrorBoundary name="layout" resetOnPropsChange={true}>
-                                            <ClientLayout>
-                                              {children}
-                                            </ClientLayout>
-                                          </ErrorBoundary>
+                                          <OptimisticNavigationProvider>
+                                            <ErrorBoundary name="layout" resetOnPropsChange={true}>
+                                              <ClientLayout>
+                                                {children}
+                                              </ClientLayout>
+                                            </ErrorBoundary>
+                                          </OptimisticNavigationProvider>
                                         </FeatureFlagListener>
                                         <ErrorBoundary name="vercel_analytics" resetOnPropsChange={false}>
                                           {process.env.NODE_ENV !== 'development' && (
