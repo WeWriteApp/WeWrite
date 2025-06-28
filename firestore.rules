@@ -635,6 +635,29 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Username reservation collections (usernames, dev_usernames, preview_usernames)
+    match /{envUsernames}/{username} {
+      // Allow reading username availability by everyone (for registration)
+      allow read: if envUsernames.matches('.*usernames') || envUsernames == 'usernames';
+
+      // Allow creating username reservations only by authenticated users
+      allow create: if (envUsernames.matches('.*usernames') || envUsernames == 'usernames') &&
+                       isAuthenticated() &&
+                       request.resource.data.keys().hasAll(['uid', 'createdAt']) &&
+                       request.resource.data.uid is string;
+
+      // Allow updating username reservations only by the owner
+      allow update: if (envUsernames.matches('.*usernames') || envUsernames == 'usernames') &&
+                       isAuthenticated() &&
+                       request.resource.data.uid == resource.data.uid &&
+                       isOwner(resource.data.uid);
+
+      // Allow deleting username reservations only by the owner or admin
+      allow delete: if (envUsernames.matches('.*usernames') || envUsernames == 'usernames') &&
+                       isAuthenticated() &&
+                       (isOwner(resource.data.uid) || isAdmin());
+    }
+
     // Environment-specific user collections (dev_users, preview_users)
     match /{envUsers}/{userId} {
       // Allow reading basic profile info by everyone (for public pages)
