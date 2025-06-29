@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Try to fix webpack runtime error with specific configuration
+  trailingSlash: false,
   // Only enable StrictMode in development to prevent double rendering in production
   reactStrictMode: process.env.NODE_ENV === 'development',
   // Completely disable all Next.js development overlays and indicators
@@ -62,73 +64,9 @@ const nextConfig = {
       fs: false
     }
 
-
-
-    // Performance optimizations for production builds
+    // Temporarily disable all webpack optimizations to fix runtime error
+    // This will help us identify if the issue is with chunk splitting
     if (!dev) {
-      // Enable tree shaking for better bundle optimization
-      config.optimization = {
-        ...config.optimization,
-        usedExports: true,
-        sideEffects: false,
-        // Split chunks for better caching
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            // Separate vendor chunks for better caching
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              chunks: 'all',
-              priority: 10,
-            },
-            // Separate common chunks
-            common: {
-              name: 'common',
-              minChunks: 2,
-              chunks: 'all',
-              priority: 5,
-              reuseExistingChunk: true,
-            },
-            // Firebase-specific chunk (large dependency)
-            firebase: {
-              test: /[\\/]node_modules[\\/](firebase|@firebase)[\\/]/,
-              name: 'firebase',
-              chunks: 'all',
-              priority: 15,
-            },
-            // UI library chunks
-            ui: {
-              test: /[\\/]node_modules[\\/](@radix-ui|@nextui-org|@mui)[\\/]/,
-              name: 'ui-libs',
-              chunks: 'all',
-              priority: 12,
-            },
-            // Mapbox chunk (very large)
-            mapbox: {
-              test: /[\\/]node_modules[\\/](mapbox-gl|@mapbox)[\\/]/,
-              name: 'mapbox',
-              chunks: 'async', // Only load when needed
-              priority: 20,
-            },
-            // Charts chunk (large)
-            charts: {
-              test: /[\\/]node_modules[\\/](recharts|d3)[\\/]/,
-              name: 'charts',
-              chunks: 'async', // Only load when needed
-              priority: 18,
-            },
-            // Stripe chunk
-            stripe: {
-              test: /[\\/]node_modules[\\/](@stripe|stripe)[\\/]/,
-              name: 'stripe',
-              chunks: 'async', // Only load when needed
-              priority: 16,
-            },
-          },
-        },
-      };
-
       // Minimize bundle size
       config.resolve.alias = {
         ...config.resolve.alias,
