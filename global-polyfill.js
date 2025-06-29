@@ -22,3 +22,20 @@ if (typeof document === 'undefined' && typeof global !== 'undefined') {
     documentElement: {}
   };
 }
+
+// Polyfill window for server environment
+if (typeof window === 'undefined' && typeof global !== 'undefined') {
+  global.window = global;
+}
+
+// Polyfill navigator for server environment
+if (typeof navigator === 'undefined' && typeof global !== 'undefined') {
+  global.navigator = { userAgent: 'node' };
+}
+
+// Polyfill location for server environment
+if (typeof location === 'undefined' && typeof global !== 'undefined') {
+  global.location = { href: '', origin: '', pathname: '/' };
+}
+
+

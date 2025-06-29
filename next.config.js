@@ -32,7 +32,8 @@ const nextConfig = {
     // Disable automatic scroll restoration since we handle it manually
     scrollRestoration: false,
     // Enable modern bundling optimizations
-    optimizeCss: true,
+    // Temporarily disable to debug build issue
+    // optimizeCss: true,
   },
   // Turbopack configuration (moved from experimental)
   turbopack: {
@@ -49,6 +50,22 @@ const nextConfig = {
     '@grpc/grpc-js',
   ],
   webpack(config, { dev, isServer }) {
+    // Add error handling for webpack runtime issues
+    if (isServer) {
+      config.optimization = {
+        ...config.optimization,
+        minimize: false, // Disable minification for server to help debug
+        splitChunks: {
+          ...config.optimization?.splitChunks,
+          chunks: 'all',
+          cacheGroups: {
+            default: false,
+            vendors: false,
+          },
+        },
+      };
+    }
+
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false
