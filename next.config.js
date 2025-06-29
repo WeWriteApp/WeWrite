@@ -3,7 +3,9 @@ const nextConfig = {
   // Only enable StrictMode in development to prevent double rendering in production
   reactStrictMode: process.env.NODE_ENV === 'development',
   // Completely disable all Next.js development overlays and indicators
-  devIndicators: false,
+  devIndicators: {
+    buildActivity: false,
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -32,39 +34,25 @@ const nextConfig = {
     // Disable automatic scroll restoration since we handle it manually
     scrollRestoration: false,
     // Enable modern bundling optimizations
-    // Temporarily disable to debug build issue
-    // optimizeCss: true,
+    optimizeCss: true,
   },
-  // Turbopack configuration (moved from experimental)
-  turbopack: {
-    rules: {
-      '*.svg': {
-        loaders: ['@svgr/webpack'],
-        as: '*.js',
-      },
-    },
-  },
-  serverExternalPackages: [
-    'firebase-admin',
-    '@fastify/busboy',
-    '@grpc/grpc-js',
-  ],
+  // Turbopack and serverExternalPackages not supported in Next.js 14
+  // These features are available in Next.js 15+
+  // turbopack: {
+  //   rules: {
+  //     '*.svg': {
+  //       loaders: ['@svgr/webpack'],
+  //       as: '*.js',
+  //     },
+  //   },
+  // },
+  // serverExternalPackages: [
+  //   'firebase-admin',
+  //   '@fastify/busboy',
+  //   '@grpc/grpc-js',
+  // ],
   webpack(config, { dev, isServer }) {
-    // Add error handling for webpack runtime issues
-    if (isServer) {
-      config.optimization = {
-        ...config.optimization,
-        minimize: false, // Disable minification for server to help debug
-        splitChunks: {
-          ...config.optimization?.splitChunks,
-          chunks: 'all',
-          cacheGroups: {
-            default: false,
-            vendors: false,
-          },
-        },
-      };
-    }
+    // Revert webpack debugging changes - using stable React 18 + Next.js 14 instead
 
     config.resolve.fallback = {
       ...config.resolve.fallback,

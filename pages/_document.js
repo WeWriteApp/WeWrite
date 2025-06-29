@@ -2,7 +2,7 @@ import { Html, Head, Main, NextScript } from 'next/document';
 
 /**
  * Custom Document component
- * 
+ *
  * This component customizes the HTML document structure for all pages.
  * It ensures that the DOCTYPE declaration is properly set to prevent Quirks Mode.
  */

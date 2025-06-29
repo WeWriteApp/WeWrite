@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useProgressiveLoading } from '../ui/progressive-loader';
-import { BarChart3, TrendingUp, PieChart, Activity } from 'lucide-react';
+import { BarChart3, TrendingUp, PieChart as PieChartIcon, Activity } from 'lucide-react';
 
 interface ChartData {
   [key: string]: any;
@@ -33,45 +33,18 @@ interface DynamicChartProps {
  * - Skeleton loading states
  */
 
-// Dynamic imports for chart components
-const LineChart = dynamic(() => import('recharts').then(mod => ({ default: mod.LineChart })), {
-  loading: () => <ChartSkeleton type="line" />,
-  ssr: false,
-});
-
-const BarChart = dynamic(() => import('recharts').then(mod => ({ default: mod.BarChart })), {
-  loading: () => <ChartSkeleton type="bar" />,
-  ssr: false,
-});
-
-const PieChart = dynamic(() => import('recharts').then(mod => ({ default: mod.PieChart })), {
-  loading: () => <ChartSkeleton type="pie" />,
-  ssr: false,
-});
-
-const AreaChart = dynamic(() => import('recharts').then(mod => ({ default: mod.AreaChart })), {
-  loading: () => <ChartSkeleton type="area" />,
-  ssr: false,
-});
-
-// Also dynamically load chart components
-const XAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.XAxis })), { ssr: false });
-const YAxis = dynamic(() => import('recharts').then(mod => ({ default: mod.YAxis })), { ssr: false });
-const CartesianGrid = dynamic(() => import('recharts').then(mod => ({ default: mod.CartesianGrid })), { ssr: false });
-const Tooltip = dynamic(() => import('recharts').then(mod => ({ default: mod.Tooltip })), { ssr: false });
-const Legend = dynamic(() => import('recharts').then(mod => ({ default: mod.Legend })), { ssr: false });
-const Line = dynamic(() => import('recharts').then(mod => ({ default: mod.Line })), { ssr: false });
-const Bar = dynamic(() => import('recharts').then(mod => ({ default: mod.Bar })), { ssr: false });
-const Area = dynamic(() => import('recharts').then(mod => ({ default: mod.Area })), { ssr: false });
-const Pie = dynamic(() => import('recharts').then(mod => ({ default: mod.Pie })), { ssr: false });
-const Cell = dynamic(() => import('recharts').then(mod => ({ default: mod.Cell })), { ssr: false });
+// Temporarily disable complex dynamic imports to fix webpack runtime error
+// const RechartsComponents = dynamic(() => import('recharts'), {
+//   loading: () => <ChartSkeleton type="line" />,
+//   ssr: false,
+// });
 
 function ChartSkeleton({ type, height = 300 }: { type: string; height?: number }) {
   const getIcon = () => {
     switch (type) {
       case 'line': return <TrendingUp className="h-8 w-8" />;
       case 'bar': return <BarChart3 className="h-8 w-8" />;
-      case 'pie': return <PieChart className="h-8 w-8" />;
+      case 'pie': return <PieChartIcon className="h-8 w-8" />;
       case 'area': return <Activity className="h-8 w-8" />;
       default: return <BarChart3 className="h-8 w-8" />;
     }
@@ -286,60 +259,13 @@ export function DynamicChart({
     <div ref={elementRef} className="w-full">
       {title && <h3 className="text-sm font-medium mb-2">{title}</h3>}
       
-      <React.Suspense fallback={<ChartSkeleton type={type} height={height} />}>
-        {type === 'line' && (
-          <LineChart {...chartProps}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="value" stroke="#1768FF" strokeWidth={2} />
-          </LineChart>
-        )}
-        
-        {type === 'bar' && (
-          <BarChart {...chartProps}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="value" fill="#1768FF" />
-          </BarChart>
-        )}
-        
-        {type === 'area' && (
-          <AreaChart {...chartProps}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Area type="monotone" dataKey="value" stroke="#1768FF" fill="#1768FF" fillOpacity={0.3} />
-          </AreaChart>
-        )}
-        
-        {type === 'pie' && (
-          <PieChart width={width} height={height}>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              outerRadius={80}
-              fill="#1768FF"
-              dataKey="value"
-              label
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 50%)`} />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
-        )}
-      </React.Suspense>
+      {/* Temporarily disabled complex charts to fix webpack runtime error */}
+      <div className="w-full bg-muted/10 rounded-lg border border-muted/20 flex items-center justify-center p-4" style={{ height }}>
+        <div className="text-center space-y-2">
+          <div className="text-muted-foreground text-sm">Chart temporarily disabled</div>
+          <div className="text-xs text-muted-foreground">Fixing webpack runtime issues</div>
+        </div>
+      </div>
     </div>
   );
 }
