@@ -38,31 +38,31 @@ import performanceMonitor from "./utils/performance-monitor";
 // Icon imports
 import { Plus, FileText, Loader, Clock, Flame, Users, Trophy, RefreshCw, Shuffle } from "lucide-react";
 
-// Temporarily disable complex dynamic imports to fix webpack runtime error
-// const TrendingPages = dynamic(() => import("./components/features/TrendingPages"), {
-//   loading: () => <TrendingPagesSkeleton limit={5} />,
-//   ssr: false
-// });
+// Dynamic imports for performance optimization
+const TrendingPages = dynamic(() => import("./components/features/TrendingPages"), {
+  loading: () => <TrendingPagesSkeleton limit={5} />,
+  ssr: false
+});
 
-// const RandomPages = dynamic(() => import("./components/features/RandomPages"), {
-//   loading: () => <RandomPagesSkeleton limit={10} />,
-//   ssr: false
-// });
+const RandomPages = dynamic(() => import("./components/features/RandomPages"), {
+  loading: () => <RandomPagesSkeleton limit={10} />,
+  ssr: false
+});
 
-// const DynamicFirebaseLoader = dynamic(() => import("./components/firebase/DynamicFirebaseLoader"), {
-//   loading: () => <div className="animate-pulse bg-muted/20 h-4 rounded" />,
-//   ssr: false
-// });
+const DynamicFirebaseLoader = dynamic(() => import("./components/firebase/DynamicFirebaseLoader"), {
+  loading: () => <div className="animate-pulse bg-muted/20 h-4 rounded" />,
+  ssr: false
+});
 
-// const DynamicChartLoader = dynamic(() => import("./components/charts/DynamicChartLoader"), {
-//   loading: () => <div className="animate-pulse bg-muted/20 h-32 rounded" />,
-//   ssr: false
-// });
+const DynamicChartLoader = dynamic(() => import("./components/charts/DynamicChartLoader"), {
+  loading: () => <div className="animate-pulse bg-muted/20 h-32 rounded" />,
+  ssr: false
+});
 
-// const DailyNotesSection = dynamic(() => import("./components/daily-notes/DailyNotesSection"), {
-//   loading: () => <div className="h-32 bg-muted/50 rounded-2xl animate-pulse mx-6 mb-8" />,
-//   ssr: false
-// });
+const DailyNotesSection = dynamic(() => import("./components/daily-notes/DailyNotesSection"), {
+  loading: () => <div className="h-32 bg-muted/50 rounded-2xl animate-pulse mx-6 mb-8" />,
+  ssr: false
+});
 
 
 
@@ -266,11 +266,9 @@ const Home = React.memo(function Home() {
             <SearchButton placeholder="Search all pages..." />
           </div>
 
-          {/* Daily Notes Section - Temporarily disabled */}
+          {/* Daily Notes Section */}
           <div data-component="DailyNotesSection">
-            <div className="h-32 bg-muted/50 rounded-2xl animate-pulse mx-6 mb-8">
-              <div className="p-4 text-center text-muted-foreground">Daily Notes temporarily disabled</div>
-            </div>
+            <DailyNotesSection />
           </div>
 
 
@@ -301,9 +299,7 @@ const Home = React.memo(function Home() {
               />
             }
           >
-            <div className="h-64 bg-muted/50 rounded-2xl animate-pulse mx-6 mb-8">
-              <div className="p-4 text-center text-muted-foreground">Trending Pages temporarily disabled</div>
-            </div>
+            <TrendingPages limit={5} showSparklines={true} priority="low" />
           </StickySection>
 
           {/* 4. Random Pages - Low priority, lazy loaded */}
@@ -313,9 +309,7 @@ const Home = React.memo(function Home() {
               <RandomPagesHeader />
             }
           >
-            <div className="h-64 bg-muted/50 rounded-2xl animate-pulse mx-6 mb-8">
-              <div className="p-4 text-center text-muted-foreground">Random Pages temporarily disabled</div>
-            </div>
+            <RandomPages limit={10} priority="low" />
           </StickySection>
 
 
