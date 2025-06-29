@@ -33,8 +33,8 @@ const nextConfig = {
     ],
     // Disable automatic scroll restoration since we handle it manually
     scrollRestoration: false,
-    // Enable modern bundling optimizations
-    optimizeCss: true,
+    // Temporarily disable CSS optimization to fix webpack runtime error
+    // optimizeCss: true,
   },
   // Turbopack and serverExternalPackages not supported in Next.js 14
   // These features are available in Next.js 15+
@@ -52,7 +52,10 @@ const nextConfig = {
   //   '@grpc/grpc-js',
   // ],
   webpack(config, { dev, isServer }) {
-    // Revert webpack debugging changes - using stable React 18 + Next.js 14 instead
+    // Add debugging for webpack runtime error
+    if (isServer) {
+      console.log('🔍 Server webpack config - investigating runtime error');
+    }
 
     config.resolve.fallback = {
       ...config.resolve.fallback,

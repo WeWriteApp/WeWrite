@@ -55,9 +55,10 @@ const ConstructionBanner = dynamic(() => import('./components/utils/Construction
   ssr: false
 });
 
-const TestModeAlertBar = dynamic(() => import('./components/admin/TestModeAlertBar'), {
-  ssr: false
-});
+// Temporarily disable complex dynamic imports to fix webpack runtime error
+// const TestModeAlertBar = dynamic(() => import('./components/admin/TestModeAlertBar'), {
+//   ssr: false
+// });
 
 
 
@@ -98,8 +99,8 @@ export default function ClientLayout({ children }) {
                                     {/* Handle pending replies after authentication */}
                                     <PendingReplyHandler />
 
-                                    {/* Test Mode Alert Bar - appears at very top when test modes are active */}
-                                    <TestModeAlertBar />
+                                    {/* Test Mode Alert Bar - temporarily disabled */}
+                                    {/* <TestModeAlertBar /> */}
 
                                     <FeatureFlagCookieManager />
                                     <main className="flex-grow">
@@ -123,8 +124,8 @@ export default function ClientLayout({ children }) {
                                         {/* Handle pending replies after authentication */}
                                         <PendingReplyHandler />
 
-                                        {/* Test Mode Alert Bar - appears at very top when test modes are active */}
-                                        <TestModeAlertBar />
+                                        {/* Test Mode Alert Bar - temporarily disabled */}
+                                        {/* <TestModeAlertBar /> */}
 
                                         {!isAuthPage && !isAdminPage && <UsernameWarningBanner />}
                                         {!isAuthPage && !isAdminPage && <UsernameEnforcementBanner />}
