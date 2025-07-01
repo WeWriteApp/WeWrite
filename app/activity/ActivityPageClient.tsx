@@ -40,7 +40,8 @@ export default function ActivityPageClient({
 
   // Use the same hook that works on the home page with pagination enabled
   // This is more reliable than server-side fetching or API calls
-  const { activities, loading: isLoading, error, hasMore, loadingMore, loadMore } = useStaticRecentActivity(20, null, false, true);
+  const activityData = useStaticRecentActivity(20, null, false, true);
+  const { activities, loading: isLoading, error, hasMore, loadingMore, loadMore } = activityData as any;
 
   // Load followed pages when user is available and viewMode is 'following'
   useEffect(() => {

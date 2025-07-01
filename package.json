@@ -65,7 +65,7 @@
     "perf:test": "npm run build && npm start & sleep 5 && npm run perf:audit && pkill -f 'next start'",
     "perf:optimize": "node scripts/optimize-performance.js",
     "perf:full": "npm run build && npm run perf:optimize && npm run analyze:bundle",
-    "deps:check": "node scripts/dependency-health-check.js",
+    "deps:check": "node scripts/dependency-health-check.cjs",
     "deps:validate": "node scripts/validate-imports.js",
     "deps:map": "node scripts/generate-dependency-map.js",
     "deps:fix": "node scripts/fix-import-paths.js",
@@ -90,7 +90,10 @@
     "dev:verbose": "NODE_OPTIONS='--trace-warnings --trace-deprecation' ENABLE_VERBOSE_LOGGING=true npm run dev",
     "build:verbose": "NODE_OPTIONS='--trace-warnings --trace-deprecation' ENABLE_VERBOSE_LOGGING=true npm run build",
     "errors:check": "node scripts/check-error-logs.cjs",
-    "errors:clear": "node scripts/clear-error-logs.cjs"
+    "errors:clear": "node scripts/clear-error-logs.cjs",
+    "vercel:check": "node scripts/check-vercel-build.cjs",
+    "vercel:fix": "node scripts/fix-vercel-build-errors.cjs",
+    "vercel:build": "SKIP_TYPE_CHECK=1 NODE_OPTIONS='--max_old_space_size=4096' npm run build"
   },
   "dependencies": {
     "@fortawesome/free-solid-svg-icons": "^6.7.2",

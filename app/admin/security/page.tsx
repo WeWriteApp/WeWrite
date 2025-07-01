@@ -2,21 +2,21 @@
 
 /**
  * Security Monitoring Page
- * 
+ *
  * Administrative interface for comprehensive security monitoring including
  * fraud detection, compliance status, audit trails, and security metrics.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { SecurityMonitoringDashboard } from '../../components/admin/SecurityMonitoringDashboard';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { 
-  Shield, 
-  AlertTriangle, 
-  Settings, 
+import {
+  Shield,
+  AlertTriangle,
+  Settings,
   Download,
   RefreshCw,
   Eye,
@@ -24,7 +24,7 @@ import {
   Activity
 } from 'lucide-react';
 
-export default function SecurityPage() {
+function SecurityPageContent() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(false);
 
@@ -276,5 +276,20 @@ export default function SecurityPage() {
         </Tabs>
       </div>
     </div>
+  );
+}
+
+export default function SecurityPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading security dashboard...</p>
+        </div>
+      </div>
+    }>
+      <SecurityPageContent />
+    </Suspense>
   );
 }

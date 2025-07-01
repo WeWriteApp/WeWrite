@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCurrentAccount } from "../providers/CurrentAccountProvider";
 import { useNotifications } from "../providers/NotificationProvider";
@@ -11,7 +11,7 @@ import { NotificationListSkeleton } from '../components/ui/skeleton';
 import { Loader, CheckCheck, ChevronLeft } from 'lucide-react';
 import { useWeWriteAnalytics } from '../hooks/useWeWriteAnalytics';
 
-export default function NotificationsPage() {
+function NotificationsContent() {
   const router = useRouter();
   const { session, isAuthenticated } = useCurrentAccount();
   const {
@@ -147,5 +147,21 @@ export default function NotificationsPage() {
       </div>
       </div>
     </div>
+  );
+}
+
+export default function NotificationsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background">
+        <div className="container max-w-4xl mx-auto px-4 py-6">
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          </div>
+        </div>
+      </div>
+    }>
+      <NotificationsContent />
+    </Suspense>
   );
 }

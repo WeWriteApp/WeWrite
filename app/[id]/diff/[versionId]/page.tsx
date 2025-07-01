@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use } from 'react';
+import React, { use, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import PageView from '../../../components/pages/PageView';
 
@@ -8,7 +8,7 @@ interface PageDiffProps {
   params: Promise<{ id: string; versionId: string; }> | { id: string; versionId: string; };
 }
 
-export default function PageDiff({ params }: PageDiffProps) {
+function PageDiffContent({ params }: PageDiffProps) {
   // Handle both Promise and object params
   let unwrappedParams;
 
@@ -30,5 +30,15 @@ export default function PageDiff({ params }: PageDiffProps) {
       versionId={versionId}
       {...(compareVersionId && { compareVersionId })}
     />
+  );
+}
+
+export default function PageDiff({ params }: PageDiffProps) {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center py-8">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+    </div>}>
+      <PageDiffContent params={params} />
+    </Suspense>
   );
 }

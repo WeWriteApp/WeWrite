@@ -1,0 +1,15 @@
+{
+  "vulnerabilities": [],
+  "outdated": [
+    {
+      "name": "error"
+    }
+  ],
+  "issues": [],
+  "recommendations": [
+    {
+      "type": "security",
+      "message": "Consider adding security packages: helmet, cors, express-rate-limit, bcrypt, jsonwebtoken"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth";
 import { auth } from "../../firebase/auth";
@@ -12,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { AuthLayout } from "../../components/layout/auth-layout";
 
-export default function CustomPasswordResetPage() {
+function CustomPasswordResetContent() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -279,5 +279,22 @@ export default function CustomPasswordResetPage() {
         </div>
       </form>
     </AuthLayout>
+  );
+}
+
+export default function CustomPasswordResetPage() {
+  return (
+    <Suspense fallback={
+      <AuthLayout
+        title="Reset Password"
+        description="Loading..."
+      >
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      </AuthLayout>
+    }>
+      <CustomPasswordResetContent />
+    </Suspense>
   );
 }

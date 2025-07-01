@@ -10,6 +10,7 @@ import SimpleSparkline from '../components/utils/SimpleSparkline';
 // // import { getTrendingPages } from "../firebase/pageViews";
 import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 import { isExactDateFormat } from "../utils/dailyNoteNavigation";
+import { useDateFormat } from '../contexts/DateFormatContext';
 
 interface TrendingPage {
   id: string;

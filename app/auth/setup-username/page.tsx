@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { addUsername, checkUsernameAvailability } from "../../firebase/auth";
 import { Button } from "../../components/ui/button";
@@ -15,7 +15,7 @@ import { debounce } from "lodash";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername } from "../../utils/usernameValidation";
 
-export default function SetupUsernamePage() {
+function SetupUsernameContent() {
   const [username, setUsername] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -294,5 +294,22 @@ export default function SetupUsernamePage() {
         </div>
       </form>
     </AuthLayout>
+  );
+}
+
+export default function SetupUsernamePage() {
+  return (
+    <Suspense fallback={
+      <AuthLayout
+        title="Choose Your Username"
+        description="Setting up your account..."
+      >
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      </AuthLayout>
+    }>
+      <SetupUsernameContent />
+    </Suspense>
   );
 }

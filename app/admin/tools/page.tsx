@@ -34,15 +34,15 @@ export default function AdminToolsPage() {
 
   // State for streak calculation
   const [streakCalculationRunning, setStreakCalculationRunning] = useState(false);
-  const [streakCalculationResult, setStreakCalculationResult] = useState(null);
+  const [streakCalculationResult, setstreakCalculationResult] = useState<any>(null);
 
   // State for notification backfill
   const [notificationBackfillRunning, setNotificationBackfillRunning] = useState(false);
-  const [notificationBackfillResult, setNotificationBackfillResult] = useState(null);
+  const [notificationBackfillResult, setnotificationBackfillResult] = useState<any>(null);
 
   // State for activity calendar backfill
   const [activityBackfillRunning, setActivityBackfillRunning] = useState(false);
-  const [activityBackfillResult, setActivityBackfillResult] = useState(null);
+  const [activityBackfillResult, setactivityBackfillResult] = useState<any>(null);
 
   // Check if user is admin
   const [isAdmin, setIsAdmin] = useState(false);

@@ -1,17 +1,17 @@
 {
-  "timestamp": "2025-06-29T23:46:11.482Z",
+  "timestamp": "2025-07-01T21:40:12.762Z",
   "summary": {
     "total": 14,
-    "passed": 14,
-    "failed": 0,
+    "passed": 11,
+    "failed": 3,
     "skipped": 0,
-    "successRate": 100
+    "successRate": 78.6
   },
   "tests": [
     {
       "name": "Health Check Module Import",
-      "status": "passed",
-      "duration": 1
+      "status": "failed",
+      "error": "Cannot find module '/Users/jamiegray/Documents/GitHub/WeWrite/scripts/dependency-health-check.js' imported from /Users/jamiegray/Documents/GitHub/WeWrite/scripts/test-dependency-system.js"
     },
     {
       "name": "Import Validator Module Import",
@@ -26,7 +26,7 @@
     {
       "name": "Self-Healing System Module Import",
       "status": "passed",
-      "duration": 1
+      "duration": 0
     },
     {
       "name": "Package.json Validation",
@@ -41,42 +41,42 @@
     {
       "name": "Dependency Health Check Execution",
       "status": "passed",
-      "duration": 254
+      "duration": 100
     },
     {
       "name": "Import Validation Execution",
       "status": "passed",
-      "duration": 268
+      "duration": 230
     },
     {
       "name": "Dependency Map Generation",
       "status": "passed",
-      "duration": 2407
+      "duration": 2306
     },
     {
       "name": "Dashboard Generation",
       "status": "passed",
-      "duration": 295
+      "duration": 282
     },
     {
       "name": "Self-Healing Plan Generation",
-      "status": "passed",
-      "duration": 258
+      "status": "failed",
+      "duration": 103
     },
     {
       "name": "Health Check Performance",
       "status": "passed",
-      "duration": 209
+      "duration": 98
     },
     {
       "name": "Import Validation Performance",
       "status": "passed",
-      "duration": 312
+      "duration": 218
     },
     {
       "name": "Memory Usage Check",
-      "status": "passed",
-      "duration": 1
+      "status": "failed",
+      "error": "Cannot find module '/Users/jamiegray/Documents/GitHub/WeWrite/scripts/dependency-health-check.js' imported from /Users/jamiegray/Documents/GitHub/WeWrite/scripts/test-dependency-system.js"
     }
   ]
 }

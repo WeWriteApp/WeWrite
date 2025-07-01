@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ModernLoginForm } from "../../components/forms/modern-login-form"
 import { ModernAuthLayout } from "../../components/layout/modern-auth-layout"
@@ -7,7 +8,7 @@ import ReturnToPreviousAccount from "./ReturnToPreviousAccount"
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
-export default function LoginPage() {
+function LoginContent() {
   const searchParams = useSearchParams();
   const action = searchParams?.get('action');
   const isPostingReply = action === 'posting_reply';
@@ -28,4 +29,21 @@ export default function LoginPage() {
       <ModernLoginForm />
     </ModernAuthLayout>
   )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <ModernAuthLayout
+        title="Sign In"
+        description="Welcome back to WeWrite"
+      >
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      </ModernAuthLayout>
+    }>
+      <LoginContent />
+    </Suspense>
+  );
 }

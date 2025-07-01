@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Head from "next/head";
 import PublicLayout from "../components/layout/PublicLayout";
@@ -70,7 +70,7 @@ interface PageData {
  * NewPage component that mimics SinglePageView structure for creating new pages
  * This component emulates the exact same architecture as editing an existing page
  */
-export default function NewPage() {
+function NewPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentAccount } = useCurrentAccount();
@@ -841,5 +841,13 @@ export default function NewPage() {
         )}
       </Layout>
     </SlideUpPage>
+  );
+}
+
+export default function NewPage() {
+  return (
+    <Suspense fallback={<NewPageSkeleton />}>
+      <NewPageContent />
+    </Suspense>
   );
 }

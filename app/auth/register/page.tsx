@@ -1,12 +1,13 @@
 "use client";
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ModernRegisterForm } from "../../components/forms/modern-register-form";
 import { ModernAuthLayout } from "../../components/layout/modern-auth-layout";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
-export default function RegisterPage(): JSX.Element {
+function RegisterContent(): JSX.Element {
   const searchParams = useSearchParams();
   const action = searchParams.get('action');
   const isPostingReply = action === 'posting_reply';
@@ -27,5 +28,22 @@ export default function RegisterPage(): JSX.Element {
 
       <ModernRegisterForm />
     </ModernAuthLayout>
+  );
+}
+
+export default function RegisterPage(): JSX.Element {
+  return (
+    <Suspense fallback={
+      <ModernAuthLayout
+        title="Join Our Community"
+        description="Create your account to start writing, collaborating, and sharing your ideas with the world."
+      >
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      </ModernAuthLayout>
+    }>
+      <RegisterContent />
+    </Suspense>
   );
 }
