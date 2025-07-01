@@ -259,7 +259,7 @@ export const userNeedsUsername = (user: UserData | null): boolean => {
  * @returns The best username or null if none available
  */
 export const getBestUsername = (user: UserData | null): string | null => {
-  return checkUserHasUsername(session).username;
+  return checkUserHasUsername(user).username;
 };
 
 /**

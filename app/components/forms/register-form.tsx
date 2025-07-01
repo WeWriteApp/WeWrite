@@ -4,19 +4,17 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { cn } from "../../lib/utils"
-import { LoadingButton } from "../ui/loading-button"
+import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { Label } from "../ui/label"
-import { useState, useEffect } from "react"
-import { createUser, addUsername, checkUsernameAvailability } from "../../firebase/auth"
-import { Check, X, AlertCircle } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
+import { createUser, addUsername, checkUsernameAvailability, loginAnonymously } from "../../firebase/auth"
+import { Check, Loader2, X } from "lucide-react"
 import { debounce } from "lodash"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
-import { AuthRedirectOverlay } from "../auth/AuthRedirectOverlay"
-// reCAPTCHA functionality removed
-import { Alert, AlertDescription } from "../ui/alert"
+import { Separator } from "../ui/separator"
+import { validateUsernameFormat, getUsernameErrorMessage, generateUsernameSuggestions } from "../../utils/usernameValidation"
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics"
-import { validateUsernameFormat, generateUsernameSuggestions } from "../../utils/usernameValidation"
+import { transferLoggedOutAllocationsToUser } from "../../utils/simulatedTokens"
 
 export function RegisterForm({
   className,
@@ -31,112 +29,13 @@ export function RegisterForm({
   const [isLoading, setIsLoading] = useState(false)
   const [isFormValid, setIsFormValid] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
-  // reCAPTCHA states removed
 
-  // Username validation states
+  // Username validation state
   const [isChecking, setIsChecking] = useState(false)
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null)
-  const [validationMessage, setValidationMessage] = useState<string>("")
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [validationMessage, setValidationMessage] = useState<string | null>(null)
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([])
-
-  // Function to check username availability
-  const checkUsername = async (username: string) => {
-    console.log('RegisterForm: checking username:', username)
-
-    if (!username || username.length < 3) {
-      setIsAvailable(null)
-      setValidationMessage("")
-      setValidationError(null)
-      setUsernameSuggestions([])
-      return
-    }
-
-    // First, validate format client-side
-    const formatValidation = validateUsernameFormat(username)
-    if (!formatValidation.isValid) {
-      setIsAvailable(false)
-      setValidationError(formatValidation.error)
-      setValidationMessage(formatValidation.message || "")
-
-      // If it contains whitespace, suggest cleaned versions
-      if (formatValidation.error === "CONTAINS_WHITESPACE") {
-        const suggestions = generateUsernameSuggestions(username)
-        setUsernameSuggestions(suggestions)
-      } else {
-        setUsernameSuggestions([])
-      }
-      return
-    }
-
-    // Special handling for known test case
-    if (username.toLowerCase() === 'jamie') {
-      console.log('RegisterForm: detected known username "jamie"')
-      setIsChecking(true)
-
-      // Force a small delay to simulate network request
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      setIsAvailable(false)
-      setValidationMessage("Username already taken")
-      setValidationError("USERNAME_TAKEN")
-      // Generate some test suggestions for 'jamie'
-      setUsernameSuggestions(['jamie123', 'jamie_2023', 'jamie2024'])
-      setIsChecking(false)
-      return
-    }
-
-    setIsChecking(true)
-    try {
-      const result = await checkUsernameAvailability(username)
-      console.log('RegisterForm: validation result:', result)
-
-      setIsAvailable(result.isAvailable)
-      setValidationMessage(result.message)
-      setValidationError(result.error || null)
-
-      // Set username suggestions if available
-      if (result.suggestions && Array.isArray(result.suggestions)) {
-        setUsernameSuggestions(result.suggestions)
-      } else {
-        setUsernameSuggestions([])
-      }
-    } catch (error) {
-      console.error('RegisterForm: validation error:', error)
-      setIsAvailable(false)
-      setValidationMessage("Error checking username")
-      setValidationError("CHECK_ERROR")
-      setUsernameSuggestions([])
-    } finally {
-      setIsChecking(false)
-    }
-  }
-
-  // Debounce the username check to avoid too many requests
-  const debouncedCheck = debounce(checkUsername, 500)
-
-  // Check username availability when username changes
-  useEffect(() => {
-    if (username) {
-      console.log('RegisterForm: username changed, checking:', username)
-      debouncedCheck(username)
-    } else {
-      setIsAvailable(null)
-      setValidationMessage("")
-      setValidationError(null)
-    }
-
-    return () => debouncedCheck.cancel()
-  }, [username])
-
-  // Force immediate check for "jamie" without debounce
-  useEffect(() => {
-    if (username && username.toLowerCase() === 'jamie') {
-      console.log('RegisterForm: forcing immediate check for "jamie"')
-      debouncedCheck.cancel() // Cancel any pending debounced checks
-      checkUsername(username) // Directly check without debounce
-    }
-  }, [username])
 
   // Validate form inputs
   useEffect(() => {
@@ -146,47 +45,112 @@ export function RegisterForm({
     // Username is valid if it's at least 3 characters and available (not taken)
     const isUsernameValid = username.length >= 3 && isAvailable === true && !validationError
 
-    console.log('RegisterForm: form validation state:', {
-      isEmailValid,
-      isPasswordValid,
-      isUsernameValid,
-      usernameLength: username.length,
-      isAvailable,
-      validationError
-    })
-
     setIsFormValid(isEmailValid && isPasswordValid && isUsernameValid)
   }, [email, password, username, isAvailable, validationError])
 
-  // Function to record username history via API
-  const recordUsernameHistory = async (userId: string, oldUsername: string, newUsername: string) => {
-    try {
-      const response = await fetch('/api/username/history', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          userId,
-          oldUsername,
-          newUsername
-        })});
+  // Username validation function (memoized to prevent infinite re-renders)
+  const checkUsername = useCallback(
+    debounce(async (value: string) => {
+      // Reset validation state
+      setValidationError(null)
+      setValidationMessage(null)
+      setUsernameSuggestions([])
 
-      if (!response.ok) {
-        throw new Error('Failed to record username history');
+      // Skip validation for empty usernames
+      if (!value) {
+        setIsAvailable(null)
+        return
       }
 
-      return await response.json();
-    } catch (error) {
-      console.error('Error recording username history:', error);
-      return { success: false, error: error.message };
+      // First, validate format client-side
+      const formatValidation = validateUsernameFormat(value)
+      if (!formatValidation.isValid) {
+        setIsAvailable(false)
+        setValidationError(formatValidation.error)
+        setValidationMessage(formatValidation.message)
+
+        // If it contains whitespace, suggest cleaned versions
+        if (formatValidation.error === "CONTAINS_WHITESPACE") {
+          const suggestions = generateUsernameSuggestions(value)
+          setUsernameSuggestions(suggestions)
+        }
+        return
+      }
+
+      // Special handling for known test case
+      if (value.toLowerCase() === 'jamie') {
+        setIsChecking(true)
+
+        // Force a small delay to simulate network request
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        setIsAvailable(false)
+        setValidationError("USERNAME_TAKEN")
+        setValidationMessage("Username already taken")
+        // Generate some test suggestions for 'jamie'
+        setUsernameSuggestions(['jamie123', 'jamie_2023', 'jamie2024'])
+        setIsChecking(false)
+        return
+      }
+
+      // Check availability
+      setIsChecking(true)
+      try {
+        const result = await checkUsernameAvailability(value)
+
+        if (typeof result === 'boolean') {
+          // Handle legacy boolean response
+          setIsAvailable(result)
+          if (!result) {
+            setValidationError("USERNAME_TAKEN")
+            setValidationMessage("Username already taken")
+          }
+        } else {
+          // Handle new object response
+          setIsAvailable(result.isAvailable)
+          setValidationMessage(result.message || null)
+          setValidationError(result.error || null)
+
+          // Set username suggestions if available
+          if (result.suggestions && Array.isArray(result.suggestions)) {
+            setUsernameSuggestions(result.suggestions)
+          }
+        }
+      } catch (error) {
+        console.error("Error checking username:", error)
+        setIsAvailable(false)
+        setValidationError("CHECK_FAILED")
+        setValidationMessage("Could not verify username availability. Please try again.")
+
+        // Prevent infinite loops by not retrying automatically
+        // User can manually retry by changing the username
+      } finally {
+        setIsChecking(false)
+      }
+    }, 500),
+    [] // Empty dependency array since we don't want this to change
+  )
+
+  // Trigger username validation when username changes
+  useEffect(() => {
+    if (username) {
+      checkUsername(username)
+    } else {
+      setIsAvailable(null)
+      setValidationError(null)
+      setValidationMessage(null)
     }
-  };
+
+    return () => {
+      checkUsername.cancel()
+    }
+  }, [username, checkUsername])
 
   // Handle clicking on a username suggestion
   const handleSuggestionClick = (suggestion: string) => {
     setUsername(suggestion)
     // Immediately check the availability of the suggested username
-    debouncedCheck.cancel()
+    checkUsername.cancel()
     checkUsername(suggestion)
   }
 
@@ -215,16 +179,19 @@ export function RegisterForm({
     }
 
     try {
-      // reCAPTCHA verification removed
       const result = await createUser(email, password)
 
       if (result.user) {
-        // Successfully created user, now add username
-        const usernameResult = await addUsername(result.session.uid, username)
+        // Add username to the user account
+        try {
+          await addUsername(result.session.uid, username)
+          console.log("Username added successfully")
 
-        if (usernameResult.success) {
-          // Record the initial username in the history
-          await recordUsernameHistory(result.session.uid, "initial", username)
+          // Transfer any logged-out token allocations to the new user
+          const transferResult = transferLoggedOutAllocationsToUser(result.session.uid)
+          if (transferResult.success && transferResult.transferredCount > 0) {
+            console.log(`Transferred ${transferResult.transferredCount} token allocations to new user`)
+          }
 
           // Track user creation event
           trackAuthEvent('USER_CREATED', {
@@ -237,203 +204,199 @@ export function RegisterForm({
           // Show redirect overlay
           setIsRedirecting(true)
 
-          // Successfully added username
+          // Redirect to home page after a short delay
+          localStorage.setItem('authRedirectPending', 'true')
           setTimeout(() => {
-            router.push("/")
+            localStorage.removeItem('authRedirectPending')
+            window.location.href = "/"
           }, 1500)
-        } else {
-          // Handle specific username errors
-          if (usernameResult.error === "USERNAME_TAKEN") {
-            setError("Username is already taken. Please choose a different username.")
-            setValidationError("USERNAME_TAKEN")
-            setValidationMessage("Username already taken")
-          } else if (usernameResult.error === "INVALID_CHARS") {
-            setError("Username contains invalid characters. Please use only letters, numbers, and underscores.")
-            setValidationError("INVALID_CHARS")
-            setValidationMessage("Username can only contain letters, numbers, and underscores")
-          } else if (usernameResult.error === "TOO_SHORT") {
-            setError("Username must be at least 3 characters long.")
-            setValidationError("TOO_SHORT")
-            setValidationMessage("Username must be at least 3 characters")
-          } else {
-            setError(usernameResult.message || "Account created but failed to set username. Please update your profile.")
-          }
+        } catch (usernameError: any) {
+          console.error("Error adding username:", usernameError)
+          setError("Account created but failed to set username. Please try again.")
+          setIsLoading(false)
         }
       } else {
-        // Error handling
+        // Handle error from createUser
         const errorCode = result.code || ""
-        let errorMessage = "Failed to create account. Please try again."
+        let errorMessage = result.message || "Failed to create account. Please try again."
 
         if (errorCode.includes("email-already-in-use")) {
-          errorMessage = "Email is already in use"
-        } else if (errorCode.includes("weak-password")) {
-          errorMessage = "Password is too weak, please use at least 6 characters"
-        } else if (errorCode.includes("invalid-email")) {
-          errorMessage = "Email address is invalid"
+          errorMessage = "Email already in use. Try logging in instead."
         }
 
         setError(errorMessage)
+        setIsLoading(false)
       }
-    } catch (err) {
-      console.error("Registration error:", err)
-      setError("An unexpected error occurred. Please try again.")
-    } finally {
+    } catch (error: any) {
+      console.error("Registration error:", error)
+      setError(error.message || "An unexpected error occurred")
       setIsLoading(false)
     }
   }
 
   return (
-    <>
-      <AuthRedirectOverlay isVisible={isRedirecting} message="Creating your account..." />
-      <form
-        className={cn("flex flex-col gap-3 sm:gap-4", className)}
-        {...props}
-        onSubmit={handleSubmit}
-      >
+    <form
+      className={cn("flex flex-col gap-4", className)}
+      {...props}
+      onSubmit={handleSubmit}
+    >
       <div className="flex flex-col items-center gap-1 text-center">
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Create account</h1>
+        <h1 className="text-2xl font-bold">Create your account</h1>
       </div>
-      <div className="grid gap-3 sm:gap-4">
+
+      <div className="grid gap-4">
         <div className="grid gap-2">
           <Label htmlFor="username" className={cn(
-            "text-sm sm:text-base",
-            validationError ? "text-destructive dark:text-red-400" : "text-foreground"
-          )}>Username</Label>
+            "text-sm font-medium",
+            validationError ? "text-destructive" : ""
+          )}>
+            Username
+          </Label>
           <div className="relative">
             <Input
               id="username"
               type="text"
-              placeholder="thomaspaine"
+              placeholder="yourname"
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               tabIndex={1}
               className={cn(
-                "bg-background text-foreground placeholder:text-muted-foreground h-10 sm:h-11 px-3",
-                (validationError || isAvailable === false) ?
-                  "border-destructive focus-visible:ring-destructive dark:border-red-400 dark:focus-visible:ring-red-400" :
-                  isAvailable === true ?
-                    "border-success focus-visible:ring-success" :
-                    "border-input"
+                "h-10 bg-background pr-10",
+                validationError ? "border-destructive focus-visible:ring-destructive" : "",
+                isAvailable === true ? "border-success focus-visible:ring-success" : ""
               )}
+              autoComplete="username"
             />
-            {/* Loading indicator - only show when checking username */}
-            {username && username.length >= 3 && isChecking && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <div className="loader"></div>
+            {isChecking && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
             )}
-            {/* Show validation status icon when not checking */}
-            {username && username.length >= 3 && !isChecking && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                {isAvailable === true ? (
+            {!isChecking && username && username.length >= 3 && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                {isAvailable ? (
                   <Check className="h-4 w-4 text-green-500" />
-                ) : isAvailable === false ? (
-                  <X className="h-4 w-4 text-destructive dark:text-red-400" />
-                ) : null}
-              </div>
-            )}
-            {/* Show error message for username validation */}
-            {(validationError || (username && username.length >= 3 && isAvailable === false)) && (
-              <div className={cn(
-                "flex flex-col mt-2 px-2 py-1.5 rounded-md bg-destructive/10 dark:bg-red-500/10 text-destructive dark:text-red-400"
-              )}>
-                <div className="flex items-center">
-                  <X className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <p className="text-xs sm:text-sm font-medium">
-                    {validationError === "USERNAME_TAKEN" ? "Username already taken" :
-                     validationError === "INVALID_CHARS" ? "Username contains invalid characters" :
-                     validationError === "TOO_SHORT" ? "Username must be at least 3 characters" :
-                     validationError === "TOO_LONG" ? "Username is too long" :
-                     isAvailable === false ? "Username already taken" :
-                     validationMessage || "Invalid username"}
-                  </p>
-                </div>
-
-                {/* Username suggestions */}
-                {validationError === "USERNAME_TAKEN" && usernameSuggestions.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-xs text-foreground mb-1.5">Try one of these instead:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {usernameSuggestions.map((suggestion, index) => (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => handleSuggestionClick(suggestion)}
-                          className="px-2 py-1 text-xs font-medium rounded-md bg-background border border-input hover:bg-accent hover:text-accent-foreground transition-colors"
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                ) : (
+                  <X className="h-4 w-4 text-destructive" />
                 )}
               </div>
             )}
           </div>
-          {username && username.length < 3 && !validationError && (
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">Username must be at least 3 characters</p>
+          {validationMessage && (
+            <div className={cn(
+              "mt-1",
+              validationError ? "text-destructive" : "text-muted-foreground"
+            )}>
+              <p className="text-xs">{validationMessage}</p>
+
+              {/* Username suggestions */}
+              {(validationError === "USERNAME_TAKEN" || validationError === "CONTAINS_WHITESPACE") && usernameSuggestions.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs text-foreground mb-1.5">
+                    {validationError === "CONTAINS_WHITESPACE" ? "Try this instead:" : "Try one of these instead:"}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {usernameSuggestions.map((suggestion, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        className="px-2 py-1 text-xs font-medium rounded-md bg-background border border-input hover:bg-accent hover:text-accent-foreground transition-colors"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
+
         <div className="grid gap-2">
-          <Label htmlFor="email" className="text-foreground text-sm sm:text-base">Email</Label>
+          <Label htmlFor="email" className="text-sm font-medium">
+            Email
+          </Label>
           <Input
             id="email"
             type="email"
-            placeholder="thomaspaine@example.com"
+            placeholder="name@example.com"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             tabIndex={2}
-            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-10 sm:h-11 px-3"
+            className="h-10 bg-background"
+            autoComplete="email"
           />
         </div>
+
         <div className="grid gap-2">
-          <Label htmlFor="password" className="text-foreground text-sm sm:text-base">Password</Label>
+          <Label htmlFor="password" className="text-sm font-medium">
+            Password
+          </Label>
           <Input
             id="password"
             type="password"
+            placeholder="••••••••"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             tabIndex={3}
-            className="bg-background border-input text-foreground placeholder:text-muted-foreground h-10 sm:h-11 px-3"
+            className="h-10 bg-background"
+            autoComplete="new-password"
           />
+          <p className="text-xs text-muted-foreground">
+            Password must be at least 6 characters
+          </p>
         </div>
+
         {error && (
-          <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
-            <p className="text-sm text-destructive">{error}</p>
+          <div className="text-sm font-medium text-destructive bg-destructive/10 p-3 rounded-md">
+            {error}
           </div>
         )}
 
-        {/* reCAPTCHA UI elements removed */}
-        <LoadingButton
-          disabled={!isFormValid}
-          isLoading={isLoading}
-          loadingText="Creating account..."
-          className={cn(
-            "w-full transition-all h-10 sm:h-11 mt-2",
-            !isFormValid && !isLoading ?
-              "opacity-50 cursor-not-allowed bg-muted hover:bg-muted text-muted-foreground" :
-              "bg-white hover:bg-white/90 text-black !text-black"
-          )}
-          tabIndex={4}
+        <Button
           type="submit"
+          className={cn(
+            "w-full h-10 font-medium",
+            !isFormValid && !isLoading ?
+              "opacity-50 cursor-not-allowed" : ""
+          )}
+          disabled={isLoading || !isFormValid}
+          tabIndex={4}
         >
-          Create account
-        </LoadingButton>
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating account...
+            </>
+          ) : (
+            "Create account"
+          )}
+        </Button>
       </div>
-      <div className="text-center text-sm sm:text-base text-muted-foreground mt-2">
-        Already have an account?{" "}
-        <Link
-          href="/auth/login"
-          className="underline underline-offset-4 text-foreground hover:text-foreground/90"
-          tabIndex={5}
-        >
-          Log in
-        </Link>
+
+      <div className="relative my-2">
+        <div className="absolute inset-0 flex items-center">
+          <Separator className="w-full" />
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-white dark:bg-gray-900 px-2 text-xs text-muted-foreground">
+            OR
+          </span>
+        </div>
       </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full h-10"
+        onClick={() => router.push('/auth/login')}
+      >
+        Sign in with existing account
+      </Button>
     </form>
-    </>
   )
 }

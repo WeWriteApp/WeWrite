@@ -23,6 +23,7 @@ import { WriterTokenBalance, WriterTokenEarnings } from '../../types/database';
 import { formatCurrency } from '../../utils/formatCurrency';
 import EarningsChart from './EarningsChart';
 import { CompactAllocationTimer } from '../AllocationCountdownTimer';
+import { getLoggedOutTokenBalance } from '../../utils/simulatedTokens';
 
 interface WriterTokenDashboardProps {
   className?: string;
@@ -37,11 +38,44 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
 
+  // Fake token data for different user states
+  const [fakeTokenData, setFakeTokenData] = useState({
+    notLoggedIn: 0,
+    noSubscription: 0,
+    pendingThisMonth: 0,
+    lockedInLastMonth: 0
+  });
+
   useEffect(() => {
     if (session?.uid) {
       loadWriterData();
     }
+    loadFakeTokenData();
   }, [session?.uid]);
+
+  const loadFakeTokenData = () => {
+    // Get logged-out user allocations
+    const loggedOutBalance = getLoggedOutTokenBalance();
+    const notLoggedInTokens = loggedOutBalance.allocations.reduce((total, allocation) => {
+      // For demo purposes, we'll assume some allocations are for this writer
+      return total + (Math.random() > 0.7 ? allocation.tokens : 0);
+    }, 0);
+
+    // Get logged-in users without subscription allocations
+    // This would normally come from a service, but for demo we'll simulate
+    const noSubscriptionTokens = Math.floor(Math.random() * 50);
+
+    // Simulate pending and locked-in tokens
+    const pendingThisMonth = Math.floor(Math.random() * 30);
+    const lockedInLastMonth = Math.floor(Math.random() * 80);
+
+    setFakeTokenData({
+      notLoggedIn: Math.floor(notLoggedInTokens),
+      noSubscription: noSubscriptionTokens,
+      pendingThisMonth,
+      lockedInLastMonth
+    });
+  };
 
   const loadWriterData = async () => {
     if (!session?.uid) return;
@@ -259,6 +293,77 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Fake Token Categories */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Pending Token Allocations
+          </CardTitle>
+          <CardDescription>
+            Token allocations from users in different states
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="text-center p-4 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg">
+              <div className="text-2xl font-bold text-orange-600">
+                {fakeTokenData.notLoggedIn}
+              </div>
+              <div className="text-sm text-orange-700 dark:text-orange-300 font-medium">
+                Not Logged In Yet
+              </div>
+              <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                Users need to sign up
+              </div>
+            </div>
+
+            <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <div className="text-2xl font-bold text-yellow-600">
+                {fakeTokenData.noSubscription}
+              </div>
+              <div className="text-sm text-yellow-700 dark:text-yellow-300 font-medium">
+                No Subscription Yet
+              </div>
+              <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                Users need to subscribe
+              </div>
+            </div>
+
+            <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">
+                {fakeTokenData.pendingThisMonth}
+              </div>
+              <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                Pending This Month
+              </div>
+              <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                Not locked in yet
+              </div>
+            </div>
+
+            <div className="text-center p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">
+                {fakeTokenData.lockedInLastMonth}
+              </div>
+              <div className="text-sm text-green-700 dark:text-green-300 font-medium">
+                Locked In Last Month
+              </div>
+              <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                Ready for payout
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-lg">
+            <p className="text-sm text-muted-foreground text-center">
+              <strong>Note:</strong> These are simulated token allocations from users in different states.
+              Only "Locked In" tokens from previous months can be included in payouts.
+            </p>
+          </div>
         </CardContent>
       </Card>
 

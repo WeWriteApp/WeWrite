@@ -321,3 +321,38 @@ export const convertSimulatedToRealTokens = async (
     errors
   };
 };
+
+/**
+ * Transfer logged-out user allocations to a new user account
+ * This should be called during the registration process
+ */
+export const transferLoggedOutAllocationsToUser = (userId: string): { success: boolean; transferredCount: number } => {
+  try {
+    const loggedOutBalance = getLoggedOutTokenBalance();
+
+    if (loggedOutBalance.allocations.length === 0) {
+      return { success: true, transferredCount: 0 };
+    }
+
+    // Save the logged-out allocations to the new user's storage
+    const userStorageKey = getUserStorageKey(userId);
+    const dataToStore = {
+      allocatedTokens: loggedOutBalance.allocatedTokens,
+      allocations: loggedOutBalance.allocations,
+      lastUpdated: Date.now()
+    };
+
+    localStorage.setItem(userStorageKey, JSON.stringify(dataToStore));
+
+    // Clear the logged-out allocations
+    clearLoggedOutTokens();
+
+    return {
+      success: true,
+      transferredCount: loggedOutBalance.allocations.length
+    };
+  } catch (error) {
+    console.warn('Error transferring logged-out allocations:', error);
+    return { success: false, transferredCount: 0 };
+  }
+};

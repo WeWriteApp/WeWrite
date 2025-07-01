@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ModernRegisterForm } from "../../components/forms/modern-register-form";
+import { RegisterForm } from "../../components/forms/register-form";
 import { ModernAuthLayout } from "../../components/layout/modern-auth-layout";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -26,7 +26,7 @@ function RegisterContent(): JSX.Element {
         </Alert>
       )}
 
-      <ModernRegisterForm />
+      <RegisterForm />
     </ModernAuthLayout>
   );
 }

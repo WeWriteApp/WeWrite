@@ -14,6 +14,11 @@ import SupportUsModal from "./SupportUsModal";
 import { getOptimizedUserSubscription } from "../../firebase/optimizedSubscription";
 import { isActiveSubscription } from "../../utils/subscriptionStatus";
 import {
+  getLoggedOutTokenBalance,
+  allocateLoggedOutTokens,
+  getLoggedOutPageAllocation
+} from "../../utils/simulatedTokens";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -123,6 +128,10 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   // Optimistic UI state
   const [pendingChanges, setPendingChanges] = useState(0);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Logged-out user state
+  const [loggedOutTokenBalance, setLoggedOutTokenBalance] = useState<any>(null);
+  const [loggedOutCurrentAllocation, setLoggedOutCurrentAllocation] = useState(0);
   const baseAllocationRef = useRef<number>(0); // Track the server-confirmed allocation
 
   // Helper functions for segment selection
@@ -170,6 +179,20 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
       setCurrentTokenAllocation(0);
     }
   }, [currentAccount, isSubscriptionEnabled, pageId, isPageOwner, visible]);
+
+  // Load logged-out user data when not authenticated
+  useEffect(() => {
+    if (!currentAccount && isSubscriptionEnabled && pageId && visible) {
+      const balance = getLoggedOutTokenBalance();
+      const currentAllocation = getLoggedOutPageAllocation(pageId);
+
+      setLoggedOutTokenBalance(balance);
+      setLoggedOutCurrentAllocation(currentAllocation);
+    } else {
+      setLoggedOutTokenBalance(null);
+      setLoggedOutCurrentAllocation(0);
+    }
+  }, [currentAccount, isSubscriptionEnabled, pageId, visible]);
 
   // Validate budget when subscription or user changes
   useEffect(() => {
@@ -425,6 +448,27 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     }, 700);
   };
 
+  // Handle token allocation for logged-out users
+  const handleLoggedOutTokenAllocation = (change: number) => {
+    if (!loggedOutTokenBalance || !pageId) return;
+
+    const newAllocation = Math.max(0, loggedOutCurrentAllocation + change);
+    const maxAllocation = loggedOutTokenBalance.availableTokens + loggedOutCurrentAllocation;
+
+    if (newAllocation > maxAllocation) {
+      return;
+    }
+
+    // Update local state immediately
+    setLoggedOutCurrentAllocation(newAllocation);
+
+    // Update localStorage
+    const result = allocateLoggedOutTokens(pageId, pageTitle || pageId, newAllocation);
+    if (result.success) {
+      setLoggedOutTokenBalance(result.balance);
+    }
+  };
+
   // Handle subscription activation
   const handleActivateSubscription = () => {
     if (isSubscriptionEnabled) {
@@ -445,27 +489,124 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     return null;
   }
 
-  // Show sign-in prompt for logged out users
+  // Show pledge bar for logged out users with simulated tokens
   if (!currentAccount) {
+    if (!loggedOutTokenBalance) {
+      return null; // Still loading
+    }
+
+    const totalTokens = loggedOutTokenBalance.totalTokens;
+    const availableTokens = loggedOutTokenBalance.availableTokens;
+    const currentPagePercentage = totalTokens > 0 ? (loggedOutCurrentAllocation / totalTokens) * 100 : 0;
+    const otherPagesPercentage = totalTokens > 0 ? ((totalTokens - availableTokens - loggedOutCurrentAllocation) / totalTokens) * 100 : 0;
+    const availablePercentage = totalTokens > 0 ? (availableTokens / totalTokens) * 100 : 0;
+
     return (
-      <div className={cn(
-        "w-full max-w-2xl mx-auto rounded-2xl shadow-2xl p-4",
-        debugColors
-          ? "bg-blue-500 border-2 border-blue-300"
-          : "bg-background/80 backdrop-blur-xl border border-white/20"
-      )}>
-        <div className="text-center">
-          <h3 className="text-base font-medium mb-3">Support this page</h3>
-          <p className="text-sm text-muted-foreground mb-3">
-            Sign in to allocate tokens and support creators
+      <div
+        ref={ref}
+        className={cn(
+          "w-full max-w-2xl mx-auto rounded-2xl shadow-2xl overflow-hidden p-4",
+          debugColors
+            ? "bg-blue-500 border-2 border-blue-300"
+            : "bg-background/80 backdrop-blur-xl border border-white/20",
+          className
+        )}
+        data-pledge-bar
+        data-component="pledge-bar-card"
+        data-testid="pledge-bar-logged-out"
+        {...props}
+      >
+        {/* Header */}
+        <div className="text-center mb-4">
+          <h3 className="text-base font-medium mb-1">Try Token Allocation</h3>
+          <p className="text-xs text-muted-foreground">
+            Allocate your 100 demo tokens • Sign up to make it real
           </p>
+        </div>
+
+        {/* Notice for logged-out users */}
+        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <p className="text-sm text-blue-700 dark:text-blue-300 text-center">
+            Log in to begin allocating tokens to pages
+          </p>
+        </div>
+
+        {/* Progress bar */}
+        <div className="relative w-full h-6 bg-gray-200 dark:bg-gray-700 rounded-full mb-4 overflow-hidden">
+          {/* Current page allocation */}
+          <div
+            className="absolute left-0 top-0 h-full bg-blue-500 transition-all duration-300"
+            style={{ width: `${currentPagePercentage}%` }}
+          />
+          {/* Other pages allocation */}
+          <div
+            className="absolute top-0 h-full bg-gray-400 transition-all duration-300"
+            style={{
+              left: `${currentPagePercentage}%`,
+              width: `${otherPagesPercentage}%`
+            }}
+          />
+          {/* Available tokens */}
+          <div
+            className="absolute top-0 h-full bg-green-400 transition-all duration-300"
+            style={{
+              left: `${currentPagePercentage + otherPagesPercentage}%`,
+              width: `${availablePercentage}%`
+            }}
+          />
+        </div>
+
+        {/* Token allocation controls */}
+        <div className="flex items-center justify-center mb-4 w-full" style={{ gap: '12px' }}>
           <Button
             size="sm"
-            onClick={() => router.push('/auth/signin')}
+            variant="outline"
+            onClick={() => handleLoggedOutTokenAllocation(-1)}
+            disabled={loggedOutCurrentAllocation <= 0}
+            className="p-0 flex-shrink-0 rounded-lg border-2 h-12 w-12"
+          >
+            <Minus className="h-5 w-5" />
+          </Button>
+
+          <div className="flex-1 text-center">
+            <div className="text-lg font-bold text-primary">
+              {loggedOutCurrentAllocation}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              of {totalTokens} tokens
+            </div>
+          </div>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleLoggedOutTokenAllocation(1)}
+            disabled={availableTokens <= 0}
+            className="p-0 flex-shrink-0 rounded-lg border-2 h-12 w-12"
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Token text */}
+        <div className="text-center mb-4">
+          <span className="font-medium text-primary text-sm">
+            {loggedOutCurrentAllocation} tokens pledged per month
+          </span>
+        </div>
+
+        {/* Sign up prompt */}
+        <div className="text-center">
+          <Button
+            size="sm"
+            onClick={() => router.push('/auth/register')}
             className="w-full"
           >
-            Sign In to Support
+            Sign Up to Make It Real
           </Button>
+          <p className="text-xs text-muted-foreground mt-2">
+            Your allocations will be saved when you create an account
+          </p>
         </div>
       </div>
     );
@@ -567,6 +708,15 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
       data-testid="pledge-bar"
       {...props}
     >
+
+        {/* Subscription Notice for logged-in users without subscription */}
+        {currentAccount && !canAllocateTokens(subscription) && (
+          <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg">
+            <p className="text-sm text-orange-700 dark:text-orange-300 text-center">
+              Start your subscription to start supporting writers with tokens
+            </p>
+          </div>
+        )}
 
         {/* Budget Warning Banner */}
         {showBudgetWarning && budgetValidation && (

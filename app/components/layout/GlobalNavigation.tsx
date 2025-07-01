@@ -5,6 +5,7 @@ import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { SidebarProvider } from './UnifiedSidebar';
 import MobileBottomNav from './MobileBottomNav';
 import SidebarLayout from './SidebarLayout';
+import UsernameEnforcementModal from '../auth/UsernameEnforcementModal';
 
 /**
  * GlobalNavigation Component
@@ -28,6 +29,8 @@ export default function GlobalNavigation({ children }: { children: React.ReactNo
       </SidebarLayout>
       {/* Mobile bottom navigation - handles its own visibility logic */}
       <MobileBottomNav />
+      {/* Username enforcement modal - shows when user needs to set username */}
+      <UsernameEnforcementModal />
     </SidebarProvider>
   );
 }

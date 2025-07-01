@@ -13,14 +13,14 @@ import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername, 
 export default function UsernameEnforcementModal() {
   const { session } = useCurrentAccount();
   const [open, setOpen] = useState(false);
-  const [, sessionname, setUsername] = useState('');
+  const [username, setUsername] = useState('');
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationMessage, setValidationMessage] = useState<string>("");
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [sessionnameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
+  const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
 
   // Check if the user has a username using centralized logic
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function UsernameEnforcementModal() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [, sessionname]);
+  }, [username]);
 
   // Handle clicking on a username suggestion
   const handleSuggestionClick = (suggestion: string) => {
@@ -119,16 +119,9 @@ export default function UsernameEnforcementModal() {
       const result = await addUsername(session.uid, username);
 
       if (result.success) {
-        // Update the user state in the global store to reflect the new username
-        const { setUser } = useGlobalStore.getState();
-        setUser({
-          ...user,
-          username: username,
-          displayName: username
-        });
-
-        // Success - close modal
+        // Success - close modal and let the auth system refresh the session
         setOpen(false);
+        // The session will be updated automatically by the auth system
       } else {
         setError('Failed to save username. Please try again.');
       }
