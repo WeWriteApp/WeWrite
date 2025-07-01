@@ -108,7 +108,9 @@ export const getUserPledges = async (userId: string): Promise<PledgeItem[]> => {
  */
 export const validatePledgeBudget = async (userId: string): Promise<BudgetValidationResult> => {
   try {
-    const response = await fetch('/api/pledges/validate-budget');
+    const response = await fetch('/api/pledges/validate-budget', {
+      credentials: 'include'
+    });
     if (!response.ok) {
       throw new Error('Failed to validate pledge budget');
     }

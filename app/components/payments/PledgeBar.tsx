@@ -196,7 +196,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
   // Validate budget when subscription or user changes
   useEffect(() => {
-    if (currentAccount && isSubscriptionEnabled) {
+    if (currentAccount && currentAccount.uid && isSubscriptionEnabled) {
       const validateBudget = async () => {
         try {
           const validation = await validatePledgeBudget(currentAccount.uid);
@@ -204,6 +204,9 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
           setShowBudgetWarning(validation.isOverBudget);
         } catch (error) {
           console.error('Error validating pledge budget:', error);
+          // Reset budget validation on error
+          setBudgetValidation(null);
+          setShowBudgetWarning(false);
         }
       };
 
@@ -252,7 +255,10 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
   // Load user subscription and token data with automatic initialization
   const loadUserData = async () => {
-    if (!currentAccount) return;
+    if (!currentAccount || !currentAccount.uid) {
+      console.log('PledgeBar: No authenticated user, skipping API calls');
+      return;
+    }
 
     try {
       // Load subscription
@@ -263,7 +269,9 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
       if (!isPageOwner) {
         // Try to load existing token balance using API
         try {
-          const balanceResponse = await fetch('/api/tokens/balance');
+          const balanceResponse = await fetch('/api/tokens/balance', {
+            credentials: 'include'
+          });
           if (balanceResponse.ok) {
             const balanceData = await balanceResponse.json();
 
@@ -272,7 +280,9 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
             if (balanceData.balance) {
               // Load current page allocation only if balance exists
-              const allocationResponse = await fetch(`/api/tokens/page-allocation?pageId=${pageId}`);
+              const allocationResponse = await fetch(`/api/tokens/page-allocation?pageId=${pageId}`, {
+                credentials: 'include'
+              });
               if (allocationResponse.ok) {
                 const allocationData = await allocationResponse.json();
                 setCurrentTokenAllocation(allocationData.currentAllocation);
@@ -311,6 +321,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
       // Use API endpoint for token initialization to avoid permission issues
       const response = await fetch('/api/tokens/balance', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'},
         body: JSON.stringify({
@@ -329,7 +340,9 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
         setTokenBalance(result.balance);
 
         // Load current page allocation using API
-        const allocationResponse = await fetch(`/api/tokens/page-allocation?pageId=${pageId}`);
+        const allocationResponse = await fetch(`/api/tokens/page-allocation?pageId=${pageId}`, {
+          credentials: 'include'
+        });
         if (allocationResponse.ok) {
           const allocationData = await allocationResponse.json();
           setCurrentTokenAllocation(allocationData.currentAllocation);
