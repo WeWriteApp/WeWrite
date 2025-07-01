@@ -1,0 +1,21 @@
+graph TD
+    app_components_ui_button_tsx["button.tsx"]
+    app_components_ui_button_tsx --> app_lib_utils_ts
+    app_firebase_config_ts["config.ts"]
+    app_lib_utils_ts["utils.ts"]
+    app_providers_AuthProvider_tsx["AuthProvider.tsx"]
+    app_providers_AuthProvider_tsx --> app_firebase_config_ts
+    functions_node_modules__sinclair_typebox_build_cjs_type_symbols_index_js["index.js"]
+    functions_node_modules_firebase_admin_lib_app_index_js["index.js"]
+    functions_node_modules_firebase_admin_lib_app_index_js --> functions_node_modules_firebase_admin_lib_utils_error_js
+    functions_node_modules_firebase_admin_lib_utils_error_js["error.js"]
+    functions_node_modules_lodash_fp__falseOptions_js["_falseOptions.js"]
+    functions_node_modules_lodash_fp_convert_js["convert.js"]
+    functions_node_modules_lodash_fp_placeholder_js["placeholder.js"]
+
+    %% Circular dependencies in red
+    app_providers_AuthProvider_tsx --> app_providers_AuthProvider_tsx
+    class app_providers_AuthProvider_tsx circular
+    app_providers_AuthProvider_tsx --> app_providers_AuthProvider_tsx
+    class app_providers_AuthProvider_tsx circular
+    classDef circular fill:#ff9999,stroke:#ff0000

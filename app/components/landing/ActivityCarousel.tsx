@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useContext } from 'react';
+import React from 'react';
 import useStaticRecentActivity from '../../hooks/useStaticRecentActivity';
 import ActivityCard from '../ActivityCard';
-import { AuthContext } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import ContentCarousel from './ContentCarousel';
 import { Info } from 'lucide-react';
 
@@ -15,12 +15,10 @@ import { Info } from 'lucide-react';
  */
 export default function ActivityCarousel() {
   const { activities, loading, error } = useStaticRecentActivity(30, null, false);
-  const { user } = useContext(AuthContext);
-
-
+  const { session } = useCurrentAccount();
 
   // Error message for non-authenticated users
-  const errorMessage = !user && error ? (
+  const errorMessage = !session && error ? (
     <div className="flex items-center gap-2">
       <Info className="h-4 w-4" />
       <p>Sign in to see recent activity from all pages</p>

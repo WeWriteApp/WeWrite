@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -15,15 +15,13 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
+  DialogTitle} from '../ui/dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from '../ui/select';
+  SelectValue} from '../ui/select';
 import {
   Users,
   Plus,
@@ -57,15 +55,15 @@ interface RevenueSplitManagerProps {
   onUpdate?: () => void;
 }
 
-export default function RevenueSplitManager({ 
-  resourceType, 
-  resourceId, 
+export default function RevenueSplitManager({
+  resourceType,
+  resourceId,
   resourceTitle,
-  onUpdate 
+  onUpdate
 }: RevenueSplitManagerProps) {
-  const { user } = useAuth();
+  const { currentAccount } = useCurrentAccount();
   const { toast } = useToast();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
   
   const [revenueSplit, setRevenueSplit] = useState<RevenueSplit | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,10 +76,10 @@ export default function RevenueSplitManager({
   });
 
   useEffect(() => {
-    if (user && isPaymentsEnabled) {
+    if (currentAccount && isPaymentsEnabled) {
       loadRevenueSplit();
     }
-  }, [user, isPaymentsEnabled, resourceType, resourceId]);
+  }, [currentAccount, isPaymentsEnabled, resourceType, resourceId]);
 
   const loadRevenueSplit = async () => {
     try {
@@ -100,8 +98,7 @@ export default function RevenueSplitManager({
       toast({
         title: "Error",
         description: "Failed to load revenue split configuration",
-        variant: "destructive",
-      });
+        variant: "destructive"});
     } finally {
       setLoading(false);
     }
@@ -112,8 +109,7 @@ export default function RevenueSplitManager({
       toast({
         title: "Invalid Input",
         description: "Please enter a valid user ID and percentage",
-        variant: "destructive",
-      });
+        variant: "destructive"});
       return;
     }
 
@@ -135,8 +131,7 @@ export default function RevenueSplitManager({
       if (response.ok) {
         toast({
           title: "Contributor Added",
-          description: "Revenue split updated successfully",
-        });
+          description: "Revenue split updated successfully"});
         setShowAddDialog(false);
         setNewContributor({ userId: '', percentage: 10, role: 'contributor' });
         loadRevenueSplit();
@@ -149,8 +144,7 @@ export default function RevenueSplitManager({
       toast({
         title: "Failed to Add Contributor",
         description: error.message || "Please try again",
-        variant: "destructive",
-      });
+        variant: "destructive"});
     } finally {
       setSaving(false);
     }
@@ -181,8 +175,7 @@ export default function RevenueSplitManager({
       toast({
         title: "Update Failed",
         description: error.message || "Please try again",
-        variant: "destructive",
-      });
+        variant: "destructive"});
     } finally {
       setSaving(false);
     }

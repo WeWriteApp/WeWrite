@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from "../../firebase/config";
-import ClientPage from '../../pages/[id]/client-page.tsx';
+import PageView from '../../components/pages/PageView';
 import { SmartLoader } from '../../components/ui/smart-loader';
 import { use } from "react";
 
@@ -108,7 +108,7 @@ export default function EditPage({ params }) {
 
   if (pageExists) {
     // Pass a special prop to indicate this is edit mode
-    return <ClientPage params={{ id }} initialEditMode={true} />;
+    return <PageView params={{ id }} initialEditMode={true} />;
   }
 
   return null;

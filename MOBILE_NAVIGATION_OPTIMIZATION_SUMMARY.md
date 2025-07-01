@@ -98,7 +98,7 @@ const handleButtonPress = useCallback((buttonId: string, targetRoute: string) =>
 ### Core Components Created
 1. **`useOptimisticNavigation`** - Hook for instant navigation feedback
 2. **`OptimisticNavigationProvider`** - Global navigation state management
-3. **`EnhancedMobileBottomNav`** - Optimized navigation component
+3. **`MobileBottomNav`** - Optimized navigation component
 4. **`UserProfileSkeleton`** - Profile-specific loading states
 5. **`NavigationSkeletons`** - Collection of skeleton screens
 6. **`useRoutePreloader`** - Intelligent route preloading

@@ -55,7 +55,7 @@ class QueryOptimizer {
     
     if (details.path) {
       // Generalize paths to avoid storing specific IDs
-      const generalizedPath = details.path.replace(/\/[a-zA-Z0-9_-]{20,}/g, '/:id');
+      const generalizedPath = details.path.replace(/\/[a-zA-Z0-9_-]{20}/g, '/:id');
       return `${queryType}:${generalizedPath}`;
     }
 

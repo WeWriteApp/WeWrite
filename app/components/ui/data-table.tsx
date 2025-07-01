@@ -9,16 +9,14 @@ import {
   SortingState,
   getSortedRowModel,
   ColumnFiltersState,
-  getFilteredRowModel,
-} from "@tanstack/react-table"
+  getFilteredRowModel} from "@tanstack/react-table"
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from "./table"
+  TableRow} from "./table"
 import { Button } from "./button"
 import { Input } from "./input"
 import { useState } from "react"
@@ -34,8 +32,7 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   searchKey,
-  searchPlaceholder = "Search...",
-}: DataTableProps<TData, TValue>) {
+  searchPlaceholder = "Search..."}: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
@@ -50,9 +47,7 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
-      columnFilters,
-    },
-  })
+      columnFilters}})
 
   return (
     <div>

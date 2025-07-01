@@ -10,24 +10,20 @@ const FundingTransactionsTable = () => {
     {
       name: "ID",
       selector: (row) => row.id,
-      sortable: true,
-    },
+      sortable: true},
     {
       name: "Funding Source",
       selector: (row) => row.fundingSourceId,
-      sortable: true,
-    },
+      sortable: true},
     {
       name: "Amount",
       selector: (row) => row.amount,
-      sortable: true,
-    },
+      sortable: true},
     {
       name: "Date",
       selector: (row) => row.date,
       cell: (row) => <div>{new Date(row.date).toLocaleDateString()}</div>,
-      sortable: true,
-    },
+      sortable: true},
     {
       name: "Status",
       selector: (row) => row.status,
@@ -42,8 +38,7 @@ const FundingTransactionsTable = () => {
           )}
         </div>
       ),
-      sortable: true,
-    },
+      sortable: true},
   ];
 
   if (!fundingTransactions) {

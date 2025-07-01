@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "../components/ui/button";
 import { ChevronLeft, Clock, Filter, Check } from "lucide-react";
 import ActivityCard from "../components/activity/ActivityCard";
-import { useAuth } from "../providers/AuthProvider";
+import { useCurrentAccount } from "../providers/CurrentAccountProvider";
 import useStaticRecentActivity from "../hooks/useStaticRecentActivity";
 import { useActivityFilter } from "../contexts/ActivityFilterContext";
 import { getFollowedPages } from "../firebase/follows";
@@ -13,14 +13,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
+  DropdownMenuTrigger} from "../components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
-} from "../components/ui/tooltip";
+  TooltipTrigger} from "../components/ui/tooltip";
 
 /**
  * Client component for the activity page that uses the same hook as the home page
@@ -34,7 +32,7 @@ export default function ActivityPageClient({
   initialError: string | null
 }) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const { viewMode, setViewMode } = useActivityFilter();
   const [limit] = useState(30);
   const [followedPages, setFollowedPages] = useState<any[]>([]);
@@ -46,9 +44,9 @@ export default function ActivityPageClient({
 
   // Load followed pages when user is available and viewMode is 'following'
   useEffect(() => {
-    if (user && viewMode === 'following') {
+    if (session && viewMode === 'following') {
       setIsLoadingFollows(true);
-      getFollowedPages(user?.uid || '')
+      getFollowedPages(session?.uid || '')
         .then(pages => {
           setFollowedPages(pages);
         })
@@ -60,7 +58,7 @@ export default function ActivityPageClient({
           setIsLoadingFollows(false);
         });
     }
-  }, [user, viewMode]);
+  }, [session, viewMode]);
 
   // Filter activities based on view mode
   const filteredActivities = (() => {
@@ -68,18 +66,18 @@ export default function ActivityPageClient({
     const safeActivities = Array.isArray(activities) ? activities : [];
     const safeFollowedPages = Array.isArray(followedPages) ? followedPages : [];
 
-    if (viewMode === 'following' && user) {
+    if (viewMode === 'following' && session) {
       return safeActivities.filter(activity => {
         // Include activities from followed pages
         return safeFollowedPages.some(page => page.id === activity.pageId);
       });
-    } else if (viewMode === 'mine' && user) {
+    } else if (viewMode === 'mine' && session) {
       return safeActivities.filter(activity => {
         // Include activities from current user's pages or bio edits
         if (activity.activityType === "bio_edit") {
-          return activity.pageId.includes(user.uid);
+          return activity.pageId.includes(session.uid);
         }
-        return activity.userId === user.uid;
+        return activity.userId === session.uid;
       });
     }
     return safeActivities;
@@ -103,7 +101,7 @@ export default function ActivityPageClient({
 
   // Filter dropdown component (same as home page)
   const FilterDropdown = () => {
-    if (!user) return null;
+    if (!session) return null;
 
     return (
       <TooltipProvider>

@@ -149,8 +149,6 @@ export function useSEO() {
   return context;
 }
 
-
-
 /**
  * SEO Performance Monitor component
  */

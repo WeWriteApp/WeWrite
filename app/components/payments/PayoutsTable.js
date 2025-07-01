@@ -3,25 +3,22 @@ import React, { useEffect, useState, useContext } from "react";
 import { PortfolioContext } from "../../providers/PortfolioProvider";
 import DataTable from "react-data-table-component";
 import { useFeatureFlag } from "../../utils/feature-flags";
-import { useAuth } from "../../providers/AuthProvider";
-
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 const PayoutsTable = () => {
-  const { user } = useAuth();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  const { session } = useCurrentAccount();
+  const isPaymentsEnabled = useFeatureFlag('payments', session?.email);
 
   // If payments feature flag is disabled, don't render anything
   if (!isPaymentsEnabled) {
     return null;
   }
   const {
-    payouts,
-  } = useContext(PortfolioContext);
+    payouts} = useContext(PortfolioContext);
   const columns = [
     {
       name: "ID",
       selector: (row) => row.id,
-      sortable: true,
-      },
+      sortable: true},
     {
       name: "Status",
       selector: (row) => row.status,
@@ -36,8 +33,7 @@ const PayoutsTable = () => {
           )}
         </div>
       ),
-      sortable: true,
-    },
+      sortable: true},
   ];
 
   if (!payouts) {

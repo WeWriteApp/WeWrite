@@ -202,8 +202,6 @@ function handleTouchMove(event: TouchEvent): void {
   }
 }
 
-
-
 /**
  * Handle context menu events (can interfere with touch handling)
  */

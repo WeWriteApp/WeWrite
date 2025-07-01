@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from "../providers/AuthProvider";
+import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import {
@@ -29,12 +29,12 @@ interface SettingsSection {
 }
 
 export default function SettingsIndexPage() {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const router = useRouter();
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
 
   // Check feature flags with proper user ID for real-time updates
-  const paymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const paymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
   // Token system is enabled by payments feature flag
   const tokenSystemEnabled = paymentsEnabled;
 
@@ -89,7 +89,7 @@ export default function SettingsIndexPage() {
   ];
 
   useEffect(() => {
-    if (!user) {
+    if (!session) {
       router.push('/auth/login');
       return;
     }
@@ -125,18 +125,18 @@ export default function SettingsIndexPage() {
       window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);
     }
-  }, [user, router, paymentsEnabled, tokenSystemEnabled]);
+  }, [, session, router, paymentsEnabled, tokenSystemEnabled]);
 
   // Check subscription status when payments are enabled and user is available
   useEffect(() => {
-    if (!user || !paymentsEnabled) {
+    if (!session || !paymentsEnabled) {
       setHasActiveSubscription(null);
       return;
     }
 
     const checkSubscriptionStatus = async () => {
       try {
-        const subscription = await getOptimizedUserSubscription(user.uid, {
+        const subscription = await getOptimizedUserSubscription(session.uid, {
           useCache: true,
           cacheTTL: 5 * 60 * 1000 // 5 minute cache
         });
@@ -158,7 +158,7 @@ export default function SettingsIndexPage() {
     };
 
     checkSubscriptionStatus();
-  }, [user, paymentsEnabled]);
+  }, [, session, paymentsEnabled]);
 
   // Filter sections based on feature flags
   const availableSections = settingsSections.filter(section => {
@@ -175,7 +175,7 @@ export default function SettingsIndexPage() {
     router.push(href);
   };
 
-  if (!user) {
+  if (!session) {
     return null;
   }
 

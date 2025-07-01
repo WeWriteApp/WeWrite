@@ -79,23 +79,19 @@ export function TokenAllocationDashboard({ userId }: TokenAllocationDashboardPro
       const response = await fetch('/api/tokens/allocate', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({
           recipientUserId,
           resourceType,
           resourceId,
-          tokens,
-        }),
-      });
+          tokens})});
 
       const result = await response.json();
 
       if (response.ok) {
         toast({
           title: "Tokens Allocated",
-          description: `Successfully allocated ${tokens} tokens`,
-        });
+          description: `Successfully allocated ${tokens} tokens`});
         
         // Reload token data
         await loadTokenData();
@@ -103,16 +99,14 @@ export function TokenAllocationDashboard({ userId }: TokenAllocationDashboardPro
         toast({
           title: "Allocation Failed",
           description: result.error || "Failed to allocate tokens",
-          variant: "destructive",
-        });
+          variant: "destructive"});
       }
     } catch (error) {
       console.error('Error allocating tokens:', error);
       toast({
         title: "Allocation Error",
         description: "Failed to allocate tokens. Please try again.",
-        variant: "destructive",
-      });
+        variant: "destructive"});
     } finally {
       setAllocating(null);
     }
@@ -135,8 +129,7 @@ export function TokenAllocationDashboard({ userId }: TokenAllocationDashboardPro
       if (response.ok) {
         toast({
           title: "Allocation Removed",
-          description: "Token allocation removed successfully",
-        });
+          description: "Token allocation removed successfully"});
         
         // Reload token data
         await loadTokenData();
@@ -144,16 +137,14 @@ export function TokenAllocationDashboard({ userId }: TokenAllocationDashboardPro
         toast({
           title: "Removal Failed",
           description: result.error || "Failed to remove allocation",
-          variant: "destructive",
-        });
+          variant: "destructive"});
       }
     } catch (error) {
       console.error('Error removing allocation:', error);
       toast({
         title: "Removal Error",
         description: "Failed to remove allocation. Please try again.",
-        variant: "destructive",
-      });
+        variant: "destructive"});
     } finally {
       setAllocating(null);
     }

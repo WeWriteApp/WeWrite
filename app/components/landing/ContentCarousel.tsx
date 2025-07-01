@@ -328,8 +328,6 @@ export default function ContentCarousel({
     }
   };
 
-
-
   return (
     <div
       className={containerClasses}

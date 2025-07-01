@@ -55,7 +55,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/
 import { getPageById } from "../../firebase/database";
 import { LINE_MODES } from '../../contexts/LineSettingsContext';
 import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform } from "framer-motion";
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { isExternalLink } from "../../utils/linkFormatters";
 import { validateLink, getLinkDisplayText, extractPageIdFromUrl } from '../../utils/linkValidator';
 import { Button } from "../ui/button";
@@ -67,7 +67,6 @@ import { useControlledAnimation } from "../../hooks/useControlledAnimation";
 import { truncateExternalLinkText } from "../../utils/textTruncation";
 import type { TextViewProps } from "../../types/components";
 import type { SlateContent, SlateNode, SlateChild, ViewMode } from "../../types/database";
-import "../paragraph-styles.css";
 import "../diff-styles.css";
 
 /**
@@ -156,7 +155,7 @@ const TextView: React.FC<TextViewProps> = ({
   const [isHovering, setIsHovering] = useState<boolean>(false);
   const [showEditTooltip, setShowEditTooltip] = useState<boolean>(false);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number; clientX: number; clientY: number } | null>(null);
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const { page } = usePage();
 
   // Debug: Check if context is working (disabled to prevent spam)
@@ -166,11 +165,11 @@ const TextView: React.FC<TextViewProps> = ({
   // Use prop value if provided, otherwise calculate
   const canEdit = propCanEdit !== undefined ? propCanEdit : Boolean(
     setIsEditing &&
-    user?.uid &&
+    session?.uid &&
     page &&
     (
       // User is the page owner
-      (page.userId && user.uid === page.userId) ||
+      (page.userId && session.uid === page.userId) ||
       // OR page belongs to a group and user is a member of that group
       (page.groupId && page.hasGroupAccess)
     )
@@ -179,7 +178,7 @@ const TextView: React.FC<TextViewProps> = ({
   // Check if current user can view this page (public or owner)
   const canView = Boolean(
     page?.isPublic ||
-    (user?.uid && page?.userId && user.uid === page.userId)
+    (session?.uid && page?.userId && session.uid === page.userId)
   );
 
   // Use lineMode from context as the primary mode, but force normal mode when editing
@@ -489,8 +488,6 @@ const TextView: React.FC<TextViewProps> = ({
     return `editor-content page-editor-stable box-border mode-transition ${modeClass}`;
   }, [effectiveMode]);
 
-
-
   // Handle click to edit - WYSIWYG smooth transition
   const handleActiveLine = (index) => {
     setActiveLineIndex(index);
@@ -640,12 +637,11 @@ const TextView: React.FC<TextViewProps> = ({
           title={canEdit && showEditTooltip ? "Click to edit" : ""}
         >
 
-
           {!parsedContents && !isSearch && (
             <div className="text-muted-foreground">
               {/* REMOVED: Excessive padding for compact layout */}
               <div className="unified-paragraph">
-                <span className="unified-paragraph-number">1</span>
+                <span className="paragraph-number">1</span>
                 <span className="unified-text-content">No content available</span>
               </div>
             </div>
@@ -764,9 +760,11 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
               return (
                 <React.Fragment key={actualIndex}>
                   <span
-                    className="dense-paragraph-number"
+                    className="paragraph-number"
                     style={{
-                      animationDelay: `${index * ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY}ms`
+                      animationDelay: `${index * ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY}ms`,
+                      display: 'inline',
+                      marginRight: '1rem'
                     }}
                   >
                     {actualIndex + 1}
@@ -944,7 +942,7 @@ const SimpleParagraphNode = ({ node, index = 0, canEdit = false, isActive = fals
       title={canEdit ? "Click to edit" : ""}
     >
       {/* Paragraph number - always show in normal mode */}
-      <span className="unified-paragraph-number">
+      <span className="paragraph-number">
         {index + 1}
       </span>
 

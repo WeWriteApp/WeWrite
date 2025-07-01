@@ -28,8 +28,7 @@ export const getSubscriptionStatusInfo = (
       color: 'text-gray-600',
       isActive: false,
       showActivateButton: true,
-      showManageButton: false,
-    };
+      showManageButton: false};
   }
 
   switch (status.toLowerCase()) {
@@ -48,8 +47,7 @@ export const getSubscriptionStatusInfo = (
             color: 'text-orange-600',
             isActive: true, // Still active until period end
             showActivateButton: false,
-            showManageButton: true,
-          };
+            showManageButton: true};
         }
       }
 
@@ -60,8 +58,7 @@ export const getSubscriptionStatusInfo = (
         color: 'text-green-600',
         isActive: true,
         showActivateButton: false,
-        showManageButton: true,
-      };
+        showManageButton: true};
 
     case 'pending':
       return {
@@ -71,8 +68,7 @@ export const getSubscriptionStatusInfo = (
         color: 'text-yellow-600',
         isActive: false,
         showActivateButton: false,
-        showManageButton: false,
-      };
+        showManageButton: false};
 
     case 'incomplete':
       return {
@@ -82,8 +78,7 @@ export const getSubscriptionStatusInfo = (
         color: 'text-orange-600',
         isActive: false,
         showActivateButton: true,
-        showManageButton: false,
-      };
+        showManageButton: false};
 
     case 'incomplete_expired':
       return {
@@ -93,8 +88,7 @@ export const getSubscriptionStatusInfo = (
         color: 'text-red-600',
         isActive: false,
         showActivateButton: true,
-        showManageButton: false,
-      };
+        showManageButton: false};
 
     case 'past_due':
     case 'unpaid':
@@ -105,8 +99,7 @@ export const getSubscriptionStatusInfo = (
         color: 'text-red-600',
         isActive: false,
         showActivateButton: false,
-        showManageButton: true,
-      };
+        showManageButton: true};
 
     case 'canceled':
     case 'cancelled':
@@ -124,8 +117,7 @@ export const getSubscriptionStatusInfo = (
             color: 'text-orange-600',
             isActive: true, // Still active until period end
             showActivateButton: false,
-            showManageButton: true,
-          };
+            showManageButton: true};
         }
       }
 
@@ -136,8 +128,7 @@ export const getSubscriptionStatusInfo = (
         color: 'text-gray-600',
         isActive: false,
         showActivateButton: true,
-        showManageButton: false,
-      };
+        showManageButton: false};
 
     case 'trialing':
       return {
@@ -147,8 +138,7 @@ export const getSubscriptionStatusInfo = (
         color: 'text-blue-600',
         isActive: true,
         showActivateButton: false,
-        showManageButton: true,
-      };
+        showManageButton: true};
 
     case 'paused':
       return {
@@ -158,8 +148,7 @@ export const getSubscriptionStatusInfo = (
         color: 'text-gray-600',
         isActive: false,
         showActivateButton: false,
-        showManageButton: true,
-      };
+        showManageButton: true};
 
     default:
       return {
@@ -169,8 +158,7 @@ export const getSubscriptionStatusInfo = (
         color: 'text-gray-600',
         isActive: false,
         showActivateButton: true,
-        showManageButton: false,
-      };
+        showManageButton: false};
   }
 };
 

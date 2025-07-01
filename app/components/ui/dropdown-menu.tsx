@@ -160,5 +160,4 @@ export {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-  DropdownMenuPortal,
-}
+  DropdownMenuPortal}

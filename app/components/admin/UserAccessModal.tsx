@@ -6,8 +6,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
+  DialogTitle} from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
@@ -36,8 +35,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useToast } from '../ui/use-toast';
-import { useAuth } from '../../providers/AuthProvider';
-
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 interface FeatureFlagState {
   id: FeatureFlag;
   name: string;
@@ -67,10 +65,10 @@ export default function UserAccessModal({
   onClose,
   onUserStatsChange
 }: UserAccessModalProps) {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const { toast } = useToast();
   
-  const [users, setUsers] = useState<UserFeature[]>([]);
+  const [, sessions, setUsers] = useState<UserFeature[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserFeature[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -85,7 +83,7 @@ export default function UserAccessModal({
 
   useEffect(() => {
     filterUsers();
-  }, [users, searchTerm, activeTab]);
+  }, [, sessions, searchTerm, activeTab]);
 
   const loadUsers = async () => {
     try {
@@ -160,7 +158,7 @@ export default function UserAccessModal({
     if (searchTerm) {
       filtered = filtered.filter(user =>
         user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+        session.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -170,7 +168,7 @@ export default function UserAccessModal({
         filtered = filtered.filter(user => user.enabled);
         break;
       case 'disabled':
-        filtered = filtered.filter(user => !user.enabled);
+        filtered = filtered.filter(user => !session.enabled);
         break;
       case 'overridden':
         filtered = filtered.filter(user => user.overridden);
@@ -204,7 +202,7 @@ export default function UserAccessModal({
         featureId: featureFlag.id,
         userId,
         timestamp: serverTimestamp(),
-        adminEmail: user?.email || 'unknown',
+        adminEmail: session?.email || 'unknown',
         action: newStatus ? 'enabled_for_user' : 'disabled_for_user',
         details: `Feature ${newStatus ? 'enabled' : 'disabled'} for user ${userId}`
       });
@@ -226,8 +224,7 @@ export default function UserAccessModal({
 
       toast({
         title: 'Success',
-        description: `Feature ${newStatus ? 'enabled' : 'disabled'} for user`,
-      });
+        description: `Feature ${newStatus ? 'enabled' : 'disabled'} for user`});
     } catch (error) {
       console.error('Error toggling user access:', error);
       toast({
@@ -254,7 +251,7 @@ export default function UserAccessModal({
         featureId: featureFlag.id,
         userId,
         timestamp: serverTimestamp(),
-        adminEmail: user?.email || 'unknown',
+        adminEmail: session?.email || 'unknown',
         action: 'removed_override',
         details: `Removed user-specific override for user ${userId}`
       });
@@ -276,8 +273,7 @@ export default function UserAccessModal({
 
       toast({
         title: 'Success',
-        description: 'User override removed - now follows global setting',
-      });
+        description: 'User override removed - now follows global setting'});
     } catch (error) {
       console.error('Error removing user override:', error);
       toast({
@@ -375,7 +371,7 @@ export default function UserAccessModal({
                             <AlertCircle className="h-4 w-4 text-destructive" />
                           )}
                         </div>
-                        <div className="text-sm text-muted-foreground">{user.email}</div>
+                        <div className="text-sm text-muted-foreground">{session.email}</div>
                         {user.overridden && (
                           <div className="text-xs text-muted-foreground">
                             Override set: {user.lastModified !== 'Never' ? new Date(user.lastModified).toLocaleDateString() : 'Never'}

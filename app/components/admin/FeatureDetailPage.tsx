@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
 import { DataTable } from '../ui/data-table';
@@ -77,11 +77,11 @@ interface FeatureDetailPageProps {
 export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const [isLoading, setIsLoading] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [globalEnabled, setGlobalEnabled] = useState(feature.enabled);
-  const [users, setUsers] = useState<UserFeature[]>([]);
+  const [, sessions, setUsers] = useState<UserFeature[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserFeature[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [filterEnabled, setFilterEnabled] = useState<boolean | null>(null);
@@ -159,11 +159,11 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
   // Check if the current user has this feature enabled
   useEffect(() => {
     const checkCurrentUserFeature = async () => {
-      if (!user) return;
+      if (!session) return;
 
       try {
         // Check if there's a user-specific override
-        const featureOverrideRef = doc(db, 'featureOverrides', `${user.uid}_${feature.id}`);
+        const featureOverrideRef = doc(db, 'featureOverrides', `${session.uid}_${feature.id}`);
         const featureOverrideDoc = await getDoc(featureOverrideRef);
 
         if (featureOverrideDoc.exists()) {
@@ -180,7 +180,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
     };
 
     checkCurrentUserFeature();
-  }, [user, feature.id, globalEnabled]);
+  }, [, session, feature.id, globalEnabled]);
 
   // Load users with their feature status
   useEffect(() => {
@@ -296,7 +296,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
     } else {
       setFilteredUsers(users.filter(user => user.enabled === filterEnabled));
     }
-  }, [filterEnabled, users]);
+  }, [filterEnabled, sessions]);
 
   // Toggle global feature status
   const toggleGlobalFeature = async () => {
@@ -369,8 +369,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
 
       toast({
         title: 'Success',
-        description: `Feature ${!globalEnabled ? 'enabled' : 'disabled'} successfully`,
-      });
+        description: `Feature ${!globalEnabled ? 'enabled' : 'disabled'} successfully`});
 
       // Refresh the page to get updated data
       router.refresh();
@@ -389,17 +388,17 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
 
   // Toggle feature for the current user
   const toggleCurrentUserFeature = async () => {
-    if (!user) return;
+    if (!session) return;
 
     try {
       setIsLoading(true);
       const newStatus = !currentUserFeatureEnabled;
 
       // Update user-specific feature override
-      const featureOverrideRef = doc(db, 'featureOverrides', `${user.uid}_${feature.id}`);
+      const featureOverrideRef = doc(db, 'featureOverrides', `${session.uid}_${feature.id}`);
 
       await setDoc(featureOverrideRef, {
-        userId: user.uid,
+        userId: session.uid,
         featureId: feature.id,
         enabled: newStatus,
         lastModified: new Date().toISOString()
@@ -409,11 +408,11 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
       const historyRef = collection(db, 'featureHistory');
       await setDoc(doc(historyRef), {
         featureId: feature.id,
-        userId: user.uid,
+        userId: session.uid,
         timestamp: serverTimestamp(),
-        adminEmail: user.email || 'unknown',
+        adminEmail: session.email || 'unknown',
         action: newStatus ? 'enabled_for_self' : 'disabled_for_self',
-        details: `Feature ${newStatus ? 'enabled' : 'disabled'} for self (${user.email})`
+        details: `Feature ${newStatus ? 'enabled' : 'disabled'} for self (${session.email})`
       });
 
       // Update local state
@@ -421,7 +420,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
 
       // Also update in the users list if present
       setUsers(users.map(u =>
-        u.id === user.uid
+        u.id === session.uid
           ? {
               ...u,
               enabled: newStatus,
@@ -433,8 +432,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
 
       toast({
         title: 'Success',
-        description: `Feature ${newStatus ? 'enabled' : 'disabled'} for your account`,
-      });
+        description: `Feature ${newStatus ? 'enabled' : 'disabled'} for your account`});
     } catch (error) {
       console.error('Error toggling current user feature:', error);
       toast({
@@ -467,7 +465,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
         featureId: feature.id,
         userId,
         timestamp: serverTimestamp(),
-        adminEmail: user?.email || localStorage.getItem('userEmail') || 'unknown',
+        adminEmail: session?.email || localStorage.getItem('userEmail') || 'unknown',
         action: !currentStatus ? 'enabled_for_user' : 'disabled_for_user',
         details: `Feature ${!currentStatus ? 'enabled' : 'disabled'} for user ${userId}`
       });
@@ -486,8 +484,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
 
       toast({
         title: 'Success',
-        description: `Feature ${!currentStatus ? 'enabled' : 'disabled'} for user`,
-      });
+        description: `Feature ${!currentStatus ? 'enabled' : 'disabled'} for user`});
     } catch (error) {
       console.error('Error toggling user feature:', error);
       toast({
@@ -504,7 +501,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
   const toggleUserSelection = (userId: string) => {
     setUsers(users.map(user =>
       user.id === userId
-        ? { ...user, selected: !user.selected }
+        ? { ...user, selected: !session.selected }
         : user
     ));
 
@@ -513,7 +510,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
       if (prev.includes(userId)) {
         return prev.filter(id => id !== userId);
       } else {
-        return [...prev, userId];
+        return [...prev, sessionId];
       }
     });
   };
@@ -548,7 +545,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
       await setDoc(doc(historyRef), {
         featureId: feature.id,
         timestamp: serverTimestamp(),
-        adminEmail: user?.email || localStorage.getItem('userEmail') || 'unknown',
+        adminEmail: session?.email || localStorage.getItem('userEmail') || 'unknown',
         action: batchActionEnabled ? 'batch_enabled' : 'batch_disabled',
         details: `Feature ${batchActionEnabled ? 'enabled' : 'disabled'} for ${selectedUsers.length} users in batch operation`
       });
@@ -571,8 +568,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
 
       toast({
         title: 'Success',
-        description: `Feature ${batchActionEnabled ? 'enabled' : 'disabled'} for ${selectedUsers.length} users`,
-      });
+        description: `Feature ${batchActionEnabled ? 'enabled' : 'disabled'} for ${selectedUsers.length} users`});
 
       // Close the dialog
       setBatchActionDialogOpen(false);
@@ -626,20 +622,17 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
         />
       ),
       enableSorting: false,
-      enableHiding: false,
-    },
+      enableHiding: false},
     {
       accessorKey: "username",
       header: "Username",
       cell: ({ row }) => (
         <div className="font-medium">{row.original.username}</div>
-      ),
-    },
+      )},
     {
       accessorKey: "email",
       header: "Email",
-      cell: ({ row }) => <div>{row.original.email}</div>,
-    },
+      cell: ({ row }) => <div>{row.original.email}</div>},
     {
       accessorKey: "enabled",
       header: "Status",
@@ -654,8 +647,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
             <Badge variant="outline" className="ml-2">Custom</Badge>
           )}
         </div>
-      ),
-    },
+      )},
     {
       accessorKey: "lastModified",
       header: "Last Modified",
@@ -663,8 +655,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
         <div title={format(new Date(row.original.lastModified), 'PPpp')}>
           {formatDistanceToNow(new Date(row.original.lastModified), { addSuffix: true })}
         </div>
-      ),
-    },
+      )},
     {
       id: "actions",
       cell: ({ row }) => (
@@ -674,8 +665,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
             onCheckedChange={() => toggleUserFeature(row.original.id, row.original.enabled)}
           />
         </div>
-      ),
-    },
+      )},
   ];
 
   return (
@@ -718,7 +708,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
               disabled={isLoading}
             />
           </div>
-          {user && currentUserFeatureEnabled !== null && (
+          {session && currentUserFeatureEnabled !== null && (
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm font-medium">Your Access:</span>
               <Switch

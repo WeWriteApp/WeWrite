@@ -79,8 +79,7 @@ export function ErrorDisplay({
     stack: stack || error?.stack || '',
     timestamp: new Date().toISOString(),
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown',
-    url: typeof window !== 'undefined' ? window.location.href : 'Unknown',
-  };
+    url: typeof window !== 'undefined' ? window.location.href : 'Unknown'};
 
   const formattedErrorText = `
 Error Details:

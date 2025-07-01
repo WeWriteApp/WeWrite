@@ -82,8 +82,7 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
       const response = await fetch('/api/tokens/pledge', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({
           pageId: pledgeId,
           tokenChange: totalChange
@@ -210,8 +209,6 @@ const CompositionBar: React.FC<CompositionBarProps> = ({
 
     return acc;
   }, {} as Record<string, OtherPledge[]>);
-
-
 
   return (
     <div className={cn("w-full relative cursor-pointer", className)} onClick={() => onPledgeChange && onPledgeChange(pledges[0]?.id || '', 0)}>

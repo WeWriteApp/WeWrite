@@ -11,8 +11,7 @@ import { getStripeSecretKey } from '../utils/stripeConfig';
 import { FinancialUtils, CorrelationId } from '../types/financial';
 
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia',
-});
+  apiVersion: '2024-12-18.acacia'});
 
 export interface SubscriptionSyncRecord {
   userId: string;

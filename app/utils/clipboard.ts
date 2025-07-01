@@ -194,8 +194,7 @@ export const showErrorToastWithCopy = async (
     toast.error(message, {
       description,
       enableCopy,
-      copyText: textToCopy,
-    });
+      copyText: textToCopy});
   } catch (error) {
     console.error('Error in showErrorToastWithCopy:', error);
     // Fallback to basic error display

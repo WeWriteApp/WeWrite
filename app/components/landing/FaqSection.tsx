@@ -6,8 +6,7 @@ import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
-} from "../../components/ui/accordion";
+  AccordionTrigger} from "../../components/ui/accordion";
 
 export const FaqSection = () => {
   const faqs = [

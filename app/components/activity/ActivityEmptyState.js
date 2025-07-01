@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
 import { Search } from 'lucide-react';
 
-
 /**
  * ActivityEmptyState Component
  *

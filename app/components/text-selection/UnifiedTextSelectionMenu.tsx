@@ -9,8 +9,7 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
+  DialogTitle} from "../ui/dialog";
 
 interface UnifiedTextSelectionMenuProps {
   selectedText: string;
@@ -241,8 +240,7 @@ const UnifiedTextSelectionMenu: React.FC<UnifiedTextSelectionMenuProps> = ({
   const menuStyle = {
     left: `${Math.max(10, Math.min(position.x, window.innerWidth - 200))}px`,
     top: `${Math.max(10, position.y)}px`,
-    transform: 'translate(-50%, -100%)',
-  };
+    transform: 'translate(-50%, -100%)'};
 
   return (
     <>

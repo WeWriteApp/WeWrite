@@ -1,0 +1,132 @@
+"use client";
+
+import { useEffect, useCallback, useRef } from 'react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '../../firebase/config';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useMultiAuth } from '../../providers/MultiAuthProvider';
+
+interface SessionAuthInitializerProps {
+  children: React.ReactNode;
+}
+
+/**
+ * SessionAuthInitializer - Connects Firebase auth to session management
+ * 
+ * This component:
+ * - Listens for Firebase auth state changes
+ * - Creates/updates sessions when users sign in
+ * - Switches to the appropriate session
+ * - Handles account switching events
+ * - Replaces the old AuthInitializer
+ */
+export default function SessionAuthInitializer({ children }: SessionAuthInitializerProps) {
+  const { switchAccountByUid, signOutCurrent } = useCurrentAccount();
+  const { addSession } = useMultiAuth();
+
+  // Create stable references to prevent useEffect from re-running
+  const switchToSessionByUidRef = useRef(switchAccountByUid);
+  const clearActiveSessionRef = useRef(signOutCurrent);
+  const addSessionRef = useRef(addSession);
+
+  // Update refs when functions change
+  switchToSessionByUidRef.current = switchAccountByUid;
+  clearActiveSessionRef.current = signOutCurrent;
+  addSessionRef.current = addSession;
+
+  // Create a session from Firebase user data
+  const createSessionFromFirebaseUser = useCallback(async (firebaseUser: User) => {
+    try {
+      console.log('SessionAuthInitializer: Creating session for new user:', firebaseUser.uid);
+
+      const sessionData = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email || '',
+        username: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
+        displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || '',
+        photoURL: firebaseUser.photoURL || null};
+
+      const newSession = await addSession(sessionData);
+      console.log('SessionAuthInitializer: Session created:', newSession.sessionId);
+
+      // Switch to the newly created session
+      await switchAccountByUid(firebaseUser.uid);
+      console.log('SessionAuthInitializer: Switched to new session for user:', firebaseUser.uid);
+
+      return newSession;
+    } catch (error) {
+      console.error('SessionAuthInitializer: Failed to create session for user:', firebaseUser.uid, error);
+      throw error;
+    }
+  }, [addSession, switchAccountByUid]);
+
+  // Handle Firebase auth state changes
+  useEffect(() => {
+    console.log('SessionAuthInitializer: Setting up Firebase auth listener');
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
+      try {
+        if (firebaseUser) {
+          console.log('SessionAuthInitializer: User signed in:', firebaseUser.uid);
+
+          try {
+            // Try to switch to this user's existing session
+            await switchToSessionByUidRef.current(firebaseUser.uid);
+            console.log('SessionAuthInitializer: Session switched for existing user:', firebaseUser.uid);
+          } catch (sessionError) {
+            // If no session exists for this user, create a new one
+            console.log('SessionAuthInitializer: No session found for user, creating new session:', firebaseUser.uid);
+            try {
+              await createSessionFromFirebaseUser(firebaseUser);
+            } catch (createError) {
+              console.error('SessionAuthInitializer: Failed to create session for user:', firebaseUser.uid, createError);
+              // If session creation fails, clear any active account
+              await clearActiveSessionRef.current();
+            }
+          }
+        } else {
+          console.log('SessionAuthInitializer: User signed out');
+          // Clear active account when user signs out
+          await clearActiveSessionRef.current();
+        }
+      } catch (error) {
+        console.error('SessionAuthInitializer: Error handling auth state change:', error);
+      }
+    });
+
+    return () => {
+      console.log('SessionAuthInitializer: Cleaning up Firebase auth listener');
+      unsubscribe();
+    };
+  }, []); // Empty dependency array - Firebase auth listener should only be set up once
+
+  // Handle account switching events from AccountSwitcher (simplified for now)
+  useEffect(() => {
+    const handleAccountSwitch = async (event: CustomEvent) => {
+      try {
+        const newUser = event.detail;
+        console.log('SessionAuthInitializer: Account switch event received:', newUser);
+
+        if (!newUser || !newUser.uid || !newUser.email) {
+          console.error('SessionAuthInitializer: Invalid account switch data received');
+          return;
+        }
+
+        // Switch to the new user's session
+        await switchAccountByUid(newUser.uid);
+        console.log('SessionAuthInitializer: Account switch complete');
+      } catch (error) {
+        console.error('SessionAuthInitializer: Error handling account switch:', error);
+      }
+    };
+
+    // Listen for account switch events
+    window.addEventListener('accountSwitch', handleAccountSwitch as EventListener);
+
+    return () => {
+      window.removeEventListener('accountSwitch', handleAccountSwitch as EventListener);
+    };
+  }, [switchAccountByUid]);
+
+  return <>{children}</>;
+}

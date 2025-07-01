@@ -11,13 +11,11 @@ const FundingSources = () => {
     {
       name: "Type",
       selector: (row) => row.type,
-      sortable: true,
-    },
+      sortable: true},
     {
       name: "Last 4",
       selector: (row) => row.last4,
-      sortable: true,
-    },
+      sortable: true},
     {
       name: "Default",
       selector: (row) => row.default,
@@ -30,8 +28,7 @@ const FundingSources = () => {
           )}
         </div>
       ),
-      sortable: true,
-    },
+      sortable: true},
   ];
 
   if (!fundingSources) {

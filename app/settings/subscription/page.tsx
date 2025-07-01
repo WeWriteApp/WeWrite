@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -21,8 +21,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import SubscriptionTierCarousel from '../../components/subscription/SubscriptionTierCarousel';
-import { PaymentFeatureGuard } from '../../components/PaymentFeatureGuard';
-
+// PaymentFeatureGuard removed
 // Define the Subscription interface
 interface Subscription {
   id: string;
@@ -39,7 +38,7 @@ interface Subscription {
 }
 
 export default function SubscriptionPage() {
-  const { user } = useAuth();
+  const { currentAccount } = useCurrentAccount();
   const router = useRouter();
   const { toast } = useToast();
   const { trackInteractionEvent } = useWeWriteAnalytics();
@@ -51,7 +50,7 @@ export default function SubscriptionPage() {
   const [showInlineTierSelector, setShowInlineTierSelector] = useState(false);
 
   // Check payments feature flag
-  const paymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const paymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
 
   // Helper function to calculate days until cancellation
   const getDaysUntilCancellation = (billingCycleEnd: string) => {
@@ -64,7 +63,7 @@ export default function SubscriptionPage() {
 
   // Fetch current subscription
   const fetchSubscription = useCallback(async () => {
-    if (!user || !paymentsEnabled) return;
+    if (!currentAccount || !paymentsEnabled) return;
 
     try {
       const response = await fetch('/api/account-subscription');
@@ -84,7 +83,7 @@ export default function SubscriptionPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, paymentsEnabled]);
+  }, [currentAccount, paymentsEnabled]);
 
   useEffect(() => {
     fetchSubscription();
@@ -98,7 +97,7 @@ export default function SubscriptionPage() {
   };
 
   const handleSubscribe = async () => {
-    if (!user) {
+    if (!currentAccount) {
       router.push('/auth/login');
       return;
     }
@@ -107,13 +106,10 @@ export default function SubscriptionPage() {
       const response = await fetch('/api/subscription/create-checkout-session', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({
           tierId: selectedTier,
-          customAmount: selectedTier === 'custom' ? customAmount : undefined,
-        }),
-      });
+          customAmount: selectedTier === 'custom' ? customAmount : undefined})});
 
       const data = await response.json();
 
@@ -135,24 +131,21 @@ export default function SubscriptionPage() {
       toast({
         title: "Error",
         description: "Failed to start checkout process. Please try again.",
-        variant: "destructive",
-      });
+        variant: "destructive"});
     }
   };
 
   if (!paymentsEnabled) {
     return (
-      <PaymentFeatureGuard redirectTo="/settings">
-        <div className="max-w-4xl mx-auto p-6">
-          <div className="text-center py-12">
-            <CreditCard className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Payments Coming Soon</h2>
-            <p className="text-muted-foreground">
-              Subscription functionality is currently being developed.
-            </p>
-          </div>
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="text-center py-12">
+          <CreditCard className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Payments Coming Soon</h2>
+          <p className="text-muted-foreground">
+            Subscription functionality is currently being developed.
+          </p>
         </div>
-      </PaymentFeatureGuard>
+      </div>
     );
   }
 
@@ -167,8 +160,7 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <PaymentFeatureGuard redirectTo="/settings">
-      <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6">
         <div className="mb-8">
           <Link href="/settings" className="inline-flex items-center text-blue-500 hover:text-blue-600 mb-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -308,6 +300,5 @@ export default function SubscriptionPage() {
           )}
         </div>
       </div>
-    </PaymentFeatureGuard>
   );
 }

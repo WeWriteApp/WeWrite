@@ -152,7 +152,7 @@ export const useSearchState = (userId: string | null, userGroups: string[] | nul
         new Map(processedPages.map(page => [page.id, page])).values()
       );
       const uniqueUsers = Array.from(
-        new Map((data.users || []).map(user => [user.id, user])).values()
+        new Map((data.users || []).map(user => [user.id, session])).values()
       );
 
       setResults({

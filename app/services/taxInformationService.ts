@@ -641,7 +641,7 @@ export class TaxInformationService {
 
       case 'foreign':
         // Foreign tax ID: allow alphanumeric, minimum 3 characters
-        return /^[A-Za-z0-9]{3,}$/.test(cleanId);
+        return /^[A-Za-z0-9]{3}$/.test(cleanId);
 
       default:
         return false;

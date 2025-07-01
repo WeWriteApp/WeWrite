@@ -4,10 +4,10 @@ import React, { useState, useRef, forwardRef, useImperativeHandle, useEffect, us
 import { createPortal } from 'react-dom';
 import { usePillStyle } from '../../contexts/PillStyleContext';
 import { useLineSettings, LINE_MODES } from '../../contexts/LineSettingsContext';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { Lock, ExternalLink, X } from "lucide-react";
 import FilteredSearchResults from '../search/FilteredSearchResults';
-import ParagraphNumberOverlay from './ParagraphNumberOverlay';
-import NonInterferingParagraphNumbers from './NonInterferingParagraphNumbers';
+
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Switch } from '../ui/switch';
 import { cn } from '../../lib/utils';
@@ -129,6 +129,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   // Memoized style classes to prevent re-computation
   const { getPillStyleClasses } = usePillStyle();
   const { lineMode } = useLineSettings();
+  const { currentAccount } = useCurrentAccount();
   const pillStyleClasses = useMemo(() => getPillStyleClasses('editor'), [getPillStyleClasses]);
 
   // Helper function to convert Slate to simple text (memoized for performance)
@@ -359,7 +360,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
             const element = node as Element;
 
             try {
-              if (element.classList?.contains('unified-paragraph-number')) {
+              if (element.classList?.contains('paragraph-number')) {
                 return;
               }
             } catch (error) {
@@ -579,7 +580,8 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
           editorRef.current.innerHTML = htmlContent;
           lastContentRef.current = htmlContent;
 
-          // Paragraph numbers handled by overlay component
+          // Add paragraph numbers to each div
+          addParagraphNumbers();
         }
       });
 
@@ -590,6 +592,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         if (editorRef.current && editorRef.current.isConnected) {
           editorRef.current.innerHTML = "<div><br></div>";
           lastContentRef.current = "<div><br></div>";
+          addParagraphNumbers();
         }
       });
     }
@@ -617,10 +620,6 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
   // SIMPLIFIED: Remove complex cursor positioning functions
 
-
-
-
-
   // CRITICAL FIX: Save cursor position using content-based approach instead of DOM selection
   const [savedCursorPosition, setSavedCursorPosition] = useState<{
     paragraphIndex: number;
@@ -638,7 +637,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         // Find which paragraph and text offset the cursor is at
         const editorElement = editorRef.current;
         const paragraphs = Array.from(editorElement.children).filter(child =>
-          child.tagName === 'DIV' && !child.classList.contains('unified-paragraph-number')
+          child.tagName === 'DIV' && !child.classList.contains('paragraph-number')
         );
 
         let paragraphIndex = 0;
@@ -706,7 +705,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
       const editorElement = editorRef.current;
       const paragraphs = Array.from(editorElement.children).filter(child =>
-        child.tagName === 'DIV' && !child.classList.contains('unified-paragraph-number')
+        child.tagName === 'DIV' && !child.classList.contains('paragraph-number')
       );
 
       const targetParagraph = paragraphs[savedCursorPosition.paragraphIndex];
@@ -756,12 +755,30 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     }
   }, [isClient, savedCursorPosition]);
 
-  // SIMPLIFIED: No paragraph number injection - use overlay instead
+  // Add paragraph numbers to each div in edit mode
   const addParagraphNumbers = useCallback(() => {
-    // Paragraph numbers are now handled by ParagraphNumberOverlay component
-    // This prevents contentEditable conflicts and typing issues
-    return;
-  }, [lineMode]);
+    if (!editorRef.current || readOnly) return;
+
+    try {
+      const divs = editorRef.current.querySelectorAll('div');
+
+      divs.forEach((div, index) => {
+        // Skip if already has a paragraph number
+        if (div.querySelector('.paragraph-number')) return;
+
+        // Create paragraph number span
+        const numberSpan = document.createElement('span');
+        numberSpan.className = 'paragraph-number';
+        numberSpan.textContent = (index + 1).toString();
+        numberSpan.contentEditable = 'false';
+
+        // Insert at the beginning of the div
+        div.insertBefore(numberSpan, div.firstChild);
+      });
+    } catch (error) {
+      console.error('Error adding paragraph numbers:', error);
+    }
+  }, [readOnly]);
 
   // Optimized content change handling with better error handling
   const handleContentChange = useCallback(() => {
@@ -814,9 +831,12 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
           onChange?.(slateContent);
 
+          // Add paragraph numbers after content changes
+          addParagraphNumbers();
+
           // Count empty lines by checking actual DOM divs
           if (onEmptyLinesChange && editorRef.current) {
-            const divs = editorRef.current.querySelectorAll('div:not(.unified-paragraph-number)');
+            const divs = editorRef.current.querySelectorAll('div:not(.paragraph-number)');
             let emptyLineCount = 0;
 
             divs.forEach((div) => {
@@ -843,6 +863,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       // Ensure editor has valid content even on error
       if (editorRef.current) {
         editorRef.current.innerHTML = '<div><br></div>';
+        addParagraphNumbers();
       }
     }
   }, [isClient, onChange, onEmptyLinesChange, convertHTMLToSlate, addParagraphNumbers]);
@@ -857,8 +878,6 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     // REMOVED: Aggressive cursor positioning that was causing cursor jumping
     // Let the browser handle cursor positioning naturally during typing
   }, [isClient, handleContentChange]);
-
-
 
   // CRITICAL FIX: Selection handling with paragraph number avoidance
   const handleSelectionChange = useCallback(() => {
@@ -934,7 +953,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
     // SIMPLIFIED: Let browser handle click positioning naturally
     // No custom cursor positioning logic - the browser handles this correctly by default
-  }, [isClient, user, currentPage, isEditMode]);
+  }, [isClient, currentAccount, currentPage, isEditMode]);
 
   // Click handler for read-only mode - switches to edit mode
   const handleViewModeClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -1036,8 +1055,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         acceptNode: (node) => {
           // Skip paragraph numbers
           if (node.parentElement &&
-              (node.parentElement.classList.contains('unified-paragraph-number') ||
-               node.parentElement.classList.contains('dense-paragraph-number'))) {
+              node.parentElement.classList.contains('paragraph-number')) {
             return NodeFilter.FILTER_REJECT;
           }
           return NodeFilter.FILTER_ACCEPT;
@@ -1077,8 +1095,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
             acceptNode: (node) => {
               // Skip paragraph numbers
               if (node.parentElement &&
-                  (node.parentElement.classList.contains('unified-paragraph-number') ||
-                   node.parentElement.classList.contains('dense-paragraph-number'))) {
+                  node.parentElement.classList.contains('paragraph-number')) {
                 return NodeFilter.FILTER_REJECT;
               }
               return NodeFilter.FILTER_ACCEPT;
@@ -1691,7 +1708,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         const { createPage } = await import('../../firebase/database');
 
         // Get current user info for page creation
-        if (!user || !user.uid) {
+        if (!currentAccount || !currentAccount.uid) {
           console.error(`Cannot create page for pending link: No authenticated user`);
           continue;
         }
@@ -1702,8 +1719,8 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
           isPublic: false, // Default to private
           location: null,
           groupId: null,
-          userId: user.uid,
-          username: user.username || user.displayName || 'Anonymous',
+          userId: currentAccount.uid,
+          username: currentAccount.username || currentAccount.displayName || 'Anonymous',
           lastModified: new Date().toISOString(),
           isReply: false
         };
@@ -1985,10 +2002,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                 }}
               />
 
-              {/* SIMPLIFIED: Always show paragraph numbers in edit mode */}
-              {!readOnly && (
-                <NonInterferingParagraphNumbers editorRef={editorRef} />
-              )}
+              {/* Paragraph numbers are now handled inline within each paragraph */}
             </>
           ) : (
             // Skeleton loader with consistent styling
@@ -2003,7 +2017,6 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
             </div>
           )}
         </div>
-
 
       </div>
 

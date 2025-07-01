@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 import { Button } from '../../components/ui/button';
 import { ChevronLeft, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react';
 import { isAdmin } from "../../utils/isAdmin";
@@ -20,7 +20,7 @@ interface SystemHealthStatus {
 }
 
 export default function PaymentsAdminPage() {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [systemHealth, setSystemHealth] = useState<SystemHealthStatus>({
@@ -32,16 +32,16 @@ export default function PaymentsAdminPage() {
   const [lastHealthCheck, setLastHealthCheck] = useState<Date | null>(null);
 
   useEffect(() => {
-    if (user && !isAdmin(user)) {
+    if (session && session.email && !isAdmin(session.email)) {
       router.push('/');
       return;
     }
     
-    if (user) {
+    if (session) {
       setLoading(false);
       checkSystemHealth();
     }
-  }, [user, router]);
+  }, [, session, router]);
 
   const checkSystemHealth = async () => {
     try {
@@ -112,7 +112,7 @@ export default function PaymentsAdminPage() {
     );
   }
 
-  if (!user || !isAdmin(user)) {
+  if (!session || !session.email || !isAdmin(session.email)) {
     return null;
   }
 

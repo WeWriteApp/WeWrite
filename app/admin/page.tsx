@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from "../providers/AuthProvider";
+import { useCurrentAccount } from "../providers/CurrentAccountProvider";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -23,7 +23,6 @@ import FeatureFlagCard from '../components/admin/FeatureFlagCard';
 import { UserManagement } from '../components/admin/UserManagement';
 import { MockEarningsService } from '../services/mockEarningsService';
 
-
 interface User {
   id: string;
   email: string;
@@ -39,7 +38,7 @@ interface FeatureFlagState {
 }
 
 export default function AdminPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { session, isLoading: authLoading } = useCurrentAccount();
   const router = useRouter();
   const { toast } = useToast();
   const { resetBannerState } = usePWA();
@@ -93,7 +92,7 @@ export default function AdminPage() {
   // Load filter state from session storage
   useEffect(() => {
     console.log('[Admin Testing] Component mounting, loading saved states...');
-    console.log('[Admin Testing] Current user on mount:', user);
+    console.log('[Admin Testing] Current user on mount:', session);
 
     if (typeof window !== 'undefined') {
       const savedFilterState = sessionStorage.getItem('admin-hide-globally-enabled');
@@ -113,7 +112,7 @@ export default function AdminPage() {
     }
 
     console.log('[Admin Testing] Component mount completed');
-  }, [user]);
+  }, [session]);
 
   // Persist filter state to session storage
   useEffect(() => {
@@ -158,8 +157,8 @@ export default function AdminPage() {
 
   // Check if user is admin
   useEffect(() => {
-    if (!authLoading && user) {
-      if (user.email !== 'jamiegray2234@gmail.com') {
+    if (!authLoading && session) {
+      if (session.email !== 'jamiegray2234@gmail.com') {
         router.push('/');
       } else {
         try {
@@ -169,10 +168,10 @@ export default function AdminPage() {
           console.error('Error in admin data loading:', error);
         }
       }
-    } else if (!authLoading && !user) {
+    } else if (!authLoading && !session) {
       router.push('/auth/login?redirect=/admin');
     }
-  }, [user, authLoading, router]);
+  }, [session, authLoading, router]);
 
   // Custom tab change handler that updates URL hash
   const handleTabChange = (newTab: string) => {
@@ -371,7 +370,7 @@ export default function AdminPage() {
 
       toast({
         title: 'Success',
-        description: `${user.username || user.email} is ${user.isAdmin ? 'no longer' : 'now'} an admin`,
+        description: `${session.username || session.email} is ${user.isAdmin ? 'no longer' : 'now'} an admin`,
         variant: 'default'
       });
     } catch (error) {
@@ -391,9 +390,8 @@ export default function AdminPage() {
     try {
       setIsLoading(true);
 
-
       // Check if user is admin
-      if (!user || user.email !== 'jamiegray2234@gmail.com') {
+      if (!session || session.email !== 'jamiegray2234@gmail.com') {
         throw new Error('Admin access required');
       }
 
@@ -406,8 +404,6 @@ export default function AdminPage() {
         const currentValue = featureFlagsDoc.exists() ? featureFlagsDoc.data()[flagId] || false : false;
         newEnabledState = !currentValue;
       }
-
-
 
       // Multiple retry strategies to handle "blocked by client" errors
       let updateSuccess = false;
@@ -457,12 +453,10 @@ export default function AdminPage() {
         throw lastError || new Error('All update strategies failed');
       }
 
-
-
       // Update local state after successful database write
       setFeatureFlags(prev =>
         prev.map(flag =>
-          flag.id === flagId ? { ...flag, enabled: newEnabledState } : flag
+          flag.id === flagId ? { ...flag, enabled: newEnabledState ?? false } : flag
         )
       );
 
@@ -551,7 +545,7 @@ export default function AdminPage() {
       return;
     }
 
-    if (!user?.email) {
+    if (!session?.email) {
       toast({
         title: "User Not Found",
         description: "Unable to identify current user",
@@ -585,13 +579,12 @@ export default function AdminPage() {
       if (result.success) {
         toast({
           title: "Mock Earnings Created",
-          description: `Successfully created ${mockTokenAmount} tokens for your account`,
-        });
+          description: `Successfully created ${mockTokenAmount} tokens for your account`});
         setMockTokenAmount('');
       } else {
         toast({
           title: "Failed to Create Mock Earnings",
-          description: result.error || "An error occurred",
+          description: (result as any).error || "An error occurred",
           variant: "destructive"
         });
       }
@@ -612,7 +605,7 @@ export default function AdminPage() {
    * Uses the centralized MockEarningsService for consistency
    */
   const handleResetMockEarnings = async () => {
-    if (!user?.email) {
+    if (!session?.email) {
       toast({
         title: "User Not Found",
         description: "Unable to identify current user",
@@ -632,12 +625,11 @@ export default function AdminPage() {
 
         toast({
           title: "Mock Earnings Reset",
-          description: summary,
-        });
+          description: summary});
       } else {
         toast({
           title: "Reset Failed",
-          description: result.error || "An error occurred",
+          description: (result as any).error || "An error occurred",
           variant: "destructive"
         });
       }
@@ -655,10 +647,10 @@ export default function AdminPage() {
 
   const handleTestPayoutFlow = async () => {
     console.log('[Admin Testing] Starting payout flow test...');
-    console.log('[Admin Testing] Current user:', user);
+    console.log('[Admin Testing] Current user:', session);
 
-    if (!user?.email) {
-      console.error('[Admin Testing] User not found or no email for payout test:', user);
+    if (!session?.email) {
+      console.error('[Admin Testing] User not found or no email for payout test:', session);
       toast({
         title: "User Not Found",
         description: "Unable to identify current user",
@@ -669,14 +661,13 @@ export default function AdminPage() {
 
     setPayoutTestLoading(true);
     try {
-      const requestBody = { userEmail: user.email };
+      const requestBody = { userEmail: session.email };
       console.log('[Admin Testing] Sending payout flow test request with body:', requestBody);
 
       const response = await fetch('/api/admin/test-payout-flow', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify(requestBody)
       });
 
@@ -691,8 +682,7 @@ export default function AdminPage() {
         console.log('[Admin Testing] Test results:', result.data);
         toast({
           title: "Payout Flow Test Complete",
-          description: "Test completed for your account. Check console for details.",
-        });
+          description: "Test completed for your account. Check console for details."});
       } else {
         console.error('[Admin Testing] Payout flow test failed:', result);
         toast({
@@ -724,8 +714,7 @@ export default function AdminPage() {
       const response = await fetch('/api/admin/payout-status', {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-        }
+          'Content-Type': 'application/json'}
       });
 
       console.log('[Admin Testing] Status check response status:', response.status);
@@ -739,8 +728,7 @@ export default function AdminPage() {
         console.log('[Admin Testing] Payout System Status:', result.data);
         toast({
           title: "System Status Check Complete",
-          description: "Check console for detailed status information",
-        });
+          description: "Check console for detailed status information"});
       } else {
         console.error('[Admin Testing] Status check failed:', result);
         toast({
@@ -785,8 +773,7 @@ export default function AdminPage() {
       const response = await fetch('/api/admin/monthly-distribution', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify(requestBody)
       });
 
@@ -800,8 +787,7 @@ export default function AdminPage() {
         console.log('[Admin Testing] Monthly distribution completed successfully');
         toast({
           title: "Monthly Distribution Complete",
-          description: `Successfully processed distribution for ${distributionMonth}`,
-        });
+          description: `Successfully processed distribution for ${distributionMonth}`});
       } else {
         console.error('[Admin Testing] Monthly distribution failed:', result);
         toast({
@@ -843,8 +829,7 @@ export default function AdminPage() {
         title: enabled ? "Inactive Subscription Test Enabled" : "Inactive Subscription Test Disabled",
         description: enabled
           ? "Subscription will appear as inactive for UI testing"
-          : "Subscription will show normal status",
-      });
+          : "Subscription will show normal status"});
     } catch (error) {
       console.error('[Admin Testing] Exception in inactive subscription toggle:', error);
       console.error('[Admin Testing] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
@@ -873,7 +858,7 @@ export default function AdminPage() {
     );
   }
 
-  if (!user) {
+  if (!session) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
@@ -883,7 +868,7 @@ export default function AdminPage() {
     );
   }
 
-  if (user.email !== 'jamiegray2234@gmail.com') {
+  if (session.email !== 'jamiegray2234@gmail.com') {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
@@ -908,7 +893,6 @@ export default function AdminPage() {
         <p className="text-muted-foreground">
           Manage feature flags and admin settings
         </p>
-
 
       </div>
 
@@ -991,7 +975,6 @@ export default function AdminPage() {
           ) : (
             <>
 
-
               <div className="space-y-3">
                 {filteredFeatureFlags.map(flag => (
                   <FeatureFlagCard
@@ -1052,13 +1035,13 @@ export default function AdminPage() {
                     className="flex items-center justify-between p-3 rounded-md border border-border hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex flex-col">
-                      <span className="font-medium">{user.username || 'No username'}</span>
-                      <span className="text-xs text-muted-foreground">{user.email}</span>
+                      <span className="font-medium">{session.username || 'No username'}</span>
+                      <span className="text-xs text-muted-foreground">{session.email}</span>
                     </div>
                     <Button
                       variant={user.isAdmin ? "destructive" : "outline"}
                       size="sm"
-                      onClick={() => toggleAdminStatus(user)}
+                      onClick={() => toggleAdminStatus(session as any)}
                       disabled={isLoading}
                     >
                       {isLoading ? (
@@ -1261,9 +1244,6 @@ export default function AdminPage() {
                 </Button>
               </div>
             </div>
-
-
-
 
           </div>
         </SwipeableTabsContent>

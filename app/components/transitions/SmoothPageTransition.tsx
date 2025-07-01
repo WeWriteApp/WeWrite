@@ -33,15 +33,13 @@ export function SmoothPageTransition({
   children,
   className,
   transitionDuration = 200,
-  enableTransitions = true,
-}: SmoothPageTransitionProps) {
+  enableTransitions = true}: SmoothPageTransitionProps) {
   const pathname = usePathname();
   const [transitionState, setTransitionState] = useState<TransitionState>({
     isTransitioning: false,
     previousContent: null,
     currentContent: children,
-    direction: 'none',
-  });
+    direction: 'none'});
   
   const previousPathnameRef = useRef<string>(pathname);
   const transitionTimeoutRef = useRef<NodeJS.Timeout>();
@@ -72,8 +70,7 @@ export function SmoothPageTransition({
       setTransitionState(prev => ({
         ...prev,
         currentContent: children,
-        isTransitioning: false,
-      }));
+        isTransitioning: false}));
       return;
     }
 
@@ -87,8 +84,7 @@ export function SmoothPageTransition({
         isTransitioning: true,
         previousContent: prev.currentContent,
         currentContent: children,
-        direction,
-      }));
+        direction}));
 
       // Clear existing timeout
       if (transitionTimeoutRef.current) {
@@ -100,8 +96,7 @@ export function SmoothPageTransition({
         setTransitionState(prev => ({
           ...prev,
           isTransitioning: false,
-          previousContent: null,
-        }));
+          previousContent: null}));
       }, transitionDuration);
 
       previousPathnameRef.current = pathname;
@@ -109,8 +104,7 @@ export function SmoothPageTransition({
       // Same route, just update content
       setTransitionState(prev => ({
         ...prev,
-        currentContent: children,
-      }));
+        currentContent: children}));
     }
   }, [pathname, children, enableTransitions, transitionDuration]);
 
@@ -164,8 +158,7 @@ export function SmoothPageTransition({
             opacity: 0,
             transform: transitionState.direction === 'forward' ? 'translateX(-100%)' : 
                       transitionState.direction === 'backward' ? 'translateX(100%)' : 
-                      'translateX(0)',
-          }}
+                      'translateX(0)'}}
         >
           {transitionState.previousContent}
         </div>
@@ -188,8 +181,7 @@ export function SmoothPageTransition({
             (transitionState.direction === 'forward' ? 'translateX(100%)' : 
              transitionState.direction === 'backward' ? 'translateX(-100%)' : 
              'translateX(0)') : 
-            'translateX(0)',
-        }}
+            'translateX(0)'}}
       >
         {transitionState.currentContent}
       </div>
@@ -202,8 +194,7 @@ export function SmoothPageTransition({
  */
 export function MobileNavigationTransition({
   children,
-  className,
-}: {
+  className}: {
   children: ReactNode;
   className?: string;
 }) {
@@ -257,8 +248,7 @@ export function usePageTransition() {
     isTransitioning,
     startTransition,
     endTransition,
-    pathname,
-  };
+    pathname};
 }
 
 export default SmoothPageTransition;

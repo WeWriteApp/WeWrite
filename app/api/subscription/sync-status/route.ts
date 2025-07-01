@@ -33,8 +33,7 @@ function initializeFirebase() {
 // Initialize Stripe with proper config
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia',
-});
+  apiVersion: '2024-12-18.acacia'});
 
 export async function POST(request: NextRequest) {
   try {
@@ -161,8 +160,7 @@ export async function POST(request: NextRequest) {
         tokens: tokens,
         currentPeriodStart: subscriptionData.currentPeriodStart,
         currentPeriodEnd: subscriptionData.currentPeriodEnd,
-        cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
-      },
+        cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end},
       statusChanged: currentStatus !== newStatus,
       previousStatus: currentStatus,
       message: `Subscription status synced successfully. Status: ${stripeSubscription.status}`

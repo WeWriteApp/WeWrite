@@ -46,8 +46,7 @@ export function ProgressiveLoader({
   className,
   onLoad,
   onError,
-  retryCount = 2,
-}: ProgressiveLoaderProps) {
+  retryCount = 2}: ProgressiveLoaderProps) {
   const [loadingState, setLoadingState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [networkCondition, setNetworkCondition] = useState<NetworkCondition | null>(null);
   const [retryAttempts, setRetryAttempts] = useState(0);
@@ -72,8 +71,7 @@ export function ProgressiveLoader({
           effectiveType: connection.effectiveType || '4g',
           downlink: connection.downlink || 10,
           rtt: connection.rtt || 100,
-          saveData: connection.saveData || false,
-        };
+          saveData: connection.saveData || false};
         
         setNetworkCondition(condition);
         
@@ -100,8 +98,7 @@ export function ProgressiveLoader({
     const priorityDelays = {
       high: 0,
       medium: 100,
-      low: 500,
-    };
+      low: 500};
 
     const effectiveDelay = Math.max(delay, priorityDelays[priority]);
     
@@ -322,8 +319,7 @@ export function useProgressiveLoading() {
           effectiveType: connection.effectiveType || '4g',
           downlink: connection.downlink || 10,
           rtt: connection.rtt || 100,
-          saveData: connection.saveData || false,
-        };
+          saveData: connection.saveData || false};
         
         setNetworkInfo(info);
         setIsSlowConnection(['slow-2g', '2g', '3g'].includes(info.effectiveType));
@@ -341,8 +337,7 @@ export function useProgressiveLoading() {
   return {
     isSlowConnection,
     networkInfo,
-    shouldDefer: isSlowConnection || networkInfo?.saveData,
-  };
+    shouldDefer: isSlowConnection || networkInfo?.saveData};
 }
 
 export default ProgressiveLoader;

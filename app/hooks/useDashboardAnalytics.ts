@@ -53,7 +53,6 @@ export function useDashboardAnalytics(dateRange: DateRange): UseDashboardAnalyti
 
   const fetchData = useCallback(async () => {
 
-
     try {
       setLoading(true);
       setError(null);

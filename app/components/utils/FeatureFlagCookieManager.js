@@ -1,7 +1,7 @@
 "use client";
 
-import { useContext, useEffect } from 'react';
-import { AuthContext } from '../../providers/AuthProvider';
+import { useEffect } from 'react';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useSyncFeatureFlagToCookie } from '../../utils/feature-flag-cookies';
 
 /**
@@ -12,7 +12,7 @@ import { useSyncFeatureFlagToCookie } from '../../utils/feature-flag-cookies';
  * has been completely removed from the application.
  */
 export default function FeatureFlagCookieManager() {
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
 
   // Groups feature flag removed - no longer needed
   // If other feature flags need cookie syncing in the future, add them here

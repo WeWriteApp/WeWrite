@@ -216,7 +216,6 @@ const useOptimizedPages = (
     }
   }, [userId, currentUserId, lastPageKey, isMoreLoading, hasMorePages]);
 
-  
   // Function to force refresh the data
   const refreshPages = useCallback((): void => {
     // Clear cache for this user

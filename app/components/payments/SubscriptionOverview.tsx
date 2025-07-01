@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -24,19 +24,19 @@ interface Subscription {
 }
 
 export function SubscriptionOverview() {
-  const { user } = useAuth();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  const { currentAccount } = useCurrentAccount();
+  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user || !isPaymentsEnabled) {
+    if (!currentAccount || !isPaymentsEnabled) {
       setLoading(false);
       return;
     }
 
-    const unsubscribe = listenToUserSubscription(user.uid, (subscriptionData) => {
+    const unsubscribe = listenToUserSubscription(currentAccount.uid, (subscriptionData) => {
       try {
         setError(null);
         setSubscription(subscriptionData);
@@ -51,7 +51,7 @@ export function SubscriptionOverview() {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [user, isPaymentsEnabled]);
+  }, [currentAccount, isPaymentsEnabled]);
 
   // If payments feature flag is disabled, don't render anything
   if (!isPaymentsEnabled) {
@@ -61,8 +61,7 @@ export function SubscriptionOverview() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
-    }).format(amount);
+      currency: 'USD'}).format(amount);
   };
 
   const getStatusBadge = (subscription: Subscription) => {
@@ -85,8 +84,7 @@ export function SubscriptionOverview() {
       canceled: AlertTriangle,
       cancelling: AlertTriangle,
       pending: Clock,
-      incomplete: AlertTriangle,
-    };
+      incomplete: AlertTriangle};
 
     const IconComponent = iconMap[statusInfo.status] || AlertTriangle;
 

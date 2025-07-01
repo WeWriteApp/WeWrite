@@ -44,7 +44,6 @@ const usePages = (
   isUserPage: boolean = false
 ): UsePagesReturn => {
 
-
   // Use higher limit for user pages, default limit for home page
   const initialLimitCount = isUserPage ? USER_PAGE_INITIAL_LIMIT : DEFAULT_INITIAL_LIMIT;
   const [loading, setLoading] = useState<boolean>(true);
@@ -444,8 +443,6 @@ const usePages = (
     }
   };
 
-
-
   // Track fetch attempts to prevent infinite loops
   const fetchAttemptsRef = useRef(0);
   const maxFetchAttempts = 3;
@@ -564,7 +561,6 @@ const usePages = (
       lastFetchTimeRef.current = Date.now();
 
       console.log(`usePages: Fetching pages for user ${userId}, attempt ${fetchAttemptsRef.current}`);
-
 
       try {
         console.log('🔍 DEBUG: Calling fetchInitialPages() now...');

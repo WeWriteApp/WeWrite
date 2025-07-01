@@ -30,8 +30,7 @@ function initializeFirebase() {
 
 // Initialize Stripe
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2025-04-30.basil' as any,
-});
+  apiVersion: '2025-04-30.basil' as any});
 
 // POST /api/subscription/retry-payment - Retry a failed payment
 export async function POST(request: NextRequest) {
@@ -85,8 +84,7 @@ export async function POST(request: NextRequest) {
     const invoices = await stripe.invoices.list({
       subscription: subscriptionData.stripeSubscriptionId,
       status: 'open',
-      limit: 1,
-    });
+      limit: 1});
 
     if (invoices.data.length === 0) {
       return NextResponse.json({ 
@@ -108,8 +106,7 @@ export async function POST(request: NextRequest) {
           lastPaymentAt: new Date().toISOString(),
           lastFailedPaymentAt: null,
           lastFailedInvoiceId: null,
-          updatedAt: FieldValue.serverTimestamp(),
-        });
+          updatedAt: FieldValue.serverTimestamp()});
 
         return NextResponse.json({ 
           success: true,
@@ -128,8 +125,7 @@ export async function POST(request: NextRequest) {
           failureCount: newFailureCount,
           lastFailedPaymentAt: new Date().toISOString(),
           lastFailedInvoiceId: invoice.id,
-          updatedAt: FieldValue.serverTimestamp(),
-        });
+          updatedAt: FieldValue.serverTimestamp()});
 
         return NextResponse.json({ 
           error: 'Payment retry failed',
@@ -147,8 +143,7 @@ export async function POST(request: NextRequest) {
         failureCount: newFailureCount,
         lastFailedPaymentAt: new Date().toISOString(),
         lastFailedInvoiceId: invoice.id,
-        updatedAt: serverTimestamp(),
-      });
+        updatedAt: serverTimestamp()});
 
       // Determine error message based on Stripe error
       let errorMessage = 'Payment retry failed';

@@ -6,7 +6,7 @@ import { Button } from '../ui/button';
 import { SectionTitle } from '../ui/section-title';
 import StickySection from "../utils/StickySection";
 import DailyNotesCarousel from './DailyNotesCarousel';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 
 interface DailyNotesSectionProps {
@@ -23,7 +23,7 @@ interface DailyNotesSectionProps {
  * Uses accent color from context and respects pill style settings.
  */
 export default function DailyNotesSection({}: DailyNotesSectionProps) {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const { accentColor, customColors } = useAccentColor();
 
   // Get the actual color value from the accent color system
@@ -40,7 +40,7 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
     return '#1768FF'; // fallback
   };
 
-  if (!user) {
+  if (!session) {
     return null; // Don't show for non-authenticated users
   }
 
@@ -87,7 +87,6 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
         <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none" />
       </div>
-
 
     </StickySection>
   );

@@ -21,8 +21,7 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
     selectedText: '',
     position: null,
     isVisible: false,
-    selectionRange: null,
-  });
+    selectionRange: null});
 
   const handleSelectionChange = useCallback(() => {
     const selection = window.getSelection();
@@ -131,8 +130,7 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
       selectedText: '',
       position: null,
       isVisible: false,
-      selectionRange: null,
-    });
+      selectionRange: null});
 
     // Clear the browser selection
     const selection = window.getSelection();
@@ -218,6 +216,5 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
     clearSelection,
     copyToClipboard,
     createShareableLink,
-    options,
-  };
+    options};
 };

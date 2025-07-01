@@ -59,8 +59,7 @@ export function OptimisticNavigationProvider({ children }: OptimisticNavigationP
     sourceRoute: null,
     startTime: null,
     showSkeleton: false,
-    navigationId: null,
-  });
+    navigationId: null});
 
   const navigationTimeoutRef = useRef<NodeJS.Timeout>();
   const skeletonTimeoutRef = useRef<NodeJS.Timeout>();
@@ -95,8 +94,7 @@ export function OptimisticNavigationProvider({ children }: OptimisticNavigationP
     const {
       showSkeleton = true,
       preloadRoute = true,
-      maxDuration = 5000,
-    } = options;
+      maxDuration = 5000} = options;
 
     const navigationId = Math.random().toString(36).substr(2, 9);
     const startTime = performance.now();
@@ -116,8 +114,7 @@ export function OptimisticNavigationProvider({ children }: OptimisticNavigationP
       sourceRoute: pathname,
       startTime,
       showSkeleton: false, // Will be set after a short delay
-      navigationId,
-    });
+      navigationId});
 
     // Show skeleton after a very short delay to avoid flashing
     if (showSkeleton) {
@@ -170,8 +167,7 @@ export function OptimisticNavigationProvider({ children }: OptimisticNavigationP
       sourceRoute: null,
       startTime: null,
       showSkeleton: false,
-      navigationId: null,
-    });
+      navigationId: null});
   };
 
   const cancelNavigation = () => {
@@ -202,8 +198,7 @@ export function OptimisticNavigationProvider({ children }: OptimisticNavigationP
     startNavigation,
     completeNavigation,
     cancelNavigation,
-    getNavigationProgress,
-  };
+    getNavigationProgress};
 
   return (
     <OptimisticNavigationContext.Provider value={contextValue}>
@@ -251,16 +246,14 @@ export function useEnhancedNavigation() {
     startNavigation(route, {
       showSkeleton: true,
       preloadRoute: true,
-      ...options,
-    });
+      ...options});
   };
 
   const navigateInstant = (route: string) => {
     startNavigation(route, {
       showSkeleton: false,
       preloadRoute: true,
-      maxDuration: 1000,
-    });
+      maxDuration: 1000});
   };
 
   return {

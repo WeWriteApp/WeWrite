@@ -3,7 +3,6 @@ import { collection, query, orderBy, limit, getDocs, where } from 'firebase/fire
 import { db } from '../../firebase/config';
 import { rtdb } from '../../firebase/rtdb';
 import { ref, get } from 'firebase/database';
-import { cachedStatsService } from '../../services/CachedStatsService';
 
 interface DashboardData {
   recentPages: any[];
@@ -113,8 +112,6 @@ async function getRecentPagesOptimized(limitCount: number, userId?: string | nul
   }
 }
 
-
-
 /**
  * Groups functionality removed
  */
@@ -145,12 +142,22 @@ async function getTrendingPagesOptimized(limitCount: number, userId?: string | n
 }
 
 /**
- * Get user statistics
+ * Get user statistics (server-side version)
  */
 async function getUserStatsOptimized(userId: string): Promise<any> {
   try {
-    const userStats = await cachedStatsService.getUserStats(userId);
-    return userStats;
+    // Fetch user data directly from RTDB (server-safe)
+    const userSnapshot = await get(ref(rtdb, `users/${userId}`));
+    const userData = userSnapshot.exists() ? userSnapshot.val() : {};
+
+    return {
+      userId,
+      pageCount: userData.pageCount || 0,
+      totalViews: userData.totalViews || 0,
+      followerCount: userData.followerCount || 0,
+      lastActive: userData.lastActive,
+      lastUpdated: Date.now()
+    };
   } catch (error) {
     console.error('Error fetching user stats:', error);
     return null;

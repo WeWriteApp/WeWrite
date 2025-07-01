@@ -23,7 +23,7 @@ export default function ReturnToPreviousAccount(): JSX.Element | null {
     const previousUserSession = localStorage.getItem('previousUserSession');
 
     if (previousUserSession) {
-      // Restore the previous user session
+      // Restore the previous user account
       localStorage.setItem('currentUser', previousUserSession);
 
       // Navigate back to the return URL or home page

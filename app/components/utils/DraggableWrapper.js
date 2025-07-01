@@ -18,8 +18,7 @@ const DraggableWrapper = ({
   id = 'draggable-wrapper',
   initialPosition = { x: 20, y: 20 },
   onPositionChange,
-  zIndex = '9999',
-}) => {
+  zIndex = '9999'}) => {
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -95,8 +94,7 @@ const DraggableWrapper = ({
         left: `${position.x}px`,
         top: `${position.y}px`,
         zIndex: zIndex,
-        userSelect: 'none',
-      }}
+        userSelect: 'none'}}
     >
       <div
         className="draggable-handle bg-background border-theme-medium rounded-t-md px-2 py-1 flex items-center justify-between"

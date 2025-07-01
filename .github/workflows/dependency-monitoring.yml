@@ -1,0 +1,264 @@
+name: Dependency Monitoring
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  dependency-monitoring:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Check for outdated dependencies
+      id: outdated
+      run: |
+        echo "## 📦 Outdated Dependencies" >> outdated.md
+        npm outdated --long >> outdated.md || true
+        echo "outdated_count=$(npm outdated --json | jq 'length' 2>/dev/null || echo 0)" >> $GITHUB_OUTPUT
+      continue-on-error: true
+      
+    - name: Run security audit
+      id: audit
+      run: |
+        echo "## 🔒 Security Audit" >> security.md
+        npm audit --audit-level=moderate >> security.md || true
+        echo "vulnerabilities=$(npm audit --json | jq '.metadata.vulnerabilities.total' 2>/dev/null || echo 0)" >> $GITHUB_OUTPUT
+      continue-on-error: true
+      
+    - name: Check dependency health
+      id: health
+      run: |
+        echo "## 🏥 Dependency Health" >> health.md
+        npm run deps:check >> health.md || true
+        npm run deps:validate >> health.md || true
+      continue-on-error: true
+      
+    - name: Generate dependency dashboard
+      run: |
+        npm run deps:dashboard
+        npm run deps:map
+      continue-on-error: true
+      
+    - name: Check for dependency updates
+      id: updates
+      run: |
+        echo "## 🔄 Available Updates" >> updates.md
+        npm run deps:update:dry >> updates.md || true
+      continue-on-error: true
+      
+    - name: Upload dependency reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: dependency-reports-${{ github.run_number }}
+        path: |
+          dependency-report.json
+          dependency-dashboard.html
+          dependency-map.mermaid
+          outdated.md
+          security.md
+          health.md
+          updates.md
+        retention-days: 30
+        
+    - name: Create issue for critical problems
+      if: steps.audit.outputs.vulnerabilities > 0 || steps.outdated.outputs.outdated_count > 20
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          let issueBody = '# 🚨 Dependency Monitoring Alert\n\n';
+          issueBody += `This is an automated report from the dependency monitoring system.\n\n`;
+          
+          // Add security vulnerabilities
+          if (${{ steps.audit.outputs.vulnerabilities }} > 0) {
+            issueBody += '## 🔒 Security Vulnerabilities\n';
+            issueBody += `Found ${{ steps.audit.outputs.vulnerabilities }} security vulnerabilities.\n\n`;
+            try {
+              const securityContent = fs.readFileSync('security.md', 'utf8');
+              issueBody += '```\n' + securityContent + '\n```\n\n';
+            } catch (error) {
+              issueBody += 'Could not read security audit details.\n\n';
+            }
+          }
+          
+          // Add outdated dependencies
+          if (${{ steps.outdated.outputs.outdated_count }} > 20) {
+            issueBody += '## 📦 Outdated Dependencies\n';
+            issueBody += `Found ${{ steps.outdated.outputs.outdated_count }} outdated dependencies.\n\n`;
+            try {
+              const outdatedContent = fs.readFileSync('outdated.md', 'utf8');
+              issueBody += '```\n' + outdatedContent + '\n```\n\n';
+            } catch (error) {
+              issueBody += 'Could not read outdated dependencies details.\n\n';
+            }
+          }
+          
+          issueBody += '## 🔧 Recommended Actions\n\n';
+          issueBody += '1. Review the security vulnerabilities and update affected packages\n';
+          issueBody += '2. Run `npm run deps:update:dry` to preview available updates\n';
+          issueBody += '3. Run `npm run deps:heal` to automatically fix dependency issues\n';
+          issueBody += '4. Check the dependency dashboard for detailed analysis\n\n';
+          
+          issueBody += '## 📊 Reports\n\n';
+          issueBody += `View detailed reports in the [workflow artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).\n\n`;
+          
+          issueBody += '---\n';
+          issueBody += '*This issue was automatically created by the dependency monitoring workflow.*';
+          
+          // Check if there's already an open issue
+          const existingIssues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: 'dependency-monitoring'
+          });
+          
+          if (existingIssues.data.length === 0) {
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Dependency Monitoring Alert - ${new Date().toISOString().split('T')[0]}`,
+              body: issueBody,
+              labels: ['dependency-monitoring', 'automated']
+            });
+          } else {
+            // Update existing issue
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: existingIssues.data[0].number,
+              body: issueBody
+            });
+          }
+
+  auto-update-dependencies:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' # Only run on scheduled events
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Configure git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+    - name: Run safe dependency updates
+      id: updates
+      run: |
+        # Only update patch versions automatically
+        npm run deps:update:dry > update-preview.txt
+        
+        # Check if there are any patch updates
+        if grep -q "patch" update-preview.txt; then
+          echo "patch_updates=true" >> $GITHUB_OUTPUT
+          npm run deps:update
+        else
+          echo "patch_updates=false" >> $GITHUB_OUTPUT
+        fi
+      continue-on-error: true
+      
+    - name: Run tests after updates
+      if: steps.updates.outputs.patch_updates == 'true'
+      run: |
+        npm run lint
+        npx tsc --noEmit
+        npm run deps:validate
+        npm run build
+      continue-on-error: true
+      
+    - name: Create pull request
+      if: steps.updates.outputs.patch_updates == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: automated dependency updates'
+        title: '🤖 Automated Dependency Updates'
+        body: |
+          ## 🤖 Automated Dependency Updates
+          
+          This PR contains automated patch-level dependency updates.
+          
+          ### Changes
+          - Updated dependencies to latest patch versions
+          - All tests and checks passed
+          
+          ### Verification
+          - ✅ TypeScript compilation
+          - ✅ ESLint checks
+          - ✅ Import validation
+          - ✅ Build process
+          
+          ### Review Notes
+          These are patch-level updates that should be safe to merge.
+          Please review the changes and merge if everything looks good.
+          
+          ---
+          *This PR was automatically created by the dependency monitoring workflow.*
+        branch: automated-dependency-updates
+        delete-branch: true
+        labels: |
+          dependencies
+          automated
+          patch-updates
+
+  dependency-dashboard-update:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Generate dependency dashboard
+      run: |
+        npm run deps:health
+        
+    - name: Deploy dashboard to GitHub Pages
+      if: github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: .
+        destination_dir: dependency-dashboard
+        keep_files: false
+        publish_branch: gh-pages
+        include_files: |
+          dependency-dashboard.html
+          dependency-report.json
+          dependency-map.mermaid

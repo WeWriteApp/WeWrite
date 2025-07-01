@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { CheckCircle, XCircle, Clock } from 'lucide-react';
-import { useSyncQueue } from '../../contexts/SyncQueueContext';
 
 interface EmailVerificationStatusProps {
   className?: string;

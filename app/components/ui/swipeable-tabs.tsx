@@ -49,8 +49,7 @@ const SwipeableTabs = ({
   tabsContentWrapperClassName,
   preventScrollOnSwipe = false,
   swipeDistance = 100,
-  animationDuration = 0.3,
-}: SwipeableTabsProps) => {
+  animationDuration = 0.3}: SwipeableTabsProps) => {
   const [activeTab, setActiveTab] = useState(value || defaultValue || "");
   const [direction, setDirection] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -294,8 +293,7 @@ const SwipeableTabs = ({
                     style={{
                       width: '100%',
                       position: 'relative',
-                      touchAction: preventScrollOnSwipe ? 'none' : 'pan-y',
-                    }}
+                      touchAction: preventScrollOnSwipe ? 'none' : 'pan-y'}}
                   >
                     {child.props.children}
                   </div>
@@ -320,8 +318,7 @@ const AnimatedTabsContent = ({
   isDragging = false,
   dragX = 0,
   tabValues = [],
-  animationDuration = 0.3,
-}: {
+  animationDuration = 0.3}: {
   children: React.ReactNode;
   direction: number;
   activeTab: string;

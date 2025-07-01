@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '../providers/AuthProvider';
+import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 
 interface PreloadOptions {
   priority?: 'high' | 'medium' | 'low';
@@ -29,7 +29,7 @@ interface RoutePreloadConfig {
 export function useRoutePreloader() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const preloadedRoutesRef = useRef<Map<string, number>>(new Map());
   const preloadTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
@@ -115,10 +115,10 @@ export function useRoutePreloader() {
     }
     
     // User-specific routes
-    if (user?.uid) {
+    if (session?.uid) {
       // Always preload user's profile
       configs.push({
-        route: `/user/${user.uid}`,
+        route: `/user/${session.uid}`,
         options: { priority: 'high', delay: 200 }
       });
       
@@ -143,9 +143,9 @@ export function useRoutePreloader() {
         
       case '/notifications':
         // From notifications, likely to go back to home or profile
-        if (user?.uid) {
+        if (session?.uid) {
           configs.push({
-            route: `/user/${user.uid}`,
+            route: `/user/${session.uid}`,
             options: { priority: 'medium', delay: 500 }
           });
         }
@@ -170,7 +170,7 @@ export function useRoutePreloader() {
     }
     
     return configs;
-  }, [pathname, user?.uid]);
+  }, [pathname, session?.uid]);
 
   // Auto-preload likely targets when route changes
   useEffect(() => {
@@ -204,8 +204,7 @@ export function useRoutePreloader() {
     return {
       totalPreloaded: preloadedRoutesRef.current.size,
       activeTimeouts: preloadTimeoutsRef.current.size,
-      preloadedRoutes: Array.from(preloadedRoutesRef.current.keys()),
-    };
+      preloadedRoutes: Array.from(preloadedRoutesRef.current.keys())};
   }, []);
 
   return {
@@ -215,24 +214,23 @@ export function useRoutePreloader() {
     preloadCritical,
     getLikelyNavigationTargets,
     getPreloadStats,
-    wasRecentlyPreloaded,
-  };
+    wasRecentlyPreloaded};
 }
 
 /**
  * Hook for mobile navigation specific preloading
  */
 export function useMobileNavigationPreloader() {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const { preloadCritical, preloadOnInteraction } = useRoutePreloader();
 
   // Preload critical mobile navigation routes
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!session?.uid) return;
     
     const criticalRoutes = [
       '/',
-      `/user/${user.uid}`,
+      `/user/${session.uid}`,
       '/notifications',
       '/new',
     ];
@@ -243,13 +241,12 @@ export function useMobileNavigationPreloader() {
     }, 1000);
     
     return () => clearTimeout(timer);
-  }, [user?.uid, preloadCritical]);
+  }, [session?.uid, preloadCritical]);
 
   // Return preload function for navigation buttons
   return {
     preloadOnHover: preloadOnInteraction,
-    preloadOnFocus: preloadOnInteraction,
-  };
+    preloadOnFocus: preloadOnInteraction};
 }
 
 export default useRoutePreloader;

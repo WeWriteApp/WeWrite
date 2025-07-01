@@ -22,8 +22,7 @@ import { TokenAllocation, WriterTokenEarnings } from '../types/database';
 // Initialize Stripe with fallback for development
 const stripeSecretKey = getStripeSecretKey();
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
-  apiVersion: '2024-12-18.acacia',
-}) : null;
+  apiVersion: '2024-12-18.acacia'}) : null;
 
 /**
  * Transaction status enum

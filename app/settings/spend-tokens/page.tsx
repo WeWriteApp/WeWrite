@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { Button } from '../../components/ui/button';
 import TokenAllocationDisplay from '../../components/subscription/TokenAllocationDisplay';
 import TokenAllocationBreakdown from '../../components/subscription/TokenAllocationBreakdown';
@@ -41,16 +41,16 @@ interface TokenBalance {
 }
 
 export default function SpendTokensPage() {
-  const { user } = useAuth();
+  const { currentAccount } = useCurrentAccount();
   const router = useRouter();
   const { trackInteractionEvent } = useWeWriteAnalytics();
-  
+
   const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
   const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Check payments feature flag
-  const paymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const paymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
 
   // Track page view
   useEffect(() => {
@@ -63,7 +63,7 @@ export default function SpendTokensPage() {
 
   // Fetch current subscription and token balance
   const fetchData = useCallback(async () => {
-    if (!user || !paymentsEnabled) return;
+    if (!currentAccount || !paymentsEnabled) return;
 
     try {
       // Fetch subscription
@@ -84,19 +84,19 @@ export default function SpendTokensPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, paymentsEnabled]);
+  }, [currentAccount, paymentsEnabled]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  if (!user || !paymentsEnabled) {
+  if (!currentAccount || !paymentsEnabled) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Spend Tokens</h1>
           <p className="text-muted-foreground">
-            {!user ? 'Please sign in to manage your token allocation.' : 'Payments are not available at this time.'}
+            {!currentAccount ? 'Please sign in to manage your token allocation.' : 'Payments are not available at this time.'}
           </p>
         </div>
       </div>

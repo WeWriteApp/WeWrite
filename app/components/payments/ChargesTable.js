@@ -5,24 +5,20 @@ import DataTable from "react-data-table-component";
 
 const ChargesTable = () => {
   const {
-    charges,
-  } = useContext(PortfolioContext);
+    charges} = useContext(PortfolioContext);
   const columns = [
     {
       name: "ID",
       selector: (row) => row.id,
-      sortable: true,
-      },
+      sortable: true},
     {
       name: "Paid To",
       selector: (row) => row.paidTo,
-      sortable: true,
-    },
+      sortable: true},
     {
       name: "Amount",
       selector: (row) => row.amount,
-      sortable: true,
-    },
+      sortable: true},
     {
       name: "Date",
       selector: (row) => row.date,
@@ -31,8 +27,7 @@ const ChargesTable = () => {
           {new Date(row.date).toLocaleDateString()}
         </div>
       ),
-      sortable: true,
-    },
+      sortable: true},
     {
       name: "Status",
       selector: (row) => row.status,
@@ -47,8 +42,7 @@ const ChargesTable = () => {
           )}
         </div>
       ),
-      sortable: true,
-    },
+      sortable: true},
   ];
 
   if (!charges) {

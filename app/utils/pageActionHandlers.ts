@@ -128,7 +128,7 @@ export const handleReply = async (page: Page, user: User | null, router: Router)
 
   try {
     // Check if user is authenticated
-    if (!user) {
+    if (!session) {
       // User is not authenticated, store draft reply and redirect to login
       try {
         // Create standardized reply content
@@ -179,7 +179,7 @@ export const handleReply = async (page: Page, user: User | null, router: Router)
     // User is authenticated, proceed with reply creation
     try {
       // Get the current username
-      const username = await getCurrentUsername(user);
+      const username = await getCurrentUsername(session);
 
       // Use utility functions to create standardized reply content
       const replyTitle = generateReplyTitle(page.title);
@@ -247,7 +247,7 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
       analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_SUCCEEDED, {
         page_id: page.id,
         share_method: 'native_share',
-        user_id: user?.uid || null,
+        user_id: session?.uid || null,
         page_title: title || page.title || "Untitled",
         page_author: page.username || "Anonymous"
       });
@@ -256,8 +256,8 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
       SharesTrackingService.trackShareSucceeded(
         page.id,
         'native_share',
-        user?.uid,
-        user?.displayName || user?.username,
+        session?.uid,
+        session?.displayName || session?.username,
         title || page.title,
         page.username
       );
@@ -270,7 +270,7 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
         analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_ABORTED, {
           page_id: page.id,
           share_method: 'native_share',
-          user_id: user?.uid || null,
+          user_id: session?.uid || null,
           page_title: title || page.title || "Untitled",
           page_author: page.username || "Anonymous",
           abort_reason: 'user_cancelled'
@@ -281,8 +281,8 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
           page.id,
           'native_share',
           'user_cancelled',
-          user?.uid,
-          user?.displayName || user?.username,
+          session?.uid,
+          session?.displayName || session?.username,
           title || page.title,
           page.username
         );
@@ -291,7 +291,7 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
         analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_ABORTED, {
           page_id: page.id,
           share_method: 'native_share',
-          user_id: user?.uid || null,
+          user_id: session?.uid || null,
           page_title: title || page.title || "Untitled",
           page_author: page.username || "Anonymous",
           abort_reason: 'share_error'
@@ -302,19 +302,19 @@ export const handleShare = (page: Page, title?: string, user?: User | null): voi
           page.id,
           'native_share',
           'share_error',
-          user?.uid,
-          user?.displayName || user?.username,
+          session?.uid,
+          session?.displayName || session?.username,
           title || page.title,
           page.username
         );
 
         // Fallback to clipboard
-        fallbackShare(pageUrl, shareText, page, user, title);
+        fallbackShare(pageUrl, shareText, page, session, title);
       }
     });
   } else {
     // Fallback to clipboard
-    fallbackShare(pageUrl, shareText, page, user, title);
+    fallbackShare(pageUrl, shareText, page, session, title);
   }
 };
 
@@ -339,7 +339,7 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
         analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_SUCCEEDED, {
           page_id: page.id,
           share_method: 'copy_link',
-          user_id: user?.uid || null,
+          user_id: session?.uid || null,
           page_title: title || page.title || "Untitled",
           page_author: page.username || "Anonymous"
         });
@@ -348,8 +348,8 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
         SharesTrackingService.trackShareSucceeded(
           page.id,
           'copy_link',
-          user?.uid,
-          user?.displayName || user?.username,
+          session?.uid,
+          session?.displayName || session?.username,
           title || page.title,
           page.username
         );
@@ -362,7 +362,7 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
         analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_ABORTED, {
           page_id: page.id,
           share_method: 'copy_link',
-          user_id: user?.uid || null,
+          user_id: session?.uid || null,
           page_title: title || page.title || "Untitled",
           page_author: page.username || "Anonymous",
           abort_reason: 'clipboard_error'
@@ -373,8 +373,8 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
           page.id,
           'copy_link',
           'clipboard_error',
-          user?.uid,
-          user?.displayName || user?.username,
+          session?.uid,
+          session?.displayName || session?.username,
           title || page.title,
           page.username
         );
@@ -397,7 +397,7 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
         analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_SUCCEEDED, {
           page_id: page.id,
           share_method: 'copy_link_legacy',
-          user_id: user?.uid || null,
+          user_id: session?.uid || null,
           page_title: title || page.title || "Untitled",
           page_author: page.username || "Anonymous"
         });
@@ -406,8 +406,8 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
         SharesTrackingService.trackShareSucceeded(
           page.id,
           'copy_link_legacy',
-          user?.uid,
-          user?.displayName || user?.username,
+          session?.uid,
+          session?.displayName || session?.username,
           title || page.title,
           page.username
         );
@@ -420,7 +420,7 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
         analytics.trackInteractionEvent(INTERACTION_EVENTS.PAGE_SHARE_ABORTED, {
           page_id: page.id,
           share_method: 'copy_link_legacy',
-          user_id: user?.uid || null,
+          user_id: session?.uid || null,
           page_title: title || page.title || "Untitled",
           page_author: page.username || "Anonymous",
           abort_reason: 'legacy_clipboard_error'
@@ -431,8 +431,8 @@ const fallbackShare = (url: string, text: string, page?: Page, user?: User | nul
           page.id,
           'copy_link_legacy',
           'legacy_clipboard_error',
-          user?.uid,
-          user?.displayName || user?.username,
+          session?.uid,
+          session?.displayName || session?.username,
           title || page.title,
           page.username
         );

@@ -13,8 +13,7 @@ import { FinancialUtils } from '../types/financial';
 
 // Mock Firebase
 jest.mock('../firebase/config', () => ({
-  db: {},
-}));
+  db: {}}));
 
 // Mock Firestore functions
 jest.mock('firebase/firestore', () => ({
@@ -30,24 +29,19 @@ jest.mock('firebase/firestore', () => ({
   limit: jest.fn(),
   writeBatch: jest.fn(),
   serverTimestamp: jest.fn(() => new Date()),
-  increment: jest.fn((value) => ({ _increment: value })),
-}));
+  increment: jest.fn((value) => ({ _increment: value }))}));
 
 // Mock services
 jest.mock('../services/stripePayoutService', () => ({
   stripePayoutService: {
     processPayout: jest.fn(),
     verifyStripeAccount: jest.fn(),
-    createStripeTransfer: jest.fn(),
-  },
-}));
+    createStripeTransfer: jest.fn()}}));
 
 jest.mock('../services/transactionTrackingService', () => ({
   TransactionTrackingService: {
     trackPayoutRequest: jest.fn(),
-    updateTransactionStatus: jest.fn(),
-  },
-}));
+    updateTransactionStatus: jest.fn()}}));
 
 describe('Automated Payout System', () => {
   let automatedPayoutService: AutomatedPayoutService;

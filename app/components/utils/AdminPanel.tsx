@@ -277,7 +277,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
 
       toast({
         title: 'Success',
-        description: `${user.username || user.email} is ${user.isAdmin ? 'no longer' : 'now'} an admin`,
+        description: `${session.username || session.email} is ${user.isAdmin ? 'no longer' : 'now'} an admin`,
         variant: 'default'
       });
     } catch (error) {
@@ -297,7 +297,6 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
     try {
       setIsLoading(true);
 
-
       // Get current feature flags from database first to avoid race conditions
       const featureFlagsRef = doc(db, 'config', 'featureFlags');
       const featureFlagsDoc = await getDoc(featureFlagsRef);
@@ -311,8 +310,6 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       const currentDatabaseValue = flagsData[flagId] || false;
       const newValue = !currentDatabaseValue;
 
-
-
       // Update the database first
       const updatedFlagsData = {
         ...flagsData,
@@ -320,7 +317,6 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       };
 
       await setDoc(featureFlagsRef, updatedFlagsData);
-
 
       // Update local state after successful database write
       setFeatureFlags(prev =>
@@ -379,8 +375,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       analyticsService.trackEvent({
         category: EVENT_CATEGORIES.ADMIN,
         action: ANALYTICS_EVENTS.PWA_BANNER_RESET,
-        label: userEmail,
-      });
+        label: userEmail});
     } catch (error) {
       console.error('Error tracking admin action:', error);
     }
@@ -462,13 +457,13 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
                           className="flex items-center justify-between p-3 rounded-md border border-border/40 hover:bg-muted/50 transition-colors"
                         >
                           <div className="flex flex-col">
-                            <span className="font-medium">{user.username || 'No username'}</span>
-                            <span className="text-xs text-muted-foreground">{user.email}</span>
+                            <span className="font-medium">{session.username || 'No username'}</span>
+                            <span className="text-xs text-muted-foreground">{session.email}</span>
                           </div>
                           <Button
                             variant={user.isAdmin ? "destructive" : "outline"}
                             size="sm"
-                            onClick={() => toggleAdminStatus(user)}
+                            onClick={() => toggleAdminStatus(session)}
                             disabled={isLoading}
                           >
                             {isLoading ? (

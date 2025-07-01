@@ -16,8 +16,7 @@ import {
   green,
   greenDark,
   gray,
-  grayDark,
-} from '@radix-ui/colors';
+  grayDark} from '@radix-ui/colors';
 
 /**
  * Get a Radix color by scale and step
@@ -41,8 +40,7 @@ export function getRadixColor(scale: string, step: number, isDark: boolean = fal
     red: isDark ? redDark : red,
     amber: isDark ? amberDark : amber,
     green: isDark ? greenDark : green,
-    gray: isDark ? grayDark : gray,
-  };
+    gray: isDark ? grayDark : gray};
 
   // Get the color scale
   const colorScale = colorScales[scale];

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from "../../../providers/AuthProvider";
+import { useCurrentAccount } from '../../../providers/CurrentAccountProvider';
 import { SubscriptionSuccessModal } from '../../../components/payments/SubscriptionSuccessModal';
 import { useFeatureFlag } from "../../../utils/feature-flags";
 import Link from 'next/link';
@@ -10,10 +10,10 @@ import { ArrowLeft } from 'lucide-react';
 import OpenCollectiveSupport from '../../../components/payments/OpenCollectiveSupport';
 
 export default function SubscriptionSuccessPage() {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  const isPaymentsEnabled = useFeatureFlag('payments', session?.email);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -22,8 +22,7 @@ export default function SubscriptionSuccessPage() {
     amount: number;
   }>({
     tier: 'Tier 1',
-    amount: 10,
-  });
+    amount: 10});
 
   // If payments feature flag is disabled, show OpenCollective support instead
   if (!isPaymentsEnabled) {
@@ -44,7 +43,7 @@ export default function SubscriptionSuccessPage() {
   }
 
   useEffect(() => {
-    if (!user) {
+    if (!session) {
       router.push('/auth/login?redirect=/settings');
       return;
     }
@@ -63,12 +62,9 @@ export default function SubscriptionSuccessPage() {
         const response = await fetch('/api/subscription-success', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-          },
+            'Content-Type': 'application/json'},
           body: JSON.stringify({
-            sessionId,
-          }),
-        });
+            sessionId})});
 
         const data = await response.json();
 
@@ -80,8 +76,7 @@ export default function SubscriptionSuccessPage() {
         setSubscriptionData({
           tier: data.subscription.tier === 'tier1' ? 'Tier 1' :
                 data.subscription.tier === 'tier2' ? 'Tier 2' : 'Tier 3',
-          amount: data.subscription.amount,
-        });
+          amount: data.subscription.amount});
 
         // Show the success modal
         setShowModal(true);
@@ -94,7 +89,7 @@ export default function SubscriptionSuccessPage() {
     };
 
     handleSubscriptionSuccess();
-  }, [user, router, searchParams]);
+  }, [, session, router, searchParams]);
 
   // If the modal is closed, redirect to the original page or settings
   const handleModalClose = () => {

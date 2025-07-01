@@ -164,14 +164,12 @@ export function RegisterForm({
       const response = await fetch('/api/username/history', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({
           userId,
           oldUsername,
           newUsername
-        }),
-      });
+        })});
 
       if (!response.ok) {
         throw new Error('Failed to record username history');
@@ -222,15 +220,15 @@ export function RegisterForm({
 
       if (result.user) {
         // Successfully created user, now add username
-        const usernameResult = await addUsername(result.user.uid, username)
+        const usernameResult = await addUsername(result.session.uid, username)
 
         if (usernameResult.success) {
           // Record the initial username in the history
-          await recordUsernameHistory(result.user.uid, "initial", username)
+          await recordUsernameHistory(result.session.uid, "initial", username)
 
           // Track user creation event
           trackAuthEvent('USER_CREATED', {
-            user_id: result.user.uid,
+            user_id: result.session.uid,
             username: username,
             email: email,
             registration_method: 'email_password'

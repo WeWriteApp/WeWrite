@@ -6,8 +6,7 @@ import {
   ToastDescription,
   ToastProvider,
   ToastTitle,
-  ToastViewport,
-} from "./toast"
+  ToastViewport} from "./toast"
 import { useToast } from "./use-toast"
 
 export function Toaster() {

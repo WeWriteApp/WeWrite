@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../../providers/AuthProvider';
+import { useCurrentAccount } from '../../../providers/CurrentAccountProvider';
 import { ArrowLeft, DollarSign, CreditCard, Settings, Trash2, Plus, Minus } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '../../../components/ui/button';
@@ -16,8 +16,7 @@ import { TokenService } from '../../../services/tokenService';
 import { calculateTokensForAmount, getCurrentMonth } from '../../../utils/subscriptionTiers';
 import { useConfirmation } from '../../../hooks/useConfirmation';
 import ConfirmationModal from '../../../components/utils/ConfirmationModal';
-import { PaymentFeatureGuard } from '../../../components/PaymentFeatureGuard';
-
+// PaymentFeatureGuard removed
 interface TokenAllocation {
   id: string;
   resourceId: string;
@@ -36,7 +35,7 @@ interface TokenBalance {
 }
 
 export default function SubscriptionManagePage() {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -48,7 +47,7 @@ export default function SubscriptionManagePage() {
   const { confirmationState, showConfirmation, closeConfirmation } = useConfirmation();
 
   useEffect(() => {
-    if (!user) {
+    if (!currentAccount) {
       router.push('/auth/login');
       return;
     }
@@ -67,7 +66,7 @@ export default function SubscriptionManagePage() {
         unsubscribe();
       }
     };
-  }, [user, router]);
+  }, [currentAccount, router]);
 
   const fetchData = async () => {
     try {
@@ -75,17 +74,17 @@ export default function SubscriptionManagePage() {
 
       // Set up real-time subscription listener for consistency
       const { listenToUserSubscription } = await import('../../../firebase/subscription');
-      const unsubscribe = listenToUserSubscription(user?.uid || '', async (subscriptionData) => {
+      const unsubscribe = listenToUserSubscription(currentAccount?.uid || '', async (subscriptionData) => {
         setSubscription(subscriptionData);
 
         if (subscriptionData?.status === 'active') {
           // Set up real-time token balance listener
-          const unsubscribeTokenBalance = TokenService.listenToTokenBalance(user.uid, (balance) => {
+          const unsubscribeTokenBalance = TokenService.listenToTokenBalance(session.uid, (balance) => {
             setTokenBalance(balance);
           });
 
           // Fetch token allocations
-          const allocations = await TokenService.getUserTokenAllocations(user.uid);
+          const allocations = await TokenService.getUserTokenAllocations(session.uid);
 
           // Enhance allocations with page/group titles
           const enhancedAllocations = await Promise.all(
@@ -94,8 +93,7 @@ export default function SubscriptionManagePage() {
               return {
                 ...allocation,
                 pageTitle: allocation.resourceType === 'page' ? `Page ${allocation.resourceId.slice(0, 8)}...` : undefined,
-                groupName: allocation.resourceType === 'group' ? `Group ${allocation.resourceId.slice(0, 8)}...` : undefined,
-              };
+                groupName: allocation.resourceType === 'group' ? `Group ${allocation.resourceId.slice(0, 8)}...` : undefined};
             })
           );
 
@@ -112,8 +110,7 @@ export default function SubscriptionManagePage() {
       toast({
         title: "Error",
         description: "Failed to load subscription data",
-        variant: "destructive",
-      });
+        variant: "destructive"});
       setLoading(false);
     }
   };
@@ -131,8 +128,7 @@ export default function SubscriptionManagePage() {
         toast({
           title: "Insufficient Tokens",
           description: "You don't have enough available tokens",
-          variant: "destructive",
-        });
+          variant: "destructive"});
         return;
       }
     }
@@ -141,7 +137,7 @@ export default function SubscriptionManagePage() {
       setUpdatingAllocation(allocationId);
 
       const result = await TokenService.allocateTokens(
-        user.uid,
+        session.uid,
         allocation.recipientUserId,
         allocation.resourceType,
         allocation.resourceId,
@@ -154,14 +150,12 @@ export default function SubscriptionManagePage() {
 
         toast({
           title: "Allocation Updated",
-          description: `${newTokens > allocation.tokens ? 'Increased' : newTokens === 0 ? 'Removed' : 'Decreased'} token allocation`,
-        });
+          description: `${newTokens > allocation.tokens ? 'Increased' : newTokens === 0 ? 'Removed' : 'Decreased'} token allocation`});
       } else {
         toast({
           title: "Update Failed",
           description: result.error || 'Failed to update allocation',
-          variant: "destructive",
-        });
+          variant: "destructive"});
       }
 
     } catch (error) {
@@ -169,8 +163,7 @@ export default function SubscriptionManagePage() {
       toast({
         title: "Error",
         description: "Failed to update token allocation",
-        variant: "destructive",
-      });
+        variant: "destructive"});
     } finally {
       setUpdatingAllocation(null);
     }
@@ -196,7 +189,7 @@ export default function SubscriptionManagePage() {
 
   const handleManageSubscription = async () => {
     try {
-      const result = await SubscriptionService.createPortalSession(user.uid);
+      const result = await SubscriptionService.createPortalSession(session.uid);
 
       if (result.url) {
         window.open(result.url, '_blank');
@@ -204,16 +197,14 @@ export default function SubscriptionManagePage() {
         toast({
           title: "Error",
           description: result.error || 'Failed to open subscription management',
-          variant: "destructive",
-        });
+          variant: "destructive"});
       }
     } catch (error) {
       console.error('Error opening portal:', error);
       toast({
         title: "Error",
         description: "Failed to open subscription management",
-        variant: "destructive",
-      });
+        variant: "destructive"});
     }
   };
 
@@ -255,8 +246,7 @@ export default function SubscriptionManagePage() {
   const usagePercentage = tokenBalance ? (tokenBalance.allocatedTokens / tokenBalance.totalTokens) * 100 : 0;
 
   return (
-    <PaymentFeatureGuard redirectTo="/settings">
-      <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8">
         <Link href="/settings/subscription" className="inline-flex items-center text-blue-500 hover:text-blue-600">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -419,8 +409,6 @@ export default function SubscriptionManagePage() {
         variant={confirmationState.variant}
       />
       </div>
-    </PaymentFeatureGuard>
+    
   );
 }
-
-

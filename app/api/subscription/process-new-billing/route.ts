@@ -22,8 +22,7 @@ import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
 
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-06-20',
-});
+  apiVersion: '2024-06-20'});
 
 export async function POST(request: NextRequest) {
   try {

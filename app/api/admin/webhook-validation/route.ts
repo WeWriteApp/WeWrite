@@ -9,8 +9,7 @@ import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
 
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia',
-});
+  apiVersion: '2024-12-18.acacia'});
 
 interface WebhookValidationResult {
   webhookEndpoints: Array<{

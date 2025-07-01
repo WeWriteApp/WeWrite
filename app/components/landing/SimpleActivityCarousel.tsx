@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useContext } from 'react';
+import React from 'react';
 import { Info } from 'lucide-react';
-import { AuthContext } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import ContentCarousel from './ContentCarousel';
 import ActivityCard from '../activity/ActivityCard';
 import useStaticRecentActivity from '../../hooks/useStaticRecentActivity';
@@ -13,7 +13,7 @@ import useStaticRecentActivity from '../../hooks/useStaticRecentActivity';
  */
 export default function SimpleActivityCarousel({ limit = 30 }: { limit?: number }) {
   const { activities, loading, error } = useStaticRecentActivity(limit);
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
 
   // Removed console logs for better performance
 

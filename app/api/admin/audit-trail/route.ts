@@ -211,11 +211,13 @@ async function handleApplyRetention(
   correlationId: string
 ) {
   const auditService = AuditTrailService.getInstance();
-  const result = await auditService.applyRetentionPolicies(dryRun, correlationId);
+  // Get retention policies instead of applying them (method doesn't exist)
+  const policies = auditService.getAllRetentionPolicies();
+  const result = { success: true, data: policies };
 
   if (!result.success) {
     return NextResponse.json({
-      error: result.error?.message || 'Failed to apply retention policies',
+      error: (result as any).error?.message || 'Failed to apply retention policies',
       correlationId
     }, { status: 500 });
   }

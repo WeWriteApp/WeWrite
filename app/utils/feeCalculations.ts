@@ -36,8 +36,7 @@ export const WEWRITE_FEE_STRUCTURE = {
   minimumPayoutThreshold: 25.00, // $25 minimum
   
   // Reserve period for new accounts (days)
-  newAccountReservePeriod: 7,
-} as const;
+  newAccountReservePeriod: 7} as const;
 
 /**
  * Function to get current fee structure from database
@@ -264,8 +263,7 @@ export function formatCurrency(amount: number, currency: string = 'USD'): string
     style: 'currency',
     currency: currency.toUpperCase(),
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+    maximumFractionDigits: 2}).format(amount);
 }
 
 /**

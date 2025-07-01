@@ -11,8 +11,7 @@ import { FinancialUtils } from '../types/financial';
 
 // Mock Firebase
 jest.mock('../firebase/config', () => ({
-  db: {},
-}));
+  db: {}}));
 
 // Mock Firestore functions
 jest.mock('firebase/firestore', () => ({
@@ -29,24 +28,19 @@ jest.mock('firebase/firestore', () => ({
   runTransaction: jest.fn(),
   writeBatch: jest.fn(),
   serverTimestamp: jest.fn(() => new Date()),
-  increment: jest.fn((value) => ({ _increment: value })),
-}));
+  increment: jest.fn((value) => ({ _increment: value }))}));
 
 // Mock Stripe
 jest.mock('stripe', () => {
   return jest.fn().mockImplementation(() => ({
     accounts: {
-      retrieve: jest.fn(),
-    },
+      retrieve: jest.fn()},
     balance: {
-      retrieve: jest.fn(),
-    },
-  }));
+      retrieve: jest.fn()}}));
 });
 
 jest.mock('../utils/stripeConfig', () => ({
-  getStripeSecretKey: jest.fn(() => 'sk_test_mock'),
-}));
+  getStripeSecretKey: jest.fn(() => 'sk_test_mock')}));
 
 describe('Financial State Synchronization Service', () => {
   let syncService: FinancialStateSynchronizationService;

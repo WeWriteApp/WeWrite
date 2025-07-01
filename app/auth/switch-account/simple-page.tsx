@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth } from "../firebase/auth";
+import { auth } from "@/components/auth";
 import Cookies from 'js-cookie';
 
 export default function SimpleSwitchAccountPage() {

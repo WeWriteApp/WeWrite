@@ -5,7 +5,7 @@ import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Trash2, RotateCcw, Calendar, AlertTriangle } from 'lucide-react'
-import { useAuth } from '../../providers/AuthProvider'
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import PillLink from '../utils/PillLink'
 
 interface DeletedPage {
@@ -19,7 +19,7 @@ interface DeletedPage {
 }
 
 export default function RecentlyDeletedPages() {
-  const { user } = useAuth()
+  const { currentAccount } = useCurrentAccount();
   const [deletedPages, setDeletedPages] = useState<DeletedPage[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -29,7 +29,7 @@ export default function RecentlyDeletedPages() {
 
   // Fetch recently deleted pages (within last 30 days)
   const fetchDeletedPages = async () => {
-    if (!user?.uid) return
+    if (!currentAccount?.uid) return
 
     try {
       setLoading(true)
@@ -47,13 +47,13 @@ export default function RecentlyDeletedPages() {
       // Query for deleted pages within the last 30 days
       const deletedPagesQuery = query(
         collection(db, 'pages'),
-        where('userId', '==', user.uid),
+        where('userId', '==', currentAccount.uid),
         where('deleted', '==', true),
         where('deletedAt', '>=', thirtyDaysAgo.toISOString()),
         orderBy('deletedAt', 'desc')
       )
 
-      console.log('Fetching deleted pages for user:', user.uid)
+      console.log('Fetching deleted pages for user:', currentAccount.uid)
       const snapshot = await getDocs(deletedPagesQuery)
       const pages: DeletedPage[] = []
 
@@ -221,7 +221,7 @@ export default function RecentlyDeletedPages() {
 
   useEffect(() => {
     fetchDeletedPages()
-  }, [user?.uid])
+  }, [currentAccount?.uid])
 
   if (loading) {
     return (

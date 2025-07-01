@@ -18,13 +18,10 @@ export default function PaymentForm({ userId, amount = 10, onSuccess }) {
         const response = await fetch('/api/create-payment-intent', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-          },
+            'Content-Type': 'application/json'},
           body: JSON.stringify({
             userId,
-            amount,
-          }),
-        });
+            amount})});
 
         const data = await response.json();
         
@@ -61,8 +58,7 @@ export default function PaymentForm({ userId, amount = 10, onSuccess }) {
         // Responsive font sizes
         fontSizeBase: '16px',
         fontSizeSm: '14px',
-        fontSizeLg: '18px',
-      },
+        fontSizeLg: '18px'},
       rules: {
         '.Input': {
           border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -71,34 +67,24 @@ export default function PaymentForm({ userId, amount = 10, onSuccess }) {
           padding: '10px 14px',
           '@media (max-width: 768px)': {
             fontSize: '14px',
-            padding: '8px 12px',
-          },
-        },
+            padding: '8px 12px'}},
         '.Input:focus': {
           border: '1px solid hsl(var(--primary))',
-          boxShadow: '0 0 0 1px #0057FF',
-        },
+          boxShadow: '0 0 0 1px #0057FF'},
         '.Label': {
           fontSize: '14px',
           marginBottom: '8px',
           color: 'rgba(255, 255, 255, 0.7)',
           '@media (max-width: 768px)': {
             fontSize: '12px',
-            marginBottom: '6px',
-          },
-        },
+            marginBottom: '6px'}},
         '.Error': {
           color: '#ff4444',
           fontSize: '14px',
           marginTop: '8px',
           '@media (max-width: 768px)': {
             fontSize: '12px',
-            marginTop: '6px',
-          },
-        },
-      },
-    },
-  };
+            marginTop: '6px'}}}}};
 
   if (loading && !clientSecret) {
     return (
@@ -159,11 +145,8 @@ const CheckoutForm = ({ onSuccess }) => {
       confirmParams: {
         return_url: window.location.href,
         payment_method_data: {
-          billing_details: {},
-        },
-      },
-      redirect: 'if_required',
-    });
+          billing_details: {}}},
+      redirect: 'if_required'});
 
     if (error) {
       setError(`Payment failed: ${error.message}`);
@@ -210,4 +193,4 @@ const CheckoutForm = ({ onSuccess }) => {
       )}
     </form>
   );
-}; 
+};

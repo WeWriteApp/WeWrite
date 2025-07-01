@@ -7,13 +7,9 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2',
-    },
+      main: '#1976d2'},
     secondary: {
-      main: '#dc004e',
-    },
-  },
-});
+      main: '#dc004e'}}});
 
 interface AppContextType {
   loading: boolean
@@ -22,8 +18,7 @@ interface AppContextType {
 
 export const AppContext = React.createContext<AppContextType>({
   loading: true,
-  setLoading: () => {},
-})
+  setLoading: () => {}})
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = React.useState(true)
@@ -35,4 +30,4 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       </AppContext.Provider>
     </ThemeProvider>
   )
-} 
+}

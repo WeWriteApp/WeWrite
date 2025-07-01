@@ -20,8 +20,7 @@ import { getOrCreatePriceForTier, createCustomPrice } from '../../../utils/strip
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia',
-});
+  apiVersion: '2024-12-18.acacia'});
 
 export async function POST(request: NextRequest) {
   try {
@@ -97,9 +96,7 @@ export async function POST(request: NextRequest) {
         // Customer doesn't exist in Stripe, create a new one
         const customer = await stripe.customers.create({
           metadata: {
-            firebaseUID: userId,
-          },
-        });
+            firebaseUID: userId}});
 
         stripeCustomerId = customer.id;
 
@@ -113,9 +110,7 @@ export async function POST(request: NextRequest) {
       // Create new Stripe customer
       const customer = await stripe.customers.create({
         metadata: {
-          firebaseUID: userId,
-        },
-      });
+          firebaseUID: userId}});
 
       stripeCustomerId = customer.id;
 
@@ -148,8 +143,7 @@ export async function POST(request: NextRequest) {
     const existingSubscriptions = await stripe.subscriptions.list({
       customer: stripeCustomerId,
       status: 'active',
-      limit: 10,
-    });
+      limit: 10});
 
     // Cancel any existing active subscriptions
     for (const existingSubscription of existingSubscriptions.data) {
@@ -161,8 +155,7 @@ export async function POST(request: NextRequest) {
     const incompleteSubscriptions = await stripe.subscriptions.list({
       customer: stripeCustomerId,
       status: 'incomplete',
-      limit: 10,
-    });
+      limit: 10});
 
     for (const incompleteSubscription of incompleteSubscriptions.data) {
       console.log(`Cancelling incomplete subscription ${incompleteSubscription.id} for user ${userId}`);
@@ -173,8 +166,7 @@ export async function POST(request: NextRequest) {
     const pastDueSubscriptions = await stripe.subscriptions.list({
       customer: stripeCustomerId,
       status: 'past_due',
-      limit: 10,
-    });
+      limit: 10});
 
     for (const pastDueSubscription of pastDueSubscriptions.data) {
       console.log(`Cancelling past_due subscription ${pastDueSubscription.id} for user ${userId}`);
@@ -188,8 +180,7 @@ export async function POST(request: NextRequest) {
       line_items: [
         {
           price: priceId,
-          quantity: 1,
-        },
+          quantity: 1},
       ],
       mode: 'subscription',
       success_url: successUrl || `${process.env.NEXT_PUBLIC_APP_URL}/settings/subscription?success=true&session_id={CHECKOUT_SESSION_ID}`,
@@ -198,17 +189,13 @@ export async function POST(request: NextRequest) {
         firebaseUID: userId,
         tier,
         amount: finalAmount.toString(),
-        tokens: finalTokens.toString(),
-      },
+        tokens: finalTokens.toString()},
       subscription_data: {
         metadata: {
           firebaseUID: userId,
           tier,
           amount: finalAmount.toString(),
-          tokens: finalTokens.toString(),
-        },
-      },
-    });
+          tokens: finalTokens.toString()}}});
 
     // Create initial subscription record in Firestore with incomplete status
     // This matches Stripe's initial subscription status before payment
@@ -226,15 +213,13 @@ export async function POST(request: NextRequest) {
       currentPeriodStart: null,
       currentPeriodEnd: null,
       createdAt: new Date(),
-      updatedAt: new Date(),
-    }, { merge: true });
+      updatedAt: new Date()}, { merge: true });
 
     console.log(`Created checkout session for user ${userId}: ${tier} - $${finalAmount}/mo - ${finalTokens} tokens`);
 
     return NextResponse.json({
       sessionId: session.id,
-      url: session.url,
-    });
+      url: session.url});
 
   } catch (error) {
     console.error('Error creating checkout session:', error);

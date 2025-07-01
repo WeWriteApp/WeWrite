@@ -49,8 +49,7 @@ async function fetchPaymentHistoryForUser(userId) {
     const invoices = await stripe.invoices.list({
       customer: stripeCustomerId,
       limit: 10,
-      status: 'paid',
-    });
+      status: 'paid'});
 
     console.log(`Found ${invoices.data.length} invoices for customer`);
 
@@ -69,8 +68,7 @@ async function fetchPaymentHistoryForUser(userId) {
       console.log('No invoices found, trying payment intents');
       const paymentIntents = await stripe.paymentIntents.list({
         customer: stripeCustomerId,
-        limit: 10,
-      });
+        limit: 10});
 
       const paymentIntentPayments = paymentIntents.data.map(payment => ({
         id: payment.id,

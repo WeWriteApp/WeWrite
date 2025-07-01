@@ -40,8 +40,6 @@ export function TrendingPagesSkeleton({ limit = 5 }: { limit?: number }) {
   );
 }
 
-
-
 /**
  * Skeleton loader for activity section
  */
@@ -206,7 +204,6 @@ export function DashboardSkeleton() {
         <SectionTitleSkeleton />
         <TrendingPagesSkeleton limit={3} />
       </div>
-
 
     </div>
   );

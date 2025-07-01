@@ -3,14 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { CreditCard, Plus, Trash2, Check, AlertTriangle, Copy } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Badge } from '../ui/badge';
-import { useTheme } from '../../providers/ThemeProvider';
+import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { getStripePublishableKey } from '../../utils/stripeConfig';
@@ -33,7 +33,7 @@ interface PaymentMethodFormProps {
 }
 
 const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCancel }) => {
-  const { user } = useAuth();
+  const { currentAccount } = useCurrentAccount();
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -43,7 +43,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!stripe || !elements || !user) {
+    if (!stripe || !elements || !currentAccount) {
       setError('Payment system not ready. Please try again.');
       return;
     }
@@ -62,9 +62,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
       const setupResponse = await fetch('/api/setup-intent', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+          'Content-Type': 'application/json'}});
 
       if (!setupResponse.ok) {
         const errorData = await setupResponse.json();
@@ -76,9 +74,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
       // Confirm the setup intent with the card
       const { error: confirmError, setupIntent } = await stripe.confirmCardSetup(clientSecret, {
         payment_method: {
-          card: cardElement,
-        },
-      });
+          card: cardElement}});
 
       if (confirmError) {
         throw new Error(confirmError.message || 'Failed to add payment method');
@@ -108,16 +104,11 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         fontSmoothing: 'antialiased',
         '::placeholder': {
-          color: theme === 'dark' ? 'rgba(255, 255, 255, 0.6)' : '#aab7c4',
-        },
-        iconColor: theme === 'dark' ? '#ffffff' : '#424770',
-      },
+          color: theme === 'dark' ? 'rgba(255, 255, 255, 0.6)' : '#aab7c4'},
+        iconColor: theme === 'dark' ? '#ffffff' : '#424770'},
       invalid: {
         color: '#fa755a',
-        iconColor: '#fa755a',
-      },
-    },
-  };
+        iconColor: '#fa755a'}}};
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -163,8 +154,8 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
 };
 
 export function PaymentMethodsManager() {
-  const { user } = useAuth();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const { session } = useCurrentAccount();
+  const isPaymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -174,7 +165,7 @@ export function PaymentMethodsManager() {
 
   // Fetch payment methods
   const fetchPaymentMethods = async (abortSignal?: AbortSignal) => {
-    if (!user) {
+    if (!session) {
       setLoading(false);
       return;
     }
@@ -186,8 +177,7 @@ export function PaymentMethodsManager() {
       const response = await fetch('/api/payment-methods', {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         signal: abortSignal
       });
 
@@ -230,7 +220,7 @@ export function PaymentMethodsManager() {
 
   // Delete a payment method
   const handleDeletePaymentMethod = async (paymentMethodId: string) => {
-    if (!user) return;
+    if (!session) return;
 
     try {
       setLoading(true);
@@ -239,12 +229,9 @@ export function PaymentMethodsManager() {
       const response = await fetch('/api/payment-methods', {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({
-          paymentMethodId,
-        }),
-      });
+          paymentMethodId})});
 
       const data = await response.json();
 
@@ -269,7 +256,7 @@ export function PaymentMethodsManager() {
 
   // Set a payment method as primary
   const handleSetPrimaryPaymentMethod = async (paymentMethodId: string) => {
-    if (!user) return;
+    if (!session) return;
 
     try {
       setLoading(true);
@@ -278,12 +265,9 @@ export function PaymentMethodsManager() {
       const response = await fetch('/api/payment-methods/primary', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({
-          paymentMethodId,
-        }),
-      });
+          paymentMethodId})});
 
       const data = await response.json();
 
@@ -308,7 +292,7 @@ export function PaymentMethodsManager() {
 
   // Load payment methods on component mount
   useEffect(() => {
-    if (user && isPaymentsEnabled) {
+    if (session && isPaymentsEnabled) {
       const controller = new AbortController();
       fetchPaymentMethods(controller.signal);
 
@@ -317,7 +301,7 @@ export function PaymentMethodsManager() {
         controller.abort();
       };
     }
-  }, [user, isPaymentsEnabled]);
+  }, [, session, isPaymentsEnabled]);
 
   // Don't render if payments feature is disabled
   if (!isPaymentsEnabled) {

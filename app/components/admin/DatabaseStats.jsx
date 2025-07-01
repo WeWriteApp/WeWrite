@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
-import { getQueryStats, clearQueryStats } from '../../../utils/queryMonitor';
+import { getQueryStats, clearQueryStats } from '@/utils/queryMonitor';
 import { db } from '../../../firebase/config';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 

@@ -14,12 +14,12 @@
  *
  * @param {Object} user - The user object containing uid, username, etc.
  */
-export const setAnalyticsUserInfo = (user) => {
-  if (!user || typeof window === 'undefined') return;
+export const setAnalyticsUserInfo = (session) => {
+  if (!session || typeof window === 'undefined') return;
 
   // Skip gtag calls in development to prevent authentication errors
   if (process.env.NODE_ENV === 'development') {
-    console.log('Analytics user info skipped in development:', user.username || 'Anonymous');
+    console.log('Analytics user info skipped in development:', session.username || 'Anonymous');
     return;
   }
 
@@ -31,17 +31,16 @@ export const setAnalyticsUserInfo = (user) => {
   try {
     // Set user ID for cross-device tracking
     window.gtag('set', {
-      'user_id': user.uid
+      'user_id': session.uid
     });
 
     // Set user properties for better segmentation
     window.gtag('set', 'user_properties', {
-      username: user.username || 'Anonymous',
-      user_id: user.uid,
-      email_domain: user.email ? user.email.split('@')[1] : null,
-      has_username: !!user.username
+      username: session.username || 'Anonymous',
+      user_id: session.uid,
+      email_domain: session.email ? session.email.split('@')[1] : null,
+      has_username: !!session.username
     });
-
 
   } catch (error) {
     console.error('Error setting analytics user info (non-fatal):', error);
@@ -55,20 +54,19 @@ export const setAnalyticsUserInfo = (user) => {
  * @param {Object} user - The user object
  * @param {Object} additionalParams - Additional parameters to include with the event
  */
-export const trackUserEvent = (eventName, user, additionalParams = {}) => {
-  if (!eventName || !user || typeof window === 'undefined' || !window.gtag) return;
+export const trackUserEvent = (eventName, session, additionalParams = {}) => {
+  if (!eventName || !session || typeof window === 'undefined' || !window.gtag) return;
 
   try {
     // Ensure we have the username in the event parameters
     const eventParams = {
       ...additionalParams,
-      username: user.username || 'Anonymous',
-      user_id: user.uid
+      username: session.username || 'Anonymous',
+      user_id: session.uid
     };
 
     // Track the event
     window.gtag('event', eventName, eventParams);
-
 
   } catch (error) {
     console.error(`Error tracking user event ${eventName}:`, error);
@@ -82,8 +80,8 @@ export const trackUserEvent = (eventName, user, additionalParams = {}) => {
  * @param {string} pageTitle - The title of the page
  * @param {Object} user - The user object
  */
-export const trackPageViewWithUser = (pagePath, pageTitle, user) => {
-  if (!pagePath || !user || typeof window === 'undefined' || !window.gtag) return;
+export const trackPageViewWithUser = (pagePath, pageTitle, session) => {
+  if (!pagePath || !session || typeof window === 'undefined' || !window.gtag) return;
 
   try {
     // Track the page view with user information
@@ -91,10 +89,9 @@ export const trackPageViewWithUser = (pagePath, pageTitle, user) => {
       page_path: pagePath,
       page_title: pageTitle || document.title,
       page_location: window.location.href,
-      username: user.username || 'Anonymous',
-      user_id: user.uid
+      username: session.username || 'Anonymous',
+      user_id: session.uid
     });
-
 
   } catch (error) {
     console.error('Error tracking page view with user info:', error);

@@ -307,6 +307,7 @@ export function AccentColorProvider({ children }: AccentColorProviderProps) {
     [ACCENT_COLORS.CUSTOM3]: 'Custom 3'
   });
   const [textColor, setTextColor] = useState<string>('#ffffff'); // Default text color
+  const [isHydrated, setIsHydrated] = useState(false); // Track hydration state
 
   /**
    * Convert hex color to HSL
@@ -364,6 +365,12 @@ export function AccentColorProvider({ children }: AccentColorProviderProps) {
    * @param colorValue - The color value string
    */
   const updateCSSVariables = (color: AccentColorKey, colorValue: string): void => {
+    // Only update CSS variables after hydration to prevent hydration mismatches
+    if (!isHydrated || typeof window === 'undefined') {
+      console.log('Skipping CSS variable update - not hydrated yet');
+      return;
+    }
+
     console.log('Updating CSS variables with:', { color, colorValue });
 
     // Special handling for high contrast color that changes based on theme
@@ -424,7 +431,6 @@ export function AccentColorProvider({ children }: AccentColorProviderProps) {
     document.documentElement.style.setProperty('--accent-10', `hsl(${h}, ${Math.max(50, s)}%, ${Math.max(45, l-15)}%)`);
     document.documentElement.style.setProperty('--accent-11', `hsl(${h}, ${Math.max(55, s+5)}%, ${Math.max(40, l-20)}%)`);
     document.documentElement.style.setProperty('--accent-12', `hsl(${h}, ${Math.max(60, s+10)}%, ${Math.max(35, l-25)}%)`);
-
 
     // Calculate and set text colors with proper contrast for different UI elements
 
@@ -546,6 +552,11 @@ export function AccentColorProvider({ children }: AccentColorProviderProps) {
     document.documentElement.style.setProperty('--destructive-foreground', destructiveTextColor);
   };
 
+  // Set hydration state after component mounts
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
   // Load saved accent color from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -608,7 +619,7 @@ export function AccentColorProvider({ children }: AccentColorProviderProps) {
       // Apply the accent color to CSS variables
       updateCSSVariables(colorToUse, valueToUse);
     }
-  }, []);
+  }, [isHydrated]);
 
   // Listen for theme changes to update high contrast color if it's selected
   useEffect(() => {

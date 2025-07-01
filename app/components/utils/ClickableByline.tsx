@@ -5,8 +5,7 @@ import { ChevronDown, Loader } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
+  DropdownMenuTrigger} from '../ui/dropdown-menu';
 
 interface ClickableBylineProps {
   children: ReactNode;
@@ -23,8 +22,7 @@ export default function ClickableByline({
   children,
   dropdown,
   isLoading = false,
-  isChanging = false,
-}: ClickableBylineProps) {
+  isChanging = false}: ClickableBylineProps) {
   const [open, setOpen] = useState(false);
 
   return (

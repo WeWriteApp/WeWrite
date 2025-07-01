@@ -183,12 +183,12 @@ export function ModernRegisterForm({
       if (result.user) {
         // Add username to the user account
         try {
-          await addUsername(result.user.uid, username)
+          await addUsername(result.session.uid, username)
           console.log("Username added successfully")
 
           // Track user creation event
           trackAuthEvent('USER_CREATED', {
-            user_id: result.user.uid,
+            user_id: result.session.uid,
             username: username,
             email: email,
             registration_method: 'email_password'

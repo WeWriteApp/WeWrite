@@ -1,8 +1,8 @@
 "use client";
-import React, { useState, useEffect, useContext, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
-import { AuthContext } from "../../providers/AuthProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { TokenService } from "../../services/tokenService";
 import { Button } from "../ui/button";
 import { Plus, Minus, DollarSign, Users, AlertTriangle, AlertCircle, Settings } from "lucide-react";
@@ -17,14 +17,12 @@ import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip";
+  TooltipTrigger} from "../ui/tooltip";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
+  DialogTitle} from "../ui/dialog";
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 
@@ -76,7 +74,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   className,
   ...props
 }, ref) => {
-  const { user } = useContext(AuthContext);
+  const { currentAccount } = useCurrentAccount();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -84,14 +82,14 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   const pageId = propPageId || pathname.substring(1);
 
   // Check if current user is the page owner
-  const isPageOwner = user && authorId && user.uid === authorId;
+  const isPageOwner = currentAccount && authorId && currentAccount.uid === authorId;
 
   // Feature flags
-  const isSubscriptionEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const isSubscriptionEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
   // Token system is now always enabled (no longer a feature flag)
 
   // Admin testing flag to force inactive subscription UI
-  const forceInactiveSubscription = useFeatureFlag('inactive_subscription', user?.email, user?.uid);
+  const forceInactiveSubscription = useFeatureFlag('inactive_subscription', currentAccount?.email, currentAccount?.uid);
 
   // Helper function to check if subscription allows token allocation
   const canAllocateTokens = (subscription: any) => {
@@ -141,8 +139,6 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     return selectedSegment === segmentName ? 1 : 0.3; // Selected segment full, others dimmed
   };
 
-
-
   // Initialize component
   useEffect(() => {
     setIsMounted(true);
@@ -166,21 +162,21 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
       return;
     }
 
-    if (user && isSubscriptionEnabled && pageId) {
+    if (currentAccount && isSubscriptionEnabled && pageId) {
       loadUserData();
     } else {
       setTokenBalance(null);
       setSubscription(null);
       setCurrentTokenAllocation(0);
     }
-  }, [user, isSubscriptionEnabled, pageId, isPageOwner, visible]);
+  }, [currentAccount, isSubscriptionEnabled, pageId, isPageOwner, visible]);
 
   // Validate budget when subscription or user changes
   useEffect(() => {
-    if (user && isSubscriptionEnabled) {
+    if (currentAccount && isSubscriptionEnabled) {
       const validateBudget = async () => {
         try {
-          const validation = await validatePledgeBudget(user.uid);
+          const validation = await validatePledgeBudget(currentAccount.uid);
           setBudgetValidation(validation);
           setShowBudgetWarning(validation.isOverBudget);
         } catch (error) {
@@ -193,9 +189,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
       setBudgetValidation(null);
       setShowBudgetWarning(false);
     }
-  }, [user, subscription, isSubscriptionEnabled]);
-
-
+  }, [currentAccount, subscription, isSubscriptionEnabled]);
 
   // Load pledge stats for page owners
   useEffect(() => {
@@ -235,11 +229,11 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
   // Load user subscription and token data with automatic initialization
   const loadUserData = async () => {
-    if (!user) return;
+    if (!currentAccount) return;
 
     try {
       // Load subscription
-      const userSubscription = await getOptimizedUserSubscription(user.uid);
+      const userSubscription = await getOptimizedUserSubscription(currentAccount.uid);
       setSubscription(userSubscription);
 
       // Skip token loading for page owners (they can't pledge to their own pages)
@@ -284,7 +278,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
   // Automatically initialize token balance for users with active subscriptions
   const initializeTokenBalanceIfNeeded = async (userSubscription: any) => {
-    if (!user || !canAllocateTokens(userSubscription)) {
+    if (!currentAccount || !canAllocateTokens(userSubscription)) {
       return;
     }
 
@@ -295,8 +289,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
       const response = await fetch('/api/tokens/balance', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({
           action: 'initialize',
           subscriptionAmount: userSubscription.amount
@@ -342,7 +335,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
   // Debounced database update function
   const debouncedDatabaseUpdate = useCallback(async (finalAllocation: number) => {
-    if (!user || !canAllocateTokens(subscription) || !tokenBalance) return;
+    if (!currentAccount || !canAllocateTokens(subscription) || !tokenBalance) return;
 
     try {
       // Calculate the total change needed to reach the final allocation
@@ -352,8 +345,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
       const response = await fetch('/api/tokens/page-allocation', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({
           pageId,
           tokenChange: totalChange
@@ -392,11 +384,11 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
       setCurrentTokenAllocation(baseAllocationRef.current);
       setPendingChanges(0);
     }
-  }, [user, subscription, tokenBalance, pageId, currentTokenAllocation, pendingChanges]);
+  }, [currentAccount, subscription, tokenBalance, pageId, currentTokenAllocation, pendingChanges]);
 
   // Handle token allocation changes with optimistic UI
   const handleTokenAllocation = (change: number) => {
-    if (!user) return;
+    if (!currentAccount) return;
 
     // For non-subscribers or inactive subscriptions, handle allocation locally without persisting to database
     if (!canAllocateTokens(subscription)) {
@@ -453,10 +445,8 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     return null;
   }
 
-
-
   // Show sign-in prompt for logged out users
-  if (!user) {
+  if (!currentAccount) {
     return (
       <div className={cn(
         "w-full max-w-2xl mx-auto rounded-2xl shadow-2xl p-4",
@@ -481,12 +471,6 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     );
   }
 
-
-
-
-
-
-
   // For page owners, render page management tools instead of pledge controls
   if (isPageOwner) {
     return (
@@ -497,8 +481,6 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
           : "bg-background/80 backdrop-blur-xl border border-white/20 dark:border-white/10 hover:shadow-3xl hover:bg-background/85",
         className
       )}>
-
-
 
         {/* Stats Display */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
@@ -522,7 +504,6 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
             </div>
           </div>
         </div>
-
 
       </div>
     );

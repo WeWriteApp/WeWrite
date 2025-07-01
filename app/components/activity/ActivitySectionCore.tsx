@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
 import { SectionTitle } from "../ui/section-title";
-import RecentActivity from './RecentActivity';
+import RecentActivity from '../features/RecentActivity';
 
 /**
  * ActivitySectionCore Component

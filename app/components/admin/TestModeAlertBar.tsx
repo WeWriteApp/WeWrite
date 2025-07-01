@@ -13,7 +13,7 @@ import {
   UserX
 } from 'lucide-react';
 import { useToast } from '../ui/use-toast';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 import { TestModeDetectionService, TestModeStatus } from '../../services/testModeDetectionService';
 import { isAdmin } from '../../utils/feature-flags';
 
@@ -42,7 +42,7 @@ import { isAdmin } from '../../utils/feature-flags';
  * - Prevents accidental test data confusion
  */
 export default function TestModeAlertBar() {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const { toast } = useToast();
   const [testStatus, setTestStatus] = useState<TestModeStatus | null>(null);
   const [loading, setLoading] = useState(false);
@@ -50,18 +50,18 @@ export default function TestModeAlertBar() {
   const [dismissed, setDismissed] = useState(false);
 
   // Check if user is admin
-  const userIsAdmin = isAdmin(user?.email);
+  const userIsAdmin = isAdmin(session?.email);
 
   /**
    * Load test mode status for current user
    * Only runs for admin users to detect active test modes
    */
   const loadTestStatus = async () => {
-    if (!user?.uid || !userIsAdmin) return;
+    if (!session?.uid || !userIsAdmin) return;
 
     try {
       setLoading(true);
-      const status = await TestModeDetectionService.detectTestModeStatus(user.uid);
+      const status = await TestModeDetectionService.detectTestModeStatus(session.uid);
       setTestStatus(status);
     } catch (error) {
       console.error('[TestModeAlertBar] Error loading test status:', error);
@@ -72,17 +72,16 @@ export default function TestModeAlertBar() {
 
   // Exit all test modes
   const handleExitTestMode = async () => {
-    if (!user?.uid) return;
+    if (!session?.uid) return;
     
     try {
       setExiting(true);
-      const result = await TestModeDetectionService.exitAllTestModes(user.uid);
+      const result = await TestModeDetectionService.exitAllTestModes(session.uid);
       
       if (result.success) {
         toast({
           title: "Test Mode Exited",
-          description: result.message,
-        });
+          description: result.message});
         
         // Reload test status
         await loadTestStatus();
@@ -113,7 +112,7 @@ export default function TestModeAlertBar() {
   // Load status on mount and when user changes
   useEffect(() => {
     loadTestStatus();
-  }, [user?.uid, userIsAdmin]);
+  }, [session?.uid, userIsAdmin]);
 
   // Auto-refresh status every 30 seconds
   useEffect(() => {

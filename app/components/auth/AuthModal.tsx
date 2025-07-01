@@ -7,8 +7,7 @@ import {
   Tabs,
   TabsContent,
   TabsList,
-  TabsTrigger,
-} from "../ui/tabs";
+  TabsTrigger} from "../ui/tabs";
 import { LoginForm } from "../forms/login-form";
 import { RegisterForm } from "../forms/register-form";
 

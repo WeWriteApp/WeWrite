@@ -58,18 +58,18 @@ export const getPageUrl = (
  */
 export const navigateToPage = (
   pageId: string,
-  user: User | null,
+  currentAccount: User | null,
   page: Page | null = null,
   userGroups: Record<string, any> | null = null,
   router: Router | null = null
 ): void => {
-  const url = getPageUrl(pageId, user, page, userGroups);
+  const url = getPageUrl(pageId, currentAccount, page, userGroups);
 
   console.log('Navigating to page with permissions:', {
     pageId,
     url,
-    canEdit: page ? canUserEditPage(user, page, userGroups) : 'unknown',
-    userId: user?.uid,
+    canEdit: page ? canUserEditPage(currentAccount, page, userGroups) : 'unknown',
+    userId: currentAccount?.uid,
     pageUserId: page?.userId
   });
 

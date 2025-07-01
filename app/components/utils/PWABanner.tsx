@@ -13,8 +13,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "../ui/dialog";
+  DialogFooter} from "../ui/dialog";
 
 export default function PWABanner() {
   const { showBanner, setShowBanner } = usePWA();
@@ -32,8 +31,7 @@ export default function PWABanner() {
       analyticsService.trackEvent({
         category: EVENT_CATEGORIES.PWA,
         action: ANALYTICS_EVENTS.PWA_BANNER_ACTION,
-        label: action === 'dont_remind' ? 'Dont_Remind' : 'Maybe_Later',
-      });
+        label: action === 'dont_remind' ? 'Dont_Remind' : 'Maybe_Later'});
     } catch (error) {
       console.error('Error tracking PWA banner action:', error);
     }
@@ -60,8 +58,7 @@ export default function PWABanner() {
       analyticsService.trackEvent({
         category: EVENT_CATEGORIES.PWA,
         action: ANALYTICS_EVENTS.PWA_BANNER_ACTION,
-        label: 'Show_Instructions',
-      });
+        label: 'Show_Instructions'});
     } catch (error) {
       console.error('Error tracking PWA banner action:', error);
     }

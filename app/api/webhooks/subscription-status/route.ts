@@ -6,8 +6,7 @@ import { handleSubscriptionStatusChange } from '../../../services/pledgeBudgetSe
 import { getCollectionName, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-});
+  apiVersion: '2023-10-16'});
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 

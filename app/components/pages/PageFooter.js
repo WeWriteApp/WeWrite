@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { PageActions } from "./PageActions";
 import WordCounter from "../editor/WordCounter";
 import PageStats from "./PageStats";
@@ -16,8 +16,7 @@ const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
 });
 import { getPageViewsLast24Hours, getPageTotalViews } from "../../firebase/pageViews";
 import { getPageVersions } from "../../firebase/database";
-import { AuthContext } from "../../providers/AuthProvider";
-
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 /**
  * PageFooter Component
  *
@@ -58,7 +57,7 @@ export default function PageFooter({
   isSaving,
   hasUnsavedChanges
 }) {
-  const { user } = useContext(AuthContext);
+  const { currentAccount } = useCurrentAccount();
   const [viewData, setViewData] = useState({ total: 0, hourly: [] });
   const [changeData, setChangeData] = useState({ count: 0, hourly: [] });
   const [isLoading, setIsLoading] = useState(true);
@@ -159,7 +158,7 @@ export default function PageFooter({
             isEditing={isEditing}
             setIsEditing={setIsEditing}
             className="action-buttons-container"
-            showFollowButton={user && !isOwner}
+            showFollowButton={currentAccount && !isOwner}
           />
         </div>
       )}

@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "../ui/button";
-import { Loader, ChevronLeft, ChevronRight, Share2, Lock, Globe, MoreHorizontal, Edit2, Plus, MessageSquare, Trash2, Link as LinkIcon } from "lucide-react";
+import { Loader, ChevronLeft, ChevronRight, Share2, Lock, Globe, MoreHorizontal, Edit2, Plus, MessageSquare, Trash2, Link as LinkIcon, AlignJustify, AlignLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ref, get } from "firebase/database";
 import { rtdb } from "../../firebase/rtdb";
@@ -14,7 +14,8 @@ import { SupporterIcon } from "../payments/SupporterIcon";
 import { SubscriptionInfoModal } from "../payments/SubscriptionInfoModal";
 
 import ClickableByline from "../utils/ClickableByline";
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useDateFormat } from '../../contexts/DateFormatContext';
 import { handleAddToPage, handleReply, handleShare } from "../../utils/pageActionHandlers";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { useSidebarContext } from "../layout/UnifiedSidebar";
@@ -23,10 +24,13 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal
 } from "../ui/dropdown-menu";
 import { Switch } from "../ui/switch";
-import { useDateFormat } from "../../contexts/DateFormatContext";
 import { DateFormatPicker } from "../ui/date-format-picker";
 import {
   navigateToPreviousDailyNote,
@@ -35,6 +39,7 @@ import {
 } from "../../utils/dailyNoteNavigation";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
+import { Logo } from "../ui/Logo";
 
 // Dynamically import AddToPageButton to avoid SSR issues
 const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
@@ -88,10 +93,9 @@ export default function PageHeader({
   isNewPage = false,
   onPrivacyChange,
   onDelete,
-  onInsertLink,
-}: PageHeaderProps) {
+  onInsertLink}: PageHeaderProps) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
@@ -104,7 +108,7 @@ export default function PageHeader({
   const [tier, setTier] = React.useState<string | null>(initialTier || null);
   const [subscriptionStatus, setSubscriptionStatus] = React.useState<string | null>(initialStatus || null);
   const [isLoadingTier, setIsLoadingTier] = React.useState<boolean>(false);
-  const subscriptionEnabled = useFeatureFlag('payments', user?.email);
+  const subscriptionEnabled = useFeatureFlag('payments', session?.email);
   const [pageId, setPageId] = React.useState<string | null>(propPageId);
   const [isAddToPageOpen, setIsAddToPageOpen] = React.useState<boolean>(false);
   const [isEditingTitle, setIsEditingTitle] = React.useState<boolean>(false);
@@ -114,7 +118,7 @@ export default function PageHeader({
   const [isEditorFocused, setIsEditorFocused] = React.useState<boolean>(false);
 
   // Date formatting context
-  const { formatDateString } = useDateFormat();
+  const { formatDate } = useDateFormat();
 
   // Calculate header positioning width - should match Header.tsx and SidebarLayout.tsx
   const headerSidebarWidth = React.useMemo(() => {
@@ -144,13 +148,13 @@ export default function PageHeader({
     // Use prop value if provided, otherwise calculate
     if (propCanEdit !== undefined) return propCanEdit;
 
-    if (!user) return false;
+    if (!session) return false;
 
     // User is the page owner
-    if (userId && user.uid === userId) return true;
+    if (userId && session.uid === userId) return true;
 
     return false;
-  }, [propCanEdit, user, userId]);
+  }, [propCanEdit, session, session?.uid]);
 
   // Update editing title when title prop changes
   React.useEffect(() => {
@@ -248,7 +252,7 @@ export default function PageHeader({
 
   // Handle daily note navigation
   const handleDailyNoteNavigation = async (direction: 'previous' | 'next') => {
-    if (!user?.uid || !title || !isExactDateFormat(title) || isNavigating) {
+    if (!session?.uid || !title || !isExactDateFormat(title) || isNavigating) {
       return;
     }
 
@@ -259,13 +263,13 @@ export default function PageHeader({
       direction: direction,
       current_date: title,
       is_editing: isEditing,
-      user_id: user.uid
+      user_id: session.uid
     });
 
     try {
       const navigationResult = direction === 'previous'
-        ? await navigateToPreviousDailyNote(user.uid, title, isEditing)
-        : await navigateToNextDailyNote(user.uid, title, isEditing);
+        ? await navigateToPreviousDailyNote(session.uid, title, isEditing)
+        : await navigateToNextDailyNote(session.uid, title, isEditing);
 
       if (navigationResult) {
         if (navigationResult.exists && navigationResult.pageId) {
@@ -355,7 +359,7 @@ export default function PageHeader({
     };
 
     fetchTierInfo();
-  }, [userId]);
+  }, [session?.uid]);
 
   // Fetch username if not provided but userId is available
   React.useEffect(() => {
@@ -380,7 +384,7 @@ export default function PageHeader({
     };
 
     fetchUsername();
-  }, [userId, username]);
+  }, [userId, session?.username]);
 
   // Extract page ID from URL and determine if user can change ownership
   React.useEffect(() => {
@@ -390,16 +394,16 @@ export default function PageHeader({
 
     // The page ID is the first segment if it's not empty and not a special route
     if (pathSegments.length > 1 && pathSegments[1] &&
-        !['user', 'group', 'admin', 'search', 'new', 'settings'].includes(pathSegments[1])) {
+        ![', session', 'group', 'admin', 'search', 'new', 'settings'].includes(pathSegments[1])) {
       const extractedPageId = pathSegments[1];
       setPageId(extractedPageId);
 
       // Check if the current user can change ownership (is the page owner)
-      if (user && userId && user.uid === userId) {
+      if (session && userId && session.uid === userId) {
         console.log("User can change page ownership");
       }
     }
-  }, [user, userId]);
+  }, [session, session?.uid]);
 
   // Groups functionality removed
 
@@ -555,7 +559,7 @@ export default function PageHeader({
       userId: userId,
       username: displayUsername
     };
-  }, [pageId, title, userId, displayUsername]);
+  }, [pageId, title, session?.uid, displayUsername]);
 
   // Handler functions using shared utilities
   const handleAddToPageClick = () => {
@@ -566,13 +570,13 @@ export default function PageHeader({
 
   const handleReplyClick = async () => {
     if (pageObject) {
-      await handleReply(pageObject, user, router);
+      await handleReply(pageObject, session, router);
     }
   };
 
   const handleShareClick = () => {
     if (pageObject) {
-      handleShare(pageObject, title, user);
+      handleShare(pageObject, title, session);
     }
   };
 
@@ -634,358 +638,418 @@ export default function PageHeader({
 
           {/* Header content area - matches main header content area */}
           <div className="flex-1 min-w-0 relative px-4 header-padding-mobile">
-            <div
-              className="flex items-center justify-between min-h-0 transition-all duration-300 ease-out"
-              style={{
-                paddingTop: `${headerPadding}px`,
-                paddingBottom: `${headerPadding}px`,
-                transform: 'translateZ(0)', // Force GPU acceleration
-                willChange: 'padding'
-              }}
-            >
-            {/* Left Side - Back Button */}
-            <div className="flex items-center gap-2 mr-4">
-              <Button
-                variant="outline"
-                size="icon"
-                className={`text-foreground transition-opacity duration-120 ${
-                  isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
-                }`}
-                onClick={handleBackClick}
-                title="Go back"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-            </div>
-
-            {/* Center - Title and Author */}
-            <div
-              className={`flex-1 flex justify-center items-center ${isScrolled ? "cursor-pointer" : ""}`}
-              onClick={isScrolled ? () => window.scrollTo({ top: 0, behavior: 'smooth' }) : undefined}
-            >
-              {/* Left navigation chevron for daily notes */}
-              {isDailyNote && !isScrolled && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 mr-2 transition-opacity duration-200"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDailyNoteNavigation('previous');
-                  }}
-                  disabled={isNavigating}
-                  title={isEditing ? "Previous calendar day (creates new note)" : "Previous daily note (existing notes only)"}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-              )}
-
+            {/* Collapsed Header Layout - Single Row */}
+            {isScrolled && (
               <div
-                className={`text-center space-y-0 transition-all duration-200 ease-out will-change-transform header-mobile-safe w-full max-w-none ${
-                  isScrolled ? "flex flex-row items-center gap-1 sm:gap-2 pl-0" : "flex flex-col items-center"
-                }`}
+                className="flex items-center justify-between min-h-0 transition-all duration-300 ease-out"
                 style={{
-                  transform: isScrolled ? "translateY(0)" : "translateY(0)",
-                  maxWidth: isScrolled ? "calc(100% - 16px)" : "100%", // Better mobile spacing
-                  margin: isScrolled ? "0 2px" : "0", // Minimal margin for mobile
-                  minWidth: 0 // Allow shrinking
+                  paddingTop: `${headerPadding}px`,
+                  paddingBottom: `${headerPadding}px`,
+                  transform: 'translateZ(0)', // Force GPU acceleration
+                  willChange: 'padding'
+                }}
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              >
+                {/* Left: Logo */}
+                <div className="flex items-center gap-2 mr-3">
+                  <Logo size="sm" priority={true} />
+                </div>
+
+                {/* Center: Title and Byline */}
+                <div className="flex-1 flex items-center justify-center gap-1 min-w-0 cursor-pointer">
+                  <h1 className="text-xs font-semibold opacity-90 truncate">
+                    {isLoading ? (
+                      <span className="inline-flex items-center">
+                        <Loader className="h-3 w-3 animate-spin mr-1" />
+                        Loading...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        <span className="truncate">
+                          {isDailyNote && title
+                            ? formatDate(title)
+                            : title
+                            ? title
+                            : isNewPage
+                            ? "Give your page a title..."
+                            : "Untitled"
+                          }
+                        </span>
+                        {isPrivate && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+                      </span>
+                    )}
+                  </h1>
+                  <span className="text-xs text-muted-foreground">by {displayUsername}</span>
+                </div>
+
+                {/* Right: Empty space for symmetry */}
+                <div className="w-8"></div>
+              </div>
+            )}
+
+            {/* Expanded Header Layout - Three Rows */}
+            {!isScrolled && (
+              <div
+                className="space-y-2 transition-all duration-300 ease-out"
+                style={{
+                  paddingTop: `${headerPadding}px`,
+                  paddingBottom: `${headerPadding}px`,
+                  transform: 'translateZ(0)', // Force GPU acceleration
+                  willChange: 'padding'
                 }}
               >
-                <h1
-                  className={`font-semibold transition-all duration-200 ease-out will-change-transform ${
-                    isScrolled
-                      ? "text-xs opacity-90 header-title-mobile"
-                      : "text-2xl mb-0.5 header-title-expanded-mobile"
-                  }`}
-                >
-                  {isLoading ? (
-                    <div className="flex items-center space-x-2">
-                      <Loader className="h-4 w-4 animate-spin" />
-                      <span className="text-muted-foreground">Loading title...</span>
-                    </div>
-                  ) : (
-                    <div className={`flex items-center ${isPrivate ? 'gap-1.5' : ''}`}>
-                      {isEditing && canEdit && isEditingTitle && !isDailyNote ? (
-                        <textarea
-                          ref={titleInputRef}
-                          value={editingTitle}
-                          onChange={handleTitleChange}
-                          onKeyDown={handleTitleKeyDown}
-                          onBlur={handleTitleBlur}
-                          onFocus={handleTitleFocus}
-                          tabIndex={isNewPage ? 1 : undefined} // Explicit first position for new pages
-                          className={`bg-background/80 border rounded-lg px-2 py-1 outline-none font-semibold text-center transition-all duration-200 resize-none overflow-hidden ${
-                            titleError
-                              ? "border-destructive focus:ring-2 focus:ring-destructive/20 focus:border-destructive"
-                              : isTitleFocused
-                              ? "border-primary/50 ring-2 ring-primary/20"
-                              : "border-muted-foreground/30"
-                          } ${
-                            isScrolled
-                              ? "text-xs opacity-90"
-                              : "text-2xl"
-                          }`}
-                          style={{
-                            maxWidth: isScrolled ? "50vw" : "100%",
-                            minWidth: isScrolled ? "60px" : "auto",
-                            width: isScrolled ? "auto" : "100%", // Full width on mobile when expanded
-                            minHeight: isScrolled ? "auto" : "2.5rem", // Minimum height for expanded state
-                            lineHeight: isScrolled ? "1.2" : "1.3" // Better line height for readability
-                          }}
-                          placeholder={isNewPage ? "Give your page a title..." : "Add a title..."}
-                          rows={1}
-                        />
-                      ) : (
-                        <span
-                          className={`${isScrolled ? "text-ellipsis overflow-hidden" : ""} ${
-                            canEdit && !isDailyNote
-                              ? isEditing
-                                ? `cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 border transition-all duration-200 ${
-                                    titleError
-                                      ? "border-destructive hover:border-destructive/70"
-                                      : isEditorFocused
-                                      ? "border-muted-foreground/30"
-                                      : "border-muted-foreground/20 hover:border-muted-foreground/30"
-                                  }`
-                                : "cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 transition-all duration-200"
-                              : isDailyNote && !isScrolled
-                              ? isEditing
-                                ? "flex flex-col items-center gap-1 cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 border border-muted-foreground/20 hover:border-muted-foreground/30 transition-all duration-200"
-                                : "flex flex-col items-center gap-1 cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 transition-all duration-200"
-                              : isDailyNote
-                              ? "cursor-pointer"
-                              : ""
-                          }`}
-                          style={isScrolled ? {
-                            maxWidth: '50vw',
-                            display: 'inline-block',
-                            verticalAlign: 'middle',
-                            whiteSpace: 'nowrap', // Prevent wrapping in collapsed state
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            lineHeight: '1.2'
-                          } : {
-                            // Allow natural wrapping on mobile for expanded state
-                            width: '100%',
-                            display: 'block',
-                            wordWrap: 'break-word',
-                            overflowWrap: 'break-word',
-                            hyphens: 'none'
-                          }}
-                          onClick={handleTitleClick}
-                          title={
-                            isDailyNote
-                              ? "Click to change date format"
-                              : (canEdit ? (isEditing ? "Click to edit title" : "Click to edit page") : undefined)
-                          }
+                {/* Row 1: Back Button + Logo + Menu */}
+                <div className="flex items-center justify-between">
+                  {/* Left: Back Button */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="text-foreground"
+                      onClick={handleBackClick}
+                      title="Go back"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </Button>
+                  </div>
+
+                  {/* Center: Logo */}
+                  <div className="flex items-center">
+                    <Logo size="lg" priority={true} />
+                  </div>
+
+                  {/* Right: Menu */}
+                  <div className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="text-foreground"
+                          title="Page actions"
+                          tabIndex={isNewPage ? 3 : undefined}
                         >
-                          <span className={!title && isNewPage ? "text-muted-foreground" : ""}>
-                            {isDailyNote && title
-                              ? formatDateString(title)
-                              : title
-                              ? title
-                              : isNewPage
-                              ? "Give your page a title..."
-                              : "Untitled"
-                            }
-                          </span>
-                        </span>
-                      )}
-                      {isPrivate && <Lock className={`${isScrolled ? 'h-3 w-3' : 'h-4 w-4'} text-muted-foreground flex-shrink-0`} />}
-                    </div>
+                          <MoreHorizontal className="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        {/* For new pages, show only the privacy toggle */}
+                        {isNewPage ? (
+                          <DropdownMenuItem
+                            className="flex items-center justify-between cursor-pointer py-3"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (onPrivacyChange) {
+                                onPrivacyChange(!isPrivate);
+                              }
+                            }}
+                          >
+                            <div className="flex items-center gap-3">
+                              {!isPrivate ? (
+                                <Globe className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <Lock className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              <div className="flex flex-col">
+                                <span className="font-medium">{!isPrivate ? "Public" : "Private"}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {!isPrivate ? "Anyone can view this page" : "Only you can view this page"}
+                                </span>
+                              </div>
+                            </div>
+                            <Switch
+                              checked={!isPrivate}
+                              onCheckedChange={(checked) => {
+                                if (onPrivacyChange) {
+                                  onPrivacyChange(checked);
+                                }
+                              }}
+                              aria-label="Toggle page visibility"
+                            />
+                          </DropdownMenuItem>
+                        ) : (
+                          <>
+                            {/* Edit option - only visible if user can edit */}
+                            {canEdit && setIsEditing && (
+                              <DropdownMenuItem
+                                className="gap-2"
+                                onClick={() => {
+                                  setIsEditing(!isEditing);
+                                }}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                                <span>{isEditing ? "Cancel" : "Edit"}</span>
+                              </DropdownMenuItem>
+                            )}
+
+                            {/* Edit mode specific options */}
+                            {isEditing ? (
+                              <>
+                                {/* Insert Link option - only in edit mode */}
+                                {onInsertLink && (
+                                  <DropdownMenuItem
+                                    className="gap-2"
+                                    onClick={onInsertLink}
+                                  >
+                                    <LinkIcon className="h-4 w-4" />
+                                    <span>Insert link</span>
+                                  </DropdownMenuItem>
+                                )}
+
+                                {/* Delete page option - only in edit mode and if user can edit */}
+                                {canEdit && onDelete && (
+                                  <DropdownMenuItem
+                                    className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={onDelete}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span>Delete page</span>
+                                  </DropdownMenuItem>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                {/* Share option - only visible when not in edit mode */}
+                                <DropdownMenuItem
+                                  className="gap-2"
+                                  onClick={handleShareClick}
+                                >
+                                  <Share2 className="h-4 w-4" />
+                                  <span>Share</span>
+                                </DropdownMenuItem>
+
+                                {/* Add to Page option - only visible when not in edit mode */}
+                                <DropdownMenuItem
+                                  className="gap-2"
+                                  onClick={handleAddToPageClick}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                  <span>Add to Page</span>
+                                </DropdownMenuItem>
+
+                                {/* Reply option - only visible when not in edit mode */}
+                                <DropdownMenuItem
+                                  className="gap-2"
+                                  onClick={handleReplyClick}
+                                >
+                                  <MessageSquare className="h-4 w-4" />
+                                  <span>Reply</span>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuSeparator />
+
+                                {/* Paragraph Mode submenu - only visible when not in edit mode */}
+                                <DropdownMenuSub>
+                                  <DropdownMenuSubTrigger className="gap-2">
+                                    {lineMode === LINE_MODES.DENSE ? (
+                                      <AlignJustify className="h-4 w-4" />
+                                    ) : (
+                                      <AlignLeft className="h-4 w-4" />
+                                    )}
+                                    <span>Paragraph Mode</span>
+                                  </DropdownMenuSubTrigger>
+                                  <DropdownMenuPortal>
+                                    <DropdownMenuSubContent>
+                                      <DropdownMenuItem
+                                        className={`gap-2 ${lineMode === LINE_MODES.NORMAL ? 'bg-accent/50' : ''}`}
+                                        onClick={() => setLineMode(LINE_MODES.NORMAL)}
+                                      >
+                                        <AlignLeft className="h-4 w-4" />
+                                        <span>Normal</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className={`gap-2 ${lineMode === LINE_MODES.DENSE ? 'bg-accent/50' : ''}`}
+                                        onClick={() => setLineMode(LINE_MODES.DENSE)}
+                                      >
+                                        <AlignJustify className="h-4 w-4" />
+                                        <span>Dense</span>
+                                      </DropdownMenuItem>
+                                    </DropdownMenuSubContent>
+                                  </DropdownMenuPortal>
+                                </DropdownMenuSub>
+                              </>
+                            )}
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+
+                {/* Row 2: Title */}
+                <div className="flex items-center justify-center">
+                  {/* Left navigation chevron for daily notes */}
+                  {isDailyNote && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 mr-2 transition-opacity duration-200"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDailyNoteNavigation('previous');
+                      }}
+                      disabled={isNavigating}
+                      title={isEditing ? "Previous calendar day (creates new note)" : "Previous daily note (existing notes only)"}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
                   )}
-                </h1>
-                <div
-                  className={`text-muted-foreground transition-all duration-200 ease-out will-change-transform ${
-                    isScrolled
-                      ? "text-xs mt-0 overflow-hidden text-ellipsis inline-block header-byline-mobile"
-                      : "text-sm mt-0.5"
-                  }`}
-                  style={{
-                    maxWidth: isScrolled ? "35vw" : "100%", // Better mobile width allocation
-                    minWidth: isScrolled ? "auto" : "auto"
-                  }}
-                >
-                  {isLoading ? (
-                    <span className="inline-flex items-center"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
-                  ) : (
-                    <span className="flex items-center gap-1 justify-center mx-auto">
-                      <span className="whitespace-nowrap flex-shrink-0">by</span>
-                      {/* For new pages, make username non-interactive to improve tab order */}
-                      {isNewPage ? (
-                        <span className="overflow-hidden text-ellipsis">
-                          {isLoading || !displayUsername ? (
-                            <span className="inline-flex items-center text-muted-foreground"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
-                          ) : (
-                            <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">{displayUsername}</span>
-                          )}
-                        </span>
+
+                  <div className="flex-1 text-center">
+                    <h1 className="text-2xl font-semibold">
+                      {isLoading ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <Loader className="h-4 w-4 animate-spin" />
+                          <span className="text-muted-foreground">Loading title...</span>
+                        </div>
                       ) : (
-                        <Link href={`/user/${userId}`} className="hover:underline overflow-hidden text-ellipsis">
-                          {isLoading || !displayUsername ? (
-                            <span className="inline-flex items-center text-muted-foreground"><Loader className="h-3 w-3 animate-spin mr-1" />Loading...</span>
+                        <div className={`flex items-center justify-center ${isPrivate ? 'gap-1.5' : ''}`}>
+                          {isEditing && canEdit && isEditingTitle && !isDailyNote ? (
+                            <textarea
+                              ref={titleInputRef}
+                              value={editingTitle}
+                              onChange={handleTitleChange}
+                              onKeyDown={handleTitleKeyDown}
+                              onBlur={handleTitleBlur}
+                              onFocus={handleTitleFocus}
+                              tabIndex={isNewPage ? 1 : undefined}
+                              className={`bg-background/80 border rounded-lg px-2 py-1 outline-none font-semibold text-center transition-all duration-200 resize-none overflow-hidden ${
+                                titleError
+                                  ? "border-destructive focus:ring-2 focus:ring-destructive/20 focus:border-destructive"
+                                  : isTitleFocused
+                                  ? "border-primary/50 ring-2 ring-primary/20"
+                                  : "border-muted-foreground/30"
+                              } text-2xl`}
+                              style={{
+                                width: "100%",
+                                minHeight: "2.5rem",
+                                lineHeight: "1.3"
+                              }}
+                              placeholder={isNewPage ? "Give your page a title..." : "Add a title..."}
+                              rows={1}
+                            />
                           ) : (
-                            <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">{displayUsername}</span>
+                            <span
+                              className={`${
+                                canEdit && !isDailyNote
+                                  ? isEditing
+                                    ? `cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 border transition-all duration-200 ${
+                                        titleError
+                                          ? "border-destructive hover:border-destructive/70"
+                                          : isEditorFocused
+                                          ? "border-muted-foreground/30"
+                                          : "border-muted-foreground/20 hover:border-muted-foreground/30"
+                                      }`
+                                    : "cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 transition-all duration-200"
+                                  : isDailyNote
+                                  ? isEditing
+                                    ? "flex flex-col items-center gap-1 cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 border border-muted-foreground/20 hover:border-muted-foreground/30 transition-all duration-200"
+                                    : "flex flex-col items-center gap-1 cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 transition-all duration-200"
+                                  : isDailyNote
+                                  ? "cursor-pointer"
+                                  : ""
+                              }`}
+                              style={{
+                                width: '100%',
+                                display: 'block',
+                                wordWrap: 'break-word',
+                                overflowWrap: 'break-word',
+                                hyphens: 'none'
+                              }}
+                              onClick={handleTitleClick}
+                              title={
+                                isDailyNote
+                                  ? "Click to change date format"
+                                  : (canEdit ? (isEditing ? "Click to edit title" : "Click to edit page") : undefined)
+                              }
+                            >
+                              <span className={!title && isNewPage ? "text-muted-foreground" : ""}>
+                                {isDailyNote && title
+                                  ? formatDate(title)
+                                  : title
+                                  ? title
+                                  : isNewPage
+                                  ? "Give your page a title..."
+                                  : "Untitled"
+                                }
+                              </span>
+                            </span>
                           )}
-                        </Link>
+                          {isPrivate && <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                        </div>
                       )}
-                      {subscriptionEnabled && (
-                        <SubscriptionInfoModal currentTier={tier} currentStatus={subscriptionStatus} userId={userId} username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}>
-                          <div className="cursor-pointer flex-shrink-0 flex items-center">
-                            <SupporterIcon tier={tier} status={subscriptionStatus} size="sm" />
-                          </div>
-                        </SubscriptionInfoModal>
-                      )}
-                    </span>
+                    </h1>
+                  </div>
+
+                  {/* Right navigation chevron for daily notes */}
+                  {isDailyNote && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 ml-2 transition-opacity duration-200"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDailyNoteNavigation('next');
+                      }}
+                      disabled={isNavigating}
+                      title={isEditing ? "Next calendar day (creates new note)" : "Next daily note (existing notes only)"}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   )}
                 </div>
-              </div>
 
-              {/* Right navigation chevron for daily notes */}
-              {isDailyNote && !isScrolled && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 ml-2 transition-opacity duration-200"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDailyNoteNavigation('next');
-                  }}
-                  disabled={isNavigating}
-                  title={isEditing ? "Next calendar day (creates new note)" : "Next daily note (existing notes only)"}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-
-            {/* Right Side - Action Menu (only visible when not scrolled) */}
-            <div className="flex items-center ml-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className={`text-foreground transition-opacity duration-120 ${
-                      isScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
-                    }`}
-                    title="Page actions"
-                    tabIndex={isNewPage ? 3 : undefined} // Set to 3rd position: after title (1) and editor (2)
-                  >
-                    <MoreHorizontal className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  {/* For new pages, show only the privacy toggle */}
-                  {isNewPage ? (
-                    <DropdownMenuItem
-                      className="flex items-center justify-between cursor-pointer py-3"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (onPrivacyChange) {
-                          onPrivacyChange(!isPrivate);
-                        }
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        {!isPrivate ? (
-                          <Globe className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Lock className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <div className="flex flex-col">
-                          <span className="font-medium">{!isPrivate ? "Public" : "Private"}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {!isPrivate ? "Anyone can view this page" : "Only you can view this page"}
+                {/* Row 3: Byline */}
+                <div className="flex items-center justify-center">
+                  <div className="text-sm text-muted-foreground">
+                    {isLoading ? (
+                      <span className="inline-flex items-center">
+                        <Loader className="h-3 w-3 animate-spin mr-1" />
+                        Loading...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 justify-center">
+                        <span className="whitespace-nowrap flex-shrink-0">by</span>
+                        {isNewPage ? (
+                          <span className="overflow-hidden text-ellipsis">
+                            {isLoading || !displayUsername ? (
+                              <span className="inline-flex items-center text-muted-foreground">
+                                <Loader className="h-3 w-3 animate-spin mr-1" />
+                                Loading...
+                              </span>
+                            ) : (
+                              <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">
+                                {displayUsername}
+                              </span>
+                            )}
                           </span>
-                        </div>
-                      </div>
-                      <Switch
-                        checked={!isPrivate}
-                        onCheckedChange={(checked) => {
-                          if (onPrivacyChange) {
-                            onPrivacyChange(checked);
-                          }
-                        }}
-                        aria-label="Toggle page visibility"
-                      />
-                    </DropdownMenuItem>
-                  ) : (
-                    <>
-                      {/* Edit option - only visible if user can edit */}
-                      {canEdit && setIsEditing && (
-                        <DropdownMenuItem
-                          className="gap-2"
-                          onClick={() => {
-                            setIsEditing(!isEditing);
-                          }}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                          <span>{isEditing ? "Cancel" : "Edit"}</span>
-                        </DropdownMenuItem>
-                      )}
-
-                      {/* Edit mode specific options */}
-                      {isEditing ? (
-                        <>
-                          {/* Insert Link option - only in edit mode */}
-                          {onInsertLink && (
-                            <DropdownMenuItem
-                              className="gap-2"
-                              onClick={onInsertLink}
-                            >
-                              <LinkIcon className="h-4 w-4" />
-                              <span>Insert link</span>
-                            </DropdownMenuItem>
-                          )}
-
-                          {/* Delete page option - only in edit mode and if user can edit */}
-                          {canEdit && onDelete && (
-                            <DropdownMenuItem
-                              className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={onDelete}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span>Delete page</span>
-                            </DropdownMenuItem>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          {/* Share option - only visible when not in edit mode */}
-                          <DropdownMenuItem
-                            className="gap-2"
-                            onClick={handleShareClick}
-                          >
-                            <Share2 className="h-4 w-4" />
-                            <span>Share</span>
-                          </DropdownMenuItem>
-
-                          {/* Add to Page option - only visible when not in edit mode */}
-                          <DropdownMenuItem
-                            className="gap-2"
-                            onClick={handleAddToPageClick}
-                          >
-                            <Plus className="h-4 w-4" />
-                            <span>Add to Page</span>
-                          </DropdownMenuItem>
-
-                          {/* Reply option - only visible when not in edit mode */}
-                          <DropdownMenuItem
-                            className="gap-2"
-                            onClick={handleReplyClick}
-                          >
-                            <MessageSquare className="h-4 w-4" />
-                            <span>Reply</span>
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            </div>
+                        ) : (
+                          <Link href={`/user/${userId}`} className="hover:underline overflow-hidden text-ellipsis">
+                            {isLoading || !displayUsername ? (
+                              <span className="inline-flex items-center text-muted-foreground">
+                                <Loader className="h-3 w-3 animate-spin mr-1" />
+                                Loading...
+                              </span>
+                            ) : (
+                              <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">
+                                {displayUsername}
+                              </span>
+                            )}
+                          </Link>
+                        )}
+                        {subscriptionEnabled && (
+                          <SubscriptionInfoModal currentTier={tier} currentStatus={subscriptionStatus} userId={userId} username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}>
+                            <div className="cursor-pointer flex-shrink-0 flex items-center">
+                              <SupporterIcon tier={tier} status={subscriptionStatus} size="sm" />
+                            </div>
+                          </SubscriptionInfoModal>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

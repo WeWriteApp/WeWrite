@@ -1,0 +1,82 @@
+{
+  "timestamp": "2025-06-29T23:46:11.482Z",
+  "summary": {
+    "total": 14,
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0,
+    "successRate": 100
+  },
+  "tests": [
+    {
+      "name": "Health Check Module Import",
+      "status": "passed",
+      "duration": 1
+    },
+    {
+      "name": "Import Validator Module Import",
+      "status": "passed",
+      "duration": 1
+    },
+    {
+      "name": "Dependency Map Generator Module Import",
+      "status": "passed",
+      "duration": 1
+    },
+    {
+      "name": "Self-Healing System Module Import",
+      "status": "passed",
+      "duration": 1
+    },
+    {
+      "name": "Package.json Validation",
+      "status": "passed",
+      "duration": 0
+    },
+    {
+      "name": "TypeScript Config Validation",
+      "status": "passed",
+      "duration": 1
+    },
+    {
+      "name": "Dependency Health Check Execution",
+      "status": "passed",
+      "duration": 254
+    },
+    {
+      "name": "Import Validation Execution",
+      "status": "passed",
+      "duration": 268
+    },
+    {
+      "name": "Dependency Map Generation",
+      "status": "passed",
+      "duration": 2407
+    },
+    {
+      "name": "Dashboard Generation",
+      "status": "passed",
+      "duration": 295
+    },
+    {
+      "name": "Self-Healing Plan Generation",
+      "status": "passed",
+      "duration": 258
+    },
+    {
+      "name": "Health Check Performance",
+      "status": "passed",
+      "duration": 209
+    },
+    {
+      "name": "Import Validation Performance",
+      "status": "passed",
+      "duration": 312
+    },
+    {
+      "name": "Memory Usage Check",
+      "status": "passed",
+      "duration": 1
+    }
+  ]
+}

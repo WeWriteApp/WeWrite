@@ -94,8 +94,7 @@ export function DynamicMapView({
   onChange,
   height = '200px',
   expandable = true,
-  showInMetadata = false,
-}: MapViewProps) {
+  showInMetadata = false}: MapViewProps) {
   const [shouldLoadMap, setShouldLoadMap] = useState(false);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [loadError, setLoadError] = useState(false);

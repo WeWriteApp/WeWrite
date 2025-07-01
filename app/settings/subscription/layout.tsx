@@ -1,8 +1,7 @@
 import React from 'react';
 
 export default function SubscriptionLayout({
-  children,
-}: {
+  children}: {
   children: React.ReactNode;
 }) {
   return (
@@ -10,4 +9,4 @@ export default function SubscriptionLayout({
       <main>{children}</main>
     </div>
   );
-} 
+}

@@ -208,7 +208,6 @@ export class DashboardAnalyticsService {
    */
   static async getNewAccountsCreated(dateRange: DateRange, granularity?: number): Promise<ChartDataPoint[]> {
 
-
     try {
       // Check cache first (include granularity in cache key)
       const cacheKey = getCacheKey('accounts', dateRange) + (granularity ? `-g${granularity}` : '');
@@ -234,8 +233,6 @@ export class DashboardAnalyticsService {
       const snapshot = await getDocs(simpleQuery);
 
       console.log(`✅ [Analytics Service] Users query successful, found ${snapshot.size} documents, will filter by date in memory`);
-
-
 
       // Group by time interval
       const dateMap = new Map<string, number>();

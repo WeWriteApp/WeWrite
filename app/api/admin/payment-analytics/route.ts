@@ -128,9 +128,6 @@ export async function GET(request: NextRequest) {
       endDate: new Date(endDate)
     };
 
-
-
-
     // Get Firebase Admin instance
     const admin = getFirebaseAdmin();
     if (!admin) {

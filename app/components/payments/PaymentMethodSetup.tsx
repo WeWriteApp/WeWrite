@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -20,7 +20,7 @@ interface PaymentMethodSetupProps {
 }
 
 const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCancel }) => {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -30,7 +30,7 @@ const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCan
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!stripe || !elements || !user) {
+    if (!stripe || !elements || !session) {
       setError('Payment system not ready. Please try again.');
       return;
     }
@@ -49,9 +49,7 @@ const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCan
       const setupResponse = await fetch('/api/setup-intent', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+          'Content-Type': 'application/json'}});
 
       if (!setupResponse.ok) {
         const errorData = await setupResponse.json();
@@ -63,9 +61,7 @@ const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCan
       // Confirm the setup intent with the card
       const { error: confirmError, setupIntent } = await stripe.confirmCardSetup(clientSecret, {
         payment_method: {
-          card: cardElement,
-        },
-      });
+          card: cardElement}});
 
       if (confirmError) {
         throw new Error(confirmError.message || 'Failed to add payment method');
@@ -119,11 +115,7 @@ const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCan
                   fontSize: '16px',
                   color: 'hsl(var(--foreground))',
                   '::placeholder': {
-                    color: 'hsl(var(--muted-foreground))',
-                  },
-                },
-              },
-            }}
+                    color: 'hsl(var(--muted-foreground))'}}}}}
           />
         </div>
       </div>
@@ -166,14 +158,14 @@ const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCan
   );
 };
 
-export const PaymentMethodSetup: React.FC<PaymentMethodSetupProps> = ({ 
-  onSuccess, 
-  onCancel, 
-  showTitle = true 
+export const PaymentMethodSetup: React.FC<PaymentMethodSetupProps> = ({
+  onSuccess,
+  onCancel,
+  showTitle = true
 }) => {
-  const { user } = useAuth();
+  const { currentAccount } = useCurrentAccount();
 
-  if (!user) {
+  if (!currentAccount) {
     return (
       <Alert>
         <AlertTriangle className="h-4 w-4" />

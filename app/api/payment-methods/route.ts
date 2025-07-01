@@ -31,8 +31,7 @@ function initializeFirebase() {
 // Get the appropriate Stripe key based on environment
 const stripeSecretKey = getStripeSecretKey();
 const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2025-04-30.basil' as any,
-});
+  apiVersion: '2025-04-30.basil' as any});
 
 // GET /api/payment-methods - Get all payment methods for the current user
 export async function GET(request: NextRequest) {
@@ -71,8 +70,7 @@ export async function GET(request: NextRequest) {
     // Get the user's payment methods from Stripe
     const paymentMethods = await stripe.paymentMethods.list({
       customer: userData.stripeCustomerId,
-      type: 'card',
-    });
+      type: 'card'});
 
     // Get the user's payment methods metadata from Firestore
     const paymentMethodsDoc = await db.collection('users').doc(userId).collection('paymentMethods').doc('metadata').get();
@@ -88,8 +86,7 @@ export async function GET(request: NextRequest) {
         last4: method.card?.last4 || '****',
         expMonth: method.card?.exp_month || 0,
         expYear: method.card?.exp_year || 0,
-        isPrimary,
-      };
+        isPrimary};
     });
 
     // Sort payment methods: primary first, then by order in metadata
@@ -176,8 +173,7 @@ export async function DELETE(request: NextRequest) {
 
     await db.collection('users').doc(userId).collection('paymentMethods').doc('metadata').set({
       primary: updatedPrimary,
-      order: updatedOrder,
-    }, { merge: true });
+      order: updatedOrder}, { merge: true });
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error: any) {

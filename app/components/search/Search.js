@@ -1,6 +1,6 @@
 "use client";
-import React, { useEffect, useState, useContext, useCallback, useMemo } from "react";
-import { AuthContext } from "../../providers/AuthProvider";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import CustomSearchAutocomplete from "./CustomSearchAutocomplete";
 import { useRouter } from "next/navigation";
 import { PillLink } from "../utils/PillLink";
@@ -61,7 +61,7 @@ class SearchCache {
 
 const Search = () => {
   const router = useRouter();
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -70,24 +70,24 @@ const Search = () => {
 
   // Clear the cache when the user changes
   useEffect(() => {
-    if (user) {
+    if (session) {
       console.log('User changed, clearing search cache');
       searchCache.clear();
     }
-  }, [user?.uid, searchCache]);
+  }, [session?.uid, searchCache]);
 
   const fetchResults = useCallback(
     debounce(async (searchTerm) => {
-      if (!user) return;
+      if (!session) return;
 
       console.log('Search component - Fetching results for:', {
         searchTerm,
-        userId: user.uid,
+        userId: session.uid,
         groups: user.groups
       });
 
       // Create a cache key based on the search term and user ID
-      const cacheKey = `${searchTerm}:${user.uid}`;
+      const cacheKey = `${searchTerm}:${session.uid}`;
 
       // Check if we have cached results, but allow retry if cache is empty
       const cachedResults = searchCache.get(cacheKey);
@@ -110,7 +110,7 @@ const Search = () => {
         }
 
         // Use unified search API for comprehensive results
-        const searchUrl = `/api/search-unified?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&context=main&maxResults=50&includeContent=true&includeUsers=true`;
+        const searchUrl = `/api/search-unified?userId=${session.uid}&searchTerm=${encodeURIComponent(searchTerm)}&context=main&maxResults=50&includeContent=true&includeUsers=true`;
 
         console.log('Making unified API request to:', searchUrl);
 
@@ -152,7 +152,7 @@ const Search = () => {
         // Add users to search results
         const formattedUsers = users.map(user => ({
           ...user,
-          name: user.username,
+          name: session.username,
           type: 'user',
           url: `/user/${user.id}`
         }));
@@ -202,7 +202,7 @@ const Search = () => {
         setIsSearching(false);
       }
     }, 500), // Standardized debounce timing to 500ms for consistent behavior
-    [user, searchCache]
+    [, session, searchCache]
   );
 
   const handleOnSelect = (item) => {
@@ -286,8 +286,7 @@ const Search = () => {
           focusBoxShadow: "0 0 0 2px hsl(var(--primary) / 0.2)"
         }}
         fuseOptions={{
-          minMatchCharLength: 1,
-        }}
+          minMatchCharLength: 1}}
         formatResult={(item) => {
           return (
             <PillLink

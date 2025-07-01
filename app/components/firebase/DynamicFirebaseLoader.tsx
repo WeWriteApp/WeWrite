@@ -29,8 +29,7 @@ export function DynamicFirebaseLoader({
   fallback,
   priority = 'medium',
   loadOnInteraction = false,
-  loadOnVisible = false,
-}: DynamicFirebaseLoaderProps) {
+  loadOnVisible = false}: DynamicFirebaseLoaderProps) {
   const [shouldLoad, setShouldLoad] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -65,8 +64,7 @@ export function DynamicFirebaseLoader({
     const delays = {
       high: isSlowConnection ? 500 : 0,
       medium: isSlowConnection ? 2000 : 1000,
-      low: isSlowConnection ? 5000 : 2000,
-    };
+      low: isSlowConnection ? 5000 : 2000};
 
     const timer = setTimeout(() => {
       setShouldLoad(true);
@@ -171,8 +169,7 @@ export function useFirebaseLoader() {
     isFirebaseLoaded,
     loadingError,
     loadFirebaseFeature,
-    isSlowConnection,
-  };
+    isSlowConnection};
 }
 
 /**
@@ -183,8 +180,7 @@ export const DynamicFirebaseAuth = dynamic(
   () => import('../auth/AddUsername').then(mod => ({ default: mod.default })),
   {
     loading: () => <FirebaseLoadingFallback />,
-    ssr: false,
-  }
+    ssr: false}
 );
 
 /**
@@ -195,8 +191,7 @@ export const DynamicFirebaseDatabase = dynamic(
   () => import('../features/RecentActivity').then(mod => ({ default: mod.default })),
   {
     loading: () => <FirebaseLoadingFallback />,
-    ssr: false,
-  }
+    ssr: false}
 );
 
 /**
@@ -245,8 +240,7 @@ export function preloadFirebaseFeature(feature: 'auth' | 'database' | 'storage')
 export function FirebaseFeatureGate({
   feature,
   children,
-  fallback,
-}: {
+  fallback}: {
   feature: 'auth' | 'database' | 'storage';
   children: React.ReactNode;
   fallback?: React.ReactNode;

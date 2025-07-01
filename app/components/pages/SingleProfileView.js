@@ -4,12 +4,11 @@ import { PillLink } from "../utils/PillLink";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DataContext } from "../../providers/DataProvider";
-import SearchResults from "../search/SearchResults";
+
 import {
   ProfilePagesProvider,
-  ProfilePagesContext,
-} from "../../providers/ProfilePageProvider";
-import { useAuth } from "../../providers/AuthProvider";
+  ProfilePagesContext} from "../../providers/ProfilePageProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { Loader, Settings, ChevronLeft, Heart, Users, Eye, Share2, DollarSign } from "lucide-react";
 import SupporterBadge from "../payments/SupporterBadge";
 import { SupporterIcon } from "../payments/SupporterIcon";
@@ -17,6 +16,7 @@ import { SubscriptionInfoModal } from "../payments/SubscriptionInfoModal";
 import { Button } from "../ui/button";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebase/database";
+import SidebarLayout from "../layout/SidebarLayout";
 
 import UserProfileTabs from '../utils/UserProfileTabs';
 import { getUserFollowerCount, getUserPageCount, getUserTotalViewCount, getUserContributorCount } from "../../firebase/counters";
@@ -27,7 +27,7 @@ import { useFeatureFlag } from "../../utils/feature-flags";
 import { useContributorCount } from "../../hooks/useContributorCount";
 
 const SingleProfileView = ({ profile }) => {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount(); // Fixed destructuring issues
   const router = useRouter();
   const [pageCount, setPageCount] = useState(0);
   const [followerCount, setFollowerCount] = useState(0);
@@ -38,10 +38,10 @@ const SingleProfileView = ({ profile }) => {
   const [isLoadingTier, setIsLoadingTier] = useState(false);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
-  const [userActivityData, setUserActivityData] = useState(null);
+  const [userActivityData, setUserActivityData] = useState(null); // Fixed destructuring
 
   // Check if payments feature is enabled
-  const paymentsEnabled = useFeatureFlag('payments', user?.email);
+  const paymentsEnabled = useFeatureFlag('payments', session?.email);
 
   // Use real-time contributor count hook when payments are enabled
   const {
@@ -69,7 +69,7 @@ const SingleProfileView = ({ profile }) => {
   }, []);
 
   // Check if this profile belongs to the current user
-  const isCurrentUser = user && user.uid === profile.uid;
+  const isCurrentUser = session && session.uid === profile.uid;
 
   // Fetch username if not provided
   useEffect(() => {
@@ -101,7 +101,7 @@ const SingleProfileView = ({ profile }) => {
           // Get follower count, page count, view count, and activity data in parallel
           const [followerCountResult, pageCountResult, viewCountResult, activityResult] = await Promise.all([
             getUserFollowerCount(profile.uid),
-            getUserPageCount(profile.uid, user?.uid), // Pass current user ID to get correct count
+            getUserPageCount(profile.uid, session?.uid), // Pass current , session ID to get correct count
             getUserTotalViewCount(profile.uid),
             getUserComprehensiveActivityLast24Hours(profile.uid)
           ]);
@@ -236,7 +236,7 @@ const SingleProfileView = ({ profile }) => {
               size="sm"
               className="gap-1"
               onClick={() => {
-                // Create share text in the format: "[username]'s profile on @WeWriteApp [URL]"
+                // Create share text in the format: "[, sessionname]'s profile on @WeWriteApp [URL]"
                 const profileUrl = window.location.href;
                 const shareText = `${username}'s profile on @WeWriteApp ${profileUrl}`;
 
@@ -245,8 +245,7 @@ const SingleProfileView = ({ profile }) => {
                   navigator.share({
                     title: `${username} on WeWrite`,
                     text: shareText,
-                    url: profileUrl,
-                  }).catch((error) => {
+                    url: profileUrl}).catch((error) => {
                     // Silent error handling - no toast
                     console.error('Error sharing:', error);
                   });
@@ -421,7 +420,7 @@ const SingleProfileView = ({ profile }) => {
           )}
         </div>
 
-        {!user && (
+        {!session && (
           <div className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg p-5 mb-6 mx-2 shadow-sm">
             <div className="flex flex-col space-y-4">
               <p className="text-center font-medium">
@@ -442,7 +441,6 @@ const SingleProfileView = ({ profile }) => {
             </div>
           </div>
         )}
-
 
         <UserProfileTabs profile={profile} />
       </div>

@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "../ui/button";
+import { Switch } from "../ui/switch";
 import { Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X } from "lucide-react";
 import dynamic from 'next/dynamic';
 import { useRouter } from "next/navigation";
@@ -30,14 +31,15 @@ import {
   DialogClose
 } from "../ui/dialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command";
-import { AuthContext } from "../../providers/AuthProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { getDatabase, ref, onValue, set, get, update } from "firebase/database";
 import { app } from "../../firebase/config";
-import SearchResults from '../search/SearchResults';
+
 import FollowButton from '../utils/FollowButton';
 import { useConfirmation } from "../../hooks/useConfirmation";
 import ConfirmationModal from '../utils/ConfirmationModal';
 import { navigateAfterPageDeletion } from "../../utils/postDeletionNavigation";
+import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
 
 // Dynamically import AddToPageButton to avoid SSR issues
 const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
@@ -99,13 +101,14 @@ export function PageActions({
   showFollowButton = false
 }: PageActionsProps) {
   const router = useRouter();
-  const { user } = useContext(AuthContext) || {};
+  const { session } = useCurrentAccount();
   const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false);
 
   // Use confirmation modal hook
   const { confirmationState, confirmDelete, closeConfirmation } = useConfirmation();
 
-
+  // Use line settings for paragraph mode toggle
+  const { lineMode, setLineMode } = useLineSettings();
 
   // Store the current page content for future use
   const [currentPageContent, setCurrentPageContent] = useState<any>(null);
@@ -137,7 +140,7 @@ export function PageActions({
       try {
         // CRITICAL: Navigate IMMEDIATELY before deletion to prevent 404
         // Use graceful navigation with proper browser history handling
-        await navigateAfterPageDeletion(page, user, router);
+        await navigateAfterPageDeletion(page, session, router);
 
         // Delete the page after navigation has started
         await deletePage(page.id);
@@ -162,7 +165,7 @@ export function PageActions({
    */
   const handleReply = async () => {
     // Check if user is authenticated
-    if (!user) {
+    if (!session) {
       // User is not authenticated, store draft reply and redirect to login
       try {
         // Create standardized reply content
@@ -319,7 +322,7 @@ export function PageActions({
           {/* Share button removed - now only in page header */}
 
           {/* Follow button - available to non-owners when logged in */}
-          {showFollowButton && user && !isOwner && !isEditing && (
+          {showFollowButton && session && !isOwner && !isEditing && (
             <FollowButton
               pageId={page.id}
               pageTitle={page.title}
@@ -344,6 +347,31 @@ export function PageActions({
           </Button>
         </div>
 
+        {/* Paragraph Mode Toggle - only show in view mode */}
+        {!isEditing && (
+          <div className="flex items-center justify-center gap-3 py-4 border-t border-border/50">
+            <div className="flex items-center gap-3">
+              {lineMode === LINE_MODES.DENSE ? (
+                <AlignJustify className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <AlignLeft className="h-4 w-4 text-muted-foreground" />
+              )}
+              <div className="flex flex-col">
+                <span className="text-sm font-medium">Dense Mode</span>
+                <span className="text-xs text-muted-foreground">
+                  Continuous text flow with inline paragraph numbers
+                </span>
+              </div>
+            </div>
+            <Switch
+              checked={lineMode === LINE_MODES.DENSE}
+              onCheckedChange={(checked) => {
+                setLineMode(checked ? LINE_MODES.DENSE : LINE_MODES.NORMAL);
+              }}
+              aria-label="Toggle dense mode"
+            />
+          </div>
+        )}
 
       </div>
 

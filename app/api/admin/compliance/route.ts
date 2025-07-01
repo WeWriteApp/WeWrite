@@ -246,7 +246,7 @@ async function handleUpdateGDPRConsent(
   }
 
   const complianceService = RegulatoryComplianceService.getInstance();
-  const result = await complianceService.updateGDPRConsent(targetUserId, consentData, correlationId);
+  const result = await (complianceService as any).updateGDPRConsent(targetUserId, consentData, correlationId);
 
   if (!result.success) {
     return NextResponse.json({
@@ -276,7 +276,7 @@ async function handleRightToBeForgotten(
   }
 
   const complianceService = RegulatoryComplianceService.getInstance();
-  const result = await complianceService.processRightToBeForgotten(targetUserId, requestDetails, correlationId);
+  const result = await (complianceService as any).processRightToBeForgotten(targetUserId, requestDetails, correlationId);
 
   if (!result.success) {
     return NextResponse.json({

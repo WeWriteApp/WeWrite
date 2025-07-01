@@ -37,13 +37,9 @@ const toastVariants = cva(
         info:
           "info group border-primary bg-primary/10 text-foreground",
         warning:
-          "warning group border-theme-medium bg-yellow-500/10 text-foreground",
-      },
-    },
+          "warning group border-theme-medium bg-yellow-500/10 text-foreground"}},
     defaultVariants: {
-      variant: "default",
-    },
-  }
+      variant: "default"}}
 )
 
 const Toast = React.forwardRef<
@@ -131,5 +127,4 @@ export {
   ToastTitle,
   ToastDescription,
   ToastClose,
-  ToastAction,
-}
+  ToastAction}

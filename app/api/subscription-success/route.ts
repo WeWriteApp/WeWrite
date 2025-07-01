@@ -31,8 +31,7 @@ function initializeFirebase() {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-04-30.basil' as any,
-});
+  apiVersion: '2025-04-30.basil' as any});
 
 // POST /api/subscription-success - Handle subscription success and cleanup
 export async function POST(request: NextRequest) {
@@ -68,8 +67,7 @@ export async function POST(request: NextRequest) {
 
     // Get the checkout session from Stripe
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['subscription'],
-    });
+      expand: ['subscription']});
 
     if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
@@ -110,8 +108,7 @@ export async function POST(request: NextRequest) {
       tier: tier,
       currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
       currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      updatedAt: new Date().toISOString()};
 
     // Create or update the subscription document
     if (subscriptionDoc.exists) {
@@ -123,16 +120,14 @@ export async function POST(request: NextRequest) {
         id: 'current',
         userId,
         ...subscriptionUpdate,
-        createdAt: new Date().toISOString(),
-      });
+        createdAt: new Date().toISOString()});
       console.log(`Created new subscription document for user ${userId}`);
     }
 
     // Update the user's subscription tier in Firestore
     await db.collection('users').doc(userId).update({
       subscriptionTier: tier,
-      subscriptionStatus: subscription.status,
-    });
+      subscriptionStatus: subscription.status});
 
     console.log(`Subscription success processing completed for user ${userId}`);
 
@@ -142,9 +137,7 @@ export async function POST(request: NextRequest) {
         id: subscription.id,
         status: subscription.status,
         amount: amount,
-        tier: tier,
-      },
-    }, { status: 200 });
+        tier: tier}}, { status: 200 });
   } catch (error: any) {
     console.error('Error handling subscription success:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });

@@ -18,8 +18,7 @@ if (process.env.NODE_ENV === 'development') {
       if (credentials.project_id && credentials.private_key && credentials.client_email) {
         logging = new Logging({
           projectId: process.env.PROJECT_ID || credentials.project_id,
-          credentials,
-        });
+          credentials});
         console.log('Google Cloud Logging initialized successfully');
       } else {
         console.log('Invalid Google Cloud Logging credentials, skipping GCP logging');
@@ -46,8 +45,7 @@ const logToGCP = async (error) => {
     const entry = log.entry(metadata, {
       message: error.message,
       stack: error.stack,
-      timestamp: new Date().toISOString(),
-    });
+      timestamp: new Date().toISOString()});
     await log.write(entry);
   } catch (logError) {
     console.error('Error logging to GCP (non-fatal):', logError);
@@ -75,7 +73,21 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Error data is required' }, { status: 400 });
     }
 
-    // Enhanced logging for Google API errors
+    // LOG ALL ERRORS TO TERMINAL - This is what the user wants!
+    console.log('🚨 BROWSER ERROR DETECTED:');
+    console.log('📍 Error Message:', typeof error === 'string' ? error : error.message);
+    console.log('📍 Stack Analysis:', body.stackAnalysis);
+    console.log('📍 Filename:', body.filename);
+    console.log('📍 Line/Column:', `${body.lineno}:${body.colno}`);
+    console.log('📍 Script Tags:', body.scriptTags);
+    console.log('📍 Full Stack:', typeof error === 'object' ? error.stack : body.stack);
+    console.log('📍 URL:', body.url);
+    console.log('📍 Type:', body.type);
+    console.log('📍 User Agent:', body.userAgent);
+    console.log('📍 Full Body:', JSON.stringify(body, null, 2));
+    console.log('🚨 END ERROR DETAILS');
+
+    // Enhanced logging for Google API errors (additional details)
     const isGoogleApiError = (
       (typeof error === 'string' && (
         error.includes('apiKey') ||
@@ -91,17 +103,8 @@ export async function POST(request) {
     );
 
     if (isGoogleApiError) {
-      console.log('🔍 GOOGLE API ERROR DETECTED:');
-      console.log('📍 Error Message:', typeof error === 'string' ? error : error.message);
-      console.log('📍 Stack Analysis:', body.stackAnalysis);
-      console.log('📍 Filename:', body.filename);
-      console.log('📍 Line/Column:', `${body.lineno}:${body.colno}`);
-      console.log('📍 Script Tags:', body.scriptTags);
-      console.log('📍 Full Stack:', typeof error === 'object' ? error.stack : body.stack);
-      console.log('📍 URL:', body.url);
-      console.log('📍 Type:', body.type);
-      console.log('📍 User Agent:', body.userAgent);
-      console.log('📍 Full Body:', JSON.stringify(body, null, 2));
+      console.log('🔍 ADDITIONAL GOOGLE API ERROR ANALYSIS:');
+      console.log('📍 This appears to be a Google API related error');
     }
 
     // Try to log the error to Google Cloud, but don't fail if it doesn't work

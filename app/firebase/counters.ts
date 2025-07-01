@@ -14,8 +14,6 @@ const CACHE_TTL = (5 * 60 * 1000);
 const pageCountMemoryCache = new Map<string, MemoryCacheEntry<number>>();
 const MEMORY_CACHE_TTL = (2 * 60 * 1000); // 2 minutes in memory cache
 
-
-
 /**
  * Get the page count for a user with caching
  *
@@ -299,7 +297,6 @@ export const decrementUserPageCount = async (userId: string, wasPublic: boolean 
     pageCountMemoryCache.delete(`user_page_count_${userId}_owner`);
     pageCountMemoryCache.delete(`user_page_count_${userId}_public`);
 
-
   } catch (error) {
     console.error('Error decrementing user page count:', error);
   }
@@ -341,7 +338,6 @@ export const updateUserPageCountForVisibilityChange = async (
     localStorage.removeItem(`user_page_count_${userId}_public`);
     pageCountMemoryCache.delete(`user_page_count_${userId}_owner`);
     pageCountMemoryCache.delete(`user_page_count_${userId}_public`);
-
 
   } catch (error: any) {
     // If the document doesn't exist, create it with the appropriate count

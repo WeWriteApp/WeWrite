@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../../providers/AuthProvider';
-
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 /**
  * AdminFeaturesWrapper
  *
@@ -11,17 +10,17 @@ import { useAuth } from '../../providers/AuthProvider';
  * the children without any modifications.
  */
 const AdminFeaturesWrapper = ({ children }) => {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Check if the current user is an admin
-    if (user && user.email === 'jamiegray2234@gmail.com') {
+    if (session && session.email === 'jamiegray2234@gmail.com') {
       setIsAdmin(true);
     } else {
       setIsAdmin(false);
     }
-  }, [user]);
+  }, [, session]);
 
   // For non-admin users, simply render the children
   if (!isAdmin) {

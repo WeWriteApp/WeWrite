@@ -1,12 +1,28 @@
 /**
  * Client-side username validation utilities
- * Provides real-time validation for username inputs
+ * Provides real-time validation for username inputs and centralized username detection logic
  */
 
 export interface UsernameValidationResult {
   isValid: boolean;
   error: string | null;
   message: string | null;
+}
+
+export interface UserData {
+  uid?: string;
+  email?: string | null;
+  username?: string | null;
+  displayName?: string | null;
+  [key: string]: any;
+}
+
+export interface UsernameCheckResult {
+  hasUsername: boolean;
+  username: string | null;
+  source: 'username' | 'displayName' | 'email' | 'none';
+  needsUsername: boolean;
+  reason?: string;
 }
 
 /**
@@ -131,7 +147,119 @@ export const generateUsernameSuggestions = (username: string): string[] => {
   }
 
   // Remove duplicates and return up to 3 suggestions
-  return [...new Set(suggestions)].slice(0, 3);
+  return Array.from(new Set(suggestions)).slice(0, 3);
+};
+
+/**
+ * CENTRALIZED USERNAME DETECTION LOGIC
+ * This is the single source of truth for determining if a user has a valid username
+ * All components should use this function instead of implementing their own logic
+ */
+
+/**
+ * Checks if a user has a valid username from any available source
+ * @param user - User data object from any auth system
+ * @returns Comprehensive username check result
+ */
+export const checkUserHasUsername = (user: UserData | null): UsernameCheckResult => {
+  if (!user) {
+    return {
+      hasUsername: false,
+      username: null,
+      source: 'none',
+      needsUsername: false, // Not logged in, so no username needed
+      reason: 'User not logged in'
+    };
+  }
+
+  // Helper function to check if a string is a valid username
+  const isValidUsernameString = (str: string | null | undefined): boolean => {
+    if (!str || typeof str !== 'string') return false;
+
+    const trimmed = str.trim();
+    if (trimmed.length === 0) return false;
+
+    // Check for invalid placeholder values
+    const invalidValues = [
+      'anonymous',
+      'missing username',
+      'user',
+      'undefined',
+      'null'
+    ];
+
+    if (invalidValues.includes(trimmed.toLowerCase())) return false;
+
+    // Check for generated usernames (user_xxxxx pattern)
+    if (/^user_[a-zA-Z0-9]+$/i.test(trimmed)) return false;
+
+    return true;
+  };
+
+  // Check username field first (highest priority)
+  if (isValidUsernameString(user.username)) {
+    return {
+      hasUsername: true,
+      username: user.username!.trim(),
+      source: 'username',
+      needsUsername: false
+    };
+  }
+
+  // Check displayName field (medium priority)
+  if (isValidUsernameString(user.displayName)) {
+    return {
+      hasUsername: true,
+      username: user.displayName!.trim(),
+      source: 'displayName',
+      needsUsername: false
+    };
+  }
+
+  // Check email prefix as last resort (low priority)
+  // Only use email prefix if user has NO username/displayName set at all
+  // Don't use it if they have invalid usernames set (they need to fix those)
+  const hasExplicitUsernameFields = (user.username && user.username.trim() !== '') ||
+                                   (user.displayName && user.displayName.trim() !== '');
+
+  if (!hasExplicitUsernameFields && user.email && typeof user.email === 'string' && user.email.includes('@')) {
+    const emailPrefix = user.email.split('@')[0];
+    if (isValidUsernameString(emailPrefix)) {
+      return {
+        hasUsername: true,
+        username: emailPrefix.trim(),
+        source: 'email',
+        needsUsername: false
+      };
+    }
+  }
+
+  // No valid username found
+  return {
+    hasUsername: false,
+    username: null,
+    source: 'none',
+    needsUsername: true,
+    reason: 'No valid username found in any field'
+  };
+};
+
+/**
+ * Simple helper function for components that just need to know if username is needed
+ * @param user - User data object from any auth system
+ * @returns True if user needs to set a username
+ */
+export const userNeedsUsername = (user: UserData | null): boolean => {
+  return checkUserHasUsername(user).needsUsername;
+};
+
+/**
+ * Gets the best available username for a user
+ * @param user - User data object from any auth system
+ * @returns The best username or null if none available
+ */
+export const getBestUsername = (user: UserData | null): string | null => {
+  return checkUserHasUsername(session).username;
 };
 
 /**

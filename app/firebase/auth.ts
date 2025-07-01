@@ -177,7 +177,7 @@ export const logoutUser = async (keepPreviousSession: boolean = false, returnToP
       }
     }
 
-    // Only clear previous user session if not explicitly keeping it
+    // Only clear previous user account if not explicitly keeping it
     if (!keepPreviousSession) {
       localStorage.removeItem('previousUserSession');
       localStorage.removeItem('wewrite_accounts');
@@ -247,6 +247,13 @@ export const addUsername = async (userId: string, username: string): Promise<Aut
       await updateProfile(auth.currentUser, {
         displayName: username
       });
+
+      // Trigger a custom event to notify components that user data has changed
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('userDataUpdated', {
+          detail: { userId, username }
+        }));
+      }
     }
 
     // Reserve the username in the usernames collection using environment-specific collection
@@ -288,7 +295,7 @@ export const updateEmail = async (user: FirebaseUser, newEmail: string): Promise
     await firebaseUpdateEmail(user, newEmail);
 
     // Update the email in Firestore users collection
-    const userDocRef = doc(db, 'users', user.uid);
+    const userDocRef = doc(db, 'users', session.uid);
     await updateDoc(userDocRef, {
       email: newEmail
     });
@@ -431,7 +438,7 @@ export const loginAnonymously = async (): Promise<AuthResult> => {
     const userCredential = await signInAnonymously(auth);
 
     // Create a basic profile for the anonymous user
-    const userDocRef = doc(db, 'users', userCredential.user.uid);
+    const userDocRef = doc(db, 'users', userCredential.session.uid);
     // Use crypto-secure random ID for anonymous users
     const anonymousId = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
     await setDoc(userDocRef, {
@@ -447,7 +454,7 @@ export const loginAnonymously = async (): Promise<AuthResult> => {
     try {
       const analytics = getAnalyticsService();
       analytics.trackAuthEvent('USER_CREATED', {
-        user_id: userCredential.user.uid,
+        user_id: userCredential.session.uid,
         username: `anonymous_${anonymousId}`,
         email: null,
         registration_method: 'anonymous'

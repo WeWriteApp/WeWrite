@@ -7,8 +7,7 @@ import { Button } from '../ui/button';
 import { Check, Star, Zap, Crown } from 'lucide-react';
 import { SUBSCRIPTION_TIERS, CUSTOM_TIER_CONFIG } from '../../utils/subscriptionTiers';
 import { useFeatureFlag } from '../../utils/feature-flags';
-import { useAuth } from '../../providers/AuthProvider';
-
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 interface TierComparisonProps {
   currentTier?: string;
   currentAmount?: number;
@@ -24,8 +23,8 @@ export function TierComparison({
   showActions = true,
   compact = false 
 }: TierComparisonProps) {
-  const { user } = useAuth();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const { session } = useCurrentAccount();
+  const isPaymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
 
   // Don't render if payments feature is disabled
   if (!isPaymentsEnabled) {
@@ -35,8 +34,7 @@ export function TierComparison({
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
-    }).format(amount);
+      currency: 'USD'}).format(amount);
   };
 
   const getTierIcon = (tierId: string) => {

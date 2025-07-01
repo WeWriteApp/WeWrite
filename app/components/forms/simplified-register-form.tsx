@@ -46,7 +46,7 @@ export function SimplifiedRegisterForm({
         
         // Store the user's email for the next step
         localStorage.setItem('pendingUserEmail', email)
-        localStorage.setItem('pendingUserId', result.user.uid)
+        localStorage.setItem('pendingUserId', result.session.uid)
         
         // Redirect to username setup page
         router.push('/auth/setup-username')

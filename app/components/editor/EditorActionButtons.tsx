@@ -4,8 +4,7 @@ import React from 'react';
 import { Button } from "../ui/button";
 import { X, Check, AlertTriangle, Link } from 'lucide-react';
 import { useFeatureFlag } from "../../utils/feature-flags";
-import { useAuth } from "../../providers/AuthProvider";
-
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 export interface EditorActionButtonsProps {
   onSave: () => void;
   onCancel: () => void;
@@ -36,7 +35,7 @@ export default function EditorActionButtons({
   className = "",
   showInsertLink = true
 }: EditorActionButtonsProps) {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   
   // Link functionality is now permanently enabled
 

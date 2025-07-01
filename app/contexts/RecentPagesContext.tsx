@@ -3,7 +3,7 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { getDatabase, ref, onValue, set, Unsubscribe } from 'firebase/database';
 import { app } from "../firebase/config";
-import { AuthContext } from "../providers/AuthProvider";
+import { useCurrentAccount } from "../providers/CurrentAccountProvider";
 
 /**
  * Recent page data interface
@@ -61,11 +61,11 @@ export const RecentPagesContext = createContext<RecentPagesContextType>({
 export function RecentPagesProvider({ children }: RecentPagesProviderProps) {
   const [recentPages, setRecentPages] = useState<RecentPage[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
 
   // Load recent pages from Firebase when user changes
   useEffect(() => {
-    if (!user) {
+    if (!session) {
       setRecentPages([]);
       setLoading(false);
       return;
@@ -75,18 +75,20 @@ export function RecentPagesProvider({ children }: RecentPagesProviderProps) {
 
     try {
       const db = getDatabase(app);
-      const recentPagesRef = ref(db, `users/${user.uid}/recentPages`);
+      const recentPagesRef = ref(db, `users/${session.uid}/recentPages`);
 
-      const unsubscribe: Unsubscribe = onValue(recentPagesRef, (snapshot) => {
+      const unsubscribe: Unsubscribe = onValue(recentPagesRef, async (snapshot) => {
         try {
           const data = snapshot.val();
           if (data) {
             // Convert to array and sort by timestamp (newest first)
-            const pagesArray = Object.values(data)
+            let pagesArray = Object.values(data)
               .filter((page: any): page is RecentPage => page && page.id) // Ensure valid page objects
               .sort((a: RecentPage, b: RecentPage) => (b.timestamp || 0) - (a.timestamp || 0))
               .slice(0, MAX_RECENT_PAGES);
 
+            // Just set the pages as-is, don't try to fix usernames in the listener
+            // (Username fixing should be done elsewhere to avoid infinite loops)
             setRecentPages(pagesArray);
           } else {
             setRecentPages([]);
@@ -115,7 +117,7 @@ export function RecentPagesProvider({ children }: RecentPagesProviderProps) {
       setRecentPages([]);
       setLoading(false);
     }
-  }, [user]);
+  }, [session?.uid]); // Only depend on session.uid to avoid unnecessary re-renders
 
   /**
    * Add a page to recent pages
@@ -123,19 +125,19 @@ export function RecentPagesProvider({ children }: RecentPagesProviderProps) {
    * @param page - The page data to add to recent pages
    */
   const addRecentPage = async (page: PageData): Promise<void> => {
-    if (!user || !page || !page.id) return;
+    if (!session || !page || !page.id) return;
 
     try {
       const db = getDatabase(app);
-      const recentPageRef = ref(db, `users/${user.uid}/recentPages/${page.id}`);
+      const recentPageRef = ref(db, `users/${session.uid}/recentPages/${page.id}`);
 
       // Create a recent page entry with only necessary data
       const recentPage: RecentPage = {
         id: page.id,
         title: page.title || 'Untitled',
         timestamp: Date.now(),
-        userId: page.userId || user.uid,
-        username: page.username || user.displayName || "Anonymous"
+        userId: page.userId || session.uid,
+        username: page.username || session.displayName || "Anonymous"
       };
 
       // Save to Firebase

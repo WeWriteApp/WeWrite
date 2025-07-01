@@ -115,8 +115,7 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
       isReply: data.isReply || false,
       replyTo: data.replyTo || null,
       replyToTitle: data.replyToTitle || null,
-      replyToUsername: data.replyToUsername || null,
-    };
+      replyToUsername: data.replyToUsername || null};
 
     console.log("Creating page with username:", username);
 

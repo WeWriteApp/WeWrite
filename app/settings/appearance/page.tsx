@@ -1,20 +1,20 @@
 'use client';
 
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useTheme } from "../../providers/ThemeProvider";
 import { useRouter } from 'next/navigation';
 import { Button } from "../../components/ui/button";
 import { ChevronLeft, Sun, Moon, Laptop, Check } from 'lucide-react';
-import { useTheme } from "next-themes";
 import AccentColorSwitcher from '../../components/utils/AccentColorSwitcher';
 import PillStyleToggle from '../../components/utils/PillStyleToggle';
 import { cn } from "../../lib/utils";
 
 export default function AppearancePage() {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
 
-  if (!user) {
+  if (!session) {
     return null;
   }
 

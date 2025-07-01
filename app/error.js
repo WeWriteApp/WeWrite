@@ -33,17 +33,14 @@ export default function Error({ error, reset }) {
       fetch("/api/errors", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-        },
+          "Content-Type": "application/json"},
         body: JSON.stringify({
           error: {
             message: error?.message || "Unknown error",
             stack: error?.stack || "",
             timestamp: new Date().toISOString(),
-            url: window.location.href,
-          }
-        }),
-      }).catch(e => console.warn("Failed to log error to backend:", e));
+            url: window.location.href}
+        })}).catch(e => console.warn("Failed to log error to backend:", e));
     } catch (e) {
       console.warn("Error logging to backend:", e);
     }
@@ -56,8 +53,7 @@ export default function Error({ error, reset }) {
     timestamp: new Date().toISOString(),
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : "Unknown",
     url: typeof window !== 'undefined' ? window.location.href : "Unknown",
-    referrer: typeof document !== 'undefined' ? document.referrer : "Unknown",
-  });
+    referrer: typeof document !== 'undefined' ? document.referrer : "Unknown"});
 
   const [formattedErrorText, setFormattedErrorText] = useState('');
 

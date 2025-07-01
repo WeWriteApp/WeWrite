@@ -140,7 +140,6 @@ export default function SwitchAccountPage() {
           </div>
         )}
 
-
       </div>
     </div>
   );

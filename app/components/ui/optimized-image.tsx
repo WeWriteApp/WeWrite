@@ -56,8 +56,7 @@ export function OptimizedImage({
   fallbackSrc,
   lowQualityPlaceholder = true,
   adaptiveLoading = true,
-  networkAware = true,
-}: OptimizedImageProps) {
+  networkAware = true}: OptimizedImageProps) {
   const [imageError, setImageError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [networkQuality, setNetworkQuality] = useState<'slow' | 'fast'>('fast');
@@ -160,8 +159,7 @@ export function OptimizedImage({
           onError,
           lowQualityPlaceholder: false, // Prevent infinite fallback
           adaptiveLoading: false,
-          networkAware: false,
-        }}
+          networkAware: false}}
       />
     );
   }
@@ -198,9 +196,7 @@ export function OptimizedImage({
     ...(fill ? { fill: true } : {}),
     ...(placeholder === 'blur' ? {
       placeholder: 'blur' as const,
-      blurDataURL: blurDataURL || getLowQualityPlaceholder(),
-    } : {}),
-  };
+      blurDataURL: blurDataURL || getLowQualityPlaceholder()} : {})};
 
   return (
     <div className={cn('relative overflow-hidden', !fill && 'inline-block')}>

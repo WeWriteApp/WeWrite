@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, Suspense } from "react";
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 import { ProfileStatsSkeleton, ProfileTabsSkeleton } from "../skeletons/UserProfileSkeleton";
 import { Button } from "../ui/button";
 import { ChevronLeft, Settings, Share2, Loader } from "lucide-react";
@@ -11,18 +11,15 @@ import dynamic from 'next/dynamic';
 // Dynamic imports for heavy components
 const UserProfileTabs = dynamic(() => import('../utils/UserProfileTabs'), {
   loading: () => <ProfileTabsSkeleton />,
-  ssr: false,
-});
+  ssr: false});
 
 const SupporterBadge = dynamic(() => import('../payments/SupporterBadge'), {
   loading: () => <div className="h-5 w-16 bg-muted rounded-full animate-pulse" />,
-  ssr: false,
-});
+  ssr: false});
 
 const SimpleSparkline = dynamic(() => import('../utils/SimpleSparkline'), {
   loading: () => <div className="w-16 h-6 bg-muted rounded animate-pulse" />,
-  ssr: false,
-});
+  ssr: false});
 
 interface OptimizedProfileData {
   uid: string;
@@ -60,14 +57,14 @@ export default function OptimizedSingleProfileView({
   profile, 
   initialStats = {} 
 }: OptimizedSingleProfileViewProps) {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const [profileStats, setProfileStats] = useState(initialStats);
   const [isLoadingStats, setIsLoadingStats] = useState(!initialStats.pageCount);
-  const [userActivityData, setUserActivityData] = useState<any>(null);
+  const [, sessionActivityData, setUserActivityData] = useState<any>(null);
   const [supporterTier, setSupporterTier] = useState(profile.tier || null);
   const [isLoadingTier, setIsLoadingTier] = useState(false);
   
-  const isCurrentUser = user?.uid === profile.uid;
+  const isCurrentUser = session?.uid === profile.uid;
   const statsLoadedRef = useRef(false);
   const activityLoadedRef = useRef(false);
 
@@ -100,8 +97,7 @@ export default function OptimizedSingleProfileView({
           pageCount,
           followerCount,
           viewCount: viewCount || profile.viewCount || 0,
-          contributorCount,
-        });
+          contributorCount});
       } catch (error) {
         console.error('Error loading profile stats:', error);
         // Use fallback values
@@ -109,8 +105,7 @@ export default function OptimizedSingleProfileView({
           pageCount: 0,
           followerCount: 0,
           viewCount: profile.viewCount || 0,
-          contributorCount: 0,
-        });
+          contributorCount: 0});
       } finally {
         setIsLoadingStats(false);
       }

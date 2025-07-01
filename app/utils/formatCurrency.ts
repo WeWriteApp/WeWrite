@@ -7,8 +7,7 @@ export function formatCurrency(amount: number, currency: string = 'USD'): string
     style: 'currency',
     currency: currency,
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+    maximumFractionDigits: 2}).format(amount);
 }
 
 export function formatTokens(tokens: number): string {

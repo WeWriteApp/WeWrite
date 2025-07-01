@@ -18,4 +18,4 @@ export interface Subscription {
   stripeSubscriptionId?: string | null;
   createdAt?: any; // Firebase Timestamp
   updatedAt?: any; // Firebase Timestamp
-} 
+}

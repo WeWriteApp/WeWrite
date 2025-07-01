@@ -26,8 +26,7 @@ export function Modal({
   footer,
   className,
   showCloseButton = true,
-  preventClickOutside = false,
-}: ModalProps) {
+  preventClickOutside = false}: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -97,8 +96,7 @@ export function Modal({
     // Store touch start position for swipe detection
     setTouchStart({
       x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
-    });
+      y: e.touches[0].clientY});
 
     // Store the touch target to check if the touch ends on the same element
     if (e.target === e.currentTarget) {
@@ -115,8 +113,7 @@ export function Modal({
     if (isMobile && touchStart) {
       const touchEnd = {
         x: e.changedTouches[0].clientX,
-        y: e.changedTouches[0].clientY,
-      };
+        y: e.changedTouches[0].clientY};
 
       const deltaY = touchEnd.y - touchStart.y;
       const deltaX = Math.abs(touchEnd.x - touchStart.x);

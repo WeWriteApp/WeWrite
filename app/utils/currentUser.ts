@@ -48,7 +48,7 @@ export const getCurrentUser = (): UserData | null => {
 
     // Check for our new wewrite cookies
     const wewriteUserId = Cookies.get('wewrite_user_id');
-    if (wewriteUserId) {
+    if (wewriteUserId && typeof window !== 'undefined') {
       // Try to get account data from sessionStorage
       const accountsJson = sessionStorage.getItem('wewrite_accounts');
       if (accountsJson) {
@@ -71,29 +71,31 @@ export const getCurrentUser = (): UserData | null => {
         const userData = JSON.parse(userSessionCookie);
         return userData;
       } catch (e) {
-        console.error('Error parsing user session cookie:', e);
+        console.error('Error parsing user account cookie:', e);
       }
     }
 
-    // If no session cookie, check localStorage
-    const switchToAccount = localStorage.getItem('switchToAccount');
-    if (switchToAccount) {
-      try {
-        const accountData = JSON.parse(switchToAccount);
-        return accountData;
-      } catch (e) {
-        console.error('Error parsing switchToAccount data:', e);
+    // If no session cookie, check localStorage (browser only)
+    if (typeof window !== 'undefined') {
+      const switchToAccount = localStorage.getItem('switchToAccount');
+      if (switchToAccount) {
+        try {
+          const accountData = JSON.parse(switchToAccount);
+          return accountData;
+        } catch (e) {
+          console.error('Error parsing switchToAccount data:', e);
+        }
       }
-    }
 
-    // Last resort: check for previous user session
-    const previousUserSession = localStorage.getItem('previousUserSession');
-    if (previousUserSession) {
-      try {
-        const sessionData = JSON.parse(previousUserSession);
-        return sessionData;
-      } catch (e) {
-        console.error('Error parsing previousUserSession data:', e);
+      // Last resort: check for previous user account
+      const previousUserSession = localStorage.getItem('previousUserSession');
+      if (previousUserSession) {
+        try {
+          const sessionData = JSON.parse(previousUserSession);
+          return sessionData;
+        } catch (e) {
+          console.error('Error parsing previousUserSession data:', e);
+        }
       }
     }
   } catch (error) {
@@ -105,12 +107,14 @@ export const getCurrentUser = (): UserData | null => {
 
 // Set the current user in all storage mechanisms
 export const setCurrentUser = (user: UserData | null): void => {
-  if (!user) {
+  if (!session) {
     Cookies.remove('userSession');
     Cookies.remove('authenticated');
     Cookies.remove('session'); // Remove Firebase auth token
-    localStorage.removeItem('switchToAccount');
-    localStorage.removeItem('accountSwitchInProgress');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('switchToAccount');
+      localStorage.removeItem('accountSwitchInProgress');
+    }
     return;
   }
 
@@ -119,10 +123,10 @@ export const setCurrentUser = (user: UserData | null): void => {
 
   // Clean up the user object to ensure it's serializable
   const cleanUser = {
-    uid: user.uid,
-    email: user.email,
-    username: user.username || user.displayName,
-    displayName: user.displayName || user.username,
+    uid: session.uid,
+    email: session.email,
+    username: session.username || session.displayName,
+    displayName: session.displayName || session.username,
     // Include the auth token if available
     authToken: user.authToken || Cookies.get('session'),
     // Add any other necessary properties from the user object
@@ -136,53 +140,55 @@ export const setCurrentUser = (user: UserData | null): void => {
   delete cleanUser.providerData;
   delete cleanUser.metadata;
 
-  // Set the user session cookie
+  // Set the user account cookie
   Cookies.set('userSession', JSON.stringify(cleanUser), { expires: 7 });
 
   // We'll no longer try to set the auth token directly to avoid browser extension issues
   // Instead, we'll just set the authenticated cookie
   Cookies.set('authenticated', 'true', { expires: 7 });
 
-  // Update saved accounts to ensure only this one is current
-  try {
-    const savedAccountsJson = localStorage.getItem('savedAccounts');
-    if (savedAccountsJson) {
-      const savedAccounts = JSON.parse(savedAccountsJson);
+  // Update saved accounts to ensure only this one is current (browser only)
+  if (typeof window !== 'undefined') {
+    try {
+      const savedAccountsJson = localStorage.getItem('savedAccounts');
+      if (savedAccountsJson) {
+        const savedAccounts = JSON.parse(savedAccountsJson);
 
-      // Check if this account already exists
-      const existingAccountIndex = savedAccounts.findIndex(account => account.uid === cleanUser.uid);
+        // Check if this account already exists
+        const existingAccountIndex = savedAccounts.findIndex(account => account.uid === cleanUser.uid);
 
-      if (existingAccountIndex >= 0) {
-        // Update existing account
-        savedAccounts[existingAccountIndex] = {
-          ...savedAccounts[existingAccountIndex],
-          ...cleanUser,
-          isCurrent: true
-        };
+        if (existingAccountIndex >= 0) {
+          // Update existing account
+          savedAccounts[existingAccountIndex] = {
+            ...savedAccounts[existingAccountIndex],
+            ...cleanUser,
+            isCurrent: true
+          };
+        } else {
+          // Add new account
+          savedAccounts.push({
+            ...cleanUser,
+            isCurrent: true
+          });
+        }
+
+        // Update all other accounts to not be current
+        const updatedAccounts = savedAccounts.map(account => ({
+          ...account,
+          isCurrent: account.uid === cleanUser.uid
+        }));
+
+        localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
       } else {
-        // Add new account
-        savedAccounts.push({
+        // No saved accounts yet, create initial array
+        localStorage.setItem('savedAccounts', JSON.stringify([{
           ...cleanUser,
           isCurrent: true
-        });
+        }]));
       }
-
-      // Update all other accounts to not be current
-      const updatedAccounts = savedAccounts.map(account => ({
-        ...account,
-        isCurrent: account.uid === cleanUser.uid
-      }));
-
-      localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
-    } else {
-      // No saved accounts yet, create initial array
-      localStorage.setItem('savedAccounts', JSON.stringify([{
-        ...cleanUser,
-        isCurrent: true
-      }]));
+    } catch (error) {
+      console.error('Error updating saved accounts:', error);
     }
-  } catch (error) {
-    console.error('Error updating saved accounts:', error);
   }
 };
 
@@ -196,8 +202,6 @@ export const isAuthenticated = (): boolean => {
   const sessionCookie = !!Cookies.get('session');
   const wewriteUserIdCookie = !!Cookies.get('wewrite_user_id');
   const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
-
-
 
   return firebaseAuth ||
          sessionUser ||

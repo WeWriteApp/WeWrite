@@ -49,8 +49,6 @@ export function generateDiffContent(
     // Simple diff algorithm - compare paragraphs
     const minLength = Math.min(diffContent.length, previous.length);
 
-
-
     // Compare each paragraph
     for (let i = 0; i < minLength; i++) {
       const currentParagraph = diffContent[i];
@@ -63,7 +61,6 @@ export function generateDiffContent(
 
       // Compare children (text nodes and links)
       if (currentParagraph.children && previousParagraph.children) {
-
 
         // FIXED: Special handling for links, especially external links
         // First, identify and process links in both paragraphs

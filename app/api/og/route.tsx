@@ -28,16 +28,14 @@ export async function GET(request: Request) {
               alignItems: 'center',
               justifyContent: 'center',
               flexDirection: 'column',
-              flexWrap: 'nowrap',
-            }}
+              flexWrap: 'nowrap'}}
           >
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginTop: 20,
-              }}
+                marginTop: 20}}
             >
               <span
                 style={{
@@ -49,8 +47,7 @@ export async function GET(request: Request) {
                   marginBottom: 10,
                   padding: '0 120px',
                   lineHeight: 1.4,
-                  whiteSpace: 'pre-wrap',
-                }}
+                  whiteSpace: 'pre-wrap'}}
               >
                 WeWrite
               </span>
@@ -65,8 +62,7 @@ export async function GET(request: Request) {
                 marginTop: 10,
                 padding: '0 120px',
                 lineHeight: 1.4,
-                whiteSpace: 'pre-wrap',
-              }}
+                whiteSpace: 'pre-wrap'}}
             >
               Write together
             </div>
@@ -78,10 +74,7 @@ export async function GET(request: Request) {
           // Add explicit content type and cache headers
           headers: {
             'content-type': 'image/png',
-            'cache-control': 'public, immutable, no-transform, max-age=31536000',
-          },
-        },
-      );
+            'cache-control': 'public, immutable, no-transform, max-age=31536000'}});
     }
 
     // Generate dynamic content based on type and parameters
@@ -119,8 +112,7 @@ export async function GET(request: Request) {
             display: 'flex',
             flexDirection: 'column',
             padding: '60px 70px',
-            fontFamily: 'sans-serif',
-          }}
+            fontFamily: 'sans-serif'}}
         >
           {/* Page Title */}
           <div
@@ -130,8 +122,7 @@ export async function GET(request: Request) {
               fontWeight: 'bold',
               color: 'white',
               lineHeight: 1.2,
-              marginBottom: '40px',
-            }}
+              marginBottom: '40px'}}
           >
             {displayTitle}
           </div>
@@ -145,8 +136,7 @@ export async function GET(request: Request) {
               marginBottom: '30px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '10px',
-            }}
+              gap: '10px'}}
             dangerouslySetInnerHTML={{ __html: contentWithLinks }}
           />
           
@@ -155,8 +145,7 @@ export async function GET(request: Request) {
             style={{
               display: 'flex',
               justifyContent: 'space-between',
-              marginTop: 'auto',
-            }}
+              marginTop: 'auto'}}
           >
             <div
               style={{
@@ -165,8 +154,7 @@ export async function GET(request: Request) {
                 opacity: 0.8,
                 padding: '10px 25px',
                 borderRadius: '40px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-              }}
+                border: '1px solid rgba(255, 255, 255, 0.2)'}}
             >
               By {displayAuthor}
             </div>
@@ -178,8 +166,7 @@ export async function GET(request: Request) {
                 opacity: 0.8,
                 padding: '10px 25px',
                 borderRadius: '40px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-              }}
+                border: '1px solid rgba(255, 255, 255, 0.2)'}}
             >
               {Number(sponsorCount) === 1 ? '1 sponsor' : `${sponsorCount} sponsors`}
             </div>
@@ -192,17 +179,12 @@ export async function GET(request: Request) {
         // Add explicit content type and cache headers
         headers: {
           'content-type': 'image/png',
-          'cache-control': 'public, immutable, no-transform, max-age=31536000',
-        },
-      },
-    );
+          'cache-control': 'public, immutable, no-transform, max-age=31536000'}});
   } catch (e) {
     console.error(e);
     return new Response('Failed to generate OG image', { 
       status: 500,
       headers: {
-        'content-type': 'text/plain',
-      },
-    });
+        'content-type': 'text/plain'}});
   }
 }

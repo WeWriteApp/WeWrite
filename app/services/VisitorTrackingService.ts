@@ -44,7 +44,7 @@ interface VisitorSession {
  */
 class VisitorTrackingService {
   private activeSubscriptions: Map<string, Unsubscribe>;
-  private currentSession: VisitorSession | null = null;
+  private currentAccount: VisitorSession | null = null;
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private isTracking: boolean = false;
   private interactionTracking: boolean = false;
@@ -91,10 +91,10 @@ class VisitorTrackingService {
     let interactionTimeout: NodeJS.Timeout | null = null;
 
     const updateInteractions = () => {
-      if (this.currentSession) {
+      if (this.currentAccount) {
         // Ensure interactions object exists
-        if (!this.currentSession.interactions) {
-          this.currentSession.interactions = {
+        if (!this.currentAccount.interactions) {
+          this.currentAccount.interactions = {
             mouseMovements: 0,
             clicks: 0,
             scrollEvents: 0,
@@ -102,7 +102,7 @@ class VisitorTrackingService {
           };
         }
 
-        this.currentSession.interactions = {
+        this.currentAccount.interactions = {
           mouseMovements,
           clicks,
           scrollEvents,
@@ -151,9 +151,9 @@ class VisitorTrackingService {
   async trackVisitor(userId?: string, isAuthenticated: boolean = false): Promise<void> {
     try {
       // Check if already tracking this session
-      if (this.isTracking && this.currentSession) {
+      if (this.isTracking && this.currentAccount) {
         // Update authentication status if changed
-        if (this.currentSession.isAuthenticated !== isAuthenticated || this.currentSession.userId !== userId) {
+        if (this.currentAccount.isAuthenticated !== isAuthenticated || this.currentAccount.userId !== userId) {
           await this.updateSessionAuth(userId, isAuthenticated);
         }
         return;
@@ -179,7 +179,7 @@ class VisitorTrackingService {
       const existingSession = await this.findExistingSession(fingerprint.id, userId);
       if (existingSession) {
         console.log('📱 Resuming existing session:', existingSession.id);
-        this.currentSession = existingSession;
+        this.currentAccount = existingSession;
         this.isTracking = true;
         this.sessionStartTime = Date.now();
         this.setupHeartbeat();
@@ -190,7 +190,7 @@ class VisitorTrackingService {
       const sessionId = this.generateSessionId(fingerprint);
       this.sessionStartTime = Date.now();
 
-      this.currentSession = {
+      this.currentAccount = {
         id: sessionId,
         fingerprint,
         ...(userId !== undefined && { userId }), // Only include userId if defined
@@ -214,9 +214,9 @@ class VisitorTrackingService {
       // Store session in Firestore (filter out undefined values)
       const sessionRef = doc(db, 'siteVisitors', sessionId);
       const sessionData = {
-        ...this.currentSession,
-        startTime: this.currentSession.startTime,
-        lastSeen: this.currentSession.lastSeen
+        ...this.currentAccount,
+        startTime: this.currentAccount.startTime,
+        lastSeen: this.currentAccount.lastSeen
       };
 
       // Remove undefined values to prevent Firestore errors
@@ -298,13 +298,13 @@ class VisitorTrackingService {
    * Update session authentication status
    */
   private async updateSessionAuth(userId?: string, isAuthenticated: boolean = false): Promise<void> {
-    if (!this.currentSession) return;
+    if (!this.currentAccount) return;
 
     try {
-      this.currentSession.userId = userId;
-      this.currentSession.isAuthenticated = isAuthenticated;
+      this.currentAccount.userId = userId;
+      this.currentAccount.isAuthenticated = isAuthenticated;
 
-      const sessionRef = doc(db, 'siteVisitors', this.currentSession.id);
+      const sessionRef = doc(db, 'siteVisitors', this.currentAccount.id);
       const updateData: any = {
         isAuthenticated,
         lastSeen: Timestamp.now()
@@ -334,16 +334,16 @@ class VisitorTrackingService {
     }
 
     this.heartbeatInterval = setInterval(async () => {
-      if (!this.currentSession) return;
+      if (!this.currentAccount) return;
 
       try {
         // Update session duration
-        this.currentSession.sessionDuration = Math.floor((Date.now() - this.sessionStartTime) / 1000);
-        this.currentSession.lastSeen = Timestamp.now();
+        this.currentAccount.sessionDuration = Math.floor((Date.now() - this.sessionStartTime) / 1000);
+        this.currentAccount.lastSeen = Timestamp.now();
 
         // Ensure interactions object exists
-        if (!this.currentSession.interactions) {
-          this.currentSession.interactions = {
+        if (!this.currentAccount.interactions) {
+          this.currentAccount.interactions = {
             mouseMovements: 0,
             clicks: 0,
             scrollEvents: 0,
@@ -353,31 +353,31 @@ class VisitorTrackingService {
 
         // Validate visitor behavior for additional bot detection
         const behaviorValidation = BotDetectionService.validateVisitorBehavior({
-          pageViews: this.currentSession.pageViews,
-          sessionDuration: this.currentSession.sessionDuration,
-          mouseMovements: this.currentSession.interactions?.mouseMovements || 0,
-          clicks: this.currentSession.interactions?.clicks || 0,
-          scrollEvents: this.currentSession.interactions?.scrollEvents || 0,
-          keystrokes: this.currentSession.interactions?.keystrokes || 0
+          pageViews: this.currentAccount.pageViews,
+          sessionDuration: this.currentAccount.sessionDuration,
+          mouseMovements: this.currentAccount.interactions?.mouseMovements || 0,
+          clicks: this.currentAccount.interactions?.clicks || 0,
+          scrollEvents: this.currentAccount.interactions?.scrollEvents || 0,
+          keystrokes: this.currentAccount.interactions?.keystrokes || 0
         });
 
         // Update bot status if suspicious behavior detected
-        if (behaviorValidation.isSuspicious && !this.currentSession.isBot) {
-          this.currentSession.isBot = true;
-          this.currentSession.botConfidence = Math.max(this.currentSession.botConfidence, 0.8);
-          this.currentSession.botCategory = 'suspicious';
+        if (behaviorValidation.isSuspicious && !this.currentAccount.isBot) {
+          this.currentAccount.isBot = true;
+          this.currentAccount.botConfidence = Math.max(this.currentAccount.botConfidence, 0.8);
+          this.currentAccount.botCategory = 'suspicious';
 
           console.log('🚨 Suspicious behavior detected:', behaviorValidation.reasons);
         }
 
         // OPTIMIZATION: Batch updates to reduce Firestore writes
         this.addToPendingUpdates({
-          lastSeen: this.currentSession.lastSeen,
-          sessionDuration: this.currentSession.sessionDuration,
-          interactions: this.currentSession.interactions,
-          isBot: this.currentSession.isBot || false,
-          botConfidence: this.currentSession.botConfidence || 0,
-          botCategory: this.currentSession.botCategory || 'unknown'
+          lastSeen: this.currentAccount.lastSeen,
+          sessionDuration: this.currentAccount.sessionDuration,
+          interactions: this.currentAccount.interactions,
+          isBot: this.currentAccount.isBot || false,
+          botConfidence: this.currentAccount.botConfidence || 0,
+          botCategory: this.currentAccount.botCategory || 'unknown'
         });
 
         // Process batch if threshold reached or enough time has passed
@@ -407,13 +407,13 @@ class VisitorTrackingService {
    * Process batched updates to reduce Firestore writes
    */
   private async processBatchUpdate(): Promise<void> {
-    if (!this.currentSession || Object.keys(this.pendingUpdates).length === 0) return;
+    if (!this.currentAccount || Object.keys(this.pendingUpdates).length === 0) return;
 
     try {
-      const sessionRef = doc(db, 'siteVisitors', this.currentSession.id);
+      const sessionRef = doc(db, 'siteVisitors', this.currentAccount.id);
       await updateDoc(sessionRef, this.pendingUpdates);
 
-      console.log(`[VisitorTracking] Batched ${this.updateCount} updates for session ${this.currentSession.id}`);
+      console.log(`[VisitorTracking] Batched ${this.updateCount} updates for session ${this.currentAccount.id}`);
 
       // Clear pending updates
       this.pendingUpdates = {};
@@ -497,24 +497,24 @@ class VisitorTrackingService {
   }
 
   /**
-   * Track a page view for the current session
+   * Track a page view for the current account
    */
   trackPageView(pageUrl: string): void {
-    if (!this.currentSession) return;
+    if (!this.currentAccount) return;
 
     try {
-      this.currentSession.pageViews++;
+      this.currentAccount.pageViews++;
 
       // Update page view count in Firestore
-      const sessionRef = doc(db, 'siteVisitors', this.currentSession.id);
+      const sessionRef = doc(db, 'siteVisitors', this.currentAccount.id);
       updateDoc(sessionRef, {
-        pageViews: this.currentSession.pageViews,
+        pageViews: this.currentAccount.pageViews,
         lastSeen: Timestamp.now()
       });
 
       console.log('📄 Page view tracked:', {
-        sessionId: this.currentSession.id,
-        pageViews: this.currentSession.pageViews,
+        sessionId: this.currentAccount.id,
+        pageViews: this.currentAccount.pageViews,
         url: pageUrl
       });
     } catch (error) {
@@ -523,10 +523,10 @@ class VisitorTrackingService {
   }
 
   /**
-   * Get current session information for debugging
+   * Get current account information for debugging
    */
   getCurrentSession(): VisitorSession | null {
-    return this.currentSession;
+    return this.currentAccount;
   }
 
   /**
@@ -556,8 +556,8 @@ class VisitorTrackingService {
       }
 
       // Mark session as ended instead of deleting (for analytics)
-      if (this.currentSession) {
-        const sessionRef = doc(db, 'siteVisitors', this.currentSession.id);
+      if (this.currentAccount) {
+        const sessionRef = doc(db, 'siteVisitors', this.currentAccount.id);
         await updateDoc(sessionRef, {
           endTime: Timestamp.now(),
           sessionDuration: Math.floor((Date.now() - this.sessionStartTime) / 1000),
@@ -565,12 +565,12 @@ class VisitorTrackingService {
         });
 
         console.log('📊 Session ended:', {
-          sessionId: this.currentSession.id,
-          duration: this.currentSession.sessionDuration,
-          pageViews: this.currentSession.pageViews
+          sessionId: this.currentAccount.id,
+          duration: this.currentAccount.sessionDuration,
+          pageViews: this.currentAccount.pageViews
         });
 
-        this.currentSession = null;
+        this.currentAccount = null;
       }
 
       // Clean up all subscriptions

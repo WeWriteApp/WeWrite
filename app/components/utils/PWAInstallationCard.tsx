@@ -11,8 +11,7 @@ import AlertModal from './AlertModal';
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
-} from "../ui/collapsible";
+  CollapsibleTrigger} from "../ui/collapsible";
 
 export default function PWAInstallationCard() {
   const { isPWA } = usePWA();

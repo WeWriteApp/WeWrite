@@ -66,16 +66,13 @@ export async function POST(request) {
         type: 'express',
         email: userEmail,
         metadata: {
-          firebaseUID: userId,
-        },
-      });
+          firebaseUID: userId}});
 
       accountId = account.id;
 
       // Save the account ID to Firestore
       await userDocRef.set({
-        stripeConnectedAccountId: accountId,
-      }, { merge: true });
+        stripeConnectedAccountId: accountId}, { merge: true });
     }
 
     // Create an account link for onboarding
@@ -83,8 +80,7 @@ export async function POST(request) {
       account: accountId,
       refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?setup=failed`,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?setup=success`,
-      type: 'account_onboarding',
-    });
+      type: 'account_onboarding'});
 
     return NextResponse.json({ url: accountLink.url });
   } catch (error) {

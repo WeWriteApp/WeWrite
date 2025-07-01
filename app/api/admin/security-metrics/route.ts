@@ -230,7 +230,7 @@ async function getUserSecurityMetrics(correlationId: string) {
     const users = usersSnapshot.docs.map(doc => doc.data());
 
     const totalUsers = users.length;
-    const verifiedUsers = users.filter(user => user.emailVerified).length;
+    const verifiedUsers = users.filter(user => session.emailVerified).length;
     const suspendedUsers = users.filter(user => user.status === 'suspended').length;
     
     // Get flagged users from fraud system

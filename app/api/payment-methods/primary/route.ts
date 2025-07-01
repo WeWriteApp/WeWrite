@@ -27,8 +27,7 @@ function initializeFirebase() {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-04-30.basil' as any,
-});
+  apiVersion: '2025-04-30.basil' as any});
 
 // POST /api/payment-methods/primary - Set a payment method as primary
 export async function POST(request: NextRequest) {
@@ -82,22 +81,18 @@ export async function POST(request: NextRequest) {
 
     // Update the primary payment method
     await db.collection('users').doc(userId).collection('paymentMethods').doc('metadata').set({
-      primary: paymentMethodId,
-    }, { merge: true });
+      primary: paymentMethodId}, { merge: true });
 
     // If the payment method is not in the order array, add it
     if (!paymentMethodsData.order.includes(paymentMethodId)) {
       await db.collection('users').doc(userId).collection('paymentMethods').doc('metadata').update({
-        order: [...paymentMethodsData.order, paymentMethodId],
-      });
+        order: [...paymentMethodsData.order, paymentMethodId]});
     }
 
     // Update the default payment method on the Stripe customer
     await stripe.customers.update(userData.stripeCustomerId, {
       invoice_settings: {
-        default_payment_method: paymentMethodId,
-      },
-    });
+        default_payment_method: paymentMethodId}});
 
     // If the user has an active subscription, update the default payment method
     const subscriptionDoc = await db.collection('users').doc(userId).collection('subscriptions').doc('current').get();
@@ -110,8 +105,7 @@ export async function POST(request: NextRequest) {
 
         try {
           await stripe.subscriptions.update(subscriptionData.stripeSubscriptionId, {
-            default_payment_method: paymentMethodId,
-          });
+            default_payment_method: paymentMethodId});
         } catch (error) {
           console.error('Error updating subscription payment method:', error);
           // Continue even if this fails

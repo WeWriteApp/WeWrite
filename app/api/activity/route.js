@@ -39,8 +39,7 @@ function initializeFirebase() {
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization'};
 
 // Default limit for activity items
 const DEFAULT_LIMIT = 30;

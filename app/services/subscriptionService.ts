@@ -130,8 +130,7 @@ export class SubscriptionService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+          'Authorization': `Bearer ${token}`},
         body: JSON.stringify({
           userId,
           tier,
@@ -140,8 +139,7 @@ export class SubscriptionService {
           tokens,
           successUrl: successUrl || `${window.location.origin}/settings/subscription?success=true`,
           cancelUrl: cancelUrl || `${window.location.origin}/settings/subscription?cancelled=true`
-        }),
-      });
+        })});
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -276,13 +274,11 @@ export class SubscriptionService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+          'Authorization': `Bearer ${token}`},
         body: JSON.stringify({
           userId,
           subscriptionId: subscription.stripeSubscriptionId
-        }),
-      });
+        })});
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -337,13 +333,11 @@ export class SubscriptionService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+          'Authorization': `Bearer ${token}`},
         body: JSON.stringify({
           userId,
           subscriptionId: subscription.stripeSubscriptionId
-        }),
-      });
+        })});
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -396,16 +390,14 @@ export class SubscriptionService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+          'Authorization': `Bearer ${token}`},
         body: JSON.stringify({
           userId,
           subscriptionId: currentSubscription.stripeSubscriptionId,
           newTier: 'custom', // Always custom for amount-based updates
           newAmount: newAmount,
           skipValidation: true // Flag to skip minimum validation
-        }),
-      });
+        })});
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -478,15 +470,13 @@ export class SubscriptionService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+          'Authorization': `Bearer ${token}`},
         body: JSON.stringify({
           userId,
           subscriptionId: currentSubscription.stripeSubscriptionId,
           newTier,
           newAmount: amount
-        }),
-      });
+        })});
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -529,10 +519,8 @@ export class SubscriptionService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ userId }),
-      });
+          'Authorization': `Bearer ${token}`},
+        body: JSON.stringify({ userId })});
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -565,10 +553,8 @@ export class SubscriptionService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ userId }),
-      });
+          'Authorization': `Bearer ${token}`},
+        body: JSON.stringify({ userId })});
 
       if (!response.ok) {
         const errorData = await response.json();

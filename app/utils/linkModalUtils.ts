@@ -33,12 +33,12 @@ export const canUserEditPage = (
   page: Page | null,
   userGroups: Record<string, any> | null = null
 ): boolean => {
-  if (!user || !page) {
+  if (!session || !page) {
     return false;
   }
 
   // User is the page owner
-  if (page.userId && user.uid === page.userId) {
+  if (page.userId && session.uid === page.userId) {
     return true;
   }
 
@@ -61,7 +61,7 @@ export const determineLinkModalType = (context: LinkInteractionContext): LinkMod
   const { user, currentPage, isEditMode, linkType, actionType } = context;
 
   // If user explicitly wants to edit and has permissions, show editor
-  if (actionType === 'edit' && user && currentPage) {
+  if (actionType === 'edit' && session && currentPage) {
     const canEdit = canUserEditPage(user, currentPage);
     if (canEdit && isEditMode) {
       return 'editor';
@@ -74,7 +74,7 @@ export const determineLinkModalType = (context: LinkInteractionContext): LinkMod
   }
 
   // For external links when user can edit and is in edit mode, show editor
-  if (linkType === 'external' && actionType === 'edit' && isEditMode && user && currentPage) {
+  if (linkType === 'external' && actionType === 'edit' && isEditMode && session && currentPage) {
     const canEdit = canUserEditPage(user, currentPage);
     if (canEdit) {
       return 'editor';

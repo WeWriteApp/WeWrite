@@ -241,5 +241,4 @@ export {
   NewPageSkeleton,
   GenericPageSkeleton,
   NavigationTransitionSkeleton,
-  useNavigationSkeleton,
-};
+  useNavigationSkeleton};

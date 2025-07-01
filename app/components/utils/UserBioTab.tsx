@@ -9,8 +9,7 @@ import { recordBioEditActivity } from "../../firebase/bioActivity";
 import dynamic from "next/dynamic";
 import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
-import { AuthContext } from "../../providers/AuthProvider";
-
+import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 
 import EmptyContentState from './EmptyContentState';
 import { UserBioSkeleton } from "../ui/page-skeleton";
@@ -25,7 +24,7 @@ import { PageProvider } from "../../contexts/PageContext";
 const PageEditor = dynamic(() => import("../editor/PageEditor"), { ssr: false });
 
 const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [bioContent, setBioContent] = useState<SlateContent | string>(profile.bio || "");
   const [originalContent, setOriginalContent] = useState<SlateContent | string>(profile.bio || "");
@@ -36,7 +35,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number; clientX: number; clientY: number } | null>(null);
 
   // Check if current user is the profile owner
-  const isProfileOwner = user && profile && user.uid === profile.uid;
+  const isProfileOwner = session && profile && session.uid === profile.uid;
 
   // Track if content has changed
   const hasUnsavedChanges = isEditing && bioContent !== originalContent;
@@ -92,7 +91,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
       // Ensure we're saving the content in the correct format
       // The Editor returns an array of nodes, which we want to preserve
       const contentToSave = bioContent;
-      const editorName = user?.username || user?.displayName || user?.email || "Unknown";
+      const editorName = session?.username || session?.displayName || session?.email || "Unknown";
 
       console.log("Saving bio content:", contentToSave);
 
@@ -103,11 +102,11 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
       });
 
       // Record the bio edit activity for the activity feed
-      if (user) {
+      if (session) {
         try {
           await recordBioEditActivity(
             profile.uid,
-            user.uid,
+            session.uid,
             editorName,
             contentToSave,
             originalContent
@@ -169,8 +168,6 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
     setBioContent(content);
     console.log("Bio content updated:", content);
   };
-
-
 
   if (isLoading && !bioContent) {
     return (
@@ -251,8 +248,6 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
         )}
       </div>
 
-
-
       {/* Unsaved Changes Dialog */}
       <UnsavedChangesDialog
         isOpen={showUnsavedChangesDialog}
@@ -261,8 +256,6 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
         onLeaveWithoutSaving={handleLeaveWithoutSaving}
         isSaving={isLoading || isHandlingNavigation}
       />
-
-
 
     </div>
   );

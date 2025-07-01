@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from '../ui/use-toast';
-import { AuthContext } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import {
   getDraftReply,
   getPendingReplyAction,
@@ -23,12 +23,12 @@ import { encodeReplyParams } from '../../utils/replyUtils';
 export default function PendingReplyHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isLoading } = useContext(AuthContext);
+  const { user, isLoading } = useAuth();
   const [handled, setHandled] = useState(false);
 
   useEffect(() => {
     // Only proceed if user is authenticated and not loading
-    if (isLoading || !user || handled) {
+    if (isLoading || !session || handled) {
       return;
     }
 
@@ -53,16 +53,16 @@ export default function PendingReplyHandler() {
     setHandled(true);
 
     // Post the reply
-    handlePendingReply(draftReply, pendingAction, user);
-  }, [user, isLoading, searchParams, handled, router]);
+    handlePendingReply(draftReply, pendingAction, session);
+  }, [session, isLoading, searchParams, handled, router]);
 
   /**
    * Handle posting a pending reply
    */
-  const handlePendingReply = async (draftReply, pendingAction, user) => {
+  const handlePendingReply = async (draftReply, pendingAction, session) => {
     try {
       // Get the username from the user object
-      const username = user.username || user.displayName || 'Missing username';
+      const username = session.username || session.displayName || 'Missing username';
 
       // Encode the parameters for the reply URL
       const params = encodeReplyParams({

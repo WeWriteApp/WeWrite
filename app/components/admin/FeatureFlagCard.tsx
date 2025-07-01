@@ -10,7 +10,7 @@ import { Loader, ChevronDown, Users, Settings, Eye, User, Globe } from 'lucide-r
 import { FeatureFlag } from '../../utils/feature-flags';
 import { collection, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useToast } from '../ui/use-toast';
 import UserAccessModal from './UserAccessModal';
 
@@ -40,7 +40,7 @@ export default function FeatureFlagCard({
   onPersonalToggle,
   isLoading = false
 }: FeatureFlagCardProps) {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const { toast } = useToast();
   const [isExpanded, setIsExpanded] = useState(false);
   const [userStats, setUserStats] = useState<UserAccessStats | null>(null);
@@ -51,10 +51,10 @@ export default function FeatureFlagCard({
 
   // Load personal feature flag state on mount
   useEffect(() => {
-    if (user) {
+    if (session) {
       loadPersonalFeatureState();
     }
-  }, [user, flag.id]);
+  }, [, session, flag.id]);
 
   // Load user access statistics when expanded
   useEffect(() => {
@@ -118,10 +118,10 @@ export default function FeatureFlagCard({
 
   // Load personal feature flag state
   const loadPersonalFeatureState = async () => {
-    if (!user) return;
+    if (!session) return;
 
     try {
-      const featureOverrideRef = doc(db, 'featureOverrides', `${user.uid}_${flag.id}`);
+      const featureOverrideRef = doc(db, 'featureOverrides', `${session.uid}_${flag.id}`);
       const featureOverrideDoc = await getDoc(featureOverrideRef);
 
       if (featureOverrideDoc.exists()) {
@@ -139,16 +139,16 @@ export default function FeatureFlagCard({
 
   // Handle personal toggle
   const handlePersonalToggle = async (checked: boolean) => {
-    if (!user) return;
+    if (!session) return;
 
     try {
       setLoadingPersonal(true);
 
       // Update user-specific feature override
-      const featureOverrideRef = doc(db, 'featureOverrides', `${user.uid}_${flag.id}`);
+      const featureOverrideRef = doc(db, 'featureOverrides', `${session.uid}_${flag.id}`);
 
       await setDoc(featureOverrideRef, {
-        userId: user.uid,
+        userId: session.uid,
         featureId: flag.id,
         enabled: checked,
         lastModified: new Date().toISOString()
@@ -289,7 +289,7 @@ export default function FeatureFlagCard({
               <Switch
                 checked={personalEnabled ?? flag.enabled}
                 onCheckedChange={handlePersonalToggle}
-                disabled={loadingPersonal || !user}
+                disabled={loadingPersonal || !session}
                 className="data-[state=checked]:bg-primary"
               />
             </div>

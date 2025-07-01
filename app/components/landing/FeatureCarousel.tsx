@@ -138,8 +138,7 @@ export const FeatureCarousel = () => {
     },
     trackMouse: true, // allow mouse drag
     trackTouch: true, // allow touch
-    preventDefaultTouchmoveEvent: true,
-  });
+    preventDefaultTouchmoveEvent: true});
 
   // Animate on arrow click
   const handleNext = () => {

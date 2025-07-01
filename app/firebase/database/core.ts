@@ -30,7 +30,7 @@ import { get, ref } from "firebase/database";
 // Import utility functions
 import { generateCacheKey, getCacheItem, setCacheItem } from "../../utils/cacheUtils";
 import { trackQueryPerformance } from "../../utils/queryMonitor";
-import { recordUserActivity } from "../streaks";
+// Removed circular import - recordUserActivity will be called directly where needed
 // Notifications functionality removed
 
 // Import types

@@ -265,29 +265,29 @@ a[data-user-id]::before {
   background-color: hsl(var(--muted) / 0.3);
 }
 
-/* Paragraph number styling - consistent between view and edit modes */
-.unified-paragraph-number {
+/* Single paragraph number implementation - works for all modes */
+.paragraph-number {
   /* Flex item that doesn't shrink */
-  flex-shrink: 0; /* CRITICAL: Never shrink the paragraph number */
-  width: 1.5rem; /* RESTORED: Back to original readable size */
-  min-width: 1.5rem; /* RESTORED: Prevent shrinking below minimum width */
+  flex-shrink: 0;
+  width: 1.25rem;
+  min-width: 1.25rem;
   text-align: right;
-  /* Theme-aware color inheritance with accessibility-compliant opacity */
+  /* Grey color for paragraph numbers */
   color: hsl(var(--muted-foreground));
-  font-size: 0.85em; /* RESTORED: Back to readable size */
-  opacity: var(--paragraph-number-opacity, 0.7); /* Accessible opacity: 70% for better contrast */
+  font-size: 0.75em;
+  font-weight: 400;
+  opacity: var(--paragraph-number-opacity);
   user-select: none;
   pointer-events: none;
   line-height: 1.5;
-  margin-right: 0.5rem; /* RESTORED: Back to proper spacing */
+  margin-right: 1rem;
   transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  /* Improved baseline alignment for both view and edit modes */
-  align-self: baseline; /* Ensure proper baseline alignment within flex container */
-  font-weight: 400; /* Normal weight for subtle appearance */
+  /* Baseline alignment for both view and edit modes */
+  align-self: baseline;
   /* Prevent layout shifts by maintaining stable dimensions */
   box-sizing: border-box;
   contain: layout style;
-  /* CRITICAL: Ensure paragraph numbers are never editable */
+  /* Ensure paragraph numbers are never editable */
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
@@ -361,7 +361,7 @@ a[data-user-id]::before {
 }
 
 /* Ensure text nodes and elements after paragraph number in edit mode flow properly */
-[contenteditable] div > .unified-paragraph-number + .unified-text-content {
+[contenteditable] div > .paragraph-number + .unified-text-content {
   /* Content wrapper after paragraph number gets flex: 1 */
   flex: 1;
   min-width: 0; /* Allow content to shrink if needed */
@@ -693,13 +693,7 @@ div.unified-paragraph {
     margin-bottom: 0.25rem; /* Tighter spacing on mobile for more screen real estate */
   }
 
-  .unified-paragraph-number {
-    /* MOBILE: Reasonable paragraph number space on mobile */
-    width: 1.25rem; /* RESTORED: Readable size on mobile */
-    min-width: 1.25rem;
-    margin-right: 0.375rem; /* RESTORED: Proper spacing on mobile */
-    font-size: 0.75rem; /* RESTORED: Readable font size on mobile */
-  }
+
 
   /* MOBILE: High specificity editor content styling - ONLY for edit mode */
   [contenteditable="true"].editor-content.normal-mode > div,
@@ -801,16 +795,7 @@ div[contenteditable="true"].editor-content > div {
   animation: fadeInUp 0.4s ease-out forwards;
 }
 
-.dense-paragraph-number {
-  color: hsl(var(--muted-foreground));
-  font-weight: 500;
-  margin-right: 0.25rem;
-  font-size: 0.875rem;
-  vertical-align: baseline;
-  /* Animate the numbers appearing */
-  opacity: 0;
-  animation: fadeInNumber 0.3s ease-out forwards;
-}
+/* Dense mode uses the same paragraph-number class with inline styling */
 
 .dense-paragraph-content {
   display: inline;
@@ -844,7 +829,7 @@ div[contenteditable="true"].editor-content > div {
     transform: scale(0.8);
   }
   to {
-    opacity: 1;
+    opacity: var(--paragraph-number-opacity);
     transform: scale(1);
   }
 }

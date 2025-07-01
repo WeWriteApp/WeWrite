@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import dynamic from "next/dynamic";
 
 // Import the editor as the main editor
@@ -149,7 +149,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
   // CRITICAL: Track if content has been properly loaded
   const [contentLoaded, setContentLoaded] = useState(false);
 
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const editorRef = useRef<any>(null);
   const { lineMode, setLineMode } = useLineSettings();
 
@@ -499,8 +499,6 @@ const PageEditor: React.FC<PageEditorProps> = ({
     }
   };
 
-
-
   // Add global click listener for debugging
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
@@ -643,8 +641,6 @@ const PageEditor: React.FC<PageEditorProps> = ({
     }
   };
 
-
-
   // Remove debug logging to improve performance and reduce console noise
   // console.log('[PageEditor] EditorProvider props:', {
   //   isPublic,
@@ -733,7 +729,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
                 onEmptyLinesChange={handleEmptyLinesChange}
                 placeholder="Start typing..."
                 contentType="wiki"
-                user={user}
+                user={session}
                 currentPage={page}
                 isEditMode={true}
                 isNewPage={isNewPage}
@@ -997,7 +993,6 @@ const PageEditor: React.FC<PageEditorProps> = ({
             </Button>
           )}
         </div>
-
 
       </div>
 

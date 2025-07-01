@@ -49,8 +49,7 @@ const SecureSyntaxHighlighter: React.FC<SecureSyntaxHighlighterProps> = ({
     backgroundColor: '#2d2d2d',
     color: '#ccc',
     overflow: 'auto',
-    margin: '0',
-  };
+    margin: '0'};
 
   // Combine default styles with custom styles
   const mergedStyle: React.CSSProperties = { ...defaultStyle, ...customStyle };
@@ -70,8 +69,7 @@ const SecureSyntaxHighlighter: React.FC<SecureSyntaxHighlighterProps> = ({
     "py": "language-python",
     "python": "language-python",
     "html": "language-html",
-    "css": "language-css",
-  };
+    "css": "language-css"};
 
   // Get the appropriate language class or fallback to text
   const languageClass = languageMap[language.toLowerCase()] || "language-text";

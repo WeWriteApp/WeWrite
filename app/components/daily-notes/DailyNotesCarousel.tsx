@@ -3,14 +3,13 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import DayCard from './DayCard';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { format, subDays, addDays } from 'date-fns';
 import { Button } from '../ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useDateFormat } from '../../contexts/DateFormatContext';
-
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 /**
  * Check if a title exactly matches the YYYY-MM-DD format
  * Returns true only for exact matches (10 characters, no additional text)
@@ -42,7 +41,7 @@ interface DailyNotesCarouselProps {
  * - Maintains scroll position when loading new dates
  */
 export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNotesCarouselProps) {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const router = useRouter();
   const carouselRef = useRef<HTMLDivElement>(null);
   const { formatDateString } = useDateFormat();
@@ -123,7 +122,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
 
   // Check for existing notes with exact YYYY-MM-DD format titles only
   const checkExistingNotes = useCallback(async (dateRange: Date[]) => {
-    if (!user?.uid) return;
+    if (!session?.uid) return;
 
     try {
       // Generate all possible YYYY-MM-DD titles for the date range
@@ -144,7 +143,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
       for (const chunk of chunks) {
         const chunkQuery = query(
           pagesRef,
-          where('userId', '==', user?.uid || ''),
+          where('userId', '==', session?.uid || ''),
           where('title', 'in', chunk)
         );
 
@@ -169,12 +168,12 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     } catch (error) {
       console.error('Error checking existing notes:', error);
     }
-  }, [user?.uid]);
+  }, [session?.uid]);
 
   // Check for existing notes when dates change
   useEffect(() => {
     const loadNotes = async () => {
-      if (!user?.uid) {
+      if (!session?.uid) {
         setLoading(false);
         return;
       }
@@ -185,7 +184,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     };
 
     loadNotes();
-  }, [user?.uid, daysBefore, daysAfter, dates, checkExistingNotes]);
+  }, [session?.uid, daysBefore, daysAfter, dates, checkExistingNotes]);
 
   // Handle day card click with enhanced error handling
   const handleDayClick = (date: Date) => {

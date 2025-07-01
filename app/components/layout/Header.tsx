@@ -3,12 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import AuthNav from "../auth/AuthNav";
+
 import { Button } from "../ui/button";
 import { Heart, DollarSign } from "lucide-react";
+import Logo from "../ui/Logo";
 import { openExternalLink } from "../../utils/pwa-detection";
 import { useSidebarContext } from "./UnifiedSidebar";
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { listenToUserSubscription } from "../../firebase/subscription";
 import { getSubscriptionButtonText, getSubscriptionNavigationPath, isActiveSubscription } from "../../utils/subscriptionStatus";
@@ -17,7 +18,7 @@ import { TokenBalance } from "../../types/database";
 
 export default function Header() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
@@ -28,7 +29,7 @@ export default function Header() {
   const headerRef = React.useRef<HTMLDivElement>(null);
 
   // Check if payments feature is enabled
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const isPaymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
 
   // Helper function to render token allocation display
   const renderTokenAllocationDisplay = () => {
@@ -50,8 +51,6 @@ export default function Header() {
     );
   };
 
-
-
   // Calculate header positioning width - only respond to persistent expanded state, not hover
   // Hover state should overlay without affecting header positioning
   const headerSidebarWidth = React.useMemo(() => {
@@ -69,30 +68,30 @@ export default function Header() {
 
   // Listen to user subscription changes
   React.useEffect(() => {
-    if (!user || !isPaymentsEnabled) {
+    if (!session || !isPaymentsEnabled) {
       setSubscription(null);
       return;
     }
 
-    const unsubscribe = listenToUserSubscription(user.uid, (subscriptionData) => {
+    const unsubscribe = listenToUserSubscription(session.uid, (subscriptionData) => {
       setSubscription(subscriptionData);
     }, { verbose: false });
 
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [user, isPaymentsEnabled]);
+  }, [session, isPaymentsEnabled]);
 
   // Listen to user token balance changes
   React.useEffect(() => {
-    if (!user || !isPaymentsEnabled) {
+    if (!session || !isPaymentsEnabled) {
       setTokenBalance(null);
       return;
     }
 
     // Only listen to token balance if user has an active subscription
     if (subscription && isActiveSubscription(subscription.status, subscription.cancelAtPeriodEnd, subscription.currentPeriodEnd)) {
-      const unsubscribe = TokenService.listenToTokenBalance(user.uid, (balance) => {
+      const unsubscribe = TokenService.listenToTokenBalance(session.uid, (balance) => {
         setTokenBalance(balance);
 
         // If no token balance exists for an active subscription, try to initialize it
@@ -116,7 +115,7 @@ export default function Header() {
     } else {
       setTokenBalance(null);
     }
-  }, [user, isPaymentsEnabled, subscription]);
+  }, [session, isPaymentsEnabled, subscription]);
 
   // Calculate and update header height
   React.useEffect(() => {
@@ -210,14 +209,13 @@ export default function Header() {
             {/* Header content area - matches editor content area */}
             <div className={`flex-1 min-w-0 flex items-center h-full px-3 sm:px-4 md:px-6 header-padding-mobile transition-all duration-300 ease-in-out`}>
               <div className="flex-1 flex items-center">
-                {/* Auth navigation (sidebar toggle or login button) */}
-                <AuthNav />
+                {/* Auth navigation removed - functionality moved to UnifiedSidebar */}
               </div>
 
               {/* Logo/Title (centered) */}
               <div className="flex items-center justify-center">
                 <Link href="/" className="flex items-center space-x-2 transition-all duration-200 hover:scale-110 hover:text-primary">
-                  <span className="font-bold text-foreground">WeWrite</span>
+                  <Logo size="sm" priority={true} clickable={true} />
                 </Link>
               </div>
 
@@ -284,7 +282,6 @@ export default function Header() {
           willChange: 'height'
         }}
       />
-
 
     </>
   );

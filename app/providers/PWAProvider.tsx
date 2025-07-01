@@ -5,8 +5,7 @@ import { isPWA, shouldShowPWABanner } from "../utils/pwa-detection";
 import { getAnalyticsService } from "../utils/analytics-service";
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
 import { PWAInstallTrackingService } from '../services/pwaInstallTracking';
-import { useAuth } from './AuthProvider';
-
+import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 // Define the context type
 interface PWAContextType {
   isPWA: boolean;
@@ -20,8 +19,7 @@ const PWAContext = createContext<PWAContextType>({
   isPWA: false,
   showBanner: false,
   setShowBanner: () => {},
-  resetBannerState: () => {},
-});
+  resetBannerState: () => {}});
 
 // Hook to use the PWA context
 export const usePWA = () => useContext(PWAContext);
@@ -29,7 +27,7 @@ export const usePWA = () => useContext(PWAContext);
 export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isPWAApp, setIsPWAApp] = useState<boolean>(false);
   const [showBanner, setShowBanner] = useState<boolean>(false);
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
 
   // Initialize PWA detection on mount
   useEffect(() => {
@@ -44,8 +42,8 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Initialize PWA installation tracking with user context
       try {
-        PWAInstallTrackingService.initialize(user?.uid, user?.username);
-        console.log('PWA installation tracking initialized', user ? `for user: ${user.username}` : 'anonymously');
+        PWAInstallTrackingService.initialize(session?.uid, session?.username);
+        console.log('PWA installation tracking initialized', session ? `for user: ${session.username}` : 'anonymously');
       } catch (error) {
         console.error('Error initializing PWA installation tracking:', error);
       }
@@ -57,8 +55,7 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           category: EVENT_CATEGORIES.APP,
           action: ANALYTICS_EVENTS.PWA_STATUS,
           label: pwaStatus ? 'PWA' : 'Browser',
-          value: pwaStatus ? 1 : 0,
-        });
+          value: pwaStatus ? 1 : 0});
 
         if (process.env.NODE_ENV === 'development') {
           console.log(`PWA status tracked: ${pwaStatus ? 'PWA' : 'Browser'}`);
@@ -81,8 +78,7 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             category: EVENT_CATEGORIES.APP,
             action: ANALYTICS_EVENTS.PWA_STATUS_CHANGED,
             label: newPWAStatus ? 'PWA' : 'Browser',
-            value: newPWAStatus ? 1 : 0,
-          });
+            value: newPWAStatus ? 1 : 0});
         } catch (error) {
           console.error('Error tracking PWA status change:', error);
         }
@@ -113,13 +109,13 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (typeof window !== 'undefined') {
       try {
         // Reinitialize with updated user context
-        PWAInstallTrackingService.initialize(user?.uid, user?.username);
-        console.log('PWA tracking updated for user context:', user ? user.username : 'anonymous');
+        PWAInstallTrackingService.initialize(session?.uid, session?.username);
+        console.log('PWA tracking updated for user context:', session?.username || 'anonymous');
       } catch (error) {
         console.error('Error updating PWA tracking user context:', error);
       }
     }
-  }, [user?.uid, user?.username]);
+  }, [session?.uid, session?.username]);
 
   // Function to reset banner state for testing
   const resetBannerState = () => {
@@ -137,8 +133,7 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         analyticsService.trackEvent({
           category: EVENT_CATEGORIES.ADMIN,
           action: ANALYTICS_EVENTS.PWA_BANNER_RESET,
-          label: 'Admin Action',
-        });
+          label: 'Admin Action'});
       } catch (error) {
         console.error('Error tracking PWA banner reset:', error);
       }
@@ -151,8 +146,7 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isPWA: isPWAApp,
         showBanner,
         setShowBanner,
-        resetBannerState,
-      }}
+        resetBannerState}}
     >
       {children}
     </PWAContext.Provider>

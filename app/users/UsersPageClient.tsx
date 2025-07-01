@@ -252,7 +252,7 @@ export default function UsersPageClient() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedUsers.map((user) => (
+              {sortedUsers.map((session) => (
                 <TableRow
                   key={user.id}
                   className="cursor-pointer hover:bg-accent/5 transition-colors"
@@ -268,7 +268,7 @@ export default function UsersPageClient() {
                             onClick={(e) => e.stopPropagation()} // Prevent double navigation
                           >
                             <span className="flex items-center gap-1">
-                              {user.username || "Unknown User"}
+                              {session.username || "Unknown User"}
                               {false && subscriptionEnabled && (
                                 <SupporterIcon
                                   tier={user.tier}

@@ -15,8 +15,7 @@ import { getUserIdFromRequest } from '../../../api/auth-helper';
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia',
-});
+  apiVersion: '2024-12-18.acacia'});
 
 interface CustomerIssue {
   customerId: string;
@@ -109,8 +108,7 @@ async function generateMonitoringReport(maxCustomers: number, includeMinorIssues
   while (hasMore && scannedCount < maxCustomers) {
     const customers = await stripe.customers.list({
       limit: Math.min(100, maxCustomers - scannedCount),
-      starting_after: startingAfter,
-    });
+      starting_after: startingAfter});
 
     for (const customer of customers.data) {
       scannedCount++;
@@ -151,8 +149,7 @@ async function analyzeCustomerSubscriptions(customer: Stripe.Customer): Promise<
   try {
     const subscriptions = await stripe.subscriptions.list({
       customer: customer.id,
-      limit: 100,
-    });
+      limit: 100});
 
     const activeSubscriptions = subscriptions.data.filter(sub => sub.status === 'active');
     

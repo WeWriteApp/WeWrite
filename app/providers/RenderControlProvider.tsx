@@ -37,8 +37,7 @@ const RenderControlContext = createContext<RenderControlContextType>({
   isFirstRender: () => true,
   resetRenderState: () => {},
   isNavigating: false,
-  lastNavigationTime: 0,
-});
+  lastNavigationTime: 0});
 
 /**
  * RenderControlProvider
@@ -129,8 +128,7 @@ export function RenderControlProvider({ children }: RenderControlProviderProps) 
     isFirstRender,
     resetRenderState,
     isNavigating,
-    lastNavigationTime,
-  };
+    lastNavigationTime};
 
   return (
     <RenderControlContext.Provider value={contextValue}>

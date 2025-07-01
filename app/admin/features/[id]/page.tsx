@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useAuth } from '../../../providers/AuthProvider';
+import { useCurrentAccount } from '../../../providers/CurrentAccountProvider';
 import { isAdmin } from '../../../utils/feature-flags';
 import { PageLoader } from '../../../components/ui/page-loader';
 import FeatureDetailPage from '../../../components/admin/FeatureDetailPage';
@@ -16,7 +16,7 @@ import { ErrorCard } from '../../../components/ui/ErrorCard';
 export default function FeatureDetail() {
   const router = useRouter();
   const params = useParams();
-  const { user, loading: authLoading } = useAuth();
+  const { session, isAuthenticated } = useCurrentAccount();
   const [isLoading, setIsLoading] = useState(true);
   const [featureData, setFeatureData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,19 +25,19 @@ export default function FeatureDetail() {
 
   // Check if user is admin
   useEffect(() => {
-    if (!authLoading && user) {
-      if (!isAdmin(user.email)) {
+    if (isAuthenticated && session) {
+      if (!isAdmin(session.email)) {
         router.push('/');
       }
-    } else if (!authLoading && !user) {
+    } else if (!isAuthenticated) {
       router.push('/auth/login?redirect=/admin/features/' + featureId);
     }
-  }, [user, authLoading, router, featureId]);
+  }, [session, isAuthenticated, router, featureId]);
 
   // Fetch feature data
   useEffect(() => {
     const fetchFeatureData = async () => {
-      if (!featureId || !user) return;
+      if (!featureId || !session) return;
 
       try {
         setIsLoading(true);
@@ -78,9 +78,9 @@ export default function FeatureDetail() {
     };
 
     fetchFeatureData();
-  }, [featureId, user]);
+  }, [featureId, session]);
 
-  if (authLoading || (user && !isAdmin(user.email))) {
+  if (isLoading || (session && !isAdmin(session.email))) {
     return <PageLoader message="Checking permissions..." />;
   }
 

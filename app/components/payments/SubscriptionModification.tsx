@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { 
   ArrowUpCircle, 
   ArrowDownCircle, 
@@ -40,8 +40,8 @@ interface ProrationPreview {
 }
 
 export function SubscriptionModification({ subscription, onModificationSuccess }: SubscriptionModificationProps) {
-  const { user } = useAuth();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const { currentAccount } = useCurrentAccount();
+  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
   
   const [selectedTier, setSelectedTier] = useState<string>('');
   const [customAmount, setCustomAmount] = useState<number>(60);
@@ -117,14 +117,11 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
       const response = await fetch('/api/subscription/preview-change', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({
           subscriptionId: subscription.stripeSubscriptionId,
           newTier: tierId,
-          newAmount: amount,
-        }),
-      });
+          newAmount: amount})});
 
       const data = await response.json();
 
@@ -155,14 +152,11 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
       const response = await fetch('/api/subscription/update', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({
           subscriptionId: subscription.stripeSubscriptionId,
           newTier: selectedTier,
-          newAmount: selectedTier === 'custom' ? customAmount : undefined,
-        }),
-      });
+          newAmount: selectedTier === 'custom' ? customAmount : undefined})});
 
       const data = await response.json();
 
@@ -197,8 +191,7 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
-    }).format(amount);
+      currency: 'USD'}).format(amount);
   };
 
   return (

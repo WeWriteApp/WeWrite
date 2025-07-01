@@ -62,7 +62,7 @@ export function ModernLoginForm({
   useEffect(() => {
     // Accept either email format or username (3+ chars, alphanumeric + underscore, no whitespace)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const usernameRegex = /^[a-zA-Z0-9_]{3,}$/
+    const usernameRegex = /^[a-zA-Z0-9_]{3}$/
     const hasWhitespace = /\s/.test(emailOrUsername)
     const isEmailOrUsernameValid = !hasWhitespace && (emailRegex.test(emailOrUsername) || usernameRegex.test(emailOrUsername))
     const isPasswordValid = password.length >= 6
@@ -79,7 +79,7 @@ export function ModernLoginForm({
           setPreviousAccount(parsedSession)
         }
       } catch (e) {
-        console.error('Error parsing previous user session:', e)
+        console.error('Error parsing previous user account:', e)
       }
     }
   }, [])

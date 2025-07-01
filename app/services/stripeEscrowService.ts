@@ -52,8 +52,7 @@ export class StripeEscrowService {
 
   constructor() {
     this.stripe = new Stripe(getStripeSecretKey() || '', {
-      apiVersion: '2024-06-20',
-    });
+      apiVersion: '2024-06-20'});
   }
 
   static getInstance(): StripeEscrowService {
@@ -94,8 +93,7 @@ export class StripeEscrowService {
         business_type: 'company',
         company: {
           name: 'WeWrite Platform Revenue',
-          tax_id: process.env.WEWRITE_TAX_ID,
-        },
+          tax_id: process.env.WEWRITE_TAX_ID},
         metadata: {
           purpose: 'platform_revenue',
           created_by: 'wewrite_platform'

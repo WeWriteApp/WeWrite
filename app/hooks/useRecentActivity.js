@@ -1,7 +1,7 @@
-import { useState, useEffect, useContext, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { collection, query, orderBy, limit, getDocs, where, getDoc, doc, startAfter } from "firebase/firestore";
 import { db } from "../firebase/config";
-import { AuthContext } from "../providers/AuthProvider";
+import { useCurrentAccount } from "../providers/CurrentAccountProvider";
 import { getPageVersions } from "../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
 import { getRecentActivity } from "../firebase/activity";
@@ -23,7 +23,7 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
   const [lastVisible, setLastVisible] = useState(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -125,7 +125,7 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
     const fetchRecentActivity = async () => {
       try {
         // Check cache first
-        const cacheKey = `${limitCount}-${filterUserId}-${followedOnly}-${mineOnly}-${user?.uid || 'anonymous'}`;
+        const cacheKey = `${limitCount}-${filterUserId}-${followedOnly}-${mineOnly}-${session?.uid || 'anonymous'}`;
         const cached = activityCache.get(cacheKey);
         if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
           console.log('Using cached activity data');
@@ -144,7 +144,7 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
 
         // If mineOnly is true, filter by current user's content
         if (mineOnly) {
-          if (!user) {
+          if (!session) {
             // If not logged in but in mine mode, return empty results
             setActivities([]);
             setLoading(false);
@@ -152,12 +152,12 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
             return;
           }
           // Set filterUserId to current user for filtering
-          filterUserId = user.uid;
+          filterUserId = session.uid;
         }
 
         // If followedOnly is true, get the list of pages the user follows
         if (followedOnly) {
-          if (!user) {
+          if (!session) {
             // If not logged in but in following mode, return empty results
             setActivities([]);
             setLoading(false);
@@ -167,7 +167,7 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
 
           try {
             const { getFollowedPages } = await import('../firebase/follows');
-            followedPageIds = await getFollowedPages(user.uid);
+            followedPageIds = await getFollowedPages(session.uid);
 
             if (followedPageIds.length === 0) {
               // If user doesn't follow any pages, return empty results
@@ -190,7 +190,7 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
           // DEBUG: Log what we're about to query
           console.log('🔍 DEBUG: About to fetch recent activity with params:', {
             limitCount,
-            userId: user ? user.uid : null,
+            userId: session?.uid || null,
             timestamp: new Date().toISOString()
           });
 
@@ -198,7 +198,7 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
           // Reduced multiplier for better performance
           const { activities: recentActivities } = await getRecentActivity(
             Math.min(limitCount + 5, 20), // Cap at 20 for performance
-            user ? user.uid : null
+            session?.uid || null
           );
 
           // DEBUG: Log what we got back
@@ -321,7 +321,7 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
           }
 
           // For logged-out users, provide empty array instead of showing error
-          if (!user) {
+          if (!session) {
             setActivities([]);
           }
         }
@@ -338,7 +338,7 @@ const useRecentActivity = (limitCount = 10, filterUserId = null, followedOnly = 
     };
 
     fetchRecentActivity();
-  }, [user, limitCount, filterUserId, followedOnly, mineOnly, refreshTrigger]);
+  }, [session, limitCount, filterUserId, followedOnly, mineOnly, refreshTrigger]);
 
   // Function to load more activities
   const loadMore = useCallback(async () => {

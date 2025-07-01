@@ -17,7 +17,7 @@ import {
   Download
 } from 'lucide-react';
 import { useToast } from '../ui/use-toast';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { TokenEarningsService } from '../../services/tokenEarningsService';
 import { WriterTokenBalance, WriterTokenEarnings } from '../../types/database';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -29,7 +29,7 @@ interface WriterTokenDashboardProps {
 }
 
 export default function WriterTokenDashboard({ className }: WriterTokenDashboardProps) {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const { toast } = useToast();
   
   const [balance, setBalance] = useState<WriterTokenBalance | null>(null);
@@ -38,20 +38,20 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
   const [requesting, setRequesting] = useState(false);
 
   useEffect(() => {
-    if (user?.uid) {
+    if (session?.uid) {
       loadWriterData();
     }
-  }, [user?.uid]);
+  }, [session?.uid]);
 
   const loadWriterData = async () => {
-    if (!user?.uid) return;
+    if (!session?.uid) return;
 
     try {
       setLoading(true);
 
       const [balanceData, earningsData] = await Promise.all([
-        TokenEarningsService.getWriterTokenBalance(user.uid),
-        TokenEarningsService.getWriterEarningsHistory(user.uid, 6)
+        TokenEarningsService.getWriterTokenBalance(session.uid),
+        TokenEarningsService.getWriterEarningsHistory(session.uid, 6)
       ]);
 
       setBalance(balanceData);
@@ -70,18 +70,17 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
   };
 
   const handleRequestPayout = async () => {
-    if (!user?.uid || !balance) return;
+    if (!session?.uid || !balance) return;
     
     try {
       setRequesting(true);
       
-      const result = await TokenEarningsService.requestPayout(user.uid);
+      const result = await TokenEarningsService.requestPayout(session.uid);
       
       if (result.success) {
         toast({
           title: "Payout Requested",
-          description: "Your payout request has been submitted successfully!",
-        });
+          description: "Your payout request has been submitted successfully!"});
         loadWriterData(); // Refresh data
       } else {
         toast({

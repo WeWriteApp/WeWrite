@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { isAdmin } from "../../utils/feature-flags";
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
@@ -13,21 +13,21 @@ import { useToast } from '../../components/ui/use-toast';
 
 export default function SetupFeaturesPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { session, isAuthenticated } = useCurrentAccount();
   const { toast } = useToast();
   const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
 
   // Check if user is admin
   useEffect(() => {
-    if (!authLoading && user) {
-      if (!isAdmin(user.email)) {
+    if (isAuthenticated && session) {
+      if (!isAdmin(session.email)) {
         router.push('/');
       }
-    } else if (!authLoading && !user) {
+    } else if (!isAuthenticated) {
       router.push('/auth/login?redirect=/admin/setup-features');
     }
-  }, [user, authLoading, router]);
+  }, [, session, isAuthenticated, router]);
 
   const runSetup = async () => {
     setIsRunning(true);
@@ -60,7 +60,7 @@ export default function SetupFeaturesPage() {
     }
   };
 
-  if (authLoading || (user && !isAdmin(user.email))) {
+  if (!isAuthenticated || (session && !isAdmin(session.email))) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />

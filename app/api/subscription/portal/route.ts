@@ -12,8 +12,7 @@ import { getUserIdFromRequest } from '../../../api/auth-helper';
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-06-20',
-});
+  apiVersion: '2024-06-20'});
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,14 +48,12 @@ export async function POST(request: NextRequest) {
     const session = await stripe.billingPortal.sessions.create({
       customer: stripeCustomerId,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings/subscription`,
-      configuration: await getOrCreatePortalConfiguration(),
-    });
+      configuration: await getOrCreatePortalConfiguration()});
 
     console.log(`Created portal session for user ${userId}`);
 
     return NextResponse.json({
-      url: session.url,
-    });
+      url: session.url});
 
   } catch (error) {
     console.error('Error creating portal session:', error);
@@ -92,8 +89,7 @@ async function cleanupInactiveSubscriptionsForPortal(stripeCustomerId: string, u
     // Get all subscriptions for this customer
     const subscriptions = await stripe.subscriptions.list({
       customer: stripeCustomerId,
-      limit: 100,
-    });
+      limit: 100});
 
     // Only proceed if there are multiple subscriptions
     if (subscriptions.data.length <= 1) {
@@ -149,8 +145,7 @@ async function getOrCreatePortalConfiguration(): Promise<string | undefined> {
     // Create a new configuration optimized for clean UX
     const newConfig = await stripe.billingPortal.configurations.create({
       business_profile: {
-        headline: 'Manage your WeWrite subscription',
-      },
+        headline: 'Manage your WeWrite subscription'},
       features: {
         payment_method_update: { enabled: true },
         subscription_cancel: {

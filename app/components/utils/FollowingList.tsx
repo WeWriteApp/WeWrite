@@ -7,7 +7,7 @@ import { Loader, UserX, Users } from 'lucide-react';
 import { db } from "../../firebase/database";
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { unfollowUser, getFollowedUsers } from "../../firebase/follows";
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import Link from 'next/link';
 import { PillLink } from "./PillLink";
 import { SupporterIcon } from '../payments/SupporterIcon';
@@ -21,7 +21,7 @@ interface FollowingListProps {
 }
 
 export default function FollowingList({ userId, isCurrentUser = false }: FollowingListProps) {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const [followedUsers, setFollowedUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
   const limit = 50;
 
   // Use the reactive feature flag hook instead of manual Firestore check
-  const subscriptionEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const subscriptionEnabled = useFeatureFlag('payments', session?.email, session?.uid);
 
   // Custom modal hooks
   const { alertState, showError, closeAlert } = useAlert();
@@ -44,7 +44,7 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
     if (!isCurrentUser) return;
 
     loadFollowedUsers();
-  }, [userId, isCurrentUser]);
+  }, [session, isCurrentUser]);
 
   const loadFollowedUsers = async (loadMore = false) => {
     try {
@@ -134,13 +134,13 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
   };
 
   const handleUnfollow = async (followedId: string) => {
-    if (!user || !isCurrentUser) return;
+    if (!session || !isCurrentUser) return;
 
     try {
       setUnfollowingId(followedId);
 
       // Call the unfollow function
-      await unfollowUser(user.uid, followedId);
+      await unfollowUser(session.uid, followedId);
 
       // Update the local state
       setFollowedUsers(prev => prev.filter(u => u.id !== followedId));

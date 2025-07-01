@@ -17,8 +17,7 @@ import { getUserIdFromRequest } from '../../../api/auth-helper';
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia',
-});
+  apiVersion: '2024-12-18.acacia'});
 
 interface CleanupResult {
   customerId: string;
@@ -131,16 +130,14 @@ async function findCustomersWithMultipleSubscriptions(maxCustomers: number): Pro
   while (hasMore && customersWithMultiple.length < maxCustomers) {
     const customers = await stripe.customers.list({
       limit: 100,
-      starting_after: startingAfter,
-    });
+      starting_after: startingAfter});
 
     for (const customer of customers.data) {
       if (customersWithMultiple.length >= maxCustomers) break;
 
       const subscriptions = await stripe.subscriptions.list({
         customer: customer.id,
-        limit: 100,
-      });
+        limit: 100});
 
       if (subscriptions.data.length > 1) {
         customersWithMultiple.push(customer);
@@ -183,8 +180,7 @@ async function cleanupCustomerSubscriptions(
     // Get all subscriptions for this customer
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      limit: 100,
-    });
+      limit: 100});
 
     result.totalSubscriptions = subscriptions.data.length;
 

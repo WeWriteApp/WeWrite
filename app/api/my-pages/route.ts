@@ -16,9 +16,7 @@ if (!getApps().length) {
       credential: cert({
         projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
         clientEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n'),
-      }),
-    });
+        privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')})});
     console.log('[Admin SDK] Initialized successfully');
   } catch (error) {
     console.error('[Admin SDK] Initialization failed:', error);

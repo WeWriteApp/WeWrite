@@ -9,8 +9,7 @@ jest.mock('firebase/firestore', () => ({
   doc: jest.fn(),
   updateDoc: jest.fn(),
   getDoc: jest.fn(),
-  serverTimestamp: jest.fn(() => new Date()),
-}));
+  serverTimestamp: jest.fn(() => new Date())}));
 
 // Mock Firebase Auth
 jest.mock('firebase/auth', () => ({
@@ -19,16 +18,13 @@ jest.mock('firebase/auth', () => ({
       uid: 'test-user-id',
       getIdToken: jest.fn(() => Promise.resolve('mock-token'))
     }
-  })),
-}));
+  }))}));
 
 // Mock Stripe
 const mockStripe = {
   subscriptions: {
     update: jest.fn(),
-    retrieve: jest.fn(),
-  },
-};
+    retrieve: jest.fn()}};
 
 jest.mock('stripe', () => {
   return jest.fn(() => mockStripe);
@@ -38,9 +34,7 @@ jest.mock('stripe', () => {
 jest.mock('../services/subscriptionService', () => ({
   SubscriptionService: {
     reactivateSubscription: jest.fn(),
-    getUserSubscription: jest.fn(),
-  },
-}));
+    getUserSubscription: jest.fn()}}));
 
 // Mock fetch for API calls
 global.fetch = jest.fn();
@@ -67,17 +61,14 @@ describe('Subscription Reactivation System', () => {
           subscription: {
             id: 'sub_test123',
             status: 'active',
-            cancelAtPeriodEnd: false,
-          }
-        }),
-      });
+            cancelAtPeriodEnd: false}
+        })});
 
       // Mock getUserSubscription to return a subscription with cancelAtPeriodEnd: true
       SubscriptionService.getUserSubscription.mockResolvedValue({
         stripeSubscriptionId: 'sub_test123',
         cancelAtPeriodEnd: true,
-        status: 'active',
-      });
+        status: 'active'});
 
       const result = await SubscriptionService.reactivateSubscription('test-user-id');
 
@@ -86,13 +77,11 @@ describe('Subscription Reactivation System', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock-token',
-        },
+          'Authorization': 'Bearer mock-token'},
         body: JSON.stringify({
           userId: 'test-user-id',
           subscriptionId: 'sub_test123'
-        }),
-      });
+        })});
     });
 
     test('should fail when subscription is not set to cancel', async () => {
@@ -102,8 +91,7 @@ describe('Subscription Reactivation System', () => {
       SubscriptionService.getUserSubscription.mockResolvedValue({
         stripeSubscriptionId: 'sub_test123',
         cancelAtPeriodEnd: false,
-        status: 'active',
-      });
+        status: 'active'});
 
       const result = await SubscriptionService.reactivateSubscription('test-user-id');
 
@@ -148,8 +136,7 @@ describe('Subscription Reactivation System', () => {
 
       // Test that Stripe is called with correct parameters
       const result = await mockStripe.subscriptions.update('sub_test123', {
-        cancel_at_period_end: false,
-      });
+        cancel_at_period_end: false});
 
       expect(result.cancel_at_period_end).toBe(false);
       expect(result.status).toBe('active');
@@ -161,8 +148,7 @@ describe('Subscription Reactivation System', () => {
       // This would test the UI component logic
       const subscription = {
         status: 'active',
-        cancelAtPeriodEnd: true,
-      };
+        cancelAtPeriodEnd: true};
 
       // The UI should show reactivation button and hide cancel/add buttons
       const shouldShowReactivateButton = subscription.status === 'active' && subscription.cancelAtPeriodEnd;
@@ -177,8 +163,7 @@ describe('Subscription Reactivation System', () => {
     test('should show normal buttons when subscription is active and not cancelling', () => {
       const subscription = {
         status: 'active',
-        cancelAtPeriodEnd: false,
-      };
+        cancelAtPeriodEnd: false};
 
       const shouldShowReactivateButton = subscription.status === 'active' && subscription.cancelAtPeriodEnd;
       const shouldShowCancelButton = subscription.status === 'active' && !subscription.cancelAtPeriodEnd;

@@ -2,7 +2,7 @@
 
 import { useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from 'next/navigation';
-import { AuthContext } from "../providers/AuthProvider";
+import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 import { PageLoader } from "../components/ui/page-loader";
 import { Button } from "../components/ui/button";
 import {
@@ -35,31 +35,31 @@ interface SettingsLayoutProps {
 }
 
 export default function SettingsLayout({ children }: SettingsLayoutProps) {
-  const { user, loading } = useContext(AuthContext);
+  const { session, isAuthenticated } = useCurrentAccount();
   const router = useRouter();
   const pathname = usePathname();
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
 
   // Check payments feature flag with proper user ID for real-time updates
-  const paymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const paymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!isAuthenticated) {
       router.push('/auth/login');
       return;
     }
-  }, [user, loading, router]);
+  }, [isAuthenticated, router]);
 
   // Check subscription status when payments are enabled and user is available
   useEffect(() => {
-    if (!user || !paymentsEnabled) {
+    if (!session || !paymentsEnabled) {
       setHasActiveSubscription(null);
       return;
     }
 
     const checkSubscriptionStatus = async () => {
       try {
-        const subscription = await getOptimizedUserSubscription(user.uid, {
+        const subscription = await getOptimizedUserSubscription(session.uid, {
           useCache: true,
           cacheTTL: 5 * 60 * 1000 // 5 minute cache
         });
@@ -81,13 +81,13 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
     };
 
     checkSubscriptionStatus();
-  }, [user, paymentsEnabled]);
+  }, [, session, paymentsEnabled]);
 
-  if (loading) {
+  if (!isAuthenticated) {
     return <PageLoader message="Loading settings..." />;
   }
 
-  if (!user) {
+  if (!session) {
     return null;
   }
 

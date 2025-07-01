@@ -47,8 +47,7 @@ export async function POST(request: NextRequest) {
       value: payload.metric.value,
       rating: payload.metric.rating,
       networkType: payload.networkInfo.effectiveType,
-      timestamp: new Date(payload.timestamp).toISOString(),
-    });
+      timestamp: new Date(payload.timestamp).toISOString()});
 
     // In production, you would send this to your analytics service
     // For now, we'll just log and store basic metrics
@@ -69,8 +68,7 @@ export async function POST(request: NextRequest) {
       value: payload.metric.value,
       rating: payload.metric.rating,
       budgetViolations,
-      networkAnalysis,
-    });
+      networkAnalysis});
 
   } catch (error) {
     console.error('Error processing web vitals metric:', error);
@@ -103,8 +101,7 @@ function checkPerformanceBudgets(metric: WebVitalsMetric, networkInfo: NetworkIn
       value: metric.value,
       budget,
       excess: metric.value - budget,
-      severity: metric.rating,
-    });
+      severity: metric.rating});
   }
 
   return violations;
@@ -114,8 +111,7 @@ function analyzeNetworkPerformance(metric: WebVitalsMetric, networkInfo: Network
   const analysis = {
     networkType: networkInfo.effectiveType || 'unknown',
     isSlowConnection: ['slow-2g', '2g', '3g'].includes(networkInfo.effectiveType || ''),
-    recommendations: [] as string[],
-  };
+    recommendations: [] as string[]};
 
   // Network-specific recommendations
   if (analysis.isSlowConnection) {
@@ -161,34 +157,28 @@ export async function GET(request: NextRequest) {
           p75: 2800,
           p90: 3500,
           p95: 4200,
-          rating: 'needs-improvement',
-        },
+          rating: 'needs-improvement'},
         FID: {
           p75: 85,
           p90: 120,
           p95: 180,
-          rating: 'good',
-        },
+          rating: 'good'},
         CLS: {
           p75: 0.08,
           p90: 0.12,
           p95: 0.18,
-          rating: 'good',
-        },
-      },
+          rating: 'good'}},
       networkBreakdown: {
         '4g': { percentage: 65, avgLCP: 2400 },
         '3g': { percentage: 25, avgLCP: 3800 },
         '2g': { percentage: 8, avgLCP: 5200 },
-        'slow-2g': { percentage: 2, avgLCP: 7500 },
-      },
+        'slow-2g': { percentage: 2, avgLCP: 7500 }},
       recommendations: [
         'Implement aggressive code splitting for heavy dependencies',
         'Optimize images with modern formats and responsive sizing',
         'Add service worker caching for better repeat visits',
         'Consider progressive loading for slow connections',
-      ],
-    };
+      ]};
 
     return NextResponse.json(summary);
 

@@ -23,7 +23,7 @@ interface ActivityFilterProviderProps {
 }
 
 // Create context
-const ActivityFilterContext = createContext<ActivityFilterContextType | undefined>(undefined);
+export const ActivityFilterContext = createContext<ActivityFilterContextType | undefined>(undefined);
 
 /**
  * Custom hook to use the activity filter context
@@ -93,8 +93,7 @@ export const ActivityFilterProvider = ({ children }: ActivityFilterProviderProps
   // Value to be provided by the context
   const value: ActivityFilterContextType = {
     viewMode,
-    setViewMode: setViewModeWithLogging,
-  };
+    setViewMode: setViewModeWithLogging};
 
   return (
     <ActivityFilterContext.Provider value={value}>

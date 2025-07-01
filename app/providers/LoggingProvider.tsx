@@ -36,14 +36,12 @@ export const LoggingProvider = ({ children }: LoggingProviderProps) => {
       await fetch("/api/errors", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-        },
+          "Content-Type": "application/json"},
         body: JSON.stringify({
           error: error.message,
           stack: error.stack,
           path
-        }),
-      });
+        })});
     } catch (e) {
       console.error("Failed to log error to backend:", e);
     }

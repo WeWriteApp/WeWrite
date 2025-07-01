@@ -27,8 +27,7 @@ export function UserProfileSkeleton({
   className,
   showTabs = true,
   showStats = true,
-  showBio = true,
-}: UserProfileSkeletonProps) {
+  showBio = true}: UserProfileSkeletonProps) {
   return (
     <div className={cn("p-5 md:p-4 animate-pulse", className)}>
       {/* Navigation bar skeleton */}

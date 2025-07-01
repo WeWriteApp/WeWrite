@@ -17,8 +17,7 @@ import { FinancialUtils } from '../types/financial';
 
 // Mock Firebase
 jest.mock('../firebase/config', () => ({
-  db: {},
-}));
+  db: {}}));
 
 // Mock Firestore functions
 jest.mock('firebase/firestore', () => ({

@@ -17,8 +17,7 @@ import { getStripeSecretKey } from './stripeConfig';
 import { SUBSCRIPTION_TIERS, SubscriptionTier } from './subscriptionTiers';
 
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia',
-});
+  apiVersion: '2024-12-18.acacia'});
 
 // WeWrite main product configuration
 export const WEWRITE_PRODUCT_CONFIG = {
@@ -26,9 +25,7 @@ export const WEWRITE_PRODUCT_CONFIG = {
   description: 'Monthly subscription to support WeWrite creators with tokens',
   metadata: {
     platform: 'wewrite',
-    type: 'subscription',
-  },
-} as const;
+    type: 'subscription'}} as const;
 
 // Cache for product and price IDs
 let cachedProductId: string | null = null;
@@ -46,8 +43,7 @@ export async function getOrCreateWeWriteProduct(): Promise<string> {
     // Search for existing WeWrite subscription product
     const products = await stripe.products.list({
       limit: 100,
-      active: true,
-    });
+      active: true});
 
     const existingProduct = products.data.find(
       product => product.name === WEWRITE_PRODUCT_CONFIG.name
@@ -110,8 +106,7 @@ export async function getOrCreatePriceForTier(
   const prices = await stripe.prices.list({
     product: await getOrCreateWeWriteProduct(),
     active: true,
-    limit: 100,
-  });
+    limit: 100});
 
   const existingPrice = prices.data.find(price => 
     price.unit_amount === Math.round(amount * 100) &&
@@ -147,15 +142,12 @@ async function createNewPrice(
       unit_amount: Math.round(amount * 100), // Convert to cents
       currency: 'usd',
       recurring: {
-        interval: 'month',
-      },
+        interval: 'month'},
       metadata: {
         tier: tierId,
         tokens: tokens.toString(),
         amount: amount.toString(),
-        tierName,
-      },
-    });
+        tierName}});
 
     console.log(`Created new price for tier ${tierId}: ${price.id} ($${amount}/mo, ${tokens} tokens)`);
     return price.id;
@@ -183,8 +175,7 @@ export async function listWeWritePrices(): Promise<Stripe.Price[]> {
     const prices = await stripe.prices.list({
       product: productId,
       active: true,
-      limit: 100,
-    });
+      limit: 100});
     return prices.data;
   } catch (error) {
     console.error('Error listing WeWrite prices:', error);

@@ -137,8 +137,6 @@ const getBestNavigationTarget = (deletedPageId: string): string | null => {
   }
 };
 
-
-
 /**
  * Enhanced navigation for admin/moderation deletion interfaces
  * This variant is specifically for deletion actions performed by admins/moderators
@@ -160,7 +158,7 @@ export const navigateAfterAdminPageDeletion = async (
       router.replace('/admin');
     } else {
       // Use standard post-deletion navigation with browser history support
-      await navigateAfterPageDeletion(page, user, router, false);
+      await navigateAfterPageDeletion(page, session, router, false);
     }
 
     // Show admin-specific success message AFTER navigation starts

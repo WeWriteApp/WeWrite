@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from "react";
 import useOptimizedPages from "../hooks/useOptimizedPages";
 import { auth } from "../firebase/config";
-import { useAuth } from "./AuthProvider";
+import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 import Cookies from 'js-cookie';
 
 /**
@@ -56,8 +56,8 @@ export const DataContext = createContext<DataContextType | undefined>(undefined)
  * @param props.children - Child components to render
  */
 export const DataProvider = ({ children }: DataProviderProps) => {
-  // Use the AuthProvider to get the authenticated user
-  const { user, isAuthenticated } = useAuth();
+  // Use the global store to get the authenticated user
+  const { session, isAuthenticated } = useCurrentAccount();
 
   // Add enhanced timeout and recovery mechanisms to prevent infinite loading
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -77,7 +77,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
     hasMorePages,
     error,
     refreshPages
-  } = useOptimizedPages(user ? user.uid : null, user?.uid, false); // Use `user.uid` to fetch pages for the logged-in user, with default limit for home page
+  } = useOptimizedPages(session?.uid || null, session?.uid, false); // Use `session.uid` to fetch pages for the logged-in user, with default limit for home page
 
   // Derive loading state with timeout protection
   const [loading, setLoading] = useState<boolean>(pagesLoading);
@@ -202,9 +202,9 @@ export const DataProvider = ({ children }: DataProviderProps) => {
   // Add enhanced debugging
   useEffect(() => {
     const debugInfo = {
-      hasUser: !!user,
-      userId: user?.uid,
-      username: user?.username,
+      hasUser: !!session,
+      userId: session?.uid,
+      username: session?.username,
       isAuthenticated,
       authState: auth.currentUser ? 'Firebase auth active' : 'No Firebase auth',
       cookieAuth: Cookies.get('authState') || 'No auth cookie',
@@ -214,13 +214,11 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       recoveryAttempted
     };
 
-
-
     // REMOVED: Automatic refresh logic that was causing infinite reload loops
     // Having zero pages is a valid state for users and should not trigger automatic refreshes
     // This was causing the infinite refresh bug where users with no pages would get stuck
     // in a continuous reload loop every second.
-  }, [user, isAuthenticated, pages, loading]);
+  }, [, session, isAuthenticated, pages, loading]);
 
   // Handle errors from usePages
   const [errorVisible, setErrorVisible] = useState<boolean>(false);
@@ -283,7 +281,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       clearTimeout(shortTimeoutRef.current);
       shortTimeoutRef.current = null;
     }
-  }, [user?.uid]);
+  }, [session?.uid]);
 
   // Function to reset loading state and attempt recovery with enhanced error handling
   const resetLoading = useCallback(() => {

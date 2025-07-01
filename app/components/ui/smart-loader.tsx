@@ -7,7 +7,6 @@ import { Button } from './button';
 import { AlertCircle, RefreshCw, Clock } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-
 interface SmartLoaderProps {
   isLoading: boolean;
   message?: string;

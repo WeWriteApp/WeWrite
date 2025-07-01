@@ -91,8 +91,7 @@ export default function HeroSection({
     onSwipedRight: () => goToIndex((carouselIndex - 1 + heroImages.length) % heroImages.length),
     trackMouse: true,
     trackTouch: true,
-    preventDefaultTouchmoveEvent: true,
-  });
+    preventDefaultTouchmoveEvent: true});
 
   return (
     <section

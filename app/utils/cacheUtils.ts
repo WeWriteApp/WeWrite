@@ -81,8 +81,7 @@ const TTL_MAP: Record<string, number> = {
   'analytics': ANALYTICS_DATA_TTL,
   'static': STATIC_DATA_TTL,
   'config': STATIC_DATA_TTL,
-  'feature_flags': STATIC_DATA_TTL,
-};
+  'feature_flags': STATIC_DATA_TTL};
 
 /**
  * Generate a consistent cache key

@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Plus, X, Quote } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '../ui/dialog';
-import SearchResults from '../search/SearchResults';
-import { AuthContext } from '../../providers/AuthProvider';
+import { useUnifiedSearch, SEARCH_CONTEXTS } from '../../hooks/useUnifiedSearch';
+import SearchResultsDisplay from '../search/SearchResultsDisplay';
+
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { appendPageReference, getPageById } from '../../firebase/database';
 import { toast } from '../ui/use-toast';
 import { useRouter } from 'next/navigation';
@@ -137,7 +139,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
   const [internalIsOpen, setInternalIsOpen] = useState<boolean>(false);
   const [isAdding, setIsAdding] = useState<boolean>(false);
   const [selectedPage, setSelectedPage] = useState<SelectedPage | null>(null);
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
   const router = useRouter();
 
   // Determine which state to use
@@ -158,7 +160,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
 
     try {
       // 1. Check rate limiting
-      if (!checkRateLimit(user.uid)) {
+      if (!checkRateLimit(session.uid)) {
         toast.error(ERROR_MESSAGES.rate_limit_exceeded);
         return;
       }
@@ -200,11 +202,11 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
       };
 
       // 6. Append the current page reference to the selected page
-      const result = await appendPageReference(selectedPage.id, sourcePageData, user.uid);
+      const result = await appendPageReference(selectedPage.id, sourcePageData, session.uid);
 
       if (result) {
         // Log successful operation
-        logAppendOperation(user.uid, page.id, selectedPage.id, true);
+        logAppendOperation(session.uid, page.id, selectedPage.id, true);
 
         setIsOpen(false);
         setSelectedPage(null);
@@ -213,14 +215,14 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
         router.push(`/${selectedPage.id}`);
       } else {
         // Log failed operation
-        logAppendOperation(user.uid, page.id, selectedPage.id, false, 'Append operation returned false');
+        logAppendOperation(session.uid, page.id, selectedPage.id, false, 'Append operation returned false');
         toast.error(ERROR_MESSAGES.unknown_error);
       }
     } catch (error: any) {
       console.error("Error adding page:", error);
 
       // Log failed operation with error details
-      logAppendOperation(user.uid, page.id, selectedPage.id, false, error.message || 'Unknown error');
+      logAppendOperation(session.uid, page.id, selectedPage.id, false, error.message || 'Unknown error');
 
       // Provide specific error messages based on error type
       let errorMessage = ERROR_MESSAGES.unknown_error;
@@ -254,7 +256,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
     }
   };
 
-  if (!user || !page) return null;
+  if (!session || !page) return null;
 
   // Always show the button, even for the page owner
 
@@ -307,13 +309,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
             >
               Select a page to add "{page?.title || 'this page'}" to. You can only add to pages you have permission to edit.
             </p>
-            <SearchResults
-              placeholder="Search your pages..."
-              editableOnly={true}
-              onSelect={handleAddToPage}
-              setShowResults={() => {}}
-              aria-label="Search for pages to add content to"
-            />
+            <AddToPageSearch onSelect={handleAddToPage} />
           </div>
 
           <DialogFooter className="mt-4 pt-4 border-t border-border dark:border-neutral-700">
@@ -338,6 +334,69 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
         </DialogContent>
       </Dialog>
     </>
+  );
+};
+
+// Search component for Add to Page functionality
+const AddToPageSearch = ({ onSelect }: { onSelect: (page: any) => void }) => {
+  const { session } = useCurrentAccount();
+  const userId = session?.uid;
+
+  const { currentQuery, results, isLoading, performSearch } = useUnifiedSearch(userId, {
+    context: SEARCH_CONTEXTS.ADD_TO_PAGE,
+    includeContent: false,
+    includeUsers: false,
+    maxResults: 50
+  });
+
+  // Filter results to only show editable pages
+  const editablePages = results.pages?.filter(page =>
+    page.userId === userId || page.isEditable
+  ) || [];
+
+  const handlePageSelect = (page: any) => {
+    onSelect(page);
+  };
+
+  return (
+    <div className="space-y-4">
+      <input
+        type="text"
+        placeholder="Search your pages..."
+        className="w-full px-3 py-2 border border-input rounded-md"
+        onChange={(e) => performSearch(e.target.value)}
+        aria-label="Search for pages to add content to"
+      />
+
+      {isLoading && (
+        <div className="text-center py-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+        </div>
+      )}
+
+      {editablePages.length > 0 && (
+        <div className="max-h-60 overflow-y-auto space-y-2">
+          {editablePages.map((page) => (
+            <button
+              key={page.id}
+              onClick={() => handlePageSelect(page)}
+              className="w-full text-left p-3 rounded-md border border-input hover:bg-accent transition-colors"
+            >
+              <div className="font-medium">{page.title || 'Untitled'}</div>
+              {page.username && (
+                <div className="text-sm text-muted-foreground">by {page.username}</div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {currentQuery && !isLoading && editablePages.length === 0 && (
+        <div className="text-center py-4 text-muted-foreground">
+          No editable pages found
+        </div>
+      )}
+    </div>
   );
 };
 

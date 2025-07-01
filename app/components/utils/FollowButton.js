@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "../ui/button";
 import { Check, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useContext } from 'react';
-import { AuthContext } from "../../providers/AuthProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import {
   Dialog,
   DialogContent,
@@ -31,7 +30,7 @@ import { followPage, unfollowPage, isFollowingPage } from "../../firebase/follow
  * @param {string} props.size - Button size (sm, md, lg)
  */
 export default function FollowButton({ pageId, pageTitle = "this page", className = "", pageOwnerId, size = "sm" }) {
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showUnfollowDialog, setShowUnfollowDialog] = useState(false);
@@ -39,20 +38,20 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
 
   // Check if the user is already following the page
   useEffect(() => {
-    if (!user || !pageId) {
+    if (!session || !pageId) {
       setIsLoading(false);
       return;
     }
 
     // Prevent following own pages
-    if (pageOwnerId && user.uid === pageOwnerId) {
+    if (pageOwnerId && session.uid === pageOwnerId) {
       setIsLoading(false);
       return;
     }
 
     const checkFollowStatus = async () => {
       try {
-        const following = await isFollowingPage(user.uid, pageId);
+        const following = await isFollowingPage(session.uid, pageId);
         setIsFollowing(following);
       } catch (error) {
         console.error("Error checking follow status:", error);
@@ -62,17 +61,17 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
     };
 
     checkFollowStatus();
-  }, [user, pageId]);
+  }, [, session, pageId]);
 
   // Handle follow button click
   const handleFollowClick = async () => {
-    if (!user) {
+    if (!session) {
       toast.error("You need to sign in to follow pages");
       return;
     }
 
     // Prevent following own pages
-    if (pageOwnerId && user.uid === pageOwnerId) {
+    if (pageOwnerId && session.uid === pageOwnerId) {
       toast.error("You cannot follow your own pages");
       return;
     }
@@ -83,7 +82,7 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
     } else {
       try {
         setIsLoading(true);
-        await followPage(user.uid, pageId);
+        await followPage(session.uid, pageId);
         setIsFollowing(true);
         setAnimateCheck(true);
 
@@ -110,7 +109,7 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
       setIsLoading(true);
 
       // Attempt to unfollow the page
-      await unfollowPage(user.uid, pageId);
+      await unfollowPage(session.uid, pageId);
 
       // Update UI state regardless of backend success
       setIsFollowing(false);

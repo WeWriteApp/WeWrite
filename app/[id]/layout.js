@@ -38,8 +38,7 @@ export async function generateMetadata({ params }) {
         creator: metadata.username || 'Anonymous',
         publisher: 'WeWrite',
         alternates: {
-          canonical: canonicalUrl,
-        },
+          canonical: canonicalUrl},
         robots: {
           index: metadata.isPublic !== false,
           follow: true,
@@ -48,9 +47,7 @@ export async function generateMetadata({ params }) {
             follow: true,
             'max-video-preview': -1,
             'max-image-preview': 'large',
-            'max-snippet': -1,
-          },
-        },
+            'max-snippet': -1}},
         openGraph: {
           title: formattedTitle,
           description: description,
@@ -65,17 +62,14 @@ export async function generateMetadata({ params }) {
               url: imageUrl,
               width: 1200,
               height: 630,
-              alt: formattedTitle,
-            }
-          ],
-        },
+              alt: formattedTitle}
+          ]},
         twitter: {
           card: 'summary_large_image',
           title: formattedTitle,
           description: description,
           images: [imageUrl],
-          creator: metadata.username ? `@${metadata.username}` : undefined,
-        }
+          creator: metadata.username ? `@${metadata.username}` : undefined}
       };
     }
   } catch (error) {
@@ -84,8 +78,7 @@ export async function generateMetadata({ params }) {
 
   return {
     title: 'WeWrite - The social wiki where every page is a fundraiser',
-    description: 'Create, collaborate, and share your writing with others on WeWrite - the social wiki where every page is a fundraiser.',
-  };
+    description: 'Create, collaborate, and share your writing with others on WeWrite - the social wiki where every page is a fundraiser.'};
 }
 
 export default async function GlobalIDLayout({ children, params }) {

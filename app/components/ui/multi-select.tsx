@@ -29,8 +29,7 @@ export function MultiSelect({
   searchPlaceholder = "Search...",
   className = "",
   onSearch,
-  loading = false,
-}: MultiSelectProps) {
+  loading = false}: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);

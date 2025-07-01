@@ -221,8 +221,7 @@ export const formatErrorDetails = (error: Error | any): ErrorDetails => {
     timestamp: new Date().toISOString(),
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : "Unknown",
     url: typeof window !== 'undefined' ? window.location.href : "Unknown",
-    referrer: typeof document !== 'undefined' ? document.referrer : "Unknown",
-  };
+    referrer: typeof document !== 'undefined' ? document.referrer : "Unknown"};
 };
 
 /**

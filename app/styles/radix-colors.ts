@@ -19,8 +19,7 @@ import {
   green,
   greenDark,
   gray,
-  grayDark,
-} from '@radix-ui/colors';
+  grayDark} from '@radix-ui/colors';
 
 // Define our color scales
 export const radixColors = {
@@ -36,8 +35,7 @@ export const radixColors = {
   green,
   greenDark,
   gray,
-  grayDark,
-};
+  grayDark};
 
 // Map Radix colors to our CSS variables
 export const lightModeColors = {
@@ -79,8 +77,7 @@ export const lightModeColors = {
   '--ring': blue.blue7,
   
   // Radius
-  '--radius': '0.5rem',
-};
+  '--radius': '0.5rem'};
 
 export const darkModeColors = {
   // Base colors
@@ -118,8 +115,7 @@ export const darkModeColors = {
   // Border colors
   '--border': slateDark.slate6,
   '--input': slateDark.slate7,
-  '--ring': blueDark.blue7,
-};
+  '--ring': blueDark.blue7};
 
 // Helper function to convert Radix color to HSL format for Tailwind
 export function radixToHsl(color: string): string {

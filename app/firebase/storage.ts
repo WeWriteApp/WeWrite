@@ -88,8 +88,7 @@ export const addDocument = async (
       uploadDate: date,
       createdAt: date,
       updatedAt: date,
-      owner: owner,
-    };
+      owner: owner};
 
     if (requestId) {
       docObj.requestId = requestId;

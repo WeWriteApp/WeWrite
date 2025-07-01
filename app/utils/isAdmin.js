@@ -1,4 +1,3 @@
-
 // Define admin user IDs
 const ADMIN_USER_IDS = [
   'jamiegray2234@gmail.com',

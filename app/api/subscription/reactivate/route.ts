@@ -12,8 +12,7 @@ import { getUserIdFromRequest } from '../../../api/auth-helper';
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-06-20',
-});
+  apiVersion: '2024-06-20'});
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,8 +59,7 @@ export async function POST(request: NextRequest) {
     try {
       // Reactivate the subscription in Stripe by setting cancel_at_period_end to false
       const subscription = await stripe.subscriptions.update(subscriptionId, {
-        cancel_at_period_end: false,
-      });
+        cancel_at_period_end: false});
 
       // Update subscription status in Firestore
       await subscriptionRef.update({
@@ -70,8 +68,7 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
         // Remove any cancellation-related fields
         cancelledAt: null,
-        cancelReason: null,
-      });
+        cancelReason: null});
 
       console.log(`[REACTIVATE SUBSCRIPTION] Successfully reactivated subscription ${subscriptionId} for user ${userId}`);
 
@@ -82,8 +79,7 @@ export async function POST(request: NextRequest) {
           id: subscription.id,
           status: subscription.status,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
-          currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-        }
+          currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString()}
       });
 
     } catch (stripeError: any) {
@@ -91,8 +87,7 @@ export async function POST(request: NextRequest) {
       
       return NextResponse.json({
         success: false,
-        error: `Failed to reactivate subscription: ${stripeError.message}`,
-      }, { status: 500 });
+        error: `Failed to reactivate subscription: ${stripeError.message}`}, { status: 500 });
     }
 
   } catch (error) {

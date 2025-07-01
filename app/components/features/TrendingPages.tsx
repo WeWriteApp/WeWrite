@@ -4,7 +4,6 @@ import React, { Suspense } from 'react';
 import { TrendingPagesSkeleton } from '../ui/skeleton-loaders';
 import dynamic from 'next/dynamic';
 
-// Dynamically import the original TrendingPages component
 const TrendingPagesCore = dynamic(() => import("./TrendingPagesCore"), {
   loading: () => <TrendingPagesSkeleton limit={5} />,
   ssr: false

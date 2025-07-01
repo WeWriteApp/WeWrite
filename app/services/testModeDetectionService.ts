@@ -64,8 +64,7 @@ export class TestModeDetectionService {
       isTestModeActive: false,
       activeTests: {
         mockEarnings: false,
-        inactiveSubscription: false,
-      },
+        inactiveSubscription: false},
       details: {}
     };
 
@@ -193,8 +192,7 @@ export class TestModeDetectionService {
         const response = await fetch('/api/admin/reset-mock-earnings', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-          },
+            'Content-Type': 'application/json'},
           body: JSON.stringify({})
         });
 

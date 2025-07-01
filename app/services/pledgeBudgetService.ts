@@ -150,8 +150,7 @@ export const updatePledgeStatus = async (
     const response = await fetch('/api/pledges/update-status', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Content-Type': 'application/json'},
       body: JSON.stringify({
         pledgeId,
         status,
@@ -177,8 +176,7 @@ export const applyBudgetValidation = async (
     const response = await fetch('/api/pledges/apply-budget-validation', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Content-Type': 'application/json'},
       body: JSON.stringify({
         validationResult
       })
@@ -203,8 +201,7 @@ export const reducePledgeAmount = async (
     const response = await fetch('/api/pledges/reduce-amount', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Content-Type': 'application/json'},
       body: JSON.stringify({
         pledgeId,
         newAmount
@@ -232,8 +229,7 @@ export const handleSubscriptionStatusChange = async (
     const response = await fetch('/api/subscription/handle-status-change', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Content-Type': 'application/json'},
       body: JSON.stringify({
         oldStatus,
         newStatus,
@@ -269,8 +265,7 @@ export const recordPledgeHistory = async (
     const response = await fetch('/api/pledges/record-history', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Content-Type': 'application/json'},
       body: JSON.stringify({
         pageId,
         pageTitle,
@@ -340,8 +335,7 @@ export const restorePledgesFromSuggestions = async (
     const response = await fetch('/api/pledges/restore-from-suggestions', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Content-Type': 'application/json'},
       body: JSON.stringify({
         suggestions,
         maxBudget

@@ -6,28 +6,30 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Loader, Check, X } from 'lucide-react';
 import { checkUsernameAvailability, addUsername } from '../../firebase/auth';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { cn } from '../../lib/utils';
-import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername } from '../../utils/usernameValidation';
+import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername, userNeedsUsername } from '../../utils/usernameValidation';
 
 export default function UsernameEnforcementModal() {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const [open, setOpen] = useState(false);
-  const [username, setUsername] = useState('');
+  const [, sessionname, setUsername] = useState('');
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationMessage, setValidationMessage] = useState<string>("");
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
+  const [sessionnameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
 
-  // Check if the user has a username
+  // Check if the user has a username using centralized logic
   useEffect(() => {
-    if (user && (!user.username || user.username === '')) {
+    if (userNeedsUsername(session)) {
       setOpen(true);
+    } else {
+      setOpen(false);
     }
-  }, [user]);
+  }, [session]);
 
   // Check username availability with debounce
   useEffect(() => {
@@ -99,7 +101,7 @@ export default function UsernameEnforcementModal() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [username]);
+  }, [, sessionname]);
 
   // Handle clicking on a username suggestion
   const handleSuggestionClick = (suggestion: string) => {
@@ -108,15 +110,28 @@ export default function UsernameEnforcementModal() {
   };
 
   const handleSave = async () => {
-    if (!user || !username || !isAvailable) return;
+    if (!session || !username || !isAvailable) return;
 
     setIsSaving(true);
     setError(null);
 
     try {
-      await addUsername(user.uid, username);
-      // Success - close modal
-      setOpen(false);
+      const result = await addUsername(session.uid, username);
+
+      if (result.success) {
+        // Update the user state in the global store to reflect the new username
+        const { setUser } = useGlobalStore.getState();
+        setUser({
+          ...user,
+          username: username,
+          displayName: username
+        });
+
+        // Success - close modal
+        setOpen(false);
+      } else {
+        setError('Failed to save username. Please try again.');
+      }
     } catch (error) {
       console.error('Error saving username:', error);
       setError('Failed to save username. Please try again.');

@@ -61,12 +61,10 @@ export default function AccentColorSelector() {
             ? {
                 // Show the current high contrast color (black in light mode, white in dark mode)
                 backgroundColor: resolvedTheme === 'dark' ? '#FFFFFF' : '#000000',
-                color: resolvedTheme === 'dark' ? '#000000' : '#FFFFFF',
-              }
+                color: resolvedTheme === 'dark' ? '#000000' : '#FFFFFF'}
             : {
                 backgroundColor: colorValue,
-                color: getTextColorForBackground(colorValue),
-              };
+                color: getTextColorForBackground(colorValue)};
 
           // Get name for the color
           const name = color === ACCENT_COLORS.HIGH_CONTRAST
@@ -138,8 +136,7 @@ export default function AccentColorSelector() {
                 )}
                 style={{
                   backgroundColor: colorValue,
-                  color: textColor,
-                }}
+                  color: textColor}}
                 onClick={() => handleColorSelect(colorKey)}
                 title={name}
               >

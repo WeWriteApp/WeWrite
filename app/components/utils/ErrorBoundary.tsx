@@ -94,8 +94,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       await fetch('/api/errors', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({
           error: {
             message: error.message,
@@ -107,8 +106,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
             userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown',
             errorId: this.state.errorId
           }
-        }),
-      });
+        })});
     } catch (reportError) {
       console.error('Failed to report error:', reportError);
     }

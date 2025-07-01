@@ -9,8 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from './dropdown-menu';
+  DropdownMenuSeparator} from './dropdown-menu';
 import { RandomPageFilters } from '../../utils/randomPageNavigation';
 
 interface RandomPageFilterMenuProps {
@@ -41,8 +40,6 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
       }
     }
   }, []);
-
-
 
   // Handle "Not mine" toggle change
   const handleExcludeOwnToggle = () => {
@@ -80,7 +77,6 @@ export const RandomPageFilterMenu: React.FC<RandomPageFilterMenuProps> = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
-
 
         <DropdownMenuItem
           onClick={(e) => {

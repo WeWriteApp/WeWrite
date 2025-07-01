@@ -308,8 +308,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
                   send_page_view: false, // We'll track manually to include titles
                 });
                 console.log('Google Analytics initialized with ID: ${GA_MEASUREMENT_ID}');
-              `,
-            }}
+              `}}
           />
         </>
       )}
@@ -328,8 +327,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
               }
               window.gtag = gtag;
               console.log('Google Analytics disabled in development (stub loaded)');
-            `,
-          }}
+            `}}
         />
       )}
 
@@ -349,8 +347,7 @@ export function UnifiedAnalyticsProvider({ children }: UnifiedAnalyticsProviderP
           fontSize: '12px',
           zIndex: 9999,
           opacity: 0.8,
-          maxWidth: '250px',
-        }}>
+          maxWidth: '250px'}}>
           <div style={{ marginBottom: '4px', fontWeight: 'bold' }}>
             Analytics: {initialized ? '✅' : '❌'}
             {error && <span style={{ color: '#ff4d4d' }}> (Error)</span>}

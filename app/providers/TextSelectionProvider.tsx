@@ -63,8 +63,7 @@ export const TextSelectionProvider: React.FC<TextSelectionProviderProps> = ({
     selectionRange,
     clearSelection,
     copyToClipboard,
-    createShareableLink,
-  };
+    createShareableLink};
 
   return (
     <TextSelectionContext.Provider value={contextValue}>

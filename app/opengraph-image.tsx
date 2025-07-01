@@ -7,8 +7,7 @@ export const runtime = 'edge';
 export const alt = 'WeWrite - Collaborative Writing Platform';
 export const size = {
   width: 1200,
-  height: 630,
-};
+  height: 630};
  
 export default function Image() {
   return new ImageResponse(
@@ -23,8 +22,7 @@ export default function Image() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '50px 80px',
-        }}
+          padding: '50px 80px'}}
       >
         <div
           style={{
@@ -34,8 +32,7 @@ export default function Image() {
             fontSize: '100px',
             fontWeight: 'bold',
             marginBottom: '24px',
-            textAlign: 'center',
-          }}
+            textAlign: 'center'}}
         >
           WeWrite
         </div>
@@ -44,15 +41,13 @@ export default function Image() {
             color: 'white',
             fontSize: '36px',
             fontWeight: 'normal',
-            textAlign: 'center',
-          }}
+            textAlign: 'center'}}
         >
           Collaborative Writing Platform
         </div>
       </div>
     ),
     {
-      ...size,
-    }
+      ...size}
   );
 }

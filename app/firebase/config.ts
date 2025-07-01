@@ -39,8 +39,7 @@ const requiredEnvVars = {
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MSNGR_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID};
 
 // Check for missing environment variables
 const missingVars = Object.entries(requiredEnvVars)
@@ -62,10 +61,7 @@ const newConfig: FirebaseConfig = {
   messagingSenderId: requiredEnvVars.messagingSenderId!,
   appId: requiredEnvVars.appId!,
   // Use the GA measurement ID for Firebase Analytics to ensure events go to the same property
-  measurementId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-};
-
-
+  measurementId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID};
 
 // Initialize Firebase
 export const app: FirebaseApp = initializeApp(newConfig);

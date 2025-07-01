@@ -47,7 +47,7 @@ export class VisitorValidationService {
     let confidence = 1.0;
 
     try {
-      // Get current active sessions
+      // Get current active accounts
       const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
       const visitorsRef = collection(db, 'siteVisitors');
       const q = query(

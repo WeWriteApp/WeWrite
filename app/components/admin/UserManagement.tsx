@@ -32,10 +32,10 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Search, Mail, MailCheck, Clock, RefreshCw, Check, X, AlertTriangle } from 'lucide-react';
-import { collection, query, orderBy, limit, getDocs, where, doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { auth } from '../../firebase/auth';
-import { getQueueCount } from '../../utils/syncQueue';
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Alert, AlertDescription } from '../ui/alert';
 
@@ -170,7 +170,6 @@ export function UserManagement() {
 
       console.log(`Found ${snapshot.docs.length} users in Firestore`);
       const userData: UserData[] = [];
-      const authInstance = auth;
 
       for (const userDoc of snapshot.docs) {
         try {
@@ -189,7 +188,11 @@ export function UserManagement() {
             emailVerified: false, // Default to false, will be updated from Firebase Auth
             createdAt: data.createdAt,
             lastLogin: data.lastLogin,
-            featureFlags: {}
+            featureFlags: {
+              payments: null,
+              map_view: null,
+              calendar_view: null
+            }
           };
 
           // Get email verification status from Firebase Auth
@@ -211,12 +214,8 @@ export function UserManagement() {
           }
 
           // Get queue count for this user
-          try {
-            user.queueCount = await getQueueCount(user.uid);
-          } catch (queueError) {
-            console.warn(`Could not get queue count for user ${user.uid}:`, queueError);
-            user.queueCount = 0; // Default to 0 if we can't get queue count
-          }
+          // TODO: Implement queue count functionality when available
+          user.queueCount = 0; // Default to 0 for now
 
           // Load feature flag overrides for this user
           for (const flag of FEATURE_FLAGS) {
@@ -460,7 +459,7 @@ export function UserManagement() {
                 ? 'text-success hover:text-success/80'
                 : 'text-destructive hover:text-destructive/80'
           }`}
-          onClick={() => toggleUserFeatureFlag(user.uid, flag, value)}
+          onClick={() => toggleUserFeatureFlag(user.uid, flag, value ?? null)}
           disabled={loading}
           title={getTooltipText()}
         >
@@ -589,30 +588,30 @@ export function UserManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => (
-                <TableRow key={user.uid} className="hover:bg-muted/50">
+              {filteredUsers.map((session) => (
+                <TableRow key={session.uid} className="hover:bg-muted/50">
                   <TableCell className="font-medium">
-                    <div className="truncate max-w-[180px]" title={user.email}>
-                      {user.email}
+                    <div className="truncate max-w-[180px]" title={session.email}>
+                      {session.email}
                     </div>
                   </TableCell>
                   <TableCell>
-                    {user.username ? (
-                      <span className="text-sm">@{user.username}</span>
+                    {session.username ? (
+                      <span className="text-sm">@{session.username}</span>
                     ) : (
                       <span className="text-muted-foreground text-sm">-</span>
                     )}
                   </TableCell>
                   <TableCell>
-                    {getVerificationBadge(user.emailVerified || false)}
+                    {getVerificationBadge(session.emailVerified || false)}
                   </TableCell>
                   <TableCell>
-                    {user.queueCount !== undefined && getQueueBadge(user.queueCount)}
+                    {session.queueCount !== undefined && getQueueBadge(session.queueCount)}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {formatDate(user.createdAt)}
+                    {formatDate(session.createdAt)}
                   </TableCell>
-                  {FEATURE_FLAGS.map(flag => renderFeatureFlagCell(user, flag))}
+                  {FEATURE_FLAGS.map(flag => renderFeatureFlagCell(session, flag))}
                 </TableRow>
               ))}
             </TableBody>

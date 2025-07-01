@@ -135,4 +135,3 @@ async function getUsernameById(db, rtdb, userId) {
     return "Missing username";
   }
 }
-

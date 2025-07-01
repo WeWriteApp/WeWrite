@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 import { Button } from '../../components/ui/button';
 import { ChevronLeft, Filter, GripVertical } from 'lucide-react';
 import { isAdmin } from "../../utils/isAdmin";
@@ -39,11 +39,12 @@ import './dashboard.css';
 
 const WIDGET_TYPE = 'WIDGET';
 
-const DraggableWidget = ({ id, index, moveWidget, children }) => {
-  const ref = useRef(null);
+const DraggableWidget = ({ id, index, moveWidget, children }: any) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   const [, drop] = useDrop({
     accept: WIDGET_TYPE,
-    hover(item, monitor) {
+    hover(item: any, monitor: any) {
       if (!ref.current) {
         return;
       }
@@ -53,8 +54,10 @@ const DraggableWidget = ({ id, index, moveWidget, children }) => {
         return;
       }
       const hoverBoundingRect = ref.current?.getBoundingClientRect();
+      if (!hoverBoundingRect) return;
       const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
       const clientOffset = monitor.getClientOffset();
+      if (!clientOffset) return;
       const hoverClientY = clientOffset.y - hoverBoundingRect.top;
       if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
         return;
@@ -64,22 +67,20 @@ const DraggableWidget = ({ id, index, moveWidget, children }) => {
       }
       moveWidget(dragIndex, hoverIndex);
       item.index = hoverIndex;
-    },
-  });
+    }});
 
   const [{ isDragging }, drag, preview] = useDrag({
     type: WIDGET_TYPE,
     item: { id, index },
     collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
+      isDragging: monitor.isDragging()})});
 
   drag(drop(ref));
+  preview(previewRef);
 
   return (
     <div
-      ref={preview}
+      ref={previewRef}
       style={{ opacity: isDragging ? 0.5 : 1, cursor: 'move' }}
     >
       <div ref={ref} className="relative">
@@ -108,7 +109,7 @@ const initialWidgets = [
 ];
 
 export default function AdminDashboardPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { session, isLoading: authLoading } = useCurrentAccount();
   const router = useRouter();
 
   const [widgets, setWidgets] = useState(initialWidgets);
@@ -217,8 +218,8 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (authLoading) return; // Wait for authentication to complete
 
-    if (user) {
-      const adminCheck = isAdmin(user.email);
+    if (session && session.email) {
+      const adminCheck = isAdmin(session.email);
       setIsAdminUser(adminCheck);
       if (!adminCheck) {
         console.log('❌ [Admin Dashboard] User is not admin, redirecting to home');
@@ -231,7 +232,7 @@ export default function AdminDashboardPage() {
       console.log('❌ [Admin Dashboard] No user, redirecting to login');
       router.push('/auth/login?redirect=/admin/dashboard');
     }
-  }, [user, authLoading, router]);
+  }, [session, authLoading, router]);
 
   // Prevent options bar from closing due to dashboard loading state changes
   useEffect(() => {
@@ -240,7 +241,7 @@ export default function AdminDashboardPage() {
   }, [dashboardLoading]);
 
   // Show loading while checking auth
-  if (authLoading || !user || !isAdmin(user.email)) {
+  if (authLoading || !session || !session.email || !isAdmin(session.email)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="loader"></div>
@@ -338,9 +339,9 @@ export default function AdminDashboardPage() {
                   {widgets.map((widget, index) => {
                     const WidgetComponent = widget.component;
                     return (
-                      <DraggableWidget key={widget.id} index={index} moveWidget={moveWidget}>
+                      <DraggableWidget key={widget.id} id={widget.id} index={index} moveWidget={moveWidget}>
                         <WidgetErrorBoundary widgetName={widget.id}>
-                          <WidgetComponent dateRange={dateRange} granularity={granularity} globalFilters={globalFilters} />
+                          <WidgetComponent {...({} as any)} />
                         </WidgetErrorBoundary>
                       </DraggableWidget>
                     );

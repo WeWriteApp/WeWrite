@@ -3,7 +3,7 @@
  * End-to-end testing for payment processing, subscription management, and webhook handling
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/jest';
+import { describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { initAdmin } from '../firebase/admin';
 import { UnifiedFeeCalculationService } from '../services/unifiedFeeCalculationService';
 import { PaymentRecoveryService } from '../services/paymentRecoveryService';

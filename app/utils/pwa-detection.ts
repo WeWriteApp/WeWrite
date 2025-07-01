@@ -15,8 +15,7 @@ const DEVICE_ID = typeof window !== 'undefined' ?
 const STORAGE_KEYS = {
   PWA_BANNER_DISMISSED: `device_${DEVICE_ID}_pwa_banner_dismissed`,
   PWA_BANNER_DISMISSED_TIMESTAMP: `device_${DEVICE_ID}_pwa_banner_dismissed_timestamp`,
-  PWA_DONT_REMIND: `device_${DEVICE_ID}_pwa_dont_remind`,
-};
+  PWA_DONT_REMIND: `device_${DEVICE_ID}_pwa_dont_remind`};
 
 /**
  * Check if the app is running in standalone mode (PWA)
@@ -154,8 +153,7 @@ export const openExternalLink = (url: string, analyticsLabel?: string): void => 
         analyticsService.trackEvent({
           category: EVENT_CATEGORIES.EXTERNAL_LINK,
           action: 'click',
-          label: analyticsLabel,
-        });
+          label: analyticsLabel});
       } catch (error) {
         console.error('Error tracking external link click:', error);
       }
@@ -189,8 +187,7 @@ export const openExternalLinkInNewTab = (url: string, analyticsLabel?: string): 
         analyticsService.trackEvent({
           category: EVENT_CATEGORIES.EXTERNAL_LINK,
           action: 'click',
-          label: analyticsLabel,
-        });
+          label: analyticsLabel});
       } catch (error) {
         console.error('Error tracking external link click:', error);
       }

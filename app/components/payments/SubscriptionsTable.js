@@ -4,11 +4,10 @@ import { PortfolioContext } from "../../providers/PortfolioProvider";
 import { getPageById } from "../../firebase/database";
 import {PillLink} from "../utils/PillLink";
 import { useFeatureFlag } from "../../utils/feature-flags";
-import { useAuth } from "../../providers/AuthProvider";
-
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 const SubscriptionsTable = () => {
-  const { user } = useAuth();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  const { session } = useCurrentAccount();
+  const isPaymentsEnabled = useFeatureFlag('payments', session?.email);
 
   // If payments feature flag is disabled, don't render anything
   if (!isPaymentsEnabled) {

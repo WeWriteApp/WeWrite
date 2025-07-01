@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { doc, getDoc } from "firebase/firestore";
 import { addUsername, updateEmail as updateFirebaseEmail, checkUsernameAvailability } from "../../firebase/auth";
 import { db } from "../../firebase/database";
@@ -20,13 +20,13 @@ import ConfirmationModal from '../../components/utils/ConfirmationModal';
 import { ChevronLeft, Edit3, Save, X, AlertCircle } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const router = useRouter();
 
   // Custom modal hooks
   const { alertState, showError, showSuccess, closeAlert } = useAlert();
   const { confirmationState, confirm, closeConfirmation } = useConfirmation();
-  const [username, setUsername] = useState('');
+  const [, sessionname, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,26 +38,26 @@ export default function ProfilePage() {
   const [tempEmail, setTempEmail] = useState('');
 
   useEffect(() => {
-    if (!user) {
+    if (!session) {
       router.push('/auth/login');
       return;
     }
 
     loadUserData();
-  }, [user, router]);
+  }, [, session, router]);
 
   const loadUserData = async () => {
-    if (!user) return;
+    if (!session) return;
 
     try {
       // Load user profile data
-      const userDocRef = doc(db, 'users', user.uid);
+      const userDocRef = doc(db, 'users', session.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
         const currentUsername = userData.username || '';
-        const currentEmail = user.email || '';
+        const currentEmail = session.email || '';
         setUsername(currentUsername);
         setEmail(currentEmail);
         setTempUsername(currentUsername);
@@ -120,7 +120,7 @@ export default function ProfilePage() {
   };
 
   const handleUsernameChange = async (newUsername: string) => {
-    if (!user) return;
+    if (!session) return;
     if (!newUsername || newUsername === username) return;
 
     // Validate username format first
@@ -145,7 +145,7 @@ export default function ProfilePage() {
       }
 
       // Add username to user profile
-      await addUsername(user.uid, newUsername);
+      await addUsername(session.uid, newUsername);
 
       // Update local state
       setUsername(newUsername);
@@ -161,7 +161,7 @@ export default function ProfilePage() {
   };
 
   const handleEmailChange = async (newEmail: string) => {
-    if (!user) return;
+    if (!session) return;
     if (!newEmail || newEmail === email) return;
 
     try {
@@ -184,7 +184,7 @@ export default function ProfilePage() {
     }
   };
 
-  if (!user) {
+  if (!session) {
     return null;
   }
 

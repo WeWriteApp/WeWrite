@@ -46,8 +46,7 @@ if (process.env.NODE_ENV === 'development') {
     console.log('Successfully parsed credentials JSON with project_id:', credentials.project_id);
     bigquery = new BigQuery({
       projectId: credentials.project_id,
-      credentials,
-    });
+      credentials});
     console.log('BigQuery client initialized successfully');
   } catch (error) {
     console.error("Failed to initialize BigQuery:", error);
@@ -80,8 +79,7 @@ async function testBigQueryConnection() {
     console.error('BigQuery connection test failed:', error);
     console.error('Connection error details:', {
       message: error.message,
-      stack: error.stack,
-    });
+      stack: error.stack});
     return false;
   }
 }
@@ -494,8 +492,6 @@ export async function GET(request) {
     console.log(`Search API called with searchTerm: "${searchTerm}", userId: ${userId}, filterByUserId: ${filterByUserId}`);
     console.log(`SEARCH API USING FIXED MULTI-WORD SEARCH LOGIC`);
 
-
-
     // IMPORTANT FIX: Log more details about the search request
     console.log('Search API request details:', {
       searchTerm,
@@ -573,8 +569,8 @@ export async function GET(request) {
             // Format users for the response
             users = users.map(user => ({
               id: user.id,
-              username: user.username || "Anonymous",
-              photoURL: user.photoURL || null,
+              username: session.username || "Anonymous",
+              photoURL: session.photoURL || null,
               type: 'user'
             }));
           } catch (userError) {
@@ -619,8 +615,8 @@ export async function GET(request) {
           // Format users for the response
           users = users.map(user => ({
             id: user.id,
-            username: user.username || "Anonymous",
-            photoURL: user.photoURL || null,
+            username: session.username || "Anonymous",
+            photoURL: session.photoURL || null,
             type: 'user'
           }));
         } catch (userError) {

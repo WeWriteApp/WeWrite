@@ -1,8 +1,8 @@
 "use client";
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 import { collection, query, limit, getDocs } from "firebase/firestore";
 import { ref, onValue } from "firebase/database";
-import { AuthContext } from "../providers/AuthProvider";
+import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 import { db } from "../firebase/config";
 import { rtdb } from "../firebase/rtdb";
 import {
@@ -22,8 +22,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from "../components/ui/table";
+  TableRow} from "../components/ui/table";
 import {
   Tooltip,
   TooltipContent,
@@ -33,7 +32,7 @@ import {
 import { PillLink } from "../components/utils/PillLink";
 
 export default function LeaderboardPage() {
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
   const [loading, setLoading] = useState(true);
   const [allUsers, setAllUsers] = useState([]);
   const [displayedUsers, setDisplayedUsers] = useState([]);
@@ -80,7 +79,7 @@ export default function LeaderboardPage() {
     const fetchUsersAndPages = async () => {
       try {
         // First, let's check if user auth state is available
-        console.log("Leaderboard: Current auth user state:", user ? `Logged in as ${user.email}` : "Not logged in");
+        console.log("Leaderboard: Current auth user state:", user ? `Logged in as ${session.email}` : "Not logged in");
 
         // Try to fetch users from RTDB
         console.log("Leaderboard: Attempting to fetch users from RTDB");
@@ -133,7 +132,7 @@ export default function LeaderboardPage() {
                     console.log("Leaderboard: Processing user data");
 
                     // Process users with their page counts
-                    const usersArray = Object.entries(data).map(([id, userData]) => ({
+                    const usersArray = Object.entries(data).map(([id, sessionData]) => ({
                       id,
                       username: userData.username || userData.displayName || "Unknown User",
                       photoURL: userData.photoURL,
@@ -190,7 +189,7 @@ export default function LeaderboardPage() {
     };
 
     fetchUsersAndPages();
-  }, [user]);
+  }, [, session]);
 
   return (
     <main className="p-4 md:p-6 space-y-6 max-w-full overflow-hidden">
@@ -213,7 +212,7 @@ export default function LeaderboardPage() {
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
             <span className="ml-2">Loading users...</span>
           </div>
-        ) : error && !user ? (
+        ) : error && !session ? (
           <div className="flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400">
             <Info className="h-4 w-4 flex-shrink-0" />
             <p>Sign in to see the leaderboard</p>
@@ -271,7 +270,7 @@ export default function LeaderboardPage() {
                               variant="primary"
                               className="max-w-[180px] truncate"
                             >
-                              {user.username}
+                              {session.username}
                             </PillLink>
                           </TooltipTrigger>
                           <TooltipContent>

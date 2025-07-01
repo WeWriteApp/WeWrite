@@ -22,8 +22,7 @@ const ThreeTier = () => {
               className="w-1/3 mb-8 object-cover object-center rounded-xl"
               style={
                 {
-                  height: "300px",
-                }
+                  height: "300px"}
               }
             />
             <div className="flex flex-col w-2/3 pl-8">
@@ -46,8 +45,7 @@ const ThreeTier = () => {
               alt="Electric Car"
               className="w-1/3 mb-8 object-cover object-center rounded-xl"
               style={{
-                height: "300px",
-              }}
+                height: "300px"}}
             />
             <div className="flex flex-col w-2/3 pl-8">
               <h2 className="text-4xl font-regular mb-8 w-1/2">
@@ -67,8 +65,7 @@ const ThreeTier = () => {
               alt="Electric Car"
               className="w-1/3 mb-8 object-cover object-center rounded-xl"
               style={{
-                height: "300px",
-              }}
+                height: "300px"}}
             />
             <div className="flex flex-col w-2/3 pl-8">
               <h2 className="text-4xl font-regular mb-8 w-1/2">

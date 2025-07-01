@@ -1,0 +1,45 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit dependency checks..."
+
+# Check for import organization
+echo "📋 Checking import organization..."
+npm run organize:imports:dry || {
+  echo "⚠️  Imports need organization. Run: npm run organize:imports"
+}
+
+# Run dependency validation
+echo "🔗 Validating imports..."
+npm run deps:validate || {
+  echo "❌ Import validation failed. Run: npm run deps:fix"
+  exit 1
+}
+
+# Check for circular dependencies
+echo "🔄 Checking for circular dependencies..."
+npm run deps:check | grep -q "CIRCULAR DEPENDENCIES" && {
+  echo "⚠️  Circular dependencies detected. Please review and refactor."
+}
+
+# Run linting
+echo "🧹 Running ESLint..."
+npm run lint || {
+  echo "❌ Linting failed. Run: npm run lint --fix"
+  exit 1
+}
+
+# Run type checking
+echo "🔍 Type checking..."
+npx tsc --noEmit || {
+  echo "❌ TypeScript compilation failed. Fix type errors."
+  exit 1
+}
+
+# Check for outdated dependencies (warning only)
+echo "📦 Checking for outdated dependencies..."
+npm outdated || {
+  echo "⚠️  Some dependencies are outdated. Consider running: npm run deps:update:dry"
+}
+
+echo "✅ Pre-commit checks passed!"

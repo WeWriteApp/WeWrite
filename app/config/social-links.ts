@@ -24,4 +24,4 @@ export const socialLinks: SocialLink[] = [
     handle: '@getwewrite',
     label: 'Follow on Instagram'
   }
-]; 
+];

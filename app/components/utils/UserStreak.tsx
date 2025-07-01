@@ -140,7 +140,6 @@ const UserStreak: React.FC<UserStreakProps> = ({ userId }) => {
               </Tooltip>
             </div>
 
-
           </div>
         </CardContent>
       </Card>

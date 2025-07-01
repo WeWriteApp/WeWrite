@@ -31,8 +31,7 @@ function initializeFirebase() {
 
 // Initialize Stripe
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2025-04-30.basil' as any,
-});
+  apiVersion: '2025-04-30.basil' as any});
 
 // POST /api/subscription/preview-change - Preview proration for subscription changes
 export async function POST(request: NextRequest) {
@@ -113,18 +112,14 @@ export async function POST(request: NextRequest) {
       unit_amount: Math.round(finalAmount * 100), // Convert to cents
       currency: 'usd',
       recurring: {
-        interval: 'month',
-      },
+        interval: 'month'},
       product_data: {
         name: `WeWrite ${newTier === 'custom' ? 'Custom' : getTierById(newTier)?.name} (Preview)`,
-        description: `${finalTokens} tokens per month for supporting WeWrite creators`,
-      },
+        description: `${finalTokens} tokens per month for supporting WeWrite creators`},
       metadata: {
         tier: newTier,
         tokens: finalTokens.toString(),
-        preview: 'true',
-      },
-    });
+        preview: 'true'}});
 
     try {
       // Preview the subscription update to get proration details
@@ -134,11 +129,9 @@ export async function POST(request: NextRequest) {
         subscription_items: [
           {
             id: currentSubscription.items.data[0].id,
-            price: tempPrice.id,
-          },
+            price: tempPrice.id},
         ],
-        subscription_proration_behavior: 'create_prorations',
-      });
+        subscription_proration_behavior: 'create_prorations'});
 
       // Calculate proration amount
       let prorationAmount = 0;
@@ -183,13 +176,11 @@ export async function POST(request: NextRequest) {
         isUpgrade: isUpgrade,
         description: description,
         currentPeriodEnd: new Date(currentSubscription.current_period_end * 1000).toISOString(),
-        tokens: finalTokens,
-      };
+        tokens: finalTokens};
 
       return NextResponse.json({
         success: true,
-        preview: preview,
-      });
+        preview: preview});
 
     } finally {
       // Clean up the temporary price
@@ -225,8 +216,7 @@ export async function POST(request: NextRequest) {
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
-  }).format(amount);
+    currency: 'USD'}).format(amount);
 }
 
 // GET method not allowed

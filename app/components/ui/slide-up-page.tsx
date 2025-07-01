@@ -64,8 +64,7 @@ export function SlideUpPage({
   const slideUpVariants = {
     initial: {
       y: '100vh',
-      opacity: 0,
-    },
+      opacity: 0},
     animate: {
       y: 0,
       opacity: 1,

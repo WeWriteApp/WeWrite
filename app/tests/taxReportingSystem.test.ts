@@ -12,8 +12,7 @@ import { FinancialUtils } from '../types/financial';
 
 // Mock Firebase
 jest.mock('../firebase/config', () => ({
-  db: {},
-}));
+  db: {}}));
 
 // Mock Firestore functions
 jest.mock('firebase/firestore', () => ({
@@ -28,8 +27,7 @@ jest.mock('firebase/firestore', () => ({
   limit: jest.fn(),
   getDocs: jest.fn(),
   writeBatch: jest.fn(),
-  serverTimestamp: jest.fn(() => new Date()),
-}));
+  serverTimestamp: jest.fn(() => new Date())}));
 
 describe('Tax Reporting System', () => {
   let taxReportingService: TaxReportingService;

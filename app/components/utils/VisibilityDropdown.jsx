@@ -6,8 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
+  DropdownMenuTrigger} from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
 
 /**
@@ -26,8 +25,7 @@ export default function VisibilityDropdown({
   isPublic,
   onVisibilityChange,
   disabled = false,
-  className = "",
-}) {
+  className = ""}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

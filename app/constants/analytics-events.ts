@@ -8,8 +8,7 @@
 
 // Page View Events
 export const PAGE_EVENTS = {
-  PAGE_VIEW: 'page_view',
-};
+  PAGE_VIEW: 'page_view'};
 
 // User Authentication Events
 export const AUTH_EVENTS = {
@@ -18,8 +17,7 @@ export const AUTH_EVENTS = {
   USER_REGISTER: 'user_register',
   USER_CREATED: 'user_created',
   PASSWORD_RESET: 'password_reset',
-  PASSWORD_RESET_REQUEST: 'password_reset_request',
-};
+  PASSWORD_RESET_REQUEST: 'password_reset_request'};
 
 // Content Creation Events
 export const CONTENT_EVENTS = {
@@ -34,8 +32,7 @@ export const CONTENT_EVENTS = {
   PAGE_CREATION_ABANDONED: 'page_creation_abandoned',
   REPLY_CREATED: 'reply_created',
   REPLY_EDITED: 'reply_edited',
-  REPLY_DELETED: 'reply_deleted',
-};
+  REPLY_DELETED: 'reply_deleted'};
 
 // User Interaction Events
 export const INTERACTION_EVENTS = {
@@ -64,8 +61,7 @@ export const INTERACTION_EVENTS = {
   CUSTOM_TEXT_TOGGLED: 'custom_text_toggled',
   AUTHOR_TOGGLE_CHANGED: 'author_toggle_changed',
   PAGE_SHARE_ABORTED: 'page_share_aborted',
-  PAGE_SHARE_SUCCEEDED: 'page_share_succeeded',
-};
+  PAGE_SHARE_SUCCEEDED: 'page_share_succeeded'};
 
 // Group Events - REMOVED: Groups feature has been completely removed from the application
 // export const GROUP_EVENTS = {
@@ -86,16 +82,14 @@ export const FEATURE_EVENTS = {
   USERNAME_CHANGED: 'username_changed',
   FEATURE_FLAG_USED: 'feature_flag_used',
   ERROR_OCCURRED: 'error_occurred',
-  ERROR_RECOVERED: 'error_recovered',
-};
+  ERROR_RECOVERED: 'error_recovered'};
 
 // PWA Events
 export const PWA_EVENTS = {
   PWA_STATUS: 'pwa_status',
   PWA_STATUS_CHANGED: 'pwa_status_changed',
   PWA_BANNER_ACTION: 'pwa_banner_action',
-  PWA_BANNER_RESET: 'pwa_banner_reset',
-};
+  PWA_BANNER_RESET: 'pwa_banner_reset'};
 
 // Navigation Events
 export const NAVIGATION_EVENTS = {
@@ -105,15 +99,13 @@ export const NAVIGATION_EVENTS = {
   BACK_BUTTON_USED: 'navigation_back_button',
   BREADCRUMB_CLICKED: 'navigation_breadcrumb',
   MENU_OPENED: 'navigation_menu_opened',
-  SEARCH_INITIATED: 'navigation_search_initiated',
-};
+  SEARCH_INITIATED: 'navigation_search_initiated'};
 
 // Session Events
 export const SESSION_EVENTS = {
   SESSION_START: 'session_start',
   SESSION_END: 'session_end',
-  TIME_ON_PAGE: 'time_on_page',
-};
+  TIME_ON_PAGE: 'time_on_page'};
 
 // All events combined
 export const ANALYTICS_EVENTS = {
@@ -125,8 +117,7 @@ export const ANALYTICS_EVENTS = {
   // ...GROUP_EVENTS, // Removed: Groups feature has been completely removed
   ...FEATURE_EVENTS,
   ...SESSION_EVENTS,
-  ...PWA_EVENTS,
-};
+  ...PWA_EVENTS};
 
 // Event categories
 export const EVENT_CATEGORIES = {
@@ -142,5 +133,4 @@ export const EVENT_CATEGORIES = {
   SYSTEM: 'System',
   PWA: 'PWA',
   APP: 'App',
-  ADMIN: 'Admin',
-};
+  ADMIN: 'Admin'};

@@ -1,25 +1,25 @@
 'use client';
 
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button } from "../../components/ui/button";
 import { ChevronLeft } from 'lucide-react';
-import { SyncQueueSettings } from '../../components/utils/SyncQueueSettings';
+
 import PWAInstallationCard from '../../components/utils/PWAInstallationCard';
 
 export default function AdvancedPage() {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) {
+    if (!session) {
       router.push('/auth/login');
       return;
     }
-  }, [user, router]);
+  }, [, session, router]);
 
-  if (!user) {
+  if (!session) {
     return null;
   }
 
@@ -51,7 +51,6 @@ export default function AdvancedPage() {
         {/* Advanced Settings Sections */}
         <div className="space-y-8">
           {/* Sync Queue Settings */}
-          <SyncQueueSettings />
 
           {/* PWA Installation */}
           <PWAInstallationCard />

@@ -107,7 +107,19 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
       `;
     }
 
-    return `${baseClasses} ${styleClasses}`.trim().replace(/\s+/g, ' ');
+    const finalClasses = `${baseClasses} ${styleClasses}`.trim().replace(/\s+/g, ' ');
+
+    // Debug output for filled pills
+    if (styleClasses.includes('bg-primary')) {
+      console.log('PillStyleContext debug - filled pill:', {
+        baseClasses,
+        styleClasses,
+        finalClasses,
+        pillStyle
+      });
+    }
+
+    return finalClasses;
   };
 
   // Get the best text color for a pill based on its background

@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { useFeatureFlag } from '../../utils/feature-flags';
-import { useAuth } from '../../providers/AuthProvider';
-
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 interface WriterEarningsFeatureGuardProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
@@ -17,8 +16,8 @@ export default function WriterEarningsFeatureGuard({
   children,
   fallback = null
 }: WriterEarningsFeatureGuardProps) {
-  const { user } = useAuth();
-  const paymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const { currentAccount } = useCurrentAccount();
+  const paymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
 
   if (!paymentsEnabled) {
     return <>{fallback}</>;

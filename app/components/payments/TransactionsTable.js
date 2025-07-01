@@ -11,39 +11,32 @@ const TransactionsTable = ({
     (transaction) => transaction.paidFor === id
   );
 
-
   const columns = [
     {
       name: "ID",
       selector: (row) => row.id,
-      sortable: true,
-    },
+      sortable: true},
     {
       name: "Paid to",
       selector: (row) => row.paidTo,
-      sortable: true,
-    },
+      sortable: true},
     {
       name: "Paid for",
       selector: (row) => row.paidFor,
-      sortable: true,
-    },
+      sortable: true},
     {
       name: "Paid by",
       selector: (row) => row.paidBy,
-      sortable: true,
-    },
+      sortable: true},
     {
       name: "Amount",
       selector: (row) => row.amount,
-      sortable: true,
-    },
+      sortable: true},
     {
       name: "Date",
       selector: (row) => row.date,
       cell: (row) => <div>{new Date(row.date).toLocaleDateString()}</div>,
-      sortable: true,
-    },
+      sortable: true},
     {
       name: "Status",
       selector: (row) => row.status,
@@ -58,8 +51,7 @@ const TransactionsTable = ({
           )}
         </div>
       ),
-      sortable: true,
-    },
+      sortable: true},
   ];
 
   if (!transactions) {

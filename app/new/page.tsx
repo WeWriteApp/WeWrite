@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useContext } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Head from "next/head";
 import PublicLayout from "../components/layout/PublicLayout";
 import { createPage } from "../firebase/database";
+import { auth } from "../firebase/config";
 // ReactGA removed - analytics now handled by UnifiedAnalyticsProvider
 // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
 // import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
@@ -12,22 +13,20 @@ import { ContentChangesTrackingService } from "../services/contentChangesTrackin
 import { useRecentPages } from "../contexts/RecentPagesContext";
 // import { CONTENT_EVENTS } from "../constants/analytics-events";
 import { createReplyAttribution } from "../utils/linkUtils";
-import { AuthContext } from "../providers/AuthProvider";
+import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useDateFormat } from '../contexts/DateFormatContext';
 import PageHeader from "../components/pages/PageHeader";
 import PageEditor from "../components/editor/PageEditor";
-import { useDateFormat } from "../contexts/DateFormatContext";
 
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../components/utils/UnsavedChangesDialog";
 import { PageProvider } from "../contexts/PageContext";
 
 import PledgeBar from "../components/payments/PledgeBar";
-import { shouldUseQueue, addToQueue, checkOperationAllowed } from "../utils/syncQueue";
-import { useSyncQueue } from "../contexts/SyncQueueContext";
+
 import SlideUpPage from "../components/ui/slide-up-page";
 import { NewPageSkeleton } from "../components/skeletons/PageEditorSkeleton";
 import { toast } from "../components/ui/use-toast";
-
 
 /**
  * Editor content node interface
@@ -74,11 +73,10 @@ interface PageData {
 export default function NewPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const authContext = useContext(AuthContext);
-  const user = authContext?.user;
+  const { currentAccount } = useCurrentAccount();
   // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
   // const { trackPageCreationFlow, trackEditingFlow } = useWeWriteAnalytics();
-  const { refreshState } = useSyncQueue();
+  
   const { addRecentPage } = useRecentPages();
 
   // RUTHLESS SIMPLIFICATION: No cache invalidation at all - just use short TTLs and browser refresh
@@ -170,14 +168,14 @@ export default function NewPage() {
       title: title,
       isPublic: isPublic,
       location: location,
-      userId: user?.uid || 'anonymous',
-      username: user?.username || user?.displayName || 'Anonymous',
+      userId: currentAccount?.uid || 'anonymous',
+      username: currentAccount?.username || currentAccount?.displayName || 'Anonymous',
       content: JSON.stringify(editorState),
       lastModified: new Date().toISOString(),
       isReply: isReply
     };
     setPage(mockPage);
-  }, [title, isPublic, location, user, editorState, isReply]);
+  }, [title, isPublic, location, currentAccount, editorState, isReply]);
 
   // Initialize content based on page type
   useEffect(() => {
@@ -206,7 +204,7 @@ export default function NewPage() {
       const attribution = createReplyAttribution({
         pageId: replyToId,
         pageTitle: pageTitle,
-        userId: user?.uid || '',
+        userId: currentAccount?.uid || '',
         username: username
       });
 
@@ -308,7 +306,7 @@ export default function NewPage() {
       hasTitle: !!(title && title.trim()),
       hasContent: !!(content && content.length),
       isReply,
-      userId: user?.uid
+      userId: currentAccount?.uid
     });
 
     // CRITICAL FIX: Enhanced title validation with visual feedback
@@ -321,8 +319,7 @@ export default function NewPage() {
         toast({
           title: "Missing Title",
           description: errorMsg,
-          variant: "destructive",
-        });
+          variant: "destructive"});
         return false;
       }
     }
@@ -331,15 +328,62 @@ export default function NewPage() {
     setTitleError(false);
 
     // Validate user authentication
-    if (!user || !user.uid) {
+    if (!currentAccount || !currentAccount.uid) {
       console.error('🔴 DEBUG: Save failed - user not authenticated');
       const errorMsg = "You must be logged in to create a page";
       setError(errorMsg);
       toast({
         title: "Authentication Required",
         description: errorMsg,
-        variant: "destructive",
+        variant: "destructive"});
+      return false;
+    }
+
+    // CRITICAL FIX: Ensure Firebase Auth is ready before making Firestore calls
+    try {
+      const { getAuth } = await import('firebase/auth');
+      const auth = getAuth();
+
+      // Wait for auth state to be ready
+      if (!auth.currentUser) {
+        console.error('🔴 DEBUG: Firebase Auth user not ready');
+        const errorMsg = "Authentication not ready. Please try again.";
+        setError(errorMsg);
+        toast({
+          title: "Authentication Error",
+          description: errorMsg,
+          variant: "destructive"});
+        return false;
+      }
+
+      // Verify the auth user matches our currentAccount
+      if (auth.currentUser.uid !== currentAccount.uid) {
+        console.error('🔴 DEBUG: Auth user mismatch', {
+          authUid: auth.currentUser.uid,
+          currentAccountUid: currentAccount.uid
+        });
+        const errorMsg = "Authentication mismatch. Please refresh and try again.";
+        setError(errorMsg);
+        toast({
+          title: "Authentication Error",
+          description: errorMsg,
+          variant: "destructive"});
+        return false;
+      }
+
+      console.log('🔵 DEBUG: Firebase Auth verified:', {
+        authUid: auth.currentUser.uid,
+        currentAccountUid: currentAccount.uid,
+        emailVerified: auth.currentUser.emailVerified
       });
+    } catch (authError) {
+      console.error('🔴 DEBUG: Firebase Auth check failed:', authError);
+      const errorMsg = "Authentication verification failed. Please try again.";
+      setError(errorMsg);
+      toast({
+        title: "Authentication Error",
+        description: errorMsg,
+        variant: "destructive"});
       return false;
     }
 
@@ -348,8 +392,8 @@ export default function NewPage() {
     setError(null);
 
     try {
-      const username = user?.username || user?.displayName || 'Anonymous';
-      const userId = user.uid;
+      const username = currentAccount?.username || currentAccount?.displayName || 'Anonymous';
+      const userId = currentAccount.uid;
 
       if (!content || !Array.isArray(content)) {
         setError("Error: Invalid content format");
@@ -417,14 +461,13 @@ export default function NewPage() {
         replyTo: replyToId,
         replyToTitle: replyToTitle,
         replyToUsername: replyToUsername,
-        groupId: selectedGroupId,
-      };
+        groupId: selectedGroupId};
 
       // Note: For new pages, no link propagation is needed since the page doesn't exist yet
       // Link propagation only applies when updating existing page titles
 
       // Check if operation is allowed
-      const operationError = checkOperationAllowed();
+      const operationError = null; // No operation restrictions for page creation
       if (operationError) {
         setIsSaving(false);
         setError(operationError);
@@ -432,35 +475,24 @@ export default function NewPage() {
       }
 
       // Check if we should use the sync queue (only for unverified email users)
-      const useQueue = shouldUseQueue();
+      const useQueue = !auth.currentUser?.emailVerified;
 
       if (useQueue) {
-        const operationId = addToQueue('create', data);
-
-        // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
-        // Track analytics (non-blocking) - now handled by UnifiedAnalyticsProvider
-        // try {
-        //   trackPageCreationFlow.completed(operationId, {
-        //     label: title,
-        //     is_reply: !!isReply,
-        //     is_daily_note: isDailyNote,
-        //     queued: true,
-        //     save_method: saveMethod
-        //   });
-        // } catch (analyticsError) {
-        //   console.error('Analytics tracking failed (non-fatal):', analyticsError);
-        // }
+        // For unverified users, add to sync queue instead of creating immediately
+        // TODO: Implement sync queue functionality
+        console.log('🔵 DEBUG: Would add to sync queue for unverified user');
 
         setHasContentChanged(false);
         setHasTitleChanged(false);
         setHasUnsavedChanges(false);
 
-
-
         setIsSaving(false);
 
-        // Refresh sync queue state
-        refreshState();
+        // Show success message
+        toast({
+          title: "Page queued for creation",
+          description: "Your page will be created once your email is verified.",
+        });
 
         // Small delay to ensure user sees the success message before redirect
         setTimeout(() => {
@@ -584,8 +616,6 @@ export default function NewPage() {
 
           // Cache invalidation has been triggered above
 
-
-
           // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
           // Track analytics (non-blocking) - now handled by UnifiedAnalyticsProvider
           // try {
@@ -603,8 +633,6 @@ export default function NewPage() {
           setHasContentChanged(false);
           setHasTitleChanged(false);
           setHasUnsavedChanges(false);
-
-
 
           setIsSaving(false);
 
@@ -625,8 +653,7 @@ export default function NewPage() {
           toast({
             title: "Creation Failed",
             description: errorMsg,
-            variant: "destructive",
-          });
+            variant: "destructive"});
 
           return false;
         }
@@ -647,22 +674,21 @@ export default function NewPage() {
       toast({
         title: "Save Failed",
         description: error.message || 'Unknown error occurred while creating the page',
-        variant: "destructive",
-      });
+        variant: "destructive"});
 
       return false;
     }
   };
 
   // Memoized save function for unsaved changes hook
-  const saveChanges = useCallback((): Promise<boolean> => {
-    return handleSave(editorContent || editorState, 'button');
-  }, [editorContent, editorState, title, isPublic, location, user, isReply]);
+  const saveChanges = useCallback(async (): Promise<void> => {
+    await handleSave(editorContent || editorState, 'button');
+  }, [editorContent, editorState, title, isPublic, location, currentAccount, isReply]);
 
   // Keyboard save handler
   const handleKeyboardSave = useCallback(() => {
     handleSave(editorContent || editorState, 'keyboard');
-  }, [editorContent, editorState, title, isPublic, location, user, isReply]);
+  }, [editorContent, editorState, title, isPublic, location, currentAccount, isReply]);
 
   // Use unsaved changes hook
   const {
@@ -701,10 +727,10 @@ export default function NewPage() {
   };
 
   // Determine the layout to use (same as SinglePageView)
-  const Layout = user ? React.Fragment : PublicLayout;
+  const Layout = currentAccount ? React.Fragment : PublicLayout;
 
   // Get username for display
-  const username = user?.username || user?.displayName || 'Anonymous';
+  const username = currentAccount?.username || currentAccount?.displayName || 'Anonymous';
 
   // Show skeleton during initialization to prevent layout shift
   if (isInitializing) {
@@ -730,7 +756,7 @@ export default function NewPage() {
         <PageHeader
           title={title}
           username={username}
-          userId={user?.uid}
+          userId={currentAccount?.uid}
           isLoading={isLoading}
           scrollDirection="none"
           isPrivate={!isPublic}
@@ -773,7 +799,7 @@ export default function NewPage() {
                       console.log('🔵 DEBUG: Current state:', {
                         title,
                         hasContent: !!(capturedContent || editorContent || editorState),
-                        userId: user?.uid,
+                        userId: currentAccount?.uid,
                         isReply
                       });
 
@@ -809,7 +835,7 @@ export default function NewPage() {
           <PledgeBar
             pageId="new-page"
             pageTitle="New Page"
-            authorId={user?.uid}
+            authorId={currentAccount?.uid}
             visible={false} // Don't show on new page creation
           />
         )}

@@ -1,60 +1,98 @@
 "use client";
 
-import React, { useState, useContext, useEffect, useRef, useCallback } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { Menu, Home, User, Plus, Bell } from 'lucide-react';
 import { Button } from '../ui/button';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { MobileOverflowSidebar } from './MobileOverflowSidebar';
 import { useEditorContext } from './UnifiedSidebar';
 import { cn } from '../../lib/utils';
-import { isPWA } from '../../utils/pwa-detection';
+import { isPWA, isMobileDevice } from '../../utils/pwa-detection';
 import NotificationBadge from '../utils/NotificationBadge';
+import useOptimisticNavigation from '../../hooks/useOptimisticNavigation';
 
 /**
  * MobileBottomNav Component
  *
- * A fixed bottom navigation toolbar for mobile devices with 5 main actions:
- * - Menu: Opens sidebar navigation
- * - Home: Navigate to home page
- * - Profile: Navigate to user's profile (authenticated users only)
- * - New Page: Create new page (authenticated users only)
- * - Notifications: Navigate to notifications page (authenticated users only)
+ * Mobile bottom navigation with:
+ * - Instant visual feedback (within 16ms)
+ * - Optimistic navigation
+ * - Haptic feedback
+ * - Route preloading
+ * - Smooth transitions
+ * - No unresponsive button states
  */
+// Helper function to detect iOS devices
+const isIOSDevice = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+};
+
+// Helper function to get appropriate bottom spacing for PWA
+const getPWABottomSpacing = (isPWAMode: boolean): string => {
+  if (!isPWAMode) return '0';
+
+  // For iOS PWA, use safe-area-inset-bottom to handle home indicator
+  if (isIOSDevice()) {
+    return 'max(env(safe-area-inset-bottom), 8px)';
+  }
+
+  // For Android PWA, use smaller spacing
+  return 'env(safe-area-inset-bottom, 4px)';
+};
+
 export default function MobileBottomNav() {
-  const router = useRouter();
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const editorContext = useEditorContext();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isPWAMode, setIsPWAMode] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Determine if we're in edit mode (editor functions are available)
-  const isEditMode = !!(editorContext.onSave && editorContext.onCancel);
+  // Enhanced navigation with optimistic feedback
+  const {
+    isNavigating,
+    targetRoute,
+    buttonPressed,
+    handleButtonPress,
+    handleButtonHover,
+    isButtonPressed,
+    isNavigatingTo,
+    getNavigationProgress} = useOptimisticNavigation({
+    preloadDelay: 50, // Very fast preloading
+    maxNavigationTime: 3000,
+    enableHapticFeedback: true});
 
-  // Check if current route is an individual page (should hide mobile nav)
-  const isIndividualPageRoute = useCallback(() => {
-    // Pattern: /[pageId] where pageId is a dynamic route parameter
-    // Exclude known static routes like /user, /group, /new, etc.
+  // Check if we're in edit mode
+  const isEditMode = editorContext?.isEditMode || false;
+
+  // Check if current route is a content page at /id/ (should hide mobile nav)
+  const isContentPageRoute = useCallback(() => {
     const staticRoutes = [
       '/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
-      '/login', '/signup', '/settings', '/privacy', '/terms', '/recents', '/groups'
+      '/login', '/signup', '/settings', '/privacy', '/terms', '/recents', '/groups',
+      '/search', '/notifications'
     ];
 
-    // Check if it's a static route
+    // Always show on static routes
     if (staticRoutes.includes(pathname)) {
       return false;
     }
 
-    // Check if it starts with known dynamic route patterns that should show nav
+    // Always show on user and group pages
     if (pathname.startsWith('/user/') || pathname.startsWith('/group/')) {
       return false;
     }
 
-    // If it's a single segment path that's not in static routes, it's likely a page ID
+    // Always show on admin routes (including admin dashboard)
+    if (pathname.startsWith('/admin/')) {
+      return false;
+    }
+
+    // Hide only on content pages at /id/ (single segment routes that aren't static)
     const segments = pathname.split('/').filter(Boolean);
     return segments.length === 1 && !staticRoutes.includes(`/${segments[0]}`);
   }, [pathname]);
@@ -75,33 +113,30 @@ export default function MobileBottomNav() {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
-      // Clear existing timeout
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
 
-      // Debounce scroll events to prevent flickering
-      scrollTimeoutRef.current = setTimeout(() => {
-        // Show toolbar when at top of page
-        if (currentScrollY <= 10) {
-          setIsVisible(true);
-        }
-        // Hide when scrolling down, show when scrolling up
-        else if (Math.abs(currentScrollY - lastScrollY) > 5) {
-          if (currentScrollY > lastScrollY && currentScrollY > 100) {
-            // Scrolling down and not near top - hide
-            setIsVisible(false);
-          } else if (currentScrollY < lastScrollY) {
-            // Scrolling up - show
-            setIsVisible(true);
-          }
-        }
+      // Hide on scroll down, show on scroll up
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsVisible(false);
+      } else if (currentScrollY < lastScrollY) {
+        setIsVisible(true);
+      }
 
-        setLastScrollY(currentScrollY);
-      }, 10); // Small debounce delay
+      // Always show when near top
+      if (currentScrollY < 50) {
+        setIsVisible(true);
+      }
+
+      // Auto-show after scroll stops
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsVisible(true);
+      }, 1000);
+
+      setLastScrollY(currentScrollY);
     };
 
-    // Only add scroll listener on mobile devices
     const mediaQuery = window.matchMedia('(max-width: 767px)');
     if (mediaQuery.matches) {
       window.addEventListener('scroll', handleScroll, { passive: true });
@@ -115,256 +150,225 @@ export default function MobileBottomNav() {
     };
   }, [lastScrollY]);
 
-  // Don't render if no user (will show login buttons instead)
-  if (!user) {
+  // Don't render if no user
+  if (!session) {
     return null;
   }
 
-  // Don't render on individual page routes (mobile only) - but keep on notifications page
-  if (isIndividualPageRoute() && pathname !== '/notifications') {
+  // Don't render on content page routes at /id/ (mobile only)
+  if (isContentPageRoute()) {
     return null;
   }
-
-  const handleMenuClick = () => {
-    setSidebarOpen(true);
-  };
-
-  const handleHomeClick = () => {
-    router.push('/');
-  };
-
-  const handleProfileClick = () => {
-    if (user?.uid) {
-      router.push(`/user/${user.uid}`);
-    }
-  };
-
-  const handleNewPageClick = () => {
-    // Add source parameter to trigger slide-up animation (same as FAB)
-    router.push('/new?source=mobile-nav');
-  };
-
-  const handleNotificationsClick = () => {
-    router.push('/notifications');
-  };
-
-  // Determine active states for navigation buttons
-  const isHomeActive = pathname === '/';
-  const isProfileActive = pathname === `/user/${user?.uid}`;
-  const isNewPageActive = pathname === '/new';
-  const isNotificationsActive = pathname === '/notifications';
-  const isMenuActive = sidebarOpen;
 
   // Don't render mobile nav in edit mode
   if (isEditMode) {
     return null;
   }
 
+  // Enhanced button click handlers with immediate feedback
+  const handleMenuClick = () => {
+    setSidebarOpen(true);
+  };
+
+  const handleHomeClick = () => {
+    handleButtonPress('home', '/');
+  };
+
+  const handleProfileClick = () => {
+    if (session?.uid) {
+      handleButtonPress('profile', `/user/${session.uid}`);
+    }
+  };
+
+  const handleNewPageClick = () => {
+    handleButtonPress('new', '/new?source=mobile-nav');
+  };
+
+  const handleNotificationsClick = () => {
+    handleButtonPress('notifications', '/notifications');
+  };
+
+  // Determine active states for navigation buttons
+  const isHomeActive = pathname === '/';
+  const isProfileActive = pathname === `/user/${session?.uid}`;
+  const isNewPageActive = pathname === '/new';
+  const isNotificationsActive = pathname === '/notifications';
+  const isMenuActive = sidebarOpen;
+
+  // Enhanced button component with instant feedback
+  const NavButton = ({
+    id,
+    icon: Icon,
+    onClick,
+    onHover,
+    isActive,
+    ariaLabel,
+    label,
+    children
+  }: {
+    id: string;
+    icon: React.ComponentType<{ className?: string }>;
+    onClick: () => void;
+    onHover?: () => void;
+    isActive: boolean;
+    ariaLabel: string;
+    label: string;
+    children?: React.ReactNode;
+  }) => {
+    const isPressed = isButtonPressed(id);
+    const isCurrentlyNavigating = isNavigatingTo(pathname);
+    
+    return (
+      <Button
+        variant="ghost"
+        size="lg"
+        onClick={onClick}
+        onMouseEnter={onHover}
+        onTouchStart={onHover} // Preload on touch start for mobile
+        className={cn(
+          "flex flex-col items-center justify-center h-16 flex-1 rounded-lg p-2 relative gap-1 group",
+          "transition-all duration-75 ease-out", // Faster transitions for responsiveness
+          "flex-shrink-0 min-w-0",
+          // Enhanced touch feedback
+          "touch-manipulation select-none",
+          // Immediate visual feedback states
+          isPressed && "scale-95 bg-primary/20",
+          // Base states with enhanced contrast
+          "hover:bg-primary/10 active:bg-primary/20",
+          // Active state styling
+          isActive
+            ? "bg-primary/10 text-primary"
+            : [
+                "text-slate-600 hover:text-slate-900",
+                "dark:text-muted-foreground dark:hover:text-foreground"
+              ],
+          // Loading state when navigating
+          isCurrentlyNavigating && "opacity-75"
+        )}
+        aria-label={ariaLabel}
+        aria-pressed={isActive}
+        disabled={isNavigating && !isPressed} // Prevent multiple navigation attempts
+      >
+        <Icon className={cn(
+          "h-6 w-6 flex-shrink-0 transition-transform duration-75",
+          isPressed && "scale-110" // Slight scale on press for immediate feedback
+        )} />
+
+        {/* Text label */}
+        <span className={cn(
+          "text-xs font-medium leading-none transition-colors duration-75",
+          "text-center max-w-full truncate",
+          isActive
+            ? "text-primary"
+            : [
+                "text-slate-500 group-hover:text-slate-700",
+                "dark:text-muted-foreground/80 dark:group-hover:text-muted-foreground"
+              ]
+        )}>
+          {label}
+        </span>
+
+        {children}
+        
+        {/* Loading indicator for navigation */}
+        {isCurrentlyNavigating && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-1 h-1 bg-primary rounded-full animate-pulse" />
+          </div>
+        )}
+      </Button>
+    );
+  };
+
   return (
     <>
-      {/* Bottom Navigation - Only visible on mobile with auto-hide functionality */}
+      {/* Bottom Navigation with enhanced responsiveness */}
       <div
         className={cn(
           "md:hidden fixed left-0 right-0 bottom-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border shadow-lg",
           "transition-transform duration-300 ease-in-out",
           // Auto-hide functionality
-          isVisible ? "translate-y-0" : "translate-y-full"
+          isVisible ? "translate-y-0" : "translate-y-full",
+          // Enhanced touch targets for mobile
+          "touch-manipulation"
         )}
+        style={{
+          paddingBottom: getPWABottomSpacing(isPWAMode)}}
       >
-        <div
-          className={cn(
-            "flex items-center justify-around px-4 pt-2",
-            // Prevent line wrapping and ensure single row layout
-            "flex-nowrap whitespace-nowrap",
-            // Handle potential overflow on very narrow screens
-            "overflow-x-auto",
-            // Increased base bottom padding for better spacing
-            "pb-6",
-            // Additional PWA bottom padding for home indicator
-            isPWAMode && "pb-10"
-          )}
-          style={{
-            // Ensure proper PWA safe area spacing - extends internal padding, not transparent space
-            paddingBottom: isPWAMode ? 'max(env(safe-area-inset-bottom), 40px)' : '24px',
-            // Ensure minimum width to prevent compression
-            minWidth: '100%'
-          }}
-        >
+        {/* Navigation progress indicator */}
+        {isNavigating && (
+          <div className="absolute top-0 left-0 h-0.5 bg-primary transition-all duration-100"
+               style={{ width: `${getNavigationProgress() * 100}%` }} />
+        )}
+
+        <div className="flex items-center justify-around px-2 py-3 gap-1">
           {/* Menu Button */}
-          <Button
-            variant="ghost"
-            size="lg"
+          <NavButton
+            id="menu"
+            icon={Menu}
             onClick={handleMenuClick}
-            className={cn(
-              "flex flex-col items-center justify-center h-12 flex-1 rounded-lg p-2",
-              "transition-all duration-200 ease-in-out",
-              // Prevent shrinking and maintain minimum size
-              "flex-shrink-0 min-w-0",
-              // Base states with enhanced light mode contrast
-              "hover:bg-primary/10 active:bg-primary/20 active:scale-95",
-              // Active state styling consistent with desktop sidebar
-              isMenuActive
-                ? "bg-primary/10 text-primary"
-                : [
-                    // Light mode: higher contrast colors
-                    "text-slate-600 hover:text-slate-900",
-                    // Dark mode: existing muted colors
-                    "dark:text-muted-foreground dark:hover:text-foreground"
-                  ],
-              // Touch feedback for mobile
-              "touch-manipulation select-none",
-              // Mobile-specific center alignment (≤768px)
-              "mobile-bottom-nav-button"
-            )}
-            aria-label="Menu"
-            aria-pressed={isMenuActive}
-          >
-            <Menu className="h-5 w-5 flex-shrink-0" />
-          </Button>
+            isActive={isMenuActive}
+            ariaLabel="Menu"
+            label="Menu"
+          />
 
           {/* Home Button */}
-          <Button
-            variant="ghost"
-            size="lg"
+          <NavButton
+            id="home"
+            icon={Home}
             onClick={handleHomeClick}
-            className={cn(
-              "flex flex-col items-center justify-center h-12 flex-1 rounded-lg p-2",
-              "transition-all duration-200 ease-in-out",
-              // Prevent shrinking and maintain minimum size
-              "flex-shrink-0 min-w-0",
-              // Base states with enhanced light mode contrast
-              "hover:bg-primary/10 active:bg-primary/20 active:scale-95",
-              // Active state styling consistent with desktop sidebar
-              isHomeActive
-                ? "bg-primary/10 text-primary"
-                : [
-                    // Light mode: higher contrast colors
-                    "text-slate-600 hover:text-slate-900",
-                    // Dark mode: existing muted colors
-                    "dark:text-muted-foreground dark:hover:text-foreground"
-                  ],
-              // Touch feedback for mobile
-              "touch-manipulation select-none",
-              // Mobile-specific center alignment (≤768px)
-              "mobile-bottom-nav-button"
-            )}
-            aria-label="Home"
-            aria-pressed={isHomeActive}
-          >
-            <Home className="h-5 w-5 flex-shrink-0" />
-          </Button>
+            onHover={() => handleButtonHover('/')}
+            isActive={isHomeActive}
+            ariaLabel="Home"
+            label="Home"
+          />
 
-          {/* Profile Button - Only show when authenticated */}
-          <Button
-            variant="ghost"
-            size="lg"
+          {/* Profile Button */}
+          <NavButton
+            id="profile"
+            icon={User}
             onClick={handleProfileClick}
-            className={cn(
-              "flex flex-col items-center justify-center h-12 flex-1 rounded-lg p-2",
-              "transition-all duration-200 ease-in-out",
-              // Prevent shrinking and maintain minimum size
-              "flex-shrink-0 min-w-0",
-              // Base states with enhanced light mode contrast
-              "hover:bg-primary/10 active:bg-primary/20 active:scale-95",
-              // Active state styling consistent with desktop sidebar
-              isProfileActive
-                ? "bg-primary/10 text-primary"
-                : [
-                    // Light mode: higher contrast colors
-                    "text-slate-600 hover:text-slate-900",
-                    // Dark mode: existing muted colors
-                    "dark:text-muted-foreground dark:hover:text-foreground"
-                  ],
-              // Touch feedback for mobile
-              "touch-manipulation select-none",
-              // Mobile-specific center alignment (≤768px)
-              "mobile-bottom-nav-button"
-            )}
-            aria-label="Profile"
-            aria-pressed={isProfileActive}
-          >
-            <User className="h-5 w-5 flex-shrink-0" />
-          </Button>
+            onHover={() => session?.uid && handleButtonHover(`/user/${session.uid}`)}
+            isActive={isProfileActive}
+            ariaLabel="Profile"
+            label="Profile"
+          />
 
-          {/* Notifications Button - Only show when authenticated */}
-          <Button
-            variant="ghost"
-            size="lg"
+          {/* Notifications Button */}
+          <NavButton
+            id="notifications"
+            icon={Bell}
             onClick={handleNotificationsClick}
-            className={cn(
-              "flex flex-col items-center justify-center h-12 flex-1 rounded-lg p-2 relative",
-              "transition-all duration-200 ease-in-out",
-              // Prevent shrinking and maintain minimum size
-              "flex-shrink-0 min-w-0",
-              // Base states with enhanced light mode contrast
-              "hover:bg-primary/10 active:bg-primary/20 active:scale-95",
-              // Active state styling consistent with desktop sidebar
-              isNotificationsActive
-                ? "bg-primary/10 text-primary"
-                : [
-                    // Light mode: higher contrast colors
-                    "text-slate-600 hover:text-slate-900",
-                    // Dark mode: existing muted colors
-                    "dark:text-muted-foreground dark:hover:text-foreground"
-                  ],
-              // Touch feedback for mobile
-              "touch-manipulation select-none",
-              // Mobile-specific center alignment (≤768px)
-              "mobile-bottom-nav-button"
-            )}
-            aria-label="Notifications"
-            aria-pressed={isNotificationsActive}
+            onHover={() => handleButtonHover('/notifications')}
+            isActive={isNotificationsActive}
+            ariaLabel="Notifications"
+            label="Alerts"
           >
-            <Bell className="h-5 w-5 flex-shrink-0" />
             <NotificationBadge
               className="absolute -top-1 -right-1"
               data-component="mobile-notification-badge"
               data-testid="mobile-notification-badge"
             />
-          </Button>
+          </NavButton>
 
-          {/* New Page Button - Only show when authenticated */}
-          <Button
-            variant="ghost"
-            size="lg"
+          {/* New Page Button */}
+          <NavButton
+            id="new"
+            icon={Plus}
             onClick={handleNewPageClick}
-            className={cn(
-              "flex flex-col items-center justify-center h-12 flex-1 rounded-lg p-2",
-              "transition-all duration-200 ease-in-out",
-              // Prevent shrinking and maintain minimum size
-              "flex-shrink-0 min-w-0",
-              // Base states with enhanced light mode contrast
-              "hover:bg-primary/10 active:bg-primary/20 active:scale-95",
-              // Active state styling consistent with desktop sidebar
-              isNewPageActive
-                ? "bg-primary/10 text-primary"
-                : [
-                    // Light mode: higher contrast colors
-                    "text-slate-600 hover:text-slate-900",
-                    // Dark mode: existing muted colors
-                    "dark:text-muted-foreground dark:hover:text-foreground"
-                  ],
-              // Touch feedback for mobile
-              "touch-manipulation select-none",
-              // Mobile-specific center alignment (≤768px)
-              "mobile-bottom-nav-button"
-            )}
-            aria-label="New Page"
-            aria-pressed={isNewPageActive}
-          >
-            <Plus className="h-5 w-5 flex-shrink-0" />
-          </Button>
+            onHover={() => handleButtonHover('/new?source=mobile-nav')}
+            isActive={isNewPageActive}
+            ariaLabel="New Page"
+            label="New"
+          />
         </div>
       </div>
 
       {/* Mobile Overflow Sidebar */}
-      {user && (
-        <MobileOverflowSidebar
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          editorProps={editorContext.onSave ? editorContext : undefined}
-        />
-      )}
+      <MobileOverflowSidebar 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)} 
+      />
     </>
   );
 }

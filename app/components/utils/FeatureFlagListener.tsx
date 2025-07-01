@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useContext, useRef } from 'react';
-import { AuthContext } from '../../providers/AuthProvider';
+import React, { useEffect, useRef } from 'react';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useToast } from '../ui/use-toast';
@@ -22,7 +22,7 @@ interface FeatureFlagListenerProps {
  * - Provide notifications about why refresh is happening
  */
 export default function FeatureFlagListener({ children }: FeatureFlagListenerProps) {
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
   const { toast } = useToast();
   const lastFeatureFlagsRef = useRef<Record<string, boolean>>({});
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -149,7 +149,7 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
 
   // Listen for feature flag changes with robust infinite reload prevention
   useEffect(() => {
-    if (!user) {
+    if (!session) {
       return;
     }
 
@@ -166,7 +166,6 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
 
       if (doc.exists()) {
         const newFlags = doc.data() as Record<string, boolean>;
-
 
         // CRITICAL FIX: Use a separate initialization flag instead of checking empty object
         if (!hasInitializedRef.current) {
@@ -197,14 +196,11 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
           }
         });
 
-
-
         // Update the reference
         lastFeatureFlagsRef.current = { ...newFlags };
 
         // Only trigger refresh if there are actual changes
         if (hasActualChanges && changedFlags.length > 0) {
-
 
           // CRITICAL FIX: Debounce multiple rapid changes to prevent reload loops
           if (debounceTimeoutRef.current) {
@@ -244,13 +240,12 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
         clearTimeout(debounceTimeoutRef.current);
       }
     };
-  }, [user, toast]);
+  }, [, session, toast]);
 
   // Listen for manual feature flag change events (from admin panel)
   useEffect(() => {
     const handleFeatureFlagChange = (event: CustomEvent) => {
       const { flagId, newValue } = event.detail;
-
 
       // Update our local reference to prevent double-refresh
       lastFeatureFlagsRef.current = {

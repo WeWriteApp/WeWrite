@@ -32,8 +32,7 @@ export async function GET(request) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization'};
 
   // Get limit from query parameter
   const { searchParams } = new URL(request.url);
@@ -298,8 +297,7 @@ export async function GET(request) {
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        }
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'}
       }
     );
   }

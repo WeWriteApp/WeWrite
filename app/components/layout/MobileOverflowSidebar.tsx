@@ -1,17 +1,16 @@
 "use client"
 
 import * as React from "react"
-import { useState, useEffect, useContext } from "react"
+import { useState, useEffect } from "react"
 import { X, ChevronLeft, Settings, Check, User, Users, Shield, Globe, Lock, Link as LinkIcon, Trash2, Clock, Shuffle } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { auth } from "../../firebase/config"
-import { signOut } from "firebase/auth"
+// Removed direct Firebase auth imports - using session management system
 import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
 import { Switch } from "../ui/switch"
-import { AccountSwitcher } from "../auth/AccountSwitcher"
+import { logoutUser } from "../../firebase/auth"
 
-import { AuthContext } from "../../providers/AuthProvider"
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useFeatureFlag } from "../../utils/feature-flags"
 import MapEditor from "../editor/MapEditor"
 import { navigateToRandomPage, RandomPageFilters } from "../../utils/randomPageNavigation"
@@ -39,12 +38,12 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
   const router = useRouter()
   const [currentSection, setCurrentSection] = useState<string | null>(null)
   const [isRandomMenuOpen, setIsRandomMenuOpen] = useState(false)
-  const { user } = useContext(AuthContext)
+  const { session } = useCurrentAccount();
 
   // Groups functionality removed
 
   // Check if map feature is enabled
-  const mapFeatureEnabled = useFeatureFlag('map_view', user?.email);
+  const mapFeatureEnabled = useFeatureFlag('map_view', session?.email);
 
   // Determine if we're in edit mode
   const isEditMode = !!(editorProps?.onSave && editorProps?.onCancel);
@@ -54,8 +53,6 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
     if (!userEmail) return false;
     return userEmail === 'jamiegray2234@gmail.com';
   };
-
-
 
   // Reset to main menu when sidebar closes
   useEffect(() => {
@@ -78,8 +75,6 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
     setCurrentSection(null)
   }
 
-
-
   // Render the appropriate section based on currentSection
   const renderSection = () => {
     switch (currentSection) {
@@ -87,9 +82,15 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
       default:
         return (
           <div className="flex flex-col space-y-6 animate-in fade-in-50 duration-300 ease-out">
-            {/* Account Switcher */}
+            {/* Logout Button */}
             <div className="mb-2">
-              <AccountSwitcher />
+              <Button
+                variant="ghost"
+                onClick={() => logoutUser()}
+                className="w-full justify-start"
+              >
+                Logout
+              </Button>
             </div>
 
             {/* Main Menu Items */}
@@ -109,7 +110,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
                 <button
                   onClick={async () => {
                     onClose();
-                    await navigateToRandomPage(router, user?.uid);
+                    await navigateToRandomPage(router, session?.uid);
                   }}
                   className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
                 >
@@ -133,8 +134,6 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
 
               {/* Groups functionality removed */}
 
-
-
               <button
                 onClick={() => {
                   onClose();
@@ -149,7 +148,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
               <button
                 onClick={() => {
                   onClose();
-                  router.push(`/user/${user?.uid}`);
+                  router.push(`/user/${session?.uid}`);
                 }}
                 className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
               >
@@ -158,7 +157,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
               </button>
 
               {/* Admin Dashboard - Only visible for admins */}
-              {user && user.email && isAdmin(user.email) && (
+              {session && session.email && isAdmin(session.email) && (
                 <button
                   onClick={() => {
                     onClose();

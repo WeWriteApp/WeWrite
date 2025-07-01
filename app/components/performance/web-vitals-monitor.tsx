@@ -74,8 +74,7 @@ export function WebVitalsMonitor() {
           effectiveType: connection.effectiveType,
           downlink: connection.downlink,
           rtt: connection.rtt,
-          saveData: connection.saveData,
-        };
+          saveData: connection.saveData};
         
         // Log network changes for debugging
         console.log('Network conditions:', networkInfoRef.current);
@@ -97,8 +96,7 @@ export function WebVitalsMonitor() {
         rating: metric.rating,
         delta: metric.delta,
         id: metric.id,
-        navigationType: metric.navigationType || 'unknown',
-      };
+        navigationType: metric.navigationType || 'unknown'};
       
       metricsRef.current.set(metric.name, webVitalsMetric);
       
@@ -132,8 +130,7 @@ export function WebVitalsMonitor() {
               name: resourceEntry.name,
               duration: resourceEntry.duration,
               size: resourceEntry.transferSize,
-              type: resourceEntry.initiatorType,
-            });
+              type: resourceEntry.initiatorType});
             
             // Report slow resources
             sendSlowResourceAlert(resourceEntry);
@@ -165,8 +162,7 @@ export function WebVitalsMonitor() {
           console.warn('Slow interaction detected:', {
             type: event.type,
             delay,
-            target: (event.target as Element)?.tagName,
-          });
+            target: (event.target as Element)?.tagName});
         }
       });
     };
@@ -185,8 +181,7 @@ export function WebVitalsMonitor() {
         value: metric.value,
         budget,
         rating: metric.rating,
-        networkConditions: networkInfoRef.current,
-      });
+        networkConditions: networkInfoRef.current});
       
       // Send budget violation alert
       sendBudgetViolationAlert(metric, budget);
@@ -202,9 +197,7 @@ export function WebVitalsMonitor() {
         value: Math.round(metric.value),
         custom_map: {
           metric_rating: metric.rating,
-          network_type: networkInfoRef.current.effectiveType,
-        },
-      });
+          network_type: networkInfoRef.current.effectiveType}});
     }
     
     // Send to custom analytics endpoint
@@ -215,9 +208,7 @@ export function WebVitalsMonitor() {
         metric,
         networkInfo: networkInfoRef.current,
         timestamp: Date.now(),
-        userAgent: navigator.userAgent,
-      }),
-    }).catch(error => {
+        userAgent: navigator.userAgent})}).catch(error => {
       console.error('Failed to send web vitals metric:', error);
     });
   };
@@ -232,9 +223,7 @@ export function WebVitalsMonitor() {
         transferSize: resource.transferSize,
         initiatorType: resource.initiatorType,
         networkInfo: networkInfoRef.current,
-        timestamp: Date.now(),
-      }),
-    }).catch(error => {
+        timestamp: Date.now()})}).catch(error => {
       console.error('Failed to send slow resource alert:', error);
     });
   };
@@ -249,9 +238,7 @@ export function WebVitalsMonitor() {
         budget,
         rating: metric.rating,
         networkInfo: networkInfoRef.current,
-        timestamp: Date.now(),
-      }),
-    }).catch(error => {
+        timestamp: Date.now()})}).catch(error => {
       console.error('Failed to send budget violation alert:', error);
     });
   };
@@ -281,8 +268,7 @@ export function WebVitalsMonitor() {
       console.log('Current Web Vitals:', {
         metrics: currentMetrics,
         networkInfo: networkInfoRef.current,
-        timestamp: new Date().toISOString(),
-      });
+        timestamp: new Date().toISOString()});
     }
   };
 
@@ -306,8 +292,7 @@ export function useWebVitals() {
   
   return {
     getMetric,
-    getAllMetrics,
-  };
+    getAllMetrics};
 }
 
 export default WebVitalsMonitor;

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription } from '../ui/card';
-import { PillLink } from '../PillLink';
+import { PillLink } from '../utils/PillLink';
 import { Sparkline } from '../ui/sparkline';
 // import { getTrendingPages } from '../../firebase/pageViews';
 import Link from 'next/link';

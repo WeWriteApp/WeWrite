@@ -9,7 +9,7 @@ import { Badge } from '../ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Plus, Minus, ExternalLink, DollarSign, ArrowUpDown, Trash2, Clock } from 'lucide-react';
 import { TokenBalance } from '../../types/database';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
 
@@ -46,7 +46,7 @@ interface TokenAllocationBreakdownProps {
 type SortOption = 'tokens-desc' | 'tokens-asc' | 'title-asc' | 'title-desc' | 'author-asc' | 'author-desc';
 
 export default function TokenAllocationBreakdown({ className = "" }: TokenAllocationBreakdownProps) {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const { toast } = useToast();
   const [allocationData, setAllocationData] = useState<AllocationData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,7 +67,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
 
   // Periodic state synchronization to handle edge cases
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!session?.uid) return;
 
     // Set up periodic refresh to catch any state drift
     const syncInterval = setInterval(() => {
@@ -78,7 +78,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
     }, 30000); // Sync every 30 seconds when idle
 
     return () => clearInterval(syncInterval);
-  }, [user?.uid, pendingChanges]);
+  }, [session?.uid, pendingChanges]);
 
   // Cleanup debounce timers on unmount
   useEffect(() => {
@@ -129,7 +129,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
   }, [allocationData?.allocations, sortBy]);
 
   const loadAllocations = async () => {
-    if (!user?.uid) {
+    if (!session?.uid) {
       setLoading(false);
       return;
     }
@@ -163,7 +163,6 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
     }
   };
 
-
   // Debounced database update function
   const debouncedDatabaseUpdate = useCallback(async (pageId: string, finalTokens: number) => {
     if (!allocationData?.summary.balance) return;
@@ -184,8 +183,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
       const response = await fetch('/api/tokens/page-allocation', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({
           pageId,
           tokenChange: totalChange
@@ -227,8 +225,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
         title: "Update Failed",
         description: error instanceof Error ? error.message : "Failed to update token allocation. Please try again.",
         variant: "destructive",
-        duration: 5000,
-      });
+        duration: 5000});
     }
   }, [allocationData]);
 
@@ -355,8 +352,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
       const response = await fetch('/api/tokens/allocate', {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({
           resourceType: 'page',
           resourceId: pageId
@@ -402,8 +398,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
       toast({
         title: "Allocation Removed",
         description: "Token allocation removed successfully",
-        duration: 3000,
-      });
+        duration: 3000});
 
     } catch (error) {
       console.error('Error deleting allocation:', error);
@@ -413,8 +408,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
         title: "Delete Failed",
         description: error instanceof Error ? error.message : "Failed to delete allocation. Please try again.",
         variant: "destructive",
-        duration: 5000,
-      });
+        duration: 5000});
     }
   };
 

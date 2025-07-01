@@ -30,28 +30,28 @@ export function LoginForm({
     setIsFormValid(isEmailValid && isPasswordValid)
   }, [email, password])
 
-  // Check for previous user session on component mount
+  // Check for previous user account on component mount
   useEffect(() => {
     // Check if we're coming back from an aborted login attempt
     const isAddingAccount = localStorage.getItem('addingNewAccount') === 'true' ||
                            sessionStorage.getItem('wewrite_adding_account') === 'true';
 
     if (isAddingAccount) {
-      console.log("Detected aborted account addition, checking for previous user session");
+      console.log("Detected aborted account addition, checking for previous user account");
 
-      // Get the previous user session
+      // Get the previous user account
       const previousUserSession = localStorage.getItem('previousUserSession') ||
                                  sessionStorage.getItem('wewrite_previous_user');
 
       if (previousUserSession) {
         try {
           const prevUser = JSON.parse(previousUserSession);
-          console.log("Found previous user session, returning to previous account");
+          console.log("Found previous user account, returning to previous account");
 
           // Set the previous account state to show the return button
           setPreviousAccount(prevUser);
         } catch (error) {
-          console.error("Error parsing previous user session:", error);
+          console.error("Error parsing previous user account:", error);
         }
       }
     }
@@ -77,7 +77,7 @@ export function LoginForm({
           console.log("Adding new account to account switcher...")
 
           try {
-            // Get the previous user session
+            // Get the previous user account
             const prevUser = JSON.parse(previousUserSession)
 
             // Get any existing saved accounts
@@ -97,9 +97,9 @@ export function LoginForm({
 
             // Add the new user to the saved accounts
             const newUser = {
-              uid: result.user.uid,
-              email: result.user.email,
-              username: result.user.displayName || email.split('@')[0],
+              uid: result.session.uid,
+              email: result.session.email,
+              username: result.session.displayName || email.split('@')[0],
               isCurrent: true
             }
 
@@ -117,7 +117,7 @@ export function LoginForm({
             // Save the updated accounts list
             localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts))
 
-            // Clear the previous user session from both storage types
+            // Clear the previous user account from both storage types
             localStorage.removeItem('previousUserSession')
             sessionStorage.removeItem('wewrite_previous_user')
 

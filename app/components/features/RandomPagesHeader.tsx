@@ -10,8 +10,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '../ui/dropdown-menu';
+  DropdownMenuSeparator} from '../ui/dropdown-menu';
 import RandomPageFilterMenu from '../ui/RandomPageFilterMenu';
 
 /**
@@ -41,8 +40,6 @@ const RandomPagesHeader = () => {
       }
     }
   }, []);
-
-
 
   // Handle dense mode toggle change
   const handleDenseModeToggle = () => {
@@ -108,7 +105,6 @@ const RandomPagesHeader = () => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
           {/* Privacy and "Not mine" filters using reusable component */}
-
 
           <DropdownMenuItem
             onClick={(e) => {

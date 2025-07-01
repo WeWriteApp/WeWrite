@@ -62,8 +62,7 @@ export const createSubscription = async (userId: string, subscriptionData: Parti
       ...subscriptionData,
       status: "inactive", // inactive until payment is processed
       createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+      updatedAt: serverTimestamp()});
     return true;
   } catch (error) {
     console.error("Error creating subscription:", error);
@@ -78,8 +77,7 @@ export const updateSubscription = async (userId: string, subscriptionData: Parti
     const subscriptionRef = doc(db, parentPath, subCollectionName, "current");
     await setDoc(subscriptionRef, {
       ...subscriptionData,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
+      updatedAt: serverTimestamp()}, { merge: true });
     return true;
   } catch (error) {
     console.error("Error updating subscription:", error);
@@ -145,8 +143,6 @@ export const getUserSubscription = async (userId: string, options: SubscriptionO
 
 // Pledge functionality removed - WeWrite now uses subscription-based token system only
 
-
-
 // Get all pledges for a user
 export const getUserPledges = async (userId: string, options: SubscriptionOptions = {}): Promise<any[]> => {
   // Control verbose logging with an option
@@ -196,13 +192,11 @@ export const cancelSubscription = async (subscriptionId: string, customerId: str
     const response = await fetch('/api/subscription/cancel', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Content-Type': 'application/json'},
       body: JSON.stringify({
         subscriptionId,
         customerId
-      }),
-    });
+      })});
 
     const result = await response.json();
 
@@ -274,5 +268,3 @@ export const listenToUserSubscription = (userId: string, callback: (data: Subscr
   // Return the unsubscribe function
   return unsubscribe;
 };
-
-

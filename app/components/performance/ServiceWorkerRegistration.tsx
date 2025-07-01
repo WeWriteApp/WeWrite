@@ -22,8 +22,7 @@ export function ServiceWorkerRegistration() {
     try {
       // Register the service worker
       const registration = await navigator.serviceWorker.register('/sw.js', {
-        scope: '/',
-      });
+        scope: '/'});
 
       console.log('Service Worker registered successfully:', registration);
 

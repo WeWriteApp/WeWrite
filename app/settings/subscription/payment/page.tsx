@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '../../../providers/AuthProvider';
+import { useCurrentAccount } from '../../../providers/CurrentAccountProvider';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { loadStripe } from '@stripe/stripe-js';
@@ -14,7 +14,6 @@ import {
   useStripe,
   useElements
 } from '@stripe/react-stripe-js';
-import { useTheme } from '../../../providers/ThemeProvider';
 import { useFeatureFlag } from '../../../utils/feature-flags';
 import OpenCollectiveSupport from '../../../components/payments/OpenCollectiveSupport';
 import { getStripePublishableKey } from '../../../utils/stripeConfig';
@@ -60,16 +59,14 @@ function PaymentForm({ clientSecret, amount, onSuccess, onCancel }: {
     try {
       const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
         type: 'card',
-        card: cardElement,
-      });
+        card: cardElement});
 
       if (paymentMethodError) {
         throw new Error(paymentMethodError.message || 'An error occurred');
       }
 
       const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: paymentMethod.id,
-      });
+        payment_method: paymentMethod.id});
 
       if (confirmError) {
         throw new Error(confirmError.message || 'Payment failed');
@@ -111,10 +108,8 @@ function PaymentForm({ clientSecret, amount, onSuccess, onCancel }: {
         fontSize: '14px',
         fontWeight: '400',
         '::placeholder': {
-          color: theme === 'dark' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)',
-        },
-        iconColor: theme === 'dark' ? '#FFFFFF' : '#333333',
-      },
+          color: theme === 'dark' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)'},
+        iconColor: theme === 'dark' ? '#FFFFFF' : '#333333'},
       invalid: {
         color: '#ff5252',
         iconColor: '#ff5252'
@@ -201,10 +196,10 @@ export default function SubscriptionPaymentPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
-  const { user } = useAuth();
+  const { currentAccount } = useCurrentAccount();
   const searchParams = useSearchParams();
   const { theme } = useTheme();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
 
   // If payments feature flag is disabled, show OpenCollective support instead
   if (!isPaymentsEnabled) {
@@ -225,7 +220,7 @@ export default function SubscriptionPaymentPage() {
   }
 
   useEffect(() => {
-    if (!user) {
+    if (!currentAccount) {
       router.push('/auth/login');
       return;
     }
@@ -245,7 +240,7 @@ export default function SubscriptionPaymentPage() {
         const { SubscriptionService } = await import('../../../services/subscriptionService');
 
         const result = await SubscriptionService.createCheckoutSession({
-          userId: user?.uid || '',
+          userId: currentAccount?.uid || '',
           tier: 'custom',
           customAmount: parsedAmount,
           successUrl: `${window.location.origin}/settings/subscription?success=true`,
@@ -270,7 +265,7 @@ export default function SubscriptionPaymentPage() {
     }
 
     createPaymentIntent();
-  }, [user, router, searchParams]);
+  }, [currentAccount, router, searchParams]);
 
   const handleSuccess = () => {
     setSuccess(true);
@@ -285,8 +280,7 @@ export default function SubscriptionPaymentPage() {
   };
 
   return (
-    <PaymentFeatureGuard redirectTo="/settings">
-      <div className="max-w-md mx-auto p-4">
+    <div className="max-w-md mx-auto p-4">
       <div className="mb-4">
         <Link href="/settings/subscription" className="inline-flex items-center text-primary hover:text-primary/80 text-sm">
           <ArrowLeft className="h-3 w-3 mr-1" />
@@ -340,6 +334,5 @@ export default function SubscriptionPaymentPage() {
         )
       )}
       </div>
-    </PaymentFeatureGuard>
   );
 }

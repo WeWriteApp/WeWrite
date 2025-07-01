@@ -20,8 +20,7 @@ import { FinancialUtils, CorrelationId } from '../../../types/financial';
 
 // Initialize Stripe
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-06-20',
-});
+  apiVersion: '2024-06-20'});
 
 export async function POST(request: NextRequest) {
   try {
@@ -167,8 +166,7 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
       currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
       currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      updatedAt: serverTimestamp(),
-    };
+      updatedAt: serverTimestamp()};
 
     // Handle status transitions properly:
     // 1. Always update from 'incomplete' to any Stripe status
@@ -193,8 +191,7 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
         id: 'current',
         userId,
         ...subscriptionData,
-        createdAt: serverTimestamp(),
-      });
+        createdAt: serverTimestamp()});
     }
 
     // Update user's token allocation
@@ -226,8 +223,7 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
     await updateDoc(subscriptionRef, {
       status: 'cancelled',
       canceledAt: new Date().toISOString(),
-      updatedAt: serverTimestamp(),
-    });
+      updatedAt: serverTimestamp()});
 
     // Reset token allocation to 0
     await TokenService.updateMonthlyTokenAllocation(userId, 0);
@@ -273,8 +269,7 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
         failureCount: 0, // Reset failure count on successful payment
         lastFailedPaymentAt: null, // Clear failed payment timestamp
         lastFailedInvoiceId: null, // Clear failed invoice ID
-        updatedAt: serverTimestamp(),
-      }
+        updatedAt: serverTimestamp()}
     };
 
     const syncResult = await syncService.synchronizeSubscription(userId, subscription.id, syncOperation);

@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { AlertTriangle, CheckCircle, Monitor, Trash2, RefreshCw } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
+import { useCurrentAccount } from '../../hooks/useAuth';
 
 interface MonitoringReport {
   timestamp: string;
@@ -27,7 +27,7 @@ interface CleanupSummary {
 }
 
 export default function SubscriptionManagement() {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [monitoringReport, setMonitoringReport] = useState<MonitoringReport | null>(null);
@@ -35,7 +35,7 @@ export default function SubscriptionManagement() {
   const [error, setError] = useState<string | null>(null);
 
   const runMonitoring = async () => {
-    if (!user) return;
+    if (!session) return;
     
     setIsMonitoring(true);
     setError(null);
@@ -44,9 +44,7 @@ export default function SubscriptionManagement() {
       const token = await user.getIdToken();
       const response = await fetch('/api/admin/subscription-monitor?maxCustomers=100', {
         headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+          'Authorization': `Bearer ${token}`}});
 
       if (!response.ok) {
         throw new Error(`Monitoring failed: ${response.statusText}`);
@@ -62,7 +60,7 @@ export default function SubscriptionManagement() {
   };
 
   const runCleanup = async (dryRun: boolean = true) => {
-    if (!user) return;
+    if (!session) return;
     
     setIsCleaningUp(true);
     setError(null);
@@ -73,14 +71,12 @@ export default function SubscriptionManagement() {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({
           dryRun,
           maxCustomers: 50,
           includeStatuses: ['canceled', 'incomplete', 'past_due', 'unpaid']
-        }),
-      });
+        })});
 
       if (!response.ok) {
         throw new Error(`Cleanup failed: ${response.statusText}`);

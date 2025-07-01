@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -60,14 +60,14 @@ interface PayoutSetup {
 }
 
 export default function PayoutDashboard() {
-  const { user } = useAuth();
+  const { currentAccount } = useCurrentAccount();
   const { toast } = useToast();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
 
   const [setup, setSetup] = useState<PayoutSetup | null>(null);
   const [earnings, setEarnings] = useState<any[]>([]);
   const [payouts, setPayouts] = useState<any[]>([]);
-  const [userEarnings, setUserEarnings] = useState<any>(null);
+  const [, sessionEarnings, setUserEarnings] = useState<any>(null);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
@@ -79,10 +79,10 @@ export default function PayoutDashboard() {
   const [riskAssessment, setRiskAssessment] = useState<PayoutRiskAssessment | null>(null);
 
   useEffect(() => {
-    if (user && isPaymentsEnabled) {
+    if (session && isPaymentsEnabled) {
       loadPayoutData();
     }
-  }, [user, isPaymentsEnabled]);
+  }, [, session, isPaymentsEnabled]);
 
   // Calculate fee breakdown and risk assessment when earnings change
   const updateFeeBreakdown = async (availableBalance: number) => {
@@ -135,7 +135,7 @@ export default function PayoutDashboard() {
   };
 
   const loadBankAccountStatus = async () => {
-    if (!user?.stripeConnectedAccountId) {
+    if (!session?.stripeConnectedAccountId) {
       setStripeAccountStatus(null);
       return;
     }
@@ -146,8 +146,7 @@ export default function PayoutDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           stripeConnectedAccountId: user.stripeConnectedAccountId
-        }),
-      });
+        })});
 
       if (response.ok) {
         const result = await response.json();
@@ -162,7 +161,7 @@ export default function PayoutDashboard() {
     try {
       setLoading(true);
 
-      if (!user?.uid) return;
+      if (!session?.uid) return;
 
       // Load payout setup
       const setupResponse = await fetch('/api/payouts/setup');
@@ -178,7 +177,7 @@ export default function PayoutDashboard() {
       await loadBankAccountStatus();
 
       // Load token earnings data
-      const tokenBalance = await TokenEarningsService.getWriterTokenBalance(user.uid);
+      const tokenBalance = await TokenEarningsService.getWriterTokenBalance(currentAccount.uid);
       if (tokenBalance) {
         const earnings = {
           totalEarnings: tokenBalance.totalUsdEarned,
@@ -194,7 +193,7 @@ export default function PayoutDashboard() {
       }
 
       // Load token earnings history
-      const tokenEarnings = await TokenEarningsService.getWriterTokenEarnings(user.uid);
+      const tokenEarnings = await TokenEarningsService.getWriterTokenEarnings(session.uid);
       setEarnings(tokenEarnings.map(earning => ({
         id: earning.id,
         amount: earning.totalUsdValue,
@@ -221,8 +220,7 @@ export default function PayoutDashboard() {
       toast({
         title: "Error",
         description: "Failed to load payout data",
-        variant: "destructive",
-      });
+        variant: "destructive"});
     } finally {
       setLoading(false);
     }
@@ -265,16 +263,14 @@ export default function PayoutDashboard() {
       const response = await fetch('/api/payouts/preferences', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      });
+        body: JSON.stringify(updates)});
 
       if (response.ok) {
         const data = await response.json();
         setPreferences(data.data);
         toast({
           title: "Settings Updated",
-          description: "Your payout preferences have been updated successfully.",
-        });
+          description: "Your payout preferences have been updated successfully."});
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to update preferences');
@@ -284,8 +280,7 @@ export default function PayoutDashboard() {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update preferences",
-        variant: "destructive",
-      });
+        variant: "destructive"});
     } finally {
       setUpdatingPreferences(false);
     }
@@ -304,8 +299,7 @@ export default function PayoutDashboard() {
       if (response.ok) {
         toast({
           title: "Payout Requested",
-          description: "Your payout has been scheduled for processing",
-        });
+          description: "Your payout has been scheduled for processing"});
         loadPayoutData();
       } else {
         const error = await response.json();
@@ -316,8 +310,7 @@ export default function PayoutDashboard() {
       toast({
         title: "Request Failed",
         description: error.message || "Failed to request payout",
-        variant: "destructive",
-      });
+        variant: "destructive"});
     } finally {
       setRequesting(false);
     }
@@ -326,8 +319,7 @@ export default function PayoutDashboard() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
-    }).format(amount);
+      currency: 'USD'}).format(amount);
   };
 
   const getStatusBadge = (status: string) => {

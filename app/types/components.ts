@@ -71,11 +71,14 @@ export interface PageEditorProps extends BaseProps {
   page?: Page;
 }
 
-// SinglePageView component props
-export interface SinglePageViewProps extends BaseProps {
-  pageId: string;
-  initialPage?: Page;
-  initialContent?: SlateContent;
+// PageView component props
+export interface PageViewProps extends BaseProps {
+  params: Promise<{ id: string }> | { id: string };
+  initialEditMode?: boolean;
+  showVersion?: boolean;
+  versionId?: string;
+  showDiff?: boolean;
+  compareVersionId?: string;
 }
 
 // UserBioTab component props
@@ -88,8 +91,6 @@ export interface GroupAboutTabProps extends BaseProps {
   group: Group;
   canEdit: boolean;
 }
-
-
 
 // Activity component props
 export interface ActivityProps extends BaseProps {

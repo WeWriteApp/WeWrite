@@ -246,8 +246,7 @@ export async function POST(request: NextRequest) {
     } catch (dbError) {
       console.error('[Mock Token Earnings] Database error:', dbError);
       return NextResponse.json({
-        error: `Failed to create mock earnings: ${dbError instanceof Error ? dbError.message : 'Database error'}`,
-      }, { status: 500 });
+        error: `Failed to create mock earnings: ${dbError instanceof Error ? dbError.message : 'Database error'}`}, { status: 500 });
     }
 
   } catch (error) {

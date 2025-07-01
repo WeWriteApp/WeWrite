@@ -14,4 +14,4 @@ interface SocialMediaModalProps {
 // The functionality is now in PledgeBarModal.js
 export default function SocialMediaModal({ open, onClose }: SocialMediaModalProps) {
   return null;
-} 
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useAuth } from "../providers/AuthProvider";
+import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Share2, Search, X, Pin } from 'lucide-react';
@@ -51,8 +51,6 @@ function debounce(func: (...args: any[]) => void, wait: number, immediate = fals
 
   return debounced;
 }
-
-
 
 // Completely isolated search input that doesn't cause parent re-renders
 const IsolatedSearchInput = React.memo<IsolatedSearchInputProps>(({ onSearch, onClear, onSave, onSubmit, initialValue, autoFocus, placeholder }) => {
@@ -184,11 +182,11 @@ IsolatedSearchInput.displayName = 'IsolatedSearchInput';
 
 // Memoize the entire SearchPage component to prevent unnecessary re-renders
 const SearchPage = React.memo(() => {
-  const { user, loading: authLoading } = useAuth();
+  const { session, isAuthenticated } = useCurrentAccount();
 
   // Memoize user data to prevent unnecessary re-renders
-  const userId = useMemo(() => user?.uid || null, [user?.uid]);
-  const userEmail = useMemo(() => user?.email || null, [user?.email]);
+  const userId = useMemo(() => session?.uid || null, [session?.uid]);
+  const userEmail = useMemo(() => session?.email || null, [session?.email]);
   // Groups functionality removed
 
   // Use unified search system - single source of truth
@@ -211,11 +209,6 @@ const SearchPage = React.memo(() => {
     }
     return '';
   }, []); // Empty dependency array - only run once
-
-
-
-
-
 
   // Perform initial search if there's a query in the URL
   // Use a ref to track if we've performed the initial search
@@ -313,8 +306,7 @@ const SearchPage = React.memo(() => {
         toast({
           title: "Copy failed",
           description: "Could not copy the URL to clipboard",
-          variant: "destructive",
-        });
+          variant: "destructive"});
       });
   }, []);
 

@@ -3,7 +3,7 @@
 import React from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { SupporterIcon } from './SupporterIcon';
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useFeatureFlag } from "../../utils/feature-flags";
 
 interface SupporterBadgeProps {
@@ -14,8 +14,8 @@ interface SupporterBadgeProps {
 }
 
 export default function SupporterBadge({ tier, className = '', showLabel = false, status = 'active' }: SupporterBadgeProps) {
-  const { user } = useAuth();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const { currentAccount } = useCurrentAccount();
+  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
 
   // If payments feature flag is disabled, don't render anything
   if (!isPaymentsEnabled) {

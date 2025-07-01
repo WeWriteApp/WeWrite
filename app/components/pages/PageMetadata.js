@@ -1,20 +1,20 @@
-import React, { useEffect, useState, useContext, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { PillLink } from "../utils/PillLink";
-import { db } from "../../firebase/config";
+import { db } from "@/firebase/config";
 import { getDatabase } from "firebase/database";
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
-import { ref, get, onValue } from "firebase/database";
-import { Loader2, Check, Users, ChevronRight, ChevronDown, Heart } from "lucide-react";
-import { liveReadersService } from "../services/LiveReadersService";
-import { pageStatsService } from "../services/PageStatsService";
+import {collection, query, where, getDocs, doc} from "firebase/firestore";
+import {ref, onValue} from "firebase/database";
+import {Loader2, ChevronRight, ChevronDown} from "lucide-react";
+import { liveReadersService } from "@/services/LiveReadersService";
+import { pageStatsService } from "@/services/PageStatsService";
 import { pledgeService } from "../services/PledgeService";
-import { AuthContext } from "../../providers/AuthProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import User from "./UserBadge";
 import { Sparkline } from "../ui/sparkline";
 import FollowButton from "../utils/FollowButton";
-import { getPageFollowerCount } from "../../firebase/follows";
-import PageMetadataMap from './pages/PageMetadataMap';
-import { useFeatureFlag } from "../../utils/feature-flags";
+import { getPageFollowerCount } from "@/firebase/follows";
+import PageMetadataMap from './PageMetadataMap';
+import { useFeatureFlag } from "@/utils/feature-flags";
 
 // MetadataItem component for the card layout
 const MetadataItem = ({ label, value, showChart = true, sparklineData }) => (
@@ -71,8 +71,8 @@ const MetadataItem = ({ label, value, showChart = true, sparklineData }) => (
 );
 
 const PageMetadata = ({ page, hidePageOwner = false }) => {
-  const { user } = useContext(AuthContext);
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  const { session } = useCurrentAccount();
+  const isPaymentsEnabled = useFeatureFlag('payments', session?.email);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [relatedPages, setRelatedPages] = useState([]);
   const [isLoadingRelated, setIsLoadingRelated] = useState(true);
@@ -111,8 +111,8 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
 
   // Initialize live readers tracking
   useEffect(() => {
-    if (user && page.id) {
-      liveReadersService.trackReader(page.id, user.uid);
+    if (session && page.id) {
+      liveReadersService.trackReader(page.id, session.uid);
 
       const unsubscribe = liveReadersService.subscribeToReaderCount(page.id, (count) => {
         setLiveReaders(count);
@@ -123,7 +123,7 @@ const PageMetadata = ({ page, hidePageOwner = false }) => {
         unsubscribe?.();
       };
     }
-  }, [page.id, user]);
+  }, [page.id, session]);
 
   // Initialize page stats tracking
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
-import { PillLink } from '../PillLink';
+import { PillLink } from '../utils/PillLink';
 import { Flame, Loader } from 'lucide-react';
 import { Sparkline } from '../ui/sparkline';
 // import { getTrendingPages } from '../../firebase/pageViews';

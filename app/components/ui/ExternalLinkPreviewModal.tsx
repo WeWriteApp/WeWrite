@@ -6,7 +6,7 @@ import { X, ExternalLink, Users, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { PillLink } from '../utils/PillLink';
+// Removed PillLink import to break circular dependency
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { ANALYTICS_EVENTS } from '../../constants/analytics-events';
 
@@ -214,13 +214,12 @@ export function ExternalLinkPreviewModal({
                   <div className="space-y-2">
                     {relatedPages.map((page) => (
                       <div key={page.id} className="flex items-center gap-2">
-                        <PillLink
+                        <a
                           href={`/${page.id}`}
-                          isPublic={true}
-                          className="text-xs"
+                          className="text-xs text-blue-600 hover:text-blue-800 underline"
                         >
                           {page.title}
-                        </PillLink>
+                        </a>
                         {page.username && (
                           <span className="text-xs text-muted-foreground">
                             by {page.username}

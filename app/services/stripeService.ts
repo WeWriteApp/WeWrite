@@ -58,15 +58,12 @@ export const createCheckoutSession = async ({ priceId, userId, amount, tierName 
     const response = await fetch('/api/subscription/create-checkout', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Content-Type': 'application/json'},
       body: JSON.stringify({
         priceId,
         userId,
         amount,
-        tierName,
-      }),
-    });
+        tierName})});
 
     // Check if the response is ok before parsing JSON
     if (!response.ok) {
@@ -100,8 +97,7 @@ export const createCheckoutSession = async ({ priceId, userId, amount, tierName 
     }
 
     const result = await stripe.redirectToCheckout({
-      sessionId: session.id,
-    });
+      sessionId: session.id});
 
     if (result.error) {
       console.error('Stripe redirect error:', result.error);
@@ -124,12 +120,9 @@ export const createPortalSession = async (userId: string): Promise<PortalSession
     const response = await fetch('/api/subscription/portal', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Content-Type': 'application/json'},
       body: JSON.stringify({
-        userId,
-      }),
-    });
+        userId})});
 
     // Check if the response is ok before parsing JSON
     if (!response.ok) {
@@ -172,9 +165,7 @@ export const getSubscriptionPrices = async (): Promise<SubscriptionPrice[]> => {
     const response = await fetch('/api/subscription-prices', {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+        'Content-Type': 'application/json'}});
 
     return await response.json();
   } catch (error) {
@@ -189,13 +180,10 @@ export const updateSubscription = async (subscriptionId: string, newPriceId: str
     const response = await fetch('/api/update-subscription', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Content-Type': 'application/json'},
       body: JSON.stringify({
         subscriptionId,
-        newPriceId,
-      }),
-    });
+        newPriceId})});
 
     return await response.json();
   } catch (error) {
@@ -210,12 +198,9 @@ export const cancelSubscription = async (subscriptionId: string): Promise<ApiRes
     const response = await fetch('/api/subscription/cancel', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Content-Type': 'application/json'},
       body: JSON.stringify({
-        subscriptionId,
-      }),
-    });
+        subscriptionId})});
 
     return await response.json();
   } catch (error) {

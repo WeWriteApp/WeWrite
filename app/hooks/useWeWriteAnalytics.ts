@@ -40,8 +40,7 @@ export const useWeWriteAnalytics = () => {
     if (typeof window !== 'undefined' && !window.sessionStartTracked) {
       analytics.trackSessionEvent(ANALYTICS_EVENTS.SESSION_START, {
         page_path: url,
-        page_title: pageTitle,
-      });
+        page_title: pageTitle});
       window.sessionStartTracked = true;
     }
   }, [pathname, searchParams, analytics]);
@@ -163,8 +162,7 @@ export const useWeWriteAnalytics = () => {
     trackNotificationInteraction,
     trackShareInteraction,
     events: ANALYTICS_EVENTS,
-    categories: EVENT_CATEGORIES,
-  };
+    categories: EVENT_CATEGORIES};
 };
 
 // Add session tracking type to Window interface

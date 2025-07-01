@@ -135,10 +135,10 @@
     visibility: visible !important;
   }
 
-  /* Specifically restore text visibility for all text elements */
-  body > div.flex.min-h-screen > div.flex-1.min-w-0 > div > main > div > div > div.w-full.max-w-none.box-border > div > div.mt-4 > div > div span,
+  /* Specifically restore text visibility for all text elements - EXCLUDE paragraph numbers */
+  body > div.flex.min-h-screen > div.flex-1.min-w-0 > div > main > div > div > div.w-full.max-w-none.box-border > div > div.mt-4 > div > div span:not(.paragraph-number),
   body > div.flex.min-h-screen > div.flex-1.min-w-0 > div > main > div > div > div.w-full.max-w-none.box-border > div > div.mt-4 > div > div button,
-  body > div.flex.min-h-screen > div.flex-1.min-w-0 > div > main > div > div > div.w-full.max-w-none.box-border > div > div.mt-4 > div > div div {
+  body > div.flex.min-h-screen > div.flex-1.min-w-0 > div > main > div > div > div.w-full.max-w-none.box-border > div > div.mt-4 > div > div div:not(.paragraph-number) {
     color: revert !important;
   }
 
@@ -146,6 +146,16 @@
   [data-pledge-bar] * {
     pointer-events: auto !important;
   }
+
+
+}
+
+/* Ensure paragraph numbers have correct styling with higher specificity for all screen sizes */
+body .paragraph-number {
+  color: hsl(var(--muted-foreground));
+  font-weight: 400;
+  opacity: var(--paragraph-number-opacity);
+  font-size: 0.75em;
 }
 
 /* Global zoom prevention (applies to all screen sizes) */
@@ -653,8 +663,8 @@ input, textarea, select {
     /* Active line highlight in editor */
     --active-line-highlight: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.1);
 
-    /* Paragraph numbering opacity - accessible contrast ratio */
-    --paragraph-number-opacity: 0.7;
+    /* Paragraph numbering opacity - subtle grey appearance */
+    --paragraph-number-opacity: 0.4;
   }
 
   .dark {
@@ -700,8 +710,8 @@ input, textarea, select {
     /* Active line highlight in editor - darker in dark mode */
     --active-line-highlight: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.15);
 
-    /* Paragraph numbering opacity - accessible contrast ratio (same as light mode) */
-    --paragraph-number-opacity: 0.7;
+    /* Paragraph numbering opacity - subtle appearance (same as light mode) */
+    --paragraph-number-opacity: 0.4;
   }
 
   /* High Contrast Mode - Light */
@@ -2002,7 +2012,7 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
 
   /* Add bottom spacing to page content to account for mobile bottom nav */
   main {
-    padding-bottom: 120px; /* Space for bottom nav + safe area */
+    padding-bottom: 140px; /* Space for larger bottom nav with text labels + safe area */
   }
 
   /* Specific spacing for page content containers */

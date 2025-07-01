@@ -8,10 +8,10 @@ import { Check, ArrowRight, Flame, Loader, User, Activity, FileText, Heart, Info
 import { Badge } from '../../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Separator } from "../../components/ui/separator";
-import Header from '../Header';
+import Header from '../layout/Header';
 import { PagePreviewCard } from './PagePreviewCard';
 import { useTheme } from "next-themes";
-import { PillLink } from "../PillLink";
+import { PillLink } from "../utils/PillLink";
 import { useSwipeable } from 'react-swipeable';
 import { AnimatePresence, motion } from 'framer-motion';
 import { getPageById } from '../../firebase/database';
@@ -39,7 +39,7 @@ const LandingPage = () => {
   const [pledgeBarAnimatingOut, setPledgeBarAnimatingOut] = useState(false);
   const { setTheme, theme } = useTheme();
   const [pageContents, setPageContents] = useState<Record<string, any>>({});
-  const [user, setUser] = useState<any>(null);
+  const [session, setUser] = useState<any>(null);
 
   // Analytics hook for tracking
   const analytics = useWeWriteAnalytics();
@@ -169,13 +169,11 @@ const LandingPage = () => {
     }, 350); // Slightly longer than animation duration for smooth completion
   };
 
-  // Check if user is logged in
+  // Check if user is logged in using hybrid session architecture
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setUser(user);
-    });
-
-    return () => unsubscribe();
+    // Use the session management system instead of direct Firebase auth
+    // The user state is already managed by the SessionAuthInitializer and Zustand store
+    // No need for direct Firebase auth listener here
   }, []);
 
   // Always set accent color to blue on landing page mount
@@ -452,8 +450,6 @@ const LandingPage = () => {
     }
   };
 
-
-
   // Animation function for text cycling
   const animateTextChange = (element: HTMLElement | null, newText: string, callback: () => void) => {
     if (!element) return;
@@ -529,13 +525,11 @@ const LandingPage = () => {
     );
   };
 
-
-
   return (
     <div className="min-h-screen bg-background">
       {/* Donation Bar for non-logged-in users */}
       <LandingPageDonationBar
-        isLoggedIn={!!user}
+        isLoggedIn={!!session}
         visible={showPledgeBar && !pledgeBarDismissed}
         onDismiss={handlePledgeBarDismiss}
         animatingOut={pledgeBarAnimatingOut}
@@ -586,8 +580,6 @@ const LandingPage = () => {
                 <FileText className="h-4 w-4" />
                 Feature Roadmap
               </a>
-
-
 
             </nav>
           </div>
@@ -673,8 +665,6 @@ const LandingPage = () => {
                 <FileText className="h-3 w-3" />
                 Feature Roadmap
               </a>
-
-
 
             </div>
           </div>

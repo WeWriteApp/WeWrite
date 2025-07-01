@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Badge } from '../ui/badge';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { 
   AlertTriangle, 
   CreditCard, 
@@ -24,11 +24,11 @@ interface FailedPaymentRecoveryProps {
 }
 
 export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: FailedPaymentRecoveryProps) {
-  const { user } = useAuth();
+  const { currentAccount } = useCurrentAccount();
   const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
 
   // Don't show if payments feature is disabled
   if (!isPaymentsEnabled) {
@@ -45,7 +45,7 @@ export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: Failed
   const amount = subscription.amount || 0;
 
   const handleRetryPayment = async () => {
-    if (!user) {
+    if (!session) {
       setError('User not authenticated');
       return;
     }
@@ -57,9 +57,7 @@ export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: Failed
       const response = await fetch('/api/subscription/retry-payment', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+          'Content-Type': 'application/json'}});
 
       const data = await response.json();
 

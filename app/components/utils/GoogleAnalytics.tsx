@@ -107,8 +107,7 @@ export default function GoogleAnalytics({ GA_MEASUREMENT_ID }: { GA_MEASUREMENT_
               send_page_view: false
             });
             console.log('Google Analytics config initialized');
-          `,
-        }}
+          `}}
       />
 
       {/* Analytics debugging indicator - hidden by default */}

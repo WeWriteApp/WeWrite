@@ -175,8 +175,7 @@ export function DynamicChart({
   height = 300,
   title,
   loading = false,
-  error,
-}: DynamicChartProps) {
+  error}: DynamicChartProps) {
   const [shouldLoadChart, setShouldLoadChart] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [hasUserRequested, setHasUserRequested] = useState(false);
@@ -252,8 +251,7 @@ export function DynamicChart({
     width,
     height,
     data,
-    margin: { top: 5, right: 30, left: 20, bottom: 5 },
-  };
+    margin: { top: 5, right: 30, left: 20, bottom: 5 }};
 
   return (
     <div ref={elementRef} className="w-full">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useContext } from "react";
+import React from "react";
 import Link from "next/link";
 import { FileText, Lock, Globe, ChevronRight, Plus, Search } from "lucide-react";
 import { Badge } from "../ui/badge";
@@ -16,8 +16,7 @@ import {
 } from "../ui/table";
 import { interactiveCard, cn } from "../../lib/utils";
 import { PillLink } from "../utils/PillLink";
-import { AuthContext } from "../../providers/AuthProvider";
-
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 export interface Page {
   id: string;
   title: string;
@@ -111,7 +110,7 @@ export default function PageList({
   groupId
 }: PageListProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
 
   if (loading) {
     return <div style={{ minHeight: '200px' }}>
@@ -178,7 +177,7 @@ export default function PageList({
                   isPublic={page.isPublic}
                   byline={page.authorName}
                   className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
-                  isOwned={page.userId === user?.uid}
+                  isOwned={page.userId === session?.uid}
                   isLoading={false}
                   label=""
                 >

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -60,8 +60,8 @@ interface Pledge {
 }
 
 function CombinedSubscriptionSectionInner() {
-  const { user } = useAuth();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const { currentAccount } = useCurrentAccount();
+  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
 
   // Removed enhanced error tracking
 
@@ -91,7 +91,7 @@ function CombinedSubscriptionSectionInner() {
       setSubscriptionError(null);
 
       // Set up real-time listener for subscription changes
-      const unsubscribe = listenToUserSubscription(user.uid, (subscriptionData) => {
+      const unsubscribe = listenToUserSubscription(session.uid, (subscriptionData) => {
         try {
           setSubscriptionError(null);
           setSubscription(subscriptionData);
@@ -142,7 +142,7 @@ function CombinedSubscriptionSectionInner() {
       setPledgesLoading(true);
       setPledgesError(null);
 
-      const unsubscribe = listenToUserPledges(user.uid, async (pledgesData) => {
+      const unsubscribe = listenToUserPledges(currentAccount.uid, async (pledgesData) => {
         try {
           if (!pledgesData || pledgesData.length === 0) {
             setPledges([]);
@@ -160,19 +160,16 @@ function CombinedSubscriptionSectionInner() {
                     ...pledge,
                     pageTitle: pageDoc.title || 'Untitled Page',
                     authorUsername: pageDoc.username,
-                    authorDisplayName: pageDoc.displayName,
-                  };
+                    authorDisplayName: pageDoc.displayName};
                 }
                 return {
                   ...pledge,
-                  pageTitle: 'Unknown Page',
-                };
+                  pageTitle: 'Unknown Page'};
               } catch (error) {
                 console.error('Error fetching page details for pledge:', error);
                 return {
                   ...pledge,
-                  pageTitle: 'Unknown Page',
-                };
+                  pageTitle: 'Unknown Page'};
               }
             })
           );
@@ -197,7 +194,7 @@ function CombinedSubscriptionSectionInner() {
   // CRITICAL: All hooks must be called before any early returns
   useEffect(() => {
     return trackEffect('subscriptionAndPaymentSetup', () => {
-      if (user?.uid && isPaymentsEnabled) {
+      if (currentAccount?.uid && isPaymentsEnabled) {
         const unsubscribeSubscription = setupSubscriptionListener();
         fetchPaymentMethods();
         fetchPledges();
@@ -210,7 +207,7 @@ function CombinedSubscriptionSectionInner() {
         };
       }
     });
-  }, [user, isPaymentsEnabled, trackEffect]);
+  }, [currentAccount, isPaymentsEnabled, trackEffect]);
 
   // If payments feature flag is disabled, don't render anything
   // But do this AFTER all hooks are declared
@@ -227,8 +224,7 @@ function CombinedSubscriptionSectionInner() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
-    }).format(amount);
+      currency: 'USD'}).format(amount);
   };
 
   const getStatusBadge = (subscription: Subscription) => {

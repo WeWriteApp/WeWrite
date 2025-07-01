@@ -19,8 +19,7 @@ import {
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-06-20',
-});
+  apiVersion: '2024-06-20'});
 
 export async function POST(request: NextRequest) {
   try {
@@ -91,33 +90,26 @@ export async function POST(request: NextRequest) {
       unit_amount: Math.round(finalAmount * 100), // Convert to cents
       currency: 'usd',
       recurring: {
-        interval: 'month',
-      },
+        interval: 'month'},
       product_data: {
-        name: `WeWrite ${newTier === 'custom' ? 'Custom' : getTierById(newTier)?.name}`,
-      },
+        name: `WeWrite ${newTier === 'custom' ? 'Custom' : getTierById(newTier)?.name}`},
       metadata: {
         tier: newTier,
-        tokens: finalTokens.toString(),
-      },
-    });
+        tokens: finalTokens.toString()}});
 
     // Update subscription with new price
     const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
       items: [
         {
           id: currentSubscription.items.data[0].id,
-          price: newPrice.id,
-        },
+          price: newPrice.id},
       ],
       proration_behavior: 'create_prorations',
       metadata: {
         firebaseUID: userId,
         tier: newTier,
         amount: finalAmount.toString(),
-        tokens: finalTokens.toString(),
-      },
-    });
+        tokens: finalTokens.toString()}});
 
     // Update subscription in Firestore
     const subscriptionRef = adminDb.collection('users').doc(userId).collection('subscription').doc('current');
@@ -126,15 +118,13 @@ export async function POST(request: NextRequest) {
       tier: newTier,
       amount: finalAmount,
       tokens: finalTokens,
-      updatedAt: new Date(),
-    });
+      updatedAt: new Date()});
 
     // Update user's monthly token allocation
     const userRef = adminDb.collection('users').doc(userId);
     await userRef.update({
       monthlyTokenAllocation: finalAmount, // $1 = 1 token allocation
-      updatedAt: new Date(),
-    });
+      updatedAt: new Date()});
 
     console.log(`Subscription updated for user ${userId}: ${newTier} - $${finalAmount}/mo - ${finalTokens} tokens`);
 
@@ -147,8 +137,7 @@ export async function POST(request: NextRequest) {
         tokens: finalTokens,
         currentPeriodEnd: new Date(updatedSubscription.current_period_end * 1000).toISOString(),
         previousAmount: currentSubscription.items.data[0].price.unit_amount / 100, // Previous amount for comparison
-      },
-    });
+      }});
 
   } catch (error: any) {
     console.error('Error updating subscription:', error);

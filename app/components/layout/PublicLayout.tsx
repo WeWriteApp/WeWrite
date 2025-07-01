@@ -12,4 +12,4 @@ export default function PublicLayout({ children }) {
       </div>
     </div>
   );
-} 
+}

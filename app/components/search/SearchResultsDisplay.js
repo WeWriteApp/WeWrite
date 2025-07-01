@@ -6,9 +6,9 @@ import Link from 'next/link';
 import { PillLink } from "../utils/PillLink";
 import PerformanceMonitor from '../utils/PerformanceMonitor';
 import { Pin } from 'lucide-react';
-import { useDateFormat } from "../../contexts/DateFormatContext";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
-import { useAuth } from "../../providers/AuthProvider";
+import { useDateFormat } from '../../contexts/DateFormatContext';
 
 /**
  * SearchResultsDisplay Component
@@ -33,11 +33,11 @@ const SearchResultsDisplay = React.memo(({
   error = null,
   searchStats = {}
 }) => {
-  const { formatDateString } = useDateFormat();
-  const { user } = useAuth();
+  const { formatDate: formatDateString } = useDateFormat();
+  const { session } = useCurrentAccount();
 
   // Check if user is admin for debug features
-  const isAdmin = user?.email === 'jamiegray2234@gmail.com';
+  const isAdmin = session?.email === 'jamiegray2234@gmail.com';
   // Memoize the combined results to prevent unnecessary recalculations
   const combinedResults = useMemo(() => {
     if (!results) {
@@ -49,7 +49,7 @@ const SearchResultsDisplay = React.memo(({
       ...(results.users || []).map(user => ({
         ...user,
         type: 'user',
-        displayName: user.username,
+        displayName: session.username,
         url: `/user/${user.id}`
       })),
       ...(results.pages || []).map(page => ({
@@ -156,7 +156,7 @@ const SearchResultsDisplay = React.memo(({
               <div key={`user-${user.id}`} className="flex items-start gap-2 min-w-0">
                 <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-60px)]">
                   <PillLink href={`/user/${user.id}`} className="max-w-full truncate">
-                    {user.username}
+                    {session.username}
                   </PillLink>
                 </div>
                 <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">

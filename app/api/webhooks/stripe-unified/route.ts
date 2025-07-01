@@ -32,8 +32,7 @@ async function getSubscriptionStatusHandler() {
 }
 
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia',
-});
+  apiVersion: '2024-12-18.acacia'});
 
 /**
  * Unified webhook event router

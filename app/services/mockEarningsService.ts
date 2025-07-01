@@ -44,8 +44,7 @@ export class MockEarningsService {
       const response = await fetch('/api/admin/mock-token-earnings', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify(request)
       });
 
@@ -77,8 +76,7 @@ export class MockEarningsService {
       const response = await fetch('/api/admin/reset-mock-earnings', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({})
       });
 

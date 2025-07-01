@@ -253,7 +253,7 @@ export const useUnifiedSearch = (
         new Map((data.pages || []).map(page => [page.id, page])).values()
       );
       const uniqueUsers = Array.from(
-        new Map((data.users || []).map(user => [user.id, user])).values()
+        new Map((data.users || []).map(user => [user.id, session])).values()
       );
 
       const searchResults: SearchResults = {

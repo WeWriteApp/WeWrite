@@ -72,14 +72,12 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
       id: 1,
       type: "bank",
       last4: "1234",
-      default: true,
-    },
+      default: true},
     {
       id: 2,
       type: "card",
       last4: "4321",
-      default: false,
-    },
+      default: false},
   ]);
   const [fundingTransactions, setFundingTransactions] = useState<FundingTransaction[]>([
     {
@@ -88,8 +86,7 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
       amount: 1000,
       date: new Date(),
       type: "deposit",
-      status: "completed",
-    },
+      status: "completed"},
   ]);
   const [charges, setCharges] = useState<Charge[]>([
     {
@@ -98,8 +95,7 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
       amount: 10,
       // date 1 month ago
       date: new Date(new Date().setMonth(new Date().getMonth() - 1)),
-      status: "paid",
-    },
+      status: "paid"},
   ]);
   const [payouts, setPayouts] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -135,8 +131,7 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
         amount: amount,
         date: new Date(),
         type: "deposit",
-        status: "completed",
-      },
+        status: "completed"},
     ]);
     setRemainingBalance(parseInt(remainingBalance.toString()) + parseInt(amount.toString()));
   };
@@ -148,8 +143,7 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
         id: fundingSources.length + 1,
         type,
         last4,
-        default: defaultSource,
-      },
+        default: defaultSource},
     ]);
   };
 
@@ -160,8 +154,7 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
         if (sub.id === id) {
           return {
             ...sub,
-            status: "inactive" as const,
-          };
+            status: "inactive" as const};
         }
         return sub;
       })
@@ -176,8 +169,7 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
         if (sub.id === id) {
           return {
             ...sub,
-            status: "active" as const,
-          };
+            status: "active" as const};
         }
         return sub;
       })
@@ -196,8 +188,7 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
             return {
               ...sub,
               status: "active" as const,
-              amount: amount,
-            };
+              amount: amount};
           }
           return sub;
         })
@@ -209,8 +200,7 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
           id,
           amount,
           date: new Date(),
-          status: "active" as const,
-        },
+          status: "active" as const},
       ]);
     }
     setRemainingBalance(parseInt(remainingBalance.toString()) - parseInt(amount.toString()));
@@ -252,7 +242,7 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
             try {
               // Use optimized Firebase function for subscription data
               const { getOptimizedUserSubscription } = await import('../firebase/optimizedSubscription');
-              const subscriptionData = await getOptimizedUserSubscription(user.uid, { useCache: true });
+              const subscriptionData = await getOptimizedUserSubscription(session.uid, { useCache: true });
 
               if (subscriptionData && subscriptionData.status) {
                 setSubscriptions([{ ...subscriptionData }]);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuth } from '../providers/AuthProvider';
+import { useCurrentAccount } from "../providers/CurrentAccountProvider";
 import { getCacheItem, setCacheItem, generateCacheKey } from '../utils/cacheUtils';
 
 interface DashboardData {
@@ -33,7 +33,7 @@ const STALE_THRESHOLD = 2 * 60 * 1000; // 2 minutes
  * Uses intelligent caching and background refresh strategies
  */
 export function useOptimizedDashboard(): UseOptimizedDashboardReturn {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,8 +65,8 @@ export function useOptimizedDashboard(): UseOptimizedDashboardReturn {
       }
       
       const params = new URLSearchParams();
-      if (user?.uid) {
-        params.append('userId', user.uid);
+      if (session?.uid) {
+        params.append('userId', session.uid);
       }
       if (forceRefresh) {
         params.append('forceRefresh', 'true');
@@ -115,7 +115,7 @@ export function useOptimizedDashboard(): UseOptimizedDashboardReturn {
       }
       backgroundRefreshRef.current = false;
     }
-  }, [user?.uid]);
+  }, [session?.uid]);
 
   /**
    * Manual refresh function
@@ -158,7 +158,7 @@ export function useOptimizedDashboard(): UseOptimizedDashboardReturn {
 
   // Set up periodic refresh for active users
   useEffect(() => {
-    if (!user || !data) {
+    if (!session || !data) {
       return;
     }
     
@@ -169,7 +169,7 @@ export function useOptimizedDashboard(): UseOptimizedDashboardReturn {
     }, 5 * 60 * 1000);
     
     return () => clearInterval(interval);
-  }, [user, data, backgroundRefresh]);
+  }, [session, data, backgroundRefresh]);
 
   // Cleanup on unmount
   useEffect(() => {

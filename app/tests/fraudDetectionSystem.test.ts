@@ -12,8 +12,7 @@ import { FinancialUtils } from '../types/financial';
 
 // Mock Firebase
 jest.mock('../firebase/config', () => ({
-  db: {},
-}));
+  db: {}}));
 
 // Mock Firestore functions
 jest.mock('firebase/firestore', () => ({
@@ -29,8 +28,7 @@ jest.mock('firebase/firestore', () => ({
   getDocs: jest.fn(),
   writeBatch: jest.fn(),
   serverTimestamp: jest.fn(() => new Date()),
-  increment: jest.fn((value) => ({ _increment: value })),
-}));
+  increment: jest.fn((value) => ({ _increment: value }))}));
 
 describe('Fraud Detection System', () => {
   let fraudEngine: FraudDetectionEngine;

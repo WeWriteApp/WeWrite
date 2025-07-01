@@ -8,11 +8,10 @@ import { DrawerContext } from "../../providers/DrawerProvider";
 import SubscriptionsTable from "./SubscriptionsTable";
 import { X, Pencil, Eye, Check, Minus, Plus, DollarSign } from "lucide-react";
 import { useFeatureFlag } from "../../utils/feature-flags";
-import { useAuth } from "../../providers/AuthProvider";
-
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 const DonateBar = () => {
-  const { user } = useAuth();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email);
+  const { currentAccount } = useCurrentAccount();
+  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email);
 
   // If payments feature flag is disabled, don't render anything
   if (!isPaymentsEnabled) {
@@ -109,8 +108,7 @@ const DonateBar = () => {
       <div
         className="fixed left-0 right-0 bottom-0 w-full h-64 z-0 pointer-events-none"
         style={{
-          background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0) 100%)',
-        }}
+          background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0) 100%)'}}
       />
       {/* Floating pledge bar */}
       <div

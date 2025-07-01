@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { CreditCard, Plus, Settings, AlertTriangle } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -19,19 +19,19 @@ interface PaymentMethod {
 }
 
 export function PaymentMethodsOverview() {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!session) {
       setLoading(false);
       return;
     }
 
     fetchPaymentMethods();
-  }, [user]);
+  }, [, session]);
 
   const fetchPaymentMethods = async () => {
     try {
@@ -41,8 +41,7 @@ export function PaymentMethodsOverview() {
       const response = await fetch('/api/payment-methods', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.uid }),
-      });
+        body: JSON.stringify({ userId: session.uid })});
 
       if (response.ok) {
         const data = await response.json();

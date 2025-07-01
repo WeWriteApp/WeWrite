@@ -1,7 +1,6 @@
 export const metadata = {
   title: 'WeWrite - Account Access',
-  description: 'Sign in or create an account for WeWrite collaborative writing platform',
-};
+  description: 'Sign in or create an account for WeWrite collaborative writing platform'};
 
 interface AuthLayoutProps {
   children: React.ReactNode;

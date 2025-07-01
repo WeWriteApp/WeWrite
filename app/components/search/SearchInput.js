@@ -6,7 +6,6 @@ import { Button } from "../ui/button";
 import { Search, X, Pin } from 'lucide-react';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 
-
 /**
  * SearchInput Component
  *

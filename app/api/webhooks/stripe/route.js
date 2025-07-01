@@ -100,7 +100,6 @@ export async function POST(request) {
       case 'invoice.paid': {
         const invoice = event.data.object;
 
-
         // Case 1: Subscription invoice
         if (invoice.subscription) {
           const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
@@ -115,7 +114,6 @@ export async function POST(request) {
           if (isNaN(value)) {
             return err('Invalid subscription_value in metadata');
           }
-
 
           //const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
           console.log("subscription paid: ", value/100);
@@ -145,8 +143,7 @@ export async function POST(request) {
           const subscriptions = await stripe.subscriptions.list({
             customer: invoice.customer,
             status: 'active',
-            limit: 1,
-          });
+            limit: 1});
 
           const activeSub = subscriptions.data[0];
           if (activeSub) {

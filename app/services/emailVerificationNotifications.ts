@@ -119,9 +119,9 @@ export const createEmailVerificationNotificationIfNeeded = async (): Promise<boo
     }
     
     const user = auth.currentUser;
-    if (!user) return false;
+    if (!session) return false;
     
-    const notificationId = await createEmailVerificationNotification(user.uid);
+    const notificationId = await createEmailVerificationNotification(session.uid);
     
     if (notificationId) {
       recordNotificationCreated();
@@ -173,10 +173,10 @@ export const checkEmailVerificationPeriodically = async (): Promise<void> => {
 export const forceCreateEmailVerificationNotification = async (): Promise<boolean> => {
   try {
     const user = auth.currentUser;
-    if (!user) return false;
+    if (!session) return false;
 
     // Skip all checks and force create the notification
-    const notificationId = await createEmailVerificationNotification(user.uid);
+    const notificationId = await createEmailVerificationNotification(session.uid);
 
     if (notificationId) {
       recordNotificationCreated();

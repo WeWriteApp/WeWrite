@@ -3,21 +3,19 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { LogOut, User, Settings } from "lucide-react"
-import { auth } from "../../firebase/config"
-import { signOut as firebaseSignOut } from "firebase/auth"
-import { useAuth } from "../../providers/AuthProvider"
+import { logoutUser } from "../../firebase/auth"
+import { useCurrentAccount } from "../../providers/CurrentAccountProvider"
 
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./dropdown-menu"
+  DropdownMenuTrigger} from "./dropdown-menu"
 import { Button } from "./button"
 
 export function UserMenu() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { session } = useCurrentAccount()
 
   const handleLogout = async () => {
     try {
@@ -53,7 +51,7 @@ export function UserMenu() {
     }
   }
 
-  if (!user) {
+  if (!session) {
     return null
   }
 

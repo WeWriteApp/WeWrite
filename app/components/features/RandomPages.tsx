@@ -5,7 +5,7 @@ import { RandomPagesSkeleton } from '../ui/skeleton-loaders';
 import { SectionTitle } from '../ui/section-title';
 import { Button } from '../ui/button';
 import { Shuffle } from 'lucide-react';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import RandomPagesTable from '../pages/RandomPagesTable';
 
 interface RandomPage {
@@ -32,7 +32,7 @@ const RandomPages = React.memo(function RandomPages({
   limit = 10,
   priority = 'low'
 }: RandomPagesProps) {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const [randomPages, setRandomPages] = useState<RandomPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [shuffling, setShuffling] = useState(false);
@@ -68,7 +68,7 @@ const RandomPages = React.memo(function RandomPages({
     try {
       // Prevent excessive API calls - throttle to max once per 2 seconds
       const now = Date.now();
-      const lastFetchKey = `randomPages_${user?.uid || 'anonymous'}`;
+      const lastFetchKey = `randomPages_${session?.uid || 'anonymous'}`;
       const lastFetch = parseInt(localStorage.getItem(lastFetchKey) || '0');
 
       if (!isShuffling && (now - lastFetch) < 2000) {
@@ -89,12 +89,11 @@ const RandomPages = React.memo(function RandomPages({
       const effectiveLimit = denseMode ? Math.max(limit * 2, 20) : limit;
 
       const params = new URLSearchParams({
-        limit: effectiveLimit.toString(),
-      });
+        limit: effectiveLimit.toString()});
 
       // Add user ID for access control if user is authenticated
-      if (user?.uid) {
-        params.append('userId', user.uid);
+      if (session?.uid) {
+        params.append('userId', session.uid);
       }
 
       // Add privacy preference
@@ -143,7 +142,7 @@ const RandomPages = React.memo(function RandomPages({
       setLoading(false);
       setShuffling(false);
     }
-  }, [limit, user?.uid, denseMode, includePrivatePages, excludeOwnPages]);
+  }, [limit, session?.uid, denseMode, includePrivatePages, excludeOwnPages]);
 
   // Handle shuffle button click
   const handleShuffle = useCallback((includePrivate = includePrivatePages, excludeOwn = excludeOwnPages) => {

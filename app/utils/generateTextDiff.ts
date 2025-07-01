@@ -107,10 +107,6 @@ export function generateTextDiff(currentContent: string, previousContent: string
   }
 }
 
-
-
-
-
 // Re-export for backward compatibility
 export { extractTextContent } from './text-extraction';
 

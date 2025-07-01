@@ -8,9 +8,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 import { Lock } from 'lucide-react';
-import { useDateFormat } from "../../contexts/DateFormatContext";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
-import { useBatchPageData } from "../../hooks/useBatchPageData";
+import { useDateFormat } from '../../contexts/DateFormatContext';
 
 interface RandomPage {
   id: string;
@@ -39,9 +39,7 @@ interface RandomPagesTableProps {
 export default function RandomPagesTable({ pages, loading = false, denseMode = false }: RandomPagesTableProps) {
   const { formatDateString } = useDateFormat();
 
-  // Preload page data for all pages to reduce individual requests
-  const pageIds = pages.map(page => page.id);
-  useBatchPageData(pageIds, { preload: true, batchDelay: 100 });
+  // Note: Batch page data preloading was removed with session management cleanup
 
   // Calculate minimum height based on expected content to prevent layout shifts
   const minHeight = pages.length > 0 ? `${Math.max(400, pages.length * 60 + 100)}px` : '400px';

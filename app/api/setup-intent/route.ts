@@ -33,8 +33,7 @@ function initializeFirebase() {
 // Get the appropriate Stripe key based on environment
 const stripeSecretKey = getStripeSecretKey();
 const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2025-04-30.basil' as any,
-});
+  apiVersion: '2025-04-30.basil' as any});
 
 // POST /api/setup-intent - Create a setup intent for adding a payment method
 export async function POST(request: NextRequest) {
@@ -71,23 +70,19 @@ export async function POST(request: NextRequest) {
       const customer = await stripe.customers.create({
         email: userRecord.email,
         metadata: {
-          firebaseUID: userId,
-        },
-      });
+          firebaseUID: userId}});
 
       customerId = customer.id;
 
       // Save the customer ID to Firestore
       await db.collection('users').doc(userId).set({
-        stripeCustomerId: customerId,
-      }, { merge: true });
+        stripeCustomerId: customerId}, { merge: true });
     }
 
     // Check if the user already has 3 payment methods
     const paymentMethods = await stripe.paymentMethods.list({
       customer: customerId,
-      type: 'card',
-    });
+      type: 'card'});
 
     if (paymentMethods.data.length >= 3) {
       return NextResponse.json({ error: 'You can only have up to 3 payment methods' }, { status: 400 });
@@ -101,8 +96,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
-      clientSecret: setupIntent.client_secret,
-    }, { status: 200 });
+      clientSecret: setupIntent.client_secret}, { status: 200 });
   } catch (error: any) {
     console.error('Error creating setup intent:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });

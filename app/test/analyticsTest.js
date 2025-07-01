@@ -72,7 +72,7 @@ async function testPageCreationTracking() {
     
     // Get current user
     const user = auth.currentUser;
-    if (!user) {
+    if (!session) {
       throw new Error('User must be logged in to test page creation');
     }
     
@@ -88,8 +88,8 @@ async function testPageCreationTracking() {
       isPublic: false,
       location: null,
       groupId: null,
-      userId: user.uid,
-      username: user.displayName || 'Test User',
+      userId: session.uid,
+      username: session.displayName || 'Test User',
       isReply: false
     };
     
@@ -136,7 +136,7 @@ async function testPageEditingTracking(pageId) {
     
     // Get current user
     const user = auth.currentUser;
-    if (!user) {
+    if (!session) {
       throw new Error('User must be logged in to test page editing');
     }
     
@@ -150,8 +150,8 @@ async function testPageEditingTracking(pageId) {
     
     const updateData = {
       content: updatedContent,
-      userId: user.uid,
-      username: user.displayName || 'Test User'
+      userId: session.uid,
+      username: session.displayName || 'Test User'
     };
     
     console.log('🔄 Updating test page...');

@@ -12,8 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFeatureFlag } from '../../utils/feature-flags';
-import { useAuth } from '../../providers/AuthProvider';
-
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 interface FailedPaymentNotificationProps {
   notification: {
     id: string;
@@ -33,15 +32,15 @@ interface FailedPaymentNotificationProps {
   onDismiss?: (notificationId: string) => void;
 }
 
-export function FailedPaymentNotification({ 
-  notification, 
-  onMarkAsRead, 
-  onDismiss 
+export function FailedPaymentNotification({
+  notification,
+  onMarkAsRead,
+  onDismiss
 }: FailedPaymentNotificationProps) {
-  const { user } = useAuth();
+  const { currentAccount } = useCurrentAccount();
   const [retrying, setRetrying] = useState(false);
   const [dismissed, setDismissed] = useState(false);
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
 
   // Don't show if payments feature is disabled
   if (!isPaymentsEnabled) {
@@ -64,7 +63,7 @@ export function FailedPaymentNotification({
   const dueDate = notification.metadata?.dueDate ? new Date(notification.metadata.dueDate) : null;
 
   const handleRetryPayment = async () => {
-    if (!user) {
+    if (!session) {
       toast.error('User not authenticated');
       return;
     }
@@ -75,9 +74,7 @@ export function FailedPaymentNotification({
       const response = await fetch('/api/subscription/retry-payment', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+          'Content-Type': 'application/json'}});
 
       const data = await response.json();
 

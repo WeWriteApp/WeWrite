@@ -12,8 +12,7 @@ import { getUserIdFromRequest } from '../../../api/auth-helper';
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-06-20',
-});
+  apiVersion: '2024-06-20'});
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,8 +64,7 @@ export async function POST(request: NextRequest) {
           status: 'canceled',
           cancelledAt: new Date(),
           cancelReason: immediate ? 'user_cancelled_stuck_subscription' : 'user_cancelled_incomplete',
-          updatedAt: new Date(),
-        });
+          updatedAt: new Date()});
 
         return NextResponse.json({
           success: true,
@@ -74,8 +72,7 @@ export async function POST(request: NextRequest) {
           subscription: {
             id: cancelledSubscription.id,
             status: cancelledSubscription.status,
-            cancelledAt: new Date(cancelledSubscription.canceled_at * 1000).toISOString(),
-          }
+            cancelledAt: new Date(cancelledSubscription.canceled_at * 1000).toISOString()}
         });
 
       } catch (stripeError: any) {
@@ -87,8 +84,7 @@ export async function POST(request: NextRequest) {
           cancelledAt: new Date(),
           cancelReason: 'user_cancelled_stuck_subscription_stripe_failed',
           updatedAt: new Date(),
-          stripeError: stripeError.message,
-        });
+          stripeError: stripeError.message});
 
         return NextResponse.json({
           success: true,
@@ -101,22 +97,19 @@ export async function POST(request: NextRequest) {
       try {
         // First, try to update the subscription directly
         const subscription = await stripe.subscriptions.update(subscriptionId, {
-          cancel_at_period_end: true,
-        });
+          cancel_at_period_end: true});
 
         // Update subscription status in Firestore
         await subscriptionRef.update({
           status: 'cancelled',
           cancelAtPeriodEnd: true,
-          updatedAt: new Date(),
-        });
+          updatedAt: new Date()});
 
         return NextResponse.json({
           success: true,
           message: 'Subscription will be cancelled at the end of the current period',
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
-          currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-        });
+          currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString()});
 
       } catch (stripeError: any) {
         console.log(`[CANCEL SUBSCRIPTION] Direct subscription update failed: ${stripeError.message}`);
@@ -141,15 +134,13 @@ export async function POST(request: NextRequest) {
                 cancelledAt: new Date(),
                 cancelReason: 'user_cancelled_via_schedule',
                 scheduleId: subscription.schedule,
-                updatedAt: new Date(),
-              });
+                updatedAt: new Date()});
 
               return NextResponse.json({
                 success: true,
                 message: 'Subscription schedule cancelled successfully',
                 cancelledAt: new Date().toISOString(),
-                scheduleId: subscription.schedule,
-              });
+                scheduleId: subscription.schedule});
             } else {
               throw new Error('No schedule found for subscription');
             }

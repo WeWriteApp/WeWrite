@@ -18,20 +18,15 @@ const iconButtonVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
+        link: "text-primary underline-offset-4 hover:underline"},
       size: {
         default: "h-10 w-10",
         sm: "h-8 w-8",
         lg: "h-12 w-12",
-        icon: "h-9 w-9",
-      },
-    },
+        icon: "h-9 w-9"}},
     defaultVariants: {
       variant: "default",
-      size: "default",
-    },
-  }
+      size: "default"}}
 )
 
 export interface IconButtonProps

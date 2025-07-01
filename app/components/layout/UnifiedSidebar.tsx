@@ -7,15 +7,15 @@ import { Switch } from "../ui/switch";
 import {
   Home, Search, User, Settings, ChevronLeft, ChevronRight, Bell, Plus,
   Globe, Lock, Link as LinkIcon, X, Check, Trash2, MapPin, Shield,
-  Clock, Shuffle
+  Clock, Shuffle, LogOut
 } from "lucide-react";
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useRouter, usePathname } from "next/navigation";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { navigateToRandomPage, RandomPageFilters } from "../../utils/randomPageNavigation";
 import MapEditor from "../editor/MapEditor";
 import RandomPageFilterMenu from "../ui/RandomPageFilterMenu";
-import { AccountSwitcher } from "../auth/AccountSwitcher";
+import { logoutUser } from "../../firebase/auth";
 import { cn } from "../../lib/utils";
 
 // Context for sidebar state management
@@ -68,7 +68,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode } & EditorCont
  * Provides sidebar state to the entire app
  */
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -91,7 +91,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Calculate sidebar width based on state - only for authenticated users
-  const sidebarWidth = user && (isExpanded || isHovering) ? 256 : user ? 64 : 0;
+  const sidebarWidth = session && (isExpanded || isHovering) ? 256 : session ? 64 : 0;
 
   const contextValue: SidebarContextType = {
     isExpanded,
@@ -100,12 +100,10 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     toggleExpanded
   };
 
-
-
   return (
     <SidebarContext.Provider value={contextValue}>
-      {/* Only render sidebar for authenticated users */}
-      {isMounted && user && <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} isRandomMenuOpen={isRandomMenuOpen} setIsRandomMenuOpen={setIsRandomMenuOpen} />}
+      {/* Only render sidebar for authenticated users and not on admin dashboard */}
+      {isMounted && session && <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} isRandomMenuOpen={isRandomMenuOpen} setIsRandomMenuOpen={setIsRandomMenuOpen} />}
       {children}
     </SidebarContext.Provider>
   );
@@ -164,37 +162,41 @@ function UnifiedSidebarContent({
   isRandomMenuOpen: boolean;
   setIsRandomMenuOpen: (value: boolean) => void;
 }) {
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const router = useRouter();
   const pathname = usePathname();
   const editorContext = useContext(EditorContext);
 
-
-
   // Check if map feature is enabled
-  const mapFeatureEnabled = useFeatureFlag('map_view', user?.email);
+  const mapFeatureEnabled = useFeatureFlag('map_view', session?.email);
 
-  // Check if user is admin
-  const isAdmin = user?.email === 'jamiegray2234@gmail.com';
+  // Check if account is admin
+  const isAdmin = session?.email === 'jamiegray2234@gmail.com';
+
+  // Check if we're on admin dashboard (should hide sidebar)
+  const isAdminDashboard = pathname === '/admin/dashboard';
+
+  // Don't render sidebar on admin dashboard
+  if (isAdminDashboard) {
+    return null;
+  }
 
   // Determine if we're in edit mode (editor functions are available)
   const isEditMode = !!(editorContext.onSave && editorContext.onCancel);
-
-
 
   // Determine if sidebar should show content (expanded or hovering)
   const showContent = isExpanded || isHovering;
 
   // Navigation items
-  // Build navigation items based on user state
+  // Build navigation items based on account state
   const navItems = [
     { icon: Home, label: 'Home', href: '/' },
     { icon: Search, label: 'Search', href: '/search' },
-    { icon: Shuffle, label: 'Random Page', action: () => navigateToRandomPage(router, user?.uid) },
+    { icon: Shuffle, label: 'Random Page', action: () => navigateToRandomPage(router, session?.uid) },
     { icon: Clock, label: 'Recents', href: '/recents' },
     { icon: Plus, label: 'New Page', href: '/new' },
     { icon: Bell, label: 'Notifications', href: '/notifications' },
-    { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/login' },
+    { icon: User, label: 'Profile', href: session ? `/user/${session.uid}` : '/login' },
     { icon: Settings, label: 'Settings', href: '/settings' },
     // Admin Dashboard - only for admin users
     ...(isAdmin ? [{ icon: Shield, label: 'Admin Dashboard', href: '/admin' }] : []),
@@ -207,8 +209,8 @@ function UnifiedSidebarContent({
     // Exact match for most routes
     if (pathname === item.href) return true;
 
-    // Special case for profile - match user profile pages
-    if (item.label === 'Profile' && user && pathname.startsWith(`/user/${user.uid}`)) {
+    // Special case for profile - match account profile pages
+    if (item.label === 'Profile' && session && pathname.startsWith(`/user/${session.uid}`)) {
       return true;
     }
 
@@ -228,10 +230,6 @@ function UnifiedSidebarContent({
       router.push(item.href);
     }
   };
-
-
-
-
 
   // Render the sidebar
   const sidebarContent = (
@@ -325,7 +323,7 @@ function UnifiedSidebarContent({
                         size="sm"
                         onFiltersChange={(filters) => {
                           // Update the navigation action with new filters
-                          const updatedItem = { ...item, action: () => navigateToRandomPage(router, user?.uid, filters) };
+                          const updatedItem = { ...item, action: () => navigateToRandomPage(router, session?.uid, filters) };
                           // The filters are already persisted by the component, so we don't need to do anything else
                         }}
                         onOpenChange={(isOpen) => {
@@ -457,13 +455,18 @@ function UnifiedSidebarContent({
             </>
           )}
 
-
-
-          {/* Account Switcher - sticky at bottom for non-edit mode */}
+          {/* Logout Button - sticky at bottom for non-edit mode */}
           {!isEditMode && (
             <div className="mt-auto pt-4 border-t border-border">
               {showContent ? (
-                <AccountSwitcher />
+                <Button
+                  variant="ghost"
+                  onClick={() => logoutUser()}
+                  className="w-full justify-start"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
               ) : (
                 <Button
                   variant="ghost"

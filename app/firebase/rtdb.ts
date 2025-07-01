@@ -49,8 +49,6 @@ export const listen = (path: string, callback: (snapshot: DataSnapshot) => void)
   return onValue(dbRef, callback);
 };
 
-
-
 export const fetchProfileFromFirebase = async (userId: string): Promise<User | null> => {
   try {
     const profileRef = ref(rtdb, `users/${userId}`);
@@ -60,8 +58,7 @@ export const fetchProfileFromFirebase = async (userId: string): Promise<User | n
     }
     return {
       uid: snapshot.key as string,
-      ...snapshot.val(),
-    } as User;
+      ...snapshot.val()} as User;
   } catch (error) {
     console.error("Error fetching profile from Firebase", error);
     return null;

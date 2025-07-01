@@ -8,7 +8,7 @@ import Link from 'next/link';
 import PillLink from '../components/utils/PillLink';
 import SimpleSparkline from '../components/utils/SimpleSparkline';
 // // import { getTrendingPages } from "../firebase/pageViews";
-import { useDateFormat } from "../contexts/DateFormatContext";
+import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 import { isExactDateFormat } from "../utils/dailyNoteNavigation";
 
 interface TrendingPage {

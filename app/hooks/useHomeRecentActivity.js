@@ -1,7 +1,7 @@
-import { useState, useEffect, useContext, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { collection, query, orderBy, limit, getDocs, where, getDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
-import { AuthContext } from "../providers/AuthProvider";
+import { useCurrentAccount } from "../providers/CurrentAccountProvider";
 import { getPageVersions } from "../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
 import { getBatchUserData } from "../firebase/batchUserData";
@@ -70,14 +70,14 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
 
   // Store values in refs for use in async functions
   const limitRef = useRef(limitCount);
   const userIdRef = useRef(filterUserId);
   const followedOnlyRef = useRef(followedOnly);
   const mineOnlyRef = useRef(mineOnly);
-  const userRef = useRef(user);
+  const userRef = useRef(session);
 
   // Update refs when props change
   useEffect(() => {
@@ -93,8 +93,8 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
   }, [mineOnly]);
 
   useEffect(() => {
-    userRef.current = user;
-  }, [user]);
+    userRef.current = session;
+  }, [session]);
 
   // Helper function to get username and subscription info from Firestore (primary) or Firebase Realtime Database (fallback)
   const getUsernameById = async (userId) => {
@@ -297,8 +297,6 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
         }
 
         console.log(`Found ${pagesSnapshot.docs.length} pages from query`);
-
-
 
         // For followed pages, we need to sort the results manually since we can't use orderBy with "in" queries
         let pageDocs = pagesSnapshot.docs;
@@ -527,8 +525,6 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
 
         console.log(`Final activities to display: ${validActivities.length}`);
 
-
-
         if (validActivities.length === 0 && followedOnlyRef.current) {
           console.log('No activities found for followed pages');
         }
@@ -591,7 +587,6 @@ const useHomeRecentActivity = (limitCount = 10, filterUserId = null, followedOnl
         currentActivitiesCount: activities.length,
         event: event.detail
       });
-
 
       // Trigger refresh by updating state
       console.log('🔵 useHomeRecentActivity: Triggering refresh with refreshTrigger update');

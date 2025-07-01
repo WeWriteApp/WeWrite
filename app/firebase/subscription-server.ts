@@ -41,8 +41,7 @@ export const updateSubscriptionServer = async (userId: string, subscriptionData:
     const subscriptionRef = adminDb.collection("users").doc(userId).collection("subscription").doc("current");
     await subscriptionRef.set({
       ...subscriptionData,
-      updatedAt: new Date(),
-    }, { merge: true });
+      updatedAt: new Date()}, { merge: true });
     return true;
   } catch (error) {
     console.error("Error updating subscription:", error);

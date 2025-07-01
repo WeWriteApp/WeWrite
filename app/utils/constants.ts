@@ -15,8 +15,7 @@ export const nodeTypes: NodeTypes = {
   CODE_BLOCK: 'code-block',
   LIST: 'list',
   LIST_ITEM: 'list-item',
-  LINK: 'link',
-} as const;
+  LINK: 'link'} as const;
 
 // Type for individual node type values
 export type NodeType = NodeTypes[keyof NodeTypes];

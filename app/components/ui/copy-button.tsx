@@ -41,8 +41,7 @@ export function CopyButton({
         toast({
           title: "Copied to clipboard",
           variant: "success",
-          duration: 2000,
-        });
+          duration: 2000});
         
         // Reset copied state after 2 seconds
         setTimeout(() => setCopied(false), 2000);
@@ -52,8 +51,7 @@ export function CopyButton({
           title: "Failed to copy",
           description: "Please try selecting and copying the text manually",
           variant: "destructive",
-          duration: 3000,
-        });
+          duration: 3000});
       }
     } catch (error) {
       console.error('Error copying text:', error);
@@ -61,8 +59,7 @@ export function CopyButton({
         title: "Copy failed",
         description: "An error occurred while copying",
         variant: "destructive",
-        duration: 3000,
-      });
+        duration: 3000});
     }
   };
 

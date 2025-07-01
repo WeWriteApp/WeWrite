@@ -19,7 +19,6 @@
 
 import * as React from "react";
 import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from "next-themes";
-
 /**
  * Theme provider props interface
  */
@@ -32,53 +31,57 @@ type ThemeProviderProps = {
   themes?: string[];
 };
 
-// Extended theme hook with high contrast mode support
-export function useTheme() {
-  const nextTheme = useNextTheme();
-  const [highContrast, setHighContrast] = React.useState<boolean>(false);
+// Simple high contrast hook implementation
+function useHighContrast() {
+  const [highContrast, setHighContrast] = React.useState(false);
+  const [isHydrated, setIsHydrated] = React.useState(false);
 
-  // Initialize high contrast mode from localStorage on mount
+  // Set hydration state after component mounts
   React.useEffect(() => {
-    const storedHighContrast = localStorage.getItem('high-contrast-mode');
-    if (storedHighContrast === 'true') {
-      setHighContrast(true);
-      document.documentElement.setAttribute('data-high-contrast', 'true');
+    setIsHydrated(true);
+    // Load high contrast preference from localStorage
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('high-contrast');
+      if (saved) {
+        setHighContrast(JSON.parse(saved));
+      }
     }
   }, []);
 
-  // Toggle high contrast mode
   const toggleHighContrast = React.useCallback(() => {
     setHighContrast(prev => {
       const newValue = !prev;
-      localStorage.setItem('high-contrast-mode', String(newValue));
-
-      if (newValue) {
-        document.documentElement.setAttribute('data-high-contrast', 'true');
-      } else {
-        document.documentElement.removeAttribute('data-high-contrast');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('high-contrast', JSON.stringify(newValue));
       }
-
       return newValue;
     });
   }, []);
 
-  // Set high contrast mode
-  const setHighContrastMode = React.useCallback((value: boolean) => {
-    setHighContrast(value);
-    localStorage.setItem('high-contrast-mode', String(value));
-
-    if (value) {
-      document.documentElement.setAttribute('data-high-contrast', 'true');
-    } else {
-      document.documentElement.removeAttribute('data-high-contrast');
+  // Apply high contrast mode to document
+  React.useEffect(() => {
+    if (isHydrated && typeof window !== 'undefined') {
+      if (highContrast) {
+        document.documentElement.setAttribute('data-high-contrast', 'true');
+      } else {
+        document.documentElement.removeAttribute('data-high-contrast');
+      }
     }
-  }, []);
+  }, [highContrast, isHydrated]);
+
+  return { highContrast, toggleHighContrast };
+}
+
+// Extended theme hook with high contrast mode support
+export function useTheme() {
+  const nextTheme = useNextTheme();
+  const { highContrast, toggleHighContrast } = useHighContrast();
 
   return {
     ...nextTheme,
     highContrast,
     toggleHighContrast,
-    setHighContrastMode
+    setHighContrastMode: toggleHighContrast // Alias for compatibility
   };
 }
 
@@ -102,6 +105,7 @@ export function ThemeProvider({
       defaultTheme={defaultTheme}
       enableSystem={enableSystem}
       themes={themes}
+      suppressHydrationWarning
       {...props}
     >
       {children}

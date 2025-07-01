@@ -8,8 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-} from "../ui/dialog";
+  DialogDescription} from "../ui/dialog";
 
 import { 
   AlertTriangle, 
@@ -95,8 +94,7 @@ export default function PledgeBarExceededBudget({
       const response = await fetch('/api/tokens/pledge', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'},
         body: JSON.stringify({
           pageId: pledgeId,
           newAmount: newAmount

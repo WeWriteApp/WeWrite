@@ -19,15 +19,11 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
   const { data: totalPagesEverCreated, loading: totalLoading } = useTotalPagesEverCreated();
   const chartConfig = useResponsiveChart(data.length, data);
 
-
-
   // Transform data for chart display (make deleted values negative)
   const chartData = data.map(item => ({
     ...item,
     pagesDeletedNegative: -(item.pagesDeleted || 0)
   }));
-
-
 
   // Calculate summary statistics for composite data
   const totalPagesCreated = data.reduce((sum, item) => sum + (item.pagesCreated || 0), 0);

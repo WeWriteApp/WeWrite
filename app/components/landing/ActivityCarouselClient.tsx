@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useContext } from 'react';
+import React from 'react';
 import { Info } from 'lucide-react';
-import { AuthContext } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import ContentCarousel from './ContentCarousel';
 import ActivityCard from '../ActivityCard';
 
@@ -22,12 +22,12 @@ export default function ActivityCarouselClient({
     hasError: !!initialError
   });
 
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
 
   // Error message for non-authenticated users or fallback error
   let errorMessage;
 
-  if (!user && initialError) {
+  if (!session && initialError) {
     // Show sign-in prompt for non-authenticated users
     errorMessage = (
       <div className="flex items-center gap-2">

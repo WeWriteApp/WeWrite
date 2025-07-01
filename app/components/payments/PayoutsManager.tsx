@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../providers/AuthProvider';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -16,8 +16,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
+  DialogTitle} from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -53,9 +52,9 @@ interface UserBalance {
 }
 
 export function PayoutsManager() {
-  const { user } = useAuth();
+  const { currentAccount } = useCurrentAccount();
   const { toast } = useToast();
-  const isPaymentsEnabled = useFeatureFlag('payments', user?.email, user?.uid);
+  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
 
   const [setup, setSetup] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -66,20 +65,20 @@ export function PayoutsManager() {
   const [payouts, setPayouts] = useState<TokenPayout[]>([]);
 
   useEffect(() => {
-    if (user && isPaymentsEnabled) {
+    if (session && isPaymentsEnabled) {
       loadPayoutSetup();
       loadRealEarningsData();
       checkBankAccountStatus();
       loadPayoutHistory();
     }
-  }, [user, isPaymentsEnabled]);
+  }, [, session, isPaymentsEnabled]);
 
   const loadRealEarningsData = async () => {
-    if (!user?.uid) return;
+    if (!session?.uid) return;
 
     try {
       // Get token earnings
-      const tokenBalance = await TokenEarningsService.getWriterTokenBalance(user.uid);
+      const tokenBalance = await TokenEarningsService.getWriterTokenBalance(session.uid);
       if (tokenBalance) {
         setRealEarnings({
           totalEarnings: tokenBalance.totalUsdEarned,
@@ -95,10 +94,10 @@ export function PayoutsManager() {
   };
 
   const loadPayoutHistory = async () => {
-    if (!user?.uid) return;
+    if (!session?.uid) return;
 
     try {
-      const payoutHistory = await TokenEarningsService.getPayoutHistory(user.uid, 10);
+      const payoutHistory = await TokenEarningsService.getPayoutHistory(session.uid, 10);
       setPayouts(payoutHistory);
     } catch (error) {
       console.error('Error loading payout history:', error);
@@ -134,7 +133,7 @@ export function PayoutsManager() {
   };
 
   const checkBankAccountStatus = async () => {
-    if (!user?.stripeConnectedAccountId) {
+    if (!session?.stripeConnectedAccountId) {
       setBankAccountConnected(false);
       return;
     }
@@ -146,8 +145,7 @@ export function PayoutsManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           stripeConnectedAccountId: user.stripeConnectedAccountId
-        }),
-      });
+        })});
 
       if (response.ok) {
         const result = await response.json();
@@ -181,14 +179,12 @@ export function PayoutsManager() {
         description: "Unable to retrieve your payout setup details",
         additionalInfo: {
           errorType: "PAYOUT_LOAD_ERROR",
-          userId: user?.uid,
+          userId: session?.uid,
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent,
           url: window.location.href,
           errorMessage: error.message,
-          errorStack: error.stack,
-        },
-      });
+          errorStack: error.stack}});
     } finally {
       setLoading(false);
     }
@@ -199,7 +195,7 @@ export function PayoutsManager() {
       setSetupLoading(true);
 
       // Ensure we have a valid user
-      if (!user?.uid) {
+      if (!session?.uid) {
         throw new Error('User not authenticated');
       }
 
@@ -218,12 +214,12 @@ export function PayoutsManager() {
         } else {
           console.log('No Firebase user available, using session-based auth');
           // Ensure we have session cookies set
-          if (user.uid) {
-            Cookies.set('wewrite_user_id', user.uid, { expires: 7 });
+          if (currentAccount.uid) {
+            Cookies.set('wewrite_user_id', currentAccount.uid, { expires: 7 });
             Cookies.set('wewrite_authenticated', 'true', { expires: 7 });
             Cookies.set('userSession', JSON.stringify({
-              uid: user.uid,
-              email: user.email,
+              uid: currentAccount.uid,
+              email: currentAccount.email,
               username: user.username
             }), { expires: 7 });
           }
@@ -231,8 +227,8 @@ export function PayoutsManager() {
       } catch (tokenError) {
         console.warn('Could not get Firebase ID token, using session-based auth:', tokenError);
         // Ensure session cookies are set as fallback
-        if (user.uid) {
-          Cookies.set('wewrite_user_id', user.uid, { expires: 7 });
+        if (currentAccount.uid) {
+          Cookies.set('wewrite_user_id', currentAccount.uid, { expires: 7 });
           Cookies.set('wewrite_authenticated', 'true', { expires: 7 });
         }
       }
@@ -249,8 +245,7 @@ export function PayoutsManager() {
       const connectResponse = await fetch('/api/create-connect-account', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ userId: user.uid }),
-      });
+        body: JSON.stringify({ userId: session.uid })});
 
       if (connectResponse.ok) {
         const result = await connectResponse.json();
@@ -275,8 +270,7 @@ export function PayoutsManager() {
             const retryResponse = await fetch('/api/create-connect-account', {
               method: 'POST',
               headers,
-              body: JSON.stringify({ userId: user.uid }),
-            });
+              body: JSON.stringify({ userId: session.uid })});
 
             if (retryResponse.ok) {
               const retryResult = await retryResponse.json();
@@ -300,15 +294,13 @@ export function PayoutsManager() {
         description: error.message || "Failed to setup bank account. Please try again.",
         additionalInfo: {
           errorType: "BANK_ACCOUNT_SETUP_ERROR",
-          userId: user?.uid,
+          userId: session?.uid,
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent,
           url: window.location.href,
-          stripeConnectedAccountId: user?.stripeConnectedAccountId,
+          stripeConnectedAccountId: session?.stripeConnectedAccountId,
           errorMessage: error.message,
-          errorStack: error.stack,
-        },
-      });
+          errorStack: error.stack}});
     } finally {
       setSetupLoading(false);
     }
@@ -327,8 +319,7 @@ export function PayoutsManager() {
             stripeConnectedAccountId: user.stripeConnectedAccountId,
             country: 'US', // Default to US, could be made dynamic
             forceCreate: true // Force creation of payout recipient
-          }),
-        });
+          })});
 
         if (!setupResponse.ok) {
           const errorData = await setupResponse.json();
@@ -343,14 +334,12 @@ export function PayoutsManager() {
       const response = await fetch('/api/payouts/earnings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'request_payout' }),
-      });
+        body: JSON.stringify({ action: 'request_payout' })});
 
       if (response.ok) {
         toast({
           title: "Payout Requested",
-          description: "Your payout request has been submitted successfully!",
-        });
+          description: "Your payout request has been submitted successfully!"});
         loadPayoutSetup(); // Refresh data
         loadRealEarningsData(); // Refresh earnings data
         loadPayoutHistory(); // Refresh payout history
@@ -365,20 +354,16 @@ export function PayoutsManager() {
         description: error.message || "Failed to request payout. Please try again.",
         additionalInfo: {
           errorType: "PAYOUT_REQUEST_ERROR",
-          userId: user?.uid,
+          userId: session?.uid,
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent,
           url: window.location.href,
           errorMessage: error.message,
-          errorStack: error.stack,
-        },
-      });
+          errorStack: error.stack}});
     } finally {
       setSetupLoading(false);
     }
   };
-
-
 
   if (loading) {
     return (

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useContext } from 'react';
 import { Clock, FileText, User, Calendar, ChevronLeft } from 'lucide-react';
-import { AuthContext } from '../providers/AuthProvider';
+import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { PillLink } from '../components/utils/PillLink';
@@ -19,18 +19,18 @@ import { RecentPagesContext } from '../contexts/RecentPagesContext';
  * Features search, filtering, and detailed page information.
  */
 export default function RecentsPage() {
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
   const { recentPages, loading } = useContext(RecentPagesContext);
   const router = useRouter();
   // Remove search functionality - no longer needed
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!user) {
+    if (!session) {
       router.push('/auth/login');
       return;
     }
-  }, [user, router]);
+  }, [session, router]);
 
   // No search functionality needed
 
@@ -52,7 +52,7 @@ export default function RecentsPage() {
     }
   };
 
-  if (!user) {
+  if (!session) {
     return null; // Will redirect to login
   }
 

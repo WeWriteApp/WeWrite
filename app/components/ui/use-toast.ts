@@ -3,8 +3,7 @@ import { copyToClipboard } from "../../utils/clipboard"
 
 import type {
   ToastActionElement,
-  ToastProps,
-} from "./toast"
+  ToastProps} from "./toast"
 
 const TOAST_LIMIT = 5
 const TOAST_REMOVE_DELAY = 1000000
@@ -20,8 +19,7 @@ const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
   UPDATE_TOAST: "UPDATE_TOAST",
   DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST",
-} as const
+  REMOVE_TOAST: "REMOVE_TOAST"} as const
 
 let count = 0
 
@@ -61,16 +59,14 @@ const reducer = (state: State, action: Action): State => {
     case actionTypes.ADD_TOAST:
       return {
         ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
-      }
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT)}
 
     case actionTypes.UPDATE_TOAST:
       return {
         ...state,
         toasts: state.toasts.map((t) =>
           t.id === action.toast.id ? { ...t, ...action.toast } : t
-        ),
-      }
+        )}
 
     case actionTypes.DISMISS_TOAST: {
       const { toastId } = action
@@ -91,23 +87,19 @@ const reducer = (state: State, action: Action): State => {
           t.id === toastId || toastId === undefined
             ? {
                 ...t,
-                open: false,
-              }
+                open: false}
             : t
-        ),
-      }
+        )}
     }
     case actionTypes.REMOVE_TOAST:
       if (action.toastId === undefined) {
         return {
           ...state,
-          toasts: [],
-        }
+          toasts: []}
       }
       return {
         ...state,
-        toasts: state.toasts.filter((t) => t.id !== action.toastId),
-      }
+        toasts: state.toasts.filter((t) => t.id !== action.toastId)}
   }
 }
 
@@ -131,8 +123,7 @@ function addToRemoveQueue(toastId: string) {
     toastTimeouts.delete(toastId)
     dispatch({
       type: actionTypes.REMOVE_TOAST,
-      toastId,
-    })
+      toastId})
   }, TOAST_REMOVE_DELAY)
 
   toastTimeouts.set(toastId, timeout)
@@ -160,16 +151,14 @@ const createCopyAction = (textToCopy: string): ToastActionElement => {
         toast({
           title: "Copied to clipboard",
           variant: "success",
-          duration: 2000,
-        });
+          duration: 2000});
       } else {
         // Show error toast if copy fails (use base toast function to avoid copy button)
         toast({
           title: "Failed to copy",
           description: "Please try selecting and copying the text manually",
           variant: "destructive",
-          duration: 3000,
-        });
+          duration: 3000});
       }
     } catch (error) {
       console.error('Error in copy action:', error);
@@ -178,8 +167,7 @@ const createCopyAction = (textToCopy: string): ToastActionElement => {
         title: "Copy failed",
         description: "An error occurred while copying",
         variant: "destructive",
-        duration: 3000,
-      });
+        duration: 3000});
     }
   };
 
@@ -189,8 +177,7 @@ const createCopyAction = (textToCopy: string): ToastActionElement => {
     {
       onClick: handleCopy,
       className: "inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive gap-1.5",
-      type: "button",
-    },
+      type: "button"},
     React.createElement(Copy, { className: "h-3.5 w-3.5" }),
     "Copy"
   );
@@ -206,8 +193,7 @@ export function toast({
   const update = (props: ToasterToast) =>
     dispatch({
       type: actionTypes.UPDATE_TOAST,
-      toast: { ...props, id },
-    })
+      toast: { ...props, id }})
   const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id })
 
   dispatch({
@@ -218,15 +204,12 @@ export function toast({
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss()
-      },
-    },
-  })
+      }}})
 
   return {
     id,
     dismiss,
-    update,
-  }
+    update}
 }
 
 // Helper functions for common toast types
@@ -251,8 +234,7 @@ toast.error = (
 
   const finalOptions: Omit<ToasterToast, "id" | "title" | "variant"> = {
     ...toastOptions,
-    variant: "destructive",
-  };
+    variant: "destructive"};
 
   // Add copy functionality through description if enabled
   if (enableCopy && copyText && typeof copyText === 'string' && copyText.trim()) {
@@ -279,14 +261,12 @@ toast.error = (
                 toast({
                   title: "Copied to clipboard",
                   variant: "success",
-                  duration: 2000,
-                });
+                  duration: 2000});
               } else {
                 toast({
                   title: "Failed to copy",
                   variant: "destructive",
-                  duration: 3000,
-                });
+                  duration: 3000});
               }
             } catch (error) {
               console.error('Copy error:', error);
@@ -346,6 +326,5 @@ export function useToast() {
   return {
     ...state,
     toast,
-    dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
-  }
+    dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId })}
 }

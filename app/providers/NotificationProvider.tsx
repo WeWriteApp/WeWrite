@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, createContext, useContext, ReactNode } from "react";
-import { AuthContext } from "./AuthProvider";
+import { useCurrentAccount } from "./CurrentAccountProvider";
 // Import real notification service functions
 import {
   getNotifications,
@@ -44,16 +44,16 @@ export const NotificationContext = createContext<NotificationContextType | undef
  * @param props.children - Child components to render
  */
 export const NotificationProvider = ({ children }: NotificationProviderProps) => {
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [lastDoc, setLastDoc] = useState<any>(null);
   const [hasMore, setHasMore] = useState<boolean>(true);
 
-  // Fetch notifications when user changes
+  // Fetch notifications when session changes
   useEffect(() => {
-    if (!user) {
+    if (!session) {
       setNotifications([]);
       setUnreadCount(0);
       setLastDoc(null);
@@ -66,7 +66,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         setLoading(true);
 
         // Get notifications first
-        const result = await getNotifications(user.uid);
+        const result = await getNotifications(session.uid);
         const notificationData = result?.notifications || [];
         const lastVisible = result?.lastDoc || null;
 
@@ -100,13 +100,13 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         console.log('NotificationProvider - actual unread count from data:', actualUnreadCount);
 
         // Get stored unread count
-        const storedCount = await getUnreadNotificationsCount(user.uid);
+        const storedCount = await getUnreadNotificationsCount(session.uid);
         console.log('NotificationProvider - stored unread count:', storedCount);
 
         // If there's a mismatch, fix it
         if (actualUnreadCount !== storedCount) {
           console.log('NotificationProvider - count mismatch detected, fixing...');
-          const fixedCount = await fixUnreadNotificationsCount(user.uid);
+          const fixedCount = await fixUnreadNotificationsCount(session.uid);
           setUnreadCount(fixedCount);
         } else {
           setUnreadCount(storedCount);
@@ -126,19 +126,19 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     };
 
     fetchNotifications();
-  }, [user]);
+  }, [session]);
 
   /**
    * Function to load more notifications
    */
   const loadMoreNotifications = async (): Promise<void> => {
-    if (!user || loading || !hasMore) return;
+    if (!session || loading || !hasMore) return;
 
     try {
       setLoading(true);
 
       const { notifications: newNotifications, lastDoc: newLastDoc } = await getNotifications(
-        user.uid,
+        session.uid,
         20,
         lastDoc
       );
@@ -180,7 +180,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
    * @param notificationId - The ID of the notification to mark as read
    */
   const markAsRead = async (notificationId: string): Promise<void> => {
-    if (!user) return;
+    if (!session) return;
 
     try {
       // Find the notification BEFORE updating local state to check if it was unread
@@ -188,7 +188,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       const wasUnread = notification && !notification.read;
 
       // Call the backend to mark as read
-      await markNotificationAsRead(user.uid, notificationId);
+      await markNotificationAsRead(session.uid, notificationId);
 
       // Update local state
       setNotifications(prev =>
@@ -216,7 +216,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
    * @param notificationId - The ID of the notification to mark as unread
    */
   const markAsUnread = async (notificationId: string): Promise<void> => {
-    if (!user) return;
+    if (!session) return;
 
     try {
       // Find the notification BEFORE updating local state to check if it was read
@@ -224,7 +224,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       const wasRead = notification && notification.read;
 
       // Call the backend to mark as unread
-      await markNotificationAsUnread(user.uid, notificationId);
+      await markNotificationAsUnread(session.uid, notificationId);
 
       // Update local state
       setNotifications(prev =>
@@ -250,13 +250,13 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
    * Function to mark all notifications as read
    */
   const markAllAsRead = async (): Promise<void> => {
-    if (!user) return;
+    if (!session) return;
 
     try {
       console.log('markAllAsRead called - current unreadCount:', unreadCount);
       console.log('markAllAsRead called - current notifications:', notifications.map(n => ({ id: n.id, read: n.read })));
 
-      await markAllNotificationsAsRead(user.uid);
+      await markAllNotificationsAsRead(session.uid);
 
       // Update local state
       setNotifications(prev =>

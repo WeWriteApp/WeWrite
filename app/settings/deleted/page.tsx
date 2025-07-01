@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button } from "../../components/ui/button";
@@ -8,17 +8,17 @@ import { ChevronLeft } from 'lucide-react';
 import RecentlyDeletedPages from '../../components/settings/RecentlyDeletedPages';
 
 export default function RecentlyDeletedPage() {
-  const { user } = useAuth();
+  const { currentAccount, isAuthenticated } = useCurrentAccount();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) {
+    if (!isAuthenticated) {
       router.push('/auth/login');
       return;
     }
-  }, [user, router]);
+  }, [isAuthenticated, router]);
 
-  if (!user) {
+  if (!isAuthenticated) {
     return null;
   }
 

@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { X, Mail, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
-import { useSyncQueue } from '../../contexts/SyncQueueContext';
-import { useAuth } from '../../providers/AuthProvider';
+
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { auth } from '../../firebase/config';
 import { sendEmailVerification } from 'firebase/auth';
 import { toast } from '../ui/use-toast';
@@ -14,13 +14,13 @@ interface UnverifiedUserBannerProps {
 }
 
 function UnverifiedUserBanner({ onDismiss }: UnverifiedUserBannerProps) {
-  const { queueCount, isEmailVerified } = useSyncQueue();
-  const { user, isAuthenticated } = useAuth();
+  
+  const { session, isAuthenticated } = useCurrentAccount();
   const [isResending, setIsResending] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
 
   // Only show banner for authenticated users with unverified emails
-  if (!isAuthenticated || !user || isEmailVerified || isDismissed) {
+  if (!isAuthenticated || !session || isEmailVerified || isDismissed) {
     return null;
   }
 

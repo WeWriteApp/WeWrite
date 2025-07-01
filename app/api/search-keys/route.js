@@ -28,11 +28,10 @@ export async function GET() {
       googleCloudKeyJsonPreview,
       googleCloudCredentialsPreview,
       nodeEnv: process.env.NODE_ENV,
-      vercelEnv: process.env.VERCEL_ENV,
-    });
+      vercelEnv: process.env.VERCEL_ENV});
   } catch (error) {
     return NextResponse.json({
       error: error.message
     }, { status: 500 });
   }
-} 
+}

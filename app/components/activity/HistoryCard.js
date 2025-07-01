@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { useDateFormat } from '../../contexts/DateFormatContext';
-
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 /**
  * HistoryCard Component
  * 

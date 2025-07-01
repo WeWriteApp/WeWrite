@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 
-import PillLink from "../utils/PillLink.js";
+import PillLink from "../utils/PillLink";
 import { Flame, Loader } from 'lucide-react';
-import SimpleSparkline from "../utils/SimpleSparkline.js";
-import Link from 'next/link';
+import SimpleSparkline from "../utils/SimpleSparkline";
+// import Link from "next/link";
 import { Button } from '../ui/button';
 // import { getTrendingPages } from '../../firebase/pageViews';
 
@@ -279,9 +279,9 @@ export default function TrendingPages({ limit = 5 }) {
       {/* View All button */}
       <div className="flex justify-center mt-4">
         <Button variant="outline" asChild>
-          <Link href="/trending">
+          <a href="/trending">
             View all trending pages
-          </Link>
+          </a>
         </Button>
       </div>
     </div>

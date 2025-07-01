@@ -7,7 +7,7 @@ import { SocialIcon } from "../ui/social-icon";
 import { socialLinks } from "../../config/social-links";
 import { DollarSign } from "lucide-react";
 import { SupporterIcon } from "../payments/SupporterIcon";
-import { useAuth } from "../../providers/AuthProvider";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useRouter } from 'next/navigation';
 
 const CustomAmountModal = ({ isOpen, onClose, value, setValue }) => {
@@ -59,14 +59,14 @@ const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customConten
   const [selectedTier, setSelectedTier] = React.useState(null);
   const [showCustomModal, setShowCustomModal] = React.useState(false);
   const [customAmount, setCustomAmount] = React.useState(50);
-  const { user } = useAuth();
+  const { session } = useCurrentAccount();
   const router = useRouter();
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
 
   const handleActivate = async () => {
     // If user is not signed in, navigate to subscription page
-    if (!user) {
+    if (!session) {
       try {
         router.push('/settings/subscription');
         onClose();
@@ -104,7 +104,7 @@ const SubscriptionActivationModal = ({ isOpen, onClose, isSignedIn, customConten
       const returnUrl = encodeURIComponent(currentPath);
 
       const result = await SubscriptionService.createCheckoutSession({
-        userId: user.uid,
+        userId: currentAccount.uid,
         tier,
         customAmount: amount,
         successUrl: `${window.location.origin}/settings/subscription/success?session_id={CHECKOUT_SESSION_ID}&return_to=${returnUrl}`,

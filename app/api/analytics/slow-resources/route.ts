@@ -43,14 +43,12 @@ export async function POST(request: NextRequest) {
       type: payload.initiatorType,
       networkType: payload.networkInfo.effectiveType,
       recommendations: analysis.recommendations,
-      timestamp: new Date(payload.timestamp).toISOString(),
-    });
+      timestamp: new Date(payload.timestamp).toISOString()});
 
     return NextResponse.json({
       success: true,
       resource: payload.name,
-      analysis,
-    });
+      analysis});
 
   } catch (error) {
     console.error('Error processing slow resource:', error);
@@ -66,8 +64,7 @@ function analyzeSlowResource(payload: SlowResourcePayload) {
     severity: getSeverity(payload.duration),
     category: getResourceCategory(payload.name, payload.initiatorType),
     recommendations: [] as string[],
-    optimizationPotential: 'medium' as 'low' | 'medium' | 'high',
-  };
+    optimizationPotential: 'medium' as 'low' | 'medium' | 'high'};
 
   const isSlowConnection = ['slow-2g', '2g', '3g'].includes(payload.networkInfo.effectiveType || '');
   
@@ -169,45 +166,38 @@ export async function GET(request: NextRequest) {
           image: 12,
           css: 8,
           font: 4,
-          api: 3,
-        },
+          api: 3},
         bySeverity: {
           critical: 5,
           high: 12,
           medium: 18,
-          low: 10,
-        },
+          low: 10},
         topOffenders: [
           {
             name: 'mapbox-gl.js',
             avgDuration: 4200,
             size: '1.47 MB',
             category: 'javascript',
-            recommendations: ['Implement dynamic loading', 'Code splitting'],
-          },
+            recommendations: ['Implement dynamic loading', 'Code splitting']},
           {
             name: 'recharts bundle',
             avgDuration: 2800,
             size: '380 KB',
             category: 'javascript',
-            recommendations: ['Lazy load charts', 'Tree shaking'],
-          },
+            recommendations: ['Lazy load charts', 'Tree shaking']},
           {
             name: 'firebase bundle',
             avgDuration: 2400,
             size: '256 KB',
             category: 'javascript',
-            recommendations: ['Dynamic imports', 'Feature splitting'],
-          },
-        ],
-      },
+            recommendations: ['Dynamic imports', 'Feature splitting']},
+        ]},
       recommendations: [
         'Implement dynamic loading for Mapbox components',
         'Add lazy loading for chart components',
         'Split Firebase features into separate bundles',
         'Optimize image loading with modern formats',
-      ],
-    };
+      ]};
 
     return NextResponse.json(summary);
 

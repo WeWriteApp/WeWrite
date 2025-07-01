@@ -48,8 +48,6 @@ export const checkPageAccess = async (pageData: PageData | null, userId: string 
   };
 };
 
-
-
 /**
  * Check if a user can edit a specific page
  */

@@ -199,11 +199,11 @@ export const getBatchUserData = async (userIds: string[]): Promise<Record<string
         rtdbResults.forEach(({ userId, user }) => {
           if (user) {
             results[userId] = user;
-            
+
             // Cache the result
             const cacheKey = generateCacheKey('userData', userId);
             setCacheItem(cacheKey, user, USER_DATA_CACHE_TTL);
-            
+
             // Update memory cache
             userDataMemoryCache.set(userId, {
               data: user,

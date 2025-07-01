@@ -1,7 +1,7 @@
-import { useState, useEffect, useContext, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { collection, query, orderBy, limit, getDocs, where, getDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
-import { AuthContext } from "../providers/AuthProvider";
+import { useCurrentAccount } from "../providers/CurrentAccountProvider";
 import { getPageVersions } from "../firebase/database";
 import { getDatabase, ref, get } from "firebase/database";
 import { getRecentActivity } from "../firebase/activity";
@@ -27,7 +27,7 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
   const [loadingMore, setLoadingMore] = useState(false);
   const [allActivities, setAllActivities] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const { user } = useContext(AuthContext);
+  const { session } = useCurrentAccount();
 
   // Helper function to get username and subscription info from Firestore (primary) or Firebase Realtime Database (fallback)
   const getUsernameById = async (userId) => {
@@ -121,7 +121,7 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
         // Get followed pages if needed
         let followedPageIds = [];
         if (followedOnly) {
-          if (!user) {
+          if (!session) {
             setActivities([]);
             setLoading(false);
             return;
@@ -129,7 +129,7 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
 
           try {
             const { getFollowedPages } = await import('../firebase/follows');
-            followedPageIds = await getFollowedPages(user.uid);
+            followedPageIds = await getFollowedPages(session.uid);
 
             if (followedPageIds.length === 0) {
               setActivities([]);
@@ -149,7 +149,7 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
         const fetchLimit = enablePagination ? limitCount * 10 : limitCount * 2;
         const { activities: recentActivities } = await getRecentActivity(
           fetchLimit,
-          user ? user.uid : null
+          session ? session.uid : null
         );
 
         // Process the activities to add subscription info
@@ -223,7 +223,7 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
     };
 
     await fetchRecentActivity();
-  }, [limitCount, filterUserId, followedOnly, enablePagination, actualLimit, user]);
+  }, [limitCount, filterUserId, followedOnly, enablePagination, actualLimit, session]);
 
   // Register cache invalidation function
   useEffect(() => {
@@ -279,7 +279,7 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
 
         // If followedOnly is true, get the list of pages the user follows
         if (followedOnly) {
-          if (!user) {
+          if (!session) {
             // If not logged in but in following mode, return empty results
             setActivities([]);
             setLoading(false);
@@ -288,7 +288,7 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
 
           try {
             const { getFollowedPages } = await import('../firebase/follows');
-            followedPageIds = await getFollowedPages(user.uid);
+            followedPageIds = await getFollowedPages(session.uid);
 
             if (followedPageIds.length === 0) {
               // If user doesn't follow any pages, return empty results
@@ -308,25 +308,25 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
         try {
           // Debug authentication state
           console.log('useStaticRecentActivity: Authentication state check', {
-            hasUser: !!user,
-            userId: user?.uid,
-            isSessionUser: user?.isSessionUser,
+            hasUser: !!session,
+            userId: session?.uid,
+            isSessionUser: session?.isSessionUser,
             timestamp: new Date().toISOString()
           });
 
           // Check if we have a valid authentication token
-          if (user && typeof window !== 'undefined') {
+          if (session && typeof window !== 'undefined') {
             try {
               const { auth } = await import('../firebase/config');
               const currentUser = auth.currentUser;
               console.log('useStaticRecentActivity: Firebase auth state', {
                 hasCurrentUser: !!currentUser,
                 currentUserUid: currentUser?.uid,
-                userMatches: currentUser?.uid === user.uid
+                userMatches: currentUser?.uid === session.uid
               });
 
               // If there's a mismatch, try to refresh the token
-              if (!currentUser && user.uid) {
+              if (!currentUser && session.uid) {
                 console.log('useStaticRecentActivity: Auth state mismatch detected, attempting token refresh');
                 // Try to get a fresh token
                 try {
@@ -346,7 +346,7 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
           const fetchLimit = enablePagination ? limitCount * 10 : limitCount * 2;
           const { activities: recentActivities } = await getRecentActivity(
             fetchLimit,
-            user ? user.uid : null
+            session?.uid || null
           );
 
           // Process the activities to add subscription info
@@ -423,13 +423,13 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
             console.error('useStaticRecentActivity: Permission denied error details', {
               errorCode: err.code,
               errorMessage: err.message,
-              hasUser: !!user,
-              userId: user?.uid,
-              isSessionUser: user?.isSessionUser
+              hasUser: !!session,
+              userId: session?.uid,
+              isSessionUser: session?.isSessionUser
             });
 
             // For authenticated users with permission errors, provide specific guidance
-            if (user) {
+            if (session) {
               setError({
                 message: "Missing or insufficient permissions",
                 details: "Please try refreshing the page or signing in again",
@@ -442,7 +442,7 @@ const useStaticRecentActivity = (limitCount = 10, filterUserId = null, followedO
             }
           } else {
             // For logged-out users, provide empty array instead of showing error
-            if (!user) {
+            if (!session) {
               setActivities([]);
               setError(null); // Don't show error for logged-out users
             } else {

@@ -34,8 +34,7 @@ export function useOptimisticNavigation(options: OptimisticNavigationOptions = {
   const {
     preloadDelay = 100,
     maxNavigationTime = 5000,
-    enableHapticFeedback = true,
-  } = options;
+    enableHapticFeedback = true} = options;
 
   const router = useRouter();
   const pathname = usePathname();
@@ -44,8 +43,7 @@ export function useOptimisticNavigation(options: OptimisticNavigationOptions = {
     isNavigating: false,
     targetRoute: null,
     startTime: null,
-    buttonPressed: null,
-  });
+    buttonPressed: null});
 
   const navigationTimeoutRef = useRef<NodeJS.Timeout>();
   const preloadTimeoutRef = useRef<NodeJS.Timeout>();
@@ -72,8 +70,7 @@ export function useOptimisticNavigation(options: OptimisticNavigationOptions = {
           isNavigating: false,
           targetRoute: null,
           startTime: null,
-          buttonPressed: null,
-        });
+          buttonPressed: null});
         pressedButtonsRef.current.clear();
       }
     }
@@ -123,8 +120,7 @@ export function useOptimisticNavigation(options: OptimisticNavigationOptions = {
       isNavigating: true,
       targetRoute,
       startTime,
-      buttonPressed: buttonId,
-    });
+      buttonPressed: buttonId});
 
     // Clear any existing timeouts
     if (navigationTimeoutRef.current) {
@@ -138,8 +134,7 @@ export function useOptimisticNavigation(options: OptimisticNavigationOptions = {
         isNavigating: false,
         targetRoute: null,
         startTime: null,
-        buttonPressed: null,
-      });
+        buttonPressed: null});
       pressedButtonsRef.current.clear();
     }, maxNavigationTime);
 
@@ -153,8 +148,7 @@ export function useOptimisticNavigation(options: OptimisticNavigationOptions = {
         isNavigating: false,
         targetRoute: null,
         startTime: null,
-        buttonPressed: null,
-      });
+        buttonPressed: null});
       pressedButtonsRef.current.clear();
     }
   }, [router, triggerHapticFeedback, maxNavigationTime]);
@@ -200,8 +194,7 @@ export function useOptimisticNavigation(options: OptimisticNavigationOptions = {
       isNavigating: false,
       targetRoute: null,
       startTime: null,
-      buttonPressed: null,
-    });
+      buttonPressed: null});
     pressedButtonsRef.current.clear();
     
     if (navigationTimeoutRef.current) {
@@ -224,8 +217,7 @@ export function useOptimisticNavigation(options: OptimisticNavigationOptions = {
     isButtonPressed,
     isNavigatingTo,
     getNavigationProgress,
-    preloadRoute,
-  };
+    preloadRoute};
 }
 
 export default useOptimisticNavigation;

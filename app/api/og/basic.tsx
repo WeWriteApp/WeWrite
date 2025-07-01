@@ -20,24 +20,21 @@ export async function GET(request: Request) {
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
-            padding: '40px',
-          }}
+            padding: '40px'}}
         >
           <div
             style={{
               color: 'white',
               fontSize: 60,
               fontWeight: 'bold',
-              marginBottom: 20,
-            }}
+              marginBottom: 20}}
           >
             WeWrite
           </div>
           <div
             style={{
               color: 'white',
-              fontSize: 30,
-            }}
+              fontSize: 30}}
           >
             Page ID: {pageId}
           </div>
@@ -45,8 +42,7 @@ export async function GET(request: Request) {
       ),
       {
         width: 1200,
-        height: 630,
-      }
+        height: 630}
     );
   } catch (e) {
     console.error(`OG image generation error: ${e.message}`);
