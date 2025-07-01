@@ -1,32 +1,93 @@
-name: Auto-close Dependabot PRs
+name: Auto-merge Dependabot Security Updates
 
 on:
   pull_request_target:
-    types: [opened, reopened]
+    types: [opened, synchronize]
 
 jobs:
-  auto-close:
-    runs-on: ubuntu-latest
+  auto-merge-security:
     if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
     steps:
-      - name: Close Pull Request
-        uses: actions/github-script@v6
+      - name: Check if security update
+        id: check-security
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const pr = context.payload.pull_request;
-            console.log(`Auto-closing Dependabot PR #${pr.number}: ${pr.title}`);
-            
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+
+            const title = pr.title.toLowerCase();
+            const body = (pr.body || '').toLowerCase();
+            const labels = pr.labels.map(label => label.name.toLowerCase());
+
+            const isSecurityUpdate =
+              title.includes('security') ||
+              title.includes('vulnerability') ||
+              title.includes('cve-') ||
+              body.includes('security') ||
+              body.includes('vulnerability') ||
+              labels.includes('security');
+
+            console.log('PR Title:', pr.title);
+            console.log('Is security update:', isSecurityUpdate);
+            return isSecurityUpdate;
+
+      - name: Auto-merge security update
+        if: steps.check-security.outputs.result == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            try {
+              // Wait a moment for any checks to start
+              await new Promise(resolve => setTimeout(resolve, 30000));
+
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                commit_title: `Auto-merge security update: ${context.payload.pull_request.title}`,
+                commit_message: 'Automatically merged security update from Dependabot',
+                merge_method: 'squash'
+              });
+
+              console.log('✅ Successfully auto-merged security update');
+            } catch (error) {
+              console.log('❌ Failed to auto-merge:', error.message);
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `⚠️ Could not auto-merge this security update: ${error.message}\n\nPlease review and merge manually.`
+              });
+            }
+
+      - name: Close non-security PRs
+        if: steps.check-security.outputs.result != 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: pr.number,
-              body: 'This Dependabot PR is being automatically closed to prevent unnecessary Vercel preview deployments. Security updates will be applied manually by the team.'
+              issue_number: context.issue.number,
+              body: '🤖 Auto-closed non-security dependency update. Only security updates are automatically processed to avoid unnecessary Vercel deployments.'
             });
-            
+
             await github.rest.pulls.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: pr.number,
+              pull_number: context.issue.number,
               state: 'closed'
             });

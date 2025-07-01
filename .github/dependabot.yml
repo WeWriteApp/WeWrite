@@ -1,16 +1,24 @@
 version: 2
 updates:
+  # Security-only updates for npm packages
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "monthly"
-    # Disable automatic pull requests completely
-    open-pull-requests-limit: 0
+      interval: "daily"
+    # Limit to security updates only
+    open-pull-requests-limit: 5
     versioning-strategy: auto
     labels:
       - "dependencies"
       - "security"
-    # Ignore all updates to prevent any PRs
+      - "auto-merge"
+    # Block all regular updates, only allow security
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
+    # Only security updates are allowed
+    allow:
+      - dependency-type: "direct"
+        update-types: ["security-update"]
+      - dependency-type: "indirect"
+        update-types: ["security-update"]
