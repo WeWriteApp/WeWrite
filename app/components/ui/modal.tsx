@@ -42,7 +42,7 @@ export function Modal({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Handle ESC key press
+  // Handle ESC key press and body scroll prevention
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isOpen) {
@@ -50,10 +50,18 @@ export function Modal({
       }
     };
 
-    document.addEventListener('keydown', handleEscKey);
-    return () => {
-      document.removeEventListener('keydown', handleEscKey);
-    };
+    if (isOpen) {
+      // Prevent body scroll when modal is open
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = 'hidden';
+      document.addEventListener('keydown', handleEscKey);
+
+      return () => {
+        // Restore body scroll when modal closes
+        document.body.style.overflow = originalStyle;
+        document.removeEventListener('keydown', handleEscKey);
+      };
+    }
   }, [isOpen, onClose]);
 
   // Handle click and touch events outside
@@ -187,6 +195,10 @@ export function Modal({
               "p-6 overflow-hidden flex flex-col",
               className
             )}
+            onWheel={(e) => {
+              // Prevent wheel events from bubbling to background
+              e.stopPropagation();
+            }}
             initial={{
               opacity: 0,
               y: typeof window !== 'undefined' && window.innerWidth < 768 ? 100 : -10
@@ -225,7 +237,7 @@ export function Modal({
               </div>
             )}
 
-            <div className="py-2 flex-1 min-h-0 overflow-hidden">{children}</div>
+            <div className="py-2 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">{children}</div>
 
             {footer && <div className="mt-4 flex-shrink-0">{footer}</div>}
           </motion.div>

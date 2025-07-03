@@ -12,6 +12,7 @@ import { PillStyleProvider } from "./contexts/PillStyleContext"
 import { LoggingProvider } from "./providers/LoggingProvider"
 import { LineSettingsProvider } from "./contexts/LineSettingsContext"
 import { RecentPagesProvider } from "./contexts/RecentPagesContext"
+import { TokenIncrementProvider } from "./contexts/TokenIncrementContext"
 
 import { ThemeProvider } from "./providers/ThemeProvider"
 import { MultiAuthProvider } from "./providers/MultiAuthProvider"
@@ -24,8 +25,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <NextJSErrorBoundary>
           <ErrorBoundary name="root">
             <GlobalErrorHandler />
@@ -40,10 +41,13 @@ export default function RootLayout({
                             <PillStyleProvider>
                               <LineSettingsProvider>
                                 <RecentPagesProvider>
-                                  <SessionAuthInitializer />
-                                  <GlobalNavigation>
-                                    {children}
-                                  </GlobalNavigation>
+                                  <TokenIncrementProvider>
+                                    <SessionAuthInitializer>
+                                    <GlobalNavigation>
+                                      {children}
+                                    </GlobalNavigation>
+                                  </SessionAuthInitializer>
+                                  </TokenIncrementProvider>
                                 </RecentPagesProvider>
                               </LineSettingsProvider>
                             </PillStyleProvider>

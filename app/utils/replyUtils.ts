@@ -43,8 +43,9 @@ interface ReplyData {
  * @returns Formatted reply title
  */
 export const generateReplyTitle = (originalTitle?: string): string => {
-  // Return empty string to allow user to set their own title
-  return "";
+  // Generate a meaningful default title that users can edit
+  const baseTitle = originalTitle || "Untitled";
+  return `Re: ${baseTitle}`;
 };
 
 /**

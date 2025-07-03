@@ -18,7 +18,6 @@ const nextConfig = {
       config.stats = {
         all: true,
         modules: true,
-        maxModules: Infinity,
         errors: true,
         errorDetails: true,
         errorStack: true,

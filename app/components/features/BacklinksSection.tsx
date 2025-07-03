@@ -56,10 +56,10 @@ export default function BacklinksSection({ page, linkedPageIds = [] }: Backlinks
     const fetchBacklinks = async () => {
       try {
         setLoading(true);
-        
+
         // Get content-based backlinks using the efficient index
         const contentBacklinks = await getBacklinksAsync(page.id, 40);
-        
+
         // Get navigation-based backlinks
         const navigationBacklinkIds = await getNavigationBacklinksAsync(page.id);
         

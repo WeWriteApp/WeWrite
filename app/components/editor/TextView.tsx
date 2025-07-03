@@ -763,8 +763,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
                     className="paragraph-number"
                     style={{
                       animationDelay: `${index * ANIMATION_CONSTANTS.DENSE_PARAGRAPH_LOADING_DELAY}ms`,
-                      display: 'inline',
-                      marginRight: '1rem'
+                      display: 'inline'
                     }}
                   >
                     {actualIndex + 1}

@@ -2,13 +2,15 @@
 
 import React from 'react';
 import { CheckCircle, XCircle, Clock } from 'lucide-react';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 
 interface EmailVerificationStatusProps {
   className?: string;
 }
 
 export function EmailVerificationStatus({ className = "" }: EmailVerificationStatusProps) {
-  const { isEmailVerified } = useSyncQueue();
+  const { currentAccount } = useCurrentAccount();
+  const isEmailVerified = currentAccount?.emailVerified || false;
 
   const getStatusConfig = () => {
     if (isEmailVerified) {

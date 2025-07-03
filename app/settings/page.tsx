@@ -18,6 +18,8 @@ import {
 import { useFeatureFlag } from '../utils/feature-flags';
 import { getOptimizedUserSubscription } from '../firebase/optimizedSubscription';
 import { isActiveSubscription } from '../utils/subscriptionStatus';
+import { WarningDot } from '../components/ui/warning-dot';
+import { useSubscriptionWarning } from '../hooks/useSubscriptionWarning';
 
 interface SettingsSection {
   id: string;
@@ -32,6 +34,7 @@ export default function SettingsIndexPage() {
   const { session } = useCurrentAccount();
   const router = useRouter();
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
+  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant } = useSubscriptionWarning();
 
   // Check feature flags with proper user ID for real-time updates
   const paymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
@@ -187,30 +190,35 @@ export default function SettingsIndexPage() {
           {availableSections.map((section) => {
             const IconComponent = section.icon;
 
-            // Show warning icon for buy-tokens if no active subscription
-            const showWarning = section.id === 'buy-tokens' &&
-              paymentsEnabled &&
-              hasActiveSubscription === false;
+            // Show warning for subscription-related sections if there are subscription issues
+            const showWarning = (section.id === 'subscription' || section.id === 'buy-tokens') &&
+              shouldShowSubscriptionWarning;
 
             return (
-              <button
-                key={section.id}
-                onClick={() => handleSectionClick(section.href)}
-                className="w-full flex items-center justify-between px-4 py-4 text-left hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 mr-3">
-                    <IconComponent className="h-4 w-4 text-primary" />
+              <div key={section.id} className="relative">
+                <button
+                  onClick={() => handleSectionClick(section.href)}
+                  className="w-full flex items-center justify-between px-4 py-4 text-left hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 mr-3">
+                      <IconComponent className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="font-medium">{section.title}</span>
                   </div>
-                  <span className="font-medium">{section.title}</span>
-                </div>
-                <div className="flex items-center">
-                  {showWarning && (
-                    <AlertTriangle className="h-4 w-4 text-amber-500 mr-2" />
-                  )}
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </div>
-              </button>
+                  <div className="flex items-center">
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </button>
+                {showWarning && (
+                  <WarningDot
+                    variant={warningVariant}
+                    size="sm"
+                    position="top-right"
+                    offset={{ top: '12px', right: '12px' }}
+                  />
+                )}
+              </div>
             );
           })}
         </div>

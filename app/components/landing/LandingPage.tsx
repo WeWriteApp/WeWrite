@@ -27,16 +27,14 @@ import { auth } from '../../firebase/config';
 import SimpleActivityCarousel from './SimpleActivityCarousel';
 import SimpleTrendingCarousel from './SimpleTrendingCarousel';
 import HeroSection from './HeroSection';
-import LandingPageDonationBar from './LandingPageDonationBar';
+
 import { FilterableFeatureList } from './FilterableFeatureList';
 
 const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   const [isMobileView, setIsMobileView] = useState(false);
-  const [showPledgeBar, setShowPledgeBar] = useState(false);
-  const [pledgeBarDismissed, setPledgeBarDismissed] = useState(false);
-  const [pledgeBarAnimatingOut, setPledgeBarAnimatingOut] = useState(false);
+
   const { setTheme, theme } = useTheme();
   const [pageContents, setPageContents] = useState<Record<string, any>>({});
   const [session, setUser] = useState<any>(null);
@@ -96,34 +94,7 @@ const LandingPage = () => {
       const currentScrollY = window.scrollY;
       setIsScrolled(currentScrollY > 10);
 
-      // Auto-hide behavior for pledge bar: Hide on downward scroll and stay hidden
-      if (!pledgeBarDismissed && showPledgeBar && currentScrollY > 50) {
-        if (!hasScrolledDown) {
-          // User scrolled down - hide the bar and mark as scrolled
-          setShowPledgeBar(false);
-          hasScrolledDown = true;
 
-          // Store in sessionStorage to keep it hidden during the session
-          sessionStorage.setItem('landingPledgeBarHidden', 'true');
-        }
-      }
-
-      // Show pledge bar after scrolling past hero section (only if not dismissed and not previously hidden)
-      if (!pledgeBarDismissed && !hasScrolledDown) {
-        const wasHidden = sessionStorage.getItem('landingPledgeBarHidden') === 'true';
-        if (!wasHidden) {
-          const heroSection = document.querySelector('section[class*="pt-24"]'); // Hero section selector
-          if (heroSection) {
-            const heroRect = heroSection.getBoundingClientRect();
-            const heroBottom = heroRect.bottom;
-            // Show pledge bar when hero section is mostly out of view
-            setShowPledgeBar(heroBottom < window.innerHeight * 0.3);
-          } else {
-            // Fallback: show after scrolling 400px
-            setShowPledgeBar(currentScrollY > 400);
-          }
-        }
-      }
 
       // Determine which section is currently in view
       const sections = ['activity', 'trending', 'features', 'about'];
@@ -156,18 +127,9 @@ const LandingPage = () => {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [isMobileView, pledgeBarDismissed]);
+  }, [isMobileView]);
 
-  // Handle pledge bar dismissal with animation
-  const handlePledgeBarDismiss = () => {
-    setPledgeBarAnimatingOut(true);
-    // Wait for animation to complete before hiding
-    setTimeout(() => {
-      setPledgeBarDismissed(true);
-      setShowPledgeBar(false);
-      setPledgeBarAnimatingOut(false);
-    }, 350); // Slightly longer than animation duration for smooth completion
-  };
+
 
   // Check if user is logged in using hybrid session architecture
   useEffect(() => {
@@ -527,13 +489,7 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Donation Bar for non-logged-in users */}
-      <LandingPageDonationBar
-        isLoggedIn={!!session}
-        visible={showPledgeBar && !pledgeBarDismissed}
-        onDismiss={handlePledgeBarDismiss}
-        animatingOut={pledgeBarAnimatingOut}
-      />
+
 
       {/* Desktop Navigation - Always sticky at the top */}
       <header className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${isMobileView ? 'hidden' : 'block'} bg-background/90 backdrop-blur-xl shadow-md py-3`}>

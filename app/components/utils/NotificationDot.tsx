@@ -18,9 +18,12 @@ export default function NotificationDot({ className }: NotificationDotProps) {
   const { unreadCount } = useNotifications();
   const { theme } = useTheme();
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Detect dark mode
+  // Detect dark mode only after hydration
   useEffect(() => {
+    setIsHydrated(true);
+
     // Check if we're in dark mode based on the resolved theme
     setIsDarkMode(resolvedTheme === 'dark');
 
@@ -41,6 +44,19 @@ export default function NotificationDot({ className }: NotificationDotProps) {
 
   if (unreadCount <= 0) {
     return null;
+  }
+
+  // Prevent hydration mismatch by using a neutral color until hydrated
+  if (!isHydrated) {
+    return (
+      <div
+        className={cn(
+          "absolute top-0 right-0 w-2 h-2 rounded-full bg-gray-500",
+          className
+        )}
+        aria-hidden="true"
+      />
+    );
   }
 
   return (

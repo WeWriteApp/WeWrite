@@ -22,12 +22,14 @@ export interface LogoProps {
   alt?: string;
   /** Priority loading for above-the-fold logos */
   priority?: boolean;
+  /** Whether to apply button-style border and shadow */
+  styled?: boolean;
 }
 
 const sizeMap = {
-  sm: { width: 24, height: 24 },
-  md: { width: 32, height: 32 },
-  lg: { width: 40, height: 40 },
+  sm: { width: 16, height: 16 }, // Much smaller for collapsed headers
+  md: { width: 36, height: 36 }, // Match button size (h-9 w-9)
+  lg: { width: 36, height: 36 }, // Match button size (h-9 w-9)
   xl: { width: 48, height: 48 }
 };
 
@@ -43,7 +45,8 @@ export function Logo({
   clickable = false,
   onClick,
   alt = 'WeWrite Logo',
-  priority = false
+  priority = false,
+  styled = false
 }: LogoProps) {
   const { theme, resolvedTheme } = useTheme();
   
@@ -66,19 +69,31 @@ export function Logo({
   }, [size, width, height]);
 
   const logoElement = (
-    <Image
-      src={logoSrc}
-      alt={alt}
-      width={dimensions.width}
-      height={dimensions.height}
-      priority={priority}
+    <div
       className={cn(
-        'transition-opacity duration-200',
+        'inline-flex items-center justify-center transition-all duration-200',
+        styled && [
+          'border border-theme-medium bg-background shadow-sm rounded-md overflow-hidden',
+          'hover:shadow-md hover:border-theme-medium',
+          size === 'sm' ? 'h-5 w-5' : 'h-9 w-9'
+        ],
         clickable && 'hover:opacity-80 cursor-pointer',
         className
       )}
       onClick={onClick}
-    />
+    >
+      <Image
+        src={logoSrc}
+        alt={alt}
+        width={styled ? (size === 'sm' ? 20 : 36) : dimensions.width}
+        height={styled ? (size === 'sm' ? 20 : 36) : dimensions.height}
+        priority={priority}
+        className={cn(
+          'transition-opacity duration-200',
+          styled && 'object-cover w-full h-full'
+        )}
+      />
+    </div>
   );
 
   return logoElement;

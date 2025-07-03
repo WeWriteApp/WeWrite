@@ -16,6 +16,7 @@ import { TokenService } from '../../../services/tokenService';
 import { calculateTokensForAmount, getCurrentMonth } from '../../../utils/subscriptionTiers';
 import { useConfirmation } from '../../../hooks/useConfirmation';
 import ConfirmationModal from '../../../components/utils/ConfirmationModal';
+import { useTokenIncrement } from '../../../contexts/TokenIncrementContext';
 // PaymentFeatureGuard removed
 interface TokenAllocation {
   id: string;
@@ -38,6 +39,7 @@ export default function SubscriptionManagePage() {
   const { session } = useCurrentAccount();
   const router = useRouter();
   const { toast } = useToast();
+  const { incrementAmount } = useTokenIncrement();
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState(null);
   const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null);
@@ -360,7 +362,7 @@ export default function SubscriptionManagePage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleTokenAllocationChange(allocation.id, -1)}
+                        onClick={() => handleTokenAllocationChange(allocation.id, -incrementAmount)}
                         disabled={updatingAllocation === allocation.id || allocation.tokens <= 0}
                         className="h-8 w-8 p-0"
                       >
@@ -374,7 +376,7 @@ export default function SubscriptionManagePage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleTokenAllocationChange(allocation.id, 1)}
+                        onClick={() => handleTokenAllocationChange(allocation.id, incrementAmount)}
                         disabled={updatingAllocation === allocation.id || (tokenBalance?.availableTokens || 0) <= 0}
                         className="h-8 w-8 p-0"
                       >

@@ -309,19 +309,17 @@ function NewPageContent() {
       userId: currentAccount?.uid
     });
 
-    // CRITICAL FIX: Enhanced title validation with visual feedback
+    // CRITICAL FIX: Enhanced title validation with visual feedback - NOW APPLIES TO ALL PAGES INCLUDING REPLIES
     if (!title || title.trim() === '') {
-      if (!isReply) {
-        console.error('🔴 DEBUG: Save failed - missing title');
-        const errorMsg = "Please add a title before saving";
-        setError(errorMsg);
-        setTitleError(true);
-        toast({
-          title: "Missing Title",
-          description: errorMsg,
-          variant: "destructive"});
-        return false;
-      }
+      console.error('🔴 DEBUG: Save failed - missing title');
+      const errorMsg = "Please add a title before saving";
+      setError(errorMsg);
+      setTitleError(true);
+      toast({
+        title: "Missing Title",
+        description: errorMsg,
+        variant: "destructive"});
+      return false;
     }
 
     // Clear title error if title is valid
@@ -450,7 +448,7 @@ function NewPageContent() {
       }
 
       const data: PageData = {
-        title: isReply ? "" : title,
+        title: title, // FIXED: Always use title for both replies and regular pages
         isPublic,
         location,
         content: JSON.stringify(finalContent),
@@ -836,7 +834,7 @@ function NewPageContent() {
             pageId="new-page"
             pageTitle="New Page"
             authorId={currentAccount?.uid}
-            visible={false} // Don't show on new page creation
+            visible={false}
           />
         )}
       </Layout>

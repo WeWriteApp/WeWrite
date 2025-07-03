@@ -155,7 +155,23 @@ body .paragraph-number {
   color: hsl(var(--muted-foreground));
   font-weight: 400;
   opacity: var(--paragraph-number-opacity);
-  font-size: 0.75em;
+  font-size: 1em; /* Same size as body text */
+}
+
+/* Normal mode: Add space after paragraph numbers */
+.normal-mode .paragraph-number {
+  margin-right: 0.75rem;
+}
+
+/* Dense mode: Reduce space after and add space before paragraph numbers */
+.dense-mode-container .paragraph-number {
+  margin-left: 0.5rem;
+  margin-right: 0.25rem;
+}
+
+/* First paragraph number in dense mode shouldn't have left margin */
+.dense-mode-container .paragraph-number:first-of-type {
+  margin-left: 0;
 }
 
 /* Global zoom prevention (applies to all screen sizes) */
@@ -302,7 +318,7 @@ input, textarea, select {
 
   /* Ensure pledge bar content has adequate padding on mobile */
   [data-pledge-bar] {
-    padding: 0.75rem !important; /* 12px padding on mobile */
+    padding: 0 !important; /* No padding on mobile */
   }
 }
 
@@ -597,11 +613,16 @@ input, textarea, select {
 }
 
 /* PWA Interface Improvements */
-/* PWA light mode styles */
+/* PWA styles - light and dark mode support */
 @media (display-mode: standalone) {
   :root {
     --pwa-background: #ffffff;
     --pwa-status-bar: #000000;
+  }
+
+  .dark {
+    --pwa-background: #000000;
+    --pwa-status-bar: #ffffff;
   }
 
   body {
@@ -1169,6 +1190,7 @@ html,
 body {
   min-height: 100vh;
   overflow-x: hidden;
+  background-color: hsl(var(--background));
 }
 
 /**
@@ -2087,6 +2109,18 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   }
   50% {
     opacity: 0.7;
+  }
+}
+
+/* Warning dot flash animation */
+@keyframes warning-flash {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.9);
   }
 }
 

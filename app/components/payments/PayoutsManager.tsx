@@ -65,20 +65,20 @@ export function PayoutsManager() {
   const [payouts, setPayouts] = useState<TokenPayout[]>([]);
 
   useEffect(() => {
-    if (session && isPaymentsEnabled) {
+    if (currentAccount && isPaymentsEnabled) {
       loadPayoutSetup();
       loadRealEarningsData();
       checkBankAccountStatus();
       loadPayoutHistory();
     }
-  }, [, session, isPaymentsEnabled]);
+  }, [currentAccount, isPaymentsEnabled]);
 
   const loadRealEarningsData = async () => {
-    if (!session?.uid) return;
+    if (!currentAccount?.uid) return;
 
     try {
       // Get token earnings
-      const tokenBalance = await TokenEarningsService.getWriterTokenBalance(session.uid);
+      const tokenBalance = await TokenEarningsService.getWriterTokenBalance(currentAccount.uid);
       if (tokenBalance) {
         setRealEarnings({
           totalEarnings: tokenBalance.totalUsdEarned,
@@ -94,10 +94,10 @@ export function PayoutsManager() {
   };
 
   const loadPayoutHistory = async () => {
-    if (!session?.uid) return;
+    if (!currentAccount?.uid) return;
 
     try {
-      const payoutHistory = await TokenEarningsService.getPayoutHistory(session.uid, 10);
+      const payoutHistory = await TokenEarningsService.getPayoutHistory(currentAccount.uid, 10);
       setPayouts(payoutHistory);
     } catch (error) {
       console.error('Error loading payout history:', error);
@@ -133,7 +133,7 @@ export function PayoutsManager() {
   };
 
   const checkBankAccountStatus = async () => {
-    if (!session?.stripeConnectedAccountId) {
+    if (!currentAccount?.stripeConnectedAccountId) {
       setBankAccountConnected(false);
       return;
     }
@@ -144,7 +144,7 @@ export function PayoutsManager() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          stripeConnectedAccountId: user.stripeConnectedAccountId
+          stripeConnectedAccountId: currentAccount.stripeConnectedAccountId
         })});
 
       if (response.ok) {
@@ -179,7 +179,7 @@ export function PayoutsManager() {
         description: "Unable to retrieve your payout setup details",
         additionalInfo: {
           errorType: "PAYOUT_LOAD_ERROR",
-          userId: session?.uid,
+          userId: currentAccount?.uid,
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent,
           url: window.location.href,
@@ -195,7 +195,7 @@ export function PayoutsManager() {
       setSetupLoading(true);
 
       // Ensure we have a valid user
-      if (!session?.uid) {
+      if (!currentAccount?.uid) {
         throw new Error('User not authenticated');
       }
 
@@ -220,7 +220,7 @@ export function PayoutsManager() {
             Cookies.set('userSession', JSON.stringify({
               uid: currentAccount.uid,
               email: currentAccount.email,
-              username: user.username
+              username: currentAccount.username
             }), { expires: 7 });
           }
         }
@@ -245,7 +245,7 @@ export function PayoutsManager() {
       const connectResponse = await fetch('/api/create-connect-account', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ userId: session.uid })});
+        body: JSON.stringify({ userId: currentAccount.uid })});
 
       if (connectResponse.ok) {
         const result = await connectResponse.json();
@@ -270,7 +270,7 @@ export function PayoutsManager() {
             const retryResponse = await fetch('/api/create-connect-account', {
               method: 'POST',
               headers,
-              body: JSON.stringify({ userId: session.uid })});
+              body: JSON.stringify({ userId: currentAccount.uid })});
 
             if (retryResponse.ok) {
               const retryResult = await retryResponse.json();
@@ -294,11 +294,11 @@ export function PayoutsManager() {
         description: error.message || "Failed to setup bank account. Please try again.",
         additionalInfo: {
           errorType: "BANK_ACCOUNT_SETUP_ERROR",
-          userId: session?.uid,
+          userId: currentAccount?.uid,
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent,
           url: window.location.href,
-          stripeConnectedAccountId: session?.stripeConnectedAccountId,
+          stripeConnectedAccountId: currentAccount?.stripeConnectedAccountId,
           errorMessage: error.message,
           errorStack: error.stack}});
     } finally {
@@ -316,7 +316,7 @@ export function PayoutsManager() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            stripeConnectedAccountId: user.stripeConnectedAccountId,
+            stripeConnectedAccountId: currentAccount.stripeConnectedAccountId,
             country: 'US', // Default to US, could be made dynamic
             forceCreate: true // Force creation of payout recipient
           })});
@@ -354,7 +354,7 @@ export function PayoutsManager() {
         description: error.message || "Failed to request payout. Please try again.",
         additionalInfo: {
           errorType: "PAYOUT_REQUEST_ERROR",
-          userId: session?.uid,
+          userId: currentAccount?.uid,
           timestamp: new Date().toISOString(),
           userAgent: navigator.userAgent,
           url: window.location.href,

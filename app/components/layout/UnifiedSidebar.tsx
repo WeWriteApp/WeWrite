@@ -17,6 +17,8 @@ import MapEditor from "../editor/MapEditor";
 import RandomPageFilterMenu from "../ui/RandomPageFilterMenu";
 import { logoutUser } from "../../firebase/auth";
 import { cn } from "../../lib/utils";
+import { WarningDot } from '../ui/warning-dot';
+import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 
 // Context for sidebar state management
 interface SidebarContextType {
@@ -166,6 +168,7 @@ function UnifiedSidebarContent({
   const router = useRouter();
   const pathname = usePathname();
   const editorContext = useContext(EditorContext);
+  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant } = useSubscriptionWarning();
 
   // Check if map feature is enabled
   const mapFeatureEnabled = useFeatureFlag('map_view', session?.email);
@@ -281,28 +284,36 @@ function UnifiedSidebarContent({
               const Icon = item.icon;
               const isRandomPage = item.label === 'Random Page';
               const isActive = isNavItemActive(item);
+              const isSettings = item.label === 'Settings';
 
-              return (
-                <div key={item.href || index} className={cn("relative", isRandomPage && "group")}>
-                  <Button
-                    variant="ghost"
-                    onClick={() => handleNavItemClick(item)}
-                    className={cn(
-                      "relative flex items-center h-12 w-full transition-all duration-300 ease-in-out",
-                      "text-foreground hover:bg-primary/10 hover:text-primary",
-                      "sidebar-nav-button",
-                      showContent && "sidebar-nav-button-expanded",
-                      // Active state styling
-                      isActive && "bg-primary/10 text-primary"
-                    )}
-                    title={showContent ? "" : item.label}
-                  >
+              const buttonContent = (
+                <Button
+                  variant="ghost"
+                  onClick={() => handleNavItemClick(item)}
+                  className={cn(
+                    "relative flex items-center h-12 w-full transition-all duration-300 ease-in-out",
+                    "text-foreground hover:bg-primary/10 hover:text-primary",
+                    "sidebar-nav-button",
+                    showContent && "sidebar-nav-button-expanded",
+                    // Active state styling
+                    isActive && "bg-primary/10 text-primary"
+                  )}
+                  title={showContent ? "" : item.label}
+                >
                     {/* Icon container - maintains position during transitions */}
                     <div className={cn(
-                      "sidebar-icon-container",
+                      "sidebar-icon-container relative",
                       showContent && "mr-3"
                     )}>
                       <Icon className="h-5 w-5 flex-shrink-0" />
+                      {isSettings && shouldShowSubscriptionWarning && (
+                        <WarningDot
+                          variant={warningVariant}
+                          size="sm"
+                          position="top-right"
+                          offset={{ top: '-2px', right: '-2px' }}
+                        />
+                      )}
                     </div>
 
                     {/* Text label - slides in from the right */}
@@ -315,6 +326,11 @@ function UnifiedSidebarContent({
                       </span>
                     </div>
                   </Button>
+              );
+
+              return (
+                <div key={item.href || index} className={cn("relative", isRandomPage && "group")}>
+                  {buttonContent}
 
                   {/* Random Page Filter Menu - only show when expanded and for random page item */}
                   {isRandomPage && showContent && (
@@ -470,24 +486,16 @@ function UnifiedSidebarContent({
               ) : (
                 <Button
                   variant="ghost"
-                  onClick={() => {
-                    // If we're in a temporary hover state, end it before navigation
-                    if (isHovering && !isExpanded) {
-                      setIsHovering(false);
-                    }
-                    router.push('/settings');
-                  }}
+                  onClick={() => logoutUser()}
                   className={cn(
                     "relative flex items-center h-12 w-full text-foreground hover:bg-primary/10 hover:text-primary transition-all duration-300 sidebar-nav-button",
-                    showContent && "sidebar-nav-button-expanded",
-                    // Active state styling consistent with other nav items
-                    pathname === '/settings' && "bg-primary/10 text-primary"
+                    showContent && "sidebar-nav-button-expanded"
                   )}
-                  title="Settings"
+                  title="Logout"
                 >
                   {/* Icon container - maintains position during transitions */}
                   <div className="sidebar-icon-container">
-                    <Settings className="h-5 w-5 flex-shrink-0" />
+                    <LogOut className="h-5 w-5 flex-shrink-0" />
                   </div>
                 </Button>
               )}

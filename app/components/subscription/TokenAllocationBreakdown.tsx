@@ -12,6 +12,7 @@ import { TokenBalance } from '../../types/database';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
+import { useTokenIncrement } from '../../contexts/TokenIncrementContext';
 
 interface PageAllocation {
   id: string;
@@ -32,6 +33,13 @@ interface TokenBalance {
 
 interface AllocationData {
   allocations: PageAllocation[];
+  pagination?: {
+    offset: number;
+    limit: number;
+    total: number;
+    hasMore: boolean;
+    returned: number;
+  };
   summary: {
     totalAllocations: number;
     totalTokensAllocated: number;
@@ -41,15 +49,18 @@ interface AllocationData {
 
 interface TokenAllocationBreakdownProps {
   className?: string;
+  onAllocationUpdate?: (allocationData: any) => void;
 }
 
 type SortOption = 'tokens-desc' | 'tokens-asc' | 'title-asc' | 'title-desc' | 'author-asc' | 'author-desc';
 
-export default function TokenAllocationBreakdown({ className = "" }: TokenAllocationBreakdownProps) {
-  const { session } = useCurrentAccount();
+export default function TokenAllocationBreakdown({ className = "", onAllocationUpdate }: TokenAllocationBreakdownProps) {
+  const { currentAccount, isAuthenticated } = useCurrentAccount();
   const { toast } = useToast();
+  const { incrementAmount } = useTokenIncrement();
   const [allocationData, setAllocationData] = useState<AllocationData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [updatingAllocation, setUpdatingAllocation] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('tokens-desc');
 
@@ -67,7 +78,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
 
   // Periodic state synchronization to handle edge cases
   useEffect(() => {
-    if (!session?.uid) return;
+    if (!currentAccount?.uid) return;
 
     // Set up periodic refresh to catch any state drift
     const syncInterval = setInterval(() => {
@@ -78,7 +89,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
     }, 30000); // Sync every 30 seconds when idle
 
     return () => clearInterval(syncInterval);
-  }, [session?.uid, pendingChanges]);
+  }, [currentAccount?.uid, pendingChanges]);
 
   // Cleanup debounce timers on unmount
   useEffect(() => {
@@ -128,15 +139,32 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
     return [...activeAllocations, ...zeroAllocations];
   }, [allocationData?.allocations, sortBy]);
 
-  const loadAllocations = async () => {
-    if (!session?.uid) {
+  // Calculate maximum tokens for bar graph proportions
+  const maxTokens = useMemo(() => {
+    if (!allocationData?.allocations || allocationData.allocations.length === 0) return 1;
+    const max = Math.max(...allocationData.allocations.map(a => a.tokens));
+    return max > 0 ? max : 1; // Ensure we never have 0 as max to avoid division by zero
+  }, [allocationData?.allocations]);
+
+  const loadAllocations = async (loadMore = false) => {
+    if (!currentAccount?.uid) {
       setLoading(false);
       return;
     }
 
     try {
-      // Use API endpoint instead of direct client-side calls
-      const response = await fetch('/api/tokens/allocations');
+      if (loadMore) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
+      // Calculate offset for pagination
+      const offset = loadMore && allocationData ? allocationData.allocations.length : 0;
+      const limit = 20;
+
+      // Use API endpoint with pagination parameters
+      const response = await fetch(`/api/tokens/allocations?limit=${limit}&offset=${offset}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch token allocations');
@@ -148,19 +176,36 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
         throw new Error(data.error || 'Failed to load allocations');
       }
 
-      setAllocationData(data);
+      if (loadMore && allocationData) {
+        // Append new allocations to existing ones
+        setAllocationData({
+          ...data,
+          allocations: [...allocationData.allocations, ...data.allocations]
+        });
+      } else {
+        // Replace with new data
+        setAllocationData(data);
+      }
 
     } catch (error) {
       console.error('Error loading token allocations:', error);
-      setAllocationData({
-        success: false,
-        allocations: [],
-        summary: { totalAllocations: 0, totalTokensAllocated: 0, balance: null },
-        error: error instanceof Error ? error.message : 'Failed to load allocations'
-      });
+      if (!loadMore) {
+        setAllocationData({
+          success: false,
+          allocations: [],
+          summary: { totalAllocations: 0, totalTokensAllocated: 0, balance: null },
+          error: error instanceof Error ? error.message : 'Failed to load allocations'
+        });
+      }
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
+  };
+
+  // Load more allocations
+  const handleLoadMore = () => {
+    loadAllocations(true);
   };
 
   // Debounced database update function
@@ -183,7 +228,8 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
       const response = await fetch('/api/tokens/page-allocation', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'},
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           pageId,
           tokenChange: totalChange
@@ -225,7 +271,8 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
         title: "Update Failed",
         description: error instanceof Error ? error.message : "Failed to update token allocation. Please try again.",
         variant: "destructive",
-        duration: 5000});
+        duration: 5000
+      });
     }
   }, [allocationData]);
 
@@ -249,7 +296,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
     setAllocationData(prev => {
       if (!prev || !prev.allocations) return prev;
 
-      return {
+      const updatedData = {
         ...prev,
         allocations: prev.allocations.map(allocation =>
           allocation.pageId === pageId
@@ -265,6 +312,13 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
           } : null
         }
       };
+
+      // Notify parent component of the update
+      if (onAllocationUpdate) {
+        onAllocationUpdate(updatedData);
+      }
+
+      return updatedData;
     });
 
     // Track pending changes
@@ -352,7 +406,8 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
       const response = await fetch('/api/tokens/allocate', {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json'},
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           resourceType: 'page',
           resourceId: pageId
@@ -398,7 +453,8 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
       toast({
         title: "Allocation Removed",
         description: "Token allocation removed successfully",
-        duration: 3000});
+        duration: 3000
+      });
 
     } catch (error) {
       console.error('Error deleting allocation:', error);
@@ -408,7 +464,8 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
         title: "Delete Failed",
         description: error instanceof Error ? error.message : "Failed to delete allocation. Please try again.",
         variant: "destructive",
-        duration: 5000});
+        duration: 5000
+      });
     }
   };
 
@@ -463,14 +520,14 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <DollarSign className="h-5 w-5" />
-          Token Allocation Breakdown
-          <Badge variant="secondary" className="ml-2 text-xs">
-            <Clock className="h-3 w-3 mr-1" />
-            Pending
-          </Badge>
+          Breakdown by page
         </CardTitle>
         <CardDescription>
-          Manage your pending monthly token allocations to creators
+          {allocationData?.pagination?.total ? (
+            `Manage your monthly token allocations to creators (${allocationData.pagination.total} pages)`
+          ) : (
+            'Manage your monthly token allocations to creators'
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -489,6 +546,9 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
             <div className="flex items-center gap-2 mb-4">
               <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">Sort by:</span>
+              {allocationData?.pagination?.hasMore && (
+                <span className="text-xs text-muted-foreground ml-2">(affects loaded items only)</span>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="w-48 justify-between">
@@ -531,6 +591,9 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
                   const isZeroAllocation = allocation.tokens === 0;
                   const isEditing = editingTokens[allocation.pageId];
 
+                  // Calculate percentage for background bar (0-100%)
+                  const barPercentage = maxTokens > 0 ? (allocation.tokens / maxTokens) * 100 : 0;
+
                   return (
                     <motion.div
                       key={allocation.id}
@@ -544,29 +607,40 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
                         y: { duration: 0.3 },
                         delay: index * 0.05 // Stagger effect
                       }}
-                      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-theme-strong rounded-lg hover:bg-muted/50 hover-border-strong transition-colors ${
+                      className={`relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-theme-strong rounded-lg hover:bg-muted/50 hover-border-strong transition-colors overflow-hidden ${
                         isZeroAllocation ? 'opacity-50' : ''
                       }`}
                     >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Link
-                            href={`/${allocation.pageId}`}
-                            className="font-medium text-primary hover:underline truncate"
-                          >
-                            {allocation.pageTitle}
-                          </Link>
-                          <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                          {isZeroAllocation && (
-                            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                              Previously pledged
-                            </span>
-                          )}
+                      {/* Subtle background bar */}
+                      <div
+                        className="absolute inset-0 bg-gradient-to-r from-accent/10 to-accent/5 transition-all duration-300"
+                        style={{
+                          width: `${barPercentage}%`,
+                          opacity: isZeroAllocation ? 0.3 : 0.6
+                        }}
+                      />
+
+                      {/* Content overlay */}
+                      <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Link
+                              href={`/${allocation.pageId}`}
+                              className="font-medium text-primary hover:underline truncate"
+                            >
+                              {allocation.pageTitle}
+                            </Link>
+                            <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                            {isZeroAllocation && (
+                              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                                Previously pledged
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            by {allocation.authorUsername}
+                          </p>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          by {allocation.authorUsername}
-                        </p>
-                      </div>
 
                       <div className="flex items-center gap-3 sm:ml-4">
                         <div className="text-right">
@@ -623,7 +697,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleTokenAllocation(allocation.pageId, -1)}
+                                onClick={() => handleTokenAllocation(allocation.pageId, -incrementAmount)}
                                 disabled={allocation.tokens <= 0}
                                 className="h-8 w-8 p-0"
                               >
@@ -631,7 +705,7 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
                               </Button>
                               <Button
                                 size="sm"
-                                onClick={() => handleTokenAllocation(allocation.pageId, 1)}
+                                onClick={() => handleTokenAllocation(allocation.pageId, incrementAmount)}
                                 disabled={(summary.balance?.availableTokens || 0) <= 0}
                                 className="h-8 w-8 p-0"
                               >
@@ -641,11 +715,45 @@ export default function TokenAllocationBreakdown({ className = "" }: TokenAlloca
                           )}
                         </div>
                       </div>
+                      </div>
                     </motion.div>
                   );
                 })}
               </AnimatePresence>
             </motion.div>
+
+            {/* Load More Button */}
+            {allocationData?.pagination?.hasMore && (
+              <div className="text-center py-4">
+                <div className="text-sm text-muted-foreground mb-3">
+                  Showing {allocationData.allocations.length} of {allocationData.pagination.total} pages
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="min-w-[140px]"
+                >
+                  {loadingMore ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
+                      Loading...
+                    </>
+                  ) : (
+                    'Load 20 more'
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {/* Show total count even when all loaded */}
+            {allocationData?.pagination && !allocationData.pagination.hasMore && allocationData.pagination.total > 20 && (
+              <div className="text-center py-2">
+                <div className="text-sm text-muted-foreground">
+                  Showing all {allocationData.pagination.total} pages
+                </div>
+              </div>
+            )}
 
             {/* Total Summary */}
             <div className="border-t-only pt-4 mt-6">

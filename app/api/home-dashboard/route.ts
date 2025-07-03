@@ -70,34 +70,34 @@ export async function GET(request: NextRequest) {
 async function getRecentPagesOptimized(limitCount: number, userId?: string | null): Promise<any[]> {
   try {
     let pagesQuery;
-    
+
     if (userId) {
-      // For logged-in users, show their pages + public pages (exclude deleted)
+      // For logged-in users, get recent pages and filter deleted ones in code
+      // This avoids the composite index requirement
       pagesQuery = query(
         collection(db, 'pages'),
-        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
-        limit(limitCount * 2) // Get more to filter later
+        limit(limitCount * 3) // Get more to account for filtering deleted pages
       );
     } else {
-      // For anonymous users, only public pages (exclude deleted)
+      // For anonymous users, only public pages
       pagesQuery = query(
         collection(db, 'pages'),
         where('isPublic', '==', true),
-        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
-        limit(limitCount)
+        limit(limitCount * 2) // Get more to account for filtering deleted pages
       );
     }
-    
+
     const snapshot = await getDocs(pagesQuery);
     const pages = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
-    
-    // Filter and limit results
+
+    // Filter out deleted pages in application code to avoid composite index requirement
     const filteredPages = pages
+      .filter(page => page.deleted !== true) // Filter deleted pages in code
       .filter(page => {
         if (!userId) return page.isPublic;
         return page.isPublic || page.userId === userId;

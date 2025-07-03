@@ -102,25 +102,23 @@ const usePages = (
     setLoading(true);
     setError(null);
 
-    // Set up a timeout to detect stalled queries
+    // Set up a more reasonable timeout to detect stalled queries
     const queryTimeoutId = setTimeout(() => {
-      console.warn("usePages: Query execution taking too long, may be stalled");
-      // Force loading to false after timeout to prevent infinite loading state
-      setLoading(false);
+      console.warn("usePages: Query execution taking longer than expected");
 
-      // CRITICAL FIX: Don't clear existing pages if we already have data
-      // This prevents pages from disappearing after they've loaded
+      // Don't immediately stop loading if we don't have data yet
       if (pages.length === 0) {
-        console.log("usePages: No pages loaded yet, providing empty data as fallback");
-        // Only set empty arrays if we don't have any data yet
-        setPages([]);
+        console.log("usePages: No pages loaded yet, continuing to wait");
+        // Don't set loading to false yet, give it more time
       } else {
-        console.log("usePages: Keeping existing pages data instead of clearing");
-        // Keep existing data, just update loading state
+        console.log("usePages: Keeping existing pages data and stopping loading");
+        setLoading(false);
       }
 
-      // Set error message
-      setError("Query execution is taking longer than expected. Please try refreshing the page.");
+      // Only set error if we don't have any data
+      if (pages.length === 0) {
+        setError("Loading is taking longer than expected. Please wait or try refreshing the page.");
+      }
 
       // Dispatch an event that other components can listen for
       if (typeof window !== 'undefined') {
@@ -129,7 +127,17 @@ const usePages = (
         });
         window.dispatchEvent(forceCompleteEvent);
       }
-    }, 5000); // Increased to 5 seconds to give more time for query to complete
+    }, 10000); // Increased to 10 seconds to give more time for query to complete
+
+    // Set a final timeout that actually stops everything
+    const finalQueryTimeoutId = setTimeout(() => {
+      console.error("usePages: Query failed to complete within reasonable time");
+      setLoading(false);
+      if (pages.length === 0) {
+        setError("Unable to load content. Please check your connection and try again.");
+        setPages([]);
+      }
+    }, 20000); // 20 second final timeout
 
     try {
       // TEMPORARY: Use dynamic import like the working API
@@ -168,8 +176,9 @@ const usePages = (
 
       console.log('usePages: Pages query completed. Found', pagesSnapshot.size, 'documents');
 
-      // Clear the timeout since we got a response
+      // Clear both timeouts since we got a response
       clearTimeout(queryTimeoutId);
+      clearTimeout(finalQueryTimeoutId);
 
       // Process pages with filtering for deleted pages
       const pagesArray = [];

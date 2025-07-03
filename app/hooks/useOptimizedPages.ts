@@ -87,35 +87,41 @@ const useOptimizedPages = (
     fetchAttemptsRef.current += 1;
     lastFetchTimeRef.current = Date.now();
     
-    // Set up a timeout to detect stalled queries
+    // Set up a more reasonable timeout to detect stalled queries
     const timeoutId = setTimeout(() => {
-      console.warn("useOptimizedPages: Query execution taking too long, may be stalled");
-      
+      console.warn("useOptimizedPages: Query execution taking longer than expected");
+
       // If we have cached data, use it even if it's stale
       const cachedPublicData = localStorage.getItem(`wewrite_pages_${userId}_public_${currentUserId === userId ? 'owner' : 'visitor'}_${initialLimitCount}`);
 
       if (cachedPublicData) {
-        console.log("useOptimizedPages: Using stale cached data as fallback");
-        
-        try {
-          if (cachedPublicData) {
-            const parsed = JSON.parse(cachedPublicData);
-            setPages(parsed.data || []);
-          }
+        console.log("useOptimizedPages: Using cached data as fallback while query continues");
 
-          // Still show error but at least we have some data
-          setError("We're having trouble refreshing your data. Showing cached content.");
+        try {
+          const parsed = JSON.parse(cachedPublicData);
+          setPages(parsed.data || []);
+          // Don't set error if we have cached data - let the query continue in background
+          setLoading(false);
         } catch (e) {
           console.error("Error parsing cached data:", e);
+          setError("We're having trouble loading your content. Please try refreshing the page.");
+          setLoading(false);
         }
       } else {
-        // No cached data available, show empty state
-        setPages([]);
-        setError("We couldn't load your content. Please try again later.");
+        // No cached data available, but don't give up yet
+        console.log("useOptimizedPages: No cached data available, continuing to wait for query");
+        // Don't set loading to false yet, give it more time
       }
-      
+    }, 8000); // Increased from 3 seconds to 8 seconds
+
+    // Set a final timeout that actually stops the loading
+    const finalTimeoutId = setTimeout(() => {
+      console.error("useOptimizedPages: Query failed to complete within reasonable time");
       setLoading(false);
-    }, 3000);
+      if (!pages.length) {
+        setError("Unable to load content. Please check your connection and try again.");
+      }
+    }, 15000); // 15 second final timeout
     
     try {
       // Fetch public pages only
@@ -135,17 +141,19 @@ const useOptimizedPages = (
       fetchAttemptsRef.current = 0;
       backoffTimeRef.current = 1000; // Reset backoff time
       
-      // Clear the timeout since we got data
+      // Clear both timeouts since we got data
       clearTimeout(timeoutId);
-      
+      clearTimeout(finalTimeoutId);
+
       // Update loading state
       setLoading(false);
       setError(null);
     } catch (err) {
       console.error("Error fetching pages:", err);
-      
-      // Clear the timeout
+
+      // Clear both timeouts
       clearTimeout(timeoutId);
+      clearTimeout(finalTimeoutId);
       
       // Check if this was an abort error (user navigated away)
       if (err.name === 'AbortError') {

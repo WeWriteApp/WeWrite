@@ -20,7 +20,8 @@ import {
 import { useFeatureFlag } from '../utils/feature-flags';
 import { cn } from '../lib/utils';
 import { getOptimizedUserSubscription } from '../firebase/optimizedSubscription';
-import { isActiveSubscription } from '../utils/subscriptionStatus';
+import { isActiveSubscription, getSubscriptionStatusInfo } from '../utils/subscriptionStatus';
+import { WarningDot } from '../components/ui/warning-dot';
 
 interface SettingsSection {
   id: string;
@@ -35,20 +36,35 @@ interface SettingsLayoutProps {
 }
 
 export default function SettingsLayout({ children }: SettingsLayoutProps) {
-  const { session, isAuthenticated } = useCurrentAccount();
+  const { session, isAuthenticated, isLoading } = useCurrentAccount();
   const router = useRouter();
   const pathname = usePathname();
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
+  const [subscriptionStatusInfo, setSubscriptionStatusInfo] = useState<any>(null);
 
   // Check payments feature flag with proper user ID for real-time updates
   const paymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
 
   useEffect(() => {
+    console.log('🎯 Settings Layout: Auth check', {
+      isAuthenticated,
+      isLoading,
+      hasSession: !!session,
+      sessionUid: session?.uid
+    });
+
+    // Don't redirect while still loading authentication state
+    if (isLoading) {
+      console.log('🎯 Settings Layout: Still loading authentication state, not redirecting');
+      return;
+    }
+
     if (!isAuthenticated) {
+      console.log('🎯 Settings Layout: Redirecting to login because not authenticated');
       router.push('/auth/login');
       return;
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isLoading, router, session]);
 
   // Check subscription status when payments are enabled and user is available
   useEffect(() => {
@@ -65,14 +81,21 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
         });
 
         if (subscription) {
+          const statusInfo = getSubscriptionStatusInfo(
+            subscription.status,
+            subscription.cancelAtPeriodEnd,
+            subscription.currentPeriodEnd
+          );
           const isActive = isActiveSubscription(
             subscription.status,
             subscription.cancelAtPeriodEnd,
             subscription.currentPeriodEnd
           );
           setHasActiveSubscription(isActive);
+          setSubscriptionStatusInfo(statusInfo);
         } else {
           setHasActiveSubscription(false);
+          setSubscriptionStatusInfo(null);
         }
       } catch (error) {
         console.error('Error checking subscription status:', error);
@@ -151,6 +174,18 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
     router.push(href);
   };
 
+  // Show loading state while authentication is being checked
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile Header - Only show on main settings page */}
@@ -185,31 +220,52 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                   const isActive = pathname === section.href ||
                     (pathname.startsWith(section.href + '/') && section.href !== '/settings');
 
-                  // Show warning icon for subscription if no active subscription
+                  // Show warning icon and color for subscription if inactive or cancelling
                   const showWarning = section.id === 'subscription' &&
                     paymentsEnabled &&
-                    hasActiveSubscription === false;
+                    (hasActiveSubscription === false ||
+                     (subscriptionStatusInfo && ['cancelling', 'canceled', 'past_due', 'unpaid'].includes(subscriptionStatusInfo.status)));
+
+                  // Get warning variant based on subscription status
+                  const getWarningVariant = () => {
+                    if (!subscriptionStatusInfo) return 'warning';
+                    switch (subscriptionStatusInfo.status) {
+                      case 'past_due':
+                      case 'unpaid':
+                        return 'critical';
+                      case 'incomplete':
+                        return 'error';
+                      default:
+                        return 'warning';
+                    }
+                  };
 
                   return (
-                    <button
-                      key={section.id}
-                      onClick={() => handleSectionClick(section.href)}
-                      className={cn(
-                        "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors",
-                        isActive
-                          ? "bg-primary/10 text-primary border border-primary/20"
-                          : "text-foreground hover:bg-muted"
-                      )}
-                    >
-                      <IconComponent className={cn(
-                        "h-5 w-5 mr-3",
-                        isActive ? "text-primary" : "text-muted-foreground"
-                      )} />
-                      <span className="flex-1 text-left">{section.title}</span>
+                    <div key={section.id} className="relative">
+                      <button
+                        onClick={() => handleSectionClick(section.href)}
+                        className={cn(
+                          "w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+                          isActive
+                            ? "bg-primary/10 text-primary border border-primary/20"
+                            : "text-foreground hover:bg-muted"
+                        )}
+                      >
+                        <IconComponent className={cn(
+                          "h-5 w-5 mr-3",
+                          isActive ? "text-primary" : "text-muted-foreground"
+                        )} />
+                        <span className="flex-1 text-left">{section.title}</span>
+                      </button>
                       {showWarning && (
-                        <AlertTriangle className="h-4 w-4 text-amber-500 ml-2" />
+                        <WarningDot
+                          variant={getWarningVariant()}
+                          size="sm"
+                          position="top-right"
+                          offset={{ top: '8px', right: '8px' }}
+                        />
                       )}
-                    </button>
+                    </div>
                   );
                 })}
               </div>

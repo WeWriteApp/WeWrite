@@ -55,6 +55,18 @@ export async function GET(request) {
   db = firestore;
 
   try {
+    // Add simple in-memory cache for trending data (5 minute TTL)
+    const cacheKey = `trending_${limitCount}`;
+    const cacheExpiry = 5 * 60 * 1000; // 5 minutes
+
+    // Check if we have cached data (in a real app, use Redis or similar)
+    if (global.trendingCache && global.trendingCache[cacheKey]) {
+      const cached = global.trendingCache[cacheKey];
+      if (Date.now() - cached.timestamp < cacheExpiry) {
+        console.log('Returning cached trending data');
+        return NextResponse.json({ trendingPages: cached.data }, { headers });
+      }
+    }
 
     // Get current date and time
     const now = new Date();
@@ -67,10 +79,12 @@ export async function GET(request) {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-    // Get page views for today and yesterday
+    // Get page views for today and yesterday with optimized queries
     const pageViewsRef = db.collection("pageViews");
-    const todayQuery = pageViewsRef.where("date", "==", todayStr);
-    const yesterdayQuery = pageViewsRef.where("date", "==", yesterdayStr);
+
+    // Limit the initial query to reduce data transfer
+    const todayQuery = pageViewsRef.where("date", "==", todayStr).limit(100);
+    const yesterdayQuery = pageViewsRef.where("date", "==", yesterdayStr).limit(100);
 
     const [todaySnapshot, yesterdaySnapshot] = await Promise.all([
       todayQuery.get(),
@@ -223,55 +237,84 @@ export async function GET(request) {
       });
     }
 
-    // Fetch page titles and user info for the trending pages
-    const pagesWithTitlesPromises = trendingPages.map(async (page) => {
-      try {
-        const pageDoc = await db.collection("pages").doc(page.id).get();
-        if (pageDoc.exists) {
-          const pageData = pageDoc.data();
+    // Optimize: Batch fetch page data and user data separately
+    const pageIds = trendingPages.map(page => page.id);
 
-          // Only include public, non-deleted pages
-          if (pageData.isPublic === false || pageData.deleted === true) {
-            return null;
-          }
+    // Batch fetch all page documents at once
+    const pageDocsPromise = db.getAll(...pageIds.map(id => db.collection("pages").doc(id)));
 
-          // Get username if userId exists
-          let username = "Anonymous";
+    // Execute the batch fetch
+    const pageDocs = await pageDocsPromise;
+
+    // Extract user IDs and prepare page data
+    const pageDataMap = new Map();
+    const userIds = new Set();
+
+    pageDocs.forEach((doc, index) => {
+      if (doc.exists) {
+        const pageData = doc.data();
+        const pageId = pageIds[index];
+
+        // Only include public, non-deleted pages
+        if (pageData.isPublic !== false && pageData.deleted !== true) {
+          pageDataMap.set(pageId, pageData);
           if (pageData.userId) {
-            try {
-              const userDoc = await db.collection("users").doc(pageData.userId).get();
-              if (userDoc.exists) {
-                const userData = userDoc.data();
-                username = userData.username || userData.displayName || "Anonymous";
-              }
-            } catch (usernameError) {
-              // Handle permission denied errors gracefully - this is expected for private user data
-              if (usernameError?.code === 'permission-denied') {
-                console.log(`Permission denied getting username for user ${pageData.userId} - this is expected for private user data`);
-              } else {
-                console.error(`Error getting username for user ${pageData.userId}:`, usernameError);
-              }
-            }
+            userIds.add(pageData.userId);
           }
-
-          return {
-            ...page,
-            title: pageData.title || 'Untitled',
-            userId: pageData.userId,
-            username
-          };
         }
-        return { ...page, title: 'Untitled' };
-      } catch (err) {
-        console.error(`Error fetching page data for ${page.id}:`, err);
-        return { ...page, title: 'Untitled' };
       }
     });
 
-    const pagesWithTitles = await Promise.all(pagesWithTitlesPromises);
+    // Batch fetch user data for all unique user IDs
+    const userDataMap = new Map();
+    if (userIds.size > 0) {
+      try {
+        const userDocs = await db.getAll(...Array.from(userIds).map(id => db.collection("users").doc(id)));
+        userDocs.forEach((doc, index) => {
+          if (doc.exists) {
+            const userData = doc.data();
+            const userId = Array.from(userIds)[index];
+            userDataMap.set(userId, userData);
+          }
+        });
+      } catch (userError) {
+        console.warn('Error batch fetching user data:', userError.message);
+        // Continue without user data if there's an error
+      }
+    }
+
+    // Combine the data efficiently
+    const pagesWithTitles = trendingPages.map(page => {
+      const pageData = pageDataMap.get(page.id);
+      if (!pageData) {
+        return null; // Page was private or deleted
+      }
+
+      let username = "Anonymous";
+      if (pageData.userId && userDataMap.has(pageData.userId)) {
+        const userData = userDataMap.get(pageData.userId);
+        username = userData.username || userData.displayName || "Anonymous";
+      }
+
+      return {
+        ...page,
+        title: pageData.title || 'Untitled',
+        userId: pageData.userId,
+        username
+      };
+    }).filter(page => page !== null);
 
     // Filter out null entries (private pages)
     const publicPages = pagesWithTitles.filter(page => page !== null);
+
+    // Cache the results
+    if (!global.trendingCache) {
+      global.trendingCache = {};
+    }
+    global.trendingCache[cacheKey] = {
+      data: publicPages,
+      timestamp: Date.now()
+    };
 
     return NextResponse.json({ trendingPages: publicPages }, { headers });
   } catch (error) {

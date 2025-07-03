@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useMultiAuth } from '../../providers/MultiAuthProvider';
+import { transferLoggedOutAllocationsToUser } from '../../utils/simulatedTokens';
 
 interface SessionAuthInitializerProps {
   children: React.ReactNode;
@@ -20,9 +21,19 @@ interface SessionAuthInitializerProps {
  * - Handles account switching events
  * - Replaces the old AuthInitializer
  */
-export default function SessionAuthInitializer({ children }: SessionAuthInitializerProps) {
+function SessionAuthInitializer({ children }: SessionAuthInitializerProps) {
+  console.log('🔥 SessionAuthInitializer: Component mounted');
+  console.log('🔥 SessionAuthInitializer: typeof window:', typeof window);
+
+  const [isClient, setIsClient] = useState(false);
   const { switchAccountByUid, signOutCurrent } = useCurrentAccount();
   const { addSession } = useMultiAuth();
+
+  // Set client flag after hydration
+  useEffect(() => {
+    console.log('🔥 SessionAuthInitializer: Setting client flag');
+    setIsClient(true);
+  }, []);
 
   // Create stable references to prevent useEffect from re-running
   const switchToSessionByUidRef = useRef(switchAccountByUid);
@@ -49,9 +60,23 @@ export default function SessionAuthInitializer({ children }: SessionAuthInitiali
       const newSession = await addSession(sessionData);
       console.log('SessionAuthInitializer: Session created:', newSession.sessionId);
 
+      // Add a small delay to ensure session is fully saved before switching
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Switch to the newly created session
       await switchAccountByUid(firebaseUser.uid);
       console.log('SessionAuthInitializer: Switched to new session for user:', firebaseUser.uid);
+
+      // Transfer any logged-out token allocations to the new user account
+      try {
+        const transferResult = transferLoggedOutAllocationsToUser(firebaseUser.uid);
+        if (transferResult.success && transferResult.transferredCount > 0) {
+          console.log(`SessionAuthInitializer: Transferred ${transferResult.transferredCount} token allocations from logged-out state to user ${firebaseUser.uid}`);
+        }
+      } catch (transferError) {
+        console.warn('SessionAuthInitializer: Failed to transfer logged-out token allocations:', transferError);
+        // Don't fail the login process if token transfer fails
+      }
 
       return newSession;
     } catch (error) {
@@ -62,7 +87,15 @@ export default function SessionAuthInitializer({ children }: SessionAuthInitiali
 
   // Handle Firebase auth state changes
   useEffect(() => {
-    console.log('SessionAuthInitializer: Setting up Firebase auth listener');
+    // Only run on client side after hydration
+    if (!isClient) {
+      console.log('🔥 SessionAuthInitializer: Skipping Firebase auth setup - not client yet');
+      return;
+    }
+
+    console.log('🔥 SessionAuthInitializer: Setting up Firebase auth listener on client');
+    console.log('🔥 SessionAuthInitializer: Firebase auth object:', auth);
+    console.log('🔥 SessionAuthInitializer: Current user:', auth.currentUser);
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
       try {
@@ -71,11 +104,24 @@ export default function SessionAuthInitializer({ children }: SessionAuthInitiali
 
           try {
             // Try to switch to this user's existing session
+            console.log('SessionAuthInitializer: Attempting to switch to existing session for user:', firebaseUser.uid);
             await switchToSessionByUidRef.current(firebaseUser.uid);
             console.log('SessionAuthInitializer: Session switched for existing user:', firebaseUser.uid);
+
+            // Transfer any logged-out token allocations to the existing user account
+            try {
+              const transferResult = transferLoggedOutAllocationsToUser(firebaseUser.uid);
+              if (transferResult.success && transferResult.transferredCount > 0) {
+                console.log(`SessionAuthInitializer: Transferred ${transferResult.transferredCount} token allocations from logged-out state to existing user ${firebaseUser.uid}`);
+              }
+            } catch (transferError) {
+              console.warn('SessionAuthInitializer: Failed to transfer logged-out token allocations for existing user:', transferError);
+              // Don't fail the login process if token transfer fails
+            }
           } catch (sessionError) {
             // If no session exists for this user, create a new one
             console.log('SessionAuthInitializer: No session found for user, creating new session:', firebaseUser.uid);
+            console.log('SessionAuthInitializer: Session error details:', sessionError);
             try {
               await createSessionFromFirebaseUser(firebaseUser);
             } catch (createError) {
@@ -98,7 +144,7 @@ export default function SessionAuthInitializer({ children }: SessionAuthInitiali
       console.log('SessionAuthInitializer: Cleaning up Firebase auth listener');
       unsubscribe();
     };
-  }, []); // Empty dependency array - Firebase auth listener should only be set up once
+  }, [isClient]); // Run when client flag changes
 
   // Handle account switching events from AccountSwitcher (simplified for now)
   useEffect(() => {
@@ -130,3 +176,5 @@ export default function SessionAuthInitializer({ children }: SessionAuthInitiali
 
   return <>{children}</>;
 }
+
+export default SessionAuthInitializer;

@@ -115,66 +115,79 @@ export const fetchPages = async (userId, isPublic = null, currentUserId = null, 
   let pagesQuery;
 
   try {
+    // Optimize queries by avoiding compound where clauses that require complex indexes
+    // Instead, filter out deleted pages client-side to reduce index requirements
     if (isPublic === null && isOwner) {
-      // Get all pages (public and private) for the owner, excluding deleted pages
+      // Get all pages (public and private) for the owner
       pagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
-        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
         ...(startAfterDoc ? [startAfter(startAfterDoc)] : []),
-        limit(pageLimit)
+        limit(pageLimit + 10) // Get extra to account for deleted pages we'll filter out
       );
     } else if (isPublic === true || !isOwner) {
-      // Get only public pages, excluding deleted pages
+      // Get only public pages
       pagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
         where('isPublic', '==', true),
-        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
         ...(startAfterDoc ? [startAfter(startAfterDoc)] : []),
-        limit(pageLimit)
+        limit(pageLimit + 5) // Get extra to account for deleted pages we'll filter out
       );
     } else {
-      // Get only private pages for the owner, excluding deleted pages
+      // Get only private pages for the owner
       pagesQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
         where('isPublic', '==', false),
-        where('deleted', '!=', true),
         orderBy('lastModified', 'desc'),
         ...(startAfterDoc ? [startAfter(startAfterDoc)] : []),
-        limit(pageLimit)
+        limit(pageLimit + 5) // Get extra to account for deleted pages we'll filter out
       );
     }
 
     // Execute the query
     const snapshot = await getDocs(pagesQuery);
     const pagesArray = [];
+    let lastValidDoc = null;
 
     snapshot.forEach((doc) => {
       try {
         const pageData = { id: doc.id, ...doc.data() };
-        pagesArray.push(pageData);
+
+        // Filter out deleted pages client-side
+        if (!pageData.deleted) {
+          pagesArray.push(pageData);
+          lastValidDoc = doc; // Track the last valid document for pagination
+
+          // Stop when we have enough pages
+          if (pagesArray.length >= pageLimit) {
+            return;
+          }
+        }
       } catch (docError) {
         console.error(`Error processing document ${doc.id}:`, docError);
       }
     });
 
-    // Get the last document for pagination
-    const lastDoc = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
+    // Trim to exact page limit if we got more than requested
+    const finalPagesArray = pagesArray.slice(0, pageLimit);
+
+    // Get the last document for pagination (use the last valid document)
+    const lastDoc = lastValidDoc;
 
     // Cache the results if this is not a pagination request
     if (!startAfterDoc) {
-      cacheData(cacheKey, pagesArray, lastDoc);
+      cacheData(cacheKey, finalPagesArray, lastDoc);
     }
 
     return {
-      data: pagesArray,
+      data: finalPagesArray,
       timestamp: Date.now(),
       lastKey: lastDoc,
-      hasMore: snapshot.docs.length === pageLimit
+      hasMore: finalPagesArray.length === pageLimit && snapshot.docs.length > finalPagesArray.length
     };
   } catch (error) {
     console.error('Error fetching pages:', error);

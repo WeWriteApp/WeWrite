@@ -151,21 +151,27 @@ export const DataProvider = ({ children }: DataProviderProps) => {
         }
       }, 5000); // 5 seconds timeout for first recovery attempt
 
-      // Set a longer timeout to force loading to complete after 15 seconds
+      // Set a more reasonable timeout to force loading to complete after 20 seconds
       loadingTimeoutRef.current = setTimeout(() => {
         console.warn("DataProvider: Loading timeout reached, forcing completion");
         setForceLoaded(true);
         setLoading(false);
 
+        // Only show timeout error if we don't have any data
+        if (pages.length === 0) {
+          console.log("DataProvider: No data available after timeout, this may indicate a connection issue");
+        }
+
         // Dispatch an event that other components can listen for
         const timeoutEvent = new CustomEvent('data-provider-timeout', {
           detail: {
             loadingDuration: Date.now() - (loadingStartTime || Date.now()),
-            reason: 'timeout'
+            reason: 'timeout',
+            hasData: pages.length > 0
           }
         });
         window.dispatchEvent(timeoutEvent);
-      }, 15000); // 15 seconds timeout - increased for better stability
+      }, 20000); // 20 seconds timeout - increased for better stability
     } else {
       // Clear the timeouts if loading completes naturally
       if (loadingTimeoutRef.current) {
@@ -220,26 +226,39 @@ export const DataProvider = ({ children }: DataProviderProps) => {
     // in a continuous reload loop every second.
   }, [, session, isAuthenticated, pages, loading]);
 
-  // Handle errors from usePages
+  // Handle errors from usePages with improved resilience
   const [errorVisible, setErrorVisible] = useState<boolean>(false);
+  const [errorCount, setErrorCount] = useState<number>(0);
 
   useEffect(() => {
     if (error) {
       console.error("DataProvider received error from usePages:", error);
 
-      // Show error message to user
-      setErrorVisible(true);
+      // Increment error count
+      setErrorCount(prev => prev + 1);
 
-      // Auto-hide error after 10 seconds
-      const hideErrorTimer = setTimeout(() => {
+      // Only show error to user if we don't have any pages data
+      // This prevents showing errors when we have cached data
+      if (pages.length === 0) {
+        setErrorVisible(true);
+
+        // Auto-hide error after 8 seconds (reduced from 10)
+        const hideErrorTimer = setTimeout(() => {
+          setErrorVisible(false);
+        }, 8000);
+
+        return () => clearTimeout(hideErrorTimer);
+      } else {
+        // We have data, so don't show the error prominently
+        console.log("DataProvider: Error occurred but we have cached data, not showing error to user");
         setErrorVisible(false);
-      }, 10000);
-
-      return () => clearTimeout(hideErrorTimer);
+      }
     } else {
       setErrorVisible(false);
+      // Reset error count on successful data load
+      setErrorCount(0);
     }
-  }, [error]);
+  }, [error, pages.length]);
 
   // Listen for the loading-force-completed event
   useEffect(() => {

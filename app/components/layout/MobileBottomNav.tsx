@@ -11,6 +11,8 @@ import { cn } from '../../lib/utils';
 import { isPWA, isMobileDevice } from '../../utils/pwa-detection';
 import NotificationBadge from '../utils/NotificationBadge';
 import useOptimisticNavigation from '../../hooks/useOptimisticNavigation';
+import { WarningDot } from '../ui/warning-dot';
+import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 
 /**
  * MobileBottomNav Component
@@ -46,6 +48,7 @@ export default function MobileBottomNav() {
   const pathname = usePathname();
   const { session } = useCurrentAccount();
   const editorContext = useEditorContext();
+  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant } = useSubscriptionWarning();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isPWAMode, setIsPWAMode] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
@@ -249,10 +252,13 @@ export default function MobileBottomNav() {
         aria-pressed={isActive}
         disabled={isNavigating && !isPressed} // Prevent multiple navigation attempts
       >
-        <Icon className={cn(
-          "h-6 w-6 flex-shrink-0 transition-transform duration-75",
-          isPressed && "scale-110" // Slight scale on press for immediate feedback
-        )} />
+        <div className="relative">
+          <Icon className={cn(
+            "h-6 w-6 flex-shrink-0 transition-transform duration-75",
+            isPressed && "scale-110" // Slight scale on press for immediate feedback
+          )} />
+          {children}
+        </div>
 
         {/* Text label */}
         <span className={cn(
@@ -267,8 +273,6 @@ export default function MobileBottomNav() {
         )}>
           {label}
         </span>
-
-        {children}
         
         {/* Loading indicator for navigation */}
         {isCurrentlyNavigating && (
@@ -310,7 +314,16 @@ export default function MobileBottomNav() {
             isActive={isMenuActive}
             ariaLabel="Menu"
             label="Menu"
-          />
+          >
+            {shouldShowSubscriptionWarning && (
+              <WarningDot
+                variant={warningVariant}
+                size="sm"
+                position="top-right"
+                offset={{ top: '-2px', right: '-2px' }}
+              />
+            )}
+          </NavButton>
 
           {/* Home Button */}
           <NavButton

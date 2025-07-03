@@ -132,52 +132,103 @@ export default function PageView({
 
   // Handle params Promise
   useEffect(() => {
+    console.log('📄 PageView params effect:', { params, unwrappedParams });
     if (params && typeof params.then === 'function') {
+      console.log('📄 PageView: params is a Promise, resolving...');
       params.then((resolvedParams) => {
+        console.log('📄 PageView: resolved params:', resolvedParams);
         setPageId(resolvedParams.id || '');
       });
     } else if (unwrappedParams) {
+      console.log('📄 PageView: using unwrappedParams:', unwrappedParams);
       setPageId(unwrappedParams.id || '');
     }
   }, [params, unwrappedParams]);
 
   // Page loading effect
   useEffect(() => {
-    if (!pageId) return;
+    console.log('📄 PageView useEffect triggered:', { pageId, currentAccountUid: currentAccount?.uid });
+    if (!pageId) {
+      console.log('📄 PageView: No pageId, returning early');
+      return;
+    }
 
+    console.log('📄 PageView: Starting page load for pageId:', pageId);
     setIsLoading(true);
     setError(null);
 
     // If showing version or diff, load version data instead of live page
     if (showVersion && versionId) {
+      console.log('📄 PageView: Loading version data');
       loadVersionData();
     } else if (showDiff && versionId) {
+      console.log('📄 PageView: Loading diff data');
       loadDiffData();
     } else {
+      console.log('📄 PageView: Setting up Firebase listener for pageId:', pageId);
       // Set up Firebase listener for live page
       const unsubscribe = listenToPageById(pageId, (data) => {
+        console.log('📄 PageView received data:', {
+          hasError: !!data.error,
+          error: data.error,
+          hasPageData: !!(data.pageData || data),
+          hasVersionData: !!data.versionData,
+          pageId: pageId,
+          currentUser: currentAccount?.uid || 'anonymous'
+        });
+
         if (data.error) {
+          console.log('📄 PageView error:', data.error);
           setError(data.error);
           setIsLoading(false);
         } else {
           const pageData = data.pageData || data;
+          const versionData = data.versionData;
+          console.log('📄 PageView page data:', {
+            id: pageData.id,
+            title: pageData.title,
+            isPublic: pageData.isPublic,
+            hasContent: !!pageData.content,
+            contentLength: pageData.content ? pageData.content.length : 0,
+            userId: pageData.userId,
+            hasVersionData: !!versionData,
+            versionContentLength: versionData?.content ? versionData.content.length : 0
+          });
+
           setPage(pageData);
           setTitle(pageData.title || '');
           setIsPublic(pageData.isPublic !== false);
           setLocation(pageData.location || '');
 
-          // Parse content
-          if (pageData.content) {
+          // Parse content - try page content first, then version content
+          let contentToUse = pageData.content;
+          let contentSource = 'page';
+
+          if (!contentToUse && versionData?.content) {
+            contentToUse = versionData.content;
+            contentSource = 'version';
+          }
+
+          if (contentToUse) {
             try {
-              const parsedContent = typeof pageData.content === 'string'
-                ? JSON.parse(pageData.content)
-                : pageData.content;
+              const parsedContent = typeof contentToUse === 'string'
+                ? JSON.parse(contentToUse)
+                : contentToUse;
+              console.log('📄 PageView parsed content:', {
+                source: contentSource,
+                type: typeof parsedContent,
+                isArray: Array.isArray(parsedContent),
+                length: Array.isArray(parsedContent) ? parsedContent.length : 'not array',
+                firstElement: Array.isArray(parsedContent) && parsedContent.length > 0 ? parsedContent[0] : null
+              });
+
               setEditorState(parsedContent);
             } catch (error) {
               console.error("Error parsing content:", error);
               setEditorState([{ type: "paragraph", children: [{ text: "Error loading content." }] }]);
             }
           } else {
+            console.log('📄 PageView: No content found in page or version, using empty content');
             setEditorState([{ type: "paragraph", children: [{ text: "" }] }]);
           }
 
@@ -400,24 +451,40 @@ export default function PageView({
   const handleSave = useCallback(async () => {
     if (!page || !pageId) return;
 
+    // Validate title is not empty
+    if (!title || title.trim() === '') {
+      setTitleError("Title is required");
+      setError("Please add a title before saving");
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
+    setTitleError(null);
 
     try {
       const contentToSave = editorState;
       const editorStateJSON = JSON.stringify(contentToSave);
 
-      const db = getDatabase(app);
-      const pageRef = ref(db, `pages/${pageId}`);
-      
-      await update(pageRef, {
+      // Use the Firestore-based updatePage function that includes backlinks indexing
+      const { updatePage } = await import('../../firebase/database');
+
+      const updateData = {
         title: title.trim(),
         content: editorStateJSON,
         isPublic,
         location: location.trim(),
-        updatedAt: Date.now()
-      });
+        lastModified: new Date().toISOString()
+      };
 
+      console.log('🔄 Updating page with backlinks indexing:', pageId);
+      const success = await updatePage(pageId, updateData);
+
+      if (!success) {
+        throw new Error('Failed to update page');
+      }
+
+      console.log('✅ Page updated successfully with backlinks indexing');
       setHasUnsavedChanges(false);
       setIsEditing(false);
     } catch (error) {
@@ -545,7 +612,7 @@ export default function PageView({
           )}
 
           <div
-            className="animate-in fade-in-0 duration-300 w-full pb-1 max-w-none box-border px-4 sm:px-6 md:px-8"
+            className="animate-in fade-in-0 duration-300 w-full pb-32 max-w-none box-border px-4 sm:px-6 md:px-8"
             style={{
               paddingTop: 'var(--page-header-height, 80px)',
               transition: 'padding-top 300ms ease-in-out'
@@ -628,22 +695,27 @@ export default function PageView({
               hasUnsavedChanges={hasUnsavedChanges}
             />
 
-            {/* Pledge Bar */}
-            {page && !isEditing && (
-              <PledgeBar pageId={page.id} />
-            )}
-
             {/* Backlinks and Related Pages */}
             {page && !isEditing && (
               <>
-                <BacklinksSection pageId={page.id} />
-                <RelatedPagesSection 
-                  currentPageId={page.id}
+                <BacklinksSection page={page} linkedPageIds={memoizedLinkedPageIds} />
+                <RelatedPagesSection
+                  page={page}
                   linkedPageIds={memoizedLinkedPageIds}
                 />
               </>
             )}
           </div>
+
+          {/* Pledge Bar - Always floating at bottom */}
+          {page && !isEditing && (
+            <PledgeBar
+              pageId={page.id}
+              pageTitle={page.title}
+              authorId={page.userId}
+              visible={true}
+            />
+          )}
         </div>
       </PageProvider>
     </PublicLayout>

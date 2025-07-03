@@ -15,6 +15,8 @@ import { useFeatureFlag } from "../../utils/feature-flags"
 import MapEditor from "../editor/MapEditor"
 import { navigateToRandomPage, RandomPageFilters } from "../../utils/randomPageNavigation"
 import RandomPageFilterMenu from "../ui/RandomPageFilterMenu"
+import { WarningDot } from '../ui/warning-dot';
+import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 
 interface SidebarProps {
   isOpen: boolean
@@ -39,6 +41,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
   const [currentSection, setCurrentSection] = useState<string | null>(null)
   const [isRandomMenuOpen, setIsRandomMenuOpen] = useState(false)
   const { session } = useCurrentAccount();
+  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant } = useSubscriptionWarning();
 
   // Groups functionality removed
 
@@ -141,7 +144,17 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
                 }}
                 className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
               >
-                <Settings className="h-5 w-5 mr-2" />
+                <div className="relative mr-2">
+                  <Settings className="h-5 w-5" />
+                  {shouldShowSubscriptionWarning && (
+                    <WarningDot
+                      variant={warningVariant}
+                      size="sm"
+                      position="top-right"
+                      offset={{ top: '-2px', right: '-2px' }}
+                    />
+                  )}
+                </div>
                 <span>Settings</span>
               </button>
 

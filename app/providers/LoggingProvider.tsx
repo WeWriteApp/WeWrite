@@ -147,11 +147,49 @@ export const LoggingProvider = ({ children }: LoggingProviderProps) => {
       logError(enhancedError as LoggingError);
     };
 
-    // Override console.error to capture more detailed error information
+    // Function to send console messages to terminal
+    const sendConsoleToTerminal = async (level: string, args: any[]) => {
+      try {
+        // Convert args to a readable message
+        const message = args.map(arg => {
+          if (typeof arg === 'object') {
+            try {
+              return JSON.stringify(arg, null, 2);
+            } catch {
+              return String(arg);
+            }
+          }
+          return String(arg);
+        }).join(' ');
+
+        await fetch('/api/log-console-error', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            level,
+            message, // This is what the API expects
+            timestamp: new Date().toISOString(),
+            url: window.location.href,
+            userAgent: navigator.userAgent
+          })
+        });
+      } catch (error) {
+        // Silently fail to avoid infinite loops
+      }
+    };
+
+    // Override console methods to forward to terminal
     const originalConsoleError = console.error;
+    const originalConsoleLog = console.log;
+    const originalConsoleWarn = console.warn;
+    const originalConsoleInfo = console.info;
+
     console.error = (...args: any[]) => {
       // Call original console.error first
       originalConsoleError.apply(console, args);
+
+      // Send to terminal
+      sendConsoleToTerminal('error', args);
 
       // Check if this looks like a Google API error
       const errorMessage = args.join(' ');
@@ -176,13 +214,43 @@ export const LoggingProvider = ({ children }: LoggingProviderProps) => {
       }
     };
 
+    console.log = (...args: any[]) => {
+      // Call original console.log first
+      originalConsoleLog.apply(console, args);
+
+      // Temporarily disable console.log forwarding to reduce spam
+      // TODO: Re-enable once we fix the undefined message issue
+      // if (process.env.NODE_ENV === 'development') {
+      //   sendConsoleToTerminal('log', args);
+      // }
+    };
+
+    console.warn = (...args: any[]) => {
+      // Call original console.warn first
+      originalConsoleWarn.apply(console, args);
+
+      // Send to terminal
+      sendConsoleToTerminal('warn', args);
+    };
+
+    console.info = (...args: any[]) => {
+      // Call original console.info first
+      originalConsoleInfo.apply(console, args);
+
+      // Send to terminal
+      sendConsoleToTerminal('info', args);
+    };
+
     // Attach the global error listeners
     window.addEventListener("error", handleGlobalError);
     window.addEventListener("unhandledrejection", handleUnhandledRejection);
 
     return () => {
-      // Restore original console.error
+      // Restore original console methods
       console.error = originalConsoleError;
+      console.log = originalConsoleLog;
+      console.warn = originalConsoleWarn;
+      console.info = originalConsoleInfo;
       window.removeEventListener("error", handleGlobalError);
       window.removeEventListener("unhandledrejection", handleUnhandledRejection);
     };

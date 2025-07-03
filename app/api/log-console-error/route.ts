@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Add user agent for debugging browser-specific issues
-    if (userAgent && (level === 'error' || message.includes('Firebase'))) {
+    if (userAgent && (level === 'error' || (message && message.includes('Firebase')))) {
       const browserInfo = userAgent.match(/(Chrome|Firefox|Safari|Edge)\/[\d.]+/)?.[0] || 'Unknown'
       logMessage += `\n🌐 Browser: ${browserInfo}`
     }

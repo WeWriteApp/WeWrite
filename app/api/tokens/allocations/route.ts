@@ -27,10 +27,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Get pagination parameters
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const offset = parseInt(searchParams.get('offset') || '0');
+
     // Get token balance first to check if user has any allocations
     console.log(`Fetching token balance for user ${userId}`);
 
     const balance = await ServerTokenService.getUserTokenBalance(userId);
+    console.log('🎯 Token Allocations API: User balance', {
+      userId,
+      balance,
+      hasBalance: !!balance,
+      allocatedTokens: balance?.allocatedTokens
+    });
+
     if (!balance) {
       return NextResponse.json({
         success: true,
@@ -44,18 +56,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // If user has allocated tokens, try to get the detailed allocations
-    if (balance.allocatedTokens === 0) {
-      return NextResponse.json({
-        success: true,
-        allocations: [],
-        summary: {
-          totalAllocations: 0,
-          totalTokensAllocated: 0,
-          balance: balance
-        }
-      });
-    }
+    // Always try to get detailed allocations regardless of balance.allocatedTokens
+    // because the balance.allocatedTokens field might be stale
+    console.log('🎯 Token Allocations API: Checking allocated tokens', {
+      allocatedTokens: balance.allocatedTokens,
+      note: 'Will fetch actual allocations to get real count'
+    });
 
     // Try to get detailed allocations using ServerTokenService
     console.log(`User has ${balance.allocatedTokens} allocated tokens, fetching detailed allocations`);
@@ -68,6 +74,20 @@ export async function GET(request: NextRequest) {
       // Filter for page allocations only
       pageAllocations = allocations.filter(allocation => allocation.resourceType === 'page');
       console.log(`Found ${pageAllocations.length} page allocations for user ${userId}`);
+
+      // If no page allocations found, return empty result
+      if (pageAllocations.length === 0) {
+        console.log('🎯 Token Allocations API: No page allocations found');
+        return NextResponse.json({
+          success: true,
+          allocations: [],
+          summary: {
+            totalAllocations: 0,
+            totalTokensAllocated: 0,
+            balance: balance
+          }
+        });
+      }
     } catch (error) {
       console.error('Error fetching detailed allocations:', error);
       // If we can't get detailed allocations, return summary only
@@ -169,11 +189,23 @@ export async function GET(request: NextRequest) {
     // Sort by tokens (highest first)
     enhancedAllocations.sort((a, b) => b.tokens - a.tokens);
 
+    // Apply pagination
+    const totalAllocations = enhancedAllocations.length;
+    const paginatedAllocations = enhancedAllocations.slice(offset, offset + limit);
+    const hasMore = offset + limit < totalAllocations;
+
     return NextResponse.json({
       success: true,
-      allocations: enhancedAllocations,
+      allocations: paginatedAllocations,
+      pagination: {
+        offset,
+        limit,
+        total: totalAllocations,
+        hasMore,
+        returned: paginatedAllocations.length
+      },
       summary: {
-        totalAllocations: enhancedAllocations.length,
+        totalAllocations: totalAllocations,
         totalTokensAllocated: enhancedAllocations.reduce((sum, allocation) => sum + allocation.tokens, 0),
         balance: balance
       }

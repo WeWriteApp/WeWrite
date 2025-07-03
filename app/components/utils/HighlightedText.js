@@ -19,9 +19,12 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
   caseSensitive = false
 }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Detect dark mode
+  // Detect dark mode only after hydration
   useEffect(() => {
+    setIsHydrated(true);
+
     // Check if dark mode is enabled
     const isDark = document.documentElement.classList.contains('dark');
     setIsDarkMode(isDark);

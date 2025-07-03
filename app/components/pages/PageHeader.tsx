@@ -641,7 +641,7 @@ export default function PageHeader({
             {/* Collapsed Header Layout - Single Row */}
             {isScrolled && (
               <div
-                className="flex items-center justify-between min-h-0 transition-all duration-300 ease-out"
+                className="flex items-center justify-center min-h-0 transition-all duration-300 ease-out relative"
                 style={{
                   paddingTop: `${headerPadding}px`,
                   paddingBottom: `${headerPadding}px`,
@@ -650,40 +650,38 @@ export default function PageHeader({
                 }}
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               >
-                {/* Left: Logo */}
-                <div className="flex items-center gap-2 mr-3">
-                  <Logo size="sm" priority={true} />
-                </div>
+                {/* Center: Logo + Title and Byline compound element */}
+                <div className="flex items-center gap-2 cursor-pointer">
+                  {/* Logo to the left of text */}
+                  <Logo size="sm" priority={true} styled={true} />
 
-                {/* Center: Title and Byline */}
-                <div className="flex-1 flex items-center justify-center gap-1 min-w-0 cursor-pointer">
-                  <h1 className="text-xs font-semibold opacity-90 truncate">
-                    {isLoading ? (
-                      <span className="inline-flex items-center">
-                        <Loader className="h-3 w-3 animate-spin mr-1" />
-                        Loading...
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1">
-                        <span className="truncate">
-                          {isDailyNote && title
-                            ? formatDate(title)
-                            : title
-                            ? title
-                            : isNewPage
-                            ? "Give your page a title..."
-                            : "Untitled"
-                          }
+                  {/* Title and Byline */}
+                  <div className="flex items-center gap-1 min-w-0">
+                    <h1 className="text-xs font-semibold opacity-90 truncate">
+                      {isLoading ? (
+                        <span className="inline-flex items-center">
+                          <Loader className="h-3 w-3 animate-spin mr-1" />
+                          Loading...
                         </span>
-                        {isPrivate && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
-                      </span>
-                    )}
-                  </h1>
-                  <span className="text-xs text-muted-foreground">by {displayUsername}</span>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <span className="truncate">
+                            {isDailyNote && title
+                              ? formatDate(title)
+                              : title
+                              ? title
+                              : isNewPage
+                              ? "Give your page a title..."
+                              : "Untitled"
+                            }
+                          </span>
+                          {isPrivate && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+                        </span>
+                      )}
+                    </h1>
+                    <span className="text-xs text-muted-foreground">by {displayUsername}</span>
+                  </div>
                 </div>
-
-                {/* Right: Empty space for symmetry */}
-                <div className="w-8"></div>
               </div>
             )}
 
@@ -715,7 +713,7 @@ export default function PageHeader({
 
                   {/* Center: Logo */}
                   <div className="flex items-center">
-                    <Logo size="lg" priority={true} />
+                    <Logo size="lg" priority={true} styled={true} />
                   </div>
 
                   {/* Right: Menu */}
@@ -998,6 +996,15 @@ export default function PageHeader({
                     </Button>
                   )}
                 </div>
+
+                {/* Title Error Message */}
+                {titleError && isEditing && canEdit && !isDailyNote && (
+                  <div className="flex justify-center mt-2">
+                    <p className="text-sm text-destructive font-medium">
+                      Title is required
+                    </p>
+                  </div>
+                )}
 
                 {/* Row 3: Byline */}
                 <div className="flex items-center justify-center">

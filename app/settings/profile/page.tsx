@@ -20,13 +20,13 @@ import ConfirmationModal from '../../components/utils/ConfirmationModal';
 import { ChevronLeft, Edit3, Save, X, AlertCircle } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { session } = useCurrentAccount();
+  const { currentAccount, isAuthenticated, isLoading } = useCurrentAccount();
   const router = useRouter();
 
   // Custom modal hooks
   const { alertState, showError, showSuccess, closeAlert } = useAlert();
   const { confirmationState, confirm, closeConfirmation } = useConfirmation();
-  const [, sessionname, setUsername] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,26 +38,26 @@ export default function ProfilePage() {
   const [tempEmail, setTempEmail] = useState('');
 
   useEffect(() => {
-    if (!session) {
+    if (!isAuthenticated) {
       router.push('/auth/login');
       return;
     }
 
     loadUserData();
-  }, [, session, router]);
+  }, [isAuthenticated, currentAccount, router]);
 
   const loadUserData = async () => {
-    if (!session) return;
+    if (!currentAccount) return;
 
     try {
       // Load user profile data
-      const userDocRef = doc(db, 'users', session.uid);
+      const userDocRef = doc(db, 'users', currentAccount.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
         const currentUsername = userData.username || '';
-        const currentEmail = session.email || '';
+        const currentEmail = currentAccount.email || '';
         setUsername(currentUsername);
         setEmail(currentEmail);
         setTempUsername(currentUsername);
@@ -120,7 +120,7 @@ export default function ProfilePage() {
   };
 
   const handleUsernameChange = async (newUsername: string) => {
-    if (!session) return;
+    if (!currentAccount) return;
     if (!newUsername || newUsername === username) return;
 
     // Validate username format first
@@ -145,7 +145,7 @@ export default function ProfilePage() {
       }
 
       // Add username to user profile
-      await addUsername(session.uid, newUsername);
+      await addUsername(currentAccount.uid, newUsername);
 
       // Update local state
       setUsername(newUsername);
@@ -161,7 +161,7 @@ export default function ProfilePage() {
   };
 
   const handleEmailChange = async (newEmail: string) => {
-    if (!session) return;
+    if (!currentAccount) return;
     if (!newEmail || newEmail === email) return;
 
     try {
@@ -184,7 +184,11 @@ export default function ProfilePage() {
     }
   };
 
-  if (!session) {
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!isAuthenticated) {
     return null;
   }
 

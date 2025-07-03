@@ -174,7 +174,10 @@ async function sendToTerminal(type: string, messages: string[]) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         level: 'error',
-        args: messages
+        message: messages.join('\n'), // Convert messages array to a single message string
+        timestamp: new Date().toISOString(),
+        url: typeof window !== 'undefined' ? window.location.href : 'N/A',
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A'
       })
     })
   } catch (error) {

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "../ui/button";
 import { Heart, DollarSign } from "lucide-react";
+import { TokenPieChart } from "../ui/TokenPieChart";
 import Logo from "../ui/Logo";
 import { openExternalLink } from "../../utils/pwa-detection";
 import { useSidebarContext } from "./UnifiedSidebar";
@@ -15,6 +16,7 @@ import { listenToUserSubscription } from "../../firebase/subscription";
 import { getSubscriptionButtonText, getSubscriptionNavigationPath, isActiveSubscription } from "../../utils/subscriptionStatus";
 import { TokenService } from "../../services/tokenService";
 import { TokenBalance } from "../../types/database";
+import { getLoggedOutTokenBalance, getUserTokenBalance } from "../../utils/simulatedTokens";
 
 export default function Header() {
   const router = useRouter();
@@ -26,6 +28,7 @@ export default function Header() {
 
   const [subscription, setSubscription] = React.useState(null);
   const [tokenBalance, setTokenBalance] = React.useState<TokenBalance | null>(null);
+  const [simulatedTokenBalance, setSimulatedTokenBalance] = React.useState<any>(null);
   const headerRef = React.useRef<HTMLDivElement>(null);
 
   // Check if payments feature is enabled
@@ -33,21 +36,19 @@ export default function Header() {
 
   // Helper function to render token allocation display
   const renderTokenAllocationDisplay = () => {
-    if (!tokenBalance) return null;
+    // Use real token balance if available, otherwise use unfunded tokens
+    const balance = tokenBalance || simulatedTokenBalance;
+    if (!balance) return null;
 
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        className="gap-1 bg-primary hover:bg-primary/90 text-white border-0"
-        onClick={() => router.push('/settings/subscription/manage')}
-        title={`${tokenBalance.allocatedTokens} tokens allocated out of ${tokenBalance.totalTokens} total monthly tokens`}
-      >
-        <DollarSign className="h-4 w-4 text-white" />
-        <span>
-          {tokenBalance.allocatedTokens}/{tokenBalance.totalTokens}
-        </span>
-      </Button>
+      <TokenPieChart
+        allocatedTokens={balance.allocatedTokens}
+        totalTokens={balance.totalTokens}
+        size={36}
+        strokeWidth={3}
+        className="hover:opacity-80 transition-opacity"
+        onClick={() => router.push('/settings/spend-tokens')}
+      />
     );
   };
 
@@ -115,6 +116,46 @@ export default function Header() {
     } else {
       setTokenBalance(null);
     }
+  }, [session, isPaymentsEnabled, subscription]);
+
+  // Load unfunded token balance for users without active subscriptions
+  React.useEffect(() => {
+    if (!isPaymentsEnabled) return;
+
+    // If user has active subscription, don't load unfunded tokens
+    if (subscription && isActiveSubscription(subscription.status, subscription.cancelAtPeriodEnd, subscription.currentPeriodEnd)) {
+      setSimulatedTokenBalance(null);
+      return;
+    }
+
+    const loadUnfundedTokens = () => {
+      // Load unfunded tokens for logged-out users or users without subscriptions
+      if (!session) {
+        // Logged-out user - load from localStorage
+        const balance = getLoggedOutTokenBalance();
+        setSimulatedTokenBalance(balance);
+      } else {
+        // Logged-in user without subscription - load user-specific unfunded tokens
+        const balance = getUserTokenBalance(session.uid);
+        setSimulatedTokenBalance(balance);
+      }
+    };
+
+    // Initial load
+    loadUnfundedTokens();
+
+    // Listen for localStorage changes to update in real-time
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key?.startsWith('wewrite_simulated_tokens')) {
+        loadUnfundedTokens();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [session, isPaymentsEnabled, subscription]);
 
   // Calculate and update header height
@@ -214,44 +255,16 @@ export default function Header() {
 
               {/* Logo/Title (centered) */}
               <div className="flex items-center justify-center">
-                <Link href="/" className="flex items-center space-x-2 transition-all duration-200 hover:scale-110 hover:text-primary">
-                  <Logo size="sm" priority={true} clickable={true} />
+                <Link href="/" className="flex items-center space-x-2 transition-all duration-200 hover:scale-105">
+                  <Logo size="md" priority={true} clickable={true} styled={true} />
                 </Link>
               </div>
 
-              {/* Support Us / Manage Subscription / Token Allocation button (right side) */}
+              {/* Token Allocation Pie Chart (right side) */}
               <div className="flex-1 flex justify-end">
                 {isPaymentsEnabled ? (
-                  // Show token allocation display for active subscriptions with token balance
-                  subscription && isActiveSubscription(subscription.status, subscription.cancelAtPeriodEnd, subscription.currentPeriodEnd) ? (
-                    tokenBalance ? (
-                      renderTokenAllocationDisplay()
-                    ) : (
-                      // Show loading state for active subscription without token balance yet
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1 bg-primary hover:bg-primary/90 text-white border-0"
-                        disabled
-                      >
-                        <DollarSign className="h-4 w-4 text-white animate-spin" />
-                        <span>Loading...</span>
-                      </Button>
-                    )
-                  ) : (
-                    // Show subscription setup/management button for inactive or no subscriptions
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1 bg-primary hover:bg-primary/90 text-white border-0"
-                      onClick={() => router.push(getSubscriptionNavigationPath(subscription?.status))}
-                    >
-                      <DollarSign className="h-4 w-4 text-white" />
-                      <span>
-                        {getSubscriptionButtonText(subscription?.status, subscription?.cancelAtPeriodEnd, subscription?.currentPeriodEnd)}
-                      </span>
-                    </Button>
-                  )
+                  // Show token allocation pie chart if user has any token allocations (funded or unfunded)
+                  renderTokenAllocationDisplay()
                 ) : (
                   <Button
                     variant="outline"

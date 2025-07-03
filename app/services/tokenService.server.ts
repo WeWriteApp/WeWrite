@@ -149,7 +149,7 @@ export class ServerTokenService {
       const currentMonth = getCurrentMonth();
 
       // Get current token balance
-      const balanceRef = db.collection('tokenBalances').doc(userId);
+      const balanceRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES)).doc(userId);
       const balanceDoc = await balanceRef.get();
 
       if (!balanceDoc.exists) {
