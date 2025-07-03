@@ -8,6 +8,7 @@ import {
 } from "firebase/firestore";
 
 import { db } from "./core";
+import { getCollectionName } from "../../utils/environmentConfig";
 
 /**
  * Search for users by username or email
@@ -18,7 +19,7 @@ export const searchUsers = async (searchQuery: string, limitCount: number = 10) 
   }
 
   try {
-    const usersRef = collection(db, "users");
+    const usersRef = collection(db, getCollectionName("users"));
     const searchLower = searchQuery.toLowerCase();
     const results = new Map();
 
@@ -141,7 +142,7 @@ export const searchPages = async (
   }
 
   try {
-    const pagesRef = collection(db, "pages");
+    const pagesRef = collection(db, getCollectionName("pages"));
     const searchLower = searchQuery.toLowerCase();
     const results = new Map();
 
@@ -238,7 +239,7 @@ export const searchPages = async (
  */
 export const getTrendingPages = async (limitCount: number = 10) => {
   try {
-    const pagesRef = collection(db, "pages");
+    const pagesRef = collection(db, getCollectionName("pages"));
     
     // For now, just get recent public pages (exclude deleted)
     // In the future, this could be based on view counts, pledge amounts, etc.
@@ -278,7 +279,7 @@ export const getTrendingPages = async (limitCount: number = 10) => {
  */
 export const getRandomPages = async (limitCount: number = 10) => {
   try {
-    const pagesRef = collection(db, "pages");
+    const pagesRef = collection(db, getCollectionName("pages"));
     
     // Get a larger set and then randomly select from it (exclude deleted)
     const randomQuery = query(

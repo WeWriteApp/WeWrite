@@ -20,6 +20,7 @@ import { app } from "./config";
 import { getBioAndAboutActivities } from "./bioActivity";
 import { getUsernameById } from "../utils/userUtils";
 import type { Page, User } from "../types/database";
+import { getCollectionName } from "../utils/environmentConfig";
 // Database imports are used in the commented-out code section
 // Keeping them for when the group membership filtering is re-enabled
 // import { getDatabase, ref, get } from "firebase/database";
@@ -184,7 +185,7 @@ export const getRecentActivity = async (
     // First, get recent public pages to know which pages to include
     // TEMPORARY: Remove deleted filter to avoid failed-precondition errors
     const pagesQuery = query(
-      collection(db, "pages"),
+      collection(db, getCollectionName("pages")),
       where("isPublic", "==", true),
       orderBy("lastModified", "desc"),
       firestoreLimit(limitCount * 3) // Get more pages to ensure we have enough versions

@@ -16,6 +16,7 @@ import { rtdb } from "../rtdb";
 import { db } from "./core";
 import { generateCacheKey, getCacheItem, setCacheItem } from "../../utils/cacheUtils";
 import { trackQueryPerformance } from "../../utils/queryMonitor";
+import { getCollectionName } from "../../utils/environmentConfig";
 
 import type { User } from "../../types/database";
 
@@ -140,7 +141,7 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
       return cachedData;
     }
 
-    const userDoc = await getDoc(doc(db, "users", userId));
+    const userDoc = await getDoc(doc(db, getCollectionName("users"), userId));
     
     if (userDoc.exists()) {
       const userData = { id: userDoc.id, ...userDoc.data() } as User;

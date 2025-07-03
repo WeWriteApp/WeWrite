@@ -54,6 +54,7 @@ import {
 import { db } from './database';
 import { generateCacheKey, getCacheItem, setCacheItem, BatchCache } from '../utils/cacheUtils';
 import { trackQueryPerformance } from '../utils/queryMonitor';
+import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../utils/environmentConfig';
 
 // Types
 interface SubscriptionData {
@@ -178,7 +179,8 @@ export const getOptimizedUserSubscription = async (
     }
     
     try {
-      const userSubRef = doc(db, "users", userId, "subscription", "current");
+      const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+      const userSubRef = doc(db, parentPath, subCollectionName, "current");
       
       // Use field selection if specified
       let docSnap;
@@ -246,7 +248,8 @@ export const getOptimizedUserPledges = async (
     }
     
     try {
-      const pledgesRef = collection(db, "users", userId, "pledges");
+      const { parentPath } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, 'pledges');
+      const pledgesRef = collection(db, parentPath, 'pledges');
       
       // Use pagination and ordering for better performance
       const pledgesQuery = query(
@@ -377,7 +380,8 @@ export const createOptimizedSubscriptionListener = (
   let lastUpdate = 0;
   const throttleMs = 5000; // Increased throttle to 5 seconds to reduce load
   
-  const userSubRef = doc(db, "users", userId, "subscription", "current");
+  const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+  const userSubRef = doc(db, parentPath, subCollectionName, "current");
   
   const unsubscribe = onSnapshot(userSubRef, (doc) => {
     const now = Date.now();

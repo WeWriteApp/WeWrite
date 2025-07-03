@@ -149,7 +149,8 @@ export const getUserPledges = async (userId: string, options: SubscriptionOption
   const verbose = options.verbose || false;
 
   try {
-    const pledgesCollectionRef = collection(db, "users", userId, "pledges");
+    const { parentPath } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, 'pledges');
+    const pledgesCollectionRef = collection(db, parentPath, 'pledges');
     const querySnapshot = await getDocs(pledgesCollectionRef);
 
     const pledges = querySnapshot.docs.map(doc => ({

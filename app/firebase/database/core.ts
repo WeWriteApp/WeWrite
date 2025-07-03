@@ -26,6 +26,7 @@ import {
 import { app } from "../config";
 import { rtdb } from "../rtdb";
 import { get, ref } from "firebase/database";
+import { getCollectionName } from "../../utils/environmentConfig";
 
 // Import utility functions
 import { generateCacheKey, getCacheItem, setCacheItem } from "../../utils/cacheUtils";
@@ -61,7 +62,7 @@ export const createPageQuery = (baseQuery: any[], includeDeleted: boolean = fals
     // Add filter to exclude deleted pages
     baseQuery.push(where('deleted', '!=', true));
   }
-  return query(collection(db, 'pages'), ...baseQuery);
+  return query(collection(db, getCollectionName('pages')), ...baseQuery);
 };
 
 /**

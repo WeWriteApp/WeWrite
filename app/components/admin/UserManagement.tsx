@@ -35,6 +35,7 @@ import { Search, Mail, MailCheck, Clock, RefreshCw, Check, X, AlertTriangle } fr
 import { collection, query, orderBy, limit, getDocs, doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { auth } from '../../firebase/auth';
+import { getCollectionName } from '../../utils/environmentConfig';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Alert, AlertDescription } from '../ui/alert';
@@ -151,7 +152,7 @@ export function UserManagement() {
 
       // Query Firestore for user documents
       const usersQuery = query(
-        collection(db, 'users'),
+        collection(db, getCollectionName('users')),
         orderBy('createdAt', 'desc'),
         limit(100)
       );
