@@ -8,6 +8,7 @@ import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 // TODO: Migrate PillStyle to global store
 import { usePillStyle, PILL_STYLES } from '../../contexts/PillStyleContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { useDateFormat } from '../../contexts/DateFormatContext';
 
 interface DayCardProps {
   date: Date;

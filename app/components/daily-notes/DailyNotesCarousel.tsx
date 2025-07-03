@@ -9,7 +9,7 @@ import { db } from '../../firebase/config';
 import { format, subDays, addDays } from 'date-fns';
 import { Button } from '../ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useDateFormat } from '../../contexts/DateFormatContext';
 /**
  * Check if a title exactly matches the YYYY-MM-DD format
  * Returns true only for exact matches (10 characters, no additional text)

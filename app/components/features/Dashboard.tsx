@@ -15,6 +15,7 @@ import { SectionTitle } from "../ui/section-title";
 import RandomPagesHeader from "../features/RandomPagesHeader";
 import { Input } from "../ui/input";
 import { Search } from "lucide-react";
+import DailyNotesSection from "../daily-notes/DailyNotesSection";
 
 const Dashboard: React.FC = () => {
   const { session, isAuthenticated } = useCurrentAccount();
@@ -59,6 +60,9 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Daily Notes Section */}
+            <DailyNotesSection />
 
             {/* Recent Activity Section */}
             <StickySection
