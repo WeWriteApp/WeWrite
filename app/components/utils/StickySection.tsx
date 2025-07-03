@@ -52,6 +52,7 @@ function determineActiveSectionPrecise(): string | null {
     const mainHeaderHeight = mainHeader ? mainHeader.getBoundingClientRect().height : 64;
 
     // If we're at the very top, no section should be sticky
+    // Account for main header height - sections should only become sticky when they would hit the main header
     if (scrollY < mainHeaderHeight) {
       return null;
     }
@@ -135,21 +136,15 @@ function determineActiveSectionPrecise(): string | null {
       const sectionInViewport = section.top < viewportBottom && section.bottom > scrollY;
 
       if (pastSectionHeader && beforeNextSection && hasVisibleContent && sectionInViewport) {
-        // Additional check: ensure there's meaningful content below the sticky header
-        const contentBelowHeader = section.bottom - effectiveViewportTop;
-        const minContentThreshold = Math.min(20, section.headerHeight); // More lenient threshold
-
-        if (contentBelowHeader >= minContentThreshold) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`[StickySection] Active section: ${section.id}`);
-            console.log(`  - effectiveViewportTop: ${effectiveViewportTop}`);
-            console.log(`  - section.top: ${section.top}`);
-            console.log(`  - section.bottom: ${section.bottom}`);
-            console.log(`  - contentBelowHeader: ${contentBelowHeader}`);
-            console.log(`  - minContentThreshold: ${minContentThreshold}`);
-          }
-          return section.id;
+        // Simplified logic: if we're in the section and past the header, make it sticky
+        // Removed contentBelowHeader check that was causing disappearing behavior
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[StickySection] Active section: ${section.id}`);
+          console.log(`  - effectiveViewportTop: ${effectiveViewportTop}`);
+          console.log(`  - section.top: ${section.top}`);
+          console.log(`  - section.bottom: ${section.bottom}`);
         }
+        return section.id;
       }
     }
 
@@ -319,6 +314,7 @@ export default function StickySection({
   const placeholderRef = useRef<HTMLDivElement>(null);
   const [isSticky, setIsSticky] = useState<boolean>(false);
   const [isAtSectionTop, setIsAtSectionTop] = useState<boolean>(false);
+  const [scrollProgress, setScrollProgress] = useState<number>(0);
 
   // Get sidebar context for proper positioning
   const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
@@ -424,13 +420,33 @@ export default function StickySection({
     // Add transition classes
     headerElement.classList.add('section-header', 'section-header-position-transition');
 
-    // Local scroll handler for section-specific behavior (like click detection)
+    // Local scroll handler for section-specific behavior (like click detection and scroll progress)
     const handleLocalScroll = (): void => {
       const scrollPosition: number = window.scrollY;
       const sectionRect: DOMRect = sectionElement.getBoundingClientRect();
       const sectionTop: number = sectionRect.top + scrollPosition;
       const isAtTop: boolean = Math.abs(scrollPosition - sectionTop) <= 10;
       setIsAtSectionTop(isAtTop);
+
+      // Calculate scroll progress for the progress bar based on main content area only
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+
+      // Find the main content area (exclude footer sections)
+      const mainContentElement = document.querySelector('[data-page-content]');
+      let contentHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+
+      if (mainContentElement) {
+        // Calculate the height up to the end of main content
+        const mainContentRect = mainContentElement.getBoundingClientRect();
+        const mainContentBottom = mainContentRect.bottom + window.scrollY;
+        const viewportHeight = window.innerHeight;
+
+        // Use the main content bottom as the effective scroll height
+        contentHeight = Math.max(0, mainContentBottom - viewportHeight);
+      }
+
+      const scrolled = contentHeight > 0 ? (winScroll / contentHeight) * 100 : 0;
+      setScrollProgress(Math.min(scrolled, 100));
     };
 
     // Use requestAnimationFrame for smooth handling
@@ -455,10 +471,20 @@ export default function StickySection({
         headerElement.classList.remove(
           'section-header-sticky',
           'section-header',
-          'section-header-position-transition'
+          'section-header-position-transition',
+          'section-header-fade-enter',
+          'section-header-fade-enter-active',
+          'section-header-fade-exit',
+          'section-header-fade-exit-active'
         );
         headerElement.style.zIndex = '';
         headerElement.style.top = '';
+        headerElement.style.position = '';
+        headerElement.style.left = '';
+        headerElement.style.right = '';
+        headerElement.style.width = '';
+        headerElement.style.paddingLeft = '';
+        headerElement.style.paddingRight = '';
       }
     };
   }, [sectionId]);
@@ -489,46 +515,78 @@ export default function StickySection({
         }
       }
 
-      // Position sticky header at the top of the viewport, respecting sidebar width on desktop
+      // Get main header height to position section header below it
+      const mainHeader = document.querySelector('header[data-component="main-header"]') || document.querySelector('header');
+      const mainHeaderHeight = mainHeader ? mainHeader.getBoundingClientRect().height : 64;
+
+      // Add fade-in transition classes
+      headerElement.classList.add('section-header-fade-enter');
+
+      // Position sticky header below the main header, respecting sidebar width on desktop
       headerElement.style.position = 'fixed';
-      headerElement.style.top = '0px';
+      headerElement.style.top = `${mainHeaderHeight}px`; // Position below main header
       headerElement.style.left = window.innerWidth >= 768 ? `${headerSidebarWidth}px` : '0px'; // Only respond to persistent expanded state
       headerElement.style.right = '0px';
       headerElement.style.width = window.innerWidth >= 768 ? `calc(100% - ${headerSidebarWidth}px)` : '100%'; // Adjust width for persistent state only
       headerElement.style.paddingLeft = '1.5rem'; // 24px consistent with main layout
       headerElement.style.paddingRight = '1.5rem'; // 24px consistent with main layout
-      headerElement.style.zIndex = '60'; // Same as main header z-index
+      headerElement.style.zIndex = '60'; // Below main header (z-70) but above content
       headerElement.classList.add('section-header-sticky');
+
+      // Trigger fade-in animation
+      requestAnimationFrame(() => {
+        headerElement.classList.remove('section-header-fade-enter');
+        headerElement.classList.add('section-header-fade-enter-active');
+      });
 
       setIsSticky(true);
 
       // Debug logging
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[StickySection] ${sectionId} - Now sticky`);
+        console.log(`[StickySection] ${sectionId} - Now sticky with fade transition`);
       }
     } else if (!shouldBeSticky && isSticky) {
-      // No longer sticky - restore to original position
-      if (placeholderElement) {
-        placeholderElement.style.height = '0px';
-        placeholderElement.style.display = 'none';
-      }
+      // No longer sticky - fade out and restore to original position
+      headerElement.classList.add('section-header-fade-exit');
 
-      // Reset header positioning and styling
-      headerElement.style.position = '';
-      headerElement.style.top = '';
-      headerElement.style.left = '';
-      headerElement.style.right = '';
-      headerElement.style.width = '';
-      headerElement.style.paddingLeft = '';
-      headerElement.style.paddingRight = '';
-      headerElement.style.zIndex = '';
-      headerElement.classList.remove('section-header-sticky');
+      // Trigger fade-out animation
+      requestAnimationFrame(() => {
+        headerElement.classList.remove('section-header-fade-exit');
+        headerElement.classList.add('section-header-fade-exit-active');
+
+        // Wait for animation to complete before resetting position
+        setTimeout(() => {
+          if (placeholderElement) {
+            placeholderElement.style.height = '0px';
+            placeholderElement.style.display = 'none';
+          }
+
+          // Reset header positioning and styling
+          headerElement.style.position = '';
+          headerElement.style.top = '';
+          headerElement.style.left = '';
+          headerElement.style.right = '';
+          headerElement.style.width = '';
+          headerElement.style.paddingLeft = '';
+          headerElement.style.paddingRight = '';
+          headerElement.style.zIndex = '';
+
+          // Clean up all transition classes
+          headerElement.classList.remove(
+            'section-header-sticky',
+            'section-header-fade-enter',
+            'section-header-fade-enter-active',
+            'section-header-fade-exit',
+            'section-header-fade-exit-active'
+          );
+        }, 300); // Match CSS transition duration
+      });
 
       setIsSticky(false);
 
       // Debug logging
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[StickySection] ${sectionId} - Restored to original position`);
+        console.log(`[StickySection] ${sectionId} - Fading out and restoring to original position`);
       }
     }
   }, [isActiveStickySection, isSticky, sectionId, headerSidebarWidth]);
@@ -556,8 +614,8 @@ export default function StickySection({
           'relative',
           'bg-background backdrop-blur-sm',
           'w-full cursor-pointer',
-          // Border only when sticky
-          isSticky && 'border-b border-border/50',
+          // Border and shadow when sticky to create unified look with main header
+          isSticky && 'border-b border-border/50 shadow-md',
           // Hover effects for better UX
           'hover:bg-background/80',
           headerClassName
@@ -575,6 +633,14 @@ export default function StickySection({
         )}>
           {headerContent}
         </div>
+
+        {/* Scroll Progress Bar - only show when sticky */}
+        {isSticky && (
+          <div
+            className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ease-in-out"
+            style={{ width: `${scrollProgress}%` }}
+          />
+        )}
       </div>
 
       {/* Section Content */}

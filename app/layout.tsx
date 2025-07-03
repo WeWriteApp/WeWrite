@@ -18,6 +18,7 @@ import { ThemeProvider } from "./providers/ThemeProvider"
 import { MultiAuthProvider } from "./providers/MultiAuthProvider"
 import { CurrentAccountProvider } from "./providers/CurrentAccountProvider"
 import { NotificationProvider } from "./providers/NotificationProvider"
+import { MobileProvider } from "./providers/MobileProvider"
 import GlobalNavigation from "./components/layout/GlobalNavigation"
 
 export default function RootLayout({
@@ -35,25 +36,27 @@ export default function RootLayout({
               <MultiAuthProvider>
                 <CurrentAccountProvider>
                   <NotificationProvider>
-                    <DataProvider>
-                        <DateFormatProvider>
-                          <AccentColorProvider>
-                            <PillStyleProvider>
-                              <LineSettingsProvider>
-                                <RecentPagesProvider>
-                                  <TokenIncrementProvider>
-                                    <SessionAuthInitializer>
-                                    <GlobalNavigation>
-                                      {children}
-                                    </GlobalNavigation>
-                                  </SessionAuthInitializer>
-                                  </TokenIncrementProvider>
-                                </RecentPagesProvider>
-                              </LineSettingsProvider>
-                            </PillStyleProvider>
-                          </AccentColorProvider>
-                        </DateFormatProvider>
-                    </DataProvider>
+                    <MobileProvider>
+                      <DataProvider>
+                          <DateFormatProvider>
+                            <AccentColorProvider>
+                              <PillStyleProvider>
+                                <LineSettingsProvider>
+                                  <RecentPagesProvider>
+                                    <TokenIncrementProvider>
+                                      <SessionAuthInitializer>
+                                      <GlobalNavigation>
+                                        {children}
+                                      </GlobalNavigation>
+                                    </SessionAuthInitializer>
+                                    </TokenIncrementProvider>
+                                  </RecentPagesProvider>
+                                </LineSettingsProvider>
+                              </PillStyleProvider>
+                            </AccentColorProvider>
+                          </DateFormatProvider>
+                      </DataProvider>
+                    </MobileProvider>
                   </NotificationProvider>
                 </CurrentAccountProvider>
               </MultiAuthProvider>

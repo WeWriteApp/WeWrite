@@ -183,7 +183,9 @@ export async function POST(request: NextRequest) {
           quantity: 1},
       ],
       mode: 'subscription',
-      success_url: successUrl || `${process.env.NEXT_PUBLIC_APP_URL}/settings/subscription?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: successUrl ?
+        (successUrl.includes('session_id') ? successUrl : `${successUrl}&session_id={CHECKOUT_SESSION_ID}`) :
+        `${process.env.NEXT_PUBLIC_APP_URL}/settings/subscription?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL}/settings/subscription?cancelled=true`,
       metadata: {
         firebaseUID: userId,

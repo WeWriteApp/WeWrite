@@ -25,6 +25,7 @@ import SimpleSparkline from "../utils/SimpleSparkline";
 import { getUserComprehensiveActivityLast24Hours } from "../../firebase/userActivity";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { useContributorCount } from "../../hooks/useContributorCount";
+import UserDonorKPI from "../analytics/UserDonorKPI";
 
 const SingleProfileView = ({ profile }) => {
   const { session } = useCurrentAccount(); // Fixed destructuring issues
@@ -415,6 +416,17 @@ const SingleProfileView = ({ profile }) => {
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <DollarSign className="h-3 w-3" />
                 <span>contributors</span>
+              </div>
+            </div>
+          )}
+
+          {/* Monthly Donors KPI with sparkline - only show when payments feature is enabled */}
+          {paymentsEnabled && (
+            <div className="flex flex-col items-center gap-2">
+              <UserDonorKPI userId={profile?.uid} />
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Users className="h-3 w-3" />
+                <span>monthly donors</span>
               </div>
             </div>
           )}

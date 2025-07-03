@@ -78,7 +78,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
 
 // Custom tier configuration
 export const CUSTOM_TIER_CONFIG: CustomTierConfig = {
-  minAmount: 50, // Minimum for custom tier (starts at $50)
+  minAmount: 40, // Minimum for custom tier (starts at $40)
   maxAmount: 1000, // Maximum monthly subscription
   tokensPerDollar: 10 // Token conversion rate
 };

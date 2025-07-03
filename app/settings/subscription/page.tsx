@@ -19,7 +19,8 @@ import {
   Calendar,
   DollarSign,
   Settings,
-  ArrowLeft
+  ArrowLeft,
+  RefreshCw
 } from 'lucide-react';
 import Link from 'next/link';
 import SubscriptionTierCarousel from '../../components/subscription/SubscriptionTierCarousel';
@@ -51,6 +52,8 @@ export default function SubscriptionPage() {
   const [previousCustomAmount, setPreviousCustomAmount] = useState<number | null>(null);
   const [showInlineTierSelector, setShowInlineTierSelector] = useState(false);
   const [showReactivationFlow, setShowReactivationFlow] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   // Check payments feature flag
   const paymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
@@ -65,11 +68,16 @@ export default function SubscriptionPage() {
   };
 
   // Fetch current subscription
-  const fetchSubscription = useCallback(async () => {
+  const fetchSubscription = useCallback(async (forceFresh = false) => {
     if (!currentAccount || !paymentsEnabled) return;
 
     try {
-      const response = await fetch('/api/account-subscription');
+      // Add cache-busting parameter when forcing fresh data
+      const url = forceFresh
+        ? `/api/account-subscription?t=${Date.now()}`
+        : '/api/account-subscription';
+
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         console.log('Subscription data received:', data);
@@ -112,8 +120,67 @@ export default function SubscriptionPage() {
     }
   }, [currentAccount, paymentsEnabled]);
 
+  // Force sync subscription status with Stripe
+  const handleSyncSubscription = useCallback(async () => {
+    if (!currentAccount?.uid) return;
+
+    setSyncing(true);
+    setSyncMessage(null);
+
+    try {
+      const { SubscriptionService } = await import('../../services/subscriptionService');
+      const result = await SubscriptionService.forceSyncSubscription(currentAccount.uid);
+
+      if (result.success) {
+        if (result.statusChanged) {
+          setSyncMessage(`Status updated: ${result.previousStatus} → ${result.currentStatus}`);
+          toast({
+            title: "Subscription Synchronized",
+            description: `Status updated from ${result.previousStatus} to ${result.currentStatus}`,
+            variant: "default"
+          });
+        } else if (result.needsWait) {
+          setSyncMessage("Subscription is still processing. Please wait a few minutes.");
+          toast({
+            title: "Processing",
+            description: "Your subscription is still being processed. Please wait a few minutes.",
+            variant: "default"
+          });
+        } else {
+          setSyncMessage("Subscription status is already up to date.");
+          toast({
+            title: "Already Synchronized",
+            description: "Your subscription status is already up to date.",
+            variant: "default"
+          });
+        }
+
+        // Refresh subscription data
+        await fetchSubscription(true);
+      } else {
+        setSyncMessage(`Sync failed: ${result.error}`);
+        toast({
+          title: "Sync Failed",
+          description: result.error || "Failed to synchronize subscription status",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error syncing subscription:', error);
+      setSyncMessage("Failed to sync subscription status");
+      toast({
+        title: "Error",
+        description: "Failed to sync subscription status. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncing(false);
+    }
+  }, [currentAccount, toast, fetchSubscription]);
+
   useEffect(() => {
-    fetchSubscription();
+    // Force fresh data on initial load to ensure accurate subscription status
+    fetchSubscription(true);
   }, [fetchSubscription]);
 
   // Handle success/cancelled redirects from Stripe
@@ -130,9 +197,30 @@ export default function SubscriptionPage() {
         variant: "default"
       });
 
-      // Refresh subscription data after successful payment
+      // Clear subscription cache to force fresh data fetch
+      if (currentAccount?.uid) {
+        import('../../firebase/optimizedSubscription').then(({ clearSubscriptionCache }) => {
+          clearSubscriptionCache(currentAccount.uid);
+          console.log('Subscription cache cleared after successful checkout');
+        });
+      }
+
+      // Refresh subscription data after successful payment with multiple attempts
+      // to handle webhook processing delays
+      const refreshWithRetry = async (attempt = 1, maxAttempts = 5) => {
+        await fetchSubscription(true); // Force fresh data
+
+        // If we still don't have an active subscription after the first attempt,
+        // try again with exponential backoff
+        if (attempt < maxAttempts) {
+          setTimeout(() => {
+            refreshWithRetry(attempt + 1, maxAttempts);
+          }, Math.min(1000 * Math.pow(2, attempt - 1), 10000)); // Cap at 10 seconds
+        }
+      };
+
       setTimeout(() => {
-        fetchSubscription();
+        refreshWithRetry();
       }, 1000);
 
       // Clean up URL parameters
@@ -147,7 +235,7 @@ export default function SubscriptionPage() {
       // Clean up URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [toast, fetchSubscription]);
+  }, [toast, fetchSubscription, currentAccount]);
 
   const handleTierSelect = (tier: string) => {
     setSelectedTier(tier);
@@ -241,6 +329,11 @@ export default function SubscriptionPage() {
       });
 
       const data = await response.json();
+      console.log('Checkout API response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP ${response.status}: Failed to create checkout session`);
+      }
 
       if (data.url) {
         // Track subscription attempt
@@ -251,9 +344,10 @@ export default function SubscriptionPage() {
           page_section: 'subscription'
         });
 
+        console.log('Redirecting to Stripe checkout:', data.url);
         window.location.href = data.url;
       } else {
-        throw new Error(data.error || 'Failed to create checkout session');
+        throw new Error(data.error || 'No checkout URL returned from server');
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
@@ -330,8 +424,23 @@ export default function SubscriptionPage() {
                             })()}
                           </Badge>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleSyncSubscription}
+                          disabled={syncing}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <RefreshCw className={`h-3 w-3 mr-1 ${syncing ? 'animate-spin' : ''}`} />
+                          {syncing ? 'Syncing...' : 'Sync'}
+                        </Button>
                       </div>
                     </div>
+                    {syncMessage && (
+                      <div className="text-xs text-muted-foreground mb-2 p-2 bg-muted rounded">
+                        {syncMessage}
+                      </div>
+                    )}
                     <p className="text-sm text-muted-foreground">
                       {currentSubscription.billingCycleEnd && !currentSubscription.cancelAtPeriodEnd && (
                         <>Next billing: {new Date(currentSubscription.billingCycleEnd).toLocaleDateString()}</>

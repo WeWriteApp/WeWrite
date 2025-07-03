@@ -221,7 +221,7 @@ export default function Header() {
     <>
       <header
         ref={headerRef}
-        className={`fixed top-0 z-[60] transition-all duration-300 ease-in-out will-change-transform ${isScrolled ? 'shadow-sm' : ''}`}
+        className={`fixed top-0 z-[70] transition-all duration-300 ease-in-out will-change-transform`}
         style={{
           transform: 'translateZ(0)', // Force GPU acceleration
           left: '0px', // Always start from left edge like the editor
@@ -230,6 +230,7 @@ export default function Header() {
         }}
         data-component="main-header"
         data-testid="main-header"
+        data-sticky="true"
       >
         <div
           className="relative header-border-transition border-visible bg-background transition-all duration-300 ease-in-out"
@@ -279,11 +280,7 @@ export default function Header() {
               </div>
             </div>
           </div>
-          {/* Scroll Progress Bar */}
-          <div
-            className="absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ease-in-out"
-            style={{ width: `${scrollProgress}%` }}
-          />
+
         </div>
       </header>
       {/* Spacer to prevent content from being hidden under the fixed header */}

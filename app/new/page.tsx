@@ -770,7 +770,7 @@ function NewPageContent() {
           <div
             className="px-4 py-4 w-full max-w-none box-border"
             style={{
-              paddingTop: 'calc(var(--page-header-height, 80px) + 1rem)', // Add extra 1rem (16px) to prevent overlap
+              paddingTop: 'calc(var(--page-header-height, 140px) + 1rem)', // Add extra 1rem (16px) to prevent overlap
               transition: 'padding-top 300ms ease-in-out' // Smooth transition when header height changes
             }}
           >

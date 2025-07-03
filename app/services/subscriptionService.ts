@@ -354,6 +354,55 @@ export class SubscriptionService {
   }
 
   /**
+   * Force synchronization of subscription status with Stripe
+   */
+  static async forceSyncSubscription(userId: string): Promise<{
+    success: boolean;
+    error?: string;
+    statusChanged?: boolean;
+    previousStatus?: string;
+    currentStatus?: string;
+    needsWait?: boolean;
+  }> {
+    try {
+      // Get authentication token
+      const user = auth.currentUser;
+      if (!user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      const token = await user.getIdToken();
+
+      // Call sync API
+      const response = await fetch('/api/subscription/force-sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { success: false, error: data.error || 'Failed to sync subscription status' };
+      }
+
+      return {
+        success: true,
+        statusChanged: data.statusChanged,
+        previousStatus: data.previousStatus,
+        currentStatus: data.currentStatus,
+        needsWait: data.needsWait
+      };
+
+    } catch (error) {
+      console.error('Error forcing subscription sync:', error);
+      return { success: false, error: 'Failed to sync subscription status' };
+    }
+  }
+
+  /**
    * Add amount to existing subscription (bypasses tier validation)
    */
   static async addToSubscription(

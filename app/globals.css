@@ -1316,6 +1316,11 @@ body {
   border-color: hsl(var(--border) / 0.4);
 }
 
+/* Page header height variable - set conservative initial value to prevent content clipping */
+:root {
+  --page-header-height: 140px; /* Conservative initial value, will be updated by JavaScript */
+}
+
 /* Smooth header height transitions */
 .header-smooth-transition {
   transition: height 300ms ease-in-out, padding 300ms ease-in-out;
@@ -1810,12 +1815,12 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
 /* Section header sticky styling - enhanced when sticky */
 .section-header-sticky {
   position: fixed !important;
-  /* top, left, right, and width will be set dynamically via JavaScript to respect sidebar */
-  top: 0 !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  /* top, left, right, and width will be set dynamically via JavaScript to respect sidebar and main header */
+  /* top will be set to main header height via JavaScript */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
   background-color: hsl(var(--background)) !important;
   backdrop-filter: blur(12px);
-  /* z-index will be set dynamically via JavaScript - should be 60 to match main header */
+  /* z-index will be set dynamically via JavaScript - should be 60 (below main header z-70) */
   z-index: 60 !important;
   /* Ensure complete coverage */
   margin: 0 !important;
@@ -1823,11 +1828,14 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   padding-right: 1.5rem !important;
   /* Prevent any content bleed-through */
   border-bottom: 1px solid hsl(var(--border)) !important;
-  /* Smooth transitions when sidebar state changes */
-  transition: left 0.3s ease-in-out, width 0.3s ease-in-out !important;
-  /* Smooth transition when becoming sticky */
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transition-property: transform, box-shadow, background-color, backdrop-filter;
+  /* Smooth fade transition when becoming sticky */
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              left 0.3s ease-in-out,
+              width 0.3s ease-in-out;
+  opacity: 1;
 }
 
 .dark .section-header-sticky {
@@ -1841,7 +1849,32 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   transition-property: transform, top, opacity, box-shadow, background-color;
 }
 
-/* Positional slide animations - no fade effects, only position changes */
+/* Fade transitions for sticky headers - simpler and more reliable */
+.section-header-fade-enter {
+  opacity: 0 !important;
+  transform: translateY(-8px) !important;
+}
+
+.section-header-fade-enter-active {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.section-header-fade-exit {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+.section-header-fade-exit-active {
+  opacity: 0 !important;
+  transform: translateY(-8px) !important;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Fallback: Keep slide animations for compatibility but prefer fade */
 .section-header-slide-up-enter {
   transform: translateY(100%);
 }

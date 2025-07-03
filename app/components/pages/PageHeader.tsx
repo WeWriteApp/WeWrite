@@ -444,6 +444,12 @@ export default function PageHeader({
       }
     };
 
+    // Set initial conservative height immediately to prevent clipping
+    document.documentElement.style.setProperty('--page-header-height', '140px');
+
+    // Try immediate update first (may not work if DOM not ready)
+    updateHeaderHeight();
+
     // Initial update with a small delay to ensure rendering is complete
     const timeoutId = setTimeout(updateHeaderHeight, 50);
 

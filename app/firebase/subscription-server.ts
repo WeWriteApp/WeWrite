@@ -84,19 +84,35 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
     };
 
     // Apply validation logic to ensure consistent subscription states
-    // If status is active but no stripeSubscriptionId, set to canceled
+    // Only cancel subscriptions that are clearly invalid (older than 10 minutes without stripeSubscriptionId)
     if (subscriptionData.status === 'active' && !subscriptionData.stripeSubscriptionId) {
-      subscriptionData.status = 'canceled';
-      subscriptionData.tier = null;
-      subscriptionData.amount = 0;
+      const createdAt = rawData.createdAt?.toDate?.() || rawData.createdAt;
+      const now = new Date();
+      const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
 
-      // Update the subscription in Firestore
-      await updateSubscriptionServer(userId, {
-        status: 'canceled',
-        tier: null,
-        amount: 0,
-        canceledAt: new Date().toISOString()
-      });
+      // Only auto-cancel if the subscription is older than 10 minutes
+      // This gives webhooks time to process and update the subscription
+      if (createdAt && createdAt < tenMinutesAgo) {
+        if (verbose) {
+          console.log(`[getUserSubscriptionServer] Auto-cancelling stale subscription for user ${userId} (created: ${createdAt}, age: ${Math.round((now.getTime() - createdAt.getTime()) / 60000)} minutes)`);
+        }
+
+        subscriptionData.status = 'canceled';
+        subscriptionData.tier = null;
+        subscriptionData.amount = 0;
+
+        // Update the subscription in Firestore
+        await updateSubscriptionServer(userId, {
+          status: 'canceled',
+          tier: null,
+          amount: 0,
+          canceledAt: new Date().toISOString()
+        });
+      } else {
+        if (verbose) {
+          console.log(`[getUserSubscriptionServer] Subscription is active but missing stripeSubscriptionId, but it's recent (created: ${createdAt}). Waiting for webhook to process.`);
+        }
+      }
     }
 
     // Log subscription status for debugging but don't automatically change it

@@ -614,7 +614,7 @@ export default function PageView({
           <div
             className="animate-in fade-in-0 duration-300 w-full pb-32 max-w-none box-border px-4 sm:px-6 md:px-8"
             style={{
-              paddingTop: 'var(--page-header-height, 80px)',
+              paddingTop: 'calc(var(--page-header-height, 140px) + 0.5rem)', // Extra padding to prevent clipping
               transition: 'padding-top 300ms ease-in-out'
             }}
           >
