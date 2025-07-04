@@ -52,6 +52,10 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   const router = useRouter();
   const { incrementAmount } = useTokenIncrement();
 
+  // Scroll detection state
+  const [isHidden, setIsHidden] = useState(false);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
   // Auto-detect pageId from URL if not provided
   const pageId = propPageId || (pathname ? pathname.substring(1) : '');
 
@@ -78,6 +82,31 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     sponsorCount: number;
     totalPledgedTokens: number;
   } | null>(null);
+
+  // Scroll detection effect
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const scrollThreshold = 100; // Minimum scroll distance to trigger hide/show
+
+      if (Math.abs(currentScrollY - lastScrollY) < scrollThreshold) {
+        return; // Don't update for small scroll movements
+      }
+
+      if (currentScrollY > lastScrollY && currentScrollY > 200) {
+        // Scrolling down and past initial threshold - hide
+        setIsHidden(true);
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling up - show
+        setIsHidden(false);
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
 
   // Load token data
   useEffect(() => {
@@ -425,7 +454,13 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   const showLoginNotice = !currentAccount && !isPageOwner;
 
   return createPortal(
-    <div className="fixed left-0 right-0 bottom-6 z-50 flex justify-center px-4">
+    <div
+      className={cn(
+        "fixed left-0 right-0 bottom-6 z-50 flex justify-center px-4",
+        "transition-transform duration-300 ease-in-out",
+        isHidden ? "translate-y-full" : "translate-y-0"
+      )}
+    >
       <div
         ref={ref}
         className={cn(
@@ -437,39 +472,37 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
         onClick={() => setIsModalOpen(true)}
       >
         {/* Main Content */}
-        <div className="p-4 space-y-4">
-          {/* Page Stats for Page Owners */}
+        <div className={cn(
+          "space-y-4",
+          isPageOwner ? "p-3" : "p-4" // Reduced padding for page owners
+        )}>
+          {/* Page Stats for Page Owners - Compact Version */}
           {isPageOwner && (
-            <div className="space-y-3">
-              <div className="text-center">
-                <h3 className="font-semibold text-lg">Page Statistics</h3>
-                <p className="text-sm text-muted-foreground">Your page's supporter activity</p>
-              </div>
-
+            <div>
               {pageStats ? (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 bg-muted/30 rounded-lg">
-                    <div className="text-2xl font-bold text-primary">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="text-center p-2 bg-muted/30 rounded-lg">
+                    <div className="text-xl font-bold text-primary">
                       {pageStats.sponsorCount}
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {pageStats.sponsorCount === 1 ? 'Supporter' : 'Supporters'}
                     </div>
                   </div>
 
-                  <div className="text-center p-3 bg-muted/30 rounded-lg">
-                    <div className="text-2xl font-bold text-primary">
+                  <div className="text-center p-2 bg-muted/30 rounded-lg">
+                    <div className="text-xl font-bold text-primary">
                       {pageStats.totalPledgedTokens}
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       Total Tokens
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="text-center p-4 bg-muted/30 rounded-lg">
-                  <div className="text-sm text-muted-foreground">
-                    Loading page statistics...
+                <div className="text-center p-2 bg-muted/30 rounded-lg">
+                  <div className="text-xs text-muted-foreground">
+                    Loading...
                   </div>
                 </div>
               )}
@@ -546,12 +579,14 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
             </div>
           )}
 
-          {/* Token Text */}
-          <div className="text-center">
-            <span className="font-medium text-primary text-sm">
-              {currentTokenAllocation} tokens pledged per month
-            </span>
-          </div>
+          {/* Token Text - Only show for non-page owners */}
+          {!isPageOwner && (
+            <div className="text-center">
+              <span className="font-medium text-primary text-sm">
+                {currentTokenAllocation} tokens pledged per month
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Warning Banners - MOVED TO BOTTOM */}
