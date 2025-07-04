@@ -683,6 +683,88 @@ const PageEditor: React.FC<PageEditorProps> = ({
         </div>
       )}
 
+      {/* Top Button Row - Discard and Save */}
+      <div className="flex flex-row gap-3 mb-4 w-full">
+        {/* Discard Button */}
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={onCancel}
+          disabled={isSaving}
+          className="gap-2 flex-1 md:flex-none md:w-auto rounded-2xl font-medium"
+        >
+          <X className="h-5 w-5" />
+          <span>Discard</span>
+        </Button>
+
+        {/* Save Button */}
+        <Button
+          onClick={async () => {
+            console.log("🔵 PageEditor: Top Save button clicked");
+
+            // Capture content before saving
+            let currentContent = currentEditorValue;
+
+            if (editorRef.current && typeof editorRef.current.getContent === 'function') {
+              try {
+                console.log("🔵 PageEditor: Capturing content from editor...");
+
+                // Check if there are pending links to process
+                if (editorRef.current.processPendingLinks && typeof editorRef.current.processPendingLinks === 'function') {
+                  console.log("🔵 PageEditor: Processing pending links before save...");
+                  const remainingPendingLinks = await editorRef.current.processPendingLinks();
+                  console.log("🔵 PageEditor: Remaining pending links after processing:", remainingPendingLinks.length);
+
+                  // Capture content AFTER processing pending links
+                  currentContent = editorRef.current.getContent();
+                  console.log("🔵 PageEditor: Captured content AFTER processing pending links");
+                } else {
+                  // Fallback: capture content normally if no pending links processing
+                  currentContent = editorRef.current.getContent();
+                  console.log("🔵 PageEditor: Captured content normally (no pending links processing)");
+                }
+
+                // Update the parent component with the current content
+                if (onContentChange) {
+                  console.log("🔵 PageEditor: Updating parent with captured content");
+                  onContentChange(currentContent);
+
+                  // Wait a bit to ensure the parent state is updated
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                } else {
+                  console.warn("🟡 PageEditor: onContentChange not available");
+                }
+
+                console.log("🔵 PageEditor: Calling onSave with updated content");
+                onSave(currentContent);
+              } catch (error) {
+                console.error("🔴 PageEditor: Error capturing content before save:", error);
+                // Fallback to save with current editor value
+                onSave(currentEditorValue);
+              }
+            } else {
+              console.warn("🟡 PageEditor: Editor ref or getContent method not available");
+              onSave(currentEditorValue);
+            }
+          }}
+          disabled={isSaving}
+          size="lg"
+          className="gap-2 flex-1 md:flex-none md:w-auto rounded-2xl font-medium bg-green-600 hover:bg-green-700 text-white"
+        >
+          {isSaving ? (
+            <>
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-background border-t-transparent" />
+              <span>Saving...</span>
+            </>
+          ) : (
+            <>
+              <Check className="h-5 w-5" />
+              <span>Save</span>
+            </>
+          )}
+        </Button>
+      </div>
+
       <div
         className="w-full max-w-none transition-all duration-200 border border-primary/30 rounded-lg p-4 md:p-6 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 hover:border-primary/40"
       >

@@ -203,6 +203,10 @@ export default function MobileBottomNav() {
   const isNotificationsActive = pathname === '/notifications';
   const isMenuActive = sidebarOpen;
 
+  // Hide mobile nav on editor pages
+  const isEditorPage = pathname === '/new' || pathname.startsWith('/edit/');
+  const shouldHideNav = isEditorPage;
+
   // Enhanced button component with instant feedback
   const NavButton = ({
     id,
@@ -296,8 +300,8 @@ export default function MobileBottomNav() {
         className={cn(
           "md:hidden fixed left-0 right-0 bottom-0 z-50 bg-background/95 backdrop-blur-xl border-t border-border shadow-lg",
           "transition-transform duration-300 ease-in-out",
-          // Auto-hide functionality
-          isVisible ? "translate-y-0" : "translate-y-full",
+          // Auto-hide functionality and hide on editor pages
+          (isVisible && !shouldHideNav) ? "translate-y-0" : "translate-y-full",
           // Enhanced touch targets for mobile
           "touch-manipulation"
         )}
