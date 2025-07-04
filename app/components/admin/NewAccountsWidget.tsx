@@ -23,6 +23,8 @@ interface NewAccountsWidgetProps {
 }
 
 export function NewAccountsWidget({ dateRange, granularity, className = "", globalFilters }: NewAccountsWidgetProps) {
+  console.log('🔥🔥🔥 NewAccountsWidget is rendering! 🔥🔥🔥');
+
   const { data: rawData, loading, error } = useAccountsMetrics(dateRange, granularity);
 
   // Debug: Log what filters we received
@@ -156,7 +158,7 @@ export function NewAccountsWidget({ dateRange, granularity, className = "", glob
             <TrendingDown className="h-4 w-4 text-red-500" />
           )}
           <span className={isPositiveTrend ? 'text-green-500' : 'text-red-500'}>
-            {Math.abs(trendPercentage).toFixed(1)}% {isPositiveTrend ? 'increase' : 'decrease'}
+            {isNaN(trendPercentage) ? '0.0' : Math.abs(trendPercentage).toFixed(1)}% {isPositiveTrend ? 'increase' : 'decrease'}
           </span>
           <span className="text-muted-foreground">vs previous period</span>
         </div>
@@ -219,7 +221,7 @@ export function NewAccountsWidget({ dateRange, granularity, className = "", glob
       {!loading && processedData.length > 0 && (
         <div className="mt-4 pt-4 border-t border-border">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Peak: {formatFilteredNumber(Math.max(...processedData.map(d => d.count)), globalFilters || { timeDisplayMode: 'overTime', perUserNormalization: false })} accounts{displayLabels.tooltipSuffix}</span>
+            <span>Peak: {formatFilteredNumber(processedData.length > 0 ? Math.max(...processedData.map(d => d.count)) : 0, globalFilters || { timeDisplayMode: 'overTime', perUserNormalization: false })} accounts{displayLabels.tooltipSuffix}</span>
             <span>Total periods: {processedData.length}</span>
           </div>
         </div>

@@ -24,7 +24,7 @@ export function ContentChangesAnalyticsWidget({ dateRange, granularity, classNam
   const totalAdded = hasData ? data.reduce((sum, item) => sum + item.charactersAdded, 0) : 0;
   const totalDeleted = hasData ? data.reduce((sum, item) => sum + item.charactersDeleted, 0) : 0;
   const netChange = totalAdded - totalDeleted;
-  const averageNetPerDay = hasData && data.length > 0 ? (netChange / data.length).toFixed(0) : '0';
+  const averageNetPerDay = hasData && data.length > 0 ? (isNaN(netChange / data.length) ? '0' : (netChange / data.length).toFixed(0)) : '0';
 
   // Custom tooltip component
   const CustomTooltip = ({ active, payload, label }: any) => {

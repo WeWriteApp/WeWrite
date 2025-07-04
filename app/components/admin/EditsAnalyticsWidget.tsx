@@ -22,7 +22,7 @@ export function EditsAnalyticsWidget({ dateRange, granularity, className = "" }:
 
   // Calculate summary statistics only if we have data
   const totalEdits = hasData ? data.reduce((sum, item) => sum + item.count, 0) : 0;
-  const averagePerDay = hasData && data.length > 0 ? (totalEdits / data.length).toFixed(1) : '0';
+  const averagePerDay = hasData && data.length > 0 ? (isNaN(totalEdits / data.length) ? '0.0' : (totalEdits / data.length).toFixed(1)) : '0';
   const peakDay = hasData ? Math.max(...data.map(d => d.count)) : 0;
   
   // Calculate trend
@@ -129,7 +129,7 @@ export function EditsAnalyticsWidget({ dateRange, granularity, className = "" }:
         </div>
         <div className="text-center">
           <div className={`text-2xl font-bold ${isPositiveTrend ? 'text-green-500' : 'text-red-500'}`}>
-            {trendPercentage > 0 ? '+' : ''}{trendPercentage.toFixed(1)}%
+            {trendPercentage > 0 ? '+' : ''}{isNaN(trendPercentage) ? '0.0' : trendPercentage.toFixed(1)}%
           </div>
           <div className="text-xs text-muted-foreground">Trend</div>
         </div>

@@ -317,6 +317,12 @@ export class DashboardAnalyticsService {
    * Get composite pages data (created and deleted) within date range using aggregation
    */
   static async getCompositePagesData(dateRange: DateRange, granularity?: number): Promise<CompositePagesDataPoint[]> {
+    // Early return if dateRange is not properly initialized
+    if (!dateRange || !dateRange.startDate || !dateRange.endDate) {
+      console.log('🔍 [Analytics Service] getCompositePagesData - dateRange not initialized');
+      return [];
+    }
+
     console.log('🔍 [Analytics Service] getCompositePagesData called with dateRange:', {
       startDate: dateRange.startDate.toISOString(),
       endDate: dateRange.endDate.toISOString(),
@@ -999,6 +1005,12 @@ export class DashboardAnalyticsService {
    */
   static async getPWAInstallsAnalytics(dateRange: DateRange, granularity?: number): Promise<PWAInstallsDataPoint[]> {
     try {
+      // Early return if dateRange is not properly initialized
+      if (!dateRange || !dateRange.startDate || !dateRange.endDate) {
+        console.log('🔍 [Analytics Service] getPWAInstallsAnalytics - dateRange not initialized');
+        return [];
+      }
+
       // Check cache first (include granularity in cache key)
       const cacheKey = getCacheKey('pwa-installs', dateRange) + (granularity ? `-g${granularity}` : '');
       const cachedData = getCachedData<PWAInstallsDataPoint[]>(cacheKey);
@@ -1173,6 +1185,12 @@ export class DashboardAnalyticsService {
    */
   static async getVisitorAnalytics(dateRange: DateRange, granularity?: number) {
     try {
+      // Early return if dateRange is not properly initialized
+      if (!dateRange || !dateRange.startDate || !dateRange.endDate) {
+        console.log('🔍 [Analytics Service] getVisitorAnalytics - dateRange not initialized');
+        return [];
+      }
+
       const { startDate, endDate } = dateRange;
       const timeConfig = getTimeIntervals(dateRange, granularity);
 

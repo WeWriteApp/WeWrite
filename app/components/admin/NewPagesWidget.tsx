@@ -146,7 +146,7 @@ export function NewPagesWidget({ dateRange, granularity, className = "" }: NewPa
             <TrendingDown className="h-4 w-4 text-red-500" />
           )}
           <span className={isPositiveTrend ? 'text-green-500' : 'text-red-500'}>
-            {Math.abs(trendPercentage).toFixed(1)}% {isPositiveTrend ? 'increase' : 'decrease'}
+            {isNaN(trendPercentage) ? '0.0' : Math.abs(trendPercentage).toFixed(1)}% {isPositiveTrend ? 'increase' : 'decrease'}
           </span>
           <span className="text-muted-foreground">vs previous period</span>
         </div>

@@ -153,7 +153,7 @@ export function TokenAllocationWidget({
           <TrendingDown className="h-4 w-4 text-red-600" />
         )}
         <span className={`text-sm font-medium ${isPositiveTrend ? 'text-green-600' : 'text-red-600'}`}>
-          {Math.abs(trendPercentage).toFixed(1)}% {isPositiveTrend ? 'increase' : 'decrease'}
+          {isNaN(trendPercentage) ? '0.0' : Math.abs(trendPercentage).toFixed(1)}% {isPositiveTrend ? 'increase' : 'decrease'}
         </span>
         <span className="text-sm text-muted-foreground">vs previous period</span>
       </div>
@@ -274,7 +274,7 @@ export function TokenAllocationWidget({
                 <span className="text-xs text-muted-foreground">Tokens Used</span>
               </div>
               <div className="text-lg font-bold text-primary">
-                {overallTokenUtilization.toFixed(1)}%
+                {isNaN(overallTokenUtilization) ? '0.0' : overallTokenUtilization.toFixed(1)}%
               </div>
             </div>
             <div>

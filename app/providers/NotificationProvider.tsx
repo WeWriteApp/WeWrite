@@ -82,17 +82,22 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
           });
         }
 
+        // TEMPORARY: Disable user data preloading to fix dashboard rendering issue
         // Preload user data for all users mentioned in notifications
         if (userIds.size > 0) {
-          console.log(`NotificationProvider - preloading user data for ${userIds.size} users`);
-          try {
-            const { preloadUserData } = await import('../firebase/batchUserData');
-            await preloadUserData(Array.from(userIds));
-            console.log('NotificationProvider - user data preloaded successfully');
-          } catch (preloadError) {
-            console.warn('NotificationProvider - error preloading user data:', preloadError);
-            // Continue even if preloading fails
-          }
+          console.log(`NotificationProvider - skipping user data preloading for ${userIds.size} users (temporarily disabled)`);
+          // try {
+          //   const { preloadUserData } = await import('../firebase/batchUserData');
+          //   if (typeof preloadUserData === 'function') {
+          //     await preloadUserData(Array.from(userIds));
+          //     console.log('NotificationProvider - user data preloaded successfully');
+          //   } else {
+          //     console.warn('NotificationProvider - preloadUserData is not a function');
+          //   }
+          // } catch (preloadError) {
+          //   console.warn('NotificationProvider - error preloading user data:', preloadError?.message || preloadError);
+          //   // Continue even if preloading fails - don't let this crash the app
+          // }
         }
 
         // Count actual unread notifications from the fetched data
@@ -159,7 +164,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
           await preloadUserData(Array.from(userIds));
           console.log('NotificationProvider - additional user data preloaded successfully');
         } catch (preloadError) {
-          console.warn('NotificationProvider - error preloading additional user data:', preloadError);
+          console.warn('NotificationProvider - error preloading additional user data:', preloadError?.message || preloadError);
           // Continue even if preloading fails
         }
       }

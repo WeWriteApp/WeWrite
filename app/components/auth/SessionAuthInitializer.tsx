@@ -27,7 +27,7 @@ function SessionAuthInitializer({ children }: SessionAuthInitializerProps) {
 
   const [isClient, setIsClient] = useState(false);
   const { switchAccountByUid, signOutCurrent } = useCurrentAccount();
-  const { addSession } = useMultiAuth();
+  const { addSession, getSessionByUid } = useMultiAuth();
 
   // Set client flag after hydration
   useEffect(() => {
@@ -60,8 +60,25 @@ function SessionAuthInitializer({ children }: SessionAuthInitializerProps) {
       const newSession = await addSession(sessionData);
       console.log('SessionAuthInitializer: Session created:', newSession.sessionId);
 
-      // Add a small delay to ensure session is fully saved before switching
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Wait for session to be available in the session store with retry logic
+      let retries = 0;
+      const maxRetries = 10;
+      let sessionFound = false;
+      while (retries < maxRetries) {
+        const session = getSessionByUid(firebaseUser.uid);
+        if (session) {
+          console.log('SessionAuthInitializer: Session found in store, switching to it');
+          sessionFound = true;
+          break;
+        }
+        console.log(`SessionAuthInitializer: Session not yet available, retrying... (${retries + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries++;
+      }
+
+      if (!sessionFound) {
+        throw new Error(`Session not found in store after ${maxRetries} retries`);
+      }
 
       // Switch to the newly created session
       await switchAccountByUid(firebaseUser.uid);

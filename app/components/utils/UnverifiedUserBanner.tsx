@@ -20,7 +20,7 @@ function UnverifiedUserBanner({ onDismiss }: UnverifiedUserBannerProps) {
   const [isDismissed, setIsDismissed] = useState(false);
 
   // Only show banner for authenticated users with unverified emails
-  if (!isAuthenticated || !session || isEmailVerified || isDismissed) {
+  if (!isAuthenticated || !session || auth.currentUser?.emailVerified || isDismissed) {
     return null;
   }
 
@@ -73,14 +73,8 @@ function UnverifiedUserBanner({ onDismiss }: UnverifiedUserBannerProps) {
               </p>
               <div className="flex items-center space-x-4 mt-1">
                 <p className="text-sm text-amber-700 dark:text-amber-300">
-                  Please verify your email to publish your changes.
+                  Please verify your email so we know you're human!
                 </p>
-                {queueCount > 0 && (
-                  <div className="flex items-center space-x-1 text-sm text-amber-700 dark:text-amber-300">
-                    <Clock className="h-4 w-4" />
-                    <span>{queueCount} change{queueCount !== 1 ? 's' : ''} queued</span>
-                  </div>
-                )}
               </div>
             </div>
           </div>

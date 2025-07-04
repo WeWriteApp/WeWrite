@@ -23,17 +23,6 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { FeatureFlag } from '../../utils/feature-flags';
-import { 
-  collection, 
-  getDocs, 
-  query, 
-  where, 
-  doc, 
-  setDoc, 
-  deleteDoc,
-  serverTimestamp 
-} from 'firebase/firestore';
-import { db } from '../../firebase/config';
 import { useToast } from '../ui/use-toast';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 interface FeatureFlagState {
@@ -68,7 +57,7 @@ export default function UserAccessModal({
   const { session } = useCurrentAccount();
   const { toast } = useToast();
   
-  const [, sessions, setUsers] = useState<UserFeature[]>([]);
+  const [users, setUsers] = useState<UserFeature[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserFeature[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -83,65 +72,26 @@ export default function UserAccessModal({
 
   useEffect(() => {
     filterUsers();
-  }, [, sessions, searchTerm, activeTab]);
+  }, [users, searchTerm, activeTab]);
 
   const loadUsers = async () => {
     try {
       setIsLoading(true);
 
-      // Get all users
-      const usersRef = collection(db, 'users');
-      const usersSnapshot = await getDocs(usersRef);
+      const response = await fetch(`/api/admin/feature-flag-users?featureFlagId=${featureFlag.id}&globalEnabled=${featureFlag.enabled}`);
 
-      // Get user-specific feature overrides
-      const featureOverridesRef = collection(db, 'featureOverrides');
-      const featureOverridesQuery = query(
-        featureOverridesRef,
-        where('featureId', '==', featureFlag.id)
-      );
-      const overridesSnapshot = await getDocs(featureOverridesQuery);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to load users');
+      }
 
-      // Create a map of user IDs to their feature override
-      const overridesMap = new Map();
-      overridesSnapshot.forEach(doc => {
-        const data = doc.data();
-        overridesMap.set(data.userId, {
-          enabled: data.enabled,
-          lastModified: data.lastModified
-        });
-      });
-
-      // Build user list with feature status
-      const userList: UserFeature[] = [];
-      usersSnapshot.forEach(doc => {
-        const userData = doc.data();
-        const override = overridesMap.get(doc.id);
-        
-        // Determine effective access
-        let effectiveAccess = featureFlag.enabled; // Default to global setting
-        let isOverridden = false;
-        
-        if (override) {
-          effectiveAccess = override.enabled;
-          isOverridden = true;
-        }
-
-        userList.push({
-          id: doc.id,
-          username: userData.username || 'No username',
-          email: userData.email || 'No email',
-          enabled: effectiveAccess,
-          lastModified: override?.lastModified || 'Never',
-          overridden: isOverridden
-        });
-      });
-
-      setUsers(userList);
+      const data = await response.json();
+      setUsers(data.users);
     } catch (error) {
       console.error('Error loading users:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load users',
+        description: error instanceof Error ? error.message : 'Failed to load users',
         variant: 'destructive'
       });
     } finally {
@@ -186,26 +136,23 @@ export default function UserAccessModal({
       setIsLoading(true);
       const newStatus = !currentStatus;
 
-      // Update user-specific feature override
-      const featureOverrideRef = doc(db, 'featureOverrides', `${userId}_${featureFlag.id}`);
-
-      await setDoc(featureOverrideRef, {
-        userId,
-        featureId: featureFlag.id,
-        enabled: newStatus,
-        lastModified: new Date().toISOString()
+      const response = await fetch('/api/admin/feature-flag-users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'toggleAccess',
+          featureFlagId: featureFlag.id,
+          targetUserId: userId,
+          enabled: newStatus
+        })
       });
 
-      // Record history
-      const historyRef = collection(db, 'featureHistory');
-      await setDoc(doc(historyRef), {
-        featureId: featureFlag.id,
-        userId,
-        timestamp: serverTimestamp(),
-        adminEmail: session?.email || 'unknown',
-        action: newStatus ? 'enabled_for_user' : 'disabled_for_user',
-        details: `Feature ${newStatus ? 'enabled' : 'disabled'} for user ${userId}`
-      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update user access');
+      }
 
       // Update local state
       setUsers(users.map(u =>
@@ -224,12 +171,13 @@ export default function UserAccessModal({
 
       toast({
         title: 'Success',
-        description: `Feature ${newStatus ? 'enabled' : 'disabled'} for user`});
+        description: `Feature ${newStatus ? 'enabled' : 'disabled'} for user`
+      });
     } catch (error) {
       console.error('Error toggling user access:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update user access',
+        description: error instanceof Error ? error.message : 'Failed to update user access',
         variant: 'destructive'
       });
     } finally {
@@ -241,20 +189,22 @@ export default function UserAccessModal({
     try {
       setIsLoading(true);
 
-      // Remove user-specific override
-      const featureOverrideRef = doc(db, 'featureOverrides', `${userId}_${featureFlag.id}`);
-      await deleteDoc(featureOverrideRef);
-
-      // Record history
-      const historyRef = collection(db, 'featureHistory');
-      await setDoc(doc(historyRef), {
-        featureId: featureFlag.id,
-        userId,
-        timestamp: serverTimestamp(),
-        adminEmail: session?.email || 'unknown',
-        action: 'removed_override',
-        details: `Removed user-specific override for user ${userId}`
+      const response = await fetch('/api/admin/feature-flag-users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'removeOverride',
+          featureFlagId: featureFlag.id,
+          targetUserId: userId
+        })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to remove user override');
+      }
 
       // Update local state - user now follows global setting
       setUsers(users.map(u =>
@@ -273,12 +223,13 @@ export default function UserAccessModal({
 
       toast({
         title: 'Success',
-        description: 'User override removed - now follows global setting'});
+        description: 'User override removed - now follows global setting'
+      });
     } catch (error) {
       console.error('Error removing user override:', error);
       toast({
         title: 'Error',
-        description: 'Failed to remove user override',
+        description: error instanceof Error ? error.message : 'Failed to remove user override',
         variant: 'destructive'
       });
     } finally {

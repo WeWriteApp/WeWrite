@@ -45,6 +45,12 @@ export function useSubscriptionConversionFunnel(dateRange: DateRange) {
   const debouncedDateRange = useDebounce(dateRange, 300);
 
   const fetchData = useCallback(async () => {
+    // Early return if dateRange is not properly initialized
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -77,6 +83,12 @@ export function useSubscriptionsOverTime(dateRange: DateRange, granularity?: num
   const debouncedDateRange = useDebounce(dateRange, 300);
 
   const fetchData = useCallback(async () => {
+    // Early return if dateRange is not properly initialized
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -109,6 +121,12 @@ export function useSubscriptionRevenue(dateRange: DateRange, granularity?: numbe
   const debouncedDateRange = useDebounce(dateRange, 300);
 
   const fetchData = useCallback(async () => {
+    // Early return if dateRange is not properly initialized
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -141,6 +159,12 @@ export function useTokenAllocationMetrics(dateRange: DateRange, granularity?: nu
   const debouncedDateRange = useDebounce(dateRange, 300);
 
   const fetchData = useCallback(async () => {
+    // Early return if dateRange is not properly initialized
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -178,6 +202,12 @@ export function useAllPaymentAnalytics(dateRange: DateRange, granularity?: numbe
   const debouncedDateRange = useDebounce(dateRange, 300);
 
   const fetchData = useCallback(async () => {
+    // Early return if dateRange is not properly initialized
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -280,10 +310,16 @@ export function useTokenAllocationSummaryStats(dateRange: DateRange) {
   const debouncedDateRange = useDebounce(dateRange, 300);
 
   const fetchData = useCallback(async () => {
+    // Early return if dateRange is not properly initialized
+    if (!debouncedDateRange || !debouncedDateRange.startDate || !debouncedDateRange.endDate) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-      
+
       const tokenMetrics = await PaymentAnalyticsService.getTokenAllocationMetrics(debouncedDateRange);
       
       // Calculate summary statistics

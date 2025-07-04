@@ -98,7 +98,7 @@ export function CumulativePagesWidget({ dateRange, granularity, className = "" }
             {isPositiveGrowth ? '+' : ''}{totalGrowth.toLocaleString()} pages
           </span>
           <span className="text-muted-foreground">
-            ({Math.abs(growthPercentage).toFixed(1)}% {isPositiveGrowth ? 'growth' : 'decline'})
+            ({isNaN(growthPercentage) ? '0.0' : Math.abs(growthPercentage).toFixed(1)}% {isPositiveGrowth ? 'growth' : 'decline'})
           </span>
         </div>
       )}

@@ -57,9 +57,12 @@ export function SubscriptionConversionFunnelWidget({
   const hasData = data && data.length > 0;
   const totalInitiated = hasData ? data[0]?.count || 0 : 0;
 
-  // Calculate overall conversion rate
+  // Calculate overall conversion rate with NaN protection
   const finalConversionRate = hasData && data.length > 3 ? data[3]?.conversionRate || 0 : 0;
+  const safeFinalConversionRate = isNaN(finalConversionRate) ? 0 : finalConversionRate;
+
   const biggestDropOff = hasData ? Math.max(...data.map(stage => stage.dropOffRate)) : 0;
+  const safeBiggestDropOff = isNaN(biggestDropOff) ? 0 : biggestDropOff;
   const biggestDropOffStage = hasData ? data.find(stage => stage.dropOffRate === biggestDropOff)?.stageName : '';
 
   return (
@@ -73,7 +76,7 @@ export function SubscriptionConversionFunnelWidget({
         
         {/* Summary Stats */}
         <div className="text-right">
-          <div className="text-2xl font-bold text-primary">{finalConversionRate.toFixed(1)}%</div>
+          <div className="text-2xl font-bold text-primary">{safeFinalConversionRate.toFixed(1)}%</div>
           <div className="text-xs text-muted-foreground">
             Overall conversion
           </div>
@@ -85,8 +88,8 @@ export function SubscriptionConversionFunnelWidget({
         <div className="flex items-center gap-2 mb-4 p-3 bg-muted/50 rounded-lg">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
           <div className="text-sm">
-            <span className="font-medium">Biggest bottleneck:</span> {biggestDropOffStage} 
-            <span className="text-muted-foreground"> ({biggestDropOff.toFixed(1)}% drop-off)</span>
+            <span className="font-medium">Biggest bottleneck:</span> {biggestDropOffStage}
+            <span className="text-muted-foreground"> ({safeBiggestDropOff.toFixed(1)}% drop-off)</span>
           </div>
         </div>
       )}
@@ -113,11 +116,11 @@ export function SubscriptionConversionFunnelWidget({
                   <div className="flex items-center gap-3 text-sm">
                     <span className="font-medium">{stage.count.toLocaleString()}</span>
                     <span className="text-muted-foreground">
-                      {stage.conversionRate.toFixed(1)}%
+                      {isNaN(stage.conversionRate) ? '0.0' : stage.conversionRate.toFixed(1)}%
                     </span>
                     {!isFirst && stage.dropOffRate > 0 && (
                       <span className="text-red-600 text-xs">
-                        -{stage.dropOffRate.toFixed(1)}%
+                        -{isNaN(stage.dropOffRate) ? '0.0' : stage.dropOffRate.toFixed(1)}%
                       </span>
                     )}
                   </div>

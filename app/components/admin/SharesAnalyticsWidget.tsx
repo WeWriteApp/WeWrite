@@ -25,7 +25,7 @@ export function SharesAnalyticsWidget({ dateRange, granularity, className = "" }
   const totalSuccessful = hasData ? data.reduce((sum, item) => sum + item.successful, 0) : 0;
   const totalAborted = hasData ? data.reduce((sum, item) => sum + item.aborted, 0) : 0;
   const successRate = totalShares > 0 ? (totalSuccessful / totalShares * 100) : 0;
-  const averagePerDay = hasData && data.length > 0 ? (totalShares / data.length).toFixed(1) : '0';
+  const averagePerDay = hasData && data.length > 0 ? (isNaN(totalShares / data.length) ? '0.0' : (totalShares / data.length).toFixed(1)) : '0';
 
   // Calculate trend for success rate only if we have data
   let trendPercentage = 0;

@@ -6,6 +6,7 @@ import { SidebarProvider } from './UnifiedSidebar';
 import MobileBottomNav from './MobileBottomNav';
 import SidebarLayout from './SidebarLayout';
 import UsernameEnforcementModal from '../auth/UsernameEnforcementModal';
+import UnverifiedUserBanner from '../utils/UnverifiedUserBanner';
 
 /**
  * GlobalNavigation Component
@@ -24,6 +25,8 @@ export default function GlobalNavigation({ children }: { children: React.ReactNo
 
   return (
     <SidebarProvider>
+      {/* Email verification banner - shows at top for unverified users */}
+      <UnverifiedUserBanner />
       <SidebarLayout>
         {children}
       </SidebarLayout>

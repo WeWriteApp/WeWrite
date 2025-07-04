@@ -109,12 +109,17 @@ const initialWidgets = [
 ];
 
 export default function AdminDashboardPage() {
+  console.log('🚀🚀🚀 AdminDashboardPage component is rendering! 🚀🚀🚀');
+
   const { session, isLoading: authLoading } = useCurrentAccount();
   const router = useRouter();
 
   const [widgets, setWidgets] = useState(initialWidgets);
 
   useEffect(() => {
+    // Clear localStorage to reset widget layout and ensure all widgets are loaded
+    localStorage.removeItem('adminDashboardLayout');
+
     const savedLayout = localStorage.getItem('adminDashboardLayout');
     if (savedLayout) {
       const parsedLayout = JSON.parse(savedLayout);
@@ -126,6 +131,9 @@ export default function AdminDashboardPage() {
         }
       });
       setWidgets(newWidgets);
+    } else {
+      // Use all initial widgets
+      setWidgets(initialWidgets);
     }
   }, []);
 
@@ -328,27 +336,39 @@ export default function AdminDashboardPage() {
         {/* Dashboard Content */}
         <div className="px-6 py-6">
           <DashboardErrorBoundary>
-            {dashboardLoading ? (
-              <>
-                <DashboardGridSkeleton />
-              </>
-            ) : (
-              <>
-                {/* Responsive Grid Layout optimized for large displays */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+            {(() => {
+              if (dashboardLoading) {
+                console.log('🔄🔄🔄 Dashboard is loading, showing skeleton 🔄🔄🔄');
+                return (
+                  <>
+                    <DashboardGridSkeleton />
+                  </>
+                );
+              } else {
+                console.log('🎯🎯🎯 Dashboard loaded, rendering widgets! 🎯🎯🎯', widgets.length, 'widgets');
+                return (
+                  <>
+                    {/* Responsive Grid Layout optimized for large displays */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
                   {widgets.map((widget, index) => {
                     const WidgetComponent = widget.component;
                     return (
                       <DraggableWidget key={widget.id} id={widget.id} index={index} moveWidget={moveWidget}>
                         <WidgetErrorBoundary widgetName={widget.id}>
-                          <WidgetComponent {...({} as any)} />
+                          <WidgetComponent
+                            dateRange={dateRange}
+                            granularity={granularity}
+                            globalFilters={globalFilters}
+                          />
                         </WidgetErrorBoundary>
                       </DraggableWidget>
                     );
-                  })}
-                </div>
-              </>
-            )}
+                    })}
+                  </div>
+                </>
+              );
+              }
+            })()}
           </DashboardErrorBoundary>
         </div>
       </div>
