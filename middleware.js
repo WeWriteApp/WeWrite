@@ -28,8 +28,14 @@ export function middleware(request) {
   // const isGroupsPath = false;
   // const requiresGroupsAuth = false;
 
-  // Get the token from the cookies
-  const token = request.cookies.get("session")?.value;
+  // Get authentication status from standard cookies
+  // Primary: Firebase session cookie (for Firebase auth users)
+  // Secondary: authenticated cookie (for session-based auth)
+  const sessionToken = request.cookies.get("session")?.value;
+  const authenticatedCookie = request.cookies.get("authenticated")?.value === 'true';
+
+  // User is authenticated if they have either a Firebase session or authenticated cookie
+  const isAuthenticated = !!(sessionToken || authenticatedCookie);
 
   // URL structure redirects
 
@@ -76,12 +82,12 @@ export function middleware(request) {
   // Authentication redirects
 
   // Redirect authenticated users away from auth pages
-  if (path.startsWith("/auth/") && token) {
+  if (path.startsWith("/auth/") && isAuthenticated) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Only redirect to login for paths that explicitly require auth
-  if (requiresAuth && !token) {
+  if (requiresAuth && !isAuthenticated) {
     const loginUrl = new URL("/auth/login", request.url);
     loginUrl.searchParams.set("from", path);
     return NextResponse.redirect(loginUrl);

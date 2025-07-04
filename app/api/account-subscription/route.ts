@@ -19,6 +19,15 @@ export async function GET(request: NextRequest) {
     // Get the user's subscription from Firestore using server-side function
     const subscription = await getUserSubscriptionServer(userId, { verbose: false });
 
+    console.log(`[ACCOUNT SUBSCRIPTION] Subscription data for user ${userId}:`, {
+      hasSubscription: !!subscription,
+      status: subscription?.status,
+      amount: subscription?.amount,
+      tokens: subscription?.tokens,
+      cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd,
+      fullData: subscription
+    });
+
     if (!subscription) {
       return NextResponse.json({ status: null });
     }

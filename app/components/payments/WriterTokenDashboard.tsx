@@ -24,6 +24,7 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import EarningsChart from './EarningsChart';
 import { CompactAllocationTimer } from '../AllocationCountdownTimer';
 import { getLoggedOutTokenBalance } from '../../utils/simulatedTokens';
+import { useSimulatedState } from '../../hooks/useAdminStateSimulator';
 
 interface WriterTokenDashboardProps {
   className?: string;
@@ -32,50 +33,185 @@ interface WriterTokenDashboardProps {
 export default function WriterTokenDashboard({ className }: WriterTokenDashboardProps) {
   const { session } = useCurrentAccount();
   const { toast } = useToast();
-  
+  const simulatedState = useSimulatedState();
+
   const [balance, setBalance] = useState<WriterTokenBalance | null>(null);
   const [earnings, setEarnings] = useState<WriterTokenEarnings[]>([]);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
+  const [unfundedMessage, setUnfundedMessage] = useState<string | null>(null);
 
-  // Fake token data for different user states
-  const [fakeTokenData, setFakeTokenData] = useState({
-    notLoggedIn: 0,
-    noSubscription: 0,
-    pendingThisMonth: 0,
-    lockedInLastMonth: 0
-  });
+  // Generate simulated token data based on admin state simulator
+  const getSimulatedTokenData = () => {
+    const { tokenEarnings } = simulatedState;
+
+    if (tokenEarnings.none) {
+      return {
+        balance: null,
+        earnings: [],
+        isEmpty: true
+      };
+    }
+
+    // For unfunded states, show a special message since these tokens aren't in the WriterTokenBalance system
+    if (tokenEarnings.unfundedLoggedOut || tokenEarnings.unfundedNoSubscription) {
+      const tokenCount = tokenEarnings.unfundedLoggedOut ? 25 : 45;
+      const source = tokenEarnings.unfundedLoggedOut ? 'logged-out users' : 'users without subscriptions';
+
+      return {
+        balance: null, // No balance since these are unfunded
+        earnings: [],
+        isEmpty: false,
+        unfundedMessage: `You have ${tokenCount} unfunded tokens from ${source}. These tokens will become funded when those users sign up and subscribe.`
+      };
+    }
+
+    if (tokenEarnings.fundedPending) {
+      return {
+        balance: {
+          userId: session?.uid || 'simulated',
+          totalTokensEarned: 120,
+          totalUsdEarned: 12.0,
+          pendingTokens: 120,
+          pendingUsdValue: 12.0,
+          availableTokens: 0,
+          availableUsdValue: 0,
+          paidOutTokens: 0,
+          paidOutUsdValue: 0,
+          lastProcessedMonth: '',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        } as WriterTokenBalance,
+        earnings: [
+          {
+            id: 'sim-1',
+            userId: session?.uid || 'simulated',
+            month: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
+            totalTokensReceived: 120,
+            totalUsdValue: 12.0,
+            status: 'pending',
+            allocations: [
+              {
+                allocationId: 'sim-alloc-1',
+                fromUserId: 'sim-user-1',
+                fromUsername: 'subscriber1',
+                resourceType: 'page',
+                resourceId: 'sim-page-1',
+                resourceTitle: 'Sample Article',
+                tokens: 120,
+                usdValue: 12.0
+              }
+            ],
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        ] as WriterTokenEarnings[],
+        isEmpty: false
+      };
+    }
+
+    if (tokenEarnings.lockedAvailable) {
+      const currentDate = new Date();
+      const lastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+      const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
+      const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+
+      return {
+        balance: {
+          userId: session?.uid || 'simulated',
+          totalTokensEarned: 250,
+          totalUsdEarned: 25.0,
+          pendingTokens: 85,
+          pendingUsdValue: 8.5,
+          availableTokens: 165,
+          availableUsdValue: 16.5,
+          paidOutTokens: 0,
+          paidOutUsdValue: 0,
+          lastProcessedMonth: lastMonthStr,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        } as WriterTokenBalance,
+        earnings: [
+          {
+            id: 'sim-1',
+            userId: session?.uid || 'simulated',
+            month: lastMonthStr,
+            totalTokensReceived: 165,
+            totalUsdValue: 16.5,
+            status: 'available',
+            allocations: [
+              {
+                allocationId: 'sim-alloc-1',
+                fromUserId: 'sim-user-1',
+                fromUsername: 'subscriber1',
+                resourceType: 'page',
+                resourceId: 'sim-page-1',
+                resourceTitle: 'Popular Article',
+                tokens: 165,
+                usdValue: 16.5
+              }
+            ],
+            createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+            updatedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+          },
+          {
+            id: 'sim-2',
+            userId: session?.uid || 'simulated',
+            month: currentMonthStr,
+            totalTokensReceived: 85,
+            totalUsdValue: 8.5,
+            status: 'pending',
+            allocations: [
+              {
+                allocationId: 'sim-alloc-2',
+                fromUserId: 'sim-user-2',
+                fromUsername: 'subscriber2',
+                resourceType: 'page',
+                resourceId: 'sim-page-2',
+                resourceTitle: 'Recent Article',
+                tokens: 85,
+                usdValue: 8.5
+              }
+            ],
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        ] as WriterTokenEarnings[],
+        isEmpty: false
+      };
+    }
+
+    return null;
+  };
 
   useEffect(() => {
-    if (session?.uid) {
-      loadWriterData();
+    // Check if we should use simulated data from admin state simulator
+    const simulatedData = getSimulatedTokenData();
+
+    if (simulatedData) {
+      // Use simulated data
+      setBalance(simulatedData.balance);
+      setEarnings(simulatedData.earnings);
+      setUnfundedMessage((simulatedData as any).unfundedMessage || null);
+      setLoading(false);
+      console.log('🎭 Using simulated token earnings data:', simulatedData);
+      return;
     }
-    loadFakeTokenData();
-  }, [session?.uid]);
 
-  const loadFakeTokenData = () => {
-    // Get logged-out user allocations
-    const loggedOutBalance = getLoggedOutTokenBalance();
-    const notLoggedInTokens = loggedOutBalance.allocations.reduce((total, allocation) => {
-      // For demo purposes, we'll assume some allocations are for this writer
-      return total + (Math.random() > 0.7 ? allocation.tokens : 0);
-    }, 0);
+    // Use real data
+    if (session?.uid) {
+      setUnfundedMessage(null);
+      loadWriterData();
+    } else {
+      // Show empty state for logged-out users (unless simulated)
+      setBalance(null);
+      setEarnings([]);
+      setUnfundedMessage(null);
+      setLoading(false);
+    }
+  }, [session?.uid, simulatedState.tokenEarnings]);
 
-    // Get logged-in users without subscription allocations
-    // This would normally come from a service, but for demo we'll simulate
-    const noSubscriptionTokens = Math.floor(Math.random() * 50);
 
-    // Simulate pending and locked-in tokens
-    const pendingThisMonth = Math.floor(Math.random() * 30);
-    const lockedInLastMonth = Math.floor(Math.random() * 80);
-
-    setFakeTokenData({
-      notLoggedIn: Math.floor(notLoggedInTokens),
-      noSubscription: noSubscriptionTokens,
-      pendingThisMonth,
-      lockedInLastMonth
-    });
-  };
 
   const loadWriterData = async () => {
     if (!session?.uid) return;
@@ -170,14 +306,22 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
             Writer Earnings
           </CardTitle>
           <CardDescription>
-            You haven't received any token allocations yet
+            {unfundedMessage ? 'Unfunded Token Allocations' : 'You haven\'t received any token allocations yet'}
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center">
-          <p className="text-muted-foreground mb-4">
-            When users allocate tokens to your pages, your earnings will appear here.
-            Create great content to start earning!
-          </p>
+          {unfundedMessage ? (
+            <div className="p-4 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg">
+              <p className="text-orange-800 dark:text-orange-200 text-sm">
+                {unfundedMessage}
+              </p>
+            </div>
+          ) : (
+            <p className="text-muted-foreground mb-4">
+              When users allocate tokens to your pages, your earnings will appear here.
+              Create great content to start earning!
+            </p>
+          )}
         </CardContent>
       </Card>
     );
@@ -297,75 +441,7 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
       </Card>
 
       {/* Fake Token Categories */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Pending Token Allocations
-          </CardTitle>
-          <CardDescription>
-            Token allocations from users in different states
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">
-                {fakeTokenData.notLoggedIn}
-              </div>
-              <div className="text-sm text-orange-700 dark:text-orange-300 font-medium">
-                Not Logged In Yet
-              </div>
-              <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                Users need to sign up
-              </div>
-            </div>
 
-            <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-              <div className="text-2xl font-bold text-yellow-600">
-                {fakeTokenData.noSubscription}
-              </div>
-              <div className="text-sm text-yellow-700 dark:text-yellow-300 font-medium">
-                No Subscription Yet
-              </div>
-              <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                Users need to subscribe
-              </div>
-            </div>
-
-            <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">
-                {fakeTokenData.pendingThisMonth}
-              </div>
-              <div className="text-sm text-blue-700 dark:text-blue-300 font-medium">
-                Pending This Month
-              </div>
-              <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                Not locked in yet
-              </div>
-            </div>
-
-            <div className="text-center p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">
-                {fakeTokenData.lockedInLastMonth}
-              </div>
-              <div className="text-sm text-green-700 dark:text-green-300 font-medium">
-                Locked In Last Month
-              </div>
-              <div className="text-xs text-green-600 dark:text-green-400 mt-1">
-                Ready for payout
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-lg">
-            <p className="text-sm text-muted-foreground text-center">
-              <strong>Note:</strong> These are simulated token allocations from users in different states.
-              Only "Locked In" tokens from previous months can be included in payouts.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Monthly Earnings */}
       <Card>

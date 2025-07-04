@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
-import { Loader, AlertCircle, CheckCircle2, RefreshCw, Bell, Flame, Calendar, DollarSign, ChevronLeft } from 'lucide-react';
+import { Loader, AlertCircle, CheckCircle2, RefreshCw, Bell, Flame, Calendar, DollarSign, ChevronLeft, Settings, Eye } from 'lucide-react';
 import { calculatePastStreaks } from '../../scripts/calculatePastStreaks';
 
 // Temporary stub functions for missing scripts
@@ -43,6 +43,51 @@ export default function AdminToolsPage() {
   // State for activity calendar backfill
   const [activityBackfillRunning, setActivityBackfillRunning] = useState(false);
   const [activityBackfillResult, setactivityBackfillResult] = useState<any>(null);
+
+  // State for state simulator
+  const [simulatorVisible, setSimulatorVisible] = useState(true);
+
+  // Check simulator visibility on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isHidden = sessionStorage.getItem('admin-state-simulator-hidden') === 'true';
+      setSimulatorVisible(!isHidden);
+    }
+  }, []);
+
+  // Function to show the simulator
+  const showSimulator = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('admin-state-simulator-hidden');
+      setSimulatorVisible(true);
+      // Refresh the page to re-mount the simulator
+      window.location.reload();
+    }
+  };
+
+  // Function to get current simulator state
+  const getCurrentSimulatorState = () => {
+    if (typeof window === 'undefined') return null;
+
+    try {
+      const savedState = localStorage.getItem('admin-state-simulator');
+      return savedState ? JSON.parse(savedState) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const currentSimulatorState = getCurrentSimulatorState();
+
+  // Function to reset simulator state
+  const resetSimulatorState = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('admin-state-simulator');
+      sessionStorage.removeItem('admin-state-simulator-hidden');
+      setSimulatorVisible(true);
+      window.location.reload();
+    }
+  };
 
   // Check if user is admin
   const [isAdmin, setIsAdmin] = useState(false);
@@ -164,7 +209,7 @@ export default function AdminToolsPage() {
       <h1 className="text-2xl font-bold mb-6">Admin Tools</h1>
 
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="streaks">
             <Flame className="h-4 w-4 mr-2" />
             Streak Calculation
@@ -180,6 +225,10 @@ export default function AdminToolsPage() {
           <TabsTrigger value="fees">
             <DollarSign className="h-4 w-4 mr-2" />
             Fee Management
+          </TabsTrigger>
+          <TabsTrigger value="simulator">
+            <Settings className="h-4 w-4 mr-2" />
+            State Simulator
           </TabsTrigger>
         </TabsList>
 
@@ -410,6 +459,146 @@ export default function AdminToolsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <FeeManagementSection />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* State Simulator Tab */}
+        <TabsContent value="simulator">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Settings className="mr-2 h-5 w-5" />
+                Admin State Simulator
+              </CardTitle>
+              <CardDescription>
+                Control the floating admin state simulator for testing different app states
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <Settings className="h-5 w-5 text-orange-500" />
+                  <div>
+                    <h3 className="font-medium">State Simulator</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Floating UI for simulating auth, subscription, and token states
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-muted-foreground">
+                    {simulatorVisible ? 'Visible' : 'Hidden'}
+                  </span>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={showSimulator}
+                      disabled={simulatorVisible}
+                      className="flex items-center space-x-1"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span>{simulatorVisible ? 'Already Visible' : 'Show Simulator'}</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={resetSimulatorState}
+                      className="flex items-center space-x-1"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      <span>Reset State</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Current State Display */}
+              {currentSimulatorState && (
+                <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
+                  <h4 className="font-medium mb-3">Current Simulator State</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Auth:</span>
+                      <span className="ml-2 text-muted-foreground">
+                        {currentSimulatorState.authState === 'logged-out' ? 'Logged Out' : 'Logged In'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="font-medium">Subscription:</span>
+                      <span className="ml-2 text-muted-foreground">
+                        {currentSimulatorState.subscriptionState === 'none' ? 'None' :
+                         currentSimulatorState.subscriptionState === 'active' ? 'Active' :
+                         currentSimulatorState.subscriptionState === 'cancelling' ? 'Cancelling' :
+                         currentSimulatorState.subscriptionState === 'payment-failed' ? 'Payment Failed' :
+                         currentSimulatorState.subscriptionState}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="font-medium">Spending:</span>
+                      <span className="ml-2 text-muted-foreground">
+                        {currentSimulatorState.spendingState?.pastMonthTokensSent ? 'Tokens Sent' : 'No Tokens Sent'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="font-medium">Earnings:</span>
+                      <span className="ml-2 text-muted-foreground">
+                        {currentSimulatorState.tokenEarningsState?.none ? 'None' : 'Has Earnings'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t">
+                    <span className="text-xs text-muted-foreground">
+                      Position: ({Math.round(currentSimulatorState.position?.x || 0)}, {Math.round(currentSimulatorState.position?.y || 0)})
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <Alert>
+                <Settings className="h-4 w-4" />
+                <AlertTitle>How to Use</AlertTitle>
+                <AlertDescription className="space-y-2">
+                  <p>The Admin State Simulator is a floating UI element that allows you to:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-4">
+                    <li>Toggle between logged in/logged out states</li>
+                    <li>Simulate different subscription states (none, active, cancelling, payment failed)</li>
+                    <li>Test spending states (past month tokens sent)</li>
+                    <li>Simulate various token earning states (unfunded, pending, locked)</li>
+                  </ul>
+                  <p className="mt-3">
+                    <strong>Controls:</strong>
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 ml-4">
+                    <li><strong>Hover/Touch:</strong> Expand the collapsed simulator</li>
+                    <li><strong>Drag:</strong> Move the simulator around the screen</li>
+                    <li><strong>Hide for Session:</strong> Hide until page refresh (use button above to restore)</li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
+
+              <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Integration Guide</h4>
+                <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+                  Components can use simulated state by importing the appropriate hooks:
+                </p>
+                <div className="bg-white dark:bg-gray-900 p-3 rounded border text-xs font-mono">
+                  <div className="text-gray-600 dark:text-gray-400">// For auth state simulation</div>
+                  <div>import {`{ useSimulatedAuth }`} from '../hooks/useSimulatedAuth';</div>
+                  <br />
+                  <div className="text-gray-600 dark:text-gray-400">// For all simulated states</div>
+                  <div>import {`{ useSimulatedAppState }`} from '../providers/AdminStateSimulatorProvider';</div>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg">
+                <h4 className="font-medium text-amber-900 dark:text-amber-100 mb-2">Extensibility</h4>
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  To add new state categories, edit <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">app/config/adminStateSimulatorConfig.ts</code>
+                  and follow the documentation in <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">docs/admin-state-simulator.md</code>
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

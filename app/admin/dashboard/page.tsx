@@ -310,24 +310,18 @@ export default function AdminDashboardPage() {
               </div>
             ) : (
               <>
-                {/* Date Range and Granularity Filters */}
+                {/* Combined Filters - Single Horizontal Row */}
                 <DateRangeFilter
                   dateRange={dateRange}
                   onDateRangeChange={setDateRange}
                   granularity={granularity}
                   onGranularityChange={setGranularity}
+                  globalFilters={globalFilters}
+                  onGlobalFiltersChange={handleGlobalFiltersChange}
                   className="border-0 shadow-none p-0 bg-transparent"
                   compact={true}
+                  combined={true}
                 />
-
-                {/* Global Analytics Filters */}
-                <div className="border-t border-border pt-4">
-                  <GlobalAnalyticsFilters
-                    filters={globalFilters}
-                    onFiltersChange={handleGlobalFiltersChange}
-                    className="w-full"
-                  />
-                </div>
               </>
             )}
           </div>

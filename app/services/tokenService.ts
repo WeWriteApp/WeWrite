@@ -83,17 +83,47 @@ export class TokenService {
     callback: (balance: TokenBalance | null) => void
   ): Unsubscribe {
     const balanceRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES), userId);
+    const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
 
-    return onSnapshot(balanceRef, (doc) => {
-      if (doc.exists()) {
-        callback(doc.data() as TokenBalance);
-      } else {
+    // Listen to both balance and subscription changes
+    const unsubscribeBalance = onSnapshot(balanceRef, async (balanceDoc) => {
+      try {
+        if (balanceDoc.exists()) {
+          const balanceData = balanceDoc.data() as TokenBalance;
+
+          // Get current subscription to verify token amounts match
+          const subscriptionDoc = await getDoc(subscriptionRef);
+          const subscriptionData = subscriptionDoc.exists() ? subscriptionDoc.data() : null;
+
+          // If subscription has different token amount, use subscription data
+          if (subscriptionData && subscriptionData.tokens && subscriptionData.tokens !== balanceData.totalTokens) {
+            console.log(`[CLIENT TOKEN BALANCE] Subscription tokens (${subscriptionData.tokens}) differ from balance tokens (${balanceData.totalTokens}), using subscription data`);
+
+            // Create corrected balance object
+            const correctedBalance: TokenBalance = {
+              ...balanceData,
+              totalTokens: subscriptionData.tokens,
+              monthlyAllocation: subscriptionData.tokens,
+              availableTokens: Math.max(0, subscriptionData.tokens - balanceData.allocatedTokens)
+            };
+
+            callback(correctedBalance);
+          } else {
+            callback(balanceData);
+          }
+        } else {
+          callback(null);
+        }
+      } catch (error) {
+        console.error('Error processing token balance:', error);
         callback(null);
       }
     }, (error) => {
       console.error('Error listening to token balance:', error);
       callback(null);
     });
+
+    return unsubscribeBalance;
   }
 
   /**

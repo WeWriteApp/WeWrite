@@ -10,7 +10,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Switch } from '../components/ui/switch';
 
 import { SwipeableTabs, SwipeableTabsList, SwipeableTabsTrigger, SwipeableTabsContent } from '../components/ui/swipeable-tabs';
-import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3, DollarSign } from 'lucide-react';
+import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3, DollarSign, Eye } from 'lucide-react';
 import { db } from "../firebase/config";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
@@ -44,8 +44,11 @@ export default function AdminPage() {
   const { resetBannerState } = usePWA();
   const [activeTab, setActiveTab] = useState('features');
 
+  // State for state simulator
+  const [simulatorVisible, setSimulatorVisible] = useState(true);
+
   // Valid tab values for hash navigation
-  const validTabs = ['features', 'users', 'admins', 'tools', 'testing', 'payments'];
+  const validTabs = ['features', 'users', 'tools'];
   const defaultTab = 'features';
 
   // User management state
@@ -841,6 +844,34 @@ export default function AdminPage() {
     }
   };
 
+  // Check simulator visibility on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isHidden = sessionStorage.getItem('admin-state-simulator-hidden') === 'true';
+      setSimulatorVisible(!isHidden);
+    }
+  }, []);
+
+  // Function to show the simulator
+  const showSimulator = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('admin-state-simulator-hidden');
+      setSimulatorVisible(true);
+      // Refresh the page to re-mount the simulator
+      window.location.reload();
+    }
+  };
+
+  // Function to reset simulator state
+  const resetSimulatorState = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('admin-state-simulator');
+      sessionStorage.removeItem('admin-state-simulator-hidden');
+      setSimulatorVisible(true);
+      window.location.reload();
+    }
+  };
+
   // Filter feature flags based on hideGloballyEnabled setting
   const filteredFeatureFlags = hideGloballyEnabled
     ? featureFlags.filter(flag => !flag.enabled)
@@ -919,35 +950,14 @@ export default function AdminPage() {
               className="flex items-center gap-2 px-4 py-3 whitespace-nowrap border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary font-medium transition-all"
             >
               <Users className="h-4 w-4" />
-              User Management
-            </SwipeableTabsTrigger>
-            <SwipeableTabsTrigger
-              value="admins"
-              className="flex items-center gap-2 px-4 py-3 whitespace-nowrap border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary font-medium transition-all"
-            >
-              <Shield className="h-4 w-4" />
-              Admin Users
+              Users
             </SwipeableTabsTrigger>
             <SwipeableTabsTrigger
               value="tools"
               className="flex items-center gap-2 px-4 py-3 whitespace-nowrap border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary font-medium transition-all"
             >
               <Smartphone className="h-4 w-4" />
-              Admin Tools
-            </SwipeableTabsTrigger>
-            <SwipeableTabsTrigger
-              value="testing"
-              className="flex items-center gap-2 px-4 py-3 whitespace-nowrap border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary font-medium transition-all"
-            >
-              <BarChart3 className="h-4 w-4" />
-              Testing Tools
-            </SwipeableTabsTrigger>
-            <SwipeableTabsTrigger
-              value="payments"
-              className="flex items-center gap-2 px-4 py-3 whitespace-nowrap border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary font-medium transition-all"
-            >
-              <DollarSign className="h-4 w-4" />
-              Payments & Payouts
+              Tools
             </SwipeableTabsTrigger>
           </div>
         </SwipeableTabsList>
@@ -993,117 +1003,124 @@ export default function AdminPage() {
           )}
         </SwipeableTabsContent>
 
-        {/* User Management Tab */}
-        <SwipeableTabsContent value="users" className="space-y-4 pt-4">
-          <UserManagement />
-        </SwipeableTabsContent>
-
-        {/* Admin Users Tab */}
-        <SwipeableTabsContent value="admins" className="space-y-4 pt-4">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-2">Admin Users</h2>
-            <p className="text-muted-foreground">Manage users with administrative privileges</p>
+        {/* Users Tab - Combined User Management and Admin Users */}
+        <SwipeableTabsContent value="users" className="space-y-6 pt-6">
+          {/* User Management Section */}
+          <div>
+            <h2 className="text-2xl font-bold mb-2">User Management</h2>
+            <p className="text-muted-foreground mb-4">Manage all users and administrative privileges</p>
+            <UserManagement />
           </div>
 
-          {/* Search */}
-          <div className="flex gap-2 mb-6">
-            <div className="flex-1">
-              <Input
-                placeholder="Search by email or username"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
+          {/* Admin Users Section */}
+          <div className="border-t pt-6">
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold mb-2">Admin Users</h3>
+              <p className="text-muted-foreground">Manage users with administrative privileges</p>
             </div>
-            <Button
-              variant="outline"
-              onClick={handleSearch}
-              disabled={isSearching || !searchTerm}
-            >
-              {isSearching ? <Loader className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            </Button>
-          </div>
 
-          {/* Search Results */}
-          {searchResults.length > 0 && (
-            <div className="space-y-2 mb-6">
-              <h3 className="text-sm font-medium">Search Results</h3>
-              <div className="space-y-2">
-                {searchResults.map(user => (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between p-3 rounded-md border border-border hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{session.username || 'No username'}</span>
-                      <span className="text-xs text-muted-foreground">{session.email}</span>
-                    </div>
-                    <Button
-                      variant={user.isAdmin ? "destructive" : "outline"}
-                      size="sm"
-                      onClick={() => toggleAdminStatus(session as any)}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <Loader className="h-4 w-4 animate-spin" />
-                      ) : user.isAdmin ? (
-                        "Remove Admin"
-                      ) : (
-                        "Make Admin"
-                      )}
-                    </Button>
-                  </div>
-                ))}
+            {/* Search */}
+            <div className="flex gap-2 mb-6">
+              <div className="flex-1">
+                <Input
+                  placeholder="Search by email or username"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                />
               </div>
+              <Button
+                variant="outline"
+                onClick={handleSearch}
+                disabled={isSearching || !searchTerm}
+              >
+                {isSearching ? <Loader className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              </Button>
             </div>
-          )}
 
-          {/* Current Admin Users */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium">Current Admin Users</h3>
-            {isLoading ? (
-              <div className="flex justify-center py-4">
-                <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
-            ) : adminUsers.length > 0 ? (
-              <div className="space-y-2">
-                {adminUsers.map(admin => (
-                  <div
-                    key={admin.id}
-                    className="flex items-center justify-between p-3 rounded-md border border-border bg-primary/5 hover:bg-primary/10 transition-colors"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{admin.username || 'No username'}</span>
-                      <span className="text-xs text-muted-foreground">{admin.email}</span>
-                    </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => toggleAdminStatus(admin)}
-                      disabled={isLoading || admin.email === 'jamiegray2234@gmail.com'} // Prevent removing the main admin
+            {/* Search Results */}
+            {searchResults.length > 0 && (
+              <div className="space-y-2 mb-6">
+                <h4 className="text-sm font-medium">Search Results</h4>
+                <div className="space-y-2">
+                  {searchResults.map(user => (
+                    <div
+                      key={user.id}
+                      className="flex items-center justify-between p-3 rounded-md border border-border hover:bg-muted/50 transition-colors"
                     >
-                      {isLoading ? (
-                        <Loader className="h-4 w-4 animate-spin" />
-                      ) : (
-                        "Remove Admin"
-                      )}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-4 text-muted-foreground">
-                No admin users found
+                      <div className="flex flex-col">
+                        <span className="font-medium">{session.username || 'No username'}</span>
+                        <span className="text-xs text-muted-foreground">{session.email}</span>
+                      </div>
+                      <Button
+                        variant={user.isAdmin ? "destructive" : "outline"}
+                        size="sm"
+                        onClick={() => toggleAdminStatus(session as any)}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <Loader className="h-4 w-4 animate-spin" />
+                        ) : user.isAdmin ? (
+                          "Remove Admin"
+                        ) : (
+                          "Make Admin"
+                        )}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+
+            {/* Current Admin Users */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Current Admin Users</h4>
+              {isLoading ? (
+                <div className="flex justify-center py-4">
+                  <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : adminUsers.length > 0 ? (
+                <div className="space-y-2">
+                  {adminUsers.map(admin => (
+                    <div
+                      key={admin.id}
+                      className="flex items-center justify-between p-3 rounded-md border border-border bg-primary/5 hover:bg-primary/10 transition-colors"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium">{admin.username || 'No username'}</span>
+                        <span className="text-xs text-muted-foreground">{admin.email}</span>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => toggleAdminStatus(admin)}
+                        disabled={isLoading || admin.email === 'jamiegray2234@gmail.com'} // Prevent removing the main admin
+                      >
+                        {isLoading ? (
+                          <Loader className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Remove Admin"
+                        )}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  No admin users found
+                </div>
+              )}
+            </div>
           </div>
         </SwipeableTabsContent>
 
-        {/* Admin Tools Tab */}
-        <SwipeableTabsContent value="tools" className="space-y-4 pt-4">
+
+
+        {/* Tools Tab - Consolidated Admin Tools, Testing Tools, and Payments */}
+        <SwipeableTabsContent value="tools" className="space-y-6 pt-6">
           <div className="mb-6">
             <h2 className="text-2xl font-bold mb-2">Admin Tools</h2>
-            <p className="text-muted-foreground">Additional administrative tools and utilities</p>
+            <p className="text-muted-foreground">Comprehensive administrative tools, testing utilities, and payment management</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1124,6 +1141,40 @@ export default function AdminPage() {
                 >
                   <Settings className="h-4 w-4" />
                   Go to Feature Flags Tab
+                </Button>
+              </div>
+            </div>
+
+            {/* Admin State Simulator */}
+            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Admin State Simulator</h3>
+                <span className="text-xs px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
+                  {simulatorVisible ? 'Visible' : 'Hidden'}
+                </span>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Floating UI for simulating auth, subscription, and token states for testing
+              </span>
+              <div className="mt-2 space-y-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={showSimulator}
+                  disabled={simulatorVisible}
+                >
+                  <Eye className="h-4 w-4" />
+                  {simulatorVisible ? 'Already Visible' : 'Show Simulator'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={resetSimulatorState}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Reset State
                 </Button>
               </div>
             </div>
@@ -1245,277 +1296,77 @@ export default function AdminPage() {
               </div>
             </div>
 
-          </div>
-        </SwipeableTabsContent>
-
-        {/* Testing Tools Tab */}
-        <SwipeableTabsContent value="testing" className="space-y-4 pt-4">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-2">Testing Tools</h2>
-            <p className="text-muted-foreground">Admin-only tools for testing payout systems and token earnings</p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Inactive Subscription Testing Tool */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  Inactive Subscription Test
-                </CardTitle>
-                <CardDescription>
-                  Test UI behavior when subscription appears as inactive
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <div className="space-y-1">
-                    <span className="text-sm font-medium">Show Inactive Subscription</span>
-                    <p className="text-xs text-muted-foreground">
-                      Makes subscription appear inactive for UI testing
-                    </p>
-                  </div>
-                  <Switch
-                    checked={inactiveSubscriptionEnabled}
-                    onCheckedChange={handleInactiveSubscriptionToggle}
-                    className="data-[state=checked]:bg-primary"
-                  />
-                </div>
-                <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg">
-                  <strong>Note:</strong> This only affects the UI display for testing purposes.
-                  It does not change actual subscription status or billing.
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Mock Token Earnings Tool */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Mock Token Earnings
-                </CardTitle>
-                <CardDescription>
-                  Create test token earnings for your account
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Token Amount</label>
-                  <Input
-                    type="number"
-                    placeholder="100"
-                    value={mockTokenAmount}
-                    onChange={(e) => setMockTokenAmount(e.target.value)}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleMockTokenEarnings}
-                    disabled={mockEarningsLoading || resetEarningsLoading}
-                    className="flex-1"
-                  >
-                    {mockEarningsLoading ? (
-                      <>
-                        <Loader className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      'Create Mock Earnings'
-                    )}
-                  </Button>
-                  <Button
-                    onClick={handleResetMockEarnings}
-                    disabled={mockEarningsLoading || resetEarningsLoading}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    {resetEarningsLoading ? (
-                      <>
-                        <Loader className="mr-2 h-4 w-4 animate-spin" />
-                        Resetting...
-                      </>
-                    ) : (
-                      'Reset to Normal'
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Payout Flow Testing Tool */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Test Payout Flow
-                </CardTitle>
-                <CardDescription>
-                  Test the complete payout workflow for your account
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-sm text-muted-foreground">
-                  This will test the complete flow: token allocation → earnings calculation → payout request → processing
-                </div>
+            {/* Testing Tools */}
+            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Testing Tools</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Test payout systems, token earnings, and subscription states
+              </span>
+              <div className="mt-2 space-y-2">
                 <Button
-                  onClick={handleTestPayoutFlow}
-                  disabled={payoutTestLoading}
-                  className="w-full"
-                >
-                  {payoutTestLoading ? (
-                    <>
-                      <Loader className="mr-2 h-4 w-4 animate-spin" />
-                      Testing Payout Flow...
-                    </>
-                  ) : (
-                    'Test Complete Payout Flow for My Account'
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Payout System Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  Payout System Status
-                </CardTitle>
-                <CardDescription>
-                  Check the health and status of the payout system
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Button
-                  onClick={handleCheckPayoutStatus}
-                  disabled={statusCheckLoading}
-                  className="w-full"
                   variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => {
+                    const enabled = !inactiveSubscriptionEnabled;
+                    handleInactiveSubscriptionToggle(enabled);
+                  }}
                 >
-                  {statusCheckLoading ? (
-                    <>
-                      <Loader className="mr-2 h-4 w-4 animate-spin" />
-                      Checking Status...
-                    </>
-                  ) : (
-                    'Check System Status'
-                  )}
+                  <DollarSign className="h-4 w-4" />
+                  {inactiveSubscriptionEnabled ? 'Disable' : 'Enable'} Inactive Subscription Test
                 </Button>
-              </CardContent>
-            </Card>
-
-            {/* Monthly Distribution Tool */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <RefreshCw className="h-5 w-5" />
-                  Monthly Distribution
-                </CardTitle>
-                <CardDescription>
-                  Manually trigger monthly token distribution processing
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Month (YYYY-MM)</label>
-                  <Input
-                    placeholder="2024-01"
-                    value={distributionMonth}
-                    onChange={(e) => setDistributionMonth(e.target.value)}
-                  />
-                </div>
                 <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
                   onClick={handleMonthlyDistribution}
                   disabled={distributionLoading}
-                  className="w-full"
-                  variant="outline"
                 >
                   {distributionLoading ? (
-                    <>
-                      <Loader className="mr-2 h-4 w-4 animate-spin" />
-                      Processing Distribution...
-                    </>
+                    <Loader className="h-4 w-4 animate-spin" />
                   ) : (
-                    'Process Monthly Distribution'
+                    <RefreshCw className="h-4 w-4" />
                   )}
+                  Test Monthly Distribution
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+
+            {/* Payment Management */}
+            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Payment Management</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Monitor and manage financial operations and payouts
+              </span>
+              <div className="mt-2 space-y-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/payments')}
+                >
+                  <DollarSign className="h-4 w-4" />
+                  Payment Dashboard
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => window.open('/admin/tools', '_blank')}
+                >
+                  <Settings className="h-4 w-4" />
+                  Advanced Tools
+                </Button>
+              </div>
+            </div>
+
           </div>
         </SwipeableTabsContent>
 
-        {/* Payments & Payouts Tab */}
-        <SwipeableTabsContent value="payments" className="space-y-4 pt-4">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-2">Payment & Payout Systems</h2>
-            <p className="text-muted-foreground">Real-time monitoring and management of financial operations</p>
-          </div>
-
-          <div className="grid gap-6">
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Quick Actions
-                </CardTitle>
-                <CardDescription>
-                  Common payment and payout management tasks
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-3 md:grid-cols-3">
-                  <Link href="/admin/payments">
-                    <Button className="w-full" variant="outline">
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      Full Monitoring Dashboard
-                    </Button>
-                  </Link>
-                  <Button
-                    onClick={() => window.open('/api/admin/webhook-validation', '_blank')}
-                    className="w-full"
-                    variant="outline"
-                  >
-                    <Shield className="mr-2 h-4 w-4" />
-                    Webhook Health Check
-                  </Button>
-                  <Button
-                    onClick={() => window.open('/api/admin/payment-metrics', '_blank')}
-                    className="w-full"
-                    variant="outline"
-                  >
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    System Status API
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* System Status Overview */}
-            <Card>
-              <CardHeader>
-                <CardTitle>System Status Overview</CardTitle>
-                <CardDescription>
-                  High-level health indicators for payment and payout systems
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">
-                    For detailed monitoring, use the full dashboard
-                  </p>
-                  <Link href="/admin/payments">
-                    <Button>
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      Open Payment Monitoring Dashboard
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </SwipeableTabsContent>
       </SwipeableTabs>
       </div>
     </div>

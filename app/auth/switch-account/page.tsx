@@ -82,10 +82,9 @@ export default function SwitchAccountPage() {
           }
         }
 
-        // Set cookies for session-based auth
+        // Set cookies for session-based auth (using standard WeWrite auth cookies)
         try {
-          Cookies.set('wewrite_user_id', switchToAccount.uid, { expires: 7 });
-          Cookies.set('wewrite_authenticated', 'true', { expires: 7 });
+          Cookies.set('authenticated', 'true', { expires: 7 });
           Cookies.set('userSession', JSON.stringify({
             uid: switchToAccount.uid,
             email: switchToAccount.email,

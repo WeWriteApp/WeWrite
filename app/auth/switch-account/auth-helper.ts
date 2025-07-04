@@ -51,9 +51,7 @@ export const signInWithToken = async (token: string): Promise<User> => {
 export const setupSessionCookies = (userData: UserData): void => {
   if (!userData || !userData.uid) return;
 
-  // Set cookies for session-based auth
-  Cookies.set('wewrite_user_id', userData.uid, { expires: 7 });
-  Cookies.set('wewrite_authenticated', 'true', { expires: 7 });
+  // Set cookies for session-based auth (using standard WeWrite auth cookies)
   Cookies.set('authenticated', 'true', { expires: 7 });
   Cookies.set('userSession', JSON.stringify({
     uid: userData.uid,

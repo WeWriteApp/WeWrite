@@ -2,8 +2,10 @@
 
 import React from 'react';
 import { Button } from '../ui/button';
-import { Calendar, RotateCcw } from 'lucide-react';
+import { Switch } from '../ui/switch';
+import { Calendar, RotateCcw, TrendingUp, Users, BarChart3, Activity } from 'lucide-react';
 import { format, subDays, subWeeks, subMonths, startOfDay, endOfDay } from 'date-fns';
+import { GlobalAnalyticsFilters as GlobalAnalyticsFiltersType } from './GlobalAnalyticsFilters';
 
 export interface DateRange {
   startDate: Date;
@@ -17,6 +19,10 @@ interface DateRangeFilterProps {
   compact?: boolean; // New prop for horizontal compact layout
   granularity?: number; // Chart granularity/buckets
   onGranularityChange?: (granularity: number) => void; // Granularity change handler
+  // Combined filter props
+  globalFilters?: GlobalAnalyticsFiltersType;
+  onGlobalFiltersChange?: (filters: GlobalAnalyticsFiltersType) => void;
+  combined?: boolean; // New prop to enable combined filter mode
 }
 
 export function DateRangeFilter({
@@ -25,7 +31,10 @@ export function DateRangeFilter({
   className = "",
   compact = false,
   granularity = 50,
-  onGranularityChange
+  onGranularityChange,
+  globalFilters,
+  onGlobalFiltersChange,
+  combined = false
 }: DateRangeFilterProps) {
   // Preset date range options
   const presetRanges = [
@@ -118,24 +127,48 @@ export function DateRangeFilter({
     }
   };
 
+  // Global filter handlers
+  const handleTimeDisplayModeChange = (mode: 'cumulative' | 'overTime') => {
+    if (onGlobalFiltersChange && globalFilters) {
+      onGlobalFiltersChange({
+        ...globalFilters,
+        timeDisplayMode: mode
+      });
+    }
+  };
+
+  const handlePerUserNormalizationChange = (enabled: boolean) => {
+    if (onGlobalFiltersChange && globalFilters) {
+      onGlobalFiltersChange({
+        ...globalFilters,
+        perUserNormalization: enabled
+      });
+    }
+  };
+
   // Compact horizontal layout for filter bar
   if (compact) {
     return (
       <div className={`${className}`}>
-        <div className="flex items-center gap-4 overflow-x-auto pb-2 options-bar-compact">
+        <div className="relative">
+          {/* Gradient fade indicators for scrollability */}
+          <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-card to-transparent pointer-events-none z-10 opacity-50"></div>
+          <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-card to-transparent pointer-events-none z-10 opacity-50"></div>
+
+          <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent options-bar-compact">
           {/* Date Inputs - Compact */}
-          <div className="flex items-center gap-2 text-sm whitespace-nowrap">
+          <div className="flex items-center gap-2 text-sm whitespace-nowrap flex-shrink-0">
             <span className="text-muted-foreground font-medium">From:</span>
             <input
               type="date"
               value={formatDateForInput(dateRange.startDate)}
               onChange={handleStartDateChange}
               max={formatDateForInput(dateRange.endDate)}
-              className="px-2 py-1.5 border border-border rounded text-foreground bg-background text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-colors w-36"
+              className="px-2 py-1.5 border border-border rounded text-foreground bg-background text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-colors w-32"
             />
           </div>
 
-          <div className="flex items-center gap-2 text-sm whitespace-nowrap">
+          <div className="flex items-center gap-2 text-sm whitespace-nowrap flex-shrink-0">
             <span className="text-muted-foreground font-medium">To:</span>
             <input
               type="date"
@@ -143,12 +176,12 @@ export function DateRangeFilter({
               onChange={handleEndDateChange}
               min={formatDateForInput(dateRange.startDate)}
               max={formatDateForInput(new Date())}
-              className="px-2 py-1.5 border border-border rounded text-foreground bg-background text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-colors w-36"
+              className="px-2 py-1.5 border border-border rounded text-foreground bg-background text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-colors w-32"
             />
           </div>
 
           {/* Separator */}
-          <div className="h-6 w-px bg-border"></div>
+          <div className="h-6 w-px bg-border flex-shrink-0"></div>
 
           {/* Preset Buttons - Horizontal */}
           {presetRanges.map((preset) => (
@@ -157,14 +190,14 @@ export function DateRangeFilter({
               variant="outline"
               size="sm"
               onClick={() => applyPresetRange(preset)}
-              className="text-xs px-3 py-1.5 h-auto whitespace-nowrap hover:bg-primary hover:text-primary-foreground transition-colors flex-shrink-0"
+              className="text-xs px-2.5 py-1.5 h-auto whitespace-nowrap hover:bg-primary hover:text-primary-foreground transition-colors flex-shrink-0"
             >
               {preset.label}
             </Button>
           ))}
 
           {/* Separator */}
-          <div className="h-6 w-px bg-border"></div>
+          <div className="h-6 w-px bg-border flex-shrink-0"></div>
 
           {/* Reset Button */}
           <Button
@@ -178,12 +211,69 @@ export function DateRangeFilter({
           </Button>
 
           {/* Separator */}
-          <div className="h-6 w-px bg-border"></div>
+          <div className="h-6 w-px bg-border flex-shrink-0"></div>
+
+          {/* Global Analytics Filters - Combined Mode */}
+          {combined && globalFilters && onGlobalFiltersChange && (
+            <>
+              {/* Time Display Mode Toggle */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">Display:</span>
+                </div>
+                <div className="flex items-center bg-muted rounded-md p-0.5">
+                  <Button
+                    variant={globalFilters.timeDisplayMode === 'cumulative' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleTimeDisplayModeChange('cumulative')}
+                    className="h-6 px-2 text-xs font-medium"
+                  >
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                    Cumulative
+                  </Button>
+                  <Button
+                    variant={globalFilters.timeDisplayMode === 'overTime' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleTimeDisplayModeChange('overTime')}
+                    className="h-6 px-2 text-xs font-medium"
+                  >
+                    <Activity className="h-3 w-3 mr-1" />
+                    Over Time
+                  </Button>
+                </div>
+              </div>
+
+              {/* Separator */}
+              <div className="h-6 w-px bg-border flex-shrink-0"></div>
+
+              {/* Per-User Normalization Toggle */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">Per User:</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Switch
+                    checked={globalFilters.perUserNormalization}
+                    onCheckedChange={handlePerUserNormalizationChange}
+                    className="data-[state=checked]:bg-primary scale-75"
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {globalFilters.perUserNormalization ? 'ON' : 'OFF'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Separator */}
+              <div className="h-6 w-px bg-border flex-shrink-0"></div>
+            </>
+          )}
 
           {/* Granularity Controls */}
           {onGranularityChange && (
             <>
-              <div className="flex items-center gap-2 text-sm whitespace-nowrap">
+              <div className="flex items-center gap-2 text-xs whitespace-nowrap flex-shrink-0">
                 <span className="text-muted-foreground font-medium">Granularity:</span>
               </div>
 
@@ -194,23 +284,35 @@ export function DateRangeFilter({
                   variant={granularity === option ? "default" : "outline"}
                   size="sm"
                   onClick={() => handleGranularityChange(option)}
-                  className="text-xs px-3 py-1.5 h-auto whitespace-nowrap hover:bg-primary hover:text-primary-foreground transition-colors flex-shrink-0"
+                  className="text-xs px-2 py-1.5 h-auto whitespace-nowrap hover:bg-primary hover:text-primary-foreground transition-colors flex-shrink-0"
                 >
                   {option}
                 </Button>
               ))}
 
               {/* Separator */}
-              <div className="h-6 w-px bg-border"></div>
+              <div className="h-6 w-px bg-border flex-shrink-0"></div>
             </>
           )}
 
           {/* Current Range Display - Compact */}
-          <div className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 ml-2">
+          <div className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 ml-1">
             <span className="font-mono">{format(dateRange.startDate, 'MMM dd')}</span>
             <span className="mx-1">→</span>
             <span className="font-mono">{format(dateRange.endDate, 'MMM dd')}</span>
-            <span className="ml-2">({Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24))}d)</span>
+            <span className="ml-1.5">({Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24))}d)</span>
+          </div>
+
+          {/* Info Text for Combined Mode */}
+          {combined && globalFilters && (
+            <div className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 ml-2 opacity-75">
+              {globalFilters.timeDisplayMode === 'cumulative'
+                ? 'Running totals'
+                : 'Period values'
+              }
+              {globalFilters.perUserNormalization && ' • Per user'}
+            </div>
+          )}
           </div>
         </div>
       </div>

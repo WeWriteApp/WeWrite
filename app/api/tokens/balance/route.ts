@@ -17,10 +17,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    console.log(`🎯 Token Balance API: Getting balance for user ${userId}`);
+
     // Get token balance
     const balance = await ServerTokenService.getUserTokenBalance(userId);
 
+    console.log(`🎯 Token Balance API: Retrieved balance:`, balance);
+
     if (!balance) {
+      console.log(`🎯 Token Balance API: No balance found for user ${userId}`);
       return NextResponse.json({
         balance: null,
         allocations: [],
@@ -31,7 +36,7 @@ export async function GET(request: NextRequest) {
     // Get current allocations
     const allocations = await ServerTokenService.getUserTokenAllocations(userId);
 
-    return NextResponse.json({
+    const response = {
       balance,
       allocations,
       summary: {
@@ -40,7 +45,16 @@ export async function GET(request: NextRequest) {
         availableTokens: balance.availableTokens,
         allocationCount: allocations.length
       }
+    };
+
+    console.log(`🎯 Token Balance API: Returning response:`, {
+      totalTokens: balance.totalTokens,
+      allocatedTokens: balance.allocatedTokens,
+      availableTokens: balance.availableTokens,
+      allocationCount: allocations.length
     });
+
+    return NextResponse.json(response);
 
   } catch (error) {
     console.error('Error getting token balance:', error);

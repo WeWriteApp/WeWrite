@@ -31,6 +31,7 @@ import { LineSettingsMenu } from "../utils/LineSettingsMenu";
 // Editor Components
 import Editor from "../editor/Editor";
 import TextView from "../editor/TextView";
+import PageEditor from "../editor/PageEditor";
 
 // Types
 interface PageViewProps {
@@ -633,20 +634,22 @@ export default function PageView({
                   </div>
                 }>
                   {isEditing ? (
-                    <Editor
-                      ref={editorRef}
-                      key={`editor-${page.id}`}
+                    <PageEditor
+                      title={title}
+                      setTitle={handleTitleChange}
                       initialContent={editorState}
-                      onChange={handleContentChange}
-                      readOnly={false}
-                      canEdit={canEdit}
-                      onSetIsEditing={handleSetIsEditing}
-                      user={currentAccount}
-                      currentPage={page}
-                      contentType="wiki"
-                      placeholder="Start typing..."
-                      isEditMode={true}
+                      onContentChange={handleContentChange}
+                      isPublic={isPublic}
+                      setIsPublic={handleVisibilityChange}
+                      location={location}
+                      setLocation={handleLocationChange}
+                      onSave={handleSave}
+                      onCancel={handleCancel}
+                      onDelete={canEdit ? handleDelete : null}
+                      isSaving={isSaving}
+                      error={error || ""}
                       isNewPage={false}
+                      page={page}
                     />
                   ) : (
                     <TextView

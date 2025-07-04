@@ -65,12 +65,7 @@ export function TokenPieChart({
           />
         </svg>
         
-        {/* Center percentage text */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-xs font-medium text-foreground">
-            {Math.round(percentage)}%
-          </span>
-        </div>
+        {/* Center is now empty - no percentage text */}
       </div>
       
       {/* Fraction text */}

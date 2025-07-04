@@ -70,14 +70,7 @@ export async function getUserIdFromRequest(request) {
     }
   }
 
-  // If still no userId, try other cookies
-  const wewriteUserId = request.cookies.get('wewrite_user_id')?.value;
-  if (wewriteUserId) {
-    console.log('Using userId from wewrite_user_id cookie:', wewriteUserId);
-    return wewriteUserId;
-  }
-
-  // If still no userId, try userSession cookie
+  // If still no userId, try userSession cookie (standard WeWrite auth)
   const userSessionCookie = request.cookies.get('userSession')?.value;
   if (userSessionCookie) {
     try {

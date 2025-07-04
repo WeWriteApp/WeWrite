@@ -6,7 +6,6 @@ import { cn } from '../../lib/utils';
 interface UserProfileSkeletonProps {
   className?: string;
   showTabs?: boolean;
-  showStats?: boolean;
   showBio?: boolean;
 }
 
@@ -26,7 +25,6 @@ interface UserProfileSkeletonProps {
 export function UserProfileSkeleton({
   className,
   showTabs = true,
-  showStats = true,
   showBio = true}: UserProfileSkeletonProps) {
   return (
     <div className={cn("p-5 md:p-4 animate-pulse", className)}>
@@ -64,23 +62,7 @@ export function UserProfileSkeleton({
         )}
       </div>
 
-      {/* Stats grid skeleton */}
-      {showStats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="flex flex-col items-center gap-2">
-              <div className="flex items-center gap-2">
-                <div className="h-6 w-12 bg-muted rounded" />
-                <div className="w-16 h-6 bg-muted rounded" />
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="h-3 w-3 bg-muted rounded" />
-                <div className="h-3 w-12 bg-muted rounded" />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+
 
       {/* Tabs skeleton */}
       {showTabs && (
@@ -146,15 +128,7 @@ export function CompactUserProfileSkeleton({ className }: { className?: string }
         </div>
       </div>
 
-      {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="text-center">
-            <div className="h-4 w-8 bg-muted rounded mx-auto mb-1" />
-            <div className="h-3 w-12 bg-muted rounded mx-auto" />
-          </div>
-        ))}
-      </div>
+
 
       {/* Content preview */}
       <div className="space-y-2">
@@ -166,27 +140,7 @@ export function CompactUserProfileSkeleton({ className }: { className?: string }
   );
 }
 
-/**
- * Profile stats skeleton for immediate feedback
- */
-export function ProfileStatsSkeleton({ className }: { className?: string }) {
-  return (
-    <div className={cn("grid grid-cols-2 md:grid-cols-4 gap-6 animate-pulse", className)}>
-      {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="flex flex-col items-center gap-2">
-          <div className="flex items-center gap-2">
-            <div className="h-6 w-12 bg-muted rounded" />
-            <div className="w-16 h-6 bg-muted rounded" />
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="h-3 w-3 bg-muted rounded" />
-            <div className="h-3 w-12 bg-muted rounded" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+
 
 /**
  * Profile tabs skeleton for tab switching

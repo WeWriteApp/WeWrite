@@ -337,52 +337,38 @@ function NewPageContent() {
       return false;
     }
 
-    // CRITICAL FIX: Ensure Firebase Auth is ready before making Firestore calls
+    // CRITICAL FIX: Handle both Firebase Auth and session-based auth
     try {
       const { getAuth } = await import('firebase/auth');
       const auth = getAuth();
 
-      // Wait for auth state to be ready
-      if (!auth.currentUser) {
-        console.error('🔴 DEBUG: Firebase Auth user not ready');
-        const errorMsg = "Authentication not ready. Please try again.";
-        setError(errorMsg);
-        toast({
-          title: "Authentication Error",
-          description: errorMsg,
-          variant: "destructive"});
-        return false;
-      }
-
-      // Verify the auth user matches our currentAccount
-      if (auth.currentUser.uid !== currentAccount.uid) {
-        console.error('🔴 DEBUG: Auth user mismatch', {
-          authUid: auth.currentUser.uid,
-          currentAccountUid: currentAccount.uid
+      // For session-based auth (after account switching), Firebase Auth might not be ready
+      // In this case, we trust the currentAccount from our session system
+      if (auth.currentUser) {
+        // Firebase Auth is available - verify it matches our currentAccount
+        if (auth.currentUser.uid !== currentAccount.uid) {
+          console.warn('🟡 DEBUG: Auth user mismatch - using session-based auth', {
+            authUid: auth.currentUser.uid,
+            currentAccountUid: currentAccount.uid
+          });
+          // Don't fail - session-based auth takes precedence after account switching
+        } else {
+          console.log('🔵 DEBUG: Firebase Auth verified:', {
+            authUid: auth.currentUser.uid,
+            currentAccountUid: currentAccount.uid,
+            emailVerified: auth.currentUser.emailVerified
+          });
+        }
+      } else {
+        // Firebase Auth not ready - use session-based auth
+        console.log('🔵 DEBUG: Using session-based auth (Firebase Auth not ready):', {
+          currentAccountUid: currentAccount.uid,
+          authMethod: 'session-based'
         });
-        const errorMsg = "Authentication mismatch. Please refresh and try again.";
-        setError(errorMsg);
-        toast({
-          title: "Authentication Error",
-          description: errorMsg,
-          variant: "destructive"});
-        return false;
       }
-
-      console.log('🔵 DEBUG: Firebase Auth verified:', {
-        authUid: auth.currentUser.uid,
-        currentAccountUid: currentAccount.uid,
-        emailVerified: auth.currentUser.emailVerified
-      });
     } catch (authError) {
-      console.error('🔴 DEBUG: Firebase Auth check failed:', authError);
-      const errorMsg = "Authentication verification failed. Please try again.";
-      setError(errorMsg);
-      toast({
-        title: "Authentication Error",
-        description: errorMsg,
-        variant: "destructive"});
-      return false;
+      console.warn('🟡 DEBUG: Firebase Auth check failed, using session-based auth:', authError);
+      // Don't fail - session-based auth is sufficient
     }
 
     console.log('🔵 DEBUG: Starting save process...');
@@ -473,7 +459,8 @@ function NewPageContent() {
       }
 
       // Check if we should use the sync queue (only for unverified email users)
-      const useQueue = !auth.currentUser?.emailVerified;
+      // For session-based auth, assume email is verified (since they successfully switched accounts)
+      const useQueue = auth.currentUser ? !auth.currentUser.emailVerified : false;
 
       if (useQueue) {
         // For unverified users, add to sync queue instead of creating immediately

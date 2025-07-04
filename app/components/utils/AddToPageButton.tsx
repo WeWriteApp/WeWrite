@@ -139,6 +139,8 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
   const [internalIsOpen, setInternalIsOpen] = useState<boolean>(false);
   const [isAdding, setIsAdding] = useState<boolean>(false);
   const [selectedPage, setSelectedPage] = useState<SelectedPage | null>(null);
+  const [showSuccess, setShowSuccess] = useState<boolean>(false);
+  const [successTargetPage, setSuccessTargetPage] = useState<SelectedPage | null>(null);
   const { session } = useCurrentAccount();
   const router = useRouter();
 
@@ -151,6 +153,20 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
 
     // Store the selected page for the Insert button
     setSelectedPage(selected);
+  };
+
+  const handleGoToTargetPage = (): void => {
+    if (successTargetPage) {
+      router.push(`/${successTargetPage.id}`);
+      handleClose();
+    }
+  };
+
+  const handleClose = (): void => {
+    setIsOpen(false);
+    setSelectedPage(null);
+    setShowSuccess(false);
+    setSuccessTargetPage(null);
   };
 
   const handleInsert = async (): Promise<void> => {
@@ -174,7 +190,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
       }
 
       // 3. Check if user has permission to edit the target page
-      const canEdit = canUserEditPage(user, targetPageData);
+      const canEdit = canUserEditPage(session, targetPageData);
       if (!canEdit) {
         toast.error(ERROR_MESSAGES.permission_denied);
         return;
@@ -208,11 +224,10 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
         // Log successful operation
         logAppendOperation(session.uid, page.id, selectedPage.id, true);
 
-        setIsOpen(false);
+        // Show success state instead of redirecting immediately
+        setSuccessTargetPage(selectedPage);
+        setShowSuccess(true);
         setSelectedPage(null);
-
-        // Redirect to the target page (will load in view mode with click-to-edit functionality)
-        router.push(`/${selectedPage.id}`);
       } else {
         // Log failed operation
         logAppendOperation(session.uid, page.id, selectedPage.id, false, 'Append operation returned false');
@@ -241,10 +256,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
     }
   };
 
-  const handleClose = (): void => {
-    setIsOpen(false);
-    setSelectedPage(null);
-  };
+
 
   // Keyboard navigation support
   const handleKeyDown = (event: React.KeyboardEvent): void => {
@@ -299,38 +311,77 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
             </Button>
           </DialogClose>
           <DialogHeader>
-            <DialogTitle>Add this page to another page</DialogTitle>
+            <DialogTitle>
+              {showSuccess ? 'Page Added Successfully' : 'Add this page to another page'}
+            </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto py-4">
-            <p 
-              id="add-to-page-description" 
-              className="text-sm text-muted-foreground mb-4"
-            >
-              Select a page to add "{page?.title || 'this page'}" to. You can only add to pages you have permission to edit.
-            </p>
-            <AddToPageSearch onSelect={handleAddToPage} />
-          </div>
+          {showSuccess ? (
+            // Success state
+            <div className="flex-1 py-4 text-center">
+              <div className="mb-4">
+                <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-3">
+                  <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  "{page?.title || 'This page'}" has been successfully added to "{successTargetPage?.title}".
+                </p>
+              </div>
 
-          <DialogFooter className="mt-4 pt-4 border-t border-border dark:border-neutral-700">
-            <Button
-              onClick={handleInsert}
-              disabled={!selectedPage || isAdding}
-              className="w-full sm:w-auto rounded-2xl font-medium"
-              size="lg"
-              aria-label={selectedPage ? `Add content to ${selectedPage.title}` : 'Select a page first'}
-              aria-describedby="add-to-page-description"
-            >
-              {isAdding ? (
-                <>
-                  <div className="h-5 w-5 rounded-full border-2 border-current border-t-transparent animate-spin mr-1"></div>
-                  <span>Adding...</span>
-                </>
-              ) : (
-                'Add Content'
-              )}
-            </Button>
-          </DialogFooter>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
+                  onClick={handleGoToTargetPage}
+                  className="rounded-2xl font-medium"
+                  size="lg"
+                >
+                  Go to {successTargetPage?.title}
+                </Button>
+                <Button
+                  onClick={handleClose}
+                  variant="outline"
+                  className="rounded-2xl font-medium"
+                  size="lg"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          ) : (
+            // Search state
+            <>
+              <div className="flex-1 overflow-y-auto py-4">
+                <p
+                  id="add-to-page-description"
+                  className="text-sm text-muted-foreground mb-4"
+                >
+                  Select a page to add "{page?.title || 'this page'}" to. You can only add to pages you have permission to edit.
+                </p>
+                <AddToPageSearch onSelect={handleAddToPage} />
+              </div>
+
+              <DialogFooter className="mt-4 pt-4 border-t border-border dark:border-neutral-700">
+                <Button
+                  onClick={handleInsert}
+                  disabled={!selectedPage || isAdding}
+                  className="w-full sm:w-auto rounded-2xl font-medium"
+                  size="lg"
+                  aria-label={selectedPage ? `Add content to ${selectedPage.title}` : 'Select a page first'}
+                  aria-describedby="add-to-page-description"
+                >
+                  {isAdding ? (
+                    <>
+                      <div className="h-5 w-5 rounded-full border-2 border-current border-t-transparent animate-spin mr-1"></div>
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    'Add Content'
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </>

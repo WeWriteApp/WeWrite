@@ -44,8 +44,8 @@ export default function Header() {
       <TokenPieChart
         allocatedTokens={balance.allocatedTokens}
         totalTokens={balance.totalTokens}
-        size={36}
-        strokeWidth={3}
+        size={28}
+        strokeWidth={2.5}
         className="hover:opacity-80 transition-opacity"
         onClick={() => router.push('/settings/spend-tokens')}
       />
@@ -69,12 +69,21 @@ export default function Header() {
 
   // Listen to user subscription changes
   React.useEffect(() => {
+    console.log('🎯 Header: Subscription effect triggered', {
+      session: !!session,
+      isPaymentsEnabled,
+      sessionUid: session?.uid
+    });
+
     if (!session || !isPaymentsEnabled) {
+      console.log('🎯 Header: No session or payments disabled, clearing subscription');
       setSubscription(null);
       return;
     }
 
+    console.log('🎯 Header: Setting up subscription listener for user:', session.uid);
     const unsubscribe = listenToUserSubscription(session.uid, (subscriptionData) => {
+      console.log('🎯 Header: Subscription updated:', sub);
       setSubscription(subscriptionData);
     }, { verbose: false });
 
@@ -83,47 +92,46 @@ export default function Header() {
     };
   }, [session, isPaymentsEnabled]);
 
-  // Listen to user token balance changes
+  // Fetch token balance directly via API (simpler approach)
   React.useEffect(() => {
+    console.log('🎯 Header: Token balance effect triggered', {
+      session: !!session,
+      isPaymentsEnabled
+    });
+
     if (!session || !isPaymentsEnabled) {
+      console.log('🎯 Header: No session or payments disabled, clearing token balance');
       setTokenBalance(null);
       return;
     }
 
-    // Only listen to token balance if user has an active subscription
-    if (subscription && isActiveSubscription(subscription.status, subscription.cancelAtPeriodEnd, subscription.currentPeriodEnd)) {
-      const unsubscribe = TokenService.listenToTokenBalance(session.uid, (balance) => {
-        setTokenBalance(balance);
-
-        // If no token balance exists for an active subscription, try to initialize it
-        if (!balance && subscription.amount) {
-          fetch('/api/tokens/balance', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'initialize',
-              subscriptionAmount: subscription.amount
-            })
-          }).catch(error => {
-            console.error('Failed to initialize token balance:', error);
-          });
+    console.log('🎯 Header: Fetching token balance via API');
+    // Fetch token balance directly via API (same approach as spend-tokens page)
+    fetch('/api/tokens/balance')
+      .then(response => response.json())
+      .then(data => {
+        console.log('🎯 Header: Token balance API response:', data);
+        if (data.summary) {
+          console.log('🎯 Header: Setting token balance from summary:', data.summary);
+          setTokenBalance(data.summary);
+        } else if (data.balance) {
+          console.log('🎯 Header: Setting token balance from balance:', data.balance);
+          setTokenBalance(data.balance);
+        } else {
+          console.log('🎯 Header: No balance or summary in response');
         }
+      })
+      .catch(error => {
+        console.error('🎯 Header: Failed to fetch token balance:', error);
       });
+  }, [session, isPaymentsEnabled]);
 
-      return () => {
-        if (unsubscribe) unsubscribe();
-      };
-    } else {
-      setTokenBalance(null);
-    }
-  }, [session, isPaymentsEnabled, subscription]);
-
-  // Load unfunded token balance for users without active subscriptions
+  // Load unfunded token balance for users without subscriptions
   React.useEffect(() => {
     if (!isPaymentsEnabled) return;
 
-    // If user has active subscription, don't load unfunded tokens
-    if (subscription && isActiveSubscription(subscription.status, subscription.cancelAtPeriodEnd, subscription.currentPeriodEnd)) {
+    // If user has any subscription (active or canceled), don't load unfunded tokens
+    if (subscription) {
       setSimulatedTokenBalance(null);
       return;
     }

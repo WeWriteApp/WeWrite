@@ -73,6 +73,10 @@ export class ServerTokenService {
     }
 
     try {
+      // Get current subscription to ensure token balance is accurate
+      const subscriptionRef = db.collection('users').doc(userId).collection('subscription').doc('current');
+      const subscriptionDoc = await subscriptionRef.get();
+
       const balanceRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES)).doc(userId);
       const balanceDoc = await balanceRef.get();
 
@@ -81,14 +85,40 @@ export class ServerTokenService {
       }
 
       const balanceData = balanceDoc.data();
-      
-      // Convert to TokenBalance format
+      const subscriptionData = subscriptionDoc.exists ? subscriptionDoc.data() : null;
+
+      // Get actual allocated tokens by summing current allocations
+      const actualAllocatedTokens = await this.calculateActualAllocatedTokens(userId);
+
+      // Use subscription data if available, otherwise fall back to balance data
+      let totalTokens = balanceData?.totalTokens || 0;
+      let monthlyAllocation = balanceData?.monthlyAllocation || 0;
+
+      // If subscription exists and has different token amount, use subscription data
+      if (subscriptionData && subscriptionData.tokens && subscriptionData.tokens !== totalTokens) {
+        console.log(`[TOKEN BALANCE] Subscription tokens (${subscriptionData.tokens}) differ from balance tokens (${totalTokens}), using subscription data`);
+        totalTokens = subscriptionData.tokens;
+        monthlyAllocation = subscriptionData.tokens;
+
+        // Update the balance record to match subscription
+        await balanceRef.update({
+          totalTokens: subscriptionData.tokens,
+          monthlyAllocation: subscriptionData.tokens,
+          availableTokens: Math.max(0, subscriptionData.tokens - actualAllocatedTokens),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
+
+      // Calculate correct available tokens
+      const availableTokens = Math.max(0, totalTokens - actualAllocatedTokens);
+
+      // Convert to TokenBalance format with corrected values
       return {
         userId,
-        totalTokens: balanceData?.totalTokens || 0,
-        allocatedTokens: balanceData?.allocatedTokens || 0,
-        availableTokens: balanceData?.availableTokens || 0,
-        monthlyAllocation: balanceData?.monthlyAllocation || 0,
+        totalTokens,
+        allocatedTokens: actualAllocatedTokens,
+        availableTokens,
+        monthlyAllocation,
         lastAllocationDate: balanceData?.lastAllocationDate || '',
         createdAt: balanceData?.createdAt || new Date(),
         updatedAt: balanceData?.updatedAt || new Date()
@@ -96,6 +126,37 @@ export class ServerTokenService {
     } catch (error) {
       console.error('ServerTokenService: Error getting user token balance:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Calculate actual allocated tokens by summing current active allocations
+   */
+  static async calculateActualAllocatedTokens(userId: string): Promise<number> {
+    if (!db) {
+      throw new Error('Firebase Admin not initialized');
+    }
+
+    try {
+      const currentMonth = getCurrentMonth();
+      const allocationsRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS));
+      const query = allocationsRef
+        .where('userId', '==', userId)
+        .where('month', '==', currentMonth)
+        .where('status', '==', 'active');
+
+      const querySnapshot = await query.get();
+
+      let totalAllocated = 0;
+      querySnapshot.forEach(doc => {
+        const allocation = doc.data();
+        totalAllocated += allocation.tokens || 0;
+      });
+
+      return totalAllocated;
+    } catch (error) {
+      console.error('ServerTokenService: Error calculating actual allocated tokens:', error);
+      return 0;
     }
   }
 
@@ -168,6 +229,29 @@ export class ServerTokenService {
         throw new Error('Insufficient tokens available');
       }
 
+      // Get page owner (recipient) for the allocation
+      let recipientUserId = '';
+      if (newPageAllocation > 0) {
+        try {
+          const pageRef = db.collection('pages').doc(pageId);
+          const pageDoc = await pageRef.get();
+
+          if (pageDoc.exists) {
+            const pageData = pageDoc.data();
+            recipientUserId = pageData?.userId || '';
+
+            if (!recipientUserId) {
+              console.warn(`Page ${pageId} exists but has no userId field`);
+            }
+          } else {
+            console.warn(`Page ${pageId} not found when allocating tokens`);
+          }
+        } catch (error) {
+          console.error(`Error fetching page ${pageId} for token allocation:`, error);
+          // Continue with empty recipientUserId rather than failing the allocation
+        }
+      }
+
       // Use a batch to ensure atomicity
       const batch = db.batch();
 
@@ -190,7 +274,7 @@ export class ServerTokenService {
         batch.set(allocationRef, {
           id: allocationId,
           userId,
-          recipientUserId: '', // Will be filled when we know the page owner
+          recipientUserId, // Now properly filled with page owner
           resourceType: 'page',
           resourceId: pageId,
           tokens: newPageAllocation,
@@ -203,11 +287,36 @@ export class ServerTokenService {
         // Remove allocation if tokens are 0
         const allocationId = `${userId}_${pageId}_${currentMonth}`;
         const allocationRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS)).doc(allocationId);
+
+        // Get the existing allocation to find the recipient before deleting
+        if (allocationDifference < 0) {
+          try {
+            const existingAllocationDoc = await allocationRef.get();
+            if (existingAllocationDoc.exists) {
+              const existingData = existingAllocationDoc.data();
+              recipientUserId = existingData?.recipientUserId || '';
+            }
+          } catch (error) {
+            console.error(`Error fetching existing allocation for removal:`, error);
+          }
+        }
+
         batch.delete(allocationRef);
       }
 
       // Commit the batch
       await batch.commit();
+
+      // Process writer earnings if we have a valid recipient and there's a change in allocation
+      if (recipientUserId && allocationDifference !== 0) {
+        try {
+          await this.processWriterEarnings(userId, recipientUserId, pageId, allocationDifference, currentMonth);
+          console.log(`✅ Processed writer earnings for ${allocationDifference} tokens from ${userId} to ${recipientUserId} for page ${pageId}`);
+        } catch (earningsError) {
+          console.error('Error processing writer earnings:', earningsError);
+          // Don't throw here - the allocation was successful, earnings processing is secondary
+        }
+      }
 
       console.log(`Server: Token allocation updated for user ${userId}, page ${pageId}: ${newPageAllocation} tokens`);
     } catch (error) {
@@ -270,6 +379,175 @@ export class ServerTokenService {
     } catch (error) {
       console.error('ServerTokenService: Error checking subscription status:', error);
       return false;
+    }
+  }
+
+  /**
+   * Process writer earnings for token allocation changes (server-side)
+   */
+  static async processWriterEarnings(
+    fromUserId: string,
+    recipientUserId: string,
+    pageId: string,
+    tokenDifference: number,
+    month: string
+  ): Promise<void> {
+    if (!db) {
+      throw new Error('Firebase Admin not initialized');
+    }
+
+    try {
+      const usdValue = tokenDifference / 10; // $1 = 10 tokens
+      const earningsId = `${recipientUserId}_${month}`;
+
+      // Get or create writer earnings record
+      const earningsRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_EARNINGS)).doc(earningsId);
+      const earningsDoc = await earningsRef.get();
+
+      const allocationData = {
+        allocationId: `${fromUserId}_${pageId}_${month}`,
+        fromUserId,
+        resourceType: 'page',
+        resourceId: pageId,
+        tokens: tokenDifference,
+        usdValue,
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      };
+
+      if (earningsDoc.exists) {
+        // Update existing earnings
+        const currentEarnings = earningsDoc.data();
+        const existingAllocations = currentEarnings?.allocations || [];
+
+        // Find existing allocation from this user for this page
+        const existingIndex = existingAllocations.findIndex(
+          (alloc: any) => alloc.fromUserId === fromUserId && alloc.resourceId === pageId
+        );
+
+        let updatedAllocations;
+        if (existingIndex >= 0) {
+          // Update existing allocation
+          updatedAllocations = [...existingAllocations];
+          updatedAllocations[existingIndex] = {
+            ...updatedAllocations[existingIndex],
+            tokens: updatedAllocations[existingIndex].tokens + tokenDifference,
+            usdValue: updatedAllocations[existingIndex].usdValue + usdValue,
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+          };
+
+          // Remove allocation if tokens become 0 or negative
+          if (updatedAllocations[existingIndex].tokens <= 0) {
+            updatedAllocations.splice(existingIndex, 1);
+          }
+        } else {
+          // Add new allocation (only if positive)
+          if (tokenDifference > 0) {
+            updatedAllocations = [...existingAllocations, allocationData];
+          } else {
+            updatedAllocations = existingAllocations;
+          }
+        }
+
+        const totalTokens = updatedAllocations.reduce((sum: number, alloc: any) => sum + alloc.tokens, 0);
+        const totalUsd = totalTokens / 10;
+
+        await earningsRef.update({
+          totalTokensReceived: totalTokens,
+          totalUsdValue: totalUsd,
+          allocations: updatedAllocations,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      } else {
+        // Create new earnings record (only for positive allocations)
+        if (tokenDifference > 0) {
+          await earningsRef.set({
+            id: earningsId,
+            userId: recipientUserId,
+            month,
+            totalTokensReceived: tokenDifference,
+            totalUsdValue: usdValue,
+            status: 'pending',
+            allocations: [allocationData],
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+        }
+      }
+
+      // Update writer token balance
+      await this.updateWriterTokenBalance(recipientUserId);
+
+    } catch (error) {
+      console.error('ServerTokenService: Error processing writer earnings:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update writer token balance based on current earnings (server-side)
+   */
+  static async updateWriterTokenBalance(userId: string): Promise<void> {
+    if (!db) {
+      throw new Error('Firebase Admin not initialized');
+    }
+
+    try {
+      // Get all earnings for this writer
+      const earningsQuery = db.collection(getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_EARNINGS))
+        .where('userId', '==', userId);
+
+      const earningsSnapshot = await earningsQuery.get();
+
+      let totalPendingTokens = 0;
+      let totalAvailableTokens = 0;
+      let totalPaidOutTokens = 0;
+      let totalPendingUsd = 0;
+      let totalAvailableUsd = 0;
+      let totalPaidOutUsd = 0;
+
+      earningsSnapshot.forEach(doc => {
+        const earning = doc.data();
+        const tokens = earning.totalTokensReceived || 0;
+        const usd = earning.totalUsdValue || 0;
+
+        switch (earning.status) {
+          case 'pending':
+            totalPendingTokens += tokens;
+            totalPendingUsd += usd;
+            break;
+          case 'available':
+            totalAvailableTokens += tokens;
+            totalAvailableUsd += usd;
+            break;
+          case 'paid_out':
+            totalPaidOutTokens += tokens;
+            totalPaidOutUsd += usd;
+            break;
+        }
+      });
+
+      const totalTokensEarned = totalPendingTokens + totalAvailableTokens + totalPaidOutTokens;
+      const totalUsdEarned = totalPendingUsd + totalAvailableUsd + totalPaidOutUsd;
+
+      // Update or create writer token balance
+      const balanceRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_BALANCES)).doc(userId);
+
+      await balanceRef.set({
+        userId,
+        totalTokensEarned,
+        totalUsdEarned,
+        pendingTokens: totalPendingTokens,
+        pendingUsdValue: totalPendingUsd,
+        availableTokens: totalAvailableTokens,
+        availableUsdValue: totalAvailableUsd,
+        paidOutTokens: totalPaidOutTokens,
+        paidOutUsdValue: totalPaidOutUsd,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+
+    } catch (error) {
+      console.error('ServerTokenService: Error updating writer token balance:', error);
+      throw error;
     }
   }
 }

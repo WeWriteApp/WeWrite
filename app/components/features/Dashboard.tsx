@@ -16,6 +16,7 @@ import RandomPagesHeader from "../features/RandomPagesHeader";
 import { Input } from "../ui/input";
 import { Search } from "lucide-react";
 import DailyNotesSection from "../daily-notes/DailyNotesSection";
+import EmailVerificationAlert from "../utils/EmailVerificationAlert";
 
 const Dashboard: React.FC = () => {
   const { session, isAuthenticated } = useCurrentAccount();
@@ -44,6 +45,9 @@ const Dashboard: React.FC = () => {
       <main className="transition-all duration-300 ease-in-out">
           <div className="container mx-auto px-4 py-6 space-y-8">
             <AddUsername />
+
+            {/* Email Verification Alert */}
+            <EmailVerificationAlert className="max-w-2xl mx-auto" />
 
             {/* Search Section */}
             <div className="max-w-2xl mx-auto">

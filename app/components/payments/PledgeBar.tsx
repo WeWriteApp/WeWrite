@@ -458,7 +458,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
       className={cn(
         "fixed left-0 right-0 bottom-6 z-50 flex justify-center px-4",
         "transition-transform duration-300 ease-in-out",
-        isHidden ? "translate-y-full" : "translate-y-0"
+        isHidden ? "translate-y-[calc(100%+2rem)]" : "translate-y-0"
       )}
     >
       <div

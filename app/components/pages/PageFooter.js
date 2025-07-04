@@ -136,20 +136,8 @@ export default function PageFooter({
         </div>
       )}
 
-      {/* Show static editing buttons when in edit mode, otherwise show PageActions */}
-      {isEditing ? (
-        <div className="mb-6 flex flex-col w-full">
-          <EditorActionButtons
-            onSave={onSave}
-            onCancel={onCancel}
-            onDelete={isOwner ? onDelete : undefined}
-            onInsertLink={onInsertLink}
-            isSaving={isSaving}
-            hasUnsavedChanges={hasUnsavedChanges}
-            className="static-editing-buttons"
-          />
-        </div>
-      ) : (
+      {/* Show PageActions when not in edit mode */}
+      {!isEditing && (
         <div className="mb-6 flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
           <PageActions
             page={page}
