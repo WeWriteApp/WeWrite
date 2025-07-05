@@ -8,9 +8,6 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { isAdminServer } from '../../../utils/server-feature-flags';
 
-const admin = getFirebaseAdmin();
-const db = admin.firestore();
-
 interface UserFeature {
   id: string;
   username: string;
@@ -23,6 +20,10 @@ interface UserFeature {
 // GET endpoint - Get all users and their access status for a feature flag
 export async function GET(request: NextRequest) {
   try {
+    // Initialize Firebase Admin
+    const admin = getFirebaseAdmin();
+    const db = admin.firestore();
+
     // Verify admin access
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
@@ -105,6 +106,10 @@ export async function GET(request: NextRequest) {
 // POST endpoint - Update user access for a feature flag
 export async function POST(request: NextRequest) {
   try {
+    // Initialize Firebase Admin
+    const admin = getFirebaseAdmin();
+    const db = admin.firestore();
+
     // Verify admin access
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
