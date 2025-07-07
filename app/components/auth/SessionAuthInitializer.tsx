@@ -212,12 +212,30 @@ function SessionAuthInitializer({ children }: SessionAuthInitializerProps) {
               console.warn('SessionAuthInitializer: Failed to transfer logged-out token allocations for existing user:', transferError);
               // Don't fail the login process if token transfer fails
             }
+
+            // Handle redirect after successful login
+            if (isOnLoginPage && authRedirectPending) {
+              console.log('SessionAuthInitializer: Login successful, redirecting to home page');
+              localStorage.removeItem('authRedirectPending');
+              setTimeout(() => {
+                window.location.href = "/";
+              }, 500);
+            }
           } catch (sessionError) {
             // If no session exists for this user, create a new one
             console.log('SessionAuthInitializer: No session found for user, creating new session:', firebaseUser.uid);
             console.log('SessionAuthInitializer: Session error details:', sessionError);
             try {
               await createSessionFromFirebaseUser(firebaseUser);
+
+              // Handle redirect after successful new session creation
+              if (isOnLoginPage && authRedirectPending) {
+                console.log('SessionAuthInitializer: New session created, redirecting to home page');
+                localStorage.removeItem('authRedirectPending');
+                setTimeout(() => {
+                  window.location.href = "/";
+                }, 500);
+              }
             } catch (createError) {
               console.error('SessionAuthInitializer: Failed to create session for user:', firebaseUser.uid, createError);
               // If session creation fails, clear any active account

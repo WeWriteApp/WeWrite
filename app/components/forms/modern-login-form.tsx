@@ -38,7 +38,8 @@ import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { Label } from "../ui/label"
 import { useState, useEffect } from "react"
-// Removed direct Firebase imports - now using API endpoints
+import { signInWithCustomToken } from "firebase/auth"
+import { auth } from "../../firebase/config"
 import { Loader2, AlertCircle } from "lucide-react"
 import { Separator } from "../ui/separator"
 // reCAPTCHA functionality removed
@@ -105,29 +106,25 @@ export function ModernLoginForm({
       const result = await response.json()
 
       if (response.ok && result.success) {
-        // Successful login
+        // Successful login - now sign into Firebase with the custom token
         console.log("Login successful:", result.data)
 
-        // The API already sets the session cookies, so we can proceed directly
-        console.log("Session cookies set by API")
+        try {
+          // Sign into Firebase with the custom token from the API
+          console.log("Signing into Firebase with custom token...")
+          localStorage.setItem('authRedirectPending', 'true')
 
-        // Check if we're adding a new account to the account switcher
-        const previousUserSession = localStorage.getItem('previousUserSession') ||
-                                   sessionStorage.getItem('wewrite_previous_user')
+          const userCredential = await signInWithCustomToken(auth, result.data.customToken)
+          console.log("Firebase sign-in successful:", userCredential.user.uid)
 
-        if (previousUserSession) {
-          console.log("Adding new account to account switcher...")
-          // This is handled by the MultiAccountProvider
-        }
+          // The Firebase auth state change will trigger the session management
+          // and handle the redirect automatically through SessionAuthInitializer
 
-        // Increase timeout to allow auth state to fully propagate
-        // and ensure cookies are properly set
-        localStorage.setItem('authRedirectPending', 'true')
-
-        setTimeout(() => {
+        } catch (firebaseError: any) {
+          console.error("Firebase sign-in error:", firebaseError)
           localStorage.removeItem('authRedirectPending')
-          window.location.href = "/"; // Use direct navigation for better compatibility
-        }, 1500)
+          setError("Authentication failed. Please try again.")
+        }
       } else {
         // Handle API error response
         let errorMessage = result.error || "Failed to sign in. Please try again."
