@@ -31,10 +31,13 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
-import { Search, Mail, MailCheck, Clock, RefreshCw, Check, X, AlertTriangle } from 'lucide-react';
+import { Search, Mail, MailCheck, RefreshCw, Check, X, AlertTriangle } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { auth } from '../../firebase/auth';
+import { formatRelativeTime } from '../../utils/formatRelativeTime';
+import { format } from 'date-fns';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Alert, AlertDescription } from '../ui/alert';
@@ -63,7 +66,6 @@ interface UserData {
   emailVerified?: boolean;  // Fetched from Firebase Auth, not Firestore
   createdAt?: string;
   lastLogin?: string;
-  queueCount?: number;
   featureFlags?: Record<FeatureFlagKey, boolean | null>; // null = using global default
 }
 
@@ -170,14 +172,8 @@ export function UserManagement() {
 
       console.log(`Successfully loaded ${data.users.length} users from API`);
 
-      // Add queue count for compatibility (TODO: implement in API)
-      const usersWithQueueCount = data.users.map((user: UserData) => ({
-        ...user,
-        queueCount: 0 // Default to 0 for now
-      }));
-
-      setUsers(usersWithQueueCount);
-      setFilteredUsers(usersWithQueueCount);
+      setUsers(data.users);
+      setFilteredUsers(data.users);
 
     } catch (error: any) {
       console.error('Error loading users:', error);
@@ -338,34 +334,19 @@ export function UserManagement() {
     );
   };
 
-  /**
-   * Generate sync queue status badge
-   *
-   * @param queueCount - Number of items in user's sync queue
-   * @returns JSX badge component or null if queue is empty
-   */
-  const getQueueBadge = (queueCount: number) => {
-    if (queueCount === 0) {
-      return null;
-    }
-    return (
-      <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
-        <Clock className="h-3 w-3 mr-1" />
-        {queueCount} queued
-      </Badge>
-    );
-  };
+
 
   /**
-   * Format date string for display
+   * Format date string for tooltip display (full date and time)
    *
    * @param dateString - ISO date string or undefined
-   * @returns Formatted date string or fallback text
+   * @returns Formatted date string for tooltip or fallback text
    */
-  const formatDate = (dateString?: string) => {
+  const formatTooltipDate = (dateString?: string) => {
     if (!dateString) return 'Unknown';
     try {
-      return new Date(dateString).toLocaleDateString();
+      const date = new Date(dateString);
+      return format(date, 'PPpp'); // e.g., "Jan 1, 2024 at 12:00:00 PM"
     } catch {
       return 'Invalid date';
     }
@@ -525,7 +506,6 @@ export function UserManagement() {
                 <TableHead className="w-[200px]">Email</TableHead>
                 <TableHead className="w-[120px]">Username</TableHead>
                 <TableHead className="w-[100px]">Status</TableHead>
-                <TableHead className="w-[100px]">Queue</TableHead>
                 <TableHead className="w-[120px]">Joined</TableHead>
                 {FEATURE_FLAGS.map(flag => (
                   <TableHead key={flag} className="w-[80px] text-center">
@@ -552,11 +532,19 @@ export function UserManagement() {
                   <TableCell>
                     {getVerificationBadge(session.emailVerified || false)}
                   </TableCell>
-                  <TableCell>
-                    {session.queueCount !== undefined && getQueueBadge(session.queueCount)}
-                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {formatDate(session.createdAt)}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help">
+                            {session.createdAt ? formatRelativeTime(session.createdAt) : 'Unknown'}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{formatTooltipDate(session.createdAt)}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                   {FEATURE_FLAGS.map(flag => renderFeatureFlagCell(session, flag))}
                 </TableRow>
