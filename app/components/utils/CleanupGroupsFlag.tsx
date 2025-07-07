@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { Button } from "../ui/button";
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from "../../firebase/config";
+// Removed direct Firebase imports - now using API endpoints
 import { useToast } from "../ui/use-toast";
 import { Trash2 } from 'lucide-react';
 
@@ -21,47 +20,32 @@ export default function CleanupGroupsFlag() {
       setIsCleaningUp(true);
       console.log('[CleanupGroupsFlag] Starting cleanup...');
 
-      // Get feature flags from Firestore
-      const featureFlagsRef = doc(db, 'config', 'featureFlags');
-      const featureFlagsDoc = await getDoc(featureFlagsRef);
+      // Call the API endpoint to sync feature flags (which will remove invalid flags like 'groups')
+      const response = await fetch('/api/feature-flags', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (featureFlagsDoc.exists()) {
-        const flagsData = featureFlagsDoc.data();
-        console.log('[CleanupGroupsFlag] Current flags:', flagsData);
+      const result = await response.json();
 
-        // Check if groups flag exists
-        if ('groups' in flagsData) {
-          console.log('[CleanupGroupsFlag] Found groups flag, removing...');
-          
-          // Create new object without groups flag
-          const cleanedFlags = { ...flagsData };
-          delete cleanedFlags.groups;
-
-          // Update the database
-          await setDoc(featureFlagsRef, cleanedFlags);
-          
-          console.log('[CleanupGroupsFlag] Groups flag removed successfully');
-          toast({
-            title: 'Success',
-            description: 'Groups feature flag has been removed from the database',
-            variant: 'default'
-          });
-        } else {
-          console.log('[CleanupGroupsFlag] No groups flag found');
-          toast({
-            title: 'Info',
-            description: 'No groups feature flag found in the database',
-            variant: 'default'
-          });
-        }
-      } else {
-        console.log('[CleanupGroupsFlag] No feature flags document found');
-        toast({
-          title: 'Info',
-          description: 'No feature flags document found',
-          variant: 'default'
-        });
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to cleanup groups flag');
       }
+
+      if (!result.success) {
+        throw new Error(result.error || 'Cleanup operation failed');
+      }
+
+      console.log('[CleanupGroupsFlag] Cleanup completed successfully');
+      console.log('[CleanupGroupsFlag] Updated flags:', result.data.flags);
+
+      toast({
+        title: 'Success',
+        description: result.data.message || 'Groups feature flag has been cleaned up successfully',
+        variant: 'default'
+      });
     } catch (error) {
       console.error('[CleanupGroupsFlag] Error:', error);
       toast({

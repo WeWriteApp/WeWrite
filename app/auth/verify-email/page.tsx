@@ -2,49 +2,76 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { sendEmailVerification, reload } from "firebase/auth";
-import { auth } from "../../firebase/auth";
+// Removed direct Firebase imports - now using API endpoints
 import { Button } from "../../components/ui/button";
-import { LoadingButton } from "../../components/ui/loading-button";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
-import { CheckCircle, AlertCircle, Mail, RefreshCw } from "lucide-react";
-import { AuthLayout } from "../../components/layout/auth-layout";
+import { CheckCircle, AlertCircle, Mail, RefreshCw, Loader2, Settings } from "lucide-react";
+import { ModernAuthLayout } from "../../components/layout/modern-auth-layout";
+import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 
 export default function VerifyEmailPage() {
-  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const [userEmail, setUserEmail] = useState("");
   const [isResending, setIsResending] = useState(false);
+  const [isCheckingVerification, setIsCheckingVerification] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(60); // Start with 60 second countdown
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
-  const [username, setUsername] = useState("");
-  const [isCheckingVerification, setIsCheckingVerification] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  
-  const router = useRouter();
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  // Check if user came from the username setup flow
+  const { currentAccount, isAuthenticated, isLoading } = useCurrentAccount();
+
+  // Check authentication state and send initial verification email
   useEffect(() => {
-    const pendingUsername = localStorage.getItem('pendingUsername');
-    
-    if (!pendingUsername) {
-      // Redirect to registration if no pending username
-      router.push('/auth/register');
-      return;
-    }
-    
-    setUsername(pendingUsername);
-    
-    // Get current user email
-    if (auth.currentUser) {
-      setUserEmail(auth.currentUser.email || "");
-      
-      // Send initial verification email
-      sendInitialVerificationEmail();
-    } else {
-      // No authenticated user, redirect to login
-      router.push('/auth/login');
-    }
-  }, [router]);
+    const initializeVerification = async () => {
+      // Wait for auth state to be determined
+      if (isLoading) return;
+
+      if (!isAuthenticated || !currentAccount) {
+        // No authenticated user, redirect to login
+        router.push('/auth/login');
+        return;
+      }
+
+      // Check if user is already verified
+      if (currentAccount.emailVerified) {
+        // User is already verified, redirect to home
+        router.push('/');
+        return;
+      }
+
+      setUserEmail(currentAccount.email || "");
+
+      // Send initial verification email using API
+      try {
+        const response = await fetch('/api/auth/verify-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: currentAccount.email
+          })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          console.log("Initial verification email sent");
+          setSuccess(true);
+        } else {
+          throw new Error(result.error || 'Failed to send verification email');
+        }
+      } catch (error: any) {
+        console.error("Error sending initial verification email:", error);
+        setError(error.message || "Failed to send verification email. Please try again.");
+      }
+
+      setIsInitializing(false);
+    };
+
+    initializeVerification();
+  }, [router, isAuthenticated, currentAccount, isLoading]);
 
   // Cooldown timer for resend button
   useEffect(() => {
@@ -56,24 +83,12 @@ export default function VerifyEmailPage() {
     }
   }, [resendCooldown]);
 
-  const sendInitialVerificationEmail = async () => {
-    if (!auth.currentUser) return;
-    
-    try {
-      await sendEmailVerification(auth.currentUser);
-      console.log("Initial verification email sent");
-      setSuccess(true);
-    } catch (error: any) {
-      console.error("Error sending initial verification email:", error);
-      setError("Failed to send verification email. Please try again.");
-    }
-  };
-
   const handleResendEmail = async () => {
     if (!auth.currentUser || resendCooldown > 0) return;
-    
+
     setIsResending(true);
     setError("");
+    setSuccess(false);
 
     try {
       await sendEmailVerification(auth.currentUser);
@@ -98,21 +113,18 @@ export default function VerifyEmailPage() {
 
   const checkEmailVerification = async () => {
     if (!auth.currentUser) return;
-    
+
     setIsCheckingVerification(true);
     setError("");
 
     try {
       // Reload the user to get the latest email verification status
       await reload(auth.currentUser);
-      
+
       if (auth.currentUser.emailVerified) {
         console.log("Email verified successfully!");
-        
-        // Clear pending data
-        localStorage.removeItem('pendingUsername');
-        
-        // Redirect to home page
+
+        // Redirect to home page with success message
         localStorage.setItem('authRedirectPending', 'true');
         setTimeout(() => {
           localStorage.removeItem('authRedirectPending');
@@ -129,20 +141,22 @@ export default function VerifyEmailPage() {
     }
   };
 
-  const handleSkipForNow = () => {
-    // Clear pending data
-    localStorage.removeItem('pendingUsername');
-    
-    // Redirect to home page without verification
-    localStorage.setItem('authRedirectPending', 'true');
-    setTimeout(() => {
-      localStorage.removeItem('authRedirectPending');
-      window.location.href = "/";
-    }, 1000);
-  };
+  // Show loading state while initializing
+  if (isInitializing) {
+    return (
+      <ModernAuthLayout
+        title="Verify Your Email"
+        description="Setting up email verification..."
+      >
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </ModernAuthLayout>
+    );
+  }
 
   return (
-    <AuthLayout
+    <ModernAuthLayout
       title="Verify Your Email"
       description={`We've sent a verification link to ${userEmail}`}
     >
@@ -163,12 +177,15 @@ export default function VerifyEmailPage() {
           <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
             <Mail className="h-8 w-8 text-primary" />
           </div>
-          
+
           <div className="space-y-2">
-            <h2 className="text-lg font-semibold">Check Your Email</h2>
+            <h2 className="text-lg font-semibold">Email Verification Required</h2>
             <p className="text-sm text-muted-foreground">
-              We've sent a verification link to <strong>{userEmail}</strong>. 
-              Click the link in the email to verify your account and complete the setup.
+              We've sent a verification link to <strong>{userEmail}</strong>.
+              You must verify your email address before you can access the application.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Don't forget to check your spam folder if you don't see the email.
             </p>
           </div>
         </div>
@@ -184,47 +201,61 @@ export default function VerifyEmailPage() {
 
         {/* Action buttons */}
         <div className="space-y-3">
-          <LoadingButton
-            onClick={checkEmailVerification}
-            isLoading={isCheckingVerification}
-            loadingText="Checking verification..."
-            className="w-full"
-          >
-            <CheckCircle className="mr-2 h-4 w-4" />
-            I've Verified My Email
-          </LoadingButton>
-
-          <LoadingButton
-            variant="outline"
-            onClick={handleResendEmail}
-            isLoading={isResending}
-            loadingText="Resending..."
-            disabled={resendCooldown > 0}
-            className="w-full"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend Email"}
-          </LoadingButton>
-
           <Button
-            variant="ghost"
-            onClick={handleSkipForNow}
-            className="w-full text-muted-foreground"
+            onClick={checkEmailVerification}
+            disabled={isCheckingVerification}
+            className="w-full"
           >
-            Skip for now (you can verify later)
+            {isCheckingVerification ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Checking verification...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="mr-2 h-4 w-4" />
+                I've Verified My Email
+              </>
+            )}
           </Button>
+
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              onClick={handleResendEmail}
+              disabled={isResending || resendCooldown > 0}
+              className="w-full"
+            >
+              {isResending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Resending...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend verification email"}
+                </>
+              )}
+            </Button>
+            {resendCooldown > 0 && (
+              <p className="text-xs text-muted-foreground text-center">
+                Didn't receive the email? Resend in {resendCooldown} seconds
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Help text */}
         <div className="text-center text-xs text-muted-foreground space-y-2">
           <p>
-            Didn't receive the email? Check your spam folder or try resending.
+            Check your spam folder if you don't see the email.
           </p>
           <p>
-            Having trouble? <a href="mailto:support@wewrite.app" className="text-primary hover:underline">Contact support</a>
+            Need to change your email address? <Button variant="link" className="h-auto p-0 text-xs text-primary" onClick={() => router.push('/auth/register')}>Register with a different email</Button>
           </p>
         </div>
       </div>
-    </AuthLayout>
+    </ModernAuthLayout>
   );
 }

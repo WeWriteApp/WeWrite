@@ -4,8 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation';
 import DayCard from './DayCard';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+// Removed direct Firebase imports - now using API endpoints
 import { format, subDays, addDays } from 'date-fns';
 import { Button } from '../ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -41,7 +40,7 @@ interface DailyNotesCarouselProps {
  * - Maintains scroll position when loading new dates
  */
 export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNotesCarouselProps) {
-  const { session } = useCurrentAccount();
+  const { currentAccount } = useCurrentAccount();
   const router = useRouter();
   const carouselRef = useRef<HTMLDivElement>(null);
   const { formatDateString } = useDateFormat();
@@ -122,58 +121,50 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
 
   // Check for existing notes with exact YYYY-MM-DD format titles only
   const checkExistingNotes = useCallback(async (dateRange: Date[]) => {
-    if (!session?.uid) return;
+    if (!currentAccount?.uid) return;
 
     try {
       // Generate all possible YYYY-MM-DD titles for the date range
       const dateStrings = dateRange.map(date => format(date, 'yyyy-MM-dd'));
 
-      // Query for pages with these exact titles by the current user
-      const pagesRef = collection(db, 'pages');
+      // Call API endpoint to get user's pages
+      const response = await fetch(`/api/pages?userId=${currentAccount?.uid}&limit=1000&orderBy=title`)
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch pages: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch pages')
+      }
+
       const foundNotes = new Set<string>();
       const pageIdMap = new Map<string, string>();
 
-      // Split dates into chunks of 10 for Firestore 'in' query limit
-      const chunks: string[][] = [];
-      for (let i = 0; i < dateStrings.length; i += 10) {
-        chunks.push(dateStrings.slice(i, i + 10));
-      }
-
-      // Query each chunk - use simple query without deleted filter to avoid index issues
-      for (const chunk of chunks) {
-        const chunkQuery = query(
-          pagesRef,
-          where('userId', '==', session?.uid || ''),
-          where('title', 'in', chunk)
-        );
-
-        const chunkSnapshot = await getDocs(chunkQuery);
-
-        chunkSnapshot.forEach((doc) => {
-          const pageData = doc.data();
-
-          // Client-side filtering: only include pages with exact YYYY-MM-DD format titles and not deleted
-          if (pageData.title &&
-              dateStrings.includes(pageData.title) &&
-              isExactDateFormat(pageData.title) &&
-              !pageData.deleted) {
-            foundNotes.add(pageData.title);
-            pageIdMap.set(pageData.title, doc.id);
-          }
-        });
-      }
+      // Filter pages to find daily notes
+      result.data.pages.forEach((page: any) => {
+        // Client-side filtering: only include pages with exact YYYY-MM-DD format titles
+        if (page.title &&
+            dateStrings.includes(page.title) &&
+            isExactDateFormat(page.title)) {
+          foundNotes.add(page.title);
+          pageIdMap.set(page.title, page.id);
+        }
+      });
 
       setExistingNotes(foundNotes);
       setNotePageIds(pageIdMap);
     } catch (error) {
       console.error('Error checking existing notes:', error);
     }
-  }, [session?.uid]);
+  }, [currentAccount?.uid]);
 
   // Check for existing notes when dates change
   useEffect(() => {
     const loadNotes = async () => {
-      if (!session?.uid) {
+      if (!currentAccount?.uid) {
         setLoading(false);
         return;
       }
@@ -184,7 +175,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     };
 
     loadNotes();
-  }, [session?.uid, daysBefore, daysAfter, dates, checkExistingNotes]);
+  }, [currentAccount?.uid, daysBefore, daysAfter, dates, checkExistingNotes]);
 
   // Handle day card click with enhanced error handling
   const handleDayClick = (date: Date) => {

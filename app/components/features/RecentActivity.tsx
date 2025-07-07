@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Clock, AlertTriangle, ChevronRight, ChevronLeft, Plus, Info, Filter, Check } from "lucide-react";
 import useRecentActivity from "../../hooks/useRecentActivity";
-import useHomeRecentActivity from "../../hooks/useHomeRecentActivity";
 import ActivityCard from "../activity/ActivityCard";
 import ActivityEmptyState from "../activity/ActivityEmptyState";
 import { Button } from "../ui/button";
@@ -51,6 +50,7 @@ const ActivitySkeleton = () => {
  * @param {boolean} renderFilterInHeader - Whether to render the filter button in the component or externally (default: false)
  */
 const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPage = false, userId = null, renderFilterInHeader = false }, ref) => {
+  console.log('🟢 RecentActivity: Component rendering with props:', { limit, showViewAll, isActivityPage, userId, renderFilterInHeader });
   const router = useRouter();
 
   // Determine if we're on the activity page by checking props or using pathname
@@ -90,13 +90,21 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
   // For activity page or user profile, use the regular hook with pagination
   const [localError, setLocalError] = useState(null);
 
-  // Call the appropriate hook at the top level (React hooks rule)
-  const activityData = isHomepage
-    ? useHomeRecentActivity(limit, userId, currentViewMode === 'following', currentViewMode === 'mine')
-    : useRecentActivity(limit, userId, currentViewMode === 'following', currentViewMode === 'mine');
+  console.log(`🟢 RecentActivity: Component rendering with isHomepage=${isHomepage}, limit=${limit}, viewMode=${currentViewMode}`);
+
+  // Call the unified hook with appropriate mode
+  const mode = isHomepage ? 'homepage' : (isInUserProfile ? 'profile' : 'activity');
+  const activityData = useRecentActivity(
+    limit,
+    userId,
+    currentViewMode === 'following',
+    currentViewMode === 'mine',
+    mode,
+    !isHomepage // Enable pagination for non-homepage modes
+  );
 
   const { activities = [], loading = false, error = null, hasMore = false, loadingMore = false, loadMore = () => {} } = activityData;
-  const { session } = useCurrentAccount();
+  const { currentAccount } = useCurrentAccount();
   const carouselRef = useRef(null);
   const [followedPages, setFollowedPages] = useState([]);
   const [isLoadingFollows, setIsLoadingFollows] = useState(true);
@@ -106,7 +114,7 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
 
   // Check if the user is following any pages
   useEffect(() => {
-    if (!session) {
+    if (!currentAccount) {
       setIsLoadingFollows(false);
       setFollowedPages([]);
       return;
@@ -115,9 +123,9 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
     const fetchFollowedPages = async () => {
       try {
         setIsLoadingFollows(true);
-        console.log(`Fetching followed pages for user ${session.uid}`);
-        const pages = await getFollowedPages(session.uid);
-        console.log(`User ${session.uid} follows ${pages.length} pages`);
+        console.log(`Fetching followed pages for user ${currentAccount.uid}`);
+        const pages = await getFollowedPages(currentAccount.uid);
+        console.log(`User ${currentAccount.uid} follows ${pages.length} pages`);
         setFollowedPages(pages);
 
         // If user has no followed pages and we're in following mode, switch to all
@@ -138,7 +146,7 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
     };
 
     fetchFollowedPages();
-  }, [, session, currentViewMode, setCurrentViewMode]);
+  }, [, currentAccount, currentViewMode, setCurrentViewMode]);
 
   // Scroll functions removed as the buttons have been removed
 
@@ -150,7 +158,7 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
 
   // Function to render the filter dropdown button
   const renderFilterDropdown = () => {
-    if (!session) return null;
+    if (!currentAccount) return null;
 
     return (
       <div className="ml-auto">
@@ -269,14 +277,14 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
           </div>
         )}
 
-        {!loading && combinedError && !session && (
+        {!loading && combinedError && !currentAccount && (
           <div className="flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-lg">
             <Info className="h-4 w-4" />
             <p>Sign in to see recent activity from all pages</p>
           </div>
         )}
 
-        {!loading && combinedError && session && (
+        {!loading && combinedError && currentAccount && (
           <div className="flex flex-col gap-2 p-3 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
@@ -393,14 +401,14 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
           </div>
         )}
 
-        {!loading && combinedError && !session && (
+        {!loading && combinedError && !currentAccount && (
           <div className="flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-lg">
             <Info className="h-4 w-4" />
             <p>Sign in to see recent activity from all pages</p>
           </div>
         )}
 
-        {!loading && combinedError && session && (
+        {!loading && combinedError && currentAccount && (
           <div className="flex flex-col gap-2 p-3 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />

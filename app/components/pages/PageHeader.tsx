@@ -10,7 +10,7 @@ import { rtdb } from "../../firebase/rtdb";
 import dynamic from 'next/dynamic';
 
 import { getUsernameById, getUserSubscriptionTier } from "../../utils/userUtils";
-import { SupporterIcon } from "../payments/SupporterIcon";
+import { SubscriptionTierBadge } from "../ui/SubscriptionTierBadge";
 import { SubscriptionInfoModal } from "../payments/SubscriptionInfoModal";
 
 import ClickableByline from "../utils/ClickableByline";
@@ -53,25 +53,71 @@ const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
  */
 const isExactDateFormat = isDailyNoteFormat;
 
+/**
+ * PageHeader Component
+ *
+ * Displays the header for individual pages, including:
+ * - Page title (editable when user has permissions)
+ * - Author username with subscription tier badge
+ * - Navigation and action buttons
+ * - Privacy indicators
+ *
+ * SUBSCRIPTION BADGE FUNCTIONALITY:
+ * The component automatically fetches and displays subscription tier badges next to usernames.
+ *
+ * Data Flow:
+ * 1. Component receives userId prop for the page author
+ * 2. Fetches username and subscription data via getUsernameById() and getUserSubscriptionTier()
+ * 3. Displays subscription badge if:
+ *    - Subscription feature flag is enabled for current user
+ *    - Valid subscription data exists (tier, status)
+ *    - Data is not loading
+ *
+ * Feature Flag Behavior:
+ * - When 'payments' feature flag is disabled: Badge still shows but modal functionality is disabled
+ * - When feature flag is enabled: Full subscription modal with upgrade/downgrade options
+ *
+ * Fallback Values:
+ * - Uses DEFAULT_SUBSCRIPTION constants when actual data is unavailable
+ * - Shows inactive/null as fallback to avoid misleading subscription status
+ */
 export interface PageHeaderProps {
+  /** The page title to display */
   title?: string;
+  /** The username of the page author (fallback if userId fetch fails) */
   username?: string;
+  /** The user ID of the page author (used to fetch subscription data and username) */
   userId?: string;
+  /** Whether the page is currently loading */
   isLoading?: boolean;
+  /** Current scroll direction for header behavior */
   scrollDirection?: string;
+  /** Whether the page is private */
   isPrivate?: boolean;
+  /** Subscription tier (deprecated - now fetched internally via userId) */
   tier?: string;
+  /** Subscription status (deprecated - now fetched internally via userId) */
   subscriptionStatus?: string;
+  /** Whether the page is currently being edited */
   isEditing?: boolean;
+  /** Callback to toggle edit mode */
   setIsEditing?: (value: boolean) => void;
+  /** Callback when title changes during editing */
   onTitleChange?: (newTitle: string) => void;
+  /** Whether the current user can edit this page */
   canEdit?: boolean;
+  /** Whether there's an error with the title */
   titleError?: boolean;
+  /** The page ID for navigation */
   pageId?: string | null;
-  isNewPage?: boolean; // Add flag to indicate this is a new page
-  onPrivacyChange?: (isPublic: boolean) => void; // Add handler for privacy toggle
-  onDelete?: () => void; // Add handler for delete page
-  onInsertLink?: () => void; // Add handler for insert link
+  /** Flag to indicate this is a new page */
+  isNewPage?: boolean;
+  /** Handler for privacy toggle */
+  onPrivacyChange?: (isPublic: boolean) => void;
+  /** Handler for delete page */
+  onDelete?: () => void;
+  /** Handler for insert link */
+  onInsertLink?: () => void;
 }
 
 export default function PageHeader({
@@ -94,6 +140,15 @@ export default function PageHeader({
   onPrivacyChange,
   onDelete,
   onInsertLink}: PageHeaderProps) {
+
+  // Default subscription values for fallback display when data is loading or unavailable
+  // IMPORTANT: Default to inactive to avoid misleading users about subscription status
+  const DEFAULT_SUBSCRIPTION = {
+    tier: 'inactive' as const,
+    status: null as const,
+    amount: null as const,
+  };
+
   const router = useRouter();
   const { session } = useCurrentAccount();
   const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
@@ -104,11 +159,66 @@ export default function PageHeader({
   const { trackInteractionEvent, events } = useWeWriteAnalytics();
   const headerRef = React.useRef<HTMLDivElement>(null);
   const { lineMode, setLineMode } = useLineSettings();
+  // User display state
   const [displayUsername, setDisplayUsername] = React.useState<string>(username || "Anonymous");
-  const [tier, setTier] = React.useState<string | null>(initialTier || null);
-  const [subscriptionStatus, setSubscriptionStatus] = React.useState<string | null>(initialStatus || null);
+
+  // Subscription data state - used for badge display
+  const [tier, setTier] = React.useState<string | null>(initialTier || null); // e.g., 'tier1', 'tier2', 'tier3'
+  const [subscriptionStatus, setSubscriptionStatus] = React.useState<string | null>(initialStatus || null); // e.g., 'active', 'inactive'
+  const [subscriptionAmount, setSubscriptionAmount] = React.useState<number | null>(null); // Monthly amount in dollars
   const [isLoadingTier, setIsLoadingTier] = React.useState<boolean>(false);
-  const subscriptionEnabled = useFeatureFlag('payments', session?.email);
+
+  // Feature flag check - determines if subscription badges should be shown
+  // Use current user's payments flag to determine if subscription system is visible
+  const subscriptionEnabled = useFeatureFlag('payments', session?.email, session?.uid);
+
+  /**
+   * Determines if subscription badge should be shown next to the username.
+   *
+   * The badge displays the user's subscription tier (tier1, tier2, tier3, inactive) with
+   * appropriate icons and tooltips. It's only shown when:
+   * - Subscription feature flag is enabled for the current user
+   * - Valid tier data has been fetched (including 'inactive')
+   * - Data is not currently loading
+   *
+   * Note: We show badges for all tiers including 'inactive' to indicate subscription status.
+   * The subscriptionStatus can be null for inactive users, so we don't require it.
+   */
+  const shouldShowSubscriptionBadge = React.useMemo(() => {
+    return subscriptionEnabled && tier && !isLoadingTier;
+  }, [subscriptionEnabled, tier, isLoadingTier]);
+
+  /**
+   * Fetch subscription data when subscriptions are enabled and userId changes.
+   * This provides subscription tier data for the badge display.
+   * Note: Main user data fetching (including subscription data) happens in the
+   * fetchUserData effect below, but this effect handles cases where subscription
+   * feature flag changes independently.
+   */
+  React.useEffect(() => {
+    if (!subscriptionEnabled || !userId) {
+      return;
+    }
+
+    setIsLoadingTier(true);
+
+    const fetchSubscriptionData = async () => {
+      try {
+        const subscriptionData = await getUserSubscriptionTier(userId);
+        const { tier: fetchedTier, status, amount } = subscriptionData;
+        setTier(fetchedTier);
+        setSubscriptionStatus(status);
+        setSubscriptionAmount(amount);
+      } catch (error) {
+        console.error('Error fetching subscription data:', error);
+      } finally {
+        setIsLoadingTier(false);
+      }
+    };
+
+    fetchSubscriptionData();
+  }, [subscriptionEnabled, userId]);
+
   const [pageId, setPageId] = React.useState<string | null>(propPageId);
   const [isAddToPageOpen, setIsAddToPageOpen] = React.useState<boolean>(false);
   const [isEditingTitle, setIsEditingTitle] = React.useState<boolean>(false);
@@ -341,50 +451,56 @@ export default function PageHeader({
     e.target.style.height = e.target.scrollHeight + 'px';
   };
 
-  // Fetch username if not provided but userId is available
+  /**
+   * Fetch username and subscription data when userId changes
+   *
+   * Data flow:
+   * 1. Set default username immediately to prevent flash
+   * 2. If userId exists, fetch username and subscription data in parallel
+   * 3. Update username if valid result received
+   * 4. Update subscription data (tier, status, amount) for badge display
+   * 5. Handle errors gracefully without showing to user
+   */
   React.useEffect(() => {
-    const fetchTierInfo = async () => {
-      if (userId) {
-        try {
-          setIsLoadingTier(true);
-          const { tier: fetchedTier, status } = await getUserSubscriptionTier(userId);
-          setTier(fetchedTier);
-          setSubscriptionStatus(status);
-        } catch (error) {
-          console.error('Error fetching tier info:', error);
-        } finally {
-          setIsLoadingTier(false);
+    const fetchUserData = async () => {
+      // Set default username immediately to prevent flash of "Missing username"
+      setDisplayUsername(username || "Anonymous");
+
+      // Only fetch additional data if we have a valid userId
+      if (!userId) {
+        return;
+      }
+
+      try {
+        setIsLoadingTier(true);
+
+        // Fetch username and subscription data in parallel for better performance
+        const [fetchedUsername, subscriptionData] = await Promise.all([
+          getUsernameById(userId),
+          getUserSubscriptionTier(userId)
+        ]);
+
+        // Update username if we got a valid result
+        if (fetchedUsername && fetchedUsername !== "Anonymous" && fetchedUsername !== "Missing username") {
+          setDisplayUsername(fetchedUsername);
         }
+
+        // Update subscription data for badge display
+        const { tier: fetchedTier, status, amount } = subscriptionData;
+        setTier(fetchedTier);
+        setSubscriptionStatus(status);
+        setSubscriptionAmount(amount);
+
+      } catch (error) {
+        console.error("Error fetching user data for header:", error);
+        // Keep the default username on error - don't show error to user
+      } finally {
+        setIsLoadingTier(false);
       }
     };
 
-    fetchTierInfo();
-  }, [session?.uid]);
-
-  // Fetch username if not provided but userId is available
-  React.useEffect(() => {
-    const fetchUsername = async () => {
-      // Always set a default username first
-      setDisplayUsername(username || "Missing username");
-
-      // Then try to fetch the actual username if we have a userId
-      if (userId) {
-        try {
-          console.log("Fetching username for userId:", userId);
-          const fetchedUsername = await getUsernameById(userId);
-          if (fetchedUsername && fetchedUsername !== "Anonymous" && fetchedUsername !== "Missing username") {
-            setDisplayUsername(fetchedUsername);
-            console.log("Username fetched for PageHeader:", fetchedUsername);
-          }
-        } catch (error) {
-          console.error("Error fetching username for header:", error);
-          // Keep the default username on error
-        }
-      }
-    };
-
-    fetchUsername();
-  }, [userId, session?.username]);
+    fetchUserData();
+  }, [userId, username]); // Re-run when userId or username prop changes
 
   // Extract page ID from URL and determine if user can change ownership
   React.useEffect(() => {
@@ -685,7 +801,26 @@ export default function PageHeader({
                         </span>
                       )}
                     </h1>
-                    <span className="text-xs text-muted-foreground">by {displayUsername}</span>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      by {displayUsername}
+                      {shouldShowSubscriptionBadge && (
+                        <SubscriptionInfoModal
+                          currentTier={tier || DEFAULT_SUBSCRIPTION.tier}
+                          currentStatus={subscriptionStatus || DEFAULT_SUBSCRIPTION.status}
+                          userId={userId}
+                          username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}
+                        >
+                          <div className="cursor-pointer flex-shrink-0 flex items-center">
+                            <SubscriptionTierBadge
+                              tier={tier || DEFAULT_SUBSCRIPTION.tier}
+                              status={subscriptionStatus || DEFAULT_SUBSCRIPTION.status}
+                              amount={subscriptionAmount || DEFAULT_SUBSCRIPTION.amount}
+                              size="sm"
+                            />
+                          </div>
+                        </SubscriptionInfoModal>
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1050,10 +1185,22 @@ export default function PageHeader({
                             )}
                           </Link>
                         )}
-                        {subscriptionEnabled && (
-                          <SubscriptionInfoModal currentTier={tier} currentStatus={subscriptionStatus} userId={userId} username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}>
+
+                        {/* Show subscription badge if user has active subscription */}
+                        {shouldShowSubscriptionBadge && (
+                          <SubscriptionInfoModal
+                            currentTier={tier || DEFAULT_SUBSCRIPTION.tier}
+                            currentStatus={subscriptionStatus || DEFAULT_SUBSCRIPTION.status}
+                            userId={userId}
+                            username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}
+                          >
                             <div className="cursor-pointer flex-shrink-0 flex items-center">
-                              <SupporterIcon tier={tier} status={subscriptionStatus} size="sm" />
+                              <SubscriptionTierBadge
+                                tier={tier || DEFAULT_SUBSCRIPTION.tier}
+                                status={subscriptionStatus || DEFAULT_SUBSCRIPTION.status}
+                                amount={subscriptionAmount || DEFAULT_SUBSCRIPTION.amount}
+                                size="sm"
+                              />
                             </div>
                           </SubscriptionInfoModal>
                         )}

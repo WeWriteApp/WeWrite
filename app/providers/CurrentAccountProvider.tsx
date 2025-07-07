@@ -3,6 +3,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import { UserAccount, CurrentAccountContextValue, SessionError, SESSION_ERROR_CODES } from '../types/account';
 import { useMultiAuth } from './MultiAuthProvider';
+import Cookies from 'js-cookie';
+import { auth } from '../firebase/config';
+import { reload } from 'firebase/auth';
 
 // Create context
 const CurrentAccountContext = createContext<CurrentAccountContextValue | null>(null);
@@ -22,15 +25,41 @@ interface CurrentSessionProviderProps {
 
 export const CurrentAccountProvider: React.FC<CurrentSessionProviderProps> = ({ children }) => {
   const multiAuth = useMultiAuth();
-  
+
   // State
   const [currentAccount, setCurrentSession] = useState<UserAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  console.log('🟢 CurrentAccountProvider: Rendering with state:', {
+    currentAccount: currentAccount?.uid || null,
+    isLoading,
+    multiAuthLoading: multiAuth.isLoading
+  });
   const [isHydrated, setIsHydrated] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Storage key for active account
   const ACTIVE_SESSION_KEY = 'wewrite_active_session_id';
+
+  // Helper function to set authentication cookies
+  const setAuthenticationCookies = useCallback((session: UserAccount | null) => {
+    if (session) {
+      console.log('CurrentAccountProvider: Setting authentication cookies for session:', session.sessionId);
+      Cookies.set('authenticated', 'true', { expires: 7 });
+      Cookies.set('userSession', JSON.stringify({
+        uid: session.uid,
+        email: session.email,
+        username: session.username,
+        displayName: session.displayName || session.username,
+        emailVerified: session.emailVerified ?? false // Include email verification status
+      }), { expires: 7 });
+    } else {
+      console.log('CurrentAccountProvider: Clearing authentication cookies');
+      Cookies.remove('authenticated');
+      Cookies.remove('userSession');
+      Cookies.remove('session');
+    }
+  }, []);
 
   // Storage utilities
   const saveActiveSessionToStorage = useCallback((sessionId: string | null) => {
@@ -55,6 +84,32 @@ export const CurrentAccountProvider: React.FC<CurrentSessionProviderProps> = ({ 
       return null;
     }
   }, []);
+
+  // Update email verification status from Firebase auth
+  const updateEmailVerificationStatus = useCallback(async () => {
+    if (!currentAccount || !auth.currentUser) return;
+
+    try {
+      // Reload Firebase user to get latest verification status
+      await reload(auth.currentUser);
+      const isVerified = auth.currentUser.emailVerified;
+
+      // Update session if verification status changed
+      if (currentAccount.emailVerified !== isVerified) {
+        console.log(`Email verification status changed for ${currentAccount.uid}: ${isVerified}`);
+        await multiAuth.updateSession(currentAccount.sessionId, { emailVerified: isVerified });
+
+        // Update local state
+        const updatedSession = multiAuth.getSession(currentAccount.sessionId);
+        if (updatedSession) {
+          setCurrentSession(updatedSession);
+          setAuthenticationCookies(updatedSession);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update email verification status:', error);
+    }
+  }, [currentAccount, multiAuth, setAuthenticationCookies]);
 
   // Hydration management
   const markAsHydrated = useCallback(() => {
@@ -84,6 +139,9 @@ export const CurrentAccountProvider: React.FC<CurrentSessionProviderProps> = ({ 
       const updatedSession = multiAuth.getSession(sessionId);
       setCurrentSession(updatedSession);
 
+      // Set authentication cookies for middleware compatibility
+      setAuthenticationCookies(updatedSession);
+
       // Save to storage
       saveActiveSessionToStorage(sessionId);
 
@@ -96,7 +154,7 @@ export const CurrentAccountProvider: React.FC<CurrentSessionProviderProps> = ({ 
     } finally {
       setIsLoading(false);
     }
-  }, [multiAuth, currentAccount, saveActiveSessionToStorage]);
+  }, [multiAuth, currentAccount, saveActiveSessionToStorage, setAuthenticationCookies]);
 
   // Switch to session by UID
   const switchAccountByUid = useCallback(async (uid: string): Promise<void> => {
@@ -121,6 +179,9 @@ export const CurrentAccountProvider: React.FC<CurrentSessionProviderProps> = ({ 
       // Clear local state
       setCurrentSession(null);
 
+      // Clear authentication cookies
+      setAuthenticationCookies(null);
+
       // Clear from storage
       saveActiveSessionToStorage(null);
 
@@ -133,7 +194,7 @@ export const CurrentAccountProvider: React.FC<CurrentSessionProviderProps> = ({ 
     } finally {
       setIsLoading(false);
     }
-  }, [currentAccount, multiAuth, saveActiveSessionToStorage]);
+  }, [currentAccount, multiAuth, saveActiveSessionToStorage, setAuthenticationCookies]);
 
   // Refresh active account
   const refreshActiveAccount = useCallback(async (): Promise<void> => {
@@ -175,7 +236,7 @@ export const CurrentAccountProvider: React.FC<CurrentSessionProviderProps> = ({ 
     const loadActiveSession = async () => {
       try {
         setIsLoading(true);
-        
+
         const activeSessionId = loadActiveSessionFromStorage();
         if (activeSessionId) {
           const session = multiAuth.getSession(activeSessionId);
@@ -187,6 +248,8 @@ export const CurrentAccountProvider: React.FC<CurrentSessionProviderProps> = ({ 
 
             if (sessionAge < maxAge) {
               setCurrentSession(session);
+              // Set authentication cookies for middleware compatibility
+              setAuthenticationCookies(session);
               await multiAuth.updateSession(session.sessionId, {
                 isActive: true,
                 lastActiveAt: new Date().toISOString()
@@ -200,6 +263,10 @@ export const CurrentAccountProvider: React.FC<CurrentSessionProviderProps> = ({ 
             // Session not found in bag, clear storage
             saveActiveSessionToStorage(null);
           }
+        } else {
+          // No active session in localStorage, check if we have server-side authentication
+          console.log('CurrentAccountProvider: No active session found, checking for server-side auth');
+          await checkAndSyncServerAuth();
         }
       } catch (err) {
         console.error('Failed to load active account:', err);
@@ -215,12 +282,66 @@ export const CurrentAccountProvider: React.FC<CurrentSessionProviderProps> = ({ 
     }
   }, [multiAuth.isLoading]); // Only depend on isLoading to avoid infinite loops
 
+  // Helper function to check server-side auth and sync with client-side sessions
+  const checkAndSyncServerAuth = useCallback(async () => {
+    try {
+      // Check if we have server-side authentication by calling an API that requires auth
+      const response = await fetch('/api/account-subscription');
+
+      if (response.ok) {
+        // We have server-side auth, check if we have user session cookie
+        const userSessionCookie = Cookies.get('userSession');
+        if (userSessionCookie) {
+          try {
+            const userData = JSON.parse(userSessionCookie);
+            console.log('CurrentAccountProvider: Found server-side auth, creating client-side session for:', userData.uid);
+
+            // Create a client-side session to match the server-side auth
+            const sessionData = {
+              uid: userData.uid,
+              email: userData.email || '',
+              username: userData.username || userData.displayName || '',
+              displayName: userData.displayName || userData.username || '',
+              photoURL: null,
+              emailVerified: userData.emailVerified ?? false
+            };
+
+            const newSession = await multiAuth.addSession(sessionData);
+            console.log('CurrentAccountProvider: Created session:', newSession.sessionId);
+
+            // Switch to this session
+            await switchAccount(newSession.sessionId);
+            console.log('CurrentAccountProvider: Switched to synced session');
+          } catch (parseError) {
+            console.error('CurrentAccountProvider: Failed to parse userSession cookie:', parseError);
+          }
+        }
+      } else {
+        console.log('CurrentAccountProvider: No server-side authentication found');
+      }
+    } catch (error) {
+      console.error('CurrentAccountProvider: Error checking server-side auth:', error);
+    }
+  }, [multiAuth, switchAccount]);
+
+  // Periodically check email verification status for unverified users
+  useEffect(() => {
+    if (!currentAccount || currentAccount.emailVerified) return;
+
+    const checkInterval = setInterval(() => {
+      updateEmailVerificationStatus();
+    }, 10000); // Check every 10 seconds for unverified users
+
+    return () => clearInterval(checkInterval);
+  }, [currentAccount, updateEmailVerificationStatus]);
+
   // Context value
   const contextValue: CurrentAccountContextValue = useMemo(() => ({
     // State
     currentAccount,
     session: currentAccount, // Alias for backward compatibility
-    isAuthenticated: !!currentAccount, // Computed from currentAccount
+    isAuthenticated: !!currentAccount, // Temporarily remove email verification requirement for debugging
+    isEmailVerified: currentAccount?.emailVerified ?? false, // Email verification status
     isLoading,
     isHydrated,
     error,

@@ -15,7 +15,7 @@ import { Button } from "./button"
 
 export function UserMenu() {
   const router = useRouter()
-  const { session } = useCurrentAccount()
+  const { currentAccount } = useCurrentAccount()
 
   const handleLogout = async () => {
     try {
@@ -51,7 +51,7 @@ export function UserMenu() {
     }
   }
 
-  if (!session) {
+  if (!currentAccount) {
     return null
   }
 

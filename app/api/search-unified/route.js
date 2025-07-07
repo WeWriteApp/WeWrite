@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, startAfter } from 'firebase/firestore';
+import { db } from '../../firebase/database';
 
 // Add export for dynamic route handling
 export const dynamic = 'force-dynamic';
@@ -150,9 +152,7 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
     const isEmptySearch = !searchTerm || searchTerm.trim().length === 0;
     const searchTermLower = searchTerm?.toLowerCase().trim() || '';
 
-    // Import Firestore modules
-    const { collection, query, where, orderBy, limit, getDocs, doc, getDoc } = await import('firebase/firestore');
-    const { db } = await import('../../firebase/database');
+    // Firestore modules are now imported at the top of the file
 
     const allResults = [];
     const processedIds = new Set();
@@ -178,7 +178,6 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
         );
         
         if (lastDoc) {
-          const { startAfter } = await import('firebase/firestore');
           userQuery = query(
             collection(db, 'pages'),
             where('userId', '==', targetUserId),
@@ -269,7 +268,6 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
         );
         
         if (lastDoc) {
-          const { startAfter } = await import('firebase/firestore');
           publicQuery = query(
             collection(db, 'pages'),
             where('isPublic', '==', true),
@@ -382,8 +380,7 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
   }
 
   try {
-    const { collection, query, where, limit, getDocs } = await import('firebase/firestore');
-    const { db } = await import('../../firebase/database');
+    // Firestore modules are now imported at the top of the file
 
     const searchLower = searchTerm.toLowerCase().trim();
     const results = new Map();

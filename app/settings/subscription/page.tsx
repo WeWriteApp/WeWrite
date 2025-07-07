@@ -11,6 +11,7 @@ import { useToast } from '../../components/ui/use-toast';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { NAVIGATION_EVENTS } from '../../constants/analytics-events';
 import { auth } from '../../firebase/config';
+import { usePWA } from '../../providers/PWAProvider';
 import {
   AlertCircle,
   CheckCircle,
@@ -19,11 +20,12 @@ import {
   Calendar,
   DollarSign,
   Settings,
-  ArrowLeft,
-  RefreshCw
+  ArrowLeft
 } from 'lucide-react';
 import Link from 'next/link';
-import SubscriptionTierCarousel from '../../components/subscription/SubscriptionTierCarousel';
+import SubscriptionTierSlider from '../../components/subscription/SubscriptionTierSlider';
+import { SubscriptionTierBadge } from '../../components/ui/SubscriptionTierBadge';
+import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 // PaymentFeatureGuard removed
 // Define the Subscription interface
 interface Subscription {
@@ -45,15 +47,17 @@ export default function SubscriptionPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { trackInteractionEvent } = useWeWriteAnalytics();
+  const { isPWA } = usePWA();
   const [loading, setLoading] = useState(true);
   const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
   const [selectedTier, setSelectedTier] = useState<string>('tier1');
-  const [customAmount, setCustomAmount] = useState<number>(10);
+  const [selectedAmount, setSelectedAmount] = useState<number>(10);
   const [previousCustomAmount, setPreviousCustomAmount] = useState<number | null>(null);
   const [showInlineTierSelector, setShowInlineTierSelector] = useState(false);
   const [showReactivationFlow, setShowReactivationFlow] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
 
   // Check payments feature flag
   const paymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
@@ -68,48 +72,32 @@ export default function SubscriptionPage() {
   };
 
   // Fetch current subscription
-  const fetchSubscription = useCallback(async (forceFresh = false) => {
+  const fetchSubscription = useCallback(async () => {
     if (!currentAccount || !paymentsEnabled) return;
 
     try {
-      // Add cache-busting parameter when forcing fresh data
-      const url = forceFresh
-        ? `/api/account-subscription?t=${Date.now()}`
-        : '/api/account-subscription';
+      setLoading(true);
+
+      const url = '/api/account-subscription';
 
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        console.log('Subscription data received:', data);
+
         setCurrentSubscription(data);
 
-        // Set tier and amount from current subscription
+        // Set amount from current subscription
         if (data && data.amount) {
-          // For cancelling subscriptions, preserve their current selection
-          if (data.cancelAtPeriodEnd) {
-            if (data.tier && data.tier !== 'custom') {
-              setSelectedTier(data.tier);
-            } else if (data.amount % 5 !== 0) {
-              // Custom amount
-              setPreviousCustomAmount(data.amount);
-              setCustomAmount(data.amount);
-              setSelectedTier('custom');
-            } else {
-              // Standard tier amounts
-              if (data.amount === 10) setSelectedTier('tier1');
-              else if (data.amount === 20) setSelectedTier('tier2');
-              else if (data.amount === 50) setSelectedTier('tier3');
-              else {
-                setPreviousCustomAmount(data.amount);
-                setCustomAmount(data.amount);
-                setSelectedTier('custom');
-              }
-            }
-          } else if (data.amount % 5 !== 0) {
-            // For non-cancelling custom subscriptions
-            setPreviousCustomAmount(data.amount);
-            setCustomAmount(data.amount);
-            setSelectedTier('custom');
+          setSelectedAmount(data.amount);
+          setPreviousCustomAmount(data.amount);
+
+          // Set tier based on amount
+          if (data.amount === 10) {
+            setSelectedTier('tier1');
+          } else if (data.amount === 20) {
+            setSelectedTier('tier2');
+          } else if (data.amount >= 30) {
+            setSelectedTier('tier3');
           }
         }
       }
@@ -120,67 +108,54 @@ export default function SubscriptionPage() {
     }
   }, [currentAccount, paymentsEnabled]);
 
-  // Force sync subscription status with Stripe
-  const handleSyncSubscription = useCallback(async () => {
-    if (!currentAccount?.uid) return;
 
-    setSyncing(true);
-    setSyncMessage(null);
 
+
+
+  // Handle subscription cancellation
+  const handleCancelSubscription = useCallback(async () => {
+    if (!currentAccount?.uid || !currentSubscription?.stripeSubscriptionId) return;
+
+    setCancelling(true);
     try {
-      const { SubscriptionService } = await import('../../services/subscriptionService');
-      const result = await SubscriptionService.forceSyncSubscription(currentAccount.uid);
+      const { cancelSubscription } = await import('../../firebase/subscription');
+      const result = await cancelSubscription(
+        currentSubscription.stripeSubscriptionId,
+        currentSubscription.stripeCustomerId
+      );
 
       if (result.success) {
-        if (result.statusChanged) {
-          setSyncMessage(`Status updated: ${result.previousStatus} → ${result.currentStatus}`);
-          toast({
-            title: "Subscription Synchronized",
-            description: `Status updated from ${result.previousStatus} to ${result.currentStatus}`,
-            variant: "default"
-          });
-        } else if (result.needsWait) {
-          setSyncMessage("Subscription is still processing. Please wait a few minutes.");
-          toast({
-            title: "Processing",
-            description: "Your subscription is still being processed. Please wait a few minutes.",
-            variant: "default"
-          });
-        } else {
-          setSyncMessage("Subscription status is already up to date.");
-          toast({
-            title: "Already Synchronized",
-            description: "Your subscription status is already up to date.",
-            variant: "default"
-          });
-        }
-
-        // Refresh subscription data
-        await fetchSubscription(true);
-      } else {
-        setSyncMessage(`Sync failed: ${result.error}`);
         toast({
-          title: "Sync Failed",
-          description: result.error || "Failed to synchronize subscription status",
+          title: "Subscription Cancelled",
+          description: "Your subscription will end at the current billing period. You can reactivate it anytime before then.",
+          variant: "default"
+        });
+
+        // Refresh subscription data to show updated status
+        await fetchSubscription();
+        setShowCancelConfirmation(false);
+      } else {
+        toast({
+          title: "Cancellation Failed",
+          description: result.error || "Failed to cancel subscription. Please try again.",
           variant: "destructive"
         });
       }
     } catch (error) {
-      console.error('Error syncing subscription:', error);
-      setSyncMessage("Failed to sync subscription status");
+      console.error('Error cancelling subscription:', error);
       toast({
         title: "Error",
-        description: "Failed to sync subscription status. Please try again.",
+        description: "Failed to cancel subscription. Please try again.",
         variant: "destructive"
       });
     } finally {
-      setSyncing(false);
+      setCancelling(false);
     }
-  }, [currentAccount, toast, fetchSubscription]);
+  }, [currentAccount, currentSubscription, toast, fetchSubscription]);
 
   useEffect(() => {
-    // Force fresh data on initial load to ensure accurate subscription status
-    fetchSubscription(true);
+    // Load subscription data on initial load
+    fetchSubscription();
   }, [fetchSubscription]);
 
   // Handle success/cancelled redirects from Stripe
@@ -197,31 +172,10 @@ export default function SubscriptionPage() {
         variant: "default"
       });
 
-      // Clear subscription cache to force fresh data fetch
-      if (currentAccount?.uid) {
-        import('../../firebase/optimizedSubscription').then(({ clearSubscriptionCache }) => {
-          clearSubscriptionCache(currentAccount.uid);
-          console.log('Subscription cache cleared after successful checkout');
-        });
-      }
-
-      // Refresh subscription data after successful payment with multiple attempts
-      // to handle webhook processing delays
-      const refreshWithRetry = async (attempt = 1, maxAttempts = 5) => {
-        await fetchSubscription(true); // Force fresh data
-
-        // If we still don't have an active subscription after the first attempt,
-        // try again with exponential backoff
-        if (attempt < maxAttempts) {
-          setTimeout(() => {
-            refreshWithRetry(attempt + 1, maxAttempts);
-          }, Math.min(1000 * Math.pow(2, attempt - 1), 10000)); // Cap at 10 seconds
-        }
-      };
-
+      // Refresh subscription data after successful payment
       setTimeout(() => {
-        refreshWithRetry();
-      }, 1000);
+        fetchSubscription();
+      }, 2000);
 
       // Clean up URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -237,10 +191,55 @@ export default function SubscriptionPage() {
     }
   }, [toast, fetchSubscription, currentAccount]);
 
-  const handleTierSelect = (tier: string) => {
-    setSelectedTier(tier);
-    if (tier !== 'custom' && previousCustomAmount) {
-      setCustomAmount(previousCustomAmount);
+  const handleAmountSelect = (amount: number) => {
+    setSelectedAmount(amount);
+
+    // Update tier based on amount
+    if (amount === 0) {
+      setSelectedTier('free');
+    } else if (amount === 10) {
+      setSelectedTier('tier1');
+    } else if (amount === 20) {
+      setSelectedTier('tier2');
+    } else if (amount >= 30) {
+      setSelectedTier('tier3');
+    } else {
+      setSelectedTier('custom');
+    }
+  };
+
+  // Get button state based on slider position
+  const getButtonState = () => {
+    const currentAmount = currentSubscription?.amount || 0;
+
+    if (selectedAmount === currentAmount) {
+      return {
+        text: 'Update Subscription',
+        variant: 'outline' as const,
+        disabled: true,
+        className: 'opacity-50 cursor-not-allowed'
+      };
+    } else if (selectedAmount === 0) {
+      return {
+        text: 'Cancel Subscription',
+        variant: 'destructive' as const,
+        disabled: false,
+        className: 'bg-red-600 hover:bg-red-700'
+      };
+    } else if (selectedAmount < currentAmount) {
+      return {
+        text: 'Downgrade Subscription',
+        variant: 'outline' as const,
+        disabled: false,
+        className: 'border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950/20'
+      };
+    } else {
+      return {
+        text: 'Upgrade Subscription',
+        variant: 'default' as const,
+        disabled: false,
+        className: 'bg-primary hover:bg-primary/90'
+      };
     }
   };
 
@@ -250,17 +249,12 @@ export default function SubscriptionPage() {
       return;
     }
 
-    // Check if this is a reactivation (subscription exists and is set to cancel)
+    // Check if this is a reactivation (subscription exists and is set to cancel or is cancelled)
     const isReactivation = currentSubscription &&
-                          currentSubscription.cancelAtPeriodEnd &&
+                          (currentSubscription.cancelAtPeriodEnd || currentSubscription.status === 'cancelled') &&
                           currentSubscription.stripeSubscriptionId;
 
-    console.log('Subscription action check:', {
-      currentSubscription,
-      isReactivation,
-      cancelAtPeriodEnd: currentSubscription?.cancelAtPeriodEnd,
-      stripeSubscriptionId: currentSubscription?.stripeSubscriptionId
-    });
+
 
     if (isReactivation) {
       // Handle reactivation
@@ -271,25 +265,49 @@ export default function SubscriptionPage() {
         }
         const token = await user.getIdToken();
 
+        // Determine if this is a reactivation with amount change
+        const currentTierAmount = currentSubscription.amount;
+        const newAmount = selectedAmount;
+        const isAmountChange = newAmount !== currentTierAmount;
+
+        const requestBody: any = {
+          subscriptionId: currentSubscription.stripeSubscriptionId
+        };
+
+        if (isAmountChange) {
+          requestBody.newTier = selectedTier;
+          requestBody.newAmount = newAmount;
+        }
+
         const response = await fetch('/api/subscription/reactivate', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({
-            subscriptionId: currentSubscription.stripeSubscriptionId
-          })
+          body: JSON.stringify(requestBody)
         });
 
         const data = await response.json();
 
         if (data.success) {
+          const subscription = data.subscription;
+          let description = "Your subscription has been reactivated!";
+
+          if (subscription.isUpgrade) {
+            description = `Subscription upgraded to $${subscription.amount}/month! You now have ${subscription.tokens} tokens per month.`;
+          } else if (subscription.isDowngrade) {
+            description = `Subscription updated to $${subscription.amount}/month. You keep your current tokens this month, and will receive ${subscription.tokens} tokens next month.`;
+          }
+
           toast({
             title: "Success",
-            description: "Your subscription has been reactivated!",
+            description,
             variant: "default"
           });
+
+          // Hide the reactivation flow since subscription is now active
+          setShowReactivationFlow(false);
 
           // Refresh subscription data
           await fetchSubscription();
@@ -307,54 +325,32 @@ export default function SubscriptionPage() {
       return;
     }
 
-    // Handle new subscription
+    // Handle new subscription - use embedded checkout
     try {
-      // Get authentication token
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-      const token = await user.getIdToken();
-
-      const response = await fetch('/api/subscription/create-checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          tier: selectedTier,
-          amount: selectedTier === 'custom' ? customAmount : undefined
-        })
+      // Track subscription attempt
+      trackInteractionEvent(NAVIGATION_EVENTS.BUTTON_CLICKED, {
+        button_name: 'subscribe',
+        tier_id: selectedTier,
+        amount: selectedAmount,
+        page_section: 'subscription'
       });
 
-      const data = await response.json();
-      console.log('Checkout API response:', data);
+      // Navigate to embedded checkout page
+      const checkoutUrl = new URL('/settings/subscription/checkout', window.location.origin);
+      checkoutUrl.searchParams.set('tier', selectedTier);
+      checkoutUrl.searchParams.set('amount', selectedAmount.toString());
+      checkoutUrl.searchParams.set('return_to', window.location.pathname);
 
-      if (!response.ok) {
-        throw new Error(data.error || `HTTP ${response.status}: Failed to create checkout session`);
-      }
 
-      if (data.url) {
-        // Track subscription attempt
-        trackInteractionEvent(NAVIGATION_EVENTS.BUTTON_CLICKED, {
-          button_name: isReactivation ? 'reactivate' : 'subscribe',
-          tier_id: selectedTier,
-          amount: selectedTier === 'custom' ? customAmount : undefined,
-          page_section: 'subscription'
-        });
+      router.push(checkoutUrl.toString());
 
-        console.log('Redirecting to Stripe checkout:', data.url);
-        window.location.href = data.url;
-      } else {
-        throw new Error(data.error || 'No checkout URL returned from server');
-      }
     } catch (error) {
-      console.error('Error creating checkout session:', error);
+      console.error('Error starting checkout process:', error);
       toast({
         title: "Error",
         description: "Failed to start checkout process. Please try again.",
-        variant: "destructive"});
+        variant: "destructive"
+      });
     }
   };
 
@@ -383,17 +379,13 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6">
-        <div className="mb-6 md:mb-8">
-          <Link href="/settings" className="inline-flex items-center text-blue-500 hover:text-blue-600 mb-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Settings
-          </Link>
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">Subscription</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Manage your WeWrite subscription and get monthly tokens to support creators.
-          </p>
-        </div>
+    <div>
+      <SettingsPageHeader
+        title="Subscription"
+        description="Manage your WeWrite subscription and get monthly tokens to support creators."
+      />
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         <div className="space-y-4 md:space-y-6">
           {/* Current Subscription Status */}
@@ -406,41 +398,40 @@ export default function SubscriptionPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                      <span className="text-xl md:text-2xl font-bold">${currentSubscription.amount}/month</span>
+                <div className="space-y-4">
+                  {/* Mobile-optimized subscription info */}
+                  <div className="flex flex-col space-y-3">
+                    {/* Amount and tier badge */}
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Badge variant={currentSubscription.status === 'active' ? 'default' : 'secondary'}>
-                          {currentSubscription.status}
-                        </Badge>
-                        {currentSubscription.cancelAtPeriodEnd && currentSubscription.billingCycleEnd && (
-                          <Badge variant="destructive">
-                            {(() => {
-                              const daysLeft = getDaysUntilCancellation(currentSubscription.billingCycleEnd);
-                              if (daysLeft <= 0) return 'Cancels today';
-                              if (daysLeft === 1) return 'Cancels in 1 day';
-                              return `Cancels in ${daysLeft} days`;
-                            })()}
-                          </Badge>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleSyncSubscription}
-                          disabled={syncing}
-                          className="h-6 px-2 text-xs"
-                        >
-                          <RefreshCw className={`h-3 w-3 mr-1 ${syncing ? 'animate-spin' : ''}`} />
-                          {syncing ? 'Syncing...' : 'Sync'}
-                        </Button>
+                        <span className="text-2xl md:text-3xl font-bold">${currentSubscription.amount}/month</span>
+                        <SubscriptionTierBadge
+                          tier={currentSubscription.tier}
+                          status={currentSubscription.status}
+                          amount={currentSubscription.amount}
+                          size="md"
+                        />
                       </div>
                     </div>
-                    {syncMessage && (
-                      <div className="text-xs text-muted-foreground mb-2 p-2 bg-muted rounded">
-                        {syncMessage}
-                      </div>
-                    )}
+
+                    {/* Status badges */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={currentSubscription.status === 'active' ? 'default' : 'secondary'}>
+                        {currentSubscription.status}
+                      </Badge>
+                      {currentSubscription.cancelAtPeriodEnd && currentSubscription.billingCycleEnd && (
+                        <Badge variant="destructive">
+                          {(() => {
+                            const daysLeft = getDaysUntilCancellation(currentSubscription.billingCycleEnd);
+                            if (daysLeft <= 0) return 'Cancels today';
+                            if (daysLeft === 1) return 'Cancels in 1 day';
+                            return `Cancels in ${daysLeft} days`;
+                          })()}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Billing info */}
                     <p className="text-sm text-muted-foreground">
                       {currentSubscription.billingCycleEnd && !currentSubscription.cancelAtPeriodEnd && (
                         <>Next billing: {new Date(currentSubscription.billingCycleEnd).toLocaleDateString()}</>
@@ -450,11 +441,13 @@ export default function SubscriptionPage() {
                       )}
                     </p>
                   </div>
-                  <div className="flex gap-2 md:flex-shrink-0">
-                    {currentSubscription.cancelAtPeriodEnd ? (
+
+                  {/* Action buttons - mobile optimized */}
+                  <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                    {(currentSubscription.cancelAtPeriodEnd || currentSubscription.status === 'cancelled') ? (
                       <Button
-                        onClick={handleSubscribe}
-                        className="bg-green-600 hover:bg-green-700 w-full md:w-auto"
+                        onClick={() => setShowReactivationFlow(true)}
+                        className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                         disabled={loading}
                         size="sm"
                       >
@@ -464,7 +457,7 @@ export default function SubscriptionPage() {
                       <Button
                         variant="outline"
                         onClick={() => setShowInlineTierSelector(true)}
-                        className="w-full md:w-auto"
+                        className="w-full sm:w-auto"
                         size="sm"
                       >
                         <Settings className="h-4 w-4 mr-2" />
@@ -477,55 +470,51 @@ export default function SubscriptionPage() {
             </Card>
           )}
 
-          {/* Subscription Management */}
-          {currentSubscription?.status === 'active' && !currentSubscription.cancelAtPeriodEnd ? (
-            <div className="text-center py-6 md:py-8">
-              <CheckCircle className="h-12 w-12 md:h-16 md:w-16 mx-auto text-green-500 mb-4" />
-              <h2 className="text-xl md:text-2xl font-bold mb-2">You're all set!</h2>
-              <p className="text-sm md:text-base text-muted-foreground mb-6">
-                Your subscription is active and you're receiving tokens monthly.
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => setShowInlineTierSelector(true)}
-                size="sm"
-              >
-                Change Plan
-              </Button>
-            </div>
-          ) : currentSubscription?.cancelAtPeriodEnd && !showReactivationFlow ? (
-            // Hide tier selection for cancelling subscriptions until user clicks reactivate
-            <div className="text-center py-6 md:py-8">
-              <AlertCircle className="h-12 w-12 md:h-16 md:w-16 mx-auto text-orange-500 mb-4" />
-              <h2 className="text-xl md:text-2xl font-bold mb-2">Subscription Cancelling</h2>
-              <p className="text-sm md:text-base text-muted-foreground mb-6">
-                Your subscription will end on {currentSubscription.billingCycleEnd ?
-                  new Date(currentSubscription.billingCycleEnd).toLocaleDateString() : 'the next billing date'}.
-                You can reactivate it anytime before then.
-              </p>
-            </div>
-          ) : (
+          {/* Show tier selector only for new subscriptions or when reactivating */}
+          {(!currentSubscription || ((currentSubscription.cancelAtPeriodEnd || currentSubscription.status === 'cancelled') && showReactivationFlow)) && (
             <div>
-              <SubscriptionTierCarousel
-                selectedTier={selectedTier}
-                onTierSelect={handleTierSelect}
-                customAmount={customAmount}
-                onCustomAmountChange={setCustomAmount}
+              {/* PWA Embedded Checkout Notice */}
+              {isPWA && (
+                <Card className="mb-6 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                      <div className="text-sm">
+                        <p className="font-medium text-blue-800 dark:text-blue-200 mb-1">
+                          Enhanced PWA Checkout
+                        </p>
+                        <p className="text-blue-700 dark:text-blue-300">
+                          You're using our optimized in-app checkout experience. No external redirects -
+                          everything happens securely within WeWrite.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <SubscriptionTierSlider
+                selectedAmount={selectedAmount}
+                onAmountSelect={handleAmountSelect}
                 currentSubscription={currentSubscription}
                 showCurrentOption={false}
               />
 
               <div className="text-center mt-6 md:mt-8">
-                <Button
-                  onClick={handleSubscribe}
-                  size="lg"
-                  className="px-6 md:px-8 w-full sm:w-auto"
-                  disabled={loading}
-                >
-                  {loading ? 'Processing...' :
-                   currentSubscription && currentSubscription.cancelAtPeriodEnd ?
-                   'Reactivate Subscription' : 'Subscribe Now'}
-                </Button>
+                {(() => {
+                  const buttonState = getButtonState();
+                  return (
+                    <Button
+                      onClick={handleSubscribe}
+                      size="lg"
+                      variant={buttonState.variant}
+                      className={`px-6 md:px-8 w-full sm:w-auto ${buttonState.className}`}
+                      disabled={loading || buttonState.disabled}
+                    >
+                      {loading ? 'Processing...' : buttonState.text}
+                    </Button>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -540,13 +529,11 @@ export default function SubscriptionPage() {
                 </p>
               </div>
 
-              <SubscriptionTierCarousel
-                selectedTier={selectedTier}
-                onTierSelect={setSelectedTier}
-                customAmount={customAmount}
-                onCustomAmountChange={setCustomAmount}
+              <SubscriptionTierSlider
+                selectedAmount={selectedAmount}
+                onAmountSelect={handleAmountSelect}
                 currentSubscription={currentSubscription}
-                showCurrentOption={true}
+                showCurrentOption={false}
               />
 
               <div className="flex flex-col sm:flex-row gap-3 mt-4 md:mt-6">
@@ -558,18 +545,58 @@ export default function SubscriptionPage() {
                 >
                   Cancel
                 </Button>
-                <Button
-                  onClick={handleSubscribe}
-                  disabled={loading}
-                  className="w-full sm:w-auto"
-                  size="sm"
-                >
-                  {loading ? 'Processing...' : 'Update Subscription'}
-                </Button>
+                {(() => {
+                  const buttonState = getButtonState();
+                  return (
+                    <Button
+                      onClick={handleSubscribe}
+                      variant={buttonState.variant}
+                      disabled={loading || buttonState.disabled}
+                      className={`w-full sm:w-auto ${buttonState.className}`}
+                      size="sm"
+                    >
+                      {loading ? 'Processing...' : buttonState.text}
+                    </Button>
+                  );
+                })()}
               </div>
             </div>
           )}
         </div>
+
+        {/* Cancel Subscription Confirmation Dialog */}
+        {showCancelConfirmation && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-background border rounded-lg p-6 max-w-md w-full">
+              <h3 className="text-lg font-semibold mb-4">Cancel Subscription?</h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                Your subscription will remain active until the end of your current billing period
+                ({currentSubscription?.billingCycleEnd ?
+                  new Date(currentSubscription.billingCycleEnd).toLocaleDateString() :
+                  'your next billing date'}). You can reactivate it anytime before then.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCancelConfirmation(false)}
+                  disabled={cancelling}
+                  size="sm"
+                >
+                  Keep Subscription
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleCancelSubscription}
+                  disabled={cancelling}
+                  size="sm"
+                >
+                  {cancelling ? 'Cancelling...' : 'Cancel Subscription'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+    </div>
   );
 }

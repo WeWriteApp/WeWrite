@@ -19,18 +19,18 @@ import { RecentPagesContext } from '../contexts/RecentPagesContext';
  * Features search, filtering, and detailed page information.
  */
 export default function RecentsPage() {
-  const { session } = useCurrentAccount();
+  const { currentAccount } = useCurrentAccount();
   const { recentPages, loading } = useContext(RecentPagesContext);
   const router = useRouter();
   // Remove search functionality - no longer needed
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!session) {
+    if (!currentAccount) {
       router.push('/auth/login');
       return;
     }
-  }, [session, router]);
+  }, [currentAccount, router]);
 
   // No search functionality needed
 
@@ -52,7 +52,7 @@ export default function RecentsPage() {
     }
   };
 
-  if (!session) {
+  if (!currentAccount) {
     return null; // Will redirect to login
   }
 

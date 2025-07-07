@@ -20,7 +20,7 @@ import { getLoggedOutTokenBalance, getUserTokenBalance } from "../../utils/simul
 
 export default function Header() {
   const router = useRouter();
-  const { session } = useCurrentAccount();
+  const { currentAccount } = useCurrentAccount();
   const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
@@ -32,7 +32,7 @@ export default function Header() {
   const headerRef = React.useRef<HTMLDivElement>(null);
 
   // Check if payments feature is enabled
-  const isPaymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
+  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
 
   // Helper function to render token allocation display
   const renderTokenAllocationDisplay = () => {
@@ -70,37 +70,37 @@ export default function Header() {
   // Listen to user subscription changes
   React.useEffect(() => {
     console.log('🎯 Header: Subscription effect triggered', {
-      session: !!session,
+      currentAccount: !!currentAccount,
       isPaymentsEnabled,
-      sessionUid: session?.uid
+      currentAccountUid: currentAccount?.uid
     });
 
-    if (!session || !isPaymentsEnabled) {
-      console.log('🎯 Header: No session or payments disabled, clearing subscription');
+    if (!currentAccount || !isPaymentsEnabled) {
+      console.log('🎯 Header: No currentAccount or payments disabled, clearing subscription');
       setSubscription(null);
       return;
     }
 
-    console.log('🎯 Header: Setting up subscription listener for user:', session.uid);
-    const unsubscribe = listenToUserSubscription(session.uid, (subscriptionData) => {
-      console.log('🎯 Header: Subscription updated:', sub);
+    console.log('🎯 Header: Setting up subscription listener for user:', currentAccount.uid);
+    const unsubscribe = listenToUserSubscription(currentAccount.uid, (subscriptionData) => {
+      console.log('🎯 Header: Subscription updated:', subscriptionData);
       setSubscription(subscriptionData);
     }, { verbose: false });
 
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [session, isPaymentsEnabled]);
+  }, [currentAccount, isPaymentsEnabled]);
 
   // Fetch token balance directly via API (simpler approach)
   React.useEffect(() => {
     console.log('🎯 Header: Token balance effect triggered', {
-      session: !!session,
+      currentAccount: !!currentAccount,
       isPaymentsEnabled
     });
 
-    if (!session || !isPaymentsEnabled) {
-      console.log('🎯 Header: No session or payments disabled, clearing token balance');
+    if (!currentAccount || !isPaymentsEnabled) {
+      console.log('🎯 Header: No currentAccount or payments disabled, clearing token balance');
       setTokenBalance(null);
       return;
     }
@@ -124,7 +124,7 @@ export default function Header() {
       .catch(error => {
         console.error('🎯 Header: Failed to fetch token balance:', error);
       });
-  }, [session, isPaymentsEnabled]);
+  }, [currentAccount, isPaymentsEnabled]);
 
   // Load unfunded token balance for users without subscriptions
   React.useEffect(() => {
@@ -138,13 +138,13 @@ export default function Header() {
 
     const loadUnfundedTokens = () => {
       // Load unfunded tokens for logged-out users or users without subscriptions
-      if (!session) {
+      if (!currentAccount) {
         // Logged-out user - load from localStorage
         const balance = getLoggedOutTokenBalance();
         setSimulatedTokenBalance(balance);
       } else {
         // Logged-in user without subscription - load user-specific unfunded tokens
-        const balance = getUserTokenBalance(session.uid);
+        const balance = getUserTokenBalance(currentAccount.uid);
         setSimulatedTokenBalance(balance);
       }
     };
@@ -164,7 +164,7 @@ export default function Header() {
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [session, isPaymentsEnabled, subscription]);
+  }, [currentAccount, isPaymentsEnabled, subscription]);
 
   // Calculate and update header height
   React.useEffect(() => {

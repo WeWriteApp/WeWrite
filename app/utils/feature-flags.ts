@@ -56,7 +56,7 @@ const initializeFeatureFlags = async (): Promise<void> => {
 
       // Set default flags
       globalFeatureFlags = {
-        payments: false,
+        payments: true, // Temporarily enabled for testing
         map_view: false,
         calendar_view: false
       };

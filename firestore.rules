@@ -353,9 +353,8 @@ service cloud.firestore {
 
     // User follows collections - Privacy controls
     match /userFollows/{userId} {
-      // Only allow the user to read their own followed pages
-      allow read: if isOwner(userId);
-      allow write: if isOwner(userId);
+      // Allow users to read and write their own follow data
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
     match /userFollowers/{userId} {
@@ -377,6 +376,18 @@ service cloud.firestore {
         request.auth.uid == resource.data.followedId
       );
       allow write: if isAuthenticated();
+    }
+
+    // Page followers collection - Track which users follow which pages
+    match /pageFollowers/{followId} {
+      // Allow users to read and write their own follow records
+      allow read, write: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.userId;
+
+      // Also allow read for existing documents where user matches
+      allow read: if isAuthenticated() &&
+        resource != null &&
+        request.auth.uid == resource.data.userId;
     }
 
     // Pledges/donations - Financial data security

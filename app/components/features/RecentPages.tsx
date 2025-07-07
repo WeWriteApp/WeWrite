@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, FileText } from 'lucide-react';
 import { getRecentlyViewedPageIds } from "../../utils/recentSearches";
-import { getDocById } from "../../firebase/database";
+// Removed direct Firebase imports - now using API endpoints
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { PillLink } from "../utils/PillLink";
 import { Skeleton } from "../ui/skeleton";
@@ -34,10 +34,25 @@ const RecentPages = React.memo(function RecentPages() {
       // Limit to 5 most recent pages
       const limitedIds = pageIds.slice(0, 5);
 
-      // Fetch page data for each ID
+      // Fetch page data for each ID using API endpoint
       const pagesPromises = limitedIds.map(async (id) => {
         try {
-          const page = await getDocById('pages', id);
+          const response = await fetch(`/api/pages/${id}`);
+
+          if (!response.ok) {
+            if (response.status === 404) {
+              return null; // Page not found
+            }
+            throw new Error(`Failed to fetch page: ${response.status}`);
+          }
+
+          const result = await response.json();
+
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to fetch page');
+          }
+
+          const page = result.data;
           if (!page) return null;
 
           // Only include pages the user has access to and that are not deleted

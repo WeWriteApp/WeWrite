@@ -35,43 +35,41 @@ export default function RecentlyDeletedPages() {
       setLoading(true)
       setError(null)
 
-      // Dynamic import to match the pattern used elsewhere
-      const { db } = await import('../../firebase/database')
-      const { collection, query, where, orderBy, getDocs, Timestamp } = await import('firebase/firestore')
-
-      // Calculate 30 days ago
-      const thirtyDaysAgo = new Date()
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-      // FIXED: Improved query with better error handling
-      // Query for deleted pages within the last 30 days
-      const deletedPagesQuery = query(
-        collection(db, 'pages'),
-        where('userId', '==', currentAccount.uid),
-        where('deleted', '==', true),
-        where('deletedAt', '>=', thirtyDaysAgo.toISOString()),
-        orderBy('deletedAt', 'desc')
-      )
-
       console.log('Fetching deleted pages for user:', currentAccount.uid)
-      const snapshot = await getDocs(deletedPagesQuery)
-      const pages: DeletedPage[] = []
 
-      snapshot.forEach((doc) => {
-        const data = doc.data()
-        // Validate that the page has required fields
-        if (data.deletedAt && data.deleted === true) {
-          pages.push({
-            id: doc.id,
-            title: data.title || 'Untitled Page',
-            deletedAt: data.deletedAt,
-            deletedBy: data.deletedBy || data.userId,
-            isPublic: data.isPublic || false,
-            lastModified: data.lastModified,
-            createdAt: data.createdAt
-          })
-        }
-      })
+      // Call API endpoint to get deleted pages
+      const response = await fetch(`/api/pages?userId=${currentAccount.uid}&includeDeleted=true&orderBy=deletedAt&orderDirection=desc&limit=100`)
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch deleted pages: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch deleted pages')
+      }
+
+      const pages: DeletedPage[] = result.data.pages
+        .filter((page: any) => {
+          // Only include pages deleted within the last 30 days
+          if (!page.deletedAt) return false
+
+          const deletedDate = new Date(page.deletedAt)
+          const thirtyDaysAgo = new Date()
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+          return deletedDate >= thirtyDaysAgo
+        })
+        .map((page: any) => ({
+          id: page.id,
+          title: page.title || 'Untitled Page',
+          deletedAt: page.deletedAt,
+          deletedBy: page.deletedBy || page.userId,
+          isPublic: page.isPublic || false,
+          lastModified: page.lastModified,
+          createdAt: page.createdAt
+        }))
 
       console.log(`Found ${pages.length} deleted pages`)
       setDeletedPages(pages)
@@ -81,12 +79,14 @@ export default function RecentlyDeletedPages() {
       // Provide more specific error messages
       let errorMessage = 'Failed to load recently deleted pages'
       if (err instanceof Error) {
-        if (err.message.includes('index')) {
-          errorMessage = 'Database index is being built. Please try again in a few minutes.'
-        } else if (err.message.includes('permission')) {
+        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+          errorMessage = 'Please log in to view deleted pages'
+        } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
           errorMessage = 'Permission denied. Please check your account settings.'
         } else if (err.message.includes('network')) {
           errorMessage = 'Network error. Please check your connection and try again.'
+        } else {
+          errorMessage = err.message
         }
       }
 
@@ -102,26 +102,49 @@ export default function RecentlyDeletedPages() {
       setRestoring(pageId)
       setError(null)
 
-      // Dynamic import
-      const { updatePage } = await import('../../firebase/database')
-
-      // Remove the deleted flag and deletedAt timestamp
-      const success = await updatePage(pageId, {
-        deleted: false,
-        deletedAt: null,
-        deletedBy: null,
-        lastModified: new Date().toISOString()
+      // Call API endpoint to restore page
+      const response = await fetch('/api/pages/restore', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          pageId
+        })
       })
 
-      if (success) {
-        // Remove from the deleted pages list
-        setDeletedPages(prev => prev.filter(page => page.id !== pageId))
-      } else {
-        setError('Failed to restore page')
+      if (!response.ok) {
+        const errorResult = await response.json()
+        throw new Error(errorResult.error || `Failed to restore page: ${response.status}`)
       }
+
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to restore page')
+      }
+
+      // Remove from the deleted pages list
+      setDeletedPages(prev => prev.filter(page => page.id !== pageId))
+
+      console.log('Page restored successfully:', result.data.message)
     } catch (err) {
       console.error('Error restoring page:', err)
-      setError('Failed to restore page')
+
+      let errorMessage = 'Failed to restore page'
+      if (err instanceof Error) {
+        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+          errorMessage = 'Please log in to restore pages'
+        } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
+          errorMessage = 'You can only restore your own pages'
+        } else if (err.message.includes('expired')) {
+          errorMessage = 'Page deletion period has expired (30 days)'
+        } else {
+          errorMessage = err.message
+        }
+      }
+
+      setError(errorMessage)
     } finally {
       setRestoring(null)
     }
@@ -137,18 +160,41 @@ export default function RecentlyDeletedPages() {
       setPermanentlyDeleting(pageId)
       setError(null)
 
-      // Dynamic import
-      const { db } = await import('../../firebase/database')
-      const { doc, deleteDoc } = await import('firebase/firestore')
+      // Call API endpoint to permanently delete page
+      const response = await fetch(`/api/pages?id=${pageId}&permanent=true`, {
+        method: 'DELETE'
+      })
 
-      // Actually delete the document from Firestore
-      await deleteDoc(doc(db, 'pages', pageId))
+      if (!response.ok) {
+        const errorResult = await response.json()
+        throw new Error(errorResult.error || `Failed to permanently delete page: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to permanently delete page')
+      }
 
       // Remove from the deleted pages list
       setDeletedPages(prev => prev.filter(page => page.id !== pageId))
+
+      console.log('Page permanently deleted:', result.data.message)
     } catch (err) {
       console.error('Error permanently deleting page:', err)
-      setError('Failed to permanently delete page')
+
+      let errorMessage = 'Failed to permanently delete page'
+      if (err instanceof Error) {
+        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+          errorMessage = 'Please log in to delete pages'
+        } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
+          errorMessage = 'You can only delete your own pages'
+        } else {
+          errorMessage = err.message
+        }
+      }
+
+      setError(errorMessage)
     } finally {
       setPermanentlyDeleting(null)
     }
@@ -227,17 +273,17 @@ export default function RecentlyDeletedPages() {
     return (
       <Card className="wewrite-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-foreground">
-            <Trash2 className="h-5 w-5 text-muted-foreground" />
+          <CardTitle className="flex items-center gap-2 text-foreground text-lg sm:text-xl">
+            <Trash2 className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
             Recently Deleted Pages
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm">
             Pages deleted within the last 30 days
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <div className="text-center py-6 sm:py-8">
+            <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary mx-auto"></div>
             <p className="mt-2 text-sm text-muted-foreground">Loading deleted pages...</p>
           </div>
         </CardContent>
@@ -248,32 +294,32 @@ export default function RecentlyDeletedPages() {
   return (
     <Card className="wewrite-card">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-foreground">
-          <Trash2 className="h-5 w-5 text-muted-foreground" />
+        <CardTitle className="flex items-center gap-2 text-foreground text-lg sm:text-xl">
+          <Trash2 className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
           Recently Deleted Pages
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-sm">
           Pages deleted within the last 30 days. They will be permanently deleted after 30 days.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {error && (
-          <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-            <div className="flex items-center gap-2 text-destructive mb-3">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="text-sm font-medium">{error}</span>
+          <div className="mb-4 p-3 sm:p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+            <div className="flex items-start gap-2 text-destructive mb-3">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <span className="text-sm font-medium leading-relaxed">{error}</span>
             </div>
             {retryCount < 3 && (
-              <Button onClick={retryFetch} variant="outline" size="sm" className="border-destructive/30 text-destructive hover:bg-destructive/10">
+              <Button onClick={retryFetch} variant="outline" size="sm" className="w-full sm:w-auto border-destructive/30 text-destructive hover:bg-destructive/10">
                 Try Again {retryCount > 0 && `(${retryCount}/3)`}
               </Button>
             )}
             {retryCount >= 3 && (
-              <div className="space-y-2">
-                <p className="text-xs text-destructive/80">
+              <div className="space-y-3">
+                <p className="text-xs text-destructive/80 leading-relaxed">
                   Multiple attempts failed. Please try refreshing the page or contact support.
                 </p>
-                <Button onClick={() => window.location.reload()} variant="outline" size="sm" className="border-destructive/30 text-destructive hover:bg-destructive/10">
+                <Button onClick={() => window.location.reload()} variant="outline" size="sm" className="w-full sm:w-auto border-destructive/30 text-destructive hover:bg-destructive/10">
                   Refresh Page
                 </Button>
               </div>
@@ -282,21 +328,21 @@ export default function RecentlyDeletedPages() {
         )}
 
         {deletedPages.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="mx-auto w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mb-4">
-              <Trash2 className="h-8 w-8 text-muted-foreground/60" />
+          <div className="text-center py-8 sm:py-12 px-4">
+            <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-muted/30 rounded-full flex items-center justify-center mb-4">
+              <Trash2 className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/60" />
             </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">No recently deleted pages</h3>
-            <p className="text-muted-foreground max-w-sm mx-auto">Pages you delete will appear here for 30 days before being permanently removed.</p>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">No recently deleted pages</h3>
+            <p className="text-sm sm:text-base text-muted-foreground max-w-sm mx-auto leading-relaxed">Pages you delete will appear here for 30 days before being permanently removed.</p>
           </div>
         ) : (
           <>
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <p className="text-sm text-muted-foreground">
                   {deletedPages.length} page{deletedPages.length !== 1 ? 's' : ''} found
                 </p>
-                <div className="h-1 w-1 bg-muted-foreground/40 rounded-full"></div>
+                <div className="hidden sm:block h-1 w-1 bg-muted-foreground/40 rounded-full"></div>
                 <p className="text-sm text-muted-foreground">
                   Auto-delete in 30 days
                 </p>
@@ -306,14 +352,15 @@ export default function RecentlyDeletedPages() {
                 size="sm"
                 onClick={deleteAllPermanently}
                 disabled={loading}
-                className="shadow-sm"
+                className="w-full sm:w-auto shadow-sm"
               >
                 <Trash2 className="h-3 w-3 mr-1" />
-                Delete All Permanently
+                <span className="hidden xs:inline">Delete All Permanently</span>
+                <span className="xs:hidden">Delete All</span>
               </Button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 sm:space-y-4">
               {deletedPages.map((page) => {
                 const daysLeft = getDaysUntilPermanentDeletion(page.deletedAt)
                 const isUrgent = daysLeft <= 7
@@ -321,28 +368,28 @@ export default function RecentlyDeletedPages() {
                 return (
                   <div
                     key={page.id}
-                    className="group flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-6 border-theme-medium rounded-xl hover:border-theme-strong hover:bg-muted/30 transition-all duration-200"
+                    className="group flex flex-col gap-4 p-4 sm:p-6 border-theme-medium rounded-xl hover:border-theme-strong hover:bg-muted/30 transition-all duration-200"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start sm:items-center gap-3 mb-3">
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-3 mb-3">
                         <div className="flex-1 min-w-0">
                           <PillLink
                             href={`/${page.id}?preview=deleted`}
-                            className="text-base"
+                            className="text-sm sm:text-base font-medium"
                           >
                             {page.title}
                           </PillLink>
                         </div>
                         <Badge
                           variant="outline"
-                          className="shrink-0 text-muted-foreground border-muted-foreground/30 bg-transparent"
+                          className="shrink-0 self-start text-xs text-muted-foreground border-muted-foreground/30 bg-transparent"
                         >
                           {page.isPublic ? "Public" : "Private"}
                         </Badge>
                       </div>
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
+                      <div className="flex flex-col gap-2 text-xs sm:text-sm">
                         <span className="flex items-center gap-1.5 text-muted-foreground">
-                          <Calendar className="h-3.5 w-3.5" />
+                          <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                           Deleted {formatDate(page.deletedAt)}
                         </span>
                         <span className={`flex items-center gap-1.5 font-medium ${
@@ -364,7 +411,7 @@ export default function RecentlyDeletedPages() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-2 sm:ml-4 opacity-100 sm:opacity-60 sm:group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border/50 sm:border-t-0 sm:pt-0 sm:ml-4 opacity-100 sm:opacity-60 sm:group-hover:opacity-100 transition-opacity duration-200">
                       <Button
                         variant="outline"
                         size="sm"
@@ -377,7 +424,8 @@ export default function RecentlyDeletedPages() {
                         ) : (
                           <RotateCcw className="h-3 w-3 mr-2" />
                         )}
-                        Restore
+                        <span className="hidden xs:inline">Restore</span>
+                        <span className="xs:hidden">↻</span>
                       </Button>
                       <Button
                         variant="destructive"
@@ -391,7 +439,8 @@ export default function RecentlyDeletedPages() {
                         ) : (
                           <Trash2 className="h-3 w-3 mr-2" />
                         )}
-                        Delete Forever
+                        <span className="hidden xs:inline">Delete Forever</span>
+                        <span className="xs:hidden">Delete</span>
                       </Button>
                     </div>
                   </div>

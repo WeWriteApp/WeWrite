@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { Button } from "../ui/button";
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from "../../firebase/config";
+// Removed direct Firebase imports - now using API endpoints
 import { FeatureFlag } from "../../utils/feature-flags";
 import { useToast } from "../ui/use-toast";
 import { RefreshCw } from 'lucide-react';
@@ -25,60 +24,32 @@ export default function FixFeatureFlagsButton() {
       setIsFixing(true);
       console.log('[DEBUG] Starting feature flag fix...');
 
-      // Get feature flags from Firestore
-      const featureFlagsRef = doc(db, 'config', 'featureFlags');
-      const featureFlagsDoc = await getDoc(featureFlagsRef);
+      // Call the API endpoint to sync feature flags (which will fix them)
+      const response = await fetch('/api/feature-flags', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (featureFlagsDoc.exists()) {
-        const flagsData = featureFlagsDoc.data();
-        console.log('[DEBUG] Current feature flags in database:', flagsData);
+      const result = await response.json();
 
-        // Create a new object with only valid flags
-        const validFlags: Record<string, boolean> = {};
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fix feature flags');
+      }
 
-        // Copy only valid flags
-        validFeatureFlags.forEach(flag => {
-          if (flag in flagsData) {
-            validFlags[flag] = flagsData[flag];
-          } else {
-            // Initialize missing flags as disabled
-            validFlags[flag] = false;
-            console.log(`[DEBUG] Adding missing flag '${flag}' as disabled`);
-          }
-        });
+      if (!result.success) {
+        throw new Error(result.error || 'Fix operation failed');
+      }
 
-        // Check for invalid flags
-        Object.keys(flagsData).forEach(flag => {
-          if (!validFeatureFlags.includes(flag as FeatureFlag)) {
-            console.log(`[DEBUG] Removing invalid flag '${flag}' from database`);
-          }
-        });
+      console.log('[DEBUG] SUCCESS: Feature flags have been fixed successfully');
+      console.log('[DEBUG] Updated feature flags:', result.data.flags);
 
-        // Update the database with only valid flags
-        await setDoc(featureFlagsRef, validFlags);
-        console.log('[DEBUG] Updated feature flags in database:', validFlags);
-
-        // Verify the update
-        const updatedDoc = await getDoc(featureFlagsRef);
-        if (updatedDoc.exists()) {
-          const updatedData = updatedDoc.data();
-          console.log('[DEBUG] Verified feature flags in database:', updatedData);
-
-          // Check if all valid flags are present
-          const allFlagsPresent = validFeatureFlags.every(flag => flag in updatedData);
-          console.log(`[DEBUG] All valid flags present: ${allFlagsPresent}`);
-
-          // Check if any invalid flags are present
-          const invalidFlagsPresent = Object.keys(updatedData).some(flag => !validFeatureFlags.includes(flag as FeatureFlag));
-          console.log(`[DEBUG] Invalid flags present: ${invalidFlagsPresent}`);
-
-          if (allFlagsPresent && !invalidFlagsPresent) {
-            console.log('[DEBUG] SUCCESS: Feature flags have been fixed successfully');
-            toast({
-              title: 'Success',
-              description: 'Feature flags have been fixed successfully',
-              variant: 'default'
-            });
+      toast({
+        title: 'Success',
+        description: result.data.message || 'Feature flags have been fixed successfully',
+        variant: 'default'
+      });
           } else {
             console.log('[DEBUG] ERROR: Feature flags were not fixed correctly');
             toast({

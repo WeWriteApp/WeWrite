@@ -48,7 +48,24 @@ export async function POST(request: NextRequest) {
     let finalAmount: number;
     let finalTokens: number;
 
-    if (newTier === 'custom') {
+    if (newTier === 'tier3') {
+      // Champion tier - custom amount starting at $30
+      if (!newAmount || newAmount < 30) {
+        return NextResponse.json({
+          error: 'Champion tier requires amount of $30 or more'
+        }, { status: 400 });
+      }
+
+      if (newAmount > CUSTOM_TIER_CONFIG.maxAmount) {
+        return NextResponse.json({
+          error: `Amount cannot exceed $${CUSTOM_TIER_CONFIG.maxAmount}`
+        }, { status: 400 });
+      }
+
+      finalAmount = newAmount;
+      finalTokens = calculateTokensForAmount(newAmount);
+    } else if (newTier === 'custom') {
+      // Legacy custom tier support
       if (!newAmount || newAmount <= 0) {
         return NextResponse.json({
           error: 'Valid amount is required for custom tier'
@@ -92,7 +109,7 @@ export async function POST(request: NextRequest) {
       recurring: {
         interval: 'month'},
       product_data: {
-        name: `WeWrite ${newTier === 'custom' ? 'Custom' : getTierById(newTier)?.name}`},
+        name: `WeWrite ${newTier === 'tier3' ? 'Champion' : newTier === 'custom' ? 'Custom' : getTierById(newTier)?.name}`},
       metadata: {
         tier: newTier,
         tokens: finalTokens.toString()}});

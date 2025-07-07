@@ -211,7 +211,7 @@ export async function GET(request) {
             pageName: pageData.title || "Untitled",
             userId: pageData.userId,
             username: await getServerUsername(pageData.userId),
-            timestamp: pageData.lastModified?.toDate() || new Date(),
+            timestamp: pageData.lastModified?.toDate ? pageData.lastModified.toDate() : (pageData.lastModified ? new Date(pageData.lastModified) : new Date()),
             currentContent: pageData.content,
             previousContent: "",
             isPublic: pageData.isPublic

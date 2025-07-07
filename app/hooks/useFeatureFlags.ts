@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from "../firebase/config";
+// Removed direct Firebase imports - now using API endpoints
 
 export interface FeatureFlag {
   id: string;
@@ -57,7 +56,7 @@ export function useFeatureFlags() {
   const [error, setError] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<number>(0);
 
-  // Load feature flags from Firestore with validation
+  // Load feature flags from API with validation
   const loadFeatureFlags = useCallback(async (forceRefresh = false) => {
     try {
       setIsLoading(true);
@@ -71,12 +70,27 @@ export function useFeatureFlags() {
         return;
       }
 
-      const featureFlagsRef = doc(db, 'config', 'featureFlags');
-      const featureFlagsDoc = await getDoc(featureFlagsRef);
+      // Call API endpoint to get feature flags
+      const response = await fetch('/api/feature-flags');
 
-      if (featureFlagsDoc.exists()) {
-        const flagsData = featureFlagsDoc.data();
-        console.log('[useFeatureFlags] Feature flags from database:', flagsData);
+      if (!response.ok) {
+        throw new Error(`Failed to load feature flags: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load feature flags');
+      }
+
+      const flags = result.data.flags || [];
+      console.log('[useFeatureFlags] Feature flags from API:', flags);
+
+      // Convert API response to expected format
+      const flagsData: Record<string, boolean> = {};
+      flags.forEach((flag: any) => {
+        flagsData[flag.id] = flag.enabled;
+      });
 
         // Validate and filter flags
         const validFlags = {};
@@ -149,22 +163,29 @@ export function useFeatureFlags() {
         )
       );
 
-      // Update database
-      const featureFlagsRef = doc(db, 'config', 'featureFlags');
-      const featureFlagsDoc = await getDoc(featureFlagsRef);
+      // Call API endpoint to update feature flag
+      const response = await fetch('/api/feature-flags', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          flagId,
+          enabled: newEnabledState,
+          description: `Feature flag ${newEnabledState ? 'enabled' : 'disabled'} via admin panel`
+        })
+      });
 
-      let currentData = {};
-      if (featureFlagsDoc.exists()) {
-        currentData = featureFlagsDoc.data();
+      if (!response.ok) {
+        const errorResult = await response.json();
+        throw new Error(errorResult.error || `Failed to update feature flag: ${response.status}`);
       }
 
-      // Update the specific flag
-      const updatedData = {
-        ...currentData,
-        [flagId]: newEnabledState
-      };
+      const result = await response.json();
 
-      await setDoc(featureFlagsRef, updatedData);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update feature flag');
+      }
 
       // Update metadata
       const featureMetaRef = doc(db, 'config', 'featureMetadata');

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { collection, query, where, orderBy, onSnapshot, limit, startAfter, getDocs, DocumentSnapshot, QueryDocumentSnapshot } from "firebase/firestore";
+// Removed direct Firebase imports - now using API endpoints
 import { registerUserPagesInvalidator, unregisterCacheInvalidator } from "../utils/cacheInvalidation";
 import { registerUserPagesInvalidation } from "../utils/globalCacheInvalidation";
 
@@ -140,68 +140,54 @@ const usePages = (
     }, 20000); // 20 second final timeout
 
     try {
-      // TEMPORARY: Use dynamic import like the working API
-      const { db } = await import('../firebase/database');
-
-      // Define the fields we need to reduce data transfer
-      const requiredFields = ['title', 'lastModified', 'isPublic', 'userId', 'groupId', 'createdAt'];
-
       // CRITICAL FIX: Show ALL pages (public + private) when viewing your own profile
       // Only show public pages when viewing someone else's profile
       const isOwner = currentUserId && userId === currentUserId;
 
-      let pagesQuery;
-      if (isOwner) {
-        // Owner sees all their pages (public + private, exclude deleted)
-        pagesQuery = query(
-          collection(db, 'pages'),
-          where('userId', '==', userId),
-          orderBy('lastModified', 'desc'),
-          limit(initialLimitCount)
-        );
-      } else {
-        // Others only see public pages (exclude deleted)
-        pagesQuery = query(
-          collection(db, 'pages'),
-          where('userId', '==', userId),
-          where('isPublic', '==', true),
-          orderBy('lastModified', 'desc'),
-          limit(initialLimitCount)
-        );
+      // Build API query parameters
+      const params = new URLSearchParams({
+        userId: userId,
+        limit: initialLimitCount.toString(),
+        orderBy: 'lastModified',
+        orderDirection: 'desc'
+      });
+
+      // Set public filter based on ownership
+      if (!isOwner) {
+        params.append('isPublic', 'true');
       }
 
-      // Execute the query with detailed logging
-      console.log(`usePages: Executing ${isOwner ? 'all pages' : 'public pages'} query for user ${userId}...`);
-      const pagesSnapshot = await getDocs(pagesQuery);
+      // Call API endpoint to get pages
+      console.log(`usePages: Fetching ${isOwner ? 'all pages' : 'public pages'} for user ${userId}...`);
+      const response = await fetch(`/api/pages?${params.toString()}`);
 
-      console.log('usePages: Pages query completed. Found', pagesSnapshot.size, 'documents');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch pages: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch pages');
+      }
+
+      console.log('usePages: Pages API completed. Found', result.data.pages.length, 'pages');
 
       // Clear both timeouts since we got a response
       clearTimeout(queryTimeoutId);
       clearTimeout(finalQueryTimeoutId);
 
-      // Process pages with filtering for deleted pages
-      const pagesArray = [];
-      pagesSnapshot.forEach((doc) => {
-        try {
-          const pageData = { id: doc.id, ...doc.data() };
-          // CRITICAL FIX: Filter out deleted pages client-side since the compound index might not exist
-          if (!pageData.deleted) {
-            pagesArray.push(pageData);
-            // DEBUG: Log page details to understand ordering
-            console.log('🔍 DEBUG: Page found:', {
-              id: pageData.id,
-              title: pageData.title,
-              lastModified: pageData.lastModified,
-              createdAt: pageData.createdAt,
-              isPublic: pageData.isPublic
-            });
-          } else {
-            console.log('usePages: Filtered out deleted page:', pageData.id);
-          }
-        } catch (docError) {
-          console.error(`Error processing document ${doc.id}:`, docError);
-        }
+      // Process pages
+      const pagesArray = result.data.pages.map((pageData: any) => {
+        // DEBUG: Log page details to understand ordering
+        console.log('🔍 DEBUG: Page found:', {
+          id: pageData.id,
+          title: pageData.title,
+          lastModified: pageData.lastModified,
+          createdAt: pageData.createdAt,
+          isPublic: pageData.isPublic
+        });
+        return pageData;
       });
 
       console.log('usePages: Processed', pagesArray.length, 'pages after filtering');

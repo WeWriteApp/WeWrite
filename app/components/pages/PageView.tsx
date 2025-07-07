@@ -691,7 +691,7 @@ export default function PageView({
               onSave={handleSave}
               onCancel={handleCancel}
               onDelete={handleDelete}
-              onEdit={() => setIsEditing(true)}
+              setIsEditing={setIsEditing} // Fix: Pass setIsEditing instead of onEdit
               isSaving={isSaving}
               error={error}
               titleError={titleError}

@@ -13,6 +13,7 @@ import { db } from "./config";
 import { rtdb } from "./rtdb";
 import { ref, get } from "firebase/database";
 import { getCacheItem, setCacheItem, generateCacheKey } from "../utils/cacheUtils";
+import { getEffectiveTier } from "../utils/subscriptionTiers";
 
 // Cache TTL for user data (10 minutes)
 const USER_DATA_CACHE_TTL = 10 * 60 * 1000;
@@ -32,6 +33,7 @@ export interface UserData {
   email?: string;
   tier?: string;
   subscriptionStatus?: string;
+  subscriptionAmount?: number;
   pageCount?: number;
   followerCount?: number;
   viewCount?: number;
@@ -134,13 +136,21 @@ export const getBatchUserData = async (userIds: string[]): Promise<Record<string
         const userData = doc.data();
         const subscription = subscriptionMap.get(doc.id);
         
+        // Use centralized tier determination logic
+        const effectiveTier = getEffectiveTier(
+          subscription?.amount || null,
+          subscription?.tier || null,
+          subscription?.status || null
+        );
+
         const user: UserData = {
           uid: doc.id,
           username: userData.username,
           displayName: userData.displayName,
           email: userData.email,
-          tier: subscription?.tier,
+          tier: effectiveTier,
           subscriptionStatus: subscription?.status,
+          subscriptionAmount: subscription?.amount,
           pageCount: userData.pageCount || 0,
           followerCount: userData.followerCount || 0,
           viewCount: userData.viewCount || 0

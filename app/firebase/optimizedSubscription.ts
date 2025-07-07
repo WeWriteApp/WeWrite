@@ -168,8 +168,8 @@ export const getOptimizedUserSubscription = async (
   const { useCache = true, cacheTTL = 10 * 60 * 1000, fieldsOnly } = options;
   
   return trackQueryPerformance('getOptimizedUserSubscription', async () => {
-    // Check cache first
-    if (useCache) {
+    // Check cache first (only on client side)
+    if (useCache && typeof window !== 'undefined') {
       const cacheKey = generateCacheKey('subscription', userId);
       const cached = getCacheItem<SubscriptionData>(cacheKey);
       if (cached) {
@@ -213,8 +213,8 @@ export const getOptimizedUserSubscription = async (
         canceledAt: rawData.canceledAt
       };
       
-      // Cache the result
-      if (useCache) {
+      // Cache the result (only on client side)
+      if (useCache && typeof window !== 'undefined') {
         const cacheKey = generateCacheKey('subscription', userId);
         setCacheItem(cacheKey, subscriptionData, cacheTTL);
       }
@@ -237,8 +237,8 @@ export const getOptimizedUserPledges = async (
   const { useCache = true, cacheTTL = 5 * 60 * 1000 } = options;
   
   return trackQueryPerformance('getOptimizedUserPledges', async () => {
-    // Check cache first
-    if (useCache) {
+    // Check cache first (only on client side)
+    if (useCache && typeof window !== 'undefined') {
       const cacheKey = generateCacheKey('pledges', userId);
       const cached = getCacheItem<PledgeData[]>(cacheKey);
       if (cached) {
@@ -269,8 +269,8 @@ export const getOptimizedUserPledges = async (
         updatedAt: doc.data().updatedAt
       }));
       
-      // Cache the result
-      if (useCache) {
+      // Cache the result (only on client side)
+      if (useCache && typeof window !== 'undefined') {
         const cacheKey = generateCacheKey('pledges', userId);
         setCacheItem(cacheKey, pledges, cacheTTL);
       }
@@ -296,8 +296,8 @@ export const getOptimizedPageInfo = async (
     const results: Record<string, any> = {};
     const uncachedPageIds: string[] = [];
     
-    // Check cache for each page
-    if (useCache) {
+    // Check cache for each page (only on client side)
+    if (useCache && typeof window !== 'undefined') {
       pageIds.forEach(pageId => {
         const cacheKey = generateCacheKey('pageInfo', pageId);
         const cached = getCacheItem<any>(cacheKey);
@@ -331,8 +331,8 @@ export const getOptimizedPageInfo = async (
               isPublic: pageSnap.data().isPublic
             };
             
-            // Cache the result
-            if (useCache) {
+            // Cache the result (only on client side)
+            if (useCache && typeof window !== 'undefined') {
               const cacheKey = generateCacheKey('pageInfo', pageId);
               setCacheItem(cacheKey, pageData, cacheTTL);
             }
@@ -368,12 +368,14 @@ export const createOptimizedSubscriptionListener = (
 ): Unsubscribe => {
   const { verbose = false } = options;
   
-  // First, try to get cached data immediately
-  const cacheKey = generateCacheKey('subscription', userId);
-  const cached = getCacheItem<SubscriptionData>(cacheKey);
-  if (cached) {
-    callback(cached);
-    logReadOperation('subscriptionListener-cached', true);
+  // First, try to get cached data immediately (only on client side)
+  if (typeof window !== 'undefined') {
+    const cacheKey = generateCacheKey('subscription', userId);
+    const cached = getCacheItem<SubscriptionData>(cacheKey);
+    if (cached) {
+      callback(cached);
+      logReadOperation('subscriptionListener-cached', true);
+    }
   }
   
   // Set up real-time listener with throttling
@@ -404,8 +406,11 @@ export const createOptimizedSubscriptionListener = (
         currentPeriodEnd: rawData.currentPeriodEnd
       };
       
-      // Update cache
-      setCacheItem(cacheKey, subscriptionData, 10 * 60 * 1000);
+      // Update cache (only on client side)
+      if (typeof window !== 'undefined') {
+        const cacheKey = generateCacheKey('subscription', userId);
+        setCacheItem(cacheKey, subscriptionData, 10 * 60 * 1000);
+      }
       
       if (verbose) {
         console.log('[OptimizedSubscriptionListener] Update:', subscriptionData.status);

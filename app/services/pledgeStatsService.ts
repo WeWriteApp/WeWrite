@@ -3,15 +3,16 @@
  * Provides real-time statistics for page owners including sponsor counts and total pledged tokens
  */
 
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
+import {
+  collection,
+  query,
+  where,
+  getDocs,
   onSnapshot,
-  type Unsubscribe 
+  type Unsubscribe
 } from 'firebase/firestore';
 import { db } from '../firebase/database/core';
+import { getCollectionName, PAYMENT_COLLECTIONS } from '../utils/environmentConfig';
 
 export interface PagePledgeStats {
   sponsorCount: number;
@@ -77,14 +78,18 @@ export const getPagePledgeStats = async (pageId: string): Promise<PagePledgeStat
 
     // Fallback: Use the token allocation API to get page stats
     // This is more efficient than querying all user subcollections
+    console.log('🔍 Falling back to API for page stats');
     const response = await fetch(`/api/tokens/page-stats?pageId=${pageId}`);
     if (response.ok) {
       const data = await response.json();
+      console.log('🔍 API response:', data);
       return {
-        sponsorCount: data.sponsorCount || 0,
-        totalPledgedTokens: data.totalPledgedTokens || 0,
-        uniqueSponsors: data.uniqueSponsors || []
+        sponsorCount: data.data?.sponsorCount || 0,
+        totalPledgedTokens: data.data?.totalPledgedTokens || 0,
+        uniqueSponsors: data.data?.uniqueSponsors || []
       };
+    } else {
+      console.log('🔍 API response not ok:', response.status, response.statusText);
     }
 
     // Final fallback: return empty stats
@@ -158,9 +163,11 @@ export const subscribeToPagePledgeStats = (
 
     // Fallback: Subscribe to token allocations for real-time updates
     const allocationsQuery = query(
-      collection(db, 'tokenAllocations'),
-      where('pageId', '==', pageId),
-      where('amount', '>', 0)
+      collection(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS)),
+      where('resourceId', '==', pageId),
+      where('resourceType', '==', 'page'),
+      where('status', '==', 'active'),
+      where('tokens', '>', 0)
     );
 
     return onSnapshot(allocationsQuery, (querySnapshot) => {
@@ -176,7 +183,7 @@ export const subscribeToPagePledgeStats = (
         }
 
         // Add to total pledged tokens
-        totalPledgedTokens += allocationData.amount || 0;
+        totalPledgedTokens += allocationData.tokens || 0;
       });
 
       const stats: PagePledgeStats = {
@@ -199,6 +206,76 @@ export const subscribeToPagePledgeStats = (
     console.error('Error setting up page pledge stats subscription:', error);
     // Return a no-op unsubscribe function
     return () => {};
+  }
+};
+
+/**
+ * Get historical supporter data for sparkline (last 24 hours)
+ * Returns hourly buckets of unique supporter counts
+ */
+export const getSupporterSparklineData = async (pageId: string): Promise<number[]> => {
+  if (!pageId) return Array(24).fill(0);
+
+  try {
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Create 24 hourly buckets
+    const hourlyBuckets = Array(24).fill(0);
+
+    // Query token allocations for the last 24 hours
+    const collectionName = getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS);
+
+    const allocationsQuery = query(
+      collection(db, collectionName),
+      where('resourceId', '==', pageId),
+      where('resourceType', '==', 'page'),
+      where('status', '==', 'active'),
+      where('tokens', '>', 0)
+    );
+
+    const querySnapshot = await getDocs(allocationsQuery);
+
+    // Track supporters by hour
+    const supportersByHour: { [hour: number]: Set<string> } = {};
+
+    querySnapshot.forEach(doc => {
+      const allocationData = doc.data();
+      console.log('🔍 Processing allocation:', {
+        id: doc.id,
+        userId: allocationData.userId,
+        tokens: allocationData.tokens,
+        createdAt: allocationData.createdAt,
+        resourceId: allocationData.resourceId
+      });
+
+      if (allocationData.createdAt && allocationData.userId) {
+        const allocationDate = allocationData.createdAt instanceof Date ?
+          allocationData.createdAt : new Date(allocationData.createdAt.seconds * 1000);
+
+        if (allocationDate >= yesterday && allocationDate <= now) {
+          const hourDiff = 23 - Math.floor((now.getTime() - allocationDate.getTime()) / (1000 * 60 * 60));
+          if (hourDiff >= 0 && hourDiff < 24) {
+            if (!supportersByHour[hourDiff]) {
+              supportersByHour[hourDiff] = new Set();
+            }
+            supportersByHour[hourDiff].add(allocationData.userId);
+          }
+        }
+      }
+    });
+
+    // Convert to counts
+    for (let i = 0; i < 24; i++) {
+      hourlyBuckets[i] = supportersByHour[i] ? supportersByHour[i].size : 0;
+    }
+
+    console.log('🔍 Final hourly buckets:', hourlyBuckets);
+    return hourlyBuckets;
+  } catch (error) {
+    console.error('Error getting supporter sparkline data:', error);
+    return Array(24).fill(0);
   }
 };
 

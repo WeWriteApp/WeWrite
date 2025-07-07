@@ -13,7 +13,7 @@ import {
   DialogDescription,
   DialogFooter
 } from "../ui/dialog";
-import { toast } from "../ui/use-toast";
+import { useToast } from "../ui/use-toast";
 import { followPage, unfollowPage, isFollowingPage } from "../../firebase/follows";
 // Notifications functionality removed
 
@@ -31,6 +31,7 @@ import { followPage, unfollowPage, isFollowingPage } from "../../firebase/follow
  */
 export default function FollowButton({ pageId, pageTitle = "this page", className = "", pageOwnerId, size = "sm" }) {
   const { session } = useCurrentAccount();
+  const { toast } = useToast();
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showUnfollowDialog, setShowUnfollowDialog] = useState(false);
@@ -66,13 +67,21 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
   // Handle follow button click
   const handleFollowClick = async () => {
     if (!session) {
-      toast.error("You need to sign in to follow pages");
+      toast({
+        title: "Sign in required",
+        description: "You need to sign in to follow pages",
+        variant: "destructive"
+      });
       return;
     }
 
     // Prevent following own pages
     if (pageOwnerId && session.uid === pageOwnerId) {
-      toast.error("You cannot follow your own pages");
+      toast({
+        title: "Cannot follow own page",
+        description: "You cannot follow your own pages",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -86,7 +95,11 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
         setIsFollowing(true);
         setAnimateCheck(true);
 
-        toast.success(`You are now following "${pageTitle}"`);
+        toast({
+          title: "Following page",
+          description: `You are now following "${pageTitle}"`,
+          variant: "success"
+        });
 
         // Notifications functionality removed
 
@@ -96,7 +109,22 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
         }, 1500);
       } catch (error) {
         console.error("Error following page:", error);
-        toast.error("Failed to follow page. Please try again.");
+
+        // Provide more specific error messages
+        let errorMessage = "Failed to follow page. Please try again.";
+        if (error.code === 'permission-denied') {
+          errorMessage = "Permission denied. Please make sure you're signed in and try again.";
+        } else if (error.code === 'not-found') {
+          errorMessage = "Page not found. It may have been deleted.";
+        } else if (error.code === 'unauthenticated') {
+          errorMessage = "Please sign in to follow pages.";
+        }
+
+        toast({
+          title: "Follow failed",
+          description: errorMessage,
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
       }
@@ -115,7 +143,11 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
       setIsFollowing(false);
       setShowUnfollowDialog(false);
 
-      toast.info(`You are no longer following "${pageTitle}"`);
+      toast({
+        title: "Unfollowed page",
+        description: `You are no longer following "${pageTitle}"`,
+        variant: "info"
+      });
     } catch (error) {
       console.error("Error unfollowing page:", error);
 
@@ -123,7 +155,11 @@ export default function FollowButton({ pageId, pageTitle = "this page", classNam
       setIsFollowing(false);
       setShowUnfollowDialog(false);
 
-      toast.warning("There was an issue unfollowing this page, but we've updated your view.");
+      toast({
+        title: "Unfollow completed",
+        description: "There was an issue unfollowing this page, but we've updated your view.",
+        variant: "warning"
+      });
     } finally {
       setIsLoading(false);
     }

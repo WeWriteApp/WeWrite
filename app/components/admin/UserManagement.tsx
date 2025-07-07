@@ -32,10 +32,9 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Search, Mail, MailCheck, Clock, RefreshCw, Check, X, AlertTriangle } from 'lucide-react';
-import { collection, query, orderBy, limit, getDocs, doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { auth } from '../../firebase/auth';
-import { getCollectionName } from '../../utils/environmentConfig';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Alert, AlertDescription } from '../ui/alert';
@@ -145,106 +144,40 @@ export function UserManagement() {
     setError({ hasError: false, message: '' });
 
     try {
-      console.log('Loading users from Firestore...');
+      console.log('Loading users from API...');
 
       // First, sync current user's email verification status
       await syncEmailVerificationStatus();
 
-      // Query Firestore for user documents
-      const usersQuery = query(
-        collection(db, getCollectionName('users')),
-        orderBy('createdAt', 'desc'),
-        limit(100)
-      );
+      // Call the admin users API endpoint
+      const response = await fetch('/api/admin/users?limit=100', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      const snapshot = await getDocs(usersQuery);
-
-      if (snapshot.empty) {
-        console.warn('No users found in Firestore');
-        setError({
-          hasError: true,
-          message: 'No users found in the database',
-          details: 'The users collection appears to be empty or inaccessible'
-        });
-        return;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      console.log(`Found ${snapshot.docs.length} users in Firestore`);
-      const userData: UserData[] = [];
+      const data = await response.json();
 
-      for (const userDoc of snapshot.docs) {
-        try {
-          const data = userDoc.data();
-
-          // Validate required fields
-          if (!data.email) {
-            console.warn(`User ${userDoc.id} missing email field`);
-          }
-
-          const user: UserData = {
-            uid: userDoc.id,
-            email: data.email || 'No email',
-            username: data.username,
-            displayName: data.displayName,
-            emailVerified: false, // Default to false, will be updated from Firebase Auth
-            createdAt: data.createdAt,
-            lastLogin: data.lastLogin,
-            featureFlags: {
-              payments: null,
-              map_view: null,
-              calendar_view: null
-            }
-          };
-
-          // Get email verification status from Firebase Auth
-          // Since we can't access other users' auth data directly in client-side code,
-          // we need to check if this data is stored in Firestore or use a server function
-          try {
-            // Check if emailVerified is stored in the Firestore document
-            if (typeof data.emailVerified === 'boolean') {
-              user.emailVerified = data.emailVerified;
-              console.log(`Email verification status from Firestore for ${user.email}: ${user.emailVerified}`);
-            } else {
-              // If not in Firestore, default to false and log for debugging
-              user.emailVerified = false;
-              console.log(`No emailVerified field in Firestore for ${user.email}, defaulting to false`);
-            }
-          } catch (authError) {
-            console.warn(`Could not determine email verification for user ${user.uid}:`, authError);
-            user.emailVerified = false;
-          }
-
-          // Get queue count for this user
-          // TODO: Implement queue count functionality when available
-          user.queueCount = 0; // Default to 0 for now
-
-          // Load feature flag overrides for this user
-          for (const flag of FEATURE_FLAGS) {
-            try {
-              const overrideRef = doc(db, 'featureOverrides', `${user.uid}_${flag}`);
-              const overrideDoc = await getDoc(overrideRef);
-
-              if (overrideDoc.exists()) {
-                user.featureFlags![flag] = overrideDoc.data().enabled;
-              } else {
-                user.featureFlags![flag] = null; // Using global default
-              }
-            } catch (flagError) {
-              console.error(`Error loading feature flag ${flag} for user ${user.uid}:`, flagError);
-              user.featureFlags![flag] = null;
-            }
-          }
-
-          userData.push(user);
-        } catch (userError) {
-          console.error(`Error processing user ${userDoc.id}:`, userError);
-          // Continue processing other users even if one fails
-        }
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to load users');
       }
 
-      console.log(`Successfully loaded ${userData.length} users`);
-      setUsers(userData);
-      setFilteredUsers(userData);
+      console.log(`Successfully loaded ${data.users.length} users from API`);
+
+      // Add queue count for compatibility (TODO: implement in API)
+      const usersWithQueueCount = data.users.map((user: UserData) => ({
+        ...user,
+        queueCount: 0 // Default to 0 for now
+      }));
+
+      setUsers(usersWithQueueCount);
+      setFilteredUsers(usersWithQueueCount);
 
     } catch (error: any) {
       console.error('Error loading users:', error);
@@ -253,15 +186,15 @@ export function UserManagement() {
       let errorMessage = 'Failed to load user data';
       let errorDetails = '';
 
-      if (error.code === 'permission-denied') {
-        errorMessage = 'Permission denied accessing user data';
-        errorDetails = 'You may not have sufficient privileges to access the users collection';
-      } else if (error.code === 'unavailable') {
-        errorMessage = 'Database connection failed';
-        errorDetails = 'Firestore service is currently unavailable. Please try again later.';
-      } else if (error.code === 'unauthenticated') {
+      if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
         errorMessage = 'Authentication required';
         errorDetails = 'Please ensure you are logged in with admin privileges';
+      } else if (error.message?.includes('403') || error.message?.includes('Admin access required')) {
+        errorMessage = 'Permission denied accessing user data';
+        errorDetails = 'You may not have sufficient privileges to access the users collection';
+      } else if (error.message?.includes('500')) {
+        errorMessage = 'Server error occurred';
+        errorDetails = 'The server encountered an error while loading user data. Please try again later.';
       } else if (error.message) {
         errorDetails = error.message;
       }
@@ -312,33 +245,44 @@ export function UserManagement() {
   const toggleUserFeatureFlag = async (userId: string, flag: FeatureFlagKey, currentValue: boolean | null) => {
     try {
       console.log(`Toggling feature flag ${flag} for user ${userId} from ${currentValue}`);
-      const overrideRef = doc(db, 'featureOverrides', `${userId}_${flag}`);
 
+      let newValue: boolean | null;
       if (currentValue === null) {
         // Currently using global default, set to enabled override
-        await setDoc(overrideRef, {
-          userId,
-          flag,
-          enabled: true,
-          createdAt: new Date().toISOString(),
-          lastModified: new Date().toISOString()
-        });
-        console.log(`Set ${flag} to enabled for user ${userId}`);
+        newValue = true;
       } else if (currentValue === true) {
         // Currently enabled, set to disabled override
-        await setDoc(overrideRef, {
-          userId,
-          flag,
-          enabled: false,
-          createdAt: new Date().toISOString(),
-          lastModified: new Date().toISOString()
-        });
-        console.log(`Set ${flag} to disabled for user ${userId}`);
+        newValue = false;
       } else {
         // Currently disabled, remove override (use global default)
-        await deleteDoc(overrideRef);
-        console.log(`Removed ${flag} override for user ${userId}, using global default`);
+        newValue = null;
       }
+
+      // Call the admin users API endpoint to update feature flag
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          targetUserId: userId,
+          featureId: flag,
+          enabled: newValue
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to update feature flag');
+      }
+
+      console.log(`Successfully updated ${flag} for user ${userId} to ${newValue}`);
 
       // Reload users to reflect changes
       await loadUsers();
@@ -347,10 +291,12 @@ export function UserManagement() {
 
       // Show user-friendly error message
       let errorMessage = `Failed to update ${flag} setting`;
-      if (error.code === 'permission-denied') {
+      if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+        errorMessage = 'Authentication required: Please log in again';
+      } else if (error.message?.includes('403') || error.message?.includes('Admin access required')) {
         errorMessage = 'Permission denied: Cannot modify feature flags';
-      } else if (error.code === 'unavailable') {
-        errorMessage = 'Database unavailable: Please try again later';
+      } else if (error.message?.includes('500')) {
+        errorMessage = 'Server error: Please try again later';
       }
 
       setError({

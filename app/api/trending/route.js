@@ -1,347 +1,162 @@
-import { NextResponse } from 'next/server';
-import { initAdmin, admin } from '../../firebase/admin';
+/**
+ * Trending Pages API
+ * Simplified trending pages endpoint using standardized API architecture
+ */
 
-// Add export for dynamic route handling to prevent static build errors
+import { NextResponse } from 'next/server';
+import { createApiResponse, createErrorResponse } from '../auth-helper';
+import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
+
 export const dynamic = 'force-dynamic';
 
-// Initialize Firebase Admin lazily
-let app;
-let db;
-
-function initializeFirebase() {
-  if (app && db) return { app, db }; // Already initialized
-
+// GET endpoint - Get trending pages
+export async function GET(request) {
   try {
-    app = initAdmin();
-    if (!app) {
-      console.warn('Firebase Admin initialization skipped during build time');
-      return { app: null, db: null };
+    const { searchParams } = new URL(request.url);
+    const limitCount = Math.min(parseInt(searchParams.get('limit') || '10', 10), 50); // Cap at 50
+
+    console.log(`Fetching trending pages with limit: ${limitCount}`);
+
+    const admin = getFirebaseAdmin();
+    const db = admin.firestore();
+
+    // Simple trending algorithm: get pages with most views
+    // Simplified to avoid complex index requirements
+    const pagesQuery = db.collection('pages')
+      .orderBy('views', 'desc')
+      .limit(limitCount * 3); // Get more to filter out private/deleted pages
+
+    const pagesSnapshot = await pagesQuery.get();
+
+    if (pagesSnapshot.empty) {
+      console.log('No trending pages found');
+      return createApiResponse({
+        trendingPages: []
+      });
     }
 
-    db = admin.firestore();
-  } catch (error) {
-    console.warn('Failed to initialize Firebase Admin for trending API:', error.message);
-    return { app: null, db: null };
-  }
+    // Process pages and get real view data
+    const trendingPages = [];
+    const userIds = new Set();
+    const pageIds = [];
 
-  return { app, db };
+    pagesSnapshot.forEach(doc => {
+      const pageData = doc.data();
+
+      // Skip private pages, deleted pages, pages without titles, or with very low views
+      if (!pageData.isPublic || pageData.deleted || !pageData.title || (pageData.views || 0) < 1) {
+        return;
+      }
+
+      trendingPages.push({
+        id: doc.id,
+        title: pageData.title,
+        views: 0, // Will be replaced with views24h for trending display
+        views24h: 0, // Will be populated with real data below
+        userId: pageData.userId,
+        username: pageData.username,
+        lastModified: pageData.lastModified,
+        hourlyViews: [] // Will be populated with real data below
+      });
+
+      pageIds.push(doc.id);
+      if (pageData.userId) {
+        userIds.add(pageData.userId);
+      }
+    });
+
+    // Get real 24-hour view data from pageViews collection
+    await Promise.all(trendingPages.map(async (page) => {
+      try {
+        const realViewData = await getRealPageViewData(db, page.id);
+        page.views24h = realViewData.total;
+        page.views = realViewData.total; // For trending, show 24h views as the main view count
+        page.hourlyViews = realViewData.hourly;
+      } catch (error) {
+        console.warn(`Failed to get real view data for page ${page.id}:`, error.message);
+        // Keep defaults: views24h = 0, hourlyViews = [], views = 0
+      }
+    }));
+
+    // Sort by 24h activity first, then by total views as fallback
+    trendingPages.sort((a, b) => {
+      // Prioritize pages with actual 24h activity
+      if (a.views24h > 0 && b.views24h === 0) return -1;
+      if (a.views24h === 0 && b.views24h > 0) return 1;
+
+      // If both have 24h activity, sort by 24h views
+      if (a.views24h > 0 && b.views24h > 0) {
+        return b.views24h - a.views24h;
+      }
+
+      // If neither has 24h activity, sort by total views
+      return b.views - a.views;
+    });
+
+    // Limit to requested count
+    const finalPages = trendingPages.slice(0, limitCount);
+
+    console.log(`Found ${finalPages.length} trending pages`);
+
+    return createApiResponse({
+      trendingPages: finalPages
+    });
+
+  } catch (error) {
+    console.error('Error fetching trending pages:', error);
+    return createErrorResponse('INTERNAL_ERROR', 'Failed to fetch trending pages');
+  }
 }
 
-export async function GET(request) {
-  // Set CORS headers
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'};
-
-  // Get limit from query parameter
-  const { searchParams } = new URL(request.url);
-  const limitCount = parseInt(searchParams.get('limit') || '10', 10);
-
-  // Initialize Firebase lazily
-  const { app: firebaseApp, db: firestore } = initializeFirebase();
-
-  // If Firebase credentials are missing, return empty array
-  if (!firebaseApp || !firestore) {
-    console.log('Firebase credentials missing - returning empty trending pages array');
-    return NextResponse.json({
-      trendingPages: [],
-      error: "Firebase credentials not available"
-    }, { headers });
-  }
-
-  // Update local references
-  app = firebaseApp;
-  db = firestore;
-
+// Helper function to get real page view data from pageViews collection
+async function getRealPageViewData(db, pageId) {
   try {
-    // Add simple in-memory cache for trending data (5 minute TTL)
-    const cacheKey = `trending_${limitCount}`;
-    const cacheExpiry = 5 * 60 * 1000; // 5 minutes
-
-    // Check if we have cached data (in a real app, use Redis or similar)
-    if (global.trendingCache && global.trendingCache[cacheKey]) {
-      const cached = global.trendingCache[cacheKey];
-      if (Date.now() - cached.timestamp < cacheExpiry) {
-        console.log('Returning cached trending data');
-        return NextResponse.json({ trendingPages: cached.data }, { headers });
-      }
-    }
-
-    // Get current date and time
     const now = new Date();
-
-    // Format today's date as YYYY-MM-DD
     const todayStr = now.toISOString().split('T')[0];
+    const yesterdayStr = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const currentHour = now.getHours();
 
-    // Calculate yesterday's date
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-    // Get page views for today and yesterday with optimized queries
-    const pageViewsRef = db.collection("pageViews");
-
-    // Limit the initial query to reduce data transfer
-    const todayQuery = pageViewsRef.where("date", "==", todayStr).limit(100);
-    const yesterdayQuery = pageViewsRef.where("date", "==", yesterdayStr).limit(100);
-
-    const [todaySnapshot, yesterdaySnapshot] = await Promise.all([
-      todayQuery.get(),
-      yesterdayQuery.get()
+    // Get today's and yesterday's pageViews documents
+    const [todayDoc, yesterdayDoc] = await Promise.all([
+      db.collection('pageViews').doc(`${pageId}_${todayStr}`).get(),
+      db.collection('pageViews').doc(`${pageId}_${yesterdayStr}`).get()
     ]);
 
-    // Combine today's and yesterday's views
-    const pageViewsMap = new Map();
+    // Initialize 24-hour array
+    const hourlyViews = Array(24).fill(0);
+    let totalViews24h = 0;
 
-    // Process yesterday's views
-    yesterdaySnapshot.forEach(doc => {
-      const data = doc.data();
-      const pageId = doc.id.split('_')[0]; // Extract page ID from document ID
-
-      if (!pageId) return;
-
-      // Get views from yesterday, but only count hours that have already passed today
-      // This gives us a rolling 24-hour window
-      const currentHour = now.getHours();
-
-      // Initialize hourly data array (24 hours) - using same logic as getPageViewsLast24Hours
-      const hourlyViews = Array(24).fill(0);
-      let viewsFromYesterday = 0;
-
-      // Add hours from yesterday that are within our 24-hour window
-      // Use same positioning logic as getPageViewsLast24Hours
+    // Add yesterday's hours that are within the last 24 hours
+    if (yesterdayDoc.exists) {
+      const yesterdayData = yesterdayDoc.data();
       for (let hour = currentHour + 1; hour < 24; hour++) {
-        const hourViews = data.hours?.[hour] || 0;
-        hourlyViews[hour - (currentHour + 1)] = hourViews;
-        viewsFromYesterday += hourViews;
-      }
-
-      // CRITICAL FIX: Ensure views24h always matches the sum of hourlyViews
-      const hourlySum = hourlyViews.reduce((sum, val) => sum + val, 0);
-      pageViewsMap.set(pageId, {
-        id: pageId,
-        views: hourlySum, // Use hourly sum as source of truth
-        views24h: hourlySum, // Ensure consistency with components that use views24h
-        hourlyViews: hourlyViews
-      });
-    });
-
-    // Process today's views
-    todaySnapshot.forEach(doc => {
-      const data = doc.data();
-      const pageId = doc.id.split('_')[0]; // Extract page ID from document ID
-
-      if (!pageId) return;
-
-      const currentHour = now.getHours();
-
-      // Calculate views from today (only hours up to current hour)
-      let viewsFromToday = 0;
-
-      if (pageViewsMap.has(pageId)) {
-        // Update existing entry - use same positioning logic as getPageViewsLast24Hours
-        const existingData = pageViewsMap.get(pageId);
-        const updatedHourlyViews = [...existingData.hourlyViews];
-
-        // Add hours from today using same logic as getPageViewsLast24Hours
-        for (let hour = 0; hour <= currentHour; hour++) {
-          const hourViews = data.hours?.[hour] || 0;
-          updatedHourlyViews[hour + (24 - (currentHour + 1))] = hourViews;
-          viewsFromToday += hourViews;
-        }
-
-        const totalViews = existingData.views + viewsFromToday;
-        // CRITICAL FIX: Ensure views24h always matches the sum of hourlyViews
-        const hourlySum = updatedHourlyViews.reduce((sum, val) => sum + val, 0);
-        pageViewsMap.set(pageId, {
-          ...existingData,
-          views: hourlySum, // Use hourly sum as source of truth
-          views24h: hourlySum, // Ensure consistency with components that use views24h
-          hourlyViews: updatedHourlyViews
-        });
-      } else {
-        // Create new entry - use same positioning logic as getPageViewsLast24Hours
-        const hourlyViews = Array(24).fill(0);
-
-        // Add hours from today using same logic as getPageViewsLast24Hours
-        for (let hour = 0; hour <= currentHour; hour++) {
-          const hourViews = data.hours?.[hour] || 0;
-          hourlyViews[hour + (24 - (currentHour + 1))] = hourViews;
-          viewsFromToday += hourViews;
-        }
-
-        // CRITICAL FIX: Ensure views24h always matches the sum of hourlyViews
-        const hourlySum = hourlyViews.reduce((sum, val) => sum + val, 0);
-        pageViewsMap.set(pageId, {
-          id: pageId,
-          views: hourlySum, // Use hourly sum as source of truth
-          views24h: hourlySum, // Ensure consistency with components that use views24h
-          hourlyViews: hourlyViews
-        });
-      }
-    });
-
-    // Convert to array and sort by 24-hour views (prioritize real activity)
-    let trendingPages = Array.from(pageViewsMap.values())
-      .sort((a, b) => b.views - a.views)
-      .slice(0, limitCount);
-
-    // If we don't have enough trending pages from the last 24 hours, get the most viewed pages overall
-    if (trendingPages.length < limitCount) {
-      // Query for pages with the most total views (only public, non-deleted pages)
-      const pagesQuery = db.collection("pages")
-        .where("isPublic", "==", true) // Only get public pages
-        .where("deleted", "!=", true) // Exclude soft-deleted pages
-        .where("views", ">", 0) // Only get pages with views > 0
-        .orderBy("views", "desc")
-        .limit(limitCount - trendingPages.length);
-
-      const pagesSnapshot = await pagesQuery.get();
-
-      // Get the page IDs we already have
-      const existingPageIds = new Set(trendingPages.map(p => p.id));
-
-      // Add additional pages that aren't already in our list
-      pagesSnapshot.forEach(doc => {
-        const pageData = doc.data();
-        const pageId = doc.id;
-        const pageViews = pageData.views || 0;
-
-        if (!existingPageIds.has(pageId) && pageViews > 0) {
-          trendingPages.push({
-            id: pageId,
-            views: pageViews,
-            views24h: 0, // These are total views, not 24-hour views
-            hourlyViews: Array(24).fill(0) // No real 24-hour data available, show flat line
-          });
-        }
-      });
-
-      // Sort again after adding additional pages
-      // Prioritize pages with real 24-hour activity over fallback pages
-      trendingPages.sort((a, b) => {
-        // First, prioritize pages with actual 24-hour views
-        const aHas24hViews = (a.views24h || 0) > 0;
-        const bHas24hViews = (b.views24h || 0) > 0;
-
-        if (aHas24hViews && !bHas24hViews) return -1;
-        if (!aHas24hViews && bHas24hViews) return 1;
-
-        // If both have 24-hour views or both don't, sort by the appropriate metric
-        if (aHas24hViews && bHas24hViews) {
-          return (b.views24h || 0) - (a.views24h || 0); // Sort by 24-hour views
-        } else {
-          return (b.views || 0) - (a.views || 0); // Sort by total views for fallback pages
-        }
-      });
-    }
-
-    // Optimize: Batch fetch page data and user data separately
-    const pageIds = trendingPages.map(page => page.id);
-
-    // Batch fetch all page documents at once
-    const pageDocsPromise = db.getAll(...pageIds.map(id => db.collection("pages").doc(id)));
-
-    // Execute the batch fetch
-    const pageDocs = await pageDocsPromise;
-
-    // Extract user IDs and prepare page data
-    const pageDataMap = new Map();
-    const userIds = new Set();
-
-    pageDocs.forEach((doc, index) => {
-      if (doc.exists) {
-        const pageData = doc.data();
-        const pageId = pageIds[index];
-
-        // Only include public, non-deleted pages
-        if (pageData.isPublic !== false && pageData.deleted !== true) {
-          pageDataMap.set(pageId, pageData);
-          if (pageData.userId) {
-            userIds.add(pageData.userId);
-          }
-        }
-      }
-    });
-
-    // Batch fetch user data for all unique user IDs
-    const userDataMap = new Map();
-    if (userIds.size > 0) {
-      try {
-        const userDocs = await db.getAll(...Array.from(userIds).map(id => db.collection("users").doc(id)));
-        userDocs.forEach((doc, index) => {
-          if (doc.exists) {
-            const userData = doc.data();
-            const userId = Array.from(userIds)[index];
-            userDataMap.set(userId, userData);
-          }
-        });
-      } catch (userError) {
-        console.warn('Error batch fetching user data:', userError.message);
-        // Continue without user data if there's an error
+        const views = yesterdayData.hours?.[hour] || 0;
+        hourlyViews[hour - (currentHour + 1)] = views;
+        totalViews24h += views;
       }
     }
 
-    // Combine the data efficiently
-    const pagesWithTitles = trendingPages.map(page => {
-      const pageData = pageDataMap.get(page.id);
-      if (!pageData) {
-        return null; // Page was private or deleted
+    // Add today's hours up to current hour
+    if (todayDoc.exists) {
+      const todayData = todayDoc.data();
+      for (let hour = 0; hour <= currentHour; hour++) {
+        const views = todayData.hours?.[hour] || 0;
+        hourlyViews[hour + (24 - (currentHour + 1))] = views;
+        totalViews24h += views;
       }
-
-      let username = "Anonymous";
-      if (pageData.userId && userDataMap.has(pageData.userId)) {
-        const userData = userDataMap.get(pageData.userId);
-        username = userData.username || userData.displayName || "Anonymous";
-      }
-
-      return {
-        ...page,
-        title: pageData.title || 'Untitled',
-        userId: pageData.userId,
-        username
-      };
-    }).filter(page => page !== null);
-
-    // Filter out null entries (private pages)
-    const publicPages = pagesWithTitles.filter(page => page !== null);
-
-    // Cache the results
-    if (!global.trendingCache) {
-      global.trendingCache = {};
     }
-    global.trendingCache[cacheKey] = {
-      data: publicPages,
-      timestamp: Date.now()
+
+    return {
+      total: totalViews24h,
+      hourly: hourlyViews
     };
-
-    return NextResponse.json({ trendingPages: publicPages }, { headers });
   } catch (error) {
-    console.error("Error getting trending pages:", error);
-
-    // Return a more detailed error message in development
-    const errorMessage = process.env.NODE_ENV === 'development'
-      ? `Failed to load trending pages: ${error.message}`
-      : "Failed to load trending pages";
-
-    // Return empty array with error message, never use mock data
-    console.log('Returning empty array for trending pages due to error:', error.message);
-
-    // Return empty array with error message
-    return NextResponse.json(
-      {
-        trendingPages: [],
-        error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      },
-      {
-        status: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization'}
-      }
-    );
+    console.warn(`Error getting real view data for page ${pageId}:`, error.message);
+    return {
+      total: 0,
+      hourly: Array(24).fill(0)
+    };
   }
 }
+
+

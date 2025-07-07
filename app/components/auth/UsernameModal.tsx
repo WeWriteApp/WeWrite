@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Check, X, Loader2 } from 'lucide-react'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { db } from '../../firebase/config'
 import { debounce } from 'lodash'
-import { checkUsernameAvailability } from '../../firebase/auth'
+// Removed direct Firebase imports - now using API endpoints
 import { cn } from '../../lib/utils'
 import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername } from '../../utils/usernameValidation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '../ui/dialog'
@@ -57,28 +55,33 @@ export function UsernameModal({ isOpen, onClose, email, onUsernameSet }: Usernam
 
     setIsChecking(true)
     try {
-      const result = await checkUsernameAvailability(username)
+      // Call API endpoint to check username availability
+      const response = await fetch(`/api/users/username?username=${encodeURIComponent(username)}`)
 
-      if (typeof result === 'boolean') {
-        // Handle legacy boolean response
-        setIsAvailable(result)
-        if (!result) {
-          setValidationError("USERNAME_TAKEN")
-          setValidationMessage("Username already taken")
-        } else {
-          setValidationError(null)
-          setValidationMessage("")
-        }
+      if (!response.ok) {
+        throw new Error(`Failed to check username: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to check username availability')
+      }
+
+      const data = result.data
+      setIsAvailable(data.available)
+
+      if (data.available) {
+        setValidationError(null)
+        setValidationMessage("Username is available")
         setUsernameSuggestions([])
       } else {
-        // Handle new object response
-        setIsAvailable(result.isAvailable)
-        setValidationMessage(result.message || "")
-        setValidationError(result.error || null)
+        setValidationError("USERNAME_TAKEN")
+        setValidationMessage(data.error || "Username already taken")
 
-        // Set username suggestions if available
-        if (result.suggestions && Array.isArray(result.suggestions)) {
-          setUsernameSuggestions(result.suggestions)
+        // Set username suggestion if available
+        if (data.suggestion) {
+          setUsernameSuggestions([data.suggestion])
         } else {
           setUsernameSuggestions([])
         }
@@ -115,17 +118,37 @@ export function UsernameModal({ isOpen, onClose, email, onUsernameSet }: Usernam
     if (!isAvailable || !username || !email) return
 
     try {
-      // Save username
-      await setDoc(doc(db, 'usernames', username.toLowerCase()), {
-        email,
-        username,
-        createdAt: new Date().toISOString()
+      // Call API endpoint to set username
+      const response = await fetch('/api/users/username', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: username
+        })
       })
+
+      if (!response.ok) {
+        const errorResult = await response.json()
+        throw new Error(errorResult.error || `Failed to save username: ${response.status}`)
+      }
+
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save username')
+      }
 
       onUsernameSet(username)
       onClose()
     } catch (error) {
       console.error('Error saving username:', error)
+
+      // Show error to user
+      setValidationError("SAVE_ERROR")
+      setValidationMessage(error instanceof Error ? error.message : "Failed to save username")
+      setIsAvailable(false)
     }
   }
 

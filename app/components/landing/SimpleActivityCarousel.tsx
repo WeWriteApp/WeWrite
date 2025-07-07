@@ -5,15 +5,15 @@ import { Info } from 'lucide-react';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import ContentCarousel from './ContentCarousel';
 import ActivityCard from '../activity/ActivityCard';
-import useStaticRecentActivity from '../../hooks/useStaticRecentActivity';
+import useRecentActivity from '../../hooks/useRecentActivity';
 
 /**
  * Simple client-side component that fetches and renders recent activity
  * Uses the same hook as the logged-in state
  */
 export default function SimpleActivityCarousel({ limit = 30 }: { limit?: number }) {
-  const { activities, loading, error } = useStaticRecentActivity(limit);
-  const { session } = useCurrentAccount();
+  const { activities, loading, error } = useRecentActivity(limit, null, false, false, 'homepage', false);
+  const { currentAccount } = useCurrentAccount();
 
   // Removed console logs for better performance
 

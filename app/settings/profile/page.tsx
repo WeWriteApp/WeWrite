@@ -18,6 +18,7 @@ import { useConfirmation } from '../../hooks/useConfirmation';
 import AlertModal from '../../components/utils/AlertModal';
 import ConfirmationModal from '../../components/utils/ConfirmationModal';
 import { ChevronLeft, Edit3, Save, X, AlertCircle } from 'lucide-react';
+import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 
 export default function ProfilePage() {
   const { currentAccount, isAuthenticated, isLoading } = useCurrentAccount();
@@ -194,28 +195,12 @@ export default function ProfilePage() {
 
   return (
     <div>
-      {/* Mobile Header */}
-      <div className="lg:hidden">
-        <div className="flex items-center px-4 py-3 border-b border-border">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push('/settings')}
-            className="mr-3"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-lg font-semibold">Profile</h1>
-        </div>
-      </div>
+      <SettingsPageHeader
+        title="Profile"
+        description="Manage your personal information"
+      />
 
-      {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Desktop Header */}
-        <div className="hidden lg:block mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Profile</h1>
-          <p className="text-muted-foreground mt-1">Manage your personal information</p>
-        </div>
 
         {/* Profile Section */}
         <Card className="wewrite-card">

@@ -20,6 +20,8 @@ export interface SubscriptionTier {
   features: string[];
   popular?: boolean;
   isCustom?: boolean;
+  isDowngrade?: boolean;
+  isCurrent?: boolean;
 }
 
 export interface CustomTierConfig {
@@ -28,11 +30,11 @@ export interface CustomTierConfig {
   tokensPerDollar: number;
 }
 
-// Standard subscription tiers - exactly 3 tiers as specified
+// Standard subscription tiers - updated structure
 export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
   {
     id: 'tier1',
-    name: 'Supporter',
+    name: '$10/month',
     description: 'Support WeWrite creators with 100 tokens monthly',
     amount: 10,
     tokens: 100,
@@ -45,8 +47,8 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
   },
   {
     id: 'tier2',
-    name: 'Enthusiast',
-    description: 'Double your support with 200 tokens monthly',
+    name: '$20/month',
+    description: 'Enhanced support with 200 tokens monthly',
     amount: 20,
     tokens: 200,
     features: [
@@ -59,13 +61,13 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     popular: true
   },
   {
-    id: 'custom',
-    name: 'Custom',
-    description: 'Choose your own amount ($50+ monthly)',
-    amount: 50, // Default/minimum amount
-    tokens: 500, // Default tokens for minimum amount
+    id: 'tier3',
+    name: '$30+/month',
+    description: 'Maximum support with 300+ tokens monthly',
+    amount: 30,
+    tokens: 300,
     features: [
-      'Custom token amount',
+      '300+ tokens per month',
       'Maximum creator support',
       'Advanced allocation tools',
       'Premium analytics',
@@ -78,7 +80,7 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
 
 // Custom tier configuration
 export const CUSTOM_TIER_CONFIG: CustomTierConfig = {
-  minAmount: 40, // Minimum for custom tier (starts at $40)
+  minAmount: 30, // Minimum for custom tier (starts at $30)
   maxAmount: 1000, // Maximum monthly subscription
   tokensPerDollar: 10 // Token conversion rate
 };
@@ -119,6 +121,38 @@ export const getTierById = (tierId: string): SubscriptionTier | null => {
  */
 export const getTierByAmount = (amount: number): SubscriptionTier | null => {
   return SUBSCRIPTION_TIERS.find(tier => tier.amount === amount) || null;
+};
+
+/**
+ * Determine tier based on amount - SINGLE SOURCE OF TRUTH
+ * This is the authoritative function for tier determination
+ */
+export const determineTierFromAmount = (amount: number | null): string => {
+  if (!amount || amount === 0) return 'inactive';
+  if (amount >= 30) return 'tier3';
+  if (amount >= 20) return 'tier2';
+  if (amount >= 10) return 'tier1';
+  return 'inactive';
+};
+
+/**
+ * Get effective tier prioritizing amount over tier field
+ * Use this function everywhere for consistent tier determination
+ */
+export const getEffectiveTier = (
+  amount: number | null,
+  tier: string | null,
+  status: string | null
+): string => {
+  // Always use amount to determine tier since it's more accurate than the tier field
+  const effectiveTier = amount !== null ? determineTierFromAmount(amount) : (tier || 'inactive');
+
+  // Check if subscription is active
+  const isActive = status === 'active' || status === 'trialing';
+  const result = isActive ? effectiveTier : 'inactive';
+
+  // Safety check: ensure we never return null/undefined
+  return result || 'inactive';
 };
 
 /**

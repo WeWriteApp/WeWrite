@@ -33,9 +33,36 @@ export function middleware(request) {
   // Secondary: authenticated cookie (for session-based auth)
   const sessionToken = request.cookies.get("session")?.value;
   const authenticatedCookie = request.cookies.get("authenticated")?.value === 'true';
+  const userSessionCookie = request.cookies.get("userSession")?.value;
+
+  // Check email verification status from userSession cookie
+  let isEmailVerified = true; // Default to true for backward compatibility
+  if (userSessionCookie) {
+    try {
+      const userSession = JSON.parse(userSessionCookie);
+      isEmailVerified = userSession.emailVerified !== false; // Default to true if not specified
+    } catch (error) {
+      console.log('[Middleware] Error parsing userSession cookie:', error);
+    }
+  }
 
   // User is authenticated if they have either a Firebase session or authenticated cookie
   const isAuthenticated = !!(sessionToken || authenticatedCookie);
+
+  // Debug logging for authentication issues
+  if (path.startsWith("/auth/login")) {
+    console.log('🔍 Middleware Debug - Login page access:', {
+      path,
+      sessionToken: !!sessionToken,
+      authenticatedCookie,
+      userSessionCookie: !!userSessionCookie,
+      isAuthenticated,
+      isEmailVerified
+    });
+  }
+
+  // User has full access if authenticated AND email verified
+  const hasFullAccess = isAuthenticated && isEmailVerified;
 
   // URL structure redirects
 
@@ -81,9 +108,19 @@ export function middleware(request) {
 
   // Authentication redirects
 
-  // Redirect authenticated users away from auth pages
-  if (path.startsWith("/auth/") && isAuthenticated) {
+  // Redirect authenticated users away from auth pages (except verify-email)
+  // TEMPORARY: Allow login page access for debugging stale sessions
+  if (path.startsWith("/auth/") && path !== "/auth/verify-email" && path !== "/auth/login" && isAuthenticated) {
+    // If user is authenticated but not verified, redirect to verification
+    if (!isEmailVerified) {
+      return NextResponse.redirect(new URL("/auth/verify-email", request.url));
+    }
     return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  // Redirect unverified users to email verification page
+  if (isAuthenticated && !isEmailVerified && path !== "/auth/verify-email") {
+    return NextResponse.redirect(new URL("/auth/verify-email", request.url));
   }
 
   // Only redirect to login for paths that explicitly require auth
@@ -91,6 +128,11 @@ export function middleware(request) {
     const loginUrl = new URL("/auth/login", request.url);
     loginUrl.searchParams.set("from", path);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Block unverified users from protected routes
+  if (requiresAuth && isAuthenticated && !isEmailVerified) {
+    return NextResponse.redirect(new URL("/auth/verify-email", request.url));
   }
 
   // For admin-only paths, check if the user is an admin

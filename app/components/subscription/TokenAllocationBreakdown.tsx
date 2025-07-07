@@ -176,11 +176,16 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
         throw new Error(data.error || 'Failed to load allocations');
       }
 
+      console.log(`📄 Loaded ${data.allocations.length} allocations (${loadMore ? 'load more' : 'initial'}), pagination:`, data.pagination);
+
       if (loadMore && allocationData) {
-        // Append new allocations to existing ones
+        // Append new allocations to existing ones, avoiding duplicates
+        const existingIds = new Set(allocationData.allocations.map(a => a.id));
+        const newAllocations = data.allocations.filter(a => !existingIds.has(a.id));
+
         setAllocationData({
           ...data,
-          allocations: [...allocationData.allocations, ...data.allocations]
+          allocations: [...allocationData.allocations, ...newAllocations]
         });
       } else {
         // Replace with new data
@@ -521,16 +526,36 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
         <CardTitle className="flex items-center gap-2">
           <DollarSign className="h-5 w-5" />
           Breakdown by page
+          {allocationData?.pagination?.total && (
+            <Badge variant="secondary" className="ml-2 text-xs">
+              {allocationData.pagination.total} {allocationData.pagination.total === 1 ? 'page' : 'pages'}
+            </Badge>
+          )}
         </CardTitle>
         <CardDescription>
-          {allocationData?.pagination?.total ? (
-            `Manage your monthly token allocations to creators (${allocationData.pagination.total} pages)`
-          ) : (
-            'Manage your monthly token allocations to creators'
-          )}
+          Manage your monthly token allocations to creators
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Quick Stats Summary */}
+        {allocationData?.summary && allocationData.summary.totalAllocations > 0 && (
+          <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg mb-4 text-sm">
+            <div className="flex items-center gap-4">
+              <span className="text-muted-foreground">
+                <strong className="text-foreground">{allocationData.summary.totalTokensAllocated}</strong> tokens allocated
+              </span>
+              <span className="text-muted-foreground">
+                to <strong className="text-foreground">{allocationData.pagination?.total || allocationData.summary.totalAllocations}</strong> {(allocationData.pagination?.total || allocationData.summary.totalAllocations) === 1 ? 'page' : 'pages'}
+              </span>
+            </div>
+            {allocationData.summary.balance && (
+              <span className="text-muted-foreground">
+                <strong className="text-foreground">{allocationData.summary.balance.availableTokens}</strong> tokens remaining
+              </span>
+            )}
+          </div>
+        )}
+
         {sortedAllocations.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-muted-foreground mb-4">
@@ -724,23 +749,28 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
 
             {/* Load More Button */}
             {allocationData?.pagination?.hasMore && (
-              <div className="text-center py-4">
+              <div className="text-center py-4 border-t border-border/50 mt-4">
                 <div className="text-sm text-muted-foreground mb-3">
-                  Showing {allocationData.allocations.length} of {allocationData.pagination.total} pages
+                  Showing {allocationData.allocations.length} of {allocationData.pagination.total} pages you're pledging to
                 </div>
                 <Button
                   variant="outline"
                   onClick={handleLoadMore}
                   disabled={loadingMore}
-                  className="min-w-[140px]"
+                  className="min-w-[160px] hover:bg-primary hover:text-primary-foreground transition-colors"
                 >
                   {loadingMore ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
-                      Loading...
+                      Loading more...
                     </>
                   ) : (
-                    'Load 20 more'
+                    <>
+                      Load 20 more pages
+                      <span className="ml-2 text-xs opacity-70">
+                        ({allocationData.pagination.total - allocationData.allocations.length} remaining)
+                      </span>
+                    </>
                   )}
                 </Button>
               </div>
@@ -748,9 +778,9 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
 
             {/* Show total count even when all loaded */}
             {allocationData?.pagination && !allocationData.pagination.hasMore && allocationData.pagination.total > 20 && (
-              <div className="text-center py-2">
+              <div className="text-center py-4 border-t border-border/50 mt-4">
                 <div className="text-sm text-muted-foreground">
-                  Showing all {allocationData.pagination.total} pages
+                  ✅ Showing all {allocationData.pagination.total} pages you're pledging to
                 </div>
               </div>
             )}

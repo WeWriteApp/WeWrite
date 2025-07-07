@@ -11,6 +11,7 @@ import { Lock } from 'lucide-react';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import { useDateFormat } from '../../contexts/DateFormatContext';
+import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 
 interface RandomPage {
   id: string;
@@ -23,6 +24,9 @@ interface RandomPage {
   groupId?: string;
   groupName?: string;
   groupIsPublic?: boolean;
+  tier?: string;
+  subscriptionStatus?: string;
+  subscriptionAmount?: number;
 }
 
 interface RandomPagesTableProps {
@@ -114,12 +118,20 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
     return (
       <span className="text-sm text-muted-foreground">
         by{' '}
-        <Link
-          href={`/user/${page.userId}`}
-          className="text-primary hover:underline"
-        >
-          {page.username}
-        </Link>
+        <span className="inline-flex items-center gap-1">
+          <Link
+            href={`/user/${page.userId}`}
+            className="text-primary hover:underline"
+          >
+            {page.username}
+          </Link>
+          <SubscriptionTierBadge
+            tier={page.tier}
+            status={page.subscriptionStatus}
+            amount={page.subscriptionAmount}
+            size="sm"
+          />
+        </span>
       </span>
     );
   };

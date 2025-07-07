@@ -10,6 +10,7 @@ import SingleProfileView from '../../components/pages/SingleProfileView';
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { PageProvider } from '../../contexts/PageContext';
+import { getUserSubscriptionTier } from '../../utils/userUtils';
 
 interface UserPageProps {
   params: Promise<{ id: string }> | { id: string };
@@ -32,29 +33,40 @@ export default function UserPage({ params }: UserPageProps) {
   const router = useRouter();
   const { currentAccount } = useCurrentAccount();
   const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+
+  // Debug the payments flag
+  console.warn('🔍 User page: Payments flag value:', {
+    isPaymentsEnabled,
+    currentAccountEmail: currentAccount?.email,
+    currentAccountUid: currentAccount?.uid
+  });
+
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Helper function to fetch subscription data using real-time listener for consistency
+  // Use the same subscription data pipeline as page headers
   const fetchUserSubscription = async (userId) => {
     try {
-      const { listenToUserSubscription } = await import('../../firebase/subscription');
-      return new Promise((resolve) => {
-        const unsubscribe = listenToUserSubscription(userId, (subscription) => {
-          unsubscribe(); // Clean up listener after first result
-          resolve(subscription);
-        });
-      });
+      const subscriptionData = await getUserSubscriptionTier(userId);
+      return subscriptionData;
     } catch (error) {
       console.error('Error fetching user subscription:', error);
+      return { tier: null, status: null, amount: null };
     }
-    return null;
   };
 
   useEffect(() => {
     async function fetchUser() {
       try {
+        console.warn('🔍 User page: Fetching user data', {
+          id,
+          isPaymentsEnabled,
+          currentAccountEmail: currentAccount?.email,
+          currentAccountUid: currentAccount?.uid,
+          timestamp: new Date().toISOString()
+        });
+
         const rtdb = getDatabase(app);
 
         // First, try to get user by ID directly (for numeric IDs or known Firebase UIDs)
@@ -67,15 +79,27 @@ export default function UserPage({ params }: UserPageProps) {
 
           // Get user's subscription to check for supporter tier (only if payments enabled)
           let subscription = null;
+          console.warn('🔍 User page: About to check payments enabled', { isPaymentsEnabled });
           if (isPaymentsEnabled) {
+            console.warn('🔍 User page: Fetching subscription data for user', id);
             subscription = await fetchUserSubscription(id);
+            console.warn('🔍 User profile subscription data:', {
+              userId: id,
+              subscription,
+              tier: subscription?.tier,
+              status: subscription?.status,
+              amount: subscription?.amount
+            });
+          } else {
+            console.warn('🔍 User page: Skipping subscription fetch - payments disabled');
           }
 
           setProfile({
             uid: id,
             ...userData,
             tier: subscription?.tier || null,
-            subscriptionStatus: subscription?.status || null
+            subscriptionStatus: subscription?.status || null,
+            subscriptionAmount: subscription?.amount || null
           });
           setIsLoading(false);
           return;
@@ -96,13 +120,21 @@ export default function UserPage({ params }: UserPageProps) {
           let subscription = null;
           if (isPaymentsEnabled) {
             subscription = await fetchUserSubscription(userId);
+            console.log('🔍 User profile subscription data (username lookup):', {
+              userId,
+              subscription,
+              tier: subscription?.tier,
+              status: subscription?.status,
+              amount: subscription?.amount
+            });
           }
 
           setProfile({
             uid: userId,
             ...userProfile,
             tier: subscription?.tier || null,
-            subscriptionStatus: subscription?.status || null
+            subscriptionStatus: subscription?.status || null,
+            subscriptionAmount: subscription?.amount || null
           });
           setIsLoading(false);
           return;
@@ -119,7 +151,7 @@ export default function UserPage({ params }: UserPageProps) {
     }
 
     fetchUser();
-  }, [id, router]);
+  }, [id, router, isPaymentsEnabled]);
 
   useEffect(() => {
     if (profile && profile.username) {

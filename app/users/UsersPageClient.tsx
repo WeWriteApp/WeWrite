@@ -9,6 +9,7 @@ import { PillLink } from '../components/utils/PillLink';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
 import { SupporterIcon } from "../components/payments/SupporterIcon";
+import { SubscriptionTierBadge } from "../components/ui/SubscriptionTierBadge";
 import { collection, getDocs, query, orderBy, limit as firestoreLimit, getDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import SimpleSparkline from "../components/utils/SimpleSparkline";
@@ -21,6 +22,7 @@ interface User {
   pageCount: number;
   tier?: string | null;
   subscriptionStatus?: string | null;
+  subscriptionAmount?: number | null;
 }
 
 export default function UsersPageClient() {
@@ -125,12 +127,15 @@ export default function UsersPageClient() {
           // Fetch subscription information if available
           let tier = null;
           let subscriptionStatus = null;
+          let subscriptionAmount = null;
           try {
-            const subscriptionDoc = await getDoc(doc(db, 'subscriptions', userId));
-            if (subscriptionDoc.exists()) {
-              const subscriptionData = subscriptionDoc.data();
+            // Use API endpoint to fetch subscription data server-side
+            const subscriptionResponse = await fetch(`/api/user-subscription?userId=${userId}`);
+            if (subscriptionResponse.ok) {
+              const subscriptionData = await subscriptionResponse.json();
               tier = subscriptionData.tier;
               subscriptionStatus = subscriptionData.status;
+              subscriptionAmount = subscriptionData.amount;
             }
           } catch (err) {
             console.error(`Error fetching subscription for user ${userId}:`, err);
@@ -142,7 +147,8 @@ export default function UsersPageClient() {
             photoURL: userData.photoURL,
             pageCount: pageCountsByUser[userId] || 0,
             tier,
-            subscriptionStatus
+            subscriptionStatus,
+            subscriptionAmount
           });
         }
 
@@ -268,14 +274,13 @@ export default function UsersPageClient() {
                             onClick={(e) => e.stopPropagation()} // Prevent double navigation
                           >
                             <span className="flex items-center gap-1">
-                              {session.username || "Unknown User"}
-                              {false && subscriptionEnabled && (
-                                <SupporterIcon
-                                  tier={user.tier}
-                                  status={user.subscriptionStatus}
-                                  size="sm"
-                                />
-                              )}
+                              {user.username || "Unknown User"}
+                              <SubscriptionTierBadge
+                                tier={user.tier}
+                                status={user.subscriptionStatus}
+                                amount={user.subscriptionAmount}
+                                size="sm"
+                              />
                             </span>
                           </PillLink>
                         </TooltipTrigger>

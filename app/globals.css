@@ -2,6 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom slider styles for subscription tier selector */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.slider::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Downgrade slider styles (yellow for downgrades) */
+.slider-downgrade::-webkit-slider-thumb {
+  background: #eab308;
+}
+
+.slider-downgrade::-moz-range-thumb {
+  background: #eab308;
+}
+
+/* Cancellation slider styles (red for cancellation) */
+.slider-cancellation::-webkit-slider-thumb {
+  background: #ef4444;
+}
+
+.slider-cancellation::-moz-range-thumb {
+  background: #ef4444;
+}
+
+/* Custom amount button animation */
+@keyframes slide-in-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-in {
+  animation-fill-mode: both;
+}
+
+.slide-in-from-right-2 {
+  animation: slide-in-from-right 0.3s ease-out;
+}
+
+/* Custom xs breakpoint utilities for mobile optimization */
+@media (min-width: 475px) {
+  .xs\:inline { display: inline; }
+  .xs\:hidden { display: none; }
+}
+
 /* Comprehensive zoom prevention for mobile devices */
 @media screen and (max-width: 768px) {
   /* Prevent all zoom gestures while preserving scrolling */

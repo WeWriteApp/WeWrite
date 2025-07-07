@@ -8,8 +8,7 @@ import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronRight, Database } from "lucide-react";
-import { db } from "../../firebase/config";
-import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
+// Removed direct Firebase imports - now using API endpoints
 import { useToast } from "../ui/use-toast";
 import { FeatureFlag, isAdmin } from "../../utils/feature-flags";
 import { usePWA } from '../../providers/PWAProvider';

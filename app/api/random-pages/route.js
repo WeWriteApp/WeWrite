@@ -25,6 +25,12 @@ export async function GET(request) {
     const { db } = await import('../../firebase/database.ts');
     const { ref, get } = await import('firebase/database');
     const { rtdb } = await import('../../firebase/rtdb.ts');
+    const { initAdmin } = await import('../../firebase/admin');
+    const { getEffectiveTier } = await import('../../utils/subscriptionTiers');
+
+    // Initialize Firebase Admin
+    const adminApp = initAdmin();
+    const adminDb = adminApp.firestore();
 
     if (!db) {
       console.log('Firebase database not available - returning empty array');
@@ -110,14 +116,14 @@ export async function GET(request) {
       }
     }
 
-    // Fetch additional data (groups and usernames) for pages
+    // Fetch additional data (groups, usernames, and subscription info) for pages
     const pagesWithCompleteInfo = await Promise.all(
       pages.map(async (page) => {
         let updatedPage = { ...page };
 
         // Groups functionality removed
 
-        // Fetch username from users collection if missing or showing as Anonymous
+        // Fetch username and subscription data
         if (!page.username || page.username === 'Anonymous') {
           try {
             const userRef = ref(rtdb, `users/${page.userId}`);
@@ -130,6 +136,21 @@ export async function GET(request) {
           } catch (userError) {
             console.error(`Error fetching username for user ${page.userId}:`, userError);
           }
+        }
+
+        // Fetch subscription information using Firebase Admin from correct path
+        try {
+          const subscriptionDoc = await adminDb.collection('users').doc(page.userId).collection('subscription').doc('current').get();
+          if (subscriptionDoc.exists) {
+            const subscriptionData = subscriptionDoc.data();
+            // Use centralized tier determination logic
+            const effectiveTier = getEffectiveTier(subscriptionData.amount, subscriptionData.tier, subscriptionData.status);
+            updatedPage.tier = effectiveTier;
+            updatedPage.subscriptionStatus = subscriptionData.status;
+            updatedPage.subscriptionAmount = subscriptionData.amount;
+          }
+        } catch (subscriptionError) {
+          console.error(`Error fetching subscription for user ${page.userId}:`, subscriptionError);
         }
 
         return updatedPage;

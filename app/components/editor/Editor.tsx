@@ -1161,17 +1161,21 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
     // Handle Ctrl+K for link insertion
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-      console.log("🔵 [DEBUG] Cmd+K pressed - opening link editor via keyboard shortcut");
-      console.log("🔵 [DEBUG] readOnly:", readOnly);
-      console.log("🔵 [DEBUG] showLinkEditor current state:", showLinkEditor);
       e.preventDefault();
       saveSelection();
-      console.log("🔵 [DEBUG] Selection saved via keyboard shortcut");
       setLinkSearchText("");
       setLinkDisplayText("");
       setShowLinkEditor(true);
-      console.log("🔵 [DEBUG] Link editor state set to true via keyboard shortcut");
-      console.log("🔵 [DEBUG] showLinkEditor should now be:", true);
+      return;
+    }
+
+    // Handle @ symbol for link insertion
+    if (e.key === '@' && !readOnly) {
+      e.preventDefault();
+      saveSelection();
+      setLinkSearchText("");
+      setLinkDisplayText("");
+      setShowLinkEditor(true);
       return;
     }
 

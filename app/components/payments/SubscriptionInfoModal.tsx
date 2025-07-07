@@ -12,9 +12,10 @@ import {
 import { X } from "lucide-react";
 import { Button } from "../ui/button";
 import Link from "next/link";
-import { SupporterIcon } from './SupporterIcon';
+import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useFeatureFlag } from '../../utils/feature-flags';
+import { SUBSCRIPTION_TIERS } from '../../utils/subscriptionTiers';
 
 interface TierModalProps {
   children: React.ReactNode;
@@ -26,13 +27,14 @@ interface TierModalProps {
 }
 
 export function SubscriptionInfoModal({ children, trigger, currentTier = null, currentStatus = null, userId = null, username = null }: TierModalProps) {
-  const { session } = useCurrentAccount();
-  const isPaymentsEnabled = useFeatureFlag('payments', session?.email);
+  const { currentAccount } = useCurrentAccount();
+  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email);
 
-  // If payments feature flag is disabled, don't render anything
+  // If payments feature flag is disabled, just render the children without modal functionality
   if (!isPaymentsEnabled) {
-    return null;
+    return <>{children}</>;
   }
+  // Use centralized tier definitions
   const tiers = [
     {
       id: 'none',
@@ -42,27 +44,19 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
       status: null,
       tier: null
     },
-    {
-      id: 'tier1',
-      name: 'Supporter',
-      description: 'Subscribe to WeWrite for $10/month',
-      amount: '$10/mo',
+    ...SUBSCRIPTION_TIERS.map(tier => ({
+      id: tier.id,
+      name: tier.name,
+      description: `Subscribe to WeWrite for $${tier.amount}/month`,
+      amount: `$${tier.amount}/mo`,
       status: 'active',
-      tier: 'tier1'
-    },
-    {
-      id: 'tier2',
-      name: 'Champion',
-      description: 'Subscribe to WeWrite for $50/month',
-      amount: '$50/mo',
-      status: 'active',
-      tier: 'tier2'
-    },
+      tier: tier.id
+    })),
     {
       id: 'custom',
       name: 'Custom',
-      description: 'Subscribe to WeWrite for $60+/month',
-      amount: '$60+/mo',
+      description: 'Subscribe to WeWrite for $30+/month',
+      amount: '$30+/mo',
       status: 'active',
       tier: 'custom'
     }
@@ -101,7 +95,7 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
                   className={`flex items-center gap-3 p-3 rounded-lg ${bgColorClass} ${borderColorClass} ${isActive ? 'ring-2 ring-primary/40' : ''}`}
                 >
                   <div className="flex-shrink-0">
-                    <SupporterIcon tier={tier.tier} status={tier.status} size="lg" />
+                    <SubscriptionTierBadge tier={tier.tier} status={tier.status} size="lg" />
                   </div>
                   <div className="flex-grow">
                     <div className={`font-medium ${activeTextClass}`}>{tier.name}</div>

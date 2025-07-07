@@ -73,7 +73,7 @@ interface PageData {
 function NewPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { currentAccount } = useCurrentAccount();
+  const { currentAccount, isAuthenticated, isEmailVerified, isLoading: authLoading } = useCurrentAccount();
   // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
   // const { trackPageCreationFlow, trackEditingFlow } = useWeWriteAnalytics();
   
@@ -109,6 +109,19 @@ function NewPageContent() {
   // Determine page type
   const isReply = searchParams?.has('replyTo') || false;
   const isDailyNote = searchParams?.get('type') === 'daily-note' || isExactDateFormat(title);
+
+  // Client-side authentication check
+  useEffect(() => {
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        console.log('NewPage: User not authenticated, redirecting to login');
+        router.push('/auth/login?from=/new');
+      } else if (!isEmailVerified) {
+        console.log('NewPage: User not verified, redirecting to email verification');
+        router.push('/auth/verify-email');
+      }
+    }
+  }, [authLoading, isAuthenticated, isEmailVerified, router]);
 
   // Initialize the page after a brief delay to prevent layout shift
   useEffect(() => {
@@ -716,6 +729,20 @@ function NewPageContent() {
 
   // Get username for display
   const username = currentAccount?.username || currentAccount?.displayName || 'Anonymous';
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <SlideUpPage>
+        <Layout>
+          <Head>
+            <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
+          </Head>
+          <NewPageSkeleton />
+        </Layout>
+      </SlideUpPage>
+    );
+  }
 
   // Show skeleton during initialization to prevent layout shift
   if (isInitializing) {

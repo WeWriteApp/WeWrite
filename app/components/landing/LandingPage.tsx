@@ -545,8 +545,9 @@ const LandingPage = () => {
               variant="secondary"
               className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
               asChild
+              onClick={() => console.log('🟠 Desktop Sign In button clicked')}
             >
-              <Link href="/auth/login">Sign In</Link>
+              <Link href="/auth/login" onClick={() => console.log('🟠 Desktop Sign In link clicked')}>Sign In</Link>
             </Button>
             <Button variant="default" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
               <Link href="/auth/register">Create Account</Link>
@@ -583,8 +584,9 @@ const LandingPage = () => {
                 size="sm"
                 className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
                 asChild
+                onClick={() => console.log('🟠 Mobile Sign In button clicked')}
               >
-                <Link href="/auth/login">Sign In</Link>
+                <Link href="/auth/login" onClick={() => console.log('🟠 Mobile Sign In link clicked')}>Sign In</Link>
               </Button>
               <Button variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
                 <Link href="/auth/register">Sign Up</Link>

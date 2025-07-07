@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
-import { SUBSCRIPTION_TIERS, CUSTOM_TIER_CONFIG, validateCustomAmount, calculateTokensForAmount } from '../../utils/subscriptionTiers';
+import { SUBSCRIPTION_TIERS, CUSTOM_TIER_CONFIG, validateCustomAmount, calculateTokensForAmount, determineTierFromAmount } from '../../utils/subscriptionTiers';
+import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 
 interface SubscriptionTierCarouselProps {
   selectedTier: string;
@@ -16,6 +17,7 @@ interface SubscriptionTierCarouselProps {
     tier?: string;
   } | null;
   showCurrentOption?: boolean;
+  showDowngradeMessaging?: boolean;
 }
 
 export default function SubscriptionTierCarousel({
@@ -24,7 +26,8 @@ export default function SubscriptionTierCarousel({
   customAmount = CUSTOM_TIER_CONFIG.minAmount,
   onCustomAmountChange,
   currentSubscription,
-  showCurrentOption = false
+  showCurrentOption = false,
+  showDowngradeMessaging = false
 }: SubscriptionTierCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [customAmountInput, setCustomAmountInput] = useState(customAmount.toString());
@@ -34,7 +37,44 @@ export default function SubscriptionTierCarousel({
 
   // Create tiers array with optional current subscription option
   const availableTiers = React.useMemo(() => {
-    const tiers = [...SUBSCRIPTION_TIERS];
+    let tiers = [...SUBSCRIPTION_TIERS];
+
+    // Filter out the current subscription tier from the list if not showing current option
+    if (!showCurrentOption && currentSubscription) {
+      // For tier3 (Champion), filter by tier ID since it's custom
+      if (currentSubscription.tier === 'tier3') {
+        tiers = tiers.filter(tier => tier.id !== 'tier3');
+      } else {
+        // For other tiers, filter by exact amount match
+        tiers = tiers.filter(tier => tier.amount !== currentSubscription.amount);
+      }
+    }
+
+    // Always include custom tier when showing downgrade messaging
+    if (showDowngradeMessaging && currentSubscription) {
+      const hasCustomTier = tiers.some(tier => tier.id === 'tier3');
+      if (!hasCustomTier) {
+        tiers.push(SUBSCRIPTION_TIERS.find(tier => tier.id === 'tier3')!);
+      }
+    }
+
+    // Add downgrade messaging for tiers lower than current subscription
+    if (showDowngradeMessaging && currentSubscription) {
+      tiers = tiers.map(tier => {
+        const isDowngrade = tier.amount < currentSubscription.amount;
+        const tokenDifference = currentSubscription.amount * 10 - tier.amount * 10;
+
+        if (isDowngrade) {
+          return {
+            ...tier,
+            name: `Downgrade to ${tier.name}`,
+            description: `You'll have ${tokenDifference} fewer tokens each month`,
+            isDowngrade: true
+          };
+        }
+        return tier;
+      });
+    }
 
     if (showCurrentOption && currentSubscription) {
       const currentTier = {
@@ -43,6 +83,7 @@ export default function SubscriptionTierCarousel({
         amount: currentSubscription.amount,
         tokens: calculateTokensForAmount(currentSubscription.amount),
         description: `Reactivate your ${currentSubscription.tier || 'custom'} subscription`,
+        features: [],
         isCurrent: true
       };
 
@@ -51,7 +92,7 @@ export default function SubscriptionTierCarousel({
     }
 
     return tiers;
-  }, [showCurrentOption, currentSubscription]);
+  }, [showCurrentOption, currentSubscription, showDowngradeMessaging]);
 
   // Update customAmountInput when customAmount prop changes
   useEffect(() => {
@@ -169,10 +210,24 @@ export default function SubscriptionTierCarousel({
         )}
 
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">{tier.name}</h3>
-          <div className="flex items-center gap-1">
-            <DollarSign className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">{displayTokens}</span>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold">{tier.name}</h3>
+            {!isCurrentTier && (
+              <SubscriptionTierBadge
+                tier={determineTierFromAmount(displayAmount)}
+                status="active"
+                amount={displayAmount}
+                size="md"
+              />
+            )}
+            {isCurrentTier && (
+              <SubscriptionTierBadge
+                tier={determineTierFromAmount(displayAmount)}
+                status="active"
+                amount={displayAmount}
+                size="md"
+              />
+            )}
           </div>
         </div>
 
@@ -207,14 +262,10 @@ export default function SubscriptionTierCarousel({
 
         <p className="text-sm text-muted-foreground mb-4">{tier.description}</p>
 
-        <ul className="space-y-2 text-sm flex-1">
-          {tier.features.map((feature: string, featureIndex: number) => (
-            <li key={featureIndex} className="flex items-start gap-2">
-              <span className="text-primary mt-0.5">✓</span>
-              <span>{feature}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="text-center py-4 bg-muted/30 rounded-lg">
+          <div className="text-2xl font-bold text-primary">{displayTokens}</div>
+          <div className="text-sm text-muted-foreground">tokens per month</div>
+        </div>
       </div>
     );
   };
@@ -222,7 +273,7 @@ export default function SubscriptionTierCarousel({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-medium mb-4">Choose Your Subscription</h2>
+        <h2 className="text-xl font-medium mb-4">Choose Subscription</h2>
         
         {/* Mobile and Small Tablet Carousel */}
         <div className="lg:hidden">

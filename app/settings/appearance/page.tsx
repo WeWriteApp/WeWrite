@@ -8,6 +8,7 @@ import { ChevronLeft, Sun, Moon, Laptop, Check } from 'lucide-react';
 import AccentColorSwitcher from '../../components/utils/AccentColorSwitcher';
 import PillStyleToggle from '../../components/utils/PillStyleToggle';
 import { cn } from "../../lib/utils";
+import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 
 export default function AppearancePage() {
   const { session } = useCurrentAccount();
@@ -42,28 +43,12 @@ export default function AppearancePage() {
 
   return (
     <div>
-      {/* Mobile Header */}
-      <div className="lg:hidden">
-        <div className="flex items-center px-4 py-3 border-b border-border">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push('/settings')}
-            className="mr-3"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-lg font-semibold">Appearance</h1>
-        </div>
-      </div>
+      <SettingsPageHeader
+        title="Appearance"
+        description="Customize the look and feel of WeWrite"
+      />
 
-      {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Desktop Header */}
-        <div className="hidden lg:block mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Appearance</h1>
-          <p className="text-muted-foreground mt-1">Customize the look and feel of WeWrite</p>
-        </div>
 
         <div className="space-y-8">
           {/* Theme Selection */}

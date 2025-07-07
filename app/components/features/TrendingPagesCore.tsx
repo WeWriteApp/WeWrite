@@ -62,20 +62,17 @@ export default function TrendingPages({ limit = 5 }) {
           return;
         }
 
-        // Check for error in response
-        if (!Array.isArray(response) && response.error) {
+        // Check for API error
+        if (!response.success) {
           console.error('TrendingPages: API returned error:', response.error);
-          setError(response.error);
+          setError(response.error || 'Failed to load trending pages');
           setLoading(false);
-          // Return empty array instead of failing completely
           setTrendingPages([]);
           return;
         }
 
-        // Handle both old and new response formats
-        const pages = Array.isArray(response)
-          ? response
-          : (response.trendingPages || []);
+        // Get pages from standardized API response
+        const pages = response.data?.trendingPages || [];
 
         console.log('TrendingPages: Received pages:', pages.length);
 

@@ -27,7 +27,8 @@ export default function TokenAllocationDisplay({
   // Get current usage data
   const totalTokens = tokenBalance?.totalTokens || monthlyAllocation;
   const allocatedTokens = tokenBalance?.allocatedTokens || 0;
-  const availableTokens = tokenBalance?.availableTokens || monthlyAllocation;
+  // Calculate available tokens as total minus allocated (not from tokenBalance.availableTokens)
+  const availableTokens = totalTokens - allocatedTokens;
 
   // Calculate percentages for progress bar
   const allocationPercentage = totalTokens > 0 ? (allocatedTokens / totalTokens) * 100 : 0;

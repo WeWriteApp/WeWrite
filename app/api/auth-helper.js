@@ -13,6 +13,45 @@ try {
 }
 
 /**
+ * Standard API response format for consistent error handling
+ */
+export const createApiResponse = (data = null, error = null, status = 200) => {
+  const response = {
+    success: !error,
+    timestamp: new Date().toISOString(),
+    ...(data && { data }),
+    ...(error && { error: typeof error === 'string' ? error : error.message })
+  };
+
+  return new Response(JSON.stringify(response), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+};
+
+/**
+ * Standard error responses
+ */
+export const ApiErrors = {
+  UNAUTHORIZED: { message: 'Authentication required', status: 401 },
+  FORBIDDEN: { message: 'Insufficient permissions', status: 403 },
+  NOT_FOUND: { message: 'Resource not found', status: 404 },
+  BAD_REQUEST: { message: 'Invalid request parameters', status: 400 },
+  INTERNAL_ERROR: { message: 'Internal server error', status: 500 },
+  FEATURE_DISABLED: { message: 'Feature is currently disabled', status: 404 }
+};
+
+/**
+ * Create standardized error response
+ */
+export const createErrorResponse = (errorType, customMessage = null) => {
+  const error = ApiErrors[errorType] || ApiErrors.INTERNAL_ERROR;
+  return createApiResponse(null, customMessage || error.message, error.status);
+};
+
+/**
  * Helper function to get the user ID from a request
  * Tries multiple authentication methods:
  * 1. Query parameter (for testing)

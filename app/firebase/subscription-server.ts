@@ -31,6 +31,12 @@ interface SubscriptionData {
   canceledAt?: string;
 }
 
+interface SubscriptionTier {
+  tier: number | null;
+  status: string | null;
+  amount: number | null;
+}
+
 interface SubscriptionOptions {
   verbose?: boolean;
 }

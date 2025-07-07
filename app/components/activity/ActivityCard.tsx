@@ -8,7 +8,7 @@ import { generateSimpleDiff, generateTextDiff, extractTextContent } from "../../
 import { useTheme } from "next-themes";
 import { cn, interactiveCard } from "../../lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
-import { SupporterIcon } from "../payments/SupporterIcon";
+import { SubscriptionTierBadge } from "../ui/SubscriptionTierBadge";
 import { format } from "date-fns";
 import { getPageById } from "../../firebase/database/pages";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
@@ -35,7 +35,7 @@ import { hasContentChanged } from "../../utils/contentNormalization";
 const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, useDynamicHeight = false }) => {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const { session } = useCurrentAccount();
+  const { currentAccount } = useCurrentAccount();
   const router = useRouter();
   const [pageData, setPageData] = useState(null);
   const [currentPageName, setCurrentPageName] = useState(activity.pageName);
@@ -46,9 +46,9 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
   // Check if user can restore this version (is page owner and in history context)
   const canRestore = activity.isHistoryContext &&
                     !activity.isCurrentVersion &&
-                    session &&
+                    currentAccount &&
                     pageData &&
-                    session.uid === pageData.userId;
+                    currentAccount.uid === pageData.userId;
 
   // Handle version restoration
   const handleRestore = async (e) => {
@@ -121,7 +121,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
   const maxAttempts = 3;
 
   useEffect(() => {
-    if (activity?.pageId && session &&
+    if (activity?.pageId && currentAccount &&
         activity.activityType !== "bio_edit" &&
         activity.activityType !== "group_about_edit" &&
         fetchAttempts < maxAttempts) {
@@ -129,7 +129,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
       const fetchPageData = async () => {
         try {
           // Use proper page access function instead of direct Firestore access
-          const result = await getPageById(activity.pageId, session?.uid);
+          const result = await getPageById(activity.pageId, currentAccount?.uid);
           if (result.pageData && !result.error) {
             setPageData(result.pageData);
             setLastError(null); // Clear error on success
@@ -163,10 +163,10 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
         fetchPageData();
       }
     }
-  }, [activity?.pageId, session, activity?.activityType, fetchAttempts]);
+  }, [activity?.pageId, currentAccount, activity?.activityType, fetchAttempts]);
 
   // Use the reactive feature flag hook instead of manual Firestore check
-  const subscriptionEnabled = useFeatureFlag('payments', session?.email, session?.uid);
+  const subscriptionEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
 
   // Ensure we have valid content before generating diffs
   const hasValidContent = activity.currentContent &&
@@ -358,10 +358,12 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
                       {activity.username || "Missing username"}
                     </Link>
                     {subscriptionEnabled && (
-                      <SupporterIcon
+                      <SubscriptionTierBadge
                         tier={activity.tier}
                         status={activity.subscriptionStatus}
+                        amount={activity.subscriptionAmount}
                         size="sm"
+                        className="ml-1"
                       />
                     )}
                   </span>

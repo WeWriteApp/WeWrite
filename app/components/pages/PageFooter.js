@@ -17,6 +17,8 @@ const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
 import { getPageViewsLast24Hours, getPageTotalViews } from "../../firebase/pageViews";
 import { getPageVersions } from "../../firebase/database";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { getPagePledgeStats, getSupporterSparklineData } from "../../services/pledgeStatsService";
+import { useFeatureFlag } from "../../utils/feature-flags";
 /**
  * PageFooter Component
  *
@@ -58,8 +60,10 @@ export default function PageFooter({
   hasUnsavedChanges
 }) {
   const { currentAccount } = useCurrentAccount();
+  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
   const [viewData, setViewData] = useState({ total: 0, hourly: [] });
   const [changeData, setChangeData] = useState({ count: 0, hourly: [] });
+  const [supporterData, setSupporterData] = useState({ count: 0, hourly: [] });
   const [isLoading, setIsLoading] = useState(true);
 
   // Use a ref to track if we've already fetched data for this page
@@ -115,6 +119,17 @@ export default function PageFooter({
           count: versions.length,
           hourly: hourlyBuckets
         });
+
+        // Fetch supporter data (only if payments are enabled)
+        if (isPaymentsEnabled) {
+          const pledgeStats = await getPagePledgeStats(page.id);
+          const supporterSparkline = await getSupporterSparklineData(page.id);
+
+          setSupporterData({
+            count: pledgeStats.sponsorCount,
+            hourly: supporterSparkline
+          });
+        }
       } catch (error) {
         console.error("Error fetching page stats:", error);
       } finally {
@@ -160,6 +175,8 @@ export default function PageFooter({
           viewData={viewData.hourly}
           changeCount={changeData.count}
           changeData={changeData.hourly}
+          supporterCount={isPaymentsEnabled ? supporterData.count : undefined}
+          supporterData={isPaymentsEnabled ? supporterData.hourly : undefined}
           pageId={page.id}
         />
       )}

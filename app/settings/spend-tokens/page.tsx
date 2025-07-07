@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { Button } from '../../components/ui/button';
+import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 import TokenAllocationDisplay from '../../components/subscription/TokenAllocationDisplay';
 import TokenAllocationBreakdown from '../../components/subscription/TokenAllocationBreakdown';
 import { useFeatureFlag } from '../../utils/feature-flags';
@@ -227,29 +228,13 @@ export default function SpendTokensPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Mobile Header */}
-      <div className="lg:hidden mb-6">
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push('/settings')}
-            className="mr-3"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-2xl font-bold">Spend Tokens</h1>
-        </div>
-      </div>
+    <div>
+      <SettingsPageHeader
+        title="Spend Tokens"
+        description="Allocate your monthly tokens to support creators"
+      />
 
-      {/* Desktop Header */}
-      <div className="hidden lg:block mb-8">
-        <h1 className="text-3xl font-bold mb-2">Spend Tokens</h1>
-        <p className="text-muted-foreground">
-          Allocate your monthly tokens to support creators
-        </p>
-      </div>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
       {loading ? (
         <div className="flex justify-center my-12">
@@ -356,6 +341,7 @@ export default function SpendTokensPage() {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }

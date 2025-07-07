@@ -38,7 +38,7 @@ interface FeatureFlagState {
 }
 
 export default function AdminPage() {
-  const { session, isLoading: authLoading } = useCurrentAccount();
+  const { currentAccount, isLoading: authLoading } = useCurrentAccount();
   const router = useRouter();
   const { toast } = useToast();
   const { resetBannerState } = usePWA();
@@ -95,7 +95,7 @@ export default function AdminPage() {
   // Load filter state from session storage
   useEffect(() => {
     console.log('[Admin Testing] Component mounting, loading saved states...');
-    console.log('[Admin Testing] Current user on mount:', session);
+    console.log('[Admin Testing] Current user on mount:', currentAccount);
 
     if (typeof window !== 'undefined') {
       const savedFilterState = sessionStorage.getItem('admin-hide-globally-enabled');
@@ -115,7 +115,7 @@ export default function AdminPage() {
     }
 
     console.log('[Admin Testing] Component mount completed');
-  }, [session]);
+  }, [currentAccount]);
 
   // Persist filter state to session storage
   useEffect(() => {
@@ -160,8 +160,8 @@ export default function AdminPage() {
 
   // Check if user is admin
   useEffect(() => {
-    if (!authLoading && session) {
-      if (session.email !== 'jamiegray2234@gmail.com') {
+    if (!authLoading && currentAccount) {
+      if (currentAccount.email !== 'jamiegray2234@gmail.com') {
         router.push('/');
       } else {
         try {
@@ -171,10 +171,10 @@ export default function AdminPage() {
           console.error('Error in admin data loading:', error);
         }
       }
-    } else if (!authLoading && !session) {
+    } else if (!authLoading && !currentAccount) {
       router.push('/auth/login?redirect=/admin');
     }
-  }, [session, authLoading, router]);
+  }, [currentAccount, authLoading, router]);
 
   // Custom tab change handler that updates URL hash
   const handleTabChange = (newTab: string) => {
@@ -185,36 +185,33 @@ export default function AdminPage() {
     }
   };
 
-  // Load admin users from Firestore
+  // Load admin users from API
   const loadAdminUsers = async () => {
     try {
       setIsLoading(true);
 
-      // Get admin users from Firestore
-      const adminUsersRef = doc(db, 'config', 'adminUsers');
-      const adminUsersDoc = await getDoc(adminUsersRef);
+      // Call the admin users API endpoint
+      const response = await fetch('/api/admin/admin-users', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (adminUsersDoc.exists()) {
-        const adminUserIds = adminUsersDoc.data().userIds || [];
-
-        // Get user details for each admin user
-        const adminUserPromises = adminUserIds.map(async (userId: string) => {
-          const userRef = doc(db, 'users', userId);
-          const userDoc = await getDoc(userRef);
-
-          if (userDoc.exists()) {
-            return {
-              id: userId,
-              ...userDoc.data(),
-              isAdmin: true
-            } as User;
-          }
-          return null;
-        });
-
-        const adminUserResults = await Promise.all(adminUserPromises);
-        setAdminUsers(adminUserResults.filter(Boolean) as User[]);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to load admin users');
+      }
+
+      console.log(`Successfully loaded ${data.adminUsers.length} admin users from API`);
+      setAdminUsers(data.adminUsers);
+
     } catch (error) {
       console.error('Error loading admin users:', error);
       toast({
@@ -292,27 +289,30 @@ export default function AdminPage() {
     try {
       setIsSearching(true);
 
-      // Search by email
-      const emailQuery = query(collection(db, 'users'), where('email', '==', searchTerm));
-      const emailSnapshot = await getDocs(emailQuery);
-
-      // Search by username
-      const usernameQuery = query(collection(db, 'users'), where('username', '==', searchTerm));
-      const usernameSnapshot = await getDocs(usernameQuery);
-
-      // Combine results
-      const results: User[] = [];
-
-      emailSnapshot.forEach(doc => {
-        results.push({ id: doc.id, ...doc.data(), isAdmin: adminUsers.some(admin => admin.id === doc.id) } as User);
+      // Call the admin users API endpoint with search term
+      const response = await fetch(`/api/admin/users?search=${encodeURIComponent(searchTerm)}&limit=20`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
-      usernameSnapshot.forEach(doc => {
-        // Avoid duplicates
-        if (!results.some(user => user.id === doc.id)) {
-          results.push({ id: doc.id, ...doc.data(), isAdmin: adminUsers.some(admin => admin.id === doc.id) } as User);
-        }
-      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to search users');
+      }
+
+      // Mark users as admin based on current admin list
+      const results = data.users.map((user: any) => ({
+        ...user,
+        isAdmin: adminUsers.some(admin => admin.id === user.uid)
+      }));
 
       setSearchResults(results);
     } catch (error) {
@@ -332,27 +332,29 @@ export default function AdminPage() {
     try {
       setIsLoading(true);
 
-      // Get current admin users
-      const adminUsersRef = doc(db, 'config', 'adminUsers');
-      const adminUsersDoc = await getDoc(adminUsersRef);
+      // Call the admin users API endpoint
+      const action = user.isAdmin ? 'remove' : 'add';
+      const response = await fetch('/api/admin/admin-users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action,
+          targetUserId: user.id
+        })
+      });
 
-      let adminUserIds: string[] = [];
-
-      if (adminUsersDoc.exists()) {
-        adminUserIds = adminUsersDoc.data().userIds || [];
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Toggle admin status
-      if (user.isAdmin) {
-        // Remove from admin users
-        adminUserIds = adminUserIds.filter(id => id !== user.id);
-      } else {
-        // Add to admin users
-        adminUserIds.push(user.id);
-      }
+      const data = await response.json();
 
-      // Update Firestore
-      await setDoc(adminUsersRef, { userIds: adminUserIds });
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to update admin status');
+      }
 
       // Update local state
       if (user.isAdmin) {
@@ -373,7 +375,7 @@ export default function AdminPage() {
 
       toast({
         title: 'Success',
-        description: `${session.username || session.email} is ${user.isAdmin ? 'no longer' : 'now'} an admin`,
+        description: `${user.username || user.email} is ${user.isAdmin ? 'no longer' : 'now'} an admin`,
         variant: 'default'
       });
     } catch (error) {
@@ -394,7 +396,7 @@ export default function AdminPage() {
       setIsLoading(true);
 
       // Check if user is admin
-      if (!session || session.email !== 'jamiegray2234@gmail.com') {
+      if (!currentAccount || currentAccount.email !== 'jamiegray2234@gmail.com') {
         throw new Error('Admin access required');
       }
 
@@ -548,7 +550,7 @@ export default function AdminPage() {
       return;
     }
 
-    if (!session?.email) {
+    if (!currentAccount?.email) {
       toast({
         title: "User Not Found",
         description: "Unable to identify current user",
@@ -608,7 +610,7 @@ export default function AdminPage() {
    * Uses the centralized MockEarningsService for consistency
    */
   const handleResetMockEarnings = async () => {
-    if (!session?.email) {
+    if (!currentAccount?.email) {
       toast({
         title: "User Not Found",
         description: "Unable to identify current user",
@@ -650,10 +652,10 @@ export default function AdminPage() {
 
   const handleTestPayoutFlow = async () => {
     console.log('[Admin Testing] Starting payout flow test...');
-    console.log('[Admin Testing] Current user:', session);
+    console.log('[Admin Testing] Current user:', currentAccount);
 
-    if (!session?.email) {
-      console.error('[Admin Testing] User not found or no email for payout test:', session);
+    if (!currentAccount?.email) {
+      console.error('[Admin Testing] User not found or no email for payout test:', currentAccount);
       toast({
         title: "User Not Found",
         description: "Unable to identify current user",
@@ -664,7 +666,7 @@ export default function AdminPage() {
 
     setPayoutTestLoading(true);
     try {
-      const requestBody = { userEmail: session.email };
+      const requestBody = { userEmail: currentAccount.email };
       console.log('[Admin Testing] Sending payout flow test request with body:', requestBody);
 
       const response = await fetch('/api/admin/test-payout-flow', {
@@ -889,7 +891,7 @@ export default function AdminPage() {
     );
   }
 
-  if (!session) {
+  if (!currentAccount) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
@@ -899,7 +901,7 @@ export default function AdminPage() {
     );
   }
 
-  if (session.email !== 'jamiegray2234@gmail.com') {
+  if (currentAccount.email !== 'jamiegray2234@gmail.com') {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
@@ -1049,13 +1051,13 @@ export default function AdminPage() {
                       className="flex items-center justify-between p-3 rounded-md border border-border hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex flex-col">
-                        <span className="font-medium">{session.username || 'No username'}</span>
-                        <span className="text-xs text-muted-foreground">{session.email}</span>
+                        <span className="font-medium">{currentAccount.username || 'No username'}</span>
+                        <span className="text-xs text-muted-foreground">{currentAccount.email}</span>
                       </div>
                       <Button
                         variant={user.isAdmin ? "destructive" : "outline"}
                         size="sm"
-                        onClick={() => toggleAdminStatus(session as any)}
+                        onClick={() => toggleAdminStatus(currentAccount as any)}
                         disabled={isLoading}
                       >
                         {isLoading ? (

@@ -4,6 +4,7 @@ import { PillLink } from "../utils/PillLink";
 import { formatRelativeTime } from "../../utils/formatRelativeTime";
 import { generateSimpleDiff, generateTextDiff } from "../../utils/generateTextDiff";
 import DiffPreview, { DiffStats } from "./DiffPreview";
+import { SubscriptionTierBadge } from "../ui/SubscriptionTierBadge";
 
 /**
  * ActivityCard component displays a single activity card
@@ -44,13 +45,21 @@ const ActivityCard = ({ activity }) => {
             ) : (
               <>
                 <span className="text-foreground">edited by{" "}</span>
-                <Link
-                  href={`/user/${activity.userId}`}
-                  className="hover:underline text-primary"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {activity.username || "anonymous"}
-                </Link>
+                <span className="inline-flex items-center gap-1">
+                  <Link
+                    href={`/user/${activity.userId}`}
+                    className="hover:underline text-primary"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {activity.username || "anonymous"}
+                  </Link>
+                  <SubscriptionTierBadge
+                    tier={activity.tier}
+                    status={activity.subscriptionStatus}
+                    amount={activity.subscriptionAmount}
+                    size="sm"
+                  />
+                </span>
               </>
             )}
           </span>

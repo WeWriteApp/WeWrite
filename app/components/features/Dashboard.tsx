@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import AddUsername from "../auth/AddUsername";
 import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,7 @@ import { useOptimizedDashboard } from "../../hooks/useOptimizedDashboard";
 import { Shuffle, TrendingUp, Clock, Zap, Activity } from "lucide-react";
 import RandomPagesTable from "../pages/RandomPagesTable";
 import RecentActivity from "./RecentActivity";
+import RecentActivityHeader from "./RecentActivityHeader";
 import StickySection from "../utils/StickySection";
 import { SectionTitle } from "../ui/section-title";
 import RandomPagesHeader from "../features/RandomPagesHeader";
@@ -17,9 +18,11 @@ import { Input } from "../ui/input";
 import { Search } from "lucide-react";
 import DailyNotesSection from "../daily-notes/DailyNotesSection";
 import EmailVerificationAlert from "../utils/EmailVerificationAlert";
+import { getBatchUserData } from "../../firebase/batchUserData";
 
 const Dashboard: React.FC = () => {
-  const { session, isAuthenticated } = useCurrentAccount();
+  console.log(`🟡 Dashboard: Component rendering`);
+  const { currentAccount, isAuthenticated, isLoading } = useCurrentAccount();
   const router = useRouter();
 
   // Handle search functionality - navigate to search page
@@ -28,13 +31,17 @@ const Dashboard: React.FC = () => {
     router.push('/search');
   };
 
+  console.log('🟡 Dashboard: Authentication state:', { isAuthenticated, isLoading, currentAccount: !!currentAccount });
+
   useEffect(() => {
     if (!isAuthenticated) {
+      console.log('🟡 Dashboard: Not authenticated, redirecting to login');
       router.push("/auth/login");
     }
   }, [isAuthenticated, router]);
 
   if (!isAuthenticated) {
+    console.log('🟡 Dashboard: Returning null due to not authenticated');
     return null;
   }
 
@@ -71,11 +78,10 @@ const Dashboard: React.FC = () => {
             {/* Recent Activity Section */}
             <StickySection
               sectionId="recent-activity"
-              headerContent={
-                <SectionTitle icon={Activity} title="Recent Activity" />
-              }
+              headerContent={<RecentActivityHeader />}
             >
-              <RecentActivity limit={8} isHomepage={true} viewMode="all" />
+              {console.log('🟡 Dashboard: About to render RecentActivity component')}
+              <RecentActivity limit={8} renderFilterInHeader={true} />
             </StickySection>
 
             {/* Random Pages Section */}
@@ -107,6 +113,60 @@ const Dashboard: React.FC = () => {
 // Recent Pages Section Component
 const RecentPagesSection = () => {
   const { data, loading, error } = useOptimizedDashboard();
+  const [pagesWithSubscriptions, setPagesWithSubscriptions] = useState([]);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+
+  // Fetch subscription data when pages are loaded
+  useEffect(() => {
+    const fetchSubscriptionData = async () => {
+      const recentPages = data?.recentPages || [];
+
+      if (recentPages.length === 0) {
+        setPagesWithSubscriptions([]);
+        return;
+      }
+
+      // Extract unique user IDs from pages
+      const uniqueUserIds = [...new Set(recentPages.map(page => page.userId).filter(Boolean))];
+
+      if (uniqueUserIds.length > 0) {
+        try {
+          setSubscriptionLoading(true);
+          console.log('RecentPagesSection: Fetching subscription data for', uniqueUserIds.length, 'users');
+
+          const batchUserData = await getBatchUserData(uniqueUserIds);
+
+          // Add subscription data to pages
+          const pagesWithSubs = recentPages.map(page => {
+            if (!page.userId) return page;
+
+            const userData = batchUserData[page.userId];
+            return {
+              ...page,
+              tier: userData?.tier,
+              subscriptionStatus: userData?.subscriptionStatus,
+              subscriptionAmount: userData?.subscriptionAmount,
+              username: userData?.username || page.username
+            };
+          });
+
+          setPagesWithSubscriptions(pagesWithSubs);
+        } catch (subscriptionError) {
+          console.error('Error fetching subscription data for recent pages:', subscriptionError);
+          // Still set the pages without subscription data
+          setPagesWithSubscriptions(recentPages);
+        } finally {
+          setSubscriptionLoading(false);
+        }
+      } else {
+        setPagesWithSubscriptions(recentPages);
+      }
+    };
+
+    if (data?.recentPages) {
+      fetchSubscriptionData();
+    }
+  }, [data?.recentPages]);
 
   if (loading) {
     return (
@@ -140,7 +200,7 @@ const RecentPagesSection = () => {
     );
   }
 
-  const recentPages = data?.recentPages || [];
+  const recentPages = pagesWithSubscriptions.length > 0 ? pagesWithSubscriptions : (data?.recentPages || []);
 
   if (recentPages.length === 0) {
     return (
@@ -164,7 +224,7 @@ const RecentPagesSection = () => {
         <SectionTitle icon={Clock} title="Recent Pages" />
       }
     >
-      <RandomPagesTable pages={recentPages} loading={false} denseMode={false} />
+      <RandomPagesTable pages={recentPages} loading={subscriptionLoading} denseMode={false} />
     </StickySection>
   );
 };

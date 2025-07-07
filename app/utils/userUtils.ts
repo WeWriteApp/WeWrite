@@ -7,8 +7,8 @@
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { auth } from "../firebase/auth";
-import { getOptimizedUserSubscription } from "../firebase/optimizedSubscription";
 import type { User } from "../types/database";
+import { getEffectiveTier } from './subscriptionTiers';
 
 /**
  * Gets the username for a given user ID
@@ -171,6 +171,7 @@ export const ensurePageUsername = async (pageData: any): Promise<any> => {
 interface SubscriptionTier {
   tier: string | null;
   status: string | null;
+  amount: number | null;
 }
 
 /**
@@ -179,23 +180,26 @@ interface SubscriptionTier {
  * @returns Object containing tier and status
  */
 export const getUserSubscriptionTier = async (userId: string): Promise<SubscriptionTier> => {
-  if (!userId) return { tier: null, status: null };
+  if (!userId) return { tier: null, status: null, amount: null };
 
   try {
-    // Get the user's subscription data using optimized version
-    const subscription = await getOptimizedUserSubscription(userId, {
-      useCache: true,
-      cacheTTL: 5 * 60 * 1000, // 5 minutes cache
-      verbose: false
-    });
+    // Use API endpoint instead of direct Firebase calls to avoid permission issues
+    const response = await fetch(`/api/user-subscription?userId=${userId}`);
+
+    if (!response.ok) {
+      console.log('No subscription data found for user:', userId);
+      return { tier: null, status: null, amount: null };
+    }
+
+    const subscription = await response.json();
 
     if (!subscription) {
-      return { tier: null, status: null };
+      return { tier: null, status: null, amount: null };
     }
 
     // Return the tier and status
-    let tier = (subscription as any).tier;
-    const status = (subscription as any).status;
+    let tier = subscription.tier;
+    const status = subscription.status;
 
     // Convert legacy tier names if needed
     if (tier === 'bronze') {
@@ -206,23 +210,13 @@ export const getUserSubscriptionTier = async (userId: string): Promise<Subscript
       tier = 'tier3';
     }
 
-    // If no tier is set but we have an amount, determine tier based on amount
-    if (!tier && (subscription as any).amount && (status === 'active' || status === 'trialing')) {
-      const amount = (subscription as any).amount;
-      if (amount >= 100) {
-        tier = 'tier3';
-      } else if (amount >= 50) {
-        tier = 'tier2';
-      } else if (amount >= 20) {
-        tier = 'tier1';
-      } else if (amount >= 10) {
-        tier = 'tier0';
-      }
-    }
+    // Use centralized tier determination logic
+    const amount = subscription.amount || null;
+    const effectiveTier = getEffectiveTier(amount, tier, status);
 
-    return { tier, status };
+    return { tier: effectiveTier, status, amount };
   } catch (error) {
     console.error('Error fetching subscription tier:', error);
-    return { tier: null, status: null };
+    return { tier: null, status: null, amount: null };
   }
 };

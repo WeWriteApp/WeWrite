@@ -8,7 +8,7 @@ import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { Label } from "../ui/label"
 import { useState, useEffect, useCallback } from "react"
-import { createUser, addUsername, checkUsernameAvailability, loginAnonymously } from "../../firebase/auth"
+// Removed direct Firebase imports - now using API endpoints
 import { Check, Loader2, X } from "lucide-react"
 import { debounce } from "lodash"
 import { Separator } from "../ui/separator"
@@ -96,24 +96,35 @@ export function RegisterForm({
       // Check availability
       setIsChecking(true)
       try {
-        const result = await checkUsernameAvailability(value)
+        // Call API endpoint to check username availability
+        const response = await fetch(`/api/users/username?username=${encodeURIComponent(value)}`)
 
-        if (typeof result === 'boolean') {
-          // Handle legacy boolean response
-          setIsAvailable(result)
-          if (!result) {
-            setValidationError("USERNAME_TAKEN")
-            setValidationMessage("Username already taken")
-          }
+        if (!response.ok) {
+          throw new Error(`Failed to check username: ${response.status}`)
+        }
+
+        const result = await response.json()
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to check username availability')
+        }
+
+        const data = result.data
+        setIsAvailable(data.available)
+
+        if (data.available) {
+          setValidationError(null)
+          setValidationMessage("Username is available")
+          setUsernameSuggestions([])
         } else {
-          // Handle new object response
-          setIsAvailable(result.isAvailable)
-          setValidationMessage(result.message || null)
-          setValidationError(result.error || null)
+          setValidationError("USERNAME_TAKEN")
+          setValidationMessage(data.error || "Username already taken")
 
-          // Set username suggestions if available
-          if (result.suggestions && Array.isArray(result.suggestions)) {
-            setUsernameSuggestions(result.suggestions)
+          // Set username suggestion if available
+          if (data.suggestion) {
+            setUsernameSuggestions([data.suggestion])
+          } else {
+            setUsernameSuggestions([])
           }
         }
       } catch (error) {
@@ -179,49 +190,60 @@ export function RegisterForm({
     }
 
     try {
-      const result = await createUser(email, password)
+      // Call API endpoint to register user
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          username,
+          displayName: username
+        })
+      })
 
-      if (result.user) {
-        // Add username to the user account
-        try {
-          await addUsername(result.session.uid, username)
-          console.log("Username added successfully")
+      const result = await response.json()
 
-          // Transfer any logged-out token allocations to the new user
-          const transferResult = transferLoggedOutAllocationsToUser(result.session.uid)
-          if (transferResult.success && transferResult.transferredCount > 0) {
-            console.log(`Transferred ${transferResult.transferredCount} token allocations to new user`)
-          }
+      if (response.ok && result.success) {
+        console.log("Account created successfully:", result.data)
 
-          // Track user creation event
-          trackAuthEvent('USER_CREATED', {
-            user_id: result.session.uid,
-            username: username,
-            email: email,
-            registration_method: 'email_password'
-          })
-
-          // Show redirect overlay
-          setIsRedirecting(true)
-
-          // Redirect to home page after a short delay
-          localStorage.setItem('authRedirectPending', 'true')
-          setTimeout(() => {
-            localStorage.removeItem('authRedirectPending')
-            window.location.href = "/"
-          }, 1500)
-        } catch (usernameError: any) {
-          console.error("Error adding username:", usernameError)
-          setError("Account created but failed to set username. Please try again.")
-          setIsLoading(false)
+        // Transfer any logged-out token allocations to the new user
+        const transferResult = transferLoggedOutAllocationsToUser(result.data.uid)
+        if (transferResult.success && transferResult.transferredCount > 0) {
+          console.log(`Transferred ${transferResult.transferredCount} token allocations to new user`)
         }
-      } else {
-        // Handle error from createUser
-        const errorCode = result.code || ""
-        let errorMessage = result.message || "Failed to create account. Please try again."
 
-        if (errorCode.includes("email-already-in-use")) {
+        // Track user creation event
+        trackAuthEvent('USER_CREATED', {
+          user_id: result.data.uid,
+          username: username,
+          email: email,
+          registration_method: 'email_password'
+        })
+
+        // Show redirect overlay
+        setIsRedirecting(true)
+
+        // Redirect to email verification page
+        console.log("Account created successfully, redirecting to email verification")
+
+          // Redirect to email verification page after a short delay
+        setTimeout(() => {
+          router.push('/auth/verify-email')
+        }, 1500)
+
+      } else {
+        // Handle API error response
+        let errorMessage = result.error || "Failed to create account. Please try again."
+
+        if (errorMessage.includes("email already exists") || errorMessage.includes("email-already-in-use")) {
           errorMessage = "Email already in use. Try logging in instead."
+        } else if (errorMessage.includes("Username is already taken")) {
+          errorMessage = "Username is already taken. Please choose a different username."
+        } else if (errorMessage.includes("weak-password")) {
+          errorMessage = "Password is too weak. Please choose a stronger password."
         }
 
         setError(errorMessage)

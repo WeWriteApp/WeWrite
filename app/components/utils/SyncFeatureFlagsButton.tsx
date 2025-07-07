@@ -2,18 +2,8 @@
 
 import React from 'react';
 import { Button } from '../ui/button';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
 import { useToast } from '../ui/use-toast';
 import { RefreshCw, CheckCircle } from 'lucide-react';
-
-// Define the complete set of feature flags that should exist
-const COMPLETE_FEATURE_FLAGS = {
-  payments: false,
-  map_view: false,
-  calendar_view: false,
-  inactive_subscription: false
-};
 
 export default function SyncFeatureFlagsButton() {
   const { toast } = useToast();
@@ -25,91 +15,51 @@ export default function SyncFeatureFlagsButton() {
       setIsSyncing(true);
       console.log('[SyncFeatureFlags] Starting feature flag synchronization...');
 
-      // Get current feature flags from Firestore
-      const featureFlagsRef = doc(db, 'config', 'featureFlags');
-      const featureFlagsDoc = await getDoc(featureFlagsRef);
+      // Call the API endpoint to sync feature flags
+      const response = await fetch('/api/feature-flags', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      let currentFlags = {};
-      if (featureFlagsDoc.exists()) {
-        currentFlags = featureFlagsDoc.data();
-        console.log('[SyncFeatureFlags] Current flags in database:', currentFlags);
-      } else {
-        console.log('[SyncFeatureFlags] No feature flags document found, will create new one');
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to sync feature flags');
       }
 
-      // Merge current flags with complete set, preserving existing values
-      const mergedFlags = { ...COMPLETE_FEATURE_FLAGS };
+      if (!result.success) {
+        throw new Error(result.error || 'Sync operation failed');
+      }
 
-      // Preserve existing flag values if they exist
-      Object.keys(currentFlags).forEach(flag => {
-        if (flag in COMPLETE_FEATURE_FLAGS) {
-          mergedFlags[flag] = currentFlags[flag];
-          console.log(`[SyncFeatureFlags] Preserving existing value for ${flag}: ${currentFlags[flag]}`);
-        } else {
-          console.log(`[SyncFeatureFlags] Removing invalid flag: ${flag}`);
-        }
-      });
-
-      // Add any missing flags with default values
-      Object.keys(COMPLETE_FEATURE_FLAGS).forEach(flag => {
-        if (!(flag in currentFlags)) {
-          console.log(`[SyncFeatureFlags] Adding missing flag ${flag} with default value: ${COMPLETE_FEATURE_FLAGS[flag]}`);
-        }
-      });
-
-      // Update the database
-      await setDoc(featureFlagsRef, mergedFlags);
-      console.log('[SyncFeatureFlags] Successfully updated feature flags:', mergedFlags);
-
-      // Update feature metadata
-      const featureMetaRef = doc(db, 'config', 'featureMetadata');
-      const timestamp = new Date().toISOString();
-
-      const metadata = {
-        subscription_management: {
-          createdAt: timestamp,
-          lastModified: timestamp,
-          description: 'Enable subscription functionality and UI for managing user subscriptions.'
-        },
-        map_view: {
-          createdAt: timestamp,
-          lastModified: timestamp,
-          description: 'Enable map view for pages with location data and geographic visualization.'
-        },
-        calendar_view: {
-          createdAt: timestamp,
-          lastModified: timestamp,
-          description: 'Enable calendar view for activity tracking and temporal organization.'
-        },
-        // groups feature removed
-        notifications: {
-          createdAt: timestamp,
-          lastModified: timestamp,
-          description: 'Enable in-app notifications for follows, page links, and other activities.'
-        },
-        link_functionality: {
-          createdAt: timestamp,
-          lastModified: timestamp,
-          description: 'Enable link creation and editing in page editors. When disabled, shows a modal with social media follow prompt.'
-        }
-      };
-
-      await setDoc(featureMetaRef, metadata);
-      console.log('[SyncFeatureFlags] Successfully updated feature metadata');
-
+      console.log('[SyncFeatureFlags] Successfully synced feature flags:', result.data.flags);
       setLastSyncTime(new Date().toLocaleString());
 
       toast({
         title: 'Success',
-        description: 'Feature flags have been synchronized successfully',
+        description: result.data.message || 'Feature flags have been synchronized successfully',
         variant: 'default'
       });
 
     } catch (error) {
       console.error('[SyncFeatureFlags] Error syncing feature flags:', error);
+
+      let errorMessage = 'Failed to sync feature flags';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      // Handle specific error cases
+      if (error.message?.includes('403') || error.message?.includes('Forbidden')) {
+        errorMessage = 'Admin access required to sync feature flags';
+      } else if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+        errorMessage = 'Please log in to sync feature flags';
+      }
+
       toast({
         title: 'Error',
-        description: `Failed to sync feature flags: ${error.message}`,
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {

@@ -11,7 +11,7 @@ import {
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { Loader, Settings, ChevronLeft, Share2 } from "lucide-react";
 import SupporterBadge from "../payments/SupporterBadge";
-import { SupporterIcon } from "../payments/SupporterIcon";
+import { SubscriptionTierBadge } from "../ui/SubscriptionTierBadge";
 import { SubscriptionInfoModal } from "../payments/SubscriptionInfoModal";
 import { Button } from "../ui/button";
 import { doc, getDoc } from "firebase/firestore";
@@ -20,19 +20,26 @@ import SidebarLayout from "../layout/SidebarLayout";
 
 import UserProfileTabs from '../utils/UserProfileTabs';
 import { useFeatureFlag } from "../../utils/feature-flags";
+import { getEffectiveTier } from '../../utils/subscriptionTiers';
 
 const SingleProfileView = ({ profile }) => {
-  const { session } = useCurrentAccount(); // Fixed destructuring issues
+  const { currentAccount } = useCurrentAccount(); // Fixed destructuring issues
   const router = useRouter();
 
   const [username, setUsername] = useState(profile.username || 'Anonymous');
   const [supporterTier, setSupporterTier] = useState(profile.tier || null);
   const [subscriptionStatus, setSubscriptionStatus] = useState(profile.subscriptionStatus || null);
+  const [subscriptionAmount, setSubscriptionAmount] = useState(profile.subscriptionAmount || null);
   const [isLoadingTier, setIsLoadingTier] = useState(false);
   const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
 
+  // Track if subscription data was provided by parent (user page)
+  const hasProvidedSubscriptionData = Boolean(
+    profile.tier || profile.subscriptionStatus || profile.subscriptionAmount
+  );
+
   // Check if payments feature is enabled
-  const paymentsEnabled = useFeatureFlag('payments', session?.email);
+  const paymentsEnabled = useFeatureFlag('payments', currentAccount?.email);
 
   // Check if subscription feature is enabled
   useEffect(() => {
@@ -54,7 +61,7 @@ const SingleProfileView = ({ profile }) => {
   }, []);
 
   // Check if this profile belongs to the current user
-  const isCurrentUser = session && session.uid === profile.uid;
+  const isCurrentUser = currentAccount && currentAccount.uid === profile.uid;
 
   // Fetch username if not provided
   useEffect(() => {
@@ -78,12 +85,35 @@ const SingleProfileView = ({ profile }) => {
 
 
 
-  // Fetch user's subscription tier
+  // Fetch user's subscription tier only if not provided by parent
   useEffect(() => {
     let unsubscribe = null;
 
     const setupSubscriptionListener = async () => {
-      if (profile.uid) {
+      // If subscription data was already provided by the user page, use it and skip fetching
+      if (hasProvidedSubscriptionData) {
+        console.log(`🔍 SingleProfileView: Using subscription data from user page for ${profile.uid}:`, {
+          tier: profile.tier,
+          status: profile.subscriptionStatus,
+          amount: profile.subscriptionAmount
+        });
+
+        // Use the data provided by the user page
+        const effectiveTier = getEffectiveTier(
+          profile.subscriptionAmount,
+          profile.tier,
+          profile.subscriptionStatus
+        );
+
+        setSupporterTier(effectiveTier === 'inactive' ? null : effectiveTier);
+        setSubscriptionStatus(profile.subscriptionStatus);
+        setSubscriptionAmount(profile.subscriptionAmount);
+        setIsLoadingTier(false);
+        return;
+      }
+
+      // Only fetch subscription data if not provided by parent
+      if (profile.uid && subscriptionEnabled) {
         try {
           setIsLoadingTier(true);
 
@@ -91,51 +121,25 @@ const SingleProfileView = ({ profile }) => {
           const { listenToUserSubscription } = await import('../../firebase/subscription');
 
           unsubscribe = listenToUserSubscription(profile.uid, (subscription) => {
-            console.log(`Subscription update received for user ${profile.uid}:`, subscription);
+            console.log(`🔍 SingleProfileView: Fetched subscription data for user ${profile.uid}:`, subscription);
 
             // Always set the subscription status if available
             if (subscription) {
               setSubscriptionStatus(subscription.status);
+              setSubscriptionAmount(subscription.amount);
 
-              // Determine tier based on subscription amount if active
-              if (subscription.status === 'active' || subscription.status === 'trialing') {
-                let tier = null;
-                const amount = subscription.amount;
+              // Use centralized tier determination logic
+              const effectiveTier = getEffectiveTier(
+                subscription.amount,
+                subscription.tier,
+                subscription.status
+              );
 
-                if (amount >= 10 && amount < 20) {
-                  tier = 'tier1';
-                } else if (amount >= 20 && amount < 50) {
-                  tier = 'tier2';
-                } else if (amount >= 50 && amount < 100) {
-                  tier = 'tier3';
-                }
-
-                // Log the tier determination for debugging
-                console.log(`Determined tier for user ${profile.uid}: ${tier} (amount: ${amount})`);
-
-                // If tier is already set in the subscription data, use that instead
-                if (subscription.tier) {
-                  console.log(`Using tier from subscription data: ${subscription.tier}`);
-                  // Convert legacy tier names if needed
-                  if (subscription.tier === 'bronze') {
-                    tier = 'tier1';
-                  } else if (subscription.tier === 'silver') {
-                    tier = 'tier2';
-                  } else if (subscription.tier === 'gold') {
-                    tier = 'tier3';
-                  } else {
-                    tier = subscription.tier;
-                  }
-                }
-
-                setSupporterTier(tier);
-              } else {
-                // No active subscription
-                setSupporterTier(null);
-              }
+              setSupporterTier(effectiveTier === 'inactive' ? null : effectiveTier);
             } else {
               // No subscription data
               setSubscriptionStatus(null);
+              setSubscriptionAmount(null);
               setSupporterTier(null);
             }
 
@@ -157,7 +161,7 @@ const SingleProfileView = ({ profile }) => {
         unsubscribe();
       }
     };
-  }, [profile.uid]);
+  }, [profile.uid, hasProvidedSubscriptionData, subscriptionEnabled]);
 
   return (
     <ProfilePagesProvider userId={profile.uid}>
@@ -226,10 +230,16 @@ const SingleProfileView = ({ profile }) => {
 
         {/* Username row */}
         <div className="flex flex-col items-center mb-6">
-          <div className="flex items-center justify-center mb-3">
+          <div className="flex items-center justify-center gap-2 mb-3">
             <Link href={`/user/${profile.uid}`} className="hover:underline">
               <h1 className="text-3xl font-semibold">{username}</h1>
             </Link>
+            <SubscriptionTierBadge
+              tier={supporterTier}
+              status={subscriptionStatus}
+              amount={subscriptionAmount}
+              size="lg"
+            />
           </div>
 
           {/* Tier badge as a chip below username - completely hidden when payments feature is disabled */}
@@ -248,7 +258,7 @@ const SingleProfileView = ({ profile }) => {
                   </div>
                 ) : (
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700">
-                    <SupporterIcon
+                    <SubscriptionTierBadge
                       tier={supporterTier}
                       status={subscriptionStatus}
                       size="md"
@@ -268,7 +278,7 @@ const SingleProfileView = ({ profile }) => {
 
 
 
-        {!session && (
+        {!currentAccount && (
           <div className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg p-5 mb-6 mx-2 shadow-sm">
             <div className="flex flex-col space-y-4">
               <p className="text-center font-medium">

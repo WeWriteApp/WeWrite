@@ -35,7 +35,16 @@ export default function TrendingPagesSection({ limit = 3 }) {
           throw new Error(`API request failed: ${apiResponse.status}`);
         }
         const response = await apiResponse.json();
-        const pages = response.trendingPages || [];
+
+        // Check for API error
+        if (!response.success) {
+          console.error('TrendingPagesSection: API returned error:', response.error);
+          setError(response.error || 'Failed to load trending pages');
+          setLoading(false);
+          return;
+        }
+
+        const pages = response.data?.trendingPages || [];
 
         // For each page, get the username (hourly view data already included from trending API)
         const pagesWithUsernames = await Promise.all(

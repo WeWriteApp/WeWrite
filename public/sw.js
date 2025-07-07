@@ -70,6 +70,16 @@ const NETWORK_FIRST_PATTERNS = [
   '/api/user-',
 ];
 
+// Payment-related patterns that should never be cached
+const PAYMENT_NEVER_CACHE_PATTERNS = [
+  '/api/subscription/create-setup-intent',
+  '/api/subscription/create-with-payment-method',
+  '/api/subscription/create-checkout',
+  '/api/webhooks/',
+  'stripe.com',
+  'js.stripe.com'
+];
+
 // Cache-first strategies for these patterns
 const CACHE_FIRST_PATTERNS = [
   '/_next/static/',
@@ -160,12 +170,18 @@ async function handleRequest(request) {
       return await cacheFirstStrategy(request, FONT_CACHE);
     }
 
-    // Strategy 4: Network-first for dynamic APIs
+    // Strategy 4: Never cache payment-related requests
+    if (isPaymentNeverCache(request.url)) {
+      console.log('Service Worker: Payment request - bypassing cache:', pathname);
+      return fetch(request);
+    }
+
+    // Strategy 5: Network-first for dynamic APIs
     if (isNetworkFirstResource(pathname)) {
       return await networkFirstStrategy(request, API_CACHE);
     }
 
-    // Strategy 5: Stale-while-revalidate for cacheable APIs
+    // Strategy 6: Stale-while-revalidate for cacheable APIs
     if (isCacheableAPI(pathname)) {
       return await staleWhileRevalidateStrategy(request, API_CACHE);
     }
@@ -367,6 +383,10 @@ function isNetworkFirstResource(pathname) {
 
 function isCacheableAPI(pathname) {
   return CACHEABLE_APIS.some(api => pathname.startsWith(api));
+}
+
+function isPaymentNeverCache(url) {
+  return PAYMENT_NEVER_CACHE_PATTERNS.some(pattern => url.includes(pattern));
 }
 
 // Background sync for failed requests (if supported)

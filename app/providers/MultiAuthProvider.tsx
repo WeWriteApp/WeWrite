@@ -25,6 +25,12 @@ export const MultiAuthProvider: React.FC<MultiAuthProviderProps> = ({ children }
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  console.log('🟠 MultiAuthProvider: Rendering with state:', {
+    sessionsCount: sessions.length,
+    isLoading,
+    error
+  });
+
   // Storage utilities
   const STORAGE_KEY = 'wewrite_sessions';
 
@@ -38,12 +44,17 @@ export const MultiAuthProvider: React.FC<MultiAuthProviderProps> = ({ children }
   }, []);
 
   const loadFromStorage = useCallback((): UserAccount[] => {
+    console.log('🟠 MultiAuthProvider: loadFromStorage called');
     try {
-      if (typeof window === 'undefined') return [];
+      if (typeof window === 'undefined') {
+        console.log('🟠 MultiAuthProvider: Window undefined, returning empty array');
+        return [];
+      }
       const stored = localStorage.getItem(STORAGE_KEY);
+      console.log('🟠 MultiAuthProvider: Loaded from localStorage:', stored ? 'data found' : 'no data');
       return stored ? JSON.parse(stored) : [];
     } catch (err) {
-      console.error('Failed to load sessions from storage:', err);
+      console.error('🟠 MultiAuthProvider: Failed to load sessions from storage:', err);
       return [];
     }
   }, []);
@@ -159,10 +170,13 @@ export const MultiAuthProvider: React.FC<MultiAuthProviderProps> = ({ children }
 
   // Load sessions on mount
   useEffect(() => {
+    console.log('🟠 MultiAuthProvider: useEffect called!');
     const loadSessions = async () => {
       try {
+        console.log('🟠 MultiAuthProvider: Loading sessions from localStorage');
         setIsLoading(true);
         const storedSessions = loadFromStorage();
+        console.log('🟠 MultiAuthProvider: Found sessions in localStorage:', storedSessions.length);
         setSessions(storedSessions);
 
         // Cleanup expired sessions without dependency loop
@@ -179,15 +193,16 @@ export const MultiAuthProvider: React.FC<MultiAuthProviderProps> = ({ children }
           saveToStorage(validSessions);
         }
       } catch (err) {
-        console.error('Failed to load sessions:', err);
+        console.error('🟠 MultiAuthProvider: Error loading sessions:', err);
         setError('Failed to load sessions');
       } finally {
+        console.log('🟠 MultiAuthProvider: Finished loading sessions, isLoading = false');
         setIsLoading(false);
       }
     };
 
     loadSessions();
-  }, [loadFromStorage, saveToStorage]);
+  }, [loadFromStorage]);
 
   // Context value
   const contextValue: SessionBagContextValue = useMemo(() => ({

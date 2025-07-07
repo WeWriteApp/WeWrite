@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect } from "react"
-import { X, ChevronLeft, Settings, Check, User, Users, Shield, Globe, Lock, Link as LinkIcon, Trash2, Clock, Shuffle } from "lucide-react"
+import { X, ChevronLeft, Settings, Check, User, Users, Shield, Globe, Lock, Link as LinkIcon, Trash2, Clock, Shuffle, LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
 // Removed direct Firebase auth imports - using session management system
 import { cn } from "../../lib/utils"
@@ -84,20 +84,9 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
 
       default:
         return (
-          <div className="flex flex-col space-y-6 animate-in fade-in-50 duration-300 ease-out">
-            {/* Logout Button */}
-            <div className="mb-2">
-              <Button
-                variant="ghost"
-                onClick={() => logoutUser()}
-                className="w-full justify-start"
-              >
-                Logout
-              </Button>
-            </div>
-
+          <div className="flex flex-col h-full">
             {/* Main Menu Items */}
-            <div className="space-y-1">
+            <div className="space-y-1 mb-6">
               <button
                 onClick={() => {
                   onClose();
@@ -305,7 +294,35 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
             </Button>
           </div>
 
-          {renderSection()}
+          {/* Main content area - flex-1 to take remaining space */}
+          <div className="flex-1 flex flex-col">
+            {renderSection()}
+          </div>
+
+          {/* User info and logout at bottom */}
+          {session && (
+            <div className="mt-auto pt-4 border-t border-border">
+              {/* User Information */}
+              <div className="mb-3 px-3 py-2">
+                <div className="text-sm font-medium text-foreground truncate">
+                  {session.displayName || session.username || 'User'}
+                </div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {session.email}
+                </div>
+              </div>
+
+              {/* Logout Button */}
+              <Button
+                variant="ghost"
+                onClick={() => logoutUser()}
+                className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+              >
+                <LogOut className="h-5 w-5 mr-2" />
+                Log Out
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </>

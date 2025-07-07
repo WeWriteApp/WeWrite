@@ -2,8 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+// Removed direct Firebase imports - now using polling for feature flag updates
 import { useToast } from '../ui/use-toast';
 
 interface FeatureFlagListenerProps {
@@ -160,16 +159,33 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
 
     listenerSetupRef.current = true;
 
-    const featureFlagsRef = doc(db, 'config', 'featureFlags');
+    // Use polling instead of real-time listeners for feature flags
+    const pollFeatureFlags = async () => {
+      try {
+        const response = await fetch('/api/feature-flags');
 
-    const unsubscribe = onSnapshot(featureFlagsRef, (doc) => {
+        if (!response.ok) {
+          console.warn('Failed to poll feature flags:', response.status);
+          return;
+        }
 
-      if (doc.exists()) {
-        const newFlags = doc.data() as Record<string, boolean>;
+        const result = await response.json();
+
+        if (!result.success) {
+          console.warn('Feature flags poll failed:', result.error);
+          return;
+        }
+
+        const flags = result.data.flags || [];
+        const newFlags: Record<string, boolean> = {};
+
+        // Convert array format to object format
+        flags.forEach((flag: any) => {
+          newFlags[flag.id] = flag.enabled;
+        });
 
         // CRITICAL FIX: Use a separate initialization flag instead of checking empty object
         if (!hasInitializedRef.current) {
-
           lastFeatureFlagsRef.current = { ...newFlags };
           hasInitializedRef.current = true;
           return;
@@ -213,21 +229,22 @@ export default function FeatureFlagListener({ children }: FeatureFlagListenerPro
             safeRefresh(changedFlags);
           }, 3000); // 3 second debounce for extra safety
         } else {
-
+          console.log('FeatureFlagListener: No changes detected in feature flags');
         }
-      } else {
-
-        if (!hasInitializedRef.current) {
-          hasInitializedRef.current = true;
-        }
+      } catch (error) {
+        console.error('Error polling feature flags:', error);
       }
-    }, (error) => {
-      console.error('Error listening to feature flags:', error);
-    });
+    };
+
+    // Initial poll
+    pollFeatureFlags();
+
+    // Set up polling interval (every 30 seconds)
+    const pollInterval = setInterval(pollFeatureFlags, 30000);
 
     return () => {
-
-      unsubscribe();
+      // Clear polling interval
+      clearInterval(pollInterval);
 
       // Reset setup flag to allow re-initialization
       listenerSetupRef.current = false;

@@ -42,13 +42,16 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
         }
         const response = await apiResponse.json();
 
-        // Handle different response formats
-        let pages = [];
-        if (Array.isArray(response)) {
-          pages = response;
-        } else if (response && typeof response === 'object' && Array.isArray(response.trendingPages)) {
-          pages = response.trendingPages;
+        // Check for API error
+        if (!response.success) {
+          console.error('SimpleTrendingCarousel: API returned error:', response.error);
+          setError(response.error || 'Failed to load trending pages');
+          setLoading(false);
+          return;
         }
+
+        // Get pages from standardized API response
+        const pages = response.data?.trendingPages || [];
 
         console.log('SimpleTrendingCarousel: Raw response:', response);
         console.log('SimpleTrendingCarousel: Processed pages:', pages);

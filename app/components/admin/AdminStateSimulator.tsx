@@ -13,10 +13,12 @@ import {
   GripHorizontal,
   Eye,
   EyeOff,
-  RotateCcw
+  RotateCcw,
+  RefreshCw
 } from 'lucide-react';
 import { useAdminStateSimulator } from '../../hooks/useAdminStateSimulator';
 import { STATE_CATEGORIES } from '../../config/adminStateSimulatorConfig';
+import { useToast } from '../ui/use-toast';
 
 interface AdminStateSimulatorProps {
   className?: string;
@@ -24,6 +26,7 @@ interface AdminStateSimulatorProps {
 
 export default function AdminStateSimulator({ className }: AdminStateSimulatorProps) {
   const adminStateHook = useAdminStateSimulator();
+  const { toast } = useToast();
   const {
     isVisible,
     isExpanded,
@@ -358,13 +361,43 @@ export default function AdminStateSimulator({ className }: AdminStateSimulatorPr
               </div>
             </div>
 
-            {/* Reset to Actual State Button */}
-            <div className="pt-4 border-t border-orange-100">
+            {/* Action Buttons */}
+            <div className="pt-4 border-t border-orange-100 space-y-2">
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                onClick={() => window.location.reload()}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Apply Changes (Refresh Page)
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
                 className="w-full text-orange-700 border-orange-200 hover:bg-orange-50"
-                onClick={adminStateHook.resetToActualState}
+                onClick={async () => {
+                  try {
+                    const detectedState = await adminStateHook.resetToActualState();
+                    const authText = detectedState.authState === 'logged-in' ? 'logged in' : 'logged out';
+                    const subText = detectedState.subscriptionState === 'active' ? 'active subscription' :
+                                   detectedState.subscriptionState === 'cancelling' ? 'cancelling subscription' :
+                                   detectedState.subscriptionState === 'payment-failed' ? 'payment failed' : 'no subscription';
+
+                    toast({
+                      title: "Reset to actual state",
+                      description: `Detected: ${authText}, ${subText}`,
+                      variant: "success"
+                    });
+                  } catch (error) {
+                    console.error('Error resetting to actual state:', error);
+                    toast({
+                      title: "Reset failed",
+                      description: "Failed to detect actual state. Please try again.",
+                      variant: "destructive"
+                    });
+                  }
+                }}
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Reset to Actual State

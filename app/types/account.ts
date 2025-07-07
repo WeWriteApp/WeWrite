@@ -10,6 +10,7 @@ export interface UserAccount {
   isActive: boolean;
   isPersistent?: boolean;
   fromAccountSwitch?: boolean;
+  emailVerified?: boolean; // Track email verification status
 }
 
 // Session error handling
@@ -59,7 +60,8 @@ export interface MultiAuthActions {
 export interface CurrentAccountState {
   currentAccount: UserAccount | null;
   session: UserAccount | null; // Alias for backward compatibility
-  isAuthenticated: boolean; // Computed from currentAccount
+  isAuthenticated: boolean; // Computed from currentAccount and email verification
+  isEmailVerified: boolean; // Computed from currentAccount email verification status
   isLoading: boolean;
   isHydrated: boolean;
   error: string | null;

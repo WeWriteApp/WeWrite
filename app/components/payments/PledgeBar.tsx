@@ -17,6 +17,7 @@ import {
 } from "../../utils/simulatedTokens";
 import { TokenAllocationModal } from './TokenAllocationModal';
 import { useTokenIncrement } from '../../contexts/TokenIncrementContext';
+import { EmbeddedCheckoutService } from '../../services/embeddedCheckoutService';
 
 interface PledgeBarProps {
   pageId?: string;

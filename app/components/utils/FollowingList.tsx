@@ -10,7 +10,7 @@ import { unfollowUser, getFollowedUsers } from "../../firebase/follows";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import Link from 'next/link';
 import { PillLink } from "./PillLink";
-import { SupporterIcon } from '../payments/SupporterIcon';
+import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { useAlert } from '../../hooks/useAlert';
 import AlertModal from './AlertModal';
@@ -200,7 +200,7 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
                 <div className="flex items-center gap-1.5">
                   <span className="font-medium">{followedUser.username || 'Anonymous User'}</span>
                   {false && subscriptionEnabled && followedUser.tier && (
-                    <SupporterIcon
+                    <SubscriptionTierBadge
                       tier={followedUser.tier}
                       status={followedUser.subscriptionStatus}
                       size="sm"

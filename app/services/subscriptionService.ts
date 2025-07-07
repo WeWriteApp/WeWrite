@@ -82,87 +82,27 @@ export class SubscriptionService {
   }
 
   /**
-   * Create a subscription checkout session
+   * Create embedded checkout URL for subscription
+   * @deprecated Use embedded checkout flow instead of hosted checkout
    */
-  static async createCheckoutSession(params: CheckoutSessionParams): Promise<CheckoutSessionResponse> {
-    try {
-      const { userId, tier, customAmount, successUrl, cancelUrl } = params;
+  static createEmbeddedCheckoutUrl(params: {
+    tier: string;
+    customAmount?: number;
+    returnUrl?: string;
+  }): string {
+    const { tier, customAmount, returnUrl } = params;
+    const url = new URL('/settings/subscription/checkout', window.location.origin);
+    url.searchParams.set('tier', tier);
 
-      // Validate tier and amount
-      let amount: number;
-      let tierName: string;
-
-      if (tier === 'custom') {
-        if (!customAmount) {
-          return { error: 'Custom amount is required for custom tier' };
-        }
-        
-        const validation = validateCustomAmount(customAmount);
-        if (!validation.valid) {
-          return { error: validation.error };
-        }
-        
-        amount = customAmount;
-        tierName = `Custom ($${amount}/mo)`;
-      } else {
-        const tierData = getTierById(tier);
-        if (!tierData) {
-          return { error: 'Invalid tier selected' };
-        }
-        
-        amount = tierData.amount;
-        tierName = tierData.name;
-      }
-
-      // Calculate tokens
-      const tokens = calculateTokensForAmount(amount);
-
-      // Get authentication token
-      const user = auth.currentUser;
-      if (!user) {
-        return { error: 'User not authenticated' };
-      }
-
-      const token = await user.getIdToken();
-
-      // Create checkout session via API
-      const response = await fetch('/api/subscription/create-checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`},
-        body: JSON.stringify({
-          userId,
-          tier,
-          amount,
-          tierName,
-          tokens,
-          successUrl: successUrl || `${window.location.origin}/settings/subscription?success=true`,
-          cancelUrl: cancelUrl || `${window.location.origin}/settings/subscription?cancelled=true`
-        })});
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        return { error: errorData.error || 'Failed to create checkout session' };
-      }
-
-      const sessionData = await response.json();
-      
-      // Track analytics
-      // if (typeof window !== 'undefined') {
-      //   const analytics = getAnalyticsService();
-      //   analytics.trackSubscriptionInitiated(tier, amount, tokens);
-      // }
-
-      return {
-        sessionId: sessionData.sessionId,
-        url: sessionData.url
-      };
-
-    } catch (error) {
-      console.error('Error creating checkout session:', error);
-      return { error: 'Failed to create checkout session' };
+    if (customAmount) {
+      url.searchParams.set('amount', customAmount.toString());
     }
+
+    if (returnUrl) {
+      url.searchParams.set('return_to', returnUrl);
+    }
+
+    return url.toString();
   }
 
   /**

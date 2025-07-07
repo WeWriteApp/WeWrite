@@ -77,60 +77,165 @@ export const followPage = async (userId: string, pageId: string): Promise<boolea
     throw new Error('User ID and Page ID are required');
   }
 
+  let followSucceeded = false;
+  const errors: string[] = [];
+
   try {
-    // Add the page to the user's followed pages
-    const userFollowsRef = doc(db, 'userFollows', userId);
-    const userFollowsDoc = await getDoc(userFollowsRef);
+    // Debug: Check Firebase auth state and wait for it to be ready
+    const { auth } = await import('./config');
 
-    if (userFollowsDoc.exists()) {
-      // Update existing document
-      await updateDoc(userFollowsRef, {
-        followedPages: arrayUnion(pageId),
-        updatedAt: serverTimestamp()
-      });
-    } else {
-      // Create new document
-      await setDoc(userFollowsRef, {
-        userId,
-        followedPages: [pageId],
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+    // Wait for auth state to be ready if it's not already
+    if (!auth.currentUser) {
+      console.warn('🔧 Follow Debug: Firebase auth not ready, waiting...');
+      await new Promise((resolve) => {
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+          console.warn('🔧 Follow Debug: Auth state changed', { user: user ? user.uid : null });
+          unsubscribe();
+          resolve(user);
+        });
+        // Timeout after 3 seconds
+        setTimeout(() => {
+          console.warn('🔧 Follow Debug: Auth wait timeout');
+          unsubscribe();
+          resolve(null);
+        }, 3000);
       });
     }
 
-    // Increment the follower count for the page
-    const pageRef = doc(db, 'pages', pageId);
-    const pageDoc = await getDoc(pageRef);
-
-    if (pageDoc.exists()) {
-      const pageData = pageDoc.data() as Page;
-
-      // Check if followerCount field exists
-      if (typeof pageData.followerCount === 'undefined') {
-        // Initialize followerCount to 1 if it doesn't exist
-        await updateDoc(pageRef, {
-          followerCount: 1
-        });
-      } else {
-        // Increment existing followerCount
-        await updateDoc(pageRef, {
-          followerCount: increment(1)
-        });
-      }
-    } else {
-      // If the page document doesn't exist, we can't follow it
-      throw new Error('Page not found');
-    }
-
-    // Add a record to the pageFollowers collection
-    const pageFollowerRef = doc(db, 'pageFollowers', `${pageId}_${userId}`);
-    await setDoc(pageFollowerRef, {
-      pageId,
-      userId,
-      followedAt: serverTimestamp()
+    const currentUser = auth.currentUser;
+    console.warn('🔧 Follow Debug: Firebase auth state', {
+      currentUser: currentUser ? {
+        uid: currentUser.uid,
+        email: currentUser.email,
+        emailVerified: currentUser.emailVerified
+      } : null,
+      providedUserId: userId,
+      userIdMatch: currentUser?.uid === userId
     });
 
-    return true;
+    if (!currentUser) {
+      throw new Error('Firebase authentication not available');
+    }
+
+    if (currentUser.uid !== userId) {
+      throw new Error('Firebase auth UID does not match provided userId');
+    }
+
+    // Additional check: Verify the user's ID token is valid
+    try {
+      const idToken = await currentUser.getIdToken(true); // Force refresh
+      console.warn('🔧 Follow Debug: ID token refreshed successfully', {
+        tokenLength: idToken.length,
+        userUid: currentUser.uid
+      });
+    } catch (tokenError) {
+      console.error('🔧 Follow Debug: Failed to get ID token', tokenError);
+      throw new Error('Failed to refresh authentication token');
+    }
+    // Step 1: Add the page to the user's followed pages
+    try {
+      const userFollowsRef = doc(db, 'userFollows', userId);
+      console.warn('🔧 Follow Debug: About to read userFollows document', {
+        collection: 'userFollows',
+        documentId: userId,
+        currentUserUid: currentUser?.uid
+      });
+
+      const userFollowsDoc = await getDoc(userFollowsRef);
+
+      if (userFollowsDoc.exists()) {
+        // Update existing document
+        console.warn('🔧 Follow Debug: About to update userFollows document', {
+          documentId: userId,
+          updateData: { followedPages: 'arrayUnion(' + pageId + ')', updatedAt: 'serverTimestamp()' }
+        });
+        await updateDoc(userFollowsRef, {
+          followedPages: arrayUnion(pageId),
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        // Create new document
+        console.warn('🔧 Follow Debug: About to create userFollows document', {
+          documentId: userId,
+          createData: { userId, followedPages: [pageId], createdAt: 'serverTimestamp()', updatedAt: 'serverTimestamp()' }
+        });
+        await setDoc(userFollowsRef, {
+          userId,
+          followedPages: [pageId],
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
+
+      followSucceeded = true;
+      console.warn('🔧 Follow Debug: ✅ Successfully updated userFollows');
+    } catch (error) {
+      console.error('🔧 Follow Debug: ❌ Failed to update userFollows:', error);
+      errors.push(`Failed to update user follows: ${error.message}`);
+    }
+
+    // Step 2: Increment the follower count for the page
+    try {
+      const pageRef = doc(db, 'pages', pageId);
+      const pageDoc = await getDoc(pageRef);
+
+      if (pageDoc.exists()) {
+        const pageData = pageDoc.data() as Page;
+
+        // Check if followerCount field exists
+        if (typeof pageData.followerCount === 'undefined') {
+          // Initialize followerCount to 1 if it doesn't exist
+          await updateDoc(pageRef, {
+            followerCount: 1
+          });
+        } else {
+          // Increment existing followerCount
+          await updateDoc(pageRef, {
+            followerCount: increment(1)
+          });
+        }
+        console.warn('🔧 Follow Debug: ✅ Successfully updated page follower count');
+      } else {
+        console.warn('🔧 Follow Debug: ⚠️ Page document not found, but continuing...');
+        errors.push('Page document not found');
+      }
+    } catch (error) {
+      console.error('🔧 Follow Debug: ❌ Failed to update page follower count:', error);
+      errors.push(`Failed to update page follower count: ${error.message}`);
+    }
+
+    // Step 3: Add a record to the pageFollowers collection
+    try {
+      const pageFollowerRef = doc(db, 'pageFollowers', `${pageId}_${userId}`);
+      const followData = {
+        pageId,
+        userId,
+        followedAt: serverTimestamp()
+      };
+
+      console.warn('🔧 Follow Debug: About to write to pageFollowers collection', {
+        documentId: `${pageId}_${userId}`,
+        data: followData,
+        userId,
+        pageId
+      });
+
+      await setDoc(pageFollowerRef, followData);
+      console.warn('🔧 Follow Debug: ✅ Successfully created pageFollowers record');
+    } catch (error) {
+      console.error('🔧 Follow Debug: ❌ Failed to create pageFollowers record:', error);
+      errors.push(`Failed to create pageFollowers record: ${error.message}`);
+    }
+
+    // Return success if the core follow operation succeeded, even if other steps failed
+    if (followSucceeded) {
+      if (errors.length > 0) {
+        console.warn('🔧 Follow Debug: Follow succeeded with some errors:', errors);
+      }
+      return true;
+    } else {
+      throw new Error(`Follow operation failed: ${errors.join(', ')}`);
+    }
   } catch (error) {
     console.error('Error following page:', error);
     throw error;
@@ -149,52 +254,69 @@ export const unfollowPage = async (userId: string, pageId: string): Promise<bool
     throw new Error('User ID and Page ID are required');
   }
 
+  let unfollowSucceeded = false;
+  const errors: string[] = [];
+
   try {
-    // Remove the page from the user's followed pages
-    const userFollowsRef = doc(db, 'userFollows', userId);
+    // Step 1: Remove the page from the user's followed pages
+    try {
+      const userFollowsRef = doc(db, 'userFollows', userId);
 
-    // Check if the document exists first
-    const userFollowsDoc = await getDoc(userFollowsRef);
+      // Check if the document exists first
+      const userFollowsDoc = await getDoc(userFollowsRef);
 
-    if (userFollowsDoc.exists()) {
-      await updateDoc(userFollowsRef, {
-        followedPages: arrayRemove(pageId),
-        updatedAt: serverTimestamp()
-      });
-    } else {
-      console.warn('User follows document does not exist for user:', userId);
-      // Create an empty document if it doesn't exist
-      await setDoc(userFollowsRef, {
-        followedPages: [],
-        updatedAt: serverTimestamp()
-      });
-    }
-
-    // Decrement the follower count for the page
-    const pageRef = doc(db, 'pages', pageId);
-    const pageDoc = await getDoc(pageRef);
-
-    if (pageDoc.exists()) {
-      const pageData = pageDoc.data() as Page;
-
-      // Check if followerCount field exists
-      if (typeof pageData.followerCount === 'undefined' || pageData.followerCount <= 0) {
-        // If followerCount doesn't exist or is already 0, set it to 0
-        await updateDoc(pageRef, {
-          followerCount: 0
+      if (userFollowsDoc.exists()) {
+        await updateDoc(userFollowsRef, {
+          followedPages: arrayRemove(pageId),
+          updatedAt: serverTimestamp()
         });
       } else {
-        // Decrement existing followerCount
-        await updateDoc(pageRef, {
-          followerCount: increment(-1)
+        console.warn('User follows document does not exist for user:', userId);
+        // Create an empty document if it doesn't exist
+        await setDoc(userFollowsRef, {
+          followedPages: [],
+          updatedAt: serverTimestamp()
         });
       }
-    } else {
-      // If the page document doesn't exist, we can't unfollow it
-      throw new Error('Page not found');
+
+      unfollowSucceeded = true;
+      console.warn('🔧 Unfollow Debug: ✅ Successfully updated userFollows');
+    } catch (error) {
+      console.error('🔧 Unfollow Debug: ❌ Failed to update userFollows:', error);
+      errors.push(`Failed to update user follows: ${error.message}`);
     }
 
-    // Remove the record from the pageFollowers collection
+    // Step 2: Decrement the follower count for the page
+    try {
+      const pageRef = doc(db, 'pages', pageId);
+      const pageDoc = await getDoc(pageRef);
+
+      if (pageDoc.exists()) {
+        const pageData = pageDoc.data() as Page;
+
+        // Check if followerCount field exists
+        if (typeof pageData.followerCount === 'undefined' || pageData.followerCount <= 0) {
+          // If followerCount doesn't exist or is already 0, set it to 0
+          await updateDoc(pageRef, {
+            followerCount: 0
+          });
+        } else {
+          // Decrement existing followerCount
+          await updateDoc(pageRef, {
+            followerCount: increment(-1)
+          });
+        }
+        console.warn('🔧 Unfollow Debug: ✅ Successfully updated page follower count');
+      } else {
+        console.warn('🔧 Unfollow Debug: ⚠️ Page document not found, but continuing...');
+        errors.push('Page document not found');
+      }
+    } catch (error) {
+      console.error('🔧 Unfollow Debug: ❌ Failed to update page follower count:', error);
+      errors.push(`Failed to update page follower count: ${error.message}`);
+    }
+
+    // Step 3: Remove the record from the pageFollowers collection
     try {
       const pageFollowerRef = doc(db, 'pageFollowers', `${pageId}_${userId}`);
 
@@ -216,12 +338,21 @@ export const unfollowPage = async (userId: string, pageId: string): Promise<bool
           followedAt: serverTimestamp() // Add this for consistency
         });
       }
-    } catch (err) {
-      // Log but don't throw - we want the unfollow to succeed even if this part fails
-      console.warn('Error updating pageFollowers record:', err);
+      console.warn('🔧 Unfollow Debug: ✅ Successfully updated pageFollowers record');
+    } catch (error) {
+      console.error('🔧 Unfollow Debug: ❌ Failed to update pageFollowers record:', error);
+      errors.push(`Failed to update pageFollowers record: ${error.message}`);
     }
 
-    return true;
+    // Return success if the core unfollow operation succeeded, even if other steps failed
+    if (unfollowSucceeded) {
+      if (errors.length > 0) {
+        console.warn('🔧 Unfollow Debug: Unfollow succeeded with some errors:', errors);
+      }
+      return true;
+    } else {
+      throw new Error(`Unfollow operation failed: ${errors.join(', ')}`);
+    }
   } catch (error) {
     console.error('Error unfollowing page:', error);
     throw error;

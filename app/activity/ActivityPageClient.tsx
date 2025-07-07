@@ -6,7 +6,7 @@ import { Button } from "../components/ui/button";
 import { ChevronLeft, Clock, Filter, Check } from "lucide-react";
 import ActivityCard from "../components/activity/ActivityCard";
 import { useCurrentAccount } from "../providers/CurrentAccountProvider";
-import useStaticRecentActivity from "../hooks/useStaticRecentActivity";
+import useRecentActivity from "../hooks/useRecentActivity";
 import { useActivityFilter } from "../contexts/ActivityFilterContext";
 import { getFollowedPages } from "../firebase/follows";
 import {
@@ -32,22 +32,27 @@ export default function ActivityPageClient({
   initialError: string | null
 }) {
   const router = useRouter();
-  const { session } = useCurrentAccount();
+  const { currentAccount } = useCurrentAccount();
   const { viewMode, setViewMode } = useActivityFilter();
   const [limit] = useState(30);
   const [followedPages, setFollowedPages] = useState<any[]>([]);
   const [isLoadingFollows, setIsLoadingFollows] = useState(false);
 
-  // Use the same hook that works on the home page with pagination enabled
-  // This is more reliable than server-side fetching or API calls
-  const activityData = useStaticRecentActivity(20, null, false, true);
-  const { activities, loading: isLoading, error, hasMore, loadingMore, loadMore } = activityData as any;
+  // Use the unified hook with activity mode and pagination enabled
+  const { activities, loading: isLoading, error, hasMore, loadingMore, loadMore } = useRecentActivity(
+    20,
+    null,
+    viewMode === 'following',
+    viewMode === 'mine',
+    'activity',
+    true // Enable pagination
+  );
 
   // Load followed pages when user is available and viewMode is 'following'
   useEffect(() => {
-    if (session && viewMode === 'following') {
+    if (currentAccount && viewMode === 'following') {
       setIsLoadingFollows(true);
-      getFollowedPages(session?.uid || '')
+      getFollowedPages(currentAccount?.uid || '')
         .then(pages => {
           setFollowedPages(pages);
         })
@@ -59,7 +64,7 @@ export default function ActivityPageClient({
           setIsLoadingFollows(false);
         });
     }
-  }, [session, viewMode]);
+  }, [currentAccount, viewMode]);
 
   // Filter activities based on view mode
   const filteredActivities = (() => {
@@ -67,18 +72,18 @@ export default function ActivityPageClient({
     const safeActivities = Array.isArray(activities) ? activities : [];
     const safeFollowedPages = Array.isArray(followedPages) ? followedPages : [];
 
-    if (viewMode === 'following' && session) {
+    if (viewMode === 'following' && currentAccount) {
       return safeActivities.filter(activity => {
         // Include activities from followed pages
         return safeFollowedPages.some(page => page.id === activity.pageId);
       });
-    } else if (viewMode === 'mine' && session) {
+    } else if (viewMode === 'mine' && currentAccount) {
       return safeActivities.filter(activity => {
         // Include activities from current user's pages or bio edits
         if (activity.activityType === "bio_edit") {
-          return activity.pageId.includes(session.uid);
+          return activity.pageId.includes(currentAccount.uid);
         }
-        return activity.userId === session.uid;
+        return activity.userId === currentAccount.uid;
       });
     }
     return safeActivities;
@@ -102,7 +107,7 @@ export default function ActivityPageClient({
 
   // Filter dropdown component (same as home page)
   const FilterDropdown = () => {
-    if (!session) return null;
+    if (!currentAccount) return null;
 
     return (
       <TooltipProvider>

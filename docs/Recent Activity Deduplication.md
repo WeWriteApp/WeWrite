@@ -9,7 +9,7 @@ Previously, if a user made multiple rapid edits to the same page, the entire Rec
 ## Implementation Details
 
 ### 1. Deduplication Logic
-**Location**: Both server-side (`app/api/activity/route.js`) and client-side (`app/hooks/useHomeRecentActivity.js`)
+**Location**: Both server-side (`app/api/activity/route.js`) and client-side (`app/hooks/useRecentActivity.js`)
 
 **Algorithm**:
 1. **Group by Page ID**: Activities are grouped by their `pageId`
@@ -91,11 +91,12 @@ The deduplication process preserves all original metadata:
   - Enhanced logging for debugging
 
 ### Client-Side
-- **`app/hooks/useHomeRecentActivity.js`**
+- **`app/hooks/useRecentActivity.js`** (Unified Hook)
   - Added `deduplicateActivitiesByPage()` function
   - Updated activity processing pipeline
   - Increased fetch limits in all query scenarios
   - Added deduplication step before final sorting and limiting
+  - Consolidated all recent activity functionality into single hook
 
 ## Benefits
 

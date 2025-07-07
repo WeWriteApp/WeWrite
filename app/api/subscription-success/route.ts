@@ -88,15 +88,11 @@ export async function POST(request: NextRequest) {
     const price = subscription.items.data[0].price;
     const amount = price.unit_amount ? price.unit_amount / 100 : 0;
 
-    // Determine the tier based on the amount or metadata
-    let tier = subscription.metadata.tier || 'custom';
-    if (!tier || tier === 'undefined') {
-      // Fallback to determining tier by amount
-      if (amount === 10) tier = 'tier1';
-      else if (amount === 20) tier = 'tier2';
-      else if (amount === 50) tier = 'tier3';
-      else tier = 'custom';
-    }
+    // Import the centralized tier determination function
+    const { determineTierFromAmount } = await import('../../utils/subscriptionTiers');
+
+    // Determine the tier based on the amount using centralized logic
+    let tier = subscription.metadata.tier || determineTierFromAmount(amount);
 
     console.log(`Processing subscription success for user ${userId}: ${tier} - $${amount}/mo - Status: ${subscription.status}`);
 

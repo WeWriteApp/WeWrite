@@ -12,7 +12,7 @@ import {
 import { X } from "lucide-react";
 import { Button } from "../ui/button";
 import Link from "next/link";
-import { SupporterIcon } from './SupporterIcon';
+import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 import { useFeatureFlag } from '@/utils/feature-flags';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 interface TierModalProps {
@@ -47,17 +47,25 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
     },
     {
       id: 'tier2',
-      name: 'Champion',
-      description: 'Subscribe to WeWrite for $50/month',
-      amount: '$50/mo',
+      name: 'Enthusiast',
+      description: 'Subscribe to WeWrite for $20/month',
+      amount: '$20/mo',
       status: 'active',
       tier: 'tier2'
     },
     {
+      id: 'tier3',
+      name: 'Champion',
+      description: 'Subscribe to WeWrite for $30+/month',
+      amount: '$30+/mo',
+      status: 'active',
+      tier: 'tier3'
+    },
+    {
       id: 'custom',
       name: 'Custom',
-      description: 'Subscribe to WeWrite for $60+/month',
-      amount: '$60+/mo',
+      description: 'Subscribe to WeWrite for $30+/month',
+      amount: '$30+/mo',
       status: 'active',
       tier: 'custom'
     }
@@ -95,7 +103,7 @@ export function SubscriptionInfoModal({ children, trigger, currentTier = null, c
                   className={`flex items-center gap-3 p-3 rounded-lg ${bgColorClass} ${borderColorClass}`}
                 >
                   <div className="flex-shrink-0">
-                    <SupporterIcon tier={tier.tier} status={tier.status} size="lg" />
+                    <SubscriptionTierBadge tier={tier.tier} status={tier.status} size="lg" />
                   </div>
                   <div className="flex-grow">
                     <div className="font-medium">{tier.name}</div>

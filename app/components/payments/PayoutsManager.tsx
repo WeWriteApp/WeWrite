@@ -413,54 +413,54 @@ export function PayoutsManager() {
   return (
     <Card className="wewrite-card">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Wallet className="h-5 w-5" />
+        <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+          <Wallet className="h-4 w-4 sm:h-5 sm:w-5" />
           Payouts
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-sm">
           Manage earnings and payout settings
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 sm:space-y-6">
         {/* Current Earnings Display */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 bg-muted/30 rounded-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="p-3 sm:p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
             <div className="flex items-center gap-2 mb-2">
               <DollarSign className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium">Current Earnings</span>
+              <span className="text-xs sm:text-sm font-medium">Current Earnings</span>
             </div>
-            <p className="text-2xl font-bold">${currentEarnings.toFixed(2)}</p>
+            <p className="text-xl sm:text-2xl font-bold text-green-600">${currentEarnings.toFixed(2)}</p>
           </div>
 
-          <div className="p-4 bg-muted/30 rounded-lg">
+          <div className="p-3 sm:p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium">Minimum Payout</span>
+              <span className="text-xs sm:text-sm font-medium">Minimum Payout</span>
             </div>
-            <p className="text-2xl font-bold">${minimumThreshold.toFixed(2)}</p>
+            <p className="text-xl sm:text-2xl font-bold text-blue-600">${minimumThreshold.toFixed(2)}</p>
           </div>
 
-          <div className="p-4 bg-muted/30 rounded-lg">
+          <div className="p-3 sm:p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
             <div className="flex items-center gap-2 mb-2">
-              <CheckCircle className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Bank Account</span>
+              <CheckCircle className="h-4 w-4 text-purple-600" />
+              <span className="text-xs sm:text-sm font-medium">Bank Account</span>
             </div>
             <div className="text-sm font-medium">
               {bankAccountConnected ? (
-                <Badge variant="default" className="bg-green-100 text-green-800">Connected</Badge>
+                <Badge variant="default" className="bg-green-600 text-white text-xs sm:text-sm">Connected</Badge>
               ) : (
-                <Badge variant="secondary">Not Connected</Badge>
+                <Badge variant="secondary" className="text-xs sm:text-sm">Not Connected</Badge>
               )}
             </div>
           </div>
         </div>
 
         {/* Bank Account Setup Section */}
-        <div className="border-theme-strong rounded-lg p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-medium">Bank Account Setup</h3>
-              <p className="text-sm text-muted-foreground">
+        <div className="border-theme-strong rounded-lg p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
+            <div className="flex-1">
+              <h3 className="font-medium text-sm sm:text-base">Bank Account Setup</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Connect bank account to receive payments
               </p>
             </div>
@@ -468,21 +468,26 @@ export function PayoutsManager() {
               onClick={handleSetupBankAccount}
               disabled={setupLoading}
               variant={bankAccountConnected ? "outline" : "default"}
+              size="sm"
+              className="w-full sm:w-auto"
             >
               {setupLoading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                  Setting up...
+                  <span className="hidden xs:inline">Setting up...</span>
+                  <span className="xs:hidden">Setup...</span>
                 </>
               ) : bankAccountConnected ? (
                 <>
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  Manage Account
+                  <span className="hidden xs:inline">Manage Account</span>
+                  <span className="xs:hidden">Manage</span>
                 </>
               ) : (
                 <>
                   <Plus className="h-4 w-4 mr-2" />
-                  Connect Bank Account
+                  <span className="hidden xs:inline">Connect Bank Account</span>
+                  <span className="xs:hidden">Connect</span>
                 </>
               )}
             </Button>

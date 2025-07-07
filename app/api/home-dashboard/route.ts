@@ -12,6 +12,8 @@ interface DashboardData {
   loadTime: number;
 }
 
+
+
 /**
  * Optimized home dashboard endpoint that fetches all data in a single request
  * Uses batch queries and caching for maximum performance
@@ -65,7 +67,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Get recent pages with optimized queries
+ * Get recent pages with optimized queries and user data
  */
 async function getRecentPagesOptimized(limitCount: number, userId?: string | null): Promise<any[]> {
   try {
@@ -104,8 +106,11 @@ async function getRecentPagesOptimized(limitCount: number, userId?: string | nul
       })
       .slice(0, limitCount);
 
-    return filteredPages;
-    
+    // Return pages without subscription data - client will fetch this using getBatchUserData
+    const pagesWithCompleteInfo = filteredPages;
+
+    return pagesWithCompleteInfo;
+
   } catch (error) {
     console.error('Error fetching recent pages:', error);
     return [];

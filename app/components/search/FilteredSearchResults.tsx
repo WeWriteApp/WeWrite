@@ -7,10 +7,10 @@ import React, {
   forwardRef} from "react";
 import { useRouter } from "next/navigation";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../firebase/config";
+// Removed unused Firebase imports - component already uses API endpoints
 import { navigateToPage } from "../../utils/pagePermissions";
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
+import { useDateFormat } from "../../contexts/DateFormatContext";
 import debounce from "lodash.debounce";
 import { Search } from "lucide-react";
 import { Input } from "../ui/input";

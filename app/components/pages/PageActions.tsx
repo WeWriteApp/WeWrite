@@ -6,7 +6,7 @@ import { Switch } from "../ui/switch";
 import { Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X } from "lucide-react";
 import dynamic from 'next/dynamic';
 import { useRouter } from "next/navigation";
-import { toast } from "../ui/use-toast";
+import { useToast } from "../ui/use-toast";
 import { deletePage } from "../../firebase/database";
 import { getUserProfile } from "../../firebase/auth";
 import { auth } from "../../firebase/auth";
@@ -102,6 +102,7 @@ export function PageActions({
 }: PageActionsProps) {
   const router = useRouter();
   const { session } = useCurrentAccount();
+  const { toast } = useToast();
   const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false);
 
   // Use confirmation modal hook
@@ -154,7 +155,11 @@ export function PageActions({
 
       } catch (error) {
         console.error("Error deleting page:", error);
-        toast.error("Failed to delete page");
+        toast({
+          title: "Delete failed",
+          description: "Failed to delete page",
+          variant: "destructive"
+        });
       }
     }
   };
@@ -199,16 +204,28 @@ export function PageActions({
           });
 
           // Show a toast message
-          toast.success("Your reply has been saved. Please sign in to post it.");
+          toast({
+            title: "Reply saved",
+            description: "Your reply has been saved. Please sign in to post it.",
+            variant: "success"
+          });
 
           // Redirect to login page with action parameter
           router.push(`/auth/login?action=posting_reply&return_to=${encodeURIComponent(returnUrl)}`);
         } else {
-          toast.error("Failed to save your reply. Please try again.");
+          toast({
+            title: "Save failed",
+            description: "Failed to save your reply. Please try again.",
+            variant: "destructive"
+          });
         }
       } catch (error) {
         console.error("Error handling guest reply:", error);
-        toast.error("Failed to create reply");
+        toast({
+          title: "Reply failed",
+          description: "Failed to create reply",
+          variant: "destructive"
+        });
       }
       return;
     }
@@ -279,11 +296,19 @@ export function PageActions({
         router.push(replyUrl);
       } catch (error) {
         console.error("Error navigating to direct-reply page:", error);
-        toast.error("Failed to create reply");
+        toast({
+          title: "Reply failed",
+          description: "Failed to create reply",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error("Error in handleReply:", error);
-      toast.error("Failed to create reply");
+      toast({
+        title: "Reply failed",
+        description: "Failed to create reply",
+        variant: "destructive"
+      });
     }
   };
 

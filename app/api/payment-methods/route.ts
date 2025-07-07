@@ -46,17 +46,17 @@ export async function GET(request: NextRequest) {
     // Update local reference
     db = firestore;
 
-    // Check if payments feature is enabled
-    const featureCheckResponse = await checkPaymentsFeatureFlag();
-    if (featureCheckResponse) {
-      return featureCheckResponse;
-    }
-
     // Get user ID from request using our helper
     const userId = await getUserIdFromRequest(request);
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if payments feature is enabled for this user
+    const featureCheckResponse = await checkPaymentsFeatureFlag(userId);
+    if (featureCheckResponse) {
+      return featureCheckResponse;
     }
 
     // Get the user's customer ID from Firestore
@@ -80,13 +80,44 @@ export async function GET(request: NextRequest) {
     const formattedPaymentMethods = paymentMethods.data.map(method => {
       const isPrimary = method.id === paymentMethodsData.primary;
 
-      return {
-        id: method.id,
-        brand: method.card?.brand || 'unknown',
-        last4: method.card?.last4 || '****',
-        expMonth: method.card?.exp_month || 0,
-        expYear: method.card?.exp_year || 0,
-        isPrimary};
+      // Handle different payment method types
+      if (method.type === 'card' && method.card) {
+        return {
+          id: method.id,
+          type: 'card',
+          brand: method.card.brand || 'unknown',
+          last4: method.card.last4 || '****',
+          expMonth: method.card.exp_month || 0,
+          expYear: method.card.exp_year || 0,
+          isPrimary
+        };
+      } else if (method.type === 'us_bank_account' && method.us_bank_account) {
+        return {
+          id: method.id,
+          type: 'us_bank_account',
+          bankName: method.us_bank_account.bank_name || 'Bank Account',
+          last4: method.us_bank_account.last4 || '****',
+          accountType: method.us_bank_account.account_type || 'checking',
+          isPrimary
+        };
+      } else if (method.type === 'sepa_debit' && method.sepa_debit) {
+        return {
+          id: method.id,
+          type: 'sepa_debit',
+          bankCode: method.sepa_debit.bank_code || '',
+          last4: method.sepa_debit.last4 || '****',
+          isPrimary
+        };
+      } else {
+        // Generic fallback for other payment method types
+        return {
+          id: method.id,
+          type: method.type,
+          brand: method.type,
+          last4: '****',
+          isPrimary
+        };
+      }
     });
 
     // Sort payment methods: primary first, then by order in metadata
@@ -124,17 +155,17 @@ export async function DELETE(request: NextRequest) {
     // Update local reference
     db = firestore;
 
-    // Check if payments feature is enabled
-    const featureCheckResponse = await checkPaymentsFeatureFlag();
-    if (featureCheckResponse) {
-      return featureCheckResponse;
-    }
-
     // Get user ID from request using our helper
     const userId = await getUserIdFromRequest(request);
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if payments feature is enabled for this user
+    const featureCheckResponse = await checkPaymentsFeatureFlag(userId);
+    if (featureCheckResponse) {
+      return featureCheckResponse;
     }
 
     // Get the payment method ID from the request body

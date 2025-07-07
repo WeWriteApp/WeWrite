@@ -177,7 +177,7 @@ export function TierComparison({
                 
                 {/* Features */}
                 <div className="space-y-3">
-                  {tier.features.map((feature, index) => (
+                  {(tier.features || []).map((feature, index) => (
                     <div key={index} className="flex items-start gap-3">
                       <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
                       <span className="text-sm">{feature}</span>

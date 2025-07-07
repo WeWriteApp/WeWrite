@@ -2,10 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { useCurrentAccount } from './providers/CurrentAccountProvider';
+import { ActivityFilterProvider } from './contexts/ActivityFilterContext';
 import LandingPage from './components/landing/LandingPage';
 import Dashboard from './components/features/Dashboard';
 
 export default function HomePage() {
+  console.log('🔴 HomePage: Component rendering');
   const { currentAccount, isAuthenticated, isLoading } = useCurrentAccount();
   const [mounted, setMounted] = useState(false);
 
@@ -14,8 +16,16 @@ export default function HomePage() {
   }, []);
 
   // Debug logging for authentication state
+  console.log('🔵 HomePage Auth State (render):', {
+    mounted,
+    isLoading,
+    isAuthenticated,
+    hasCurrentAccount: !!currentAccount,
+    currentAccountUid: currentAccount?.uid
+  });
+
   useEffect(() => {
-    console.log('🔵 HomePage Auth State:', {
+    console.log('🔵 HomePage Auth State (useEffect):', {
       mounted,
       isLoading,
       isAuthenticated,
@@ -37,5 +47,11 @@ export default function HomePage() {
   }
 
   // Show dashboard for authenticated users, landing page for others
-  return isAuthenticated ? <Dashboard /> : <LandingPage />;
+  return isAuthenticated ? (
+    <ActivityFilterProvider>
+      <Dashboard />
+    </ActivityFilterProvider>
+  ) : (
+    <LandingPage />
+  );
 }

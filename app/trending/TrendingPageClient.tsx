@@ -11,6 +11,8 @@ import SimpleSparkline from '../components/utils/SimpleSparkline';
 import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 import { isExactDateFormat } from "../utils/dailyNoteNavigation";
 import { useDateFormat } from '../contexts/DateFormatContext';
+import { SubscriptionTierBadge } from "../components/ui/SubscriptionTierBadge";
+import { getBatchUserData } from "../firebase/batchUserData";
 
 interface TrendingPage {
   id: string;
@@ -20,6 +22,9 @@ interface TrendingPage {
   hourlyViews: number[];
   userId?: string;
   username?: string;
+  tier?: string;
+  subscriptionStatus?: string;
+  subscriptionAmount?: number;
 }
 
 export default function TrendingPageClient() {
@@ -50,10 +55,17 @@ export default function TrendingPageClient() {
           return;
         }
 
-        // Handle both old and new response formats
-        const pages = Array.isArray(response)
-          ? response
-          : (response.trendingPages || []);
+        // Check for API error
+        if (!response.success) {
+          console.error('TrendingPageClient: API returned error:', response.error);
+          setError(response.error || 'Failed to load trending pages');
+          setLoading(false);
+          setTrendingPages([]);
+          return;
+        }
+
+        // Get pages from standardized API response
+        const pages = response.data?.trendingPages || [];
 
         console.log('TrendingPageClient: Received pages:', pages.length);
 
@@ -66,7 +78,37 @@ export default function TrendingPageClient() {
 
         // The API now provides hourlyViews data for all pages, so we can use it directly
         console.log('TrendingPageClient: Using hourly data from API');
-        setTrendingPages(pages);
+
+        // Extract unique user IDs and fetch subscription data
+        const uniqueUserIds = [...new Set(pages.map(page => page.userId).filter(Boolean))];
+
+        if (uniqueUserIds.length > 0) {
+          console.log('TrendingPageClient: Fetching subscription data for', uniqueUserIds.length, 'users');
+          try {
+            const batchUserData = await getBatchUserData(uniqueUserIds);
+
+            // Add subscription data to pages
+            const pagesWithSubscriptions = pages.map(page => {
+              if (!page.userId) return page;
+
+              const userData = batchUserData[page.userId];
+              return {
+                ...page,
+                tier: userData?.tier,
+                subscriptionStatus: userData?.subscriptionStatus,
+                subscriptionAmount: userData?.subscriptionAmount
+              };
+            });
+
+            setTrendingPages(pagesWithSubscriptions);
+          } catch (subscriptionError) {
+            console.error('Error fetching subscription data:', subscriptionError);
+            // Still set the pages without subscription data
+            setTrendingPages(pages);
+          }
+        } else {
+          setTrendingPages(pages);
+        }
       } catch (err) {
         console.error('Error fetching trending pages:', err);
         setError(`Failed to load trending pages: ${err.message}`);
@@ -163,13 +205,21 @@ export default function TrendingPageClient() {
                     </td>
                     <td className="py-3 px-4">
                       {page.userId && page.username ? (
-                        <Link
-                          href={`/user/${page.userId}`}
-                          className="text-primary hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {page.username}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/user/${page.userId}`}
+                            className="text-primary hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {page.username}
+                          </Link>
+                          <SubscriptionTierBadge
+                            tier={page.tier}
+                            status={page.subscriptionStatus}
+                            amount={page.subscriptionAmount}
+                            size="sm"
+                          />
+                        </div>
                       ) : (
                         <span className="text-muted-foreground">Anonymous</span>
                       )}
@@ -213,16 +263,24 @@ export default function TrendingPageClient() {
                         </span>
                       </span>
                     </h3>
-                    <div className="text-sm text-muted-foreground">
-                      by{' '}
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                      <span>by{' '}</span>
                       {page.userId && page.username ? (
-                        <Link
-                          href={`/user/${page.userId}`}
-                          className="text-primary hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {page.username}
-                        </Link>
+                        <>
+                          <Link
+                            href={`/user/${page.userId}`}
+                            className="text-primary hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {page.username}
+                          </Link>
+                          <SubscriptionTierBadge
+                            tier={page.tier}
+                            status={page.subscriptionStatus}
+                            amount={page.subscriptionAmount}
+                            size="sm"
+                          />
+                        </>
                       ) : (
                         <span>Anonymous</span>
                       )}

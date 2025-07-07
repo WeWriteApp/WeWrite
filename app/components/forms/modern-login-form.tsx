@@ -38,7 +38,7 @@ import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { Label } from "../ui/label"
 import { useState, useEffect } from "react"
-import { loginUser, loginAnonymously } from "../../firebase/auth"
+// Removed direct Firebase imports - now using API endpoints
 import { Loader2, AlertCircle } from "lucide-react"
 import { Separator } from "../ui/separator"
 // reCAPTCHA functionality removed
@@ -90,12 +90,26 @@ export function ModernLoginForm({
     setIsLoading(true)
 
     try {
-      // reCAPTCHA verification removed
-      const result = await loginUser(emailOrUsername, password)
+      // Call API endpoint for login
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          emailOrUsername,
+          password
+        })
+      })
 
-      if (result.user) {
-        // Successful login - redirect to home page
-        console.log("Login successful, redirecting...")
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        // Successful login
+        console.log("Login successful:", result.data)
+
+        // The API already sets the session cookies, so we can proceed directly
+        console.log("Session cookies set by API")
 
         // Check if we're adding a new account to the account switcher
         const previousUserSession = localStorage.getItem('previousUserSession') ||
@@ -115,13 +129,16 @@ export function ModernLoginForm({
           window.location.href = "/"; // Use direct navigation for better compatibility
         }, 1500)
       } else {
-        // Error handling
-        const errorCode = result.code || ""
-        let errorMessage = result.message || "Failed to sign in. Please try again."
+        // Handle API error response
+        let errorMessage = result.error || "Failed to sign in. Please try again."
 
-        if (errorCode.includes("user-not-found") || errorCode.includes("wrong-password")) {
-          errorMessage = "Invalid email or password"
-        } else if (errorCode.includes("too-many-requests")) {
+        if (errorMessage.includes("No account found") || errorMessage.includes("user-not-found")) {
+          errorMessage = "No account found with this username or email"
+        } else if (errorMessage.includes("Invalid email") || errorMessage.includes("invalid-email")) {
+          errorMessage = "Invalid email address"
+        } else if (errorMessage.includes("user-disabled")) {
+          errorMessage = "This account has been disabled"
+        } else if (errorMessage.includes("too-many-requests")) {
           errorMessage = "Too many attempts. Please try again later."
         }
 

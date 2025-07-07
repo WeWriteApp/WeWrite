@@ -8,8 +8,7 @@ import { Badge } from '../ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { Loader, ChevronDown, Users, Settings, Eye, User, Globe } from 'lucide-react';
 import { FeatureFlag } from '../../utils/feature-flags';
-import { collection, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+// Removed direct Firebase imports - now using API endpoints
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useToast } from '../ui/use-toast';
 import UserAccessModal from './UserAccessModal';
@@ -67,42 +66,24 @@ export default function FeatureFlagCard({
     try {
       setLoadingStats(true);
 
-      // Get total users count
-      const usersRef = collection(db, 'users');
-      const usersSnapshot = await getDocs(usersRef);
-      const totalUsers = usersSnapshot.size;
+      // Call API endpoint to get user statistics for this feature flag
+      const response = await fetch(`/api/admin/feature-flag-users?featureFlagId=${flag.id}&globalEnabled=${flag.enabled}`);
 
-      // Get user-specific feature overrides
-      const featureOverridesRef = collection(db, 'featureOverrides');
-      const featureOverridesQuery = query(
-        featureOverridesRef,
-        where('featureId', '==', flag.id)
-      );
-      const overridesSnapshot = await getDocs(featureOverridesQuery);
-
-      const customOverrides = overridesSnapshot.size;
-
-      // Calculate users with access based on global flag + overrides
-      let usersWithAccess = 0;
-
-      if (flag.enabled) {
-        // If globally enabled, count all users minus those with disabled overrides
-        usersWithAccess = totalUsers;
-        overridesSnapshot.forEach(doc => {
-          const data = doc.data();
-          if (!data.enabled) {
-            usersWithAccess--;
-          }
-        });
-      } else {
-        // If globally disabled, count only those with enabled overrides
-        overridesSnapshot.forEach(doc => {
-          const data = doc.data();
-          if (data.enabled) {
-            usersWithAccess++;
-          }
-        });
+      if (!response.ok) {
+        throw new Error(`Failed to load user stats: ${response.status}`);
       }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load user stats');
+      }
+
+      // Calculate statistics from the user list
+      const users = result.users || [];
+      const totalUsers = users.length;
+      const usersWithAccess = users.filter(user => user.enabled).length;
+      const customOverrides = users.filter(user => user.overridden).length;
 
       setUserStats({
         totalUsers,
@@ -111,6 +92,13 @@ export default function FeatureFlagCard({
       });
     } catch (error) {
       console.error('Error loading user stats:', error);
+
+      // Show user-friendly error message
+      toast({
+        title: 'Error',
+        description: 'Failed to load user statistics',
+        variant: 'destructive'
+      });
     } finally {
       setLoadingStats(false);
     }
@@ -121,12 +109,29 @@ export default function FeatureFlagCard({
     if (!session) return;
 
     try {
-      const featureOverrideRef = doc(db, 'featureOverrides', `${session.uid}_${flag.id}`);
-      const featureOverrideDoc = await getDoc(featureOverrideRef);
+      // Call API endpoint to get user's feature flag overrides
+      const response = await fetch(`/api/feature-flags/user-overrides?userId=${session.uid}&featureId=${flag.id}`);
 
-      if (featureOverrideDoc.exists()) {
-        const data = featureOverrideDoc.data();
-        setPersonalEnabled(data.enabled);
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.warn('User not authenticated for personal feature flags');
+          setPersonalEnabled(flag.enabled);
+          return;
+        }
+        throw new Error(`Failed to load personal feature state: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load personal feature state');
+      }
+
+      const overrides = result.data.overrides || [];
+      const override = overrides.find(o => o.featureId === flag.id);
+
+      if (override) {
+        setPersonalEnabled(override.enabled);
       } else {
         // If no override, use the global setting
         setPersonalEnabled(flag.enabled);
@@ -144,15 +149,29 @@ export default function FeatureFlagCard({
     try {
       setLoadingPersonal(true);
 
-      // Update user-specific feature override
-      const featureOverrideRef = doc(db, 'featureOverrides', `${session.uid}_${flag.id}`);
-
-      await setDoc(featureOverrideRef, {
-        userId: session.uid,
-        featureId: flag.id,
-        enabled: checked,
-        lastModified: new Date().toISOString()
+      // Call API endpoint to update user-specific feature override
+      const response = await fetch('/api/feature-flags/user-overrides', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: session.uid,
+          featureId: flag.id,
+          enabled: checked
+        })
       });
+
+      if (!response.ok) {
+        const errorResult = await response.json();
+        throw new Error(errorResult.error || `Failed to update personal feature flag: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update personal feature flag');
+      }
 
       setPersonalEnabled(checked);
 
@@ -173,7 +192,7 @@ export default function FeatureFlagCard({
       // Show success message
       toast({
         title: 'Success',
-        description: `Personal ${flag.name} feature ${checked ? 'enabled' : 'disabled'}`,
+        description: result.data.message || `Personal ${flag.name} feature ${checked ? 'enabled' : 'disabled'}`,
         variant: 'default'
       });
     } catch (error) {
@@ -183,9 +202,20 @@ export default function FeatureFlagCard({
       setPersonalEnabled(!checked);
 
       // Show error message
+      let errorMessage = `Failed to ${checked ? 'enable' : 'disable'} personal ${flag.name} feature`;
+      if (error instanceof Error) {
+        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          errorMessage = 'Please log in to modify personal feature flags';
+        } else if (error.message.includes('403') || error.message.includes('Forbidden')) {
+          errorMessage = 'Insufficient permissions to modify this feature flag';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
       toast({
         title: 'Error',
-        description: `Failed to ${checked ? 'enable' : 'disable'} personal ${flag.name} feature`,
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {

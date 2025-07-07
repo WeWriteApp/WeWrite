@@ -16,6 +16,9 @@ interface RandomPage {
   lastModified: string;
   createdAt: string;
   isPublic: boolean;
+  tier?: string;
+  subscriptionStatus?: string;
+  subscriptionAmount?: number;
   // Groups functionality removed
 }
 
