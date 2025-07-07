@@ -3,6 +3,7 @@
  * Provides authentication and authorization utilities for admin API endpoints
  */
 
+import { NextRequest } from 'next/server';
 import { getUserIdFromRequest } from './auth-helper';
 import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 
@@ -17,20 +18,16 @@ const ADMIN_USER_IDS = [
 
 /**
  * Check if a user is an admin (server-side version)
- * @param {string} userEmail - The user's email
- * @returns {boolean} - Whether the user is an admin
  */
-export const isAdminServer = (userEmail) => {
+export const isAdminServer = (userEmail?: string | null): boolean => {
   if (!userEmail) return false;
   return ADMIN_USER_IDS.includes(userEmail);
 };
 
 /**
  * Check admin permissions for API requests
- * @param {NextRequest} request - The Next.js request object
- * @returns {Promise<{success: boolean, error?: string, userEmail?: string}>} - Auth result
  */
-export async function checkAdminPermissions(request) {
+export async function checkAdminPermissions(request: NextRequest): Promise<{success: boolean, error?: string, userEmail?: string}> {
   try {
     // Get user ID from request
     const userId = await getUserIdFromRequest(request);

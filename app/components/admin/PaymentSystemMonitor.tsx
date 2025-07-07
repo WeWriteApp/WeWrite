@@ -67,8 +67,9 @@ export function PaymentSystemMonitor() {
     try {
       // Fetch payment metrics
       const metricsResponse = await fetch('/api/admin/payment-metrics', {
+        method: 'GET',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY}`,
           'Content-Type': 'application/json'
         }
       });
@@ -80,8 +81,9 @@ export function PaymentSystemMonitor() {
 
       // Fetch payment alerts
       const alertsResponse = await fetch('/api/admin/payment-alerts', {
+        method: 'GET',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY}`,
           'Content-Type': 'application/json'
         }
       });
@@ -98,8 +100,9 @@ export function PaymentSystemMonitor() {
 
       // Fetch transaction volume data
       const volumeResponse = await fetch('/api/admin/transaction-volume', {
+        method: 'GET',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY}`,
           'Content-Type': 'application/json'
         }
       });

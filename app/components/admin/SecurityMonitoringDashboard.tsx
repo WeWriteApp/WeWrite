@@ -83,8 +83,9 @@ export function SecurityMonitoringDashboard() {
     try {
       // Fetch security metrics
       const metricsResponse = await fetch('/api/admin/security-metrics', {
+        method: 'GET',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY}`,
           'Content-Type': 'application/json'
         }
       });
@@ -96,8 +97,9 @@ export function SecurityMonitoringDashboard() {
 
       // Fetch security alerts
       const alertsResponse = await fetch('/api/admin/security-alerts', {
+        method: 'GET',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY}`,
           'Content-Type': 'application/json'
         }
       });
@@ -147,8 +149,8 @@ export function SecurityMonitoringDashboard() {
     try {
       const response = await fetch('/api/admin/security-report', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_ADMIN_API_KEY}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
