@@ -28,6 +28,7 @@ import {
   XCircle,
   AlertCircle
 } from 'lucide-react';
+import { StatusIcon } from '../ui/status-icon';
 
 interface SecurityMetrics {
   fraudDetection: {
@@ -135,10 +136,10 @@ export function SecurityMonitoringDashboard() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'resolved': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'investigating': return <Clock className="h-4 w-4 text-yellow-500" />;
-      case 'open': return <AlertCircle className="h-4 w-4 text-red-500" />;
-      default: return <XCircle className="h-4 w-4 text-gray-500" />;
+      case 'resolved': return <StatusIcon status="success" size="sm" position="static" />;
+      case 'investigating': return <StatusIcon status="pending" size="sm" position="static" />;
+      case 'open': return <StatusIcon status="error" size="sm" position="static" />;
+      default: return <StatusIcon status="inactive" size="sm" position="static" />;
     }
   };
 

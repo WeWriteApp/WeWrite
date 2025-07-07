@@ -15,11 +15,16 @@ import {
   Coins,
   Palette
 } from 'lucide-react';
+import { StatusIcon } from '../components/ui/status-icon';
 import { useFeatureFlag } from '../utils/feature-flags';
 import { getOptimizedUserSubscription } from '../firebase/optimizedSubscription';
-import { isActiveSubscription } from '../utils/subscriptionStatus';
+import { isActiveSubscription, getSubscriptionStatusInfo } from '../utils/subscriptionStatus';
 import { WarningDot } from '../components/ui/warning-dot';
 import { useSubscriptionWarning } from '../hooks/useSubscriptionWarning';
+import { useBankSetupStatus } from '../hooks/useBankSetupStatus';
+import { useTokenBalance } from '../hooks/useTokenBalance';
+import { TokenPieChart } from '../components/ui/TokenPieChart';
+
 
 interface SettingsSection {
   id: string;
@@ -35,6 +40,10 @@ export default function SettingsIndexPage() {
   const router = useRouter();
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
   const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant } = useSubscriptionWarning();
+
+  // Get bank setup status and token balance
+  const bankSetupStatus = useBankSetupStatus();
+  const tokenBalance = useTokenBalance();
 
   // Check feature flags with proper user ID for real-time updates
   const paymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
@@ -91,6 +100,39 @@ export default function SettingsIndexPage() {
     }
   ];
 
+  // Check subscription status when payments are enabled and user is available
+  useEffect(() => {
+    if (!session || !paymentsEnabled) {
+      setHasActiveSubscription(null);
+      return;
+    }
+
+    const checkSubscriptionStatus = async () => {
+      try {
+        const subscription = await getOptimizedUserSubscription(session.uid, {
+          useCache: true,
+          cacheTTL: 5 * 60 * 1000 // 5 minute cache
+        });
+
+        if (subscription) {
+          const isActive = isActiveSubscription(
+            subscription.status,
+            subscription.cancelAtPeriodEnd,
+            subscription.currentPeriodEnd
+          );
+          setHasActiveSubscription(isActive);
+        } else {
+          setHasActiveSubscription(false);
+        }
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+        setHasActiveSubscription(false);
+      }
+    };
+
+    checkSubscriptionStatus();
+  }, [session, paymentsEnabled]);
+
   useEffect(() => {
     if (!session) {
       router.push('/auth/login');
@@ -130,38 +172,7 @@ export default function SettingsIndexPage() {
     }
   }, [, session, router, paymentsEnabled, tokenSystemEnabled]);
 
-  // Check subscription status when payments are enabled and user is available
-  useEffect(() => {
-    if (!session || !paymentsEnabled) {
-      setHasActiveSubscription(null);
-      return;
-    }
 
-    const checkSubscriptionStatus = async () => {
-      try {
-        const subscription = await getOptimizedUserSubscription(session.uid, {
-          useCache: true,
-          cacheTTL: 5 * 60 * 1000 // 5 minute cache
-        });
-
-        if (subscription) {
-          const isActive = isActiveSubscription(
-            subscription.status,
-            subscription.cancelAtPeriodEnd,
-            subscription.currentPeriodEnd
-          );
-          setHasActiveSubscription(isActive);
-        } else {
-          setHasActiveSubscription(false);
-        }
-      } catch (error) {
-        console.error('Error checking subscription status:', error);
-        setHasActiveSubscription(false);
-      }
-    };
-
-    checkSubscriptionStatus();
-  }, [, session, paymentsEnabled]);
 
   // Filter sections based on feature flags
   const availableSections = settingsSections.filter(section => {
@@ -191,8 +202,12 @@ export default function SettingsIndexPage() {
             const IconComponent = section.icon;
 
             // Show warning for subscription-related sections if there are subscription issues
+            // But don't show warning dots when we have status icons or when loading
+            // Only show warnings for truly problematic states, not for active subscriptions
             const showWarning = (section.id === 'subscription' || section.id === 'buy-tokens') &&
-              shouldShowSubscriptionWarning;
+              shouldShowSubscriptionWarning &&
+              hasActiveSubscription !== null && // Don't show while loading
+              hasActiveSubscription === false; // Only show when explicitly false (not active)
 
             return (
               <div key={section.id} className="relative">
@@ -206,7 +221,34 @@ export default function SettingsIndexPage() {
                     </div>
                     <span className="font-medium">{section.title}</span>
                   </div>
-                  <div className="flex items-center">
+                  <div className="flex items-center gap-2">
+                    {/* Status icons for specific sections - show success and warnings */}
+                    {section.id === 'subscription' && paymentsEnabled && hasActiveSubscription !== null && (
+                      hasActiveSubscription === true ? (
+                        <StatusIcon status="success" size="sm" position="static" />
+                      ) : (
+                        <StatusIcon status="warning" size="sm" position="static" />
+                      )
+                    )}
+
+                    {section.id === 'earnings' && paymentsEnabled && (
+                      bankSetupStatus.isSetup ? (
+                        <StatusIcon status="success" size="sm" position="static" />
+                      ) : (
+                        <StatusIcon status="warning" size="sm" position="static" />
+                      )
+                    )}
+
+                    {section.id === 'spend-tokens' && paymentsEnabled && tokenBalance && (
+                      <TokenPieChart
+                        allocatedTokens={tokenBalance.allocatedTokens}
+                        totalTokens={tokenBalance.totalTokens}
+                        size={20}
+                        strokeWidth={2}
+                        showFraction={false}
+                      />
+                    )}
+
                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   </div>
                 </button>

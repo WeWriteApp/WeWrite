@@ -3,6 +3,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { initAdmin } from '../../../firebase/admin';
 import { getUserIdFromRequest } from '../../auth-helper';
 import Stripe from 'stripe';
+import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 
 // Initialize Firebase Admin lazily
 let db: any;
@@ -95,7 +96,8 @@ export async function POST(request: NextRequest) {
         default_payment_method: paymentMethodId}});
 
     // If the user has an active subscription, update the default payment method
-    const subscriptionDoc = await db.collection('users').doc(userId).collection('subscriptions').doc('current').get();
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionDoc = await db.doc(parentPath).collection(subCollectionName).doc('current').get();
 
     if (subscriptionDoc.exists) {
       const subscriptionData = subscriptionDoc.data();

@@ -13,6 +13,8 @@ import NotificationBadge from '../utils/NotificationBadge';
 import useOptimisticNavigation from '../../hooks/useOptimisticNavigation';
 import { WarningDot } from '../ui/warning-dot';
 import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
+import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
+import { useUserEarnings } from '../../hooks/useUserEarnings';
 
 /**
  * MobileBottomNav Component
@@ -48,7 +50,37 @@ export default function MobileBottomNav() {
   const pathname = usePathname();
   const { session } = useCurrentAccount();
   const editorContext = useEditorContext();
-  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant } = useSubscriptionWarning();
+  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription, paymentsEnabled } = useSubscriptionWarning();
+  const bankSetupStatus = useBankSetupStatus();
+  const { earnings } = useUserEarnings();
+
+  // Calculate the most critical status from all settings sections (same logic as UnifiedSidebar)
+  const getMostCriticalSettingsStatus = () => {
+    if (!paymentsEnabled) return null;
+
+    // Check for warnings first (most critical)
+    const hasSubscriptionWarning = hasActiveSubscription !== null && hasActiveSubscription === false;
+    // Only show bank setup warning if user has funds but bank isn't set up
+    const hasBankSetupWarning = earnings?.hasEarnings && !bankSetupStatus.isSetup;
+
+    if (hasSubscriptionWarning || hasBankSetupWarning) {
+      return 'warning';
+    }
+
+    // Check for success states
+    const hasActiveSubscriptionSuccess = hasActiveSubscription === true;
+    const hasBankSetupSuccess = bankSetupStatus.isSetup;
+
+    if (hasActiveSubscriptionSuccess || hasBankSetupSuccess) {
+      return 'success';
+    }
+
+    return null;
+  };
+
+  const criticalSettingsStatus = getMostCriticalSettingsStatus();
+
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isPWAMode, setIsPWAMode] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
@@ -324,9 +356,9 @@ export default function MobileBottomNav() {
             ariaLabel="Menu"
             label="Menu"
           >
-            {shouldShowSubscriptionWarning && (
+            {criticalSettingsStatus === 'warning' && (
               <WarningDot
-                variant={warningVariant}
+                variant="warning"
                 size="sm"
                 position="top-right"
                 offset={{ top: '-2px', right: '-2px' }}

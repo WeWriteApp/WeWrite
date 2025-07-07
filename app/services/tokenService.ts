@@ -104,7 +104,7 @@ export class TokenService {
               ...balanceData,
               totalTokens: subscriptionData.tokens,
               monthlyAllocation: subscriptionData.tokens,
-              availableTokens: Math.max(0, subscriptionData.tokens - balanceData.allocatedTokens)
+              availableTokens: subscriptionData.tokens - balanceData.allocatedTokens
             };
 
             callback(correctedBalance);

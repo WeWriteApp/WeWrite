@@ -16,6 +16,7 @@ import {
   Shield,
   CreditCard
 } from 'lucide-react';
+import { StatusIcon } from '../ui/status-icon';
 import { usePWA } from '../../providers/PWAProvider';
 
 interface CompatibilityCheck {
@@ -167,11 +168,11 @@ export function PWACompatibilityChecker({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pass':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
+        return <StatusIcon status="success" size="sm" position="static" />;
       case 'fail':
-        return <XCircle className="w-4 h-4 text-red-500" />;
+        return <StatusIcon status="error" size="sm" position="static" />;
       case 'warning':
-        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+        return <StatusIcon status="warning" size="sm" position="static" />;
       default:
         return null;
     }

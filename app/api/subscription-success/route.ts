@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { admin, initAdmin } from '../../firebase/admin';
 import Stripe from 'stripe';
+import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../utils/environmentConfig';
 
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
@@ -80,8 +81,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Subscription not found in session' }, { status: 404 });
     }
 
-    // Use the correct Firestore path (singular 'subscription', not 'subscriptions')
-    const subscriptionRef = db.collection('users').doc(userId).collection('subscription').doc('current');
+    // Use the environment-aware Firestore path
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionRef = db.doc(parentPath).collection(subCollectionName).doc('current');
     const subscriptionDoc = await subscriptionRef.get();
 
     // Get the subscription price from Stripe

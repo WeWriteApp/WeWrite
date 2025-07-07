@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CheckCircle, Circle } from 'lucide-react';
+import { StatusIcon } from '../ui/status-icon';
 import { CheckoutStep } from './SubscriptionCheckout';
 
 interface CheckoutProgressIndicatorProps {
@@ -38,7 +39,7 @@ export function CheckoutProgressIndicator({ steps }: CheckoutProgressIndicatorPr
                 aria-label={`Step ${index + 1}: ${step.title}`}
               >
                 {step.completed ? (
-                  <CheckCircle className="w-5 h-5" />
+                  <StatusIcon status="success" size="md" position="static" />
                 ) : (
                   <span className="text-sm font-medium">{index + 1}</span>
                 )}

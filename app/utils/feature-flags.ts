@@ -124,11 +124,11 @@ export const isFeatureEnabledForUser = async (flag: FeatureFlag, userId?: string
     if (featureOverrideDoc.exists()) {
       const data = featureOverrideDoc.data();
       const userOverride = data.enabled;
-      console.log(`[FeatureFlags] User override found for ${flag} (user: ${userId}): ${userOverride}`);
+      console.warn(`[FeatureFlags] User override found for ${flag} (user: ${userId}): ${userOverride}`, data);
       return userOverride;
     } else {
       // No override, use global setting
-      console.log(`[FeatureFlags] No user override for ${flag} (user: ${userId}), using global: ${globalEnabled}`);
+      console.warn(`[FeatureFlags] No user override for ${flag} (user: ${userId}), using global: ${globalEnabled}`);
       return globalEnabled;
     }
   } catch (error) {
@@ -178,7 +178,7 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null, use
         if (userId) {
           console.log(`[FeatureFlags] Checking user-specific overrides for ${flag}`);
           const enabled = await isFeatureEnabledForUser(flag, userId);
-          console.log(`[FeatureFlags] User-specific result for ${flag}: ${enabled}`);
+          console.warn(`[FeatureFlags] User-specific result for ${flag}: ${enabled}`);
           if (isMounted) {
             setIsEnabled(enabled);
             setInitialized(true);

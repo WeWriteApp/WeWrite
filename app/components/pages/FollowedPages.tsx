@@ -42,7 +42,7 @@ export default function FollowedPages({
   className = "",
   onPageUnfollowed
 }: FollowedPagesProps) {
-  const { session } = useCurrentAccount();
+  const { currentAccount } = useCurrentAccount();
   const [pages, setPages] = useState<Page[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +67,7 @@ export default function FollowedPages({
     }
 
     loadFollowedPages();
-  }, [, sessionId, isCurrentUser]);
+  }, [userId, currentAccount?.uid, isCurrentUser]);
 
   const loadFollowedPages = async (loadMore = false) => {
     try {
@@ -105,7 +105,7 @@ export default function FollowedPages({
         try {
           // Use cached version to reduce database calls
           const { getCachedPageById } = await import('../../utils/requestCache');
-          const result = await getCachedPageById(pageId, session?.uid);
+          const result = await getCachedPageById(pageId, currentAccount?.uid);
           if (result.pageData && !result.error) {
             return result.pageData;
           }
@@ -146,7 +146,7 @@ export default function FollowedPages({
       setUnfollowingId(pageToUnfollow.id);
 
       // Call the unfollow function
-      await unfollowPage(session.uid, pageToUnfollow.id);
+      await unfollowPage(currentAccount?.uid || '', pageToUnfollow.id);
 
       // Update the local state
       setPages(prev => prev.filter(p => p.id !== pageToUnfollow.id));

@@ -138,12 +138,12 @@ export function TokenAllocationModal({
     const currentPageAllocation = tokenData.currentPageAllocation;
 
     // Calculate other pages tokens: total allocated minus current page allocation
-    // Ensure it's never negative
+    // Allow negative values to show overspending
     const otherPagesTokens = Math.max(0, allocatedTokens - currentPageAllocation);
 
     // Calculate available tokens: total minus all allocations (other + current)
     const totalUsedTokens = otherPagesTokens + currentPageAllocation;
-    const availableTokens = Math.max(0, totalTokens - totalUsedTokens);
+    const availableTokens = totalTokens - totalUsedTokens;
 
     // Calculate percentages for composition bar (order: other, this, available)
     const otherPagesPercentage = totalTokens > 0 ? (otherPagesTokens / totalTokens) * 100 : 0;
@@ -177,7 +177,7 @@ export function TokenAllocationModal({
           {/* Other pages */}
           {otherPagesPercentage > 0 && (
             <div
-              className="h-full bg-muted-foreground/30 rounded flex items-center justify-center"
+              className="h-full bg-muted-foreground/30 rounded-full flex items-center justify-center"
               style={{ width: `${otherPagesPercentage}%`, minWidth: '20px' }}
             >
               <span className="text-white font-medium text-xs">
@@ -189,7 +189,7 @@ export function TokenAllocationModal({
           {/* Current page */}
           {currentPagePercentage > 0 && (
             <div
-              className="h-full bg-primary rounded flex items-center justify-center"
+              className="h-full bg-primary rounded-full flex items-center justify-center"
               style={{ width: `${currentPagePercentage}%`, minWidth: '20px' }}
             >
               <span className="text-white font-medium text-xs">
@@ -198,14 +198,14 @@ export function TokenAllocationModal({
             </div>
           )}
 
-          {/* Available */}
+          {/* Available/Unfunded */}
           {availablePercentage > 0 && (
             <div
-              className="h-full bg-muted-foreground/10 rounded flex items-center justify-center"
+              className="h-full bg-muted-foreground/10 rounded-full flex items-center justify-center"
               style={{ width: `${availablePercentage}%`, minWidth: '20px' }}
             >
               <span className="text-muted-foreground font-medium text-xs">
-                {Math.round(availableTokens)}
+                {Math.round(Math.abs(availableTokens))}
               </span>
             </div>
           )}
@@ -230,7 +230,7 @@ export function TokenAllocationModal({
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>Other pages: {Math.round(otherPagesTokens)}</span>
           <span>This page: {Math.round(currentPageAllocation)}</span>
-          <span>Available: {Math.round(availableTokens)}</span>
+          <span>{availableTokens < 0 ? 'Unfunded tokens' : 'Available'}: {Math.round(Math.abs(availableTokens))}</span>
         </div>
       </div>
     );

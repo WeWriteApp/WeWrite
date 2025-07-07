@@ -19,6 +19,7 @@ import {
   Users,
   Activity
 } from 'lucide-react';
+import { StatusIcon } from '../ui/status-icon';
 
 interface FinancialTransaction {
   id: string;
@@ -127,13 +128,13 @@ export default function TransactionTrackingDashboard() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <StatusIcon status="success" size="sm" position="static" />;
       case 'failed':
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <StatusIcon status="error" size="sm" position="static" />;
       case 'processing':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
+        return <StatusIcon status="pending" size="sm" position="static" />;
       default:
-        return <AlertTriangle className="h-4 w-4 text-gray-500" />;
+        return <StatusIcon status="warning" size="sm" position="static" />;
     }
   };
 

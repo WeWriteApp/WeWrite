@@ -7,12 +7,24 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
-import { Plus, Minus, ExternalLink, DollarSign, ArrowUpDown, Trash2, Clock } from 'lucide-react';
+import { Plus, Minus, ExternalLink, DollarSign, ArrowUpDown, Trash2, Clock, RotateCcw, X } from 'lucide-react';
 import { TokenBalance } from '../../types/database';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
 import { useTokenIncrement } from '../../contexts/TokenIncrementContext';
+import { triggerTokenBalanceRefresh } from '../../contexts/TokenBalanceContext';
+
+// Custom Zero with diagonal line icon component
+const ZeroWithCross = ({ className }: { className?: string }) => (
+  <div className={`relative inline-flex items-center justify-center ${className}`}>
+    <span className="text-xs font-bold">0</span>
+    <div
+      className="absolute w-2 h-px bg-current transform rotate-45"
+      style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(45deg)' }}
+    />
+  </div>
+);
 
 interface PageAllocation {
   id: string;
@@ -63,6 +75,8 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
   const [loadingMore, setLoadingMore] = useState(false);
   const [updatingAllocation, setUpdatingAllocation] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('tokens-desc');
+  const [sortingDelayed, setSortingDelayed] = useState(false);
+  const sortDelayTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Optimistic UI state
   const [pendingChanges, setPendingChanges] = useState<Record<string, number>>({});
@@ -73,23 +87,13 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    loadAllocations();
-  }, []);
+    if (currentAccount?.uid) {
+      loadAllocations();
+    }
+  }, [currentAccount?.uid]);
 
-  // Periodic state synchronization to handle edge cases
-  useEffect(() => {
-    if (!currentAccount?.uid) return;
-
-    // Set up periodic refresh to catch any state drift
-    const syncInterval = setInterval(() => {
-      // Only sync if there are no pending changes to avoid conflicts
-      if (Object.keys(pendingChanges).length === 0) {
-        loadAllocations();
-      }
-    }, 30000); // Sync every 30 seconds when idle
-
-    return () => clearInterval(syncInterval);
-  }, [currentAccount?.uid, pendingChanges]);
+  // Remove periodic sync to prevent jarring reloads
+  // Data will be refreshed only when user performs actions or navigates back to page
 
   // Cleanup debounce timers on unmount
   useEffect(() => {
@@ -97,16 +101,24 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
       Object.values(debounceTimersRef.current).forEach(timer => {
         clearTimeout(timer);
       });
+
+      // Cleanup sort delay timer
+      if (sortDelayTimerRef.current) {
+        clearTimeout(sortDelayTimerRef.current);
+      }
     };
   }, []);
 
-  // Memoized sorted allocations to trigger animations when sort changes
-  const sortedAllocations = useMemo(() => {
-    if (!allocationData?.allocations) return [];
+  // Store the stable sorted order that only updates when not delayed
+  const [stableSortedOrder, setStableSortedOrder] = useState<PageAllocation[]>([]);
+
+  // Effect to update stable sorted order only when sorting is not delayed
+  useEffect(() => {
+    if (!allocationData?.allocations || sortingDelayed) return;
 
     const allocations = [...allocationData.allocations];
 
-    // First sort by the selected criteria
+    // Perform normal sorting
     let sorted;
     switch (sortBy) {
       case 'tokens-desc':
@@ -136,8 +148,27 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
     const activeAllocations = sorted.filter(a => a.tokens > 0);
     const zeroAllocations = sorted.filter(a => a.tokens === 0);
 
-    return [...activeAllocations, ...zeroAllocations];
-  }, [allocationData?.allocations, sortBy]);
+    setStableSortedOrder([...activeAllocations, ...zeroAllocations]);
+  }, [allocationData?.allocations, sortBy, sortingDelayed]);
+
+  // Display allocations with updated token values but stable order during delays
+  const sortedAllocations = useMemo(() => {
+    if (!allocationData?.allocations) return [];
+
+    if (stableSortedOrder.length === 0) {
+      // Initial load - return current allocations with default sort
+      const allocations = [...allocationData.allocations];
+      const activeAllocations = allocations.filter(a => a.tokens > 0);
+      const zeroAllocations = allocations.filter(a => a.tokens === 0);
+      return [...activeAllocations.sort((a, b) => b.tokens - a.tokens), ...zeroAllocations];
+    }
+
+    // Update the stable order with current token values while maintaining position
+    return stableSortedOrder.map(stableItem => {
+      const currentItem = allocationData.allocations.find(a => a.pageId === stableItem.pageId);
+      return currentItem || stableItem;
+    }).filter(item => allocationData.allocations.some(a => a.pageId === item.pageId));
+  }, [allocationData?.allocations, stableSortedOrder]);
 
   // Calculate maximum tokens for bar graph proportions
   const maxTokens = useMemo(() => {
@@ -145,6 +176,82 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
     const max = Math.max(...allocationData.allocations.map(a => a.tokens));
     return max > 0 ? max : 1; // Ensure we never have 0 as max to avoid division by zero
   }, [allocationData?.allocations]);
+
+  // Calculate unfunded tokens for each allocation
+  const unfundedTokensData = useMemo(() => {
+    if (!allocationData?.summary.balance) return { unfundedByPage: {}, totalUnfunded: 0 };
+
+    const availableTokens = allocationData.summary.balance.availableTokens;
+
+    // If we have positive available tokens, nothing is unfunded
+    if (availableTokens >= 0) {
+      return { unfundedByPage: {}, totalUnfunded: 0 };
+    }
+
+    // Calculate total overspend
+    const totalUnfunded = Math.abs(availableTokens);
+
+    // Sort allocations by tokens (highest first) to determine which are unfunded
+    const sortedByTokens = [...sortedAllocations]
+      .filter(a => a.tokens > 0)
+      .sort((a, b) => b.tokens - a.tokens);
+
+    const unfundedByPage: Record<string, number> = {};
+
+    // New algorithm: Distribute unfunded tokens equally across highest pages
+    // so that all pages end up with the same funded amount
+
+    let remainingUnfunded = totalUnfunded;
+    let currentIndex = 0;
+
+    while (remainingUnfunded > 0 && currentIndex < sortedByTokens.length) {
+      // Find all pages at the current highest level
+      const currentHighest = sortedByTokens[currentIndex].tokens;
+      const pagesAtCurrentLevel = [];
+
+      for (let i = currentIndex; i < sortedByTokens.length; i++) {
+        if (sortedByTokens[i].tokens === currentHighest) {
+          pagesAtCurrentLevel.push(sortedByTokens[i]);
+        } else {
+          break;
+        }
+      }
+
+      // Calculate how much to reduce from each page at this level
+      const nextHighest = currentIndex + pagesAtCurrentLevel.length < sortedByTokens.length
+        ? sortedByTokens[currentIndex + pagesAtCurrentLevel.length].tokens
+        : 0;
+
+      // Maximum we can reduce from each page at this level
+      const maxReductionPerPage = currentHighest - nextHighest;
+      const totalMaxReduction = maxReductionPerPage * pagesAtCurrentLevel.length;
+
+      if (totalMaxReduction >= remainingUnfunded) {
+        // We can distribute the remaining unfunded tokens equally across these pages
+        const unfundedPerPage = Math.floor(remainingUnfunded / pagesAtCurrentLevel.length);
+        const extraUnfunded = remainingUnfunded % pagesAtCurrentLevel.length;
+
+        pagesAtCurrentLevel.forEach((allocation, index) => {
+          const unfundedForThisPage = unfundedPerPage + (index < extraUnfunded ? 1 : 0);
+          if (unfundedForThisPage > 0) {
+            unfundedByPage[allocation.pageId] = (unfundedByPage[allocation.pageId] || 0) + unfundedForThisPage;
+          }
+        });
+
+        remainingUnfunded = 0;
+      } else {
+        // Reduce all pages at this level to the next level
+        pagesAtCurrentLevel.forEach(allocation => {
+          unfundedByPage[allocation.pageId] = (unfundedByPage[allocation.pageId] || 0) + maxReductionPerPage;
+        });
+
+        remainingUnfunded -= totalMaxReduction;
+        currentIndex += pagesAtCurrentLevel.length;
+      }
+    }
+
+    return { unfundedByPage, totalUnfunded };
+  }, [allocationData?.summary.balance, sortedAllocations]);
 
   const loadAllocations = async (loadMore = false) => {
     if (!currentAccount?.uid) {
@@ -188,8 +295,12 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
           allocations: [...allocationData.allocations, ...newAllocations]
         });
       } else {
-        // Replace with new data
-        setAllocationData(data);
+        // Replace with new data only if it's actually different
+        if (!allocationData ||
+            JSON.stringify(allocationData.allocations) !== JSON.stringify(data.allocations) ||
+            allocationData.summary.totalTokensAllocated !== data.summary.totalTokensAllocated) {
+          setAllocationData(data);
+        }
       }
 
     } catch (error) {
@@ -215,13 +326,12 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
 
   // Debounced database update function
   const debouncedDatabaseUpdate = useCallback(async (pageId: string, finalTokens: number) => {
-    if (!allocationData?.summary.balance) return;
+    if (!allocationData?.summary) return;
 
     // Check if the current allocation data is still valid by comparing with server
     const currentAllocation = allocationData.allocations.find(a => a.pageId === pageId);
     if (!currentAllocation) {
-      console.warn('Allocation not found, refreshing data');
-      await loadAllocations();
+      console.warn('Allocation not found, but keeping optimistic updates');
       return;
     }
 
@@ -261,8 +371,8 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
     } catch (error) {
       console.error('Error allocating tokens:', error);
 
-      // Revert optimistic update on error by reloading fresh data
-      await loadAllocations();
+      // Don't reload data on error - keep user's optimistic updates
+      // This allows overspending to persist even if server validation fails
 
       // Clear pending changes for this page
       setPendingChanges(prev => {
@@ -271,31 +381,48 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
         return updated;
       });
 
-      // Show error feedback to user
-      toast({
-        title: "Update Failed",
-        description: error instanceof Error ? error.message : "Failed to update token allocation. Please try again.",
-        variant: "destructive",
-        duration: 5000
-      });
+      // Only show error feedback for non-overspending errors
+      if (!error.message?.includes('Insufficient tokens')) {
+        toast({
+          title: "Update Failed",
+          description: error instanceof Error ? error.message : "Failed to update token allocation. Please try again.",
+          variant: "destructive",
+          duration: 5000
+        });
+      }
     }
   }, [allocationData]);
 
   const handleTokenAllocation = (pageId: string, change: number) => {
-    if (!allocationData?.summary.balance) return;
+    if (!allocationData?.summary) return;
 
     const currentAllocation = allocationData.allocations.find(a => a.pageId === pageId);
     const currentTokens = currentAllocation?.tokens || 0;
-    const pendingChange = pendingChanges[pageId] || 0;
-    const currentWithPending = currentTokens + pendingChange;
-    const newAllocation = Math.max(0, currentWithPending + change);
 
-    // Validate allocation
-    const maxAllocation = allocationData.summary.balance.availableTokens + currentTokens;
-    if (newAllocation > maxAllocation) {
-      console.log('Insufficient tokens available');
-      return;
+    // Calculate the new allocation value, ensuring it doesn't go below 0
+    const newAllocation = Math.max(0, currentTokens + change);
+
+    // If the change would result in the same value, don't do anything
+    if (newAllocation === currentTokens) return;
+
+    // Calculate the actual change that will be applied (might be different due to Math.max)
+    const actualChange = newAllocation - currentTokens;
+
+    // Allow all changes - users can overspend and see unfunded tokens
+
+    // Delay sorting to prevent items jumping during rapid clicks
+    setSortingDelayed(true);
+
+    // Clear existing sort delay timer
+    if (sortDelayTimerRef.current) {
+      clearTimeout(sortDelayTimerRef.current);
     }
+
+    // Set new timer to re-enable sorting after 300ms of inactivity
+    sortDelayTimerRef.current = setTimeout(() => {
+      setSortingDelayed(false);
+      sortDelayTimerRef.current = null;
+    }, 300);
 
     // Update UI immediately (optimistic update)
     setAllocationData(prev => {
@@ -310,18 +437,21 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
         ),
         summary: {
           ...prev.summary,
-          totalTokensAllocated: prev.summary.totalTokensAllocated + change,
+          totalTokensAllocated: prev.summary.totalTokensAllocated + actualChange,
           balance: prev.summary.balance ? {
             ...prev.summary.balance,
-            availableTokens: prev.summary.balance.availableTokens - change
+            availableTokens: prev.summary.balance.availableTokens - actualChange
           } : null
         }
       };
 
-      // Notify parent component of the update
+      // Notify parent component of the update (debounced to prevent excessive updates)
       if (onAllocationUpdate) {
         onAllocationUpdate(updatedData);
       }
+
+      // Trigger global token balance refresh
+      triggerTokenBalanceRefresh();
 
       return updatedData;
     });
@@ -329,7 +459,7 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
     // Track pending changes
     setPendingChanges(prev => ({
       ...prev,
-      [pageId]: (prev[pageId] || 0) + change
+      [pageId]: (prev[pageId] || 0) + actualChange
     }));
 
     // Clear existing timer for this page
@@ -379,15 +509,7 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
     const currentTokens = currentAllocation?.tokens || 0;
     const change = newTokens - currentTokens;
 
-    // Validate against available tokens
-    if (change > 0 && allocationData?.summary.balance) {
-      const maxAllocation = allocationData.summary.balance.availableTokens + currentTokens;
-      if (newTokens > maxAllocation) {
-        // Reset to max possible value
-        setInputValues(prev => ({ ...prev, [pageId]: maxAllocation.toString() }));
-        return;
-      }
-    }
+    // Allow all token amounts - users can overspend
 
     // Apply the change
     if (change !== 0) {
@@ -403,6 +525,18 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
     const currentAllocation = allocationData?.allocations.find(a => a.pageId === pageId);
     setInputValues(prev => ({ ...prev, [pageId]: (currentAllocation?.tokens || 0).toString() }));
     setEditingTokens(prev => ({ ...prev, [pageId]: false }));
+  };
+
+  // Handle zeroing out allocation
+  const handleZeroAllocation = (pageId: string) => {
+    if (!allocationData?.summary) return;
+
+    const currentAllocation = allocationData.allocations.find(a => a.pageId === pageId);
+    const currentTokens = currentAllocation?.tokens || 0;
+
+    if (currentTokens > 0) {
+      handleTokenAllocation(pageId, -currentTokens);
+    }
   };
 
   // Handle deleting zero allocation
@@ -495,7 +629,11 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
     );
   }
 
-  if (!allocationData || !allocationData.summary.balance) {
+  // Never hide the breakdown once we have any data - always show the interface
+  // Only show "no data" message on initial load when we truly have no data
+  const shouldShowNoDataMessage = !loading && (!allocationData || allocationData.allocations.length === 0) && !currentAccount?.uid;
+
+  if (shouldShowNoDataMessage) {
     return (
       <Card className={className}>
         <CardHeader>
@@ -517,8 +655,6 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
       </Card>
     );
   }
-
-  const { summary } = allocationData;
 
   return (
     <Card className={className}>
@@ -616,8 +752,14 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                   const isZeroAllocation = allocation.tokens === 0;
                   const isEditing = editingTokens[allocation.pageId];
 
-                  // Calculate percentage for background bar (0-100%)
+                  // Calculate percentage for progress bar (0-100%)
                   const barPercentage = maxTokens > 0 ? (allocation.tokens / maxTokens) * 100 : 0;
+
+                  // Calculate funded vs unfunded portions
+                  const unfundedTokens = unfundedTokensData.unfundedByPage[allocation.pageId] || 0;
+                  const fundedTokens = allocation.tokens - unfundedTokens;
+                  const fundedPercentage = maxTokens > 0 ? (fundedTokens / maxTokens) * 100 : 0;
+                  const unfundedPercentage = maxTokens > 0 ? (unfundedTokens / maxTokens) * 100 : 0;
 
                   return (
                     <motion.div
@@ -632,21 +774,12 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                         y: { duration: 0.3 },
                         delay: index * 0.05 // Stagger effect
                       }}
-                      className={`relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-theme-strong rounded-lg hover:bg-muted/50 hover-border-strong transition-colors overflow-hidden ${
+                      className={`flex flex-col gap-3 p-4 border-theme-strong rounded-lg hover:bg-muted/50 hover-border-strong transition-colors ${
                         isZeroAllocation ? 'opacity-50' : ''
                       }`}
                     >
-                      {/* Subtle background bar */}
-                      <div
-                        className="absolute inset-0 bg-gradient-to-r from-accent/10 to-accent/5 transition-all duration-300"
-                        style={{
-                          width: `${barPercentage}%`,
-                          opacity: isZeroAllocation ? 0.3 : 0.6
-                        }}
-                      />
-
-                      {/* Content overlay */}
-                      <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+                      {/* Main content row */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <Link
@@ -701,6 +834,11 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                                     (saving...)
                                   </span>
                                 )}
+                                {unfundedTokensData.unfundedByPage[allocation.pageId] && (
+                                  <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                                    {unfundedTokensData.unfundedByPage[allocation.pageId]} unfunded
+                                  </div>
+                                )}
                               </div>
                               <div className="text-xs text-muted-foreground">per month</div>
                             </div>
@@ -708,38 +846,74 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                         </div>
 
                         <div className="flex gap-1">
+                          {/* Always show three buttons */}
+
+                          {/* Minus Button - Allow reducing even when overspending */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleTokenAllocation(allocation.pageId, -incrementAmount)}
+                            disabled={allocation.tokens <= 0}
+                            className="h-8 w-8 p-0"
+                            title={allocation.tokens <= 0 ? "Cannot go below zero" : `Remove ${incrementAmount} tokens`}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+
+                          {/* Plus Button - Always enabled, allow overspending */}
+                          <Button
+                            size="sm"
+                            onClick={() => handleTokenAllocation(allocation.pageId, incrementAmount)}
+                            className="h-8 w-8 p-0"
+                            title={`Add ${incrementAmount} tokens`}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+
+                          {/* Third Button - Zero or Delete */}
                           {isZeroAllocation ? (
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleDeleteAllocation(allocation.pageId)}
                               className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                              title="Remove from list"
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           ) : (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleTokenAllocation(allocation.pageId, -incrementAmount)}
-                                disabled={allocation.tokens <= 0}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => handleTokenAllocation(allocation.pageId, incrementAmount)}
-                                disabled={(summary.balance?.availableTokens || 0) <= 0}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleZeroAllocation(allocation.pageId)}
+                              className="h-8 w-8 p-0"
+                              title="Zero out allocation"
+                            >
+                              <ZeroWithCross className="h-3 w-3" />
+                            </Button>
                           )}
                         </div>
                       </div>
+                      </div>
+
+                      {/* Progress bar row - separate from main content */}
+                      <div className="w-full h-2 bg-muted/30 rounded-full overflow-hidden">
+                        <div className="flex h-full gap-0.5">
+                          {/* Funded tokens (solid blue with rounded caps) */}
+                          {fundedPercentage > 0 && (
+                            <div
+                              className="bg-blue-600 transition-all duration-300 rounded-full"
+                              style={{ width: `${fundedPercentage}%` }}
+                            />
+                          )}
+                          {/* Unfunded tokens (solid orange with rounded caps) */}
+                          {unfundedPercentage > 0 && (
+                            <div
+                              className="bg-orange-600 transition-all duration-300 rounded-full"
+                              style={{ width: `${unfundedPercentage}%` }}
+                            />
+                          )}
+                        </div>
                       </div>
                     </motion.div>
                   );
@@ -785,17 +959,7 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
               </div>
             )}
 
-            {/* Total Summary */}
-            <div className="border-t-only pt-4 mt-6">
-              <div className="flex justify-between items-center text-sm">
-                <span className="font-medium">Total Allocated:</span>
-                <span className="font-medium">{summary.totalTokensAllocated} tokens</span>
-              </div>
-              <div className="flex justify-between items-center text-sm text-muted-foreground mt-1">
-                <span>Available:</span>
-                <span>{summary.balance?.availableTokens || 0} tokens</span>
-              </div>
-            </div>
+
           </div>
         )}
       </CardContent>

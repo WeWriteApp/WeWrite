@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { CheckCircle, XCircle, Clock } from 'lucide-react';
+import { StatusIcon } from '../ui/status-icon';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 
 interface EmailVerificationStatusProps {
@@ -15,7 +16,7 @@ export function EmailVerificationStatus({ className = "" }: EmailVerificationSta
   const getStatusConfig = () => {
     if (isEmailVerified) {
       return {
-        icon: <CheckCircle className="h-4 w-4" />,
+        icon: <StatusIcon status="success" size="sm" position="static" />,
         text: "Email verified",
         bgColor: "bg-success/10 dark:bg-success/20",
         borderColor: "border-theme-medium",
@@ -25,7 +26,7 @@ export function EmailVerificationStatus({ className = "" }: EmailVerificationSta
     }
 
     return {
-      icon: <XCircle className="h-4 w-4" />,
+      icon: <StatusIcon status="error" size="sm" position="static" />,
       text: "Email not verified",
       bgColor: "bg-red-50 dark:bg-red-950/20",
       borderColor: "border-theme-medium",

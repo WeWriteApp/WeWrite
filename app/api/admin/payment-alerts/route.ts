@@ -70,10 +70,24 @@ export async function GET(request: NextRequest) {
     }
 
     // Check for failed subscriptions
-    const failedSubscriptionsSnapshot = await adminDb.collectionGroup('subscription')
-      .where('status', '==', 'past_due')
-      .where('failureCount', '>=', 2)
-      .get();
+    let failedSubscriptionsSnapshot: any = { size: 0 };
+
+    try {
+      console.log('[Payment Alerts] Querying failed subscriptions...');
+      failedSubscriptionsSnapshot = await adminDb.collectionGroup('subscription')
+        .where('status', '==', 'past_due')
+        .where('failureCount', '>=', 2)
+        .get();
+      console.log(`[Payment Alerts] Found ${failedSubscriptionsSnapshot.size} failed subscriptions`);
+    } catch (error: any) {
+      console.error('[Payment Alerts] Error querying failed subscriptions:', {
+        error: error.message,
+        code: error.code,
+        query: 'collectionGroup(subscription).where(status, ==, past_due).where(failureCount, >=, 2)',
+        requiredIndex: 'subscription collection: (status, failureCount)',
+        stack: error.stack
+      });
+    }
 
     if (failedSubscriptionsSnapshot.size > 0) {
       alerts.push({

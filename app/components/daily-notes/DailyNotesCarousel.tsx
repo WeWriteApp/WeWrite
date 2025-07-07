@@ -124,11 +124,8 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     if (!currentAccount?.uid) return;
 
     try {
-      // Generate all possible YYYY-MM-DD titles for the date range
-      const dateStrings = dateRange.map(date => format(date, 'yyyy-MM-dd'));
-
       // Call API endpoint to get user's pages
-      const response = await fetch(`/api/pages?userId=${currentAccount?.uid}&limit=1000&orderBy=title`)
+      const response = await fetch(`/api/my-pages?userId=${currentAccount?.uid}&limit=1000&sortBy=title&sortDirection=asc`)
 
       if (!response.ok) {
         throw new Error(`Failed to fetch pages: ${response.status}`)
@@ -136,24 +133,21 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
 
       const result = await response.json()
 
-      if (!result.success) {
+      if (result.error) {
         throw new Error(result.error || 'Failed to fetch pages')
       }
 
       const foundNotes = new Set<string>();
       const pageIdMap = new Map<string, string>();
 
-      // Filter pages to find daily notes
-      result.data.pages.forEach((page: any) => {
+      // Filter pages to find ALL daily notes (not just those in current range)
+      result.pages.forEach((page: any) => {
         // Client-side filtering: only include pages with exact YYYY-MM-DD format titles
-        if (page.title &&
-            dateStrings.includes(page.title) &&
-            isExactDateFormat(page.title)) {
+        if (page.title && isExactDateFormat(page.title)) {
           foundNotes.add(page.title);
           pageIdMap.set(page.title, page.id);
         }
       });
-
       setExistingNotes(foundNotes);
       setNotePageIds(pageIdMap);
     } catch (error) {

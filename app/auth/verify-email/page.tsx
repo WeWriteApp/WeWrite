@@ -5,16 +5,23 @@ import { useRouter } from "next/navigation";
 // Removed direct Firebase imports - now using API endpoints
 import { Button } from "../../components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
-import { CheckCircle, AlertCircle, Mail, RefreshCw, Loader2, Settings } from "lucide-react";
+import { CheckCircle, AlertCircle, Mail, RefreshCw, Loader2, Settings, Clock } from "lucide-react";
 import { ModernAuthLayout } from "../../components/layout/modern-auth-layout";
 import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
+import { auth } from "../../firebase/config";
+import { sendEmailVerification, reload } from 'firebase/auth';
+import {
+  getResendCooldownRemaining,
+  canResendVerificationEmail,
+  startResendCooldown
+} from '../../services/emailVerificationNotifications';
 
 export default function VerifyEmailPage() {
   const router = useRouter();
   const [userEmail, setUserEmail] = useState("");
   const [isResending, setIsResending] = useState(false);
   const [isCheckingVerification, setIsCheckingVerification] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(60); // Start with 60 second countdown
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -73,18 +80,23 @@ export default function VerifyEmailPage() {
     initializeVerification();
   }, [router, isAuthenticated, currentAccount, isLoading]);
 
-  // Cooldown timer for resend button
+  // Update cooldown timer
   useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setTimeout(() => {
-        setResendCooldown(resendCooldown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [resendCooldown]);
+    const updateCooldown = () => {
+      setCooldownRemaining(getResendCooldownRemaining());
+    };
+
+    // Initial update
+    updateCooldown();
+
+    // Update every second while cooldown is active
+    const interval = setInterval(updateCooldown, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleResendEmail = async () => {
-    if (!auth.currentUser || resendCooldown > 0) return;
+    if (!auth.currentUser || !canResendVerificationEmail()) return;
 
     setIsResending(true);
     setError("");
@@ -92,19 +104,21 @@ export default function VerifyEmailPage() {
 
     try {
       await sendEmailVerification(auth.currentUser);
+      startResendCooldown();
+      setCooldownRemaining(getResendCooldownRemaining());
+
       console.log("Verification email resent");
       setSuccess(true);
-      setResendCooldown(60); // 60 second cooldown
     } catch (error: any) {
       console.error("Error resending verification email:", error);
-      
+
       let errorMessage = "Failed to resend verification email";
       if (error.code === 'auth/too-many-requests') {
         errorMessage = "Too many requests. Please wait before trying again";
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       setError(errorMessage);
     } finally {
       setIsResending(false);
@@ -223,7 +237,7 @@ export default function VerifyEmailPage() {
             <Button
               variant="outline"
               onClick={handleResendEmail}
-              disabled={isResending || resendCooldown > 0}
+              disabled={isResending || cooldownRemaining > 0}
               className="w-full"
             >
               {isResending ? (
@@ -231,16 +245,28 @@ export default function VerifyEmailPage() {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Resending...
                 </>
+              ) : cooldownRemaining > 0 ? (
+                <>
+                  <Clock className="mr-2 h-4 w-4" />
+                  {cooldownRemaining > 60
+                    ? `Resend in ${Math.ceil(cooldownRemaining / 60)}m ${cooldownRemaining % 60}s`
+                    : `Resend in ${cooldownRemaining}s`
+                  }
+                </>
               ) : (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend verification email"}
+                  Resend verification email
                 </>
               )}
             </Button>
-            {resendCooldown > 0 && (
+            {cooldownRemaining > 0 && (
               <p className="text-xs text-muted-foreground text-center">
-                Didn't receive the email? Resend in {resendCooldown} seconds
+                Didn't receive the email? You can resend in{' '}
+                {cooldownRemaining > 60
+                  ? `${Math.ceil(cooldownRemaining / 60)} minute${Math.ceil(cooldownRemaining / 60) > 1 ? 's' : ''} and ${cooldownRemaining % 60} second${cooldownRemaining % 60 !== 1 ? 's' : ''}`
+                  : `${cooldownRemaining} second${cooldownRemaining !== 1 ? 's' : ''}`
+                }
               </p>
             )}
           </div>

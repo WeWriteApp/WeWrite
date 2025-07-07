@@ -12,6 +12,8 @@ import { createEmailVerificationNotification } from '../firebase/notifications';
 // Local storage key for tracking notification dismissals
 const DISMISSED_KEY = 'email_verification_notification_dismissed';
 const LAST_NOTIFICATION_KEY = 'last_email_verification_notification';
+const RESEND_COOLDOWN_KEY = 'email_verification_resend_cooldown';
+const RESEND_COUNT_KEY = 'email_verification_resend_count';
 
 /**
  * Check if the user has dismissed email verification notifications
@@ -46,12 +48,74 @@ export const dismissEmailVerificationNotifications = (): void => {
  */
 export const clearDismissedStatus = (): void => {
   if (typeof window === 'undefined') return;
-  
+
   try {
     localStorage.removeItem(DISMISSED_KEY);
     localStorage.removeItem(LAST_NOTIFICATION_KEY);
+    localStorage.removeItem(RESEND_COOLDOWN_KEY);
+    localStorage.removeItem(RESEND_COUNT_KEY);
   } catch (error) {
     console.error('Error clearing dismissed status:', error);
+  }
+};
+
+/**
+ * Get the current resend cooldown remaining time in seconds
+ */
+export const getResendCooldownRemaining = (): number => {
+  if (typeof window === 'undefined') return 0;
+
+  try {
+    const cooldownData = localStorage.getItem(RESEND_COOLDOWN_KEY);
+    if (!cooldownData) return 0;
+
+    const { expiresAt } = JSON.parse(cooldownData);
+    const now = Date.now();
+    const remaining = Math.max(0, Math.ceil((expiresAt - now) / 1000));
+
+    // Clean up expired cooldown
+    if (remaining === 0) {
+      localStorage.removeItem(RESEND_COOLDOWN_KEY);
+    }
+
+    return remaining;
+  } catch (error) {
+    console.error('Error getting resend cooldown:', error);
+    return 0;
+  }
+};
+
+/**
+ * Check if resend is currently allowed
+ */
+export const canResendVerificationEmail = (): boolean => {
+  return getResendCooldownRemaining() === 0;
+};
+
+/**
+ * Start a resend cooldown period
+ * First resend: 60 seconds, subsequent resends: 5 minutes (300 seconds)
+ */
+export const startResendCooldown = (): void => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    // Get current resend count
+    const countData = localStorage.getItem(RESEND_COUNT_KEY);
+    const currentCount = countData ? parseInt(countData, 10) : 0;
+    const newCount = currentCount + 1;
+
+    // Determine cooldown duration
+    const cooldownSeconds = newCount === 1 ? 60 : 300; // 60s first time, 5min after
+    const expiresAt = Date.now() + (cooldownSeconds * 1000);
+
+    // Store cooldown data
+    localStorage.setItem(RESEND_COOLDOWN_KEY, JSON.stringify({ expiresAt }));
+    localStorage.setItem(RESEND_COUNT_KEY, newCount.toString());
+
+    console.log(`Email verification resend cooldown started: ${cooldownSeconds}s (attempt ${newCount})`);
+  } catch (error) {
+    console.error('Error starting resend cooldown:', error);
   }
 };
 

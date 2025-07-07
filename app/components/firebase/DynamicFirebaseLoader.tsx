@@ -177,7 +177,7 @@ export function useFirebaseLoader() {
  * Note: These are placeholder imports - replace with actual component paths
  */
 export const DynamicFirebaseAuth = dynamic(
-  () => import('../auth/AddUsername').then(mod => ({ default: mod.default })),
+  () => import('../auth/UsernameEnforcementModal').then(mod => ({ default: mod.default })),
   {
     loading: () => <FirebaseLoadingFallback />,
     ssr: false}

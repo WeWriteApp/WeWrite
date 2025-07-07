@@ -17,6 +17,7 @@ import { getSubscriptionButtonText, getSubscriptionNavigationPath, isActiveSubsc
 import { TokenService } from "../../services/tokenService";
 import { TokenBalance } from "../../types/database";
 import { getLoggedOutTokenBalance, getUserTokenBalance } from "../../utils/simulatedTokens";
+import { useTokenBalanceContext } from "../../contexts/TokenBalanceContext";
 
 export default function Header() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function Header() {
   const [headerHeight, setHeaderHeight] = React.useState(80); // Start at 80px (h-20)
 
   const [subscription, setSubscription] = React.useState(null);
-  const [tokenBalance, setTokenBalance] = React.useState<TokenBalance | null>(null);
+  const { tokenBalance: contextTokenBalance } = useTokenBalanceContext();
   const [simulatedTokenBalance, setSimulatedTokenBalance] = React.useState<any>(null);
   const headerRef = React.useRef<HTMLDivElement>(null);
 
@@ -37,7 +38,7 @@ export default function Header() {
   // Helper function to render token allocation display
   const renderTokenAllocationDisplay = () => {
     // Use real token balance if available, otherwise use unfunded tokens
-    const balance = tokenBalance || simulatedTokenBalance;
+    const balance = contextTokenBalance || simulatedTokenBalance;
     if (!balance) return null;
 
     return (
@@ -92,39 +93,7 @@ export default function Header() {
     };
   }, [currentAccount, isPaymentsEnabled]);
 
-  // Fetch token balance directly via API (simpler approach)
-  React.useEffect(() => {
-    console.log('🎯 Header: Token balance effect triggered', {
-      currentAccount: !!currentAccount,
-      isPaymentsEnabled
-    });
-
-    if (!currentAccount || !isPaymentsEnabled) {
-      console.log('🎯 Header: No currentAccount or payments disabled, clearing token balance');
-      setTokenBalance(null);
-      return;
-    }
-
-    console.log('🎯 Header: Fetching token balance via API');
-    // Fetch token balance directly via API (same approach as spend-tokens page)
-    fetch('/api/tokens/balance')
-      .then(response => response.json())
-      .then(data => {
-        console.log('🎯 Header: Token balance API response:', data);
-        if (data.summary) {
-          console.log('🎯 Header: Setting token balance from summary:', data.summary);
-          setTokenBalance(data.summary);
-        } else if (data.balance) {
-          console.log('🎯 Header: Setting token balance from balance:', data.balance);
-          setTokenBalance(data.balance);
-        } else {
-          console.log('🎯 Header: No balance or summary in response');
-        }
-      })
-      .catch(error => {
-        console.error('🎯 Header: Failed to fetch token balance:', error);
-      });
-  }, [currentAccount, isPaymentsEnabled]);
+  // Token balance is now provided by context - no need to fetch separately
 
   // Load unfunded token balance for users without subscriptions
   React.useEffect(() => {

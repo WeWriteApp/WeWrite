@@ -17,11 +17,17 @@ import {
   Coins,
   Palette
 } from 'lucide-react';
+import { StatusIcon } from '../components/ui/status-icon';
 import { useFeatureFlag } from '../utils/feature-flags';
 import { cn } from '../lib/utils';
 import { getOptimizedUserSubscription } from '../firebase/optimizedSubscription';
 import { isActiveSubscription, getSubscriptionStatusInfo } from '../utils/subscriptionStatus';
 import { WarningDot } from '../components/ui/warning-dot';
+import { useBankSetupStatus } from '../hooks/useBankSetupStatus';
+import { useTokenBalanceContext } from '../contexts/TokenBalanceContext';
+import { TokenPieChart } from '../components/ui/TokenPieChart';
+import { useUserEarnings } from '../hooks/useUserEarnings';
+
 
 interface SettingsSection {
   id: string;
@@ -44,6 +50,11 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
   // Check payments feature flag with proper user ID for real-time updates
   const paymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
+
+  // Get bank setup status, token balance, and user earnings
+  const bankSetupStatus = useBankSetupStatus();
+  const { tokenBalance } = useTokenBalanceContext();
+  const { earnings } = useUserEarnings();
 
   useEffect(() => {
     console.log('🎯 Settings Layout: Auth check', {
@@ -220,11 +231,17 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                   const isActive = pathname === section.href ||
                     (pathname.startsWith(section.href + '/') && section.href !== '/settings');
 
-                  // Show warning icon and color for subscription if inactive or cancelling
+                  // Show warning dots only for truly problematic states, not for active subscriptions
+                  // Don't show warning dots when we have status icons or when loading
                   const showWarning = section.id === 'subscription' &&
                     paymentsEnabled &&
-                    (hasActiveSubscription === false ||
-                     (subscriptionStatusInfo && ['cancelling', 'canceled', 'past_due', 'unpaid'].includes(subscriptionStatusInfo.status)));
+                    hasActiveSubscription !== null && // Don't show while loading
+                    (
+                      // Show warning for completely inactive subscriptions
+                      (hasActiveSubscription === false && (!subscriptionStatusInfo || subscriptionStatusInfo.status === 'none')) ||
+                      // Show warning for problematic states (but not for active cancelling subscriptions)
+                      (subscriptionStatusInfo && ['canceled', 'past_due', 'unpaid', 'incomplete'].includes(subscriptionStatusInfo.status) && hasActiveSubscription === false)
+                    );
 
                   // Get warning variant based on subscription status
                   const getWarningVariant = () => {
@@ -256,6 +273,39 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
                           isActive ? "text-primary" : "text-muted-foreground"
                         )} />
                         <span className="flex-1 text-left">{section.title}</span>
+
+                        {/* Status icons for specific sections - show success and warnings */}
+                        {section.id === 'subscription' && paymentsEnabled && hasActiveSubscription !== null && (
+                          hasActiveSubscription === true ? (
+                            <StatusIcon status="success" size="sm" position="static" />
+                          ) : (
+                            <StatusIcon status="warning" size="sm" position="static" />
+                          )
+                        )}
+
+                        {section.id === 'earnings' && paymentsEnabled && (() => {
+                          // Only show warning if user has funds but bank isn't set up
+                          if (earnings?.hasEarnings && !bankSetupStatus.isSetup) {
+                            return <StatusIcon status="warning" size="sm" position="static" />;
+                          }
+                          // Show success if bank is set up properly
+                          if (bankSetupStatus.isSetup) {
+                            return <StatusIcon status="success" size="sm" position="static" />;
+                          }
+                          // No icon if user has no funds to pay out
+                          return null;
+                        })()}
+
+                        {section.id === 'spend-tokens' && paymentsEnabled && tokenBalance && (
+                          <TokenPieChart
+                            allocatedTokens={tokenBalance.allocatedTokens}
+                            totalTokens={tokenBalance.totalTokens}
+                            size={20}
+                            strokeWidth={2}
+                            className="ml-2"
+                            showFraction={false}
+                          />
+                        )}
                       </button>
                       {showWarning && (
                         <WarningDot

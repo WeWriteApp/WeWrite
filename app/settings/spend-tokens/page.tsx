@@ -18,6 +18,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
+
 // Define interfaces
 interface Subscription {
   id: string;
@@ -91,7 +92,29 @@ export default function SpendTokensPage() {
       if (tokenResponse.ok) {
         const tokenData = await tokenResponse.json();
         console.log('🎯 Spend Tokens: Loaded token balance data', tokenData);
-        setTokenBalance(tokenData);
+
+        // Extract the balance data consistently with other components
+        if (tokenData.summary) {
+          // Ensure consistent calculation of available tokens
+          const availableTokens = tokenData.summary.totalTokens - tokenData.summary.allocatedTokens;
+          setTokenBalance({
+            totalTokens: tokenData.summary.totalTokens,
+            allocatedTokens: tokenData.summary.allocatedTokens,
+            availableTokens: availableTokens,
+            pendingTokens: 0
+          });
+        } else if (tokenData.balance) {
+          // Ensure consistent calculation of available tokens
+          const availableTokens = tokenData.balance.totalTokens - tokenData.balance.allocatedTokens;
+          setTokenBalance({
+            totalTokens: tokenData.balance.totalTokens,
+            allocatedTokens: tokenData.balance.allocatedTokens,
+            availableTokens: availableTokens,
+            pendingTokens: 0
+          });
+        } else {
+          setTokenBalance(null);
+        }
       } else {
         console.log('🎯 Spend Tokens: Token balance response not ok', tokenResponse.status);
       }
@@ -298,6 +321,8 @@ export default function SpendTokensPage() {
             className="mb-6"
             onAllocationUpdate={handleAllocationUpdate}
           />
+
+
 
           {/* Subscription Status Messages */}
           {currentSubscription && currentSubscription.cancelAtPeriodEnd && (

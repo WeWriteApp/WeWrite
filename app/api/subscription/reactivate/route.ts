@@ -13,6 +13,7 @@ import {
   getTierById,
   CUSTOM_TIER_CONFIG
 } from '../../../utils/subscriptionTiers';
+import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 
 // Initialize Firebase Admin and Stripe
 const adminApp = initAdmin();
@@ -44,8 +45,9 @@ export async function POST(request: NextRequest) {
 
     console.log(`[REACTIVATE SUBSCRIPTION] Starting reactivation for user ${userId}, subscription ${subscriptionId}`);
 
-    // Get current subscription data to check status
-    const subscriptionRef = adminDb.collection('users').doc(userId).collection('subscription').doc('current');
+    // Get current subscription data to check status using environment-aware path
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc('current');
     const subscriptionDoc = await subscriptionRef.get();
 
     if (!subscriptionDoc.exists) {

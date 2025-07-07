@@ -31,19 +31,47 @@ export async function GET(request: NextRequest) {
     const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 
     // Get subscription metrics
-    const subscriptionsSnapshot = await adminDb.collectionGroup('subscription')
-      .where('status', '==', 'active')
-      .get();
-    
-    const activeSubscriptions = subscriptionsSnapshot.size;
+    let activeSubscriptions = 0;
+    let lastMonthActiveSubscriptions = 0;
 
-    // Get last month's active subscriptions for growth calculation
-    const lastMonthSubscriptionsSnapshot = await adminDb.collectionGroup('subscription')
-      .where('status', '==', 'active')
-      .where('createdAt', '<=', lastMonthEnd)
-      .get();
-    
-    const lastMonthActiveSubscriptions = lastMonthSubscriptionsSnapshot.size;
+    try {
+      console.log('[Payment Metrics] Querying active subscriptions...');
+      const subscriptionsSnapshot = await adminDb.collectionGroup('subscription')
+        .where('status', '==', 'active')
+        .get();
+
+      activeSubscriptions = subscriptionsSnapshot.size;
+      console.log(`[Payment Metrics] Found ${activeSubscriptions} active subscriptions`);
+    } catch (error: any) {
+      console.error('[Payment Metrics] Error querying active subscriptions:', {
+        error: error.message,
+        code: error.code,
+        query: 'collectionGroup(subscription).where(status, ==, active)',
+        stack: error.stack
+      });
+      // Continue with 0 value
+    }
+
+    try {
+      console.log('[Payment Metrics] Querying last month active subscriptions...');
+      const lastMonthSubscriptionsSnapshot = await adminDb.collectionGroup('subscription')
+        .where('status', '==', 'active')
+        .where('createdAt', '<=', lastMonthEnd)
+        .get();
+
+      lastMonthActiveSubscriptions = lastMonthSubscriptionsSnapshot.size;
+      console.log(`[Payment Metrics] Found ${lastMonthActiveSubscriptions} last month active subscriptions`);
+    } catch (error: any) {
+      console.error('[Payment Metrics] Error querying last month subscriptions:', {
+        error: error.message,
+        code: error.code,
+        query: 'collectionGroup(subscription).where(status, ==, active).where(createdAt, <=, lastMonthEnd)',
+        requiredIndex: 'subscription collection: (status, createdAt)',
+        lastMonthEnd: lastMonthEnd.toISOString(),
+        stack: error.stack
+      });
+      // Continue with 0 value
+    }
     const subscriptionGrowth = lastMonthActiveSubscriptions > 0 
       ? ((activeSubscriptions - lastMonthActiveSubscriptions) / lastMonthActiveSubscriptions) * 100 
       : 0;
@@ -110,12 +138,28 @@ export async function GET(request: NextRequest) {
       : 0;
 
     // Get failed payment retry metrics
-    const failedPaymentsSnapshot = await adminDb.collectionGroup('subscription')
-      .where('status', 'in', ['past_due', 'unpaid'])
-      .where('lastFailedPaymentAt', '>=', today.toISOString())
-      .get();
+    let failedPayments = 0;
 
-    const failedPayments = failedPaymentsSnapshot.size;
+    try {
+      console.log('[Payment Metrics] Querying failed payments...');
+      const failedPaymentsSnapshot = await adminDb.collectionGroup('subscription')
+        .where('status', 'in', ['past_due', 'unpaid'])
+        .where('lastFailedPaymentAt', '>=', today.toISOString())
+        .get();
+
+      failedPayments = failedPaymentsSnapshot.size;
+      console.log(`[Payment Metrics] Found ${failedPayments} failed payments`);
+    } catch (error: any) {
+      console.error('[Payment Metrics] Error querying failed payments:', {
+        error: error.message,
+        code: error.code,
+        query: 'collectionGroup(subscription).where(status, in, [past_due, unpaid]).where(lastFailedPaymentAt, >=, today)',
+        requiredIndex: 'subscription collection: (status, lastFailedPaymentAt)',
+        today: today.toISOString(),
+        stack: error.stack
+      });
+      // Continue with 0 value
+    }
 
     // Calculate retry success rate (simplified - would need more detailed tracking)
     const retrySuccessRate = failedPayments > 0 ? Math.max(0, 100 - (failedPayments * 10)) : 100;
@@ -143,10 +187,28 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error fetching payment metrics:', error);
+    console.error('[Payment Metrics] Critical error in payment metrics API:', {
+      error: error.message,
+      code: error.code,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+      endpoint: '/api/admin/payment-metrics'
+    });
+
     return NextResponse.json({
       error: 'Failed to fetch payment metrics',
-      details: error.message
+      details: error.message,
+      code: error.code,
+      timestamp: new Date().toISOString(),
+      debugInfo: {
+        message: 'Check server logs for detailed error information',
+        possibleCauses: [
+          'Missing Firebase indexes for subscription queries',
+          'Firestore permissions issue',
+          'Invalid date range calculations',
+          'Collection structure mismatch'
+        ]
+      }
     }, { status: 500 });
   }
 }

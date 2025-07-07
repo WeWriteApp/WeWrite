@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { CreditCard, Settings, AlertTriangle, CheckCircle, Clock, DollarSign } from 'lucide-react';
+import { StatusIcon } from '../ui/status-icon';
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { listenToUserSubscription } from '../../firebase/subscription';
 import Link from 'next/link';
@@ -76,21 +77,22 @@ export function SubscriptionOverview() {
       subscription.currentPeriodEnd
     );
 
-    // Map status to appropriate icons
-    const iconMap = {
-      active: CheckCircle,
-      trialing: Clock,
-      past_due: AlertTriangle,
-      canceled: AlertTriangle,
-      cancelling: AlertTriangle,
-      pending: Clock,
-      incomplete: AlertTriangle};
+    // Map status to appropriate status icon types
+    const statusIconMap = {
+      active: 'success',
+      trialing: 'info',
+      past_due: 'warning',
+      canceled: 'error',
+      cancelling: 'warning',
+      pending: 'pending',
+      incomplete: 'warning'
+    } as const;
 
-    const IconComponent = iconMap[statusInfo.status] || AlertTriangle;
+    const statusIconType = statusIconMap[statusInfo.status] || 'warning';
 
     const badge = (
       <Badge variant={statusInfo.variant} className={`${statusInfo.color} flex items-center gap-1`}>
-        <IconComponent className="h-3 w-3" />
+        <StatusIcon status={statusIconType} size="sm" position="static" />
         {statusInfo.displayText}
       </Badge>
     );

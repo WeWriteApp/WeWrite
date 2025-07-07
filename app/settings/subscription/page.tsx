@@ -20,7 +20,8 @@ import {
   Calendar,
   DollarSign,
   Settings,
-  ArrowLeft
+  ArrowLeft,
+  RefreshCw
 } from 'lucide-react';
 import Link from 'next/link';
 import SubscriptionTierSlider from '../../components/subscription/SubscriptionTierSlider';
@@ -309,8 +310,13 @@ export default function SubscriptionPage() {
           // Hide the reactivation flow since subscription is now active
           setShowReactivationFlow(false);
 
-          // Refresh subscription data
+          // Force refresh subscription data with cache bust
           await fetchSubscription();
+
+          // Also trigger a page reload to ensure all components refresh
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
         } else {
           throw new Error(data.error || 'Failed to reactivate subscription');
         }
@@ -388,6 +394,24 @@ export default function SubscriptionPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         <div className="space-y-4 md:space-y-6">
+          {/* Debug info for subscription data */}
+          {process.env.NODE_ENV === 'development' && currentSubscription && (
+            <Card className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800">
+              <CardContent className="p-4">
+                <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">Debug: Subscription Data</h4>
+                <pre className="text-xs text-yellow-700 dark:text-yellow-300 overflow-auto">
+                  {JSON.stringify({
+                    amount: currentSubscription.amount,
+                    tier: currentSubscription.tier,
+                    status: currentSubscription.status,
+                    cancelAtPeriodEnd: currentSubscription.cancelAtPeriodEnd,
+                    stripeSubscriptionId: currentSubscription.stripeSubscriptionId
+                  }, null, 2)}
+                </pre>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Current Subscription Status */}
           {currentSubscription && (
             <Card>
@@ -416,7 +440,10 @@ export default function SubscriptionPage() {
 
                     {/* Status badges */}
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant={currentSubscription.status === 'active' ? 'default' : 'secondary'}>
+                      <Badge
+                        variant={currentSubscription.status === 'active' ? 'default' : 'secondary'}
+                        className={currentSubscription.status === 'active' ? 'bg-green-500 hover:bg-green-600 text-white' : ''}
+                      >
                         {currentSubscription.status}
                       </Badge>
                       {currentSubscription.cancelAtPeriodEnd && currentSubscription.billingCycleEnd && (
@@ -462,6 +489,28 @@ export default function SubscriptionPage() {
                       >
                         <Settings className="h-4 w-4 mr-2" />
                         Change Plan
+                      </Button>
+                    )}
+
+                    {/* Debug refresh button */}
+                    {process.env.NODE_ENV === 'development' && (
+                      <Button
+                        variant="outline"
+                        onClick={async () => {
+                          setLoading(true);
+                          await fetchSubscription();
+                          setLoading(false);
+                          toast({
+                            title: "Refreshed",
+                            description: "Subscription data has been refreshed"
+                          });
+                        }}
+                        className="w-full sm:w-auto"
+                        size="sm"
+                        disabled={loading}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Force Refresh
                       </Button>
                     )}
                   </div>

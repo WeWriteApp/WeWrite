@@ -11,6 +11,7 @@ import { PayoutSystemMonitor } from "../../components/admin/PayoutSystemMonitor"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
+import { CopyErrorButton } from "../../components/ui/CopyErrorButton";
 
 interface SystemHealthStatus {
   payments: 'healthy' | 'warning' | 'critical';
@@ -96,12 +97,73 @@ export default function PaymentsAdminPage() {
       warning: 'secondary',
       critical: 'destructive'
     } as const;
-    
+
     return (
       <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>
         {status.toUpperCase()}
       </Badge>
     );
+  };
+
+  const getTroubleshootingSteps = () => {
+    const steps = [];
+
+    if (systemHealth.payments === 'critical') {
+      steps.push('1. Check Firebase Console for missing indexes on subscription collection');
+      steps.push('2. Verify Stripe webhook endpoints are active and receiving events');
+      steps.push('3. Check API error logs for payment processing failures');
+    }
+
+    if (systemHealth.payouts === 'critical') {
+      steps.push('1. Verify Stripe Connect account status and capabilities');
+      steps.push('2. Check Firebase indexes for users collection queries');
+      steps.push('3. Review payout API error logs for transfer failures');
+    }
+
+    if (systemHealth.webhooks === 'critical') {
+      steps.push('1. Verify webhook endpoint URLs are accessible');
+      steps.push('2. Check webhook signature validation');
+      steps.push('3. Review webhook processing logs for errors');
+    }
+
+    return steps;
+  };
+
+  const getFirebaseIndexInstructions = () => {
+    const instructions = [];
+
+    if (systemHealth.payments === 'critical') {
+      instructions.push({
+        title: 'Subscription Collection Index',
+        collection: 'subscription',
+        fields: [{ name: 'status', order: 'Ascending' }],
+        description: 'Fixes payment processing queries'
+      });
+    }
+
+    if (systemHealth.payouts === 'critical') {
+      instructions.push({
+        title: 'Users Collection Index',
+        collection: 'users',
+        fields: [
+          { name: 'isCreator', order: 'Ascending' },
+          { name: 'lastActiveAt', order: 'Ascending' }
+        ],
+        description: 'Fixes payout metrics queries'
+      });
+
+      instructions.push({
+        title: 'Financial Transactions Index',
+        collection: 'financialTransactions',
+        fields: [
+          { name: 'type', order: 'Ascending' },
+          { name: 'createdAt', order: 'Ascending' }
+        ],
+        description: 'Fixes payment alerts queries'
+      });
+    }
+
+    return instructions;
   };
 
   if (loading) {
@@ -216,16 +278,93 @@ export default function PaymentsAdminPage() {
       {systemHealth.overall === 'critical' && (
         <Card className="border-red-500 bg-red-50 dark:bg-red-950">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <span className="font-semibold text-red-700 dark:text-red-300">
-                Critical System Issues Detected
-              </span>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+                <span className="font-semibold text-red-700 dark:text-red-300">
+                  Critical System Issues Detected
+                </span>
+              </div>
+              <CopyErrorButton
+                error={`Critical Payment System Issues - ${new Date().toISOString()}\n\nAffected Systems:\n${systemHealth.payments === 'critical' ? '• Payment Processing: CRITICAL\n' : ''}${systemHealth.payouts === 'critical' ? '• Payout System: CRITICAL\n' : ''}${systemHealth.webhooks === 'critical' ? '• Webhook Processing: CRITICAL\n' : ''}\nLast Health Check: ${lastHealthCheck?.toISOString() || 'Never'}\nURL: ${window.location.href}`}
+                size="sm"
+                variant="outline"
+                className="text-red-700 dark:text-red-300 border-red-300"
+              />
             </div>
-            <p className="text-sm text-red-600 dark:text-red-400">
-              One or more payment/payout systems are experiencing critical issues. 
-              Immediate attention required to prevent service disruption.
-            </p>
+            <div className="space-y-2">
+              <p className="text-sm text-red-600 dark:text-red-400">
+                <strong>Immediate Action Required:</strong> Critical failures detected in payment infrastructure.
+              </p>
+              <div className="text-xs text-red-500 dark:text-red-400 space-y-1">
+                {systemHealth.payments === 'critical' && (
+                  <div>• <strong>Payment Processing:</strong> Unable to process new subscriptions or charges</div>
+                )}
+                {systemHealth.payouts === 'critical' && (
+                  <div>• <strong>Payout System:</strong> Creator payments may be delayed or failing</div>
+                )}
+                {systemHealth.webhooks === 'critical' && (
+                  <div>• <strong>Webhook Processing:</strong> Payment status updates not being received</div>
+                )}
+                <div className="mt-2 pt-2 border-t border-red-200 dark:border-red-800">
+                  <div className="flex items-center justify-between mb-2">
+                    <strong>Quick Fix - Create Missing Firebase Indexes:</strong>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7 text-red-700 dark:text-red-300 border-red-300 hover:bg-red-100 dark:hover:bg-red-900"
+                      onClick={() => window.open('https://console.firebase.google.com/project/wewrite-ccd82/firestore/indexes', '_blank')}
+                    >
+                      Open Firebase Console
+                    </Button>
+                  </div>
+
+                  <div className="mt-2 space-y-3">
+                    {getFirebaseIndexInstructions().map((instruction, index) => (
+                      <div key={index} className="bg-red-50 dark:bg-red-950 p-3 rounded border border-red-200 dark:border-red-800">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-red-700 dark:text-red-300 text-sm">
+                            {instruction.title}
+                          </span>
+                          <CopyErrorButton
+                            error={`Firebase Index Creation Instructions:
+
+Collection: ${instruction.collection}
+Fields: ${instruction.fields.map(f => `${f.name} (${f.order})`).join(', ')}
+
+Steps:
+1. Go to Firebase Console > Firestore > Indexes
+2. Click "Create Index"
+3. Select collection: ${instruction.collection}
+4. Add fields: ${instruction.fields.map(f => `${f.name} (${f.order})`).join(', ')}
+5. Click "Create"
+
+URL: https://console.firebase.google.com/project/wewrite-ccd82/firestore/indexes`}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-red-600 dark:text-red-400"
+                          />
+                        </div>
+                        <div className="text-xs text-red-600 dark:text-red-400 space-y-1">
+                          <div><strong>Collection:</strong> {instruction.collection}</div>
+                          <div><strong>Fields:</strong> {instruction.fields.map(f => `${f.name} (${f.order})`).join(', ')}</div>
+                          <div><strong>Purpose:</strong> {instruction.description}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-3 pt-2 border-t border-red-200 dark:border-red-800">
+                    <strong>Additional Troubleshooting:</strong>
+                    <div className="mt-1 space-y-1">
+                      {getTroubleshootingSteps().map((step, index) => (
+                        <div key={index} className="text-xs">• {step}</div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

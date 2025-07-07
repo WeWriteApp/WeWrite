@@ -73,9 +73,9 @@ export class ServerTokenService {
     }
 
     try {
-      // Get current subscription to ensure token balance is accurate
-      const subscriptionRef = db.collection('users').doc(userId).collection('subscription').doc('current');
-      const subscriptionDoc = await subscriptionRef.get();
+      // CRITICAL FIX: Use the same subscription source as the sync logic
+      const { getUserSubscriptionServer } = await import('../firebase/subscription-server');
+      const subscriptionData = await getUserSubscriptionServer(userId, { verbose: false });
 
       const balanceRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES)).doc(userId);
       const balanceDoc = await balanceRef.get();
@@ -85,7 +85,17 @@ export class ServerTokenService {
       }
 
       const balanceData = balanceDoc.data();
-      const subscriptionData = subscriptionDoc.exists ? subscriptionDoc.data() : null;
+
+      // Log subscription data for debugging
+      if (subscriptionData && subscriptionData.status === 'active') {
+        console.log(`[TOKEN BALANCE] Found subscription for user ${userId}:`, {
+          amount: subscriptionData?.amount,
+          tokens: subscriptionData?.tokens,
+          status: subscriptionData?.status
+        });
+      } else {
+        console.log(`[TOKEN BALANCE] No active subscription found for user ${userId}`);
+      }
 
       // Get actual allocated tokens by summing current allocations
       const actualAllocatedTokens = await this.calculateActualAllocatedTokens(userId);
@@ -94,23 +104,36 @@ export class ServerTokenService {
       let totalTokens = balanceData?.totalTokens || 0;
       let monthlyAllocation = balanceData?.monthlyAllocation || 0;
 
-      // If subscription exists and has different token amount, use subscription data
-      if (subscriptionData && subscriptionData.tokens && subscriptionData.tokens !== totalTokens) {
-        console.log(`[TOKEN BALANCE] Subscription tokens (${subscriptionData.tokens}) differ from balance tokens (${totalTokens}), using subscription data`);
-        totalTokens = subscriptionData.tokens;
-        monthlyAllocation = subscriptionData.tokens;
+      // CRITICAL FIX: Calculate expected tokens from subscription amount, not stored tokens field
+      if (subscriptionData && subscriptionData.amount) {
+        const expectedTokens = calculateTokensForAmount(subscriptionData.amount);
 
-        // Update the balance record to match subscription
-        await balanceRef.update({
-          totalTokens: subscriptionData.tokens,
-          monthlyAllocation: subscriptionData.tokens,
-          availableTokens: Math.max(0, subscriptionData.tokens - actualAllocatedTokens),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
+        // Check if stored tokens field matches calculated tokens from amount
+        if (subscriptionData.tokens !== expectedTokens) {
+          console.log(`[TOKEN BALANCE] SUBSCRIPTION DATA INCONSISTENCY: stored tokens (${subscriptionData.tokens}) don't match calculated tokens (${expectedTokens}) for amount $${subscriptionData.amount}`);
+
+          // Note: Subscription inconsistency detected but will be handled by subscription service
+          console.log(`[TOKEN BALANCE] Note: Subscription record should be updated by subscription service to fix token inconsistency`);
+        }
+
+        // Use calculated tokens from amount (source of truth)
+        if (expectedTokens !== totalTokens) {
+          console.log(`[TOKEN BALANCE] Balance tokens (${totalTokens}) differ from expected tokens (${expectedTokens}) for $${subscriptionData.amount}/mo, syncing balance`);
+          totalTokens = expectedTokens;
+          monthlyAllocation = expectedTokens;
+
+          // Update the balance record to match calculated subscription tokens
+          await balanceRef.update({
+            totalTokens: expectedTokens,
+            monthlyAllocation: expectedTokens,
+            availableTokens: expectedTokens - actualAllocatedTokens,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+        }
       }
 
-      // Calculate correct available tokens
-      const availableTokens = Math.max(0, totalTokens - actualAllocatedTokens);
+      // Calculate correct available tokens (allow negative values for overspending)
+      const availableTokens = totalTokens - actualAllocatedTokens;
 
       // Convert to TokenBalance format with corrected values
       return {
@@ -224,10 +247,8 @@ export class ServerTokenService {
       const newPageAllocation = Math.max(0, currentPageAllocation + tokenChange);
       const allocationDifference = newPageAllocation - currentPageAllocation;
 
-      // Check if user has enough available tokens
-      if (allocationDifference > 0 && allocationDifference > (balanceData?.availableTokens || 0)) {
-        throw new Error('Insufficient tokens available');
-      }
+      // Allow overspending - users can allocate more tokens than available
+      // Unfunded tokens will be indicated in the UI
 
       // Get page owner (recipient) for the allocation
       let recipientUserId = '';

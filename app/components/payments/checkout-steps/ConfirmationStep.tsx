@@ -6,6 +6,7 @@ import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
 import { Separator } from '../../ui/separator';
 import { CheckCircle, Zap, Calendar, CreditCard, ArrowRight, Home, Settings, Loader2 } from 'lucide-react';
+import { StatusIcon } from '../../ui/status-icon';
 import { SelectedPlan } from '../SubscriptionCheckout';
 import { useRouter } from 'next/navigation';
 import { useCurrentAccount } from '../../../providers/CurrentAccountProvider';
@@ -171,9 +172,7 @@ export function ConfirmationStep({
       <Card className="border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800">
         <CardContent className="p-8 text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
-              <CheckCircle className="w-8 h-8 text-white" />
-            </div>
+            <StatusIcon status="success" size="lg" position="static" className="w-16 h-16" />
           </div>
           <h2 className="text-2xl font-bold text-green-800 dark:text-green-200 mb-2">
             Subscription Activated!

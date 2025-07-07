@@ -18,19 +18,39 @@ export const getEnvironmentType = (): 'production' | 'preview' | 'development' =
   if (process.env.VERCEL_ENV === 'production') {
     return 'production';
   }
-  
+
   // Check for preview environment (Vercel preview deployments)
   if (process.env.VERCEL_ENV === 'preview') {
     return 'preview';
   }
-  
+
   // Check for development environment
   if (process.env.NODE_ENV === 'development') {
     return 'development';
   }
-  
+
   // Default to development for safety (better to isolate than contaminate)
   return 'development';
+};
+
+/**
+ * Get the environment type for subscription data specifically
+ * This allows overriding the environment for subscription data access
+ */
+export const getSubscriptionEnvironmentType = (): 'production' | 'preview' | 'development' => {
+  // Check for subscription-specific environment override
+  if (process.env.SUBSCRIPTION_ENV === 'production') {
+    return 'production';
+  }
+  if (process.env.SUBSCRIPTION_ENV === 'preview') {
+    return 'preview';
+  }
+  if (process.env.SUBSCRIPTION_ENV === 'development') {
+    return 'development';
+  }
+
+  // Fall back to general environment type
+  return getEnvironmentType();
 };
 
 /**
@@ -38,7 +58,25 @@ export const getEnvironmentType = (): 'production' | 'preview' | 'development' =
  */
 export const getEnvironmentPrefix = (): string => {
   const envType = getEnvironmentType();
-  
+
+  switch (envType) {
+    case 'production':
+      return ''; // No prefix for production (keep existing collection names)
+    case 'preview':
+      return 'preview_';
+    case 'development':
+      return 'dev_';
+    default:
+      return 'dev_'; // Safe default
+  }
+};
+
+/**
+ * Get the environment prefix for subscription collections specifically
+ */
+export const getSubscriptionEnvironmentPrefix = (): string => {
+  const envType = getSubscriptionEnvironmentType();
+
   switch (envType) {
     case 'production':
       return ''; // No prefix for production (keep existing collection names)
@@ -84,9 +122,17 @@ export const getSubCollectionPath = (
   documentId: string,
   subCollection: string
 ): { parentPath: string; subCollectionName: string } => {
-  const envParentCollection = getCollectionName(parentCollection);
-  const envSubCollection = getCollectionName(subCollection);
-  
+  // Use subscription-specific environment for subscription collections
+  const isSubscriptionCollection = subCollection === PAYMENT_COLLECTIONS.SUBSCRIPTIONS;
+
+  const envParentCollection = isSubscriptionCollection
+    ? getSubscriptionEnvironmentPrefix() + parentCollection
+    : getCollectionName(parentCollection);
+
+  const envSubCollection = isSubscriptionCollection
+    ? getSubscriptionEnvironmentPrefix() + subCollection
+    : getCollectionName(subCollection);
+
   return {
     parentPath: `${envParentCollection}/${documentId}`,
     subCollectionName: envSubCollection

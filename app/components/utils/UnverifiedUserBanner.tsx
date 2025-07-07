@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Mail, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 
@@ -8,16 +8,37 @@ import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { auth } from '../../firebase/config';
 import { sendEmailVerification } from 'firebase/auth';
 import { toast } from '../ui/use-toast';
+import {
+  getResendCooldownRemaining,
+  canResendVerificationEmail,
+  startResendCooldown
+} from '../../services/emailVerificationNotifications';
 
 interface UnverifiedUserBannerProps {
   onDismiss?: () => void;
 }
 
 function UnverifiedUserBanner({ onDismiss }: UnverifiedUserBannerProps) {
-  
+
   const { session, isAuthenticated } = useCurrentAccount();
   const [isResending, setIsResending] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+
+  // Update cooldown timer
+  useEffect(() => {
+    const updateCooldown = () => {
+      setCooldownRemaining(getResendCooldownRemaining());
+    };
+
+    // Initial update
+    updateCooldown();
+
+    // Update every second while cooldown is active
+    const interval = setInterval(updateCooldown, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Only show banner for authenticated users with unverified emails
   if (!isAuthenticated || !session || auth.currentUser?.emailVerified || isDismissed) {
@@ -34,9 +55,16 @@ function UnverifiedUserBanner({ onDismiss }: UnverifiedUserBannerProps) {
       return;
     }
 
+    if (!canResendVerificationEmail()) {
+      return;
+    }
+
     setIsResending(true);
     try {
       await sendEmailVerification(auth.currentUser);
+      startResendCooldown();
+      setCooldownRemaining(getResendCooldownRemaining());
+
       toast({
         title: "Verification email sent",
         description: "Please check your email and click the verification link.",
@@ -84,11 +112,23 @@ function UnverifiedUserBanner({ onDismiss }: UnverifiedUserBannerProps) {
               variant="outline"
               size="sm"
               onClick={handleResendVerification}
-              disabled={isResending}
+              disabled={isResending || cooldownRemaining > 0}
               className="bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-900/50"
             >
-              <Mail className="h-4 w-4 mr-1" />
-              {isResending ? 'Sending...' : 'Resend email'}
+              {cooldownRemaining > 0 ? (
+                <>
+                  <Clock className="h-4 w-4 mr-1" />
+                  {cooldownRemaining > 60
+                    ? `${Math.ceil(cooldownRemaining / 60)}m ${cooldownRemaining % 60}s`
+                    : `${cooldownRemaining}s`
+                  }
+                </>
+              ) : (
+                <>
+                  <Mail className="h-4 w-4 mr-1" />
+                  {isResending ? 'Sending...' : 'Resend email'}
+                </>
+              )}
             </Button>
             
             <Button

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/admin';
+import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 
 /**
  * API endpoint to get user's subscription budget
@@ -15,8 +16,9 @@ export async function GET(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
-    // Get user's subscription data
-    const subscriptionRef = db.collection('users').doc(userId).collection('subscription').doc('current');
+    // Get user's subscription data using environment-aware path
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionRef = db.doc(parentPath).collection(subCollectionName).doc('current');
     const subscriptionDoc = await subscriptionRef.get();
     
     let budget = {

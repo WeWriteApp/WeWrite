@@ -43,10 +43,17 @@ export function useSubscriptionWarning() {
             subscription.cancelAtPeriodEnd,
             subscription.currentPeriodEnd
           );
-          
+
+          console.warn('Subscription warning hook - subscription found:', {
+            subscription,
+            statusInfo,
+            isActive: statusInfo.isActive
+          });
+
           setHasActiveSubscription(statusInfo.isActive);
           setSubscriptionStatusInfo(statusInfo);
         } else {
+          console.warn('Subscription warning hook - no subscription found');
           setHasActiveSubscription(false);
           setSubscriptionStatusInfo(null);
         }
@@ -71,11 +78,22 @@ export function useSubscriptionWarning() {
   }, [isAuthenticated, session?.uid, paymentsEnabled]);
 
   // Determine if warning should be shown
-  const shouldShowWarning = paymentsEnabled && 
-    isAuthenticated && 
-    !isLoading && 
-    (hasActiveSubscription === false || 
-     (subscriptionStatusInfo && ['cancelling', 'canceled', 'past_due', 'unpaid', 'incomplete'].includes(subscriptionStatusInfo.status)));
+  // Only show warnings for truly problematic states, not for active subscriptions that are cancelling
+  const shouldShowWarning = paymentsEnabled &&
+    isAuthenticated &&
+    !isLoading &&
+    (hasActiveSubscription === false ||
+     (subscriptionStatusInfo && ['canceled', 'past_due', 'unpaid', 'incomplete'].includes(subscriptionStatusInfo.status)));
+
+  // Debug warning calculation
+  console.warn('Subscription warning calculation:', {
+    paymentsEnabled,
+    isAuthenticated,
+    isLoading,
+    hasActiveSubscription,
+    subscriptionStatus: subscriptionStatusInfo?.status,
+    shouldShowWarning
+  });
 
   // Get warning variant based on subscription status
   const getWarningVariant = () => {

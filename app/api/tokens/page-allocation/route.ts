@@ -47,13 +47,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Error in token page allocation API:', error);
     
-    // Return specific error messages for common issues
-    if (error.message.includes('Insufficient tokens')) {
-      return NextResponse.json({
-        error: 'Insufficient tokens available',
-        message: error.message
-      }, { status: 400 });
-    }
+    // Allow overspending - no longer return errors for insufficient tokens
 
     if (error.message.includes('Token balance not found')) {
       return NextResponse.json({

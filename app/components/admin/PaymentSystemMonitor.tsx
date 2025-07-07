@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { CopyErrorButton } from '../ui/CopyErrorButton';
 import { 
   CreditCard, 
   TrendingUp, 
@@ -87,7 +88,12 @@ export function PaymentSystemMonitor() {
 
       if (alertsResponse.ok) {
         const alertsData = await alertsResponse.json();
-        setAlerts(alertsData.data || []);
+        // Convert timestamp strings back to Date objects
+        const processedAlertsData = (alertsData.data || []).map((alert: any) => ({
+          ...alert,
+          timestamp: new Date(alert.timestamp)
+        }));
+        setAlerts(processedAlertsData);
       }
 
       // Fetch transaction volume data
@@ -100,12 +106,38 @@ export function PaymentSystemMonitor() {
 
       if (volumeResponse.ok) {
         const volumeData = await volumeResponse.json();
-        setTransactionVolume(volumeData.data || []);
+        // Convert timestamp strings back to Date objects
+        const processedVolumeData = (volumeData.data || []).map((item: any) => ({
+          ...item,
+          timestamp: new Date(item.timestamp)
+        }));
+        setTransactionVolume(processedVolumeData);
       }
 
       setLastUpdated(new Date());
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching payment monitoring data:', error);
+
+      // Add a synthetic error alert for display
+      const errorAlert = {
+        id: `fetch-error-${Date.now()}`,
+        title: 'Data Fetch Error',
+        message: `Failed to load payment monitoring data: ${error.message || 'Unknown error'}`,
+        type: 'system_error',
+        severity: 'critical' as const,
+        timestamp: new Date(),
+        resolved: false,
+        metadata: {
+          errorType: 'FETCH_ERROR',
+          endpoint: 'payment-monitoring',
+          errorMessage: error.message,
+          errorStack: error.stack,
+          userAgent: navigator.userAgent,
+          url: window.location.href
+        }
+      };
+
+      setAlerts(prev => [errorAlert, ...prev]);
     } finally {
       setRefreshing(false);
       setLoading(false);
@@ -196,21 +228,48 @@ export function PaymentSystemMonitor() {
       {alerts.filter(alert => alert.severity === 'critical' && !alert.resolved).length > 0 && (
         <Card className="border-red-500 bg-red-50 dark:bg-red-950">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <span className="font-semibold text-red-700 dark:text-red-300">
-                Critical Payment System Alerts
-              </span>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+                <span className="font-semibold text-red-700 dark:text-red-300">
+                  Critical Payment System Alerts ({alerts.filter(alert => alert.severity === 'critical' && !alert.resolved).length})
+                </span>
+              </div>
+              <CopyErrorButton
+                error={`Critical Payment System Alerts - ${new Date().toISOString()}\n\n${alerts
+                  .filter(alert => alert.severity === 'critical' && !alert.resolved)
+                  .map(alert => `Alert: ${alert.title}\nMessage: ${alert.message}\nType: ${alert.type}\nTimestamp: ${alert.timestamp.toISOString()}\nID: ${alert.id}\n${alert.metadata ? `Metadata: ${JSON.stringify(alert.metadata, null, 2)}` : ''}\n`)
+                  .join('\n')}\nSystem Info:\nURL: ${window.location.href}\nUser Agent: ${navigator.userAgent}`}
+                size="sm"
+                variant="outline"
+                className="text-red-700 dark:text-red-300 border-red-300"
+              />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-2">
               {alerts
                 .filter(alert => alert.severity === 'critical' && !alert.resolved)
                 .slice(0, 3)
                 .map(alert => (
-                  <p key={alert.id} className="text-sm text-red-600 dark:text-red-400">
-                    • {alert.title}: {alert.message}
-                  </p>
+                  <div key={alert.id} className="flex items-start gap-2">
+                    <span className="text-red-600 dark:text-red-400 mt-0.5">•</span>
+                    <div className="flex-1">
+                      <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                        {alert.title}
+                      </p>
+                      <p className="text-xs text-red-500 dark:text-red-400">
+                        {alert.message}
+                      </p>
+                      <p className="text-xs text-red-400 dark:text-red-500 mt-1">
+                        {alert.type} • {alert.timestamp.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
                 ))}
+              {alerts.filter(alert => alert.severity === 'critical' && !alert.resolved).length > 3 && (
+                <p className="text-xs text-red-500 dark:text-red-400 mt-2">
+                  + {alerts.filter(alert => alert.severity === 'critical' && !alert.resolved).length - 3} more critical alerts
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -500,12 +559,32 @@ export function PaymentSystemMonitor() {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground mb-1">
+                        <p className="text-sm text-muted-foreground mb-2">
                           {alert.message}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {alert.timestamp.toLocaleString()}
-                        </p>
+
+                        {/* Enhanced error details */}
+                        <div className="text-xs text-muted-foreground space-y-1 mb-2">
+                          <div><strong>Alert ID:</strong> {alert.id}</div>
+                          <div><strong>Type:</strong> {alert.type}</div>
+                          <div><strong>Severity:</strong> {alert.severity}</div>
+                          <div><strong>Timestamp:</strong> {alert.timestamp.toLocaleString()}</div>
+                          {alert.metadata && (
+                            <div><strong>Details:</strong> {JSON.stringify(alert.metadata, null, 2)}</div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">
+                            {alert.timestamp.toLocaleString()}
+                          </span>
+                          <CopyErrorButton
+                            error={`Payment System Alert\n\nAlert ID: ${alert.id}\nTitle: ${alert.title}\nMessage: ${alert.message}\nType: ${alert.type}\nSeverity: ${alert.severity}\nTimestamp: ${alert.timestamp.toISOString()}\nResolved: ${alert.resolved}\n${alert.metadata ? `\nMetadata:\n${JSON.stringify(alert.metadata, null, 2)}` : ''}\n\nSystem Info:\nURL: ${window.location.href}\nUser Agent: ${navigator.userAgent}`}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2"
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}

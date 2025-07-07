@@ -2,6 +2,7 @@
 // This file should ONLY be imported in API routes and server components
 
 import { initAdmin } from "./admin";
+import { getSubCollectionPath, PAYMENT_COLLECTIONS } from "../utils/environmentConfig";
 
 // Initialize Firebase Admin
 const adminApp = initAdmin();
@@ -44,7 +45,8 @@ interface SubscriptionOptions {
 // Update a user's subscription (server-side only)
 export const updateSubscriptionServer = async (userId: string, subscriptionData: Partial<SubscriptionData>): Promise<boolean> => {
   try {
-    const subscriptionRef = adminDb.collection("users").doc(userId).collection("subscription").doc("current");
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc("current");
     await subscriptionRef.set({
       ...subscriptionData,
       updatedAt: new Date()}, { merge: true });
@@ -66,8 +68,9 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
       console.log(`[getUserSubscriptionServer] Fetching subscription for user: ${userId}`);
     }
 
-    // Check the primary location (user path)
-    const subscriptionRef = adminDb.collection("users").doc(userId).collection("subscription").doc("current");
+    // Check the primary location (user path) using environment-aware path
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc("current");
     const subscriptionSnap = await subscriptionRef.get();
 
     // If no subscription found, return null
@@ -86,7 +89,8 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
       status: rawData.status || 'canceled',
       amount: rawData.amount || 0,
       tier: rawData.tier || null,
-      stripeSubscriptionId: rawData.stripeSubscriptionId || null
+      stripeSubscriptionId: rawData.stripeSubscriptionId || null,
+      paymentMethodId: rawData.metadata?.paymentMethodId || null
     };
 
     // Apply validation logic to ensure consistent subscription states

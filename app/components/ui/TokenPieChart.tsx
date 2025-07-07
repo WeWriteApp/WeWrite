@@ -9,6 +9,7 @@ interface TokenPieChartProps {
   strokeWidth?: number;
   className?: string;
   onClick?: () => void;
+  showFraction?: boolean;
 }
 
 export function TokenPieChart({
@@ -17,19 +18,65 @@ export function TokenPieChart({
   size = 32,
   strokeWidth = 3,
   className = '',
-  onClick
+  onClick,
+  showFraction = true
 }: TokenPieChartProps) {
-  const percentage = totalTokens > 0 ? (allocatedTokens / totalTokens) * 100 : 0;
+  // Calculate available tokens and check for overspending
+  const availableTokens = totalTokens - allocatedTokens;
+  const isOverspent = availableTokens < 0;
+
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const strokeDasharray = circumference;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  // Calculate funded vs unfunded tokens when overspent
+  const unfundedTokens = isOverspent ? Math.abs(availableTokens) : 0;
+  const fundedTokens = isOverspent ? totalTokens : allocatedTokens; // When overspent, funded = total available
+
+  // Calculate percentages and stroke properties
+  let fundedPercentage = 0;
+  let unfundedPercentage = 0;
+  let singlePercentage = 0;
+
+  // Gap between segments (in percentage points)
+  const gapPercentage = 8; // 8% gap for clear visual separation
+
+  if (isOverspent && totalTokens > 0) {
+    // When overspent, show funded (blue) and unfunded (orange) segments with gaps
+    // Reserve space for gaps before and after each segment (2 gaps total)
+    const totalVisualPercentage = 100 - (gapPercentage * 2); // Reserve space for 2 gaps
+    const adjustedFundedPercentage = (fundedTokens / (fundedTokens + unfundedTokens)) * totalVisualPercentage;
+    const adjustedUnfundedPercentage = (unfundedTokens / (fundedTokens + unfundedTokens)) * totalVisualPercentage;
+
+    fundedPercentage = adjustedFundedPercentage;
+    unfundedPercentage = adjustedUnfundedPercentage;
+  } else if (totalTokens > 0) {
+    // Normal case: single segment
+    singlePercentage = Math.min((allocatedTokens / totalTokens) * 100, 100);
+  }
+
+  // Calculate stroke dash properties for segments
+  const fundedStrokeDasharray = circumference;
+  const fundedStrokeDashoffset = circumference - (fundedPercentage / 100) * circumference;
+
+  const unfundedStrokeDasharray = circumference;
+  // Start unfunded segment after funded segment with a small gap
+  const unfundedStartOffset = (fundedPercentage + gapPercentage) / 100 * circumference;
+  const unfundedStrokeDashoffset = circumference - (unfundedPercentage / 100) * circumference - unfundedStartOffset;
+
+  const singleStrokeDasharray = circumference;
+  const singleStrokeDashoffset = circumference - (singlePercentage / 100) * circumference;
+
+  // Determine colors and title text
+  const progressColor = isOverspent ? 'text-orange-500' : 'text-primary';
+  const titleText = isOverspent
+    ? `${allocatedTokens} tokens allocated out of ${totalTokens} total monthly tokens (${unfundedTokens} tokens unfunded)`
+    : `${allocatedTokens} tokens allocated out of ${totalTokens} total monthly tokens`;
 
   return (
-    <div 
+    <div
       className={`flex items-center gap-2 ${onClick ? 'cursor-pointer' : ''} ${className}`}
       onClick={onClick}
-      title={`${allocatedTokens} tokens allocated out of ${totalTokens} total monthly tokens`}
+      title={titleText}
     >
       {/* Pie Chart SVG */}
       <div className="relative" style={{ width: size, height: size }}>
@@ -39,39 +86,86 @@ export function TokenPieChart({
           className="transform -rotate-90"
           viewBox={`0 0 ${size} ${size}`}
         >
-          {/* Background circle */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={strokeWidth}
-            className="text-muted-foreground/20"
-          />
-          
-          {/* Progress circle */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={strokeWidth}
-            strokeDasharray={strokeDasharray}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            className="text-primary transition-all duration-300 ease-in-out"
-          />
+          {/* No background circle for overspent state to show white gaps */}
+          {!isOverspent && (
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={strokeWidth}
+              className="text-muted-foreground/20"
+            />
+          )}
+
+          {isOverspent ? (
+            // When overspent: show funded (blue) and unfunded (orange) segments with gaps
+            <>
+              {/* Funded tokens segment (blue) - starts after initial gap */}
+              {fundedPercentage > 0 && (
+                <circle
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={strokeWidth}
+                  strokeDasharray={`${(fundedPercentage / 100) * circumference} ${circumference}`}
+                  strokeDashoffset={-(gapPercentage / 100) * circumference}
+                  strokeLinecap="round"
+                  className="text-blue-600 transition-all duration-300 ease-in-out"
+                />
+              )}
+
+              {/* Unfunded tokens segment (orange) - starts after funded + gap */}
+              {unfundedPercentage > 0 && (
+                <circle
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={strokeWidth}
+                  strokeDasharray={`${(unfundedPercentage / 100) * circumference} ${circumference}`}
+                  strokeDashoffset={-((fundedPercentage + gapPercentage * 2) / 100) * circumference}
+                  strokeLinecap="round"
+                  className="text-orange-600 transition-all duration-300 ease-in-out"
+                />
+              )}
+            </>
+          ) : (
+            // Normal case: single progress circle
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={strokeWidth}
+              strokeDasharray={singleStrokeDasharray}
+              strokeDashoffset={singleStrokeDashoffset}
+              strokeLinecap="round"
+              className={`${progressColor} transition-all duration-300 ease-in-out`}
+            />
+          )}
         </svg>
-        
+
         {/* Center is now empty - no percentage text */}
       </div>
-      
-      {/* Fraction text */}
-      <span className="text-sm font-medium text-foreground">
-        {allocatedTokens}/{totalTokens}
-      </span>
+
+      {/* Fraction text - only show if showFraction is true */}
+      {showFraction && (
+        <span className={`text-sm font-medium ${isOverspent ? 'text-orange-600' : 'text-foreground'}`}>
+          {isOverspent ? (
+            // Show overage amount when overspent
+            `+${unfundedTokens} over`
+          ) : (
+            // Normal display
+            `${allocatedTokens}/${totalTokens}`
+          )}
+        </span>
+      )}
     </div>
   );
 }

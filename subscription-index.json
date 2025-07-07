@@ -1,0 +1,15 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "subscription",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

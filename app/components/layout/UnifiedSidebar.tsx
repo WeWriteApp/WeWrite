@@ -18,7 +18,11 @@ import RandomPageFilterMenu from "../ui/RandomPageFilterMenu";
 import { logoutUser } from "../../firebase/auth";
 import { cn } from "../../lib/utils";
 import { WarningDot } from '../ui/warning-dot';
+import { StatusIcon } from '../ui/status-icon';
 import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
+import { CheckCircle } from 'lucide-react';
+import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
+import { useUserEarnings } from '../../hooks/useUserEarnings';
 
 // Context for sidebar state management
 interface SidebarContextType {
@@ -168,7 +172,44 @@ function UnifiedSidebarContent({
   const router = useRouter();
   const pathname = usePathname();
   const editorContext = useContext(EditorContext);
-  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant } = useSubscriptionWarning();
+  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription, paymentsEnabled } = useSubscriptionWarning();
+  const bankSetupStatus = useBankSetupStatus();
+  const { earnings } = useUserEarnings();
+
+  // Calculate the most critical status from all settings sections
+  const getMostCriticalSettingsStatus = () => {
+    if (!paymentsEnabled) return null;
+
+    // Check for warnings first (most critical)
+    const hasSubscriptionWarning = hasActiveSubscription !== null && hasActiveSubscription === false;
+    // Only show bank setup warning if user has funds but bank isn't set up
+    const hasBankSetupWarning = earnings?.hasEarnings && !bankSetupStatus.isSetup;
+
+    if (hasSubscriptionWarning || hasBankSetupWarning) {
+      return 'warning';
+    }
+
+    // If no warnings and we have data, don't show any icon (success is hidden)
+    if (hasActiveSubscription !== null) {
+      return null; // Hide success status
+    }
+
+    return null;
+  };
+
+  const criticalSettingsStatus = getMostCriticalSettingsStatus();
+
+  // Debug subscription status
+  React.useEffect(() => {
+    console.warn('Sidebar subscription status:', {
+      paymentsEnabled,
+      hasActiveSubscription,
+      shouldShowSubscriptionWarning,
+      warningVariant,
+      bankSetupStatus: bankSetupStatus.isSetup,
+      criticalSettingsStatus
+    });
+  }, [paymentsEnabled, hasActiveSubscription, shouldShowSubscriptionWarning, warningVariant, bankSetupStatus.isSetup, criticalSettingsStatus]);
 
   // Check if map feature is enabled
   const mapFeatureEnabled = useFeatureFlag('map_view', session?.email);
@@ -302,28 +343,31 @@ function UnifiedSidebarContent({
                 >
                     {/* Icon container - maintains position during transitions */}
                     <div className={cn(
-                      "sidebar-icon-container relative",
+                      "sidebar-icon-container relative inline-block",
                       showContent && "mr-3"
                     )}>
                       <Icon className="h-5 w-5 flex-shrink-0" />
-                      {isSettings && shouldShowSubscriptionWarning && (
-                        <WarningDot
-                          variant={warningVariant}
-                          size="sm"
-                          position="top-right"
-                          offset={{ top: '-2px', right: '-2px' }}
-                        />
+                      {isSettings && criticalSettingsStatus === 'warning' && !showContent && (
+                        // Small warning dot when collapsed
+                        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full"></div>
                       )}
                     </div>
 
                     {/* Text label - slides in from the right */}
                     <div className={cn(
-                      "sidebar-text-container flex-1 flex items-center",
+                      "sidebar-text-container flex-1 flex items-center justify-between",
                       showContent ? "opacity-100 max-w-none" : "opacity-0 max-w-0"
                     )}>
                       <span className="font-medium whitespace-nowrap text-left">
                         {item.label}
                       </span>
+                      {isSettings && criticalSettingsStatus === 'warning' && showContent && (
+                        <StatusIcon
+                          status="warning"
+                          size="sm"
+                          position="static"
+                        />
+                      )}
                     </div>
                   </Button>
               );

@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import AddUsername from "../auth/AddUsername";
 import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 import { useRouter } from "next/navigation";
 import Header from "../layout/Header";
@@ -51,8 +50,6 @@ const Dashboard: React.FC = () => {
       {/* Main content area with proper sidebar spacing */}
       <main className="transition-all duration-300 ease-in-out">
           <div className="container mx-auto px-4 py-6 space-y-8">
-            <AddUsername />
-
             {/* Email Verification Alert */}
             <EmailVerificationAlert className="max-w-2xl mx-auto" />
 

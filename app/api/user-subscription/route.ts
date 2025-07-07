@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../firebase/admin';
 import { getEffectiveTier } from '../../utils/subscriptionTiers';
+import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../utils/environmentConfig';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +14,8 @@ export async function GET(request: NextRequest) {
 
     // Fetch subscription information using Firebase Admin from correct path
     const admin = getFirebaseAdmin();
-    const subscriptionDoc = await admin.firestore().collection('users').doc(userId).collection('subscription').doc('current').get();
+    const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+    const subscriptionDoc = await admin.firestore().doc(parentPath).collection(subCollectionName).doc('current').get();
     
     // Get subscription data (or null if document doesn't exist)
     const subscriptionData = subscriptionDoc.exists ? subscriptionDoc.data() : null;

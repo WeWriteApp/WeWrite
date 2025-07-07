@@ -55,7 +55,7 @@ const FilteredSearchResults = forwardRef(({
   // State management
   const [search, setSearch] = useState(initialSearch);
   const [pages, setPages] = useState([]);
-  const [sessions, setUsers] = useState([]);
+  const [users, setUsers] = useState([]);
   const [groups, setGroups] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedId, setSelectedId] = useState(initialSelectedId);
@@ -592,22 +592,22 @@ const FilteredSearchResults = forwardRef(({
                 <div className="space-y-1">
                   {users.map((session) => (
                     <button
-                      key={user.id}
+                      key={session.id}
                       onClick={() => handleSelect(session)}
                       className={`w-full text-left p-2 hover:bg-muted rounded-md transition-colors ${
-                        selectedId === user.id ? 'bg-muted' : ''
+                        selectedId === session.id ? 'bg-muted' : ''
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         {session.photoURL && (
                           <img
                             src={session.photoURL}
-                            alt={user.title}
+                            alt={session.title}
                             className="w-5 h-5 rounded-full"
                           />
                         )}
                         <span className="text-sm font-medium text-foreground">
-                          @{user.title}
+                          @{session.title}
                         </span>
                         <span className="text-xs text-muted-foreground">
                           (User Profile)

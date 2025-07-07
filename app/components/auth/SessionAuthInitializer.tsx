@@ -217,9 +217,8 @@ function SessionAuthInitializer({ children }: SessionAuthInitializerProps) {
             if (isOnLoginPage && authRedirectPending) {
               console.log('SessionAuthInitializer: Login successful, redirecting to home page');
               localStorage.removeItem('authRedirectPending');
-              setTimeout(() => {
-                window.location.href = "/";
-              }, 500);
+              // Immediate redirect without delay to prevent showing login page
+              window.location.href = "/";
             }
           } catch (sessionError) {
             // If no session exists for this user, create a new one
@@ -232,9 +231,8 @@ function SessionAuthInitializer({ children }: SessionAuthInitializerProps) {
               if (isOnLoginPage && authRedirectPending) {
                 console.log('SessionAuthInitializer: New session created, redirecting to home page');
                 localStorage.removeItem('authRedirectPending');
-                setTimeout(() => {
-                  window.location.href = "/";
-                }, 500);
+                // Immediate redirect without delay to prevent showing login page
+                window.location.href = "/";
               }
             } catch (createError) {
               console.error('SessionAuthInitializer: Failed to create session for user:', firebaseUser.uid, createError);

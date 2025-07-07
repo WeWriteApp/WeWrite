@@ -467,25 +467,52 @@ export default function PageView({
       const contentToSave = editorState;
       const editorStateJSON = JSON.stringify(contentToSave);
 
-      // Use the Firestore-based updatePage function that includes backlinks indexing
-      const { updatePage } = await import('../../firebase/database');
+      // Use saveNewVersion with no-op detection instead of direct updatePage
+      const { saveNewVersion } = await import('../../firebase/database/versions');
+      const { getUsernameById } = await import('../../utils/userUtils');
 
+      // Get current user's username
+      const username = await getUsernameById(currentAccount?.uid || '');
+
+      const versionData = {
+        content: editorStateJSON,
+        userId: currentAccount?.uid || '',
+        username: username || 'Anonymous',
+        skipIfUnchanged: true // Enable no-op detection
+      };
+
+      console.log('🔄 Updating page with version creation and no-op detection:', pageId);
+      const versionResult = await saveNewVersion(pageId, versionData);
+
+      // Check if the save was skipped due to no changes
+      if (versionResult && !versionResult.success && versionResult.message === 'Content unchanged') {
+        console.log('✅ No changes detected, skipping version creation');
+        setHasUnsavedChanges(false);
+        setIsEditing(false);
+        return;
+      }
+
+      if (!versionResult) {
+        throw new Error('Failed to create new version');
+      }
+
+      // Update page metadata (title, isPublic, location) if they changed
+      const { updatePage } = await import('../../firebase/database');
       const updateData = {
         title: title.trim(),
-        content: editorStateJSON,
         isPublic,
         location: location.trim(),
         lastModified: new Date().toISOString()
       };
 
-      console.log('🔄 Updating page with backlinks indexing:', pageId);
-      const success = await updatePage(pageId, updateData);
+      console.log('🔄 Updating page metadata:', pageId);
+      const metadataSuccess = await updatePage(pageId, updateData);
 
-      if (!success) {
-        throw new Error('Failed to update page');
+      if (!metadataSuccess) {
+        throw new Error('Failed to update page metadata');
       }
 
-      console.log('✅ Page updated successfully with backlinks indexing');
+      console.log('✅ Page updated successfully with version creation and no-op detection');
       setHasUnsavedChanges(false);
       setIsEditing(false);
     } catch (error) {

@@ -16,7 +16,10 @@ import MapEditor from "../editor/MapEditor"
 import { navigateToRandomPage, RandomPageFilters } from "../../utils/randomPageNavigation"
 import RandomPageFilterMenu from "../ui/RandomPageFilterMenu"
 import { WarningDot } from '../ui/warning-dot';
+import { StatusIcon } from '../ui/status-icon';
 import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
+import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
+import { useUserEarnings } from '../../hooks/useUserEarnings';
 
 interface SidebarProps {
   isOpen: boolean
@@ -41,7 +44,37 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
   const [currentSection, setCurrentSection] = useState<string | null>(null)
   const [isRandomMenuOpen, setIsRandomMenuOpen] = useState(false)
   const { session } = useCurrentAccount();
-  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant } = useSubscriptionWarning();
+  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription, paymentsEnabled } = useSubscriptionWarning();
+  const bankSetupStatus = useBankSetupStatus();
+  const { earnings } = useUserEarnings();
+
+  // Calculate the most critical status from all settings sections (same logic as UnifiedSidebar)
+  const getMostCriticalSettingsStatus = () => {
+    if (!paymentsEnabled) return null;
+
+    // Check for warnings first (most critical)
+    const hasSubscriptionWarning = hasActiveSubscription !== null && hasActiveSubscription === false;
+    // Only show bank setup warning if user has funds but bank isn't set up
+    const hasBankSetupWarning = earnings?.hasEarnings && !bankSetupStatus.isSetup;
+
+    if (hasSubscriptionWarning || hasBankSetupWarning) {
+      return 'warning';
+    }
+
+    // Check for success states
+    const hasActiveSubscriptionSuccess = hasActiveSubscription === true;
+    const hasBankSetupSuccess = bankSetupStatus.isSetup;
+
+    if (hasActiveSubscriptionSuccess || hasBankSetupSuccess) {
+      return 'success';
+    }
+
+    return null;
+  };
+
+  const criticalSettingsStatus = getMostCriticalSettingsStatus();
+
+
 
   // Groups functionality removed
 
@@ -131,20 +164,19 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
                   onClose();
                   router.push('/settings');
                 }}
-                className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
               >
-                <div className="relative mr-2">
-                  <Settings className="h-5 w-5" />
-                  {shouldShowSubscriptionWarning && (
-                    <WarningDot
-                      variant={warningVariant}
-                      size="sm"
-                      position="top-right"
-                      offset={{ top: '-2px', right: '-2px' }}
-                    />
-                  )}
+                <div className="flex items-center">
+                  <Settings className="h-5 w-5 mr-2" />
+                  <span>Settings</span>
                 </div>
-                <span>Settings</span>
+                {criticalSettingsStatus === 'warning' && (
+                  <StatusIcon
+                    status="warning"
+                    size="sm"
+                    position="static"
+                  />
+                )}
               </button>
 
               <button
