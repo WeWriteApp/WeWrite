@@ -92,6 +92,7 @@ export function useFeatureFlags() {
         flagsData[flag.id] = flag.enabled;
       });
 
+      if (Object.keys(flagsData).length > 0) {
         // Validate and filter flags
         const validFlags = {};
         const invalidFlags = [];
