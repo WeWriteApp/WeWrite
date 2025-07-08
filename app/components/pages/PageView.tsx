@@ -462,6 +462,7 @@ export default function PageView({
     setTitleError(null);
 
     try {
+      // Wrap the entire save operation to prevent any errors from causing full page errors
       const contentToSave = editorState;
       const editorStateJSON = JSON.stringify(contentToSave);
 
@@ -526,6 +527,29 @@ export default function PageView({
 
       setHasUnsavedChanges(false);
       setIsEditing(false);
+
+      // Show success feedback to user
+      try {
+        const { toast } = await import('../../hooks/use-toast');
+        toast({
+          title: "Page Saved",
+          description: "Your changes have been saved successfully.",
+          variant: "default"
+        });
+      } catch (toastError) {
+        console.error('Error showing success toast (non-fatal):', toastError);
+      }
+
+      // CRITICAL FIX: Redirect to page view after successful save to prevent error boundary issues
+      // This ensures the user sees the saved page instead of staying in edit mode
+      setTimeout(() => {
+        try {
+          router.replace(`/${pageId}`);
+        } catch (routerError) {
+          console.error('Error during post-save redirect (non-fatal):', routerError);
+          // If redirect fails, just stay on the page - it's already saved
+        }
+      }, 100);
     } catch (error) {
       console.error("Error saving page:", error);
       setError("Failed to save page. Please try again.");

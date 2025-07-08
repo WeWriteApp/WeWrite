@@ -675,8 +675,18 @@ function NewPageContent() {
           // CRITICAL FIX: Longer delay to ensure database consistency before redirect
           // This prevents 404 errors when navigating to newly created pages
           setTimeout(() => {
-            // Use replace instead of push to prevent back button issues
-            router.replace(`/${pageId}`);
+            try {
+              // Use replace instead of push to prevent back button issues
+              router.replace(`/${pageId}`);
+            } catch (routerError) {
+              console.error('Error during post-save redirect (non-fatal):', routerError);
+              // If redirect fails, show success message and let user navigate manually
+              toast({
+                title: "Page Created Successfully",
+                description: `Your page "${title}" has been created. You can find it in your pages.`,
+                variant: "default"
+              });
+            }
           }, 1000);
 
           return true;
