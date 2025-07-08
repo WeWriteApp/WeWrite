@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 import { useFeatureFlag } from '../utils/feature-flags';
-import { getOptimizedUserSubscription } from '../firebase/optimizedSubscription';
 import { getSubscriptionStatusInfo } from '../utils/subscriptionStatus';
+import { useSmartSubscriptionState } from './useSmartSubscriptionState';
 
 /**
  * Hook to determine when to show subscription warning indicators
@@ -16,66 +16,45 @@ export function useSubscriptionWarning() {
   const { session, isAuthenticated } = useCurrentAccount();
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
   const [subscriptionStatusInfo, setSubscriptionStatusInfo] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
   // Check payments feature flag with proper user ID for real-time updates
   const paymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
 
+  // Use smart subscription state with optimized polling for warning checks
+  const { subscription, isLoading } = useSmartSubscriptionState({
+    enableRealTime: false, // Use polling for warning checks to reduce real-time listeners
+    pollInterval: 10 * 60 * 1000, // 10 minutes for warning checks
+    staleThreshold: 15 * 60 * 1000, // 15 minutes stale threshold
+    offlineFirst: true
+  });
+
   useEffect(() => {
-    let isMounted = true;
+    if (!isAuthenticated || !session?.uid || !paymentsEnabled) {
+      setHasActiveSubscription(null);
+      setSubscriptionStatusInfo(null);
+      return;
+    }
 
-    const checkSubscriptionStatus = async () => {
-      if (!isAuthenticated || !session?.uid || !paymentsEnabled) {
-        setHasActiveSubscription(null);
-        setSubscriptionStatusInfo(null);
-        setIsLoading(false);
-        return;
-      }
+    if (subscription) {
+      const statusInfo = getSubscriptionStatusInfo(
+        subscription.status,
+        subscription.cancelAtPeriodEnd,
+        subscription.currentPeriodEnd
+      );
 
-      try {
-        const subscription = await getOptimizedUserSubscription(session.uid);
-        
-        if (!isMounted) return;
+      console.warn('Subscription warning hook - subscription found:', {
+        subscription,
+        statusInfo,
+        isActive: statusInfo.isActive
+      });
 
-        if (subscription) {
-          const statusInfo = getSubscriptionStatusInfo(
-            subscription.status,
-            subscription.cancelAtPeriodEnd,
-            subscription.currentPeriodEnd
-          );
-
-          console.warn('Subscription warning hook - subscription found:', {
-            subscription,
-            statusInfo,
-            isActive: statusInfo.isActive
-          });
-
-          setHasActiveSubscription(statusInfo.isActive);
-          setSubscriptionStatusInfo(statusInfo);
-        } else {
-          console.warn('Subscription warning hook - no subscription found');
-          setHasActiveSubscription(false);
-          setSubscriptionStatusInfo(null);
-        }
-      } catch (error) {
-        console.error('Error checking subscription status:', error);
-        if (isMounted) {
-          setHasActiveSubscription(false);
-          setSubscriptionStatusInfo(null);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    checkSubscriptionStatus();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [isAuthenticated, session?.uid, paymentsEnabled]);
+      setHasActiveSubscription(statusInfo.isActive);
+      setSubscriptionStatusInfo(statusInfo);
+    } else {
+      console.warn('Subscription warning hook - no subscription found');
+      setHasActiveSubscription(false);
+      setSubscriptionStatusInfo(null);
+    }
+  }, [isAuthenticated, session?.uid, paymentsEnabled, subscription]);
 
   // Determine if warning should be shown
   // Only show warnings for truly problematic states, not for active subscriptions that are cancelling

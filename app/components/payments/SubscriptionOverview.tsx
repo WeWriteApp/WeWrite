@@ -8,7 +8,7 @@ import { Badge } from '../ui/badge';
 import { CreditCard, Settings, AlertTriangle, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import { StatusIcon } from '../ui/status-icon';
 import { useFeatureFlag } from '../../utils/feature-flags';
-import { listenToUserSubscription } from '../../firebase/subscription';
+import { useSmartSubscriptionState } from '../../hooks/useSmartSubscriptionState';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { getSubscriptionStatusInfo, getSubscriptionGuidanceMessage, getSubscriptionActionText, getCancellationTooltip } from '../../utils/subscriptionStatus';
@@ -27,32 +27,14 @@ interface Subscription {
 export function SubscriptionOverview() {
   const { currentAccount } = useCurrentAccount();
   const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!currentAccount || !isPaymentsEnabled) {
-      setLoading(false);
-      return;
-    }
-
-    const unsubscribe = listenToUserSubscription(currentAccount.uid, (subscriptionData) => {
-      try {
-        setError(null);
-        setSubscription(subscriptionData);
-      } catch (error) {
-        console.error('SubscriptionOverview: Error processing subscription:', error);
-        setError('Failed to load subscription details');
-      } finally {
-        setLoading(false);
-      }
-    }, { verbose: process.env.NODE_ENV === 'development' });
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [currentAccount, isPaymentsEnabled]);
+  // Use smart subscription state with real-time updates for subscription overview
+  const { subscription, isLoading: loading, error } = useSmartSubscriptionState({
+    enableRealTime: true, // Enable real-time for subscription overview
+    pollInterval: 2 * 60 * 1000, // 2 minutes fallback polling
+    staleThreshold: 5 * 60 * 1000, // 5 minutes stale threshold
+    offlineFirst: true
+  });
 
   // If payments feature flag is disabled, don't render anything
   if (!isPaymentsEnabled) {
