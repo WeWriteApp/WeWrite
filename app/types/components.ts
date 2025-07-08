@@ -7,7 +7,7 @@ import {
   User,
   Page,
   Group,
-  SlateContent,
+  EditorContent,
   ViewMode,
   LineMode,
   LinkData,
@@ -28,7 +28,7 @@ export interface BaseProps {
 
 // TextView component props
 export interface TextViewProps extends BaseProps {
-  content: SlateContent | string;
+  content: EditorContent | string;
   isSearch?: boolean;
   viewMode?: ViewMode;
   onRenderComplete?: () => void;
@@ -42,8 +42,8 @@ export interface TextViewProps extends BaseProps {
 
 // Editor component props
 export interface EditorProps extends BaseProps {
-  initialContent?: SlateContent;
-  onChange?: (content: SlateContent) => void;
+  initialContent?: EditorContent;
+  onChange?: (content: EditorContent) => void;
   placeholder?: string;
   contentType?: 'wiki' | 'about' | 'bio';
   onKeyDown?: (event: KeyboardEvent) => void;
@@ -55,8 +55,8 @@ export interface EditorProps extends BaseProps {
 export interface PageEditorProps extends BaseProps {
   title: string;
   setTitle: (title: string) => void;
-  initialContent: SlateContent;
-  onContentChange: (content: SlateContent) => void;
+  initialContent: EditorContent;
+  onContentChange: (content: EditorContent) => void;
   location?: string;
   setLocation?: (location: string) => void;
   onSave: () => void;

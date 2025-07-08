@@ -141,7 +141,7 @@ const TextView: React.FC<TextViewProps> = ({
   showLineNumbers = true,
   isEditing = false
 }) => {
-  const [parsedContents, setParsedContents] = useState<SlateContent | null>(null);
+  const [parsedContents, setParsedContents] = useState<EditorContent | null>(null);
   const [language, setLanguage] = useState<string | null>(null);
 
   // Get the full context to ensure we're subscribed to all updates

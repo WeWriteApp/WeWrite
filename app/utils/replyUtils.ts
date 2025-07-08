@@ -8,11 +8,11 @@
  */
 
 /**
- * Slate editor node interface
+ * Editor node interface
  */
-interface SlateNode {
+interface EditorNode {
   type: string;
-  children: Array<{ text: string } | SlateNode>;
+  children: Array<{ text: string } | EditorNode>;
   [key: string]: any;
 }
 
@@ -32,7 +32,7 @@ interface ReplyOptions {
  */
 interface ReplyData {
   title: string;
-  content: SlateNode[];
+  content: EditorNode[];
   username: string;
 }
 
@@ -52,7 +52,7 @@ export const generateReplyTitle = (originalTitle?: string): string => {
  * Creates standardized initial content for a reply
  *
  * @param options - Configuration options for the reply
- * @returns Slate editor nodes for the initial content
+ * @returns Editor nodes for the initial content
  */
 export const createReplyContent = ({
   pageId,
@@ -60,7 +60,7 @@ export const createReplyContent = ({
   userId = "anonymous",
   username = "Anonymous",
   replyType = "standard"
-}: ReplyOptions): SlateNode[] => {
+}: ReplyOptions): EditorNode[] => {
   // This structure allows for future reply types (agree/disagree/etc.)
   switch (replyType) {
     case "standard":

@@ -1,9 +1,9 @@
-import type { LinkData, SlateContent } from "../../types/database";
+import type { LinkData, EditorContent } from "../../types/database";
 
 /**
- * Extract links from Slate.js content nodes
+ * Extract links from editor content nodes
  */
-export const extractLinksFromNodes = (nodes: SlateContent[]): LinkData[] => {
+export const extractLinksFromNodes = (nodes: EditorContent): LinkData[] => {
   const links: LinkData[] = [];
 
   const extractFromNode = (node: any) => {
@@ -239,7 +239,7 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
 
       try {
         // Parse content if it's a string
-        let contentNodes: SlateContent[] = [];
+        let contentNodes: EditorContent = [];
         if (typeof data.content === 'string') {
           try {
             contentNodes = JSON.parse(data.content);
@@ -372,11 +372,11 @@ export const validateLinkUrl = async (url: string): Promise<boolean> => {
 /**
  * Extract page references from content
  */
-export const extractPageReferences = (content: string | SlateContent[]): string[] => {
+export const extractPageReferences = (content: string | EditorContent): string[] => {
   const pageIds: string[] = [];
 
   try {
-    let nodes: SlateContent[] = [];
+    let nodes: EditorContent = [];
 
     if (typeof content === 'string') {
       nodes = JSON.parse(content);
@@ -479,11 +479,11 @@ export const findPagesLinkingToExternalUrl = async (
 /**
  * Extract user mentions from content
  */
-export const extractUserMentions = (content: string | SlateContent[]): string[] => {
+export const extractUserMentions = (content: string | EditorContent): string[] => {
   const userIds: string[] = [];
 
   try {
-    let nodes: SlateContent[] = [];
+    let nodes: EditorContent = [];
 
     if (typeof content === 'string') {
       nodes = JSON.parse(content);
@@ -542,7 +542,7 @@ export const findUserPagesLinkingToExternalUrl = async (
       if (!page.content) continue;
 
       try {
-        let content: SlateContent[] = [];
+        let content: EditorContent = [];
 
         // Parse content if it's a string
         if (typeof page.content === 'string') {
@@ -591,6 +591,7 @@ export const getUserExternalLinks = async (
   text: string;
   pageId: string;
   pageTitle: string;
+  lastModified?: any;
 }>> => {
   try {
     // Import required functions
@@ -608,6 +609,7 @@ export const getUserExternalLinks = async (
       text: string;
       pageId: string;
       pageTitle: string;
+      lastModified?: any;
     }> = [];
 
     // Process each page to extract external links
@@ -656,7 +658,8 @@ export const getUserExternalLinks = async (
             url: link.url,
             text: link.text || link.url,
             pageId: page.id,
-            pageTitle: page.title || 'Untitled'
+            pageTitle: page.title || 'Untitled',
+            lastModified: page.lastModified
           });
         });
       } catch (error) {
@@ -680,12 +683,236 @@ export const getUserExternalLinks = async (
 };
 
 /**
+ * Get aggregated external links from a user's pages with global counts
+ */
+export const getUserExternalLinksAggregated = async (
+  userId: string,
+  currentUserId: string | null = null,
+  sortBy: 'recent' | 'oldest' | 'most_linked' | 'least_linked' = 'recent'
+): Promise<Array<{
+  url: string;
+  text: string;
+  globalCount: number;
+  userCount: number;
+  pages: Array<{
+    pageId: string;
+    pageTitle: string;
+    lastModified?: any;
+  }>;
+  mostRecentModified?: any;
+  oldestModified?: any;
+}>> => {
+  try {
+    // Get all individual external link entries for this user
+    const externalLinkEntries = await getUserExternalLinks(userId, currentUserId);
+
+    // Group by URL
+    const linkGroups = new Map<string, {
+      url: string;
+      text: string;
+      pages: Array<{
+        pageId: string;
+        pageTitle: string;
+        lastModified?: any;
+      }>;
+      mostRecentModified?: any;
+      oldestModified?: any;
+    }>();
+
+    externalLinkEntries.forEach(entry => {
+      if (!linkGroups.has(entry.url)) {
+        linkGroups.set(entry.url, {
+          url: entry.url,
+          text: entry.text,
+          pages: [],
+          mostRecentModified: entry.lastModified,
+          oldestModified: entry.lastModified
+        });
+      }
+
+      const group = linkGroups.get(entry.url)!;
+
+      // Add page if not already included
+      const existingPage = group.pages.find(p => p.pageId === entry.pageId);
+      if (!existingPage) {
+        group.pages.push({
+          pageId: entry.pageId,
+          pageTitle: entry.pageTitle,
+          lastModified: entry.lastModified
+        });
+      }
+
+      // Update most recent and oldest modified dates
+      if (entry.lastModified) {
+        if (!group.mostRecentModified || entry.lastModified > group.mostRecentModified) {
+          group.mostRecentModified = entry.lastModified;
+        }
+        if (!group.oldestModified || entry.lastModified < group.oldestModified) {
+          group.oldestModified = entry.lastModified;
+        }
+      }
+    });
+
+    // Get global counts for all URLs efficiently
+    const urls = Array.from(linkGroups.keys());
+    const globalCounts = await getGlobalExternalLinkCounts(urls);
+
+    // Create aggregated links with global counts
+    const aggregatedLinks = Array.from(linkGroups.values()).map(group => ({
+      url: group.url,
+      text: group.text,
+      globalCount: globalCounts.get(group.url) || 0,
+      userCount: group.pages.length,
+      pages: group.pages,
+      mostRecentModified: group.mostRecentModified,
+      oldestModified: group.oldestModified
+    }));
+
+    // Sort based on the requested sort option
+    aggregatedLinks.sort((a, b) => {
+      switch (sortBy) {
+        case 'recent':
+          // Most recently modified first
+          if (!a.mostRecentModified && !b.mostRecentModified) return 0;
+          if (!a.mostRecentModified) return 1;
+          if (!b.mostRecentModified) return -1;
+          return b.mostRecentModified.localeCompare(a.mostRecentModified);
+
+        case 'oldest':
+          // Oldest modified first
+          if (!a.oldestModified && !b.oldestModified) return 0;
+          if (!a.oldestModified) return 1;
+          if (!b.oldestModified) return -1;
+          return a.oldestModified.localeCompare(b.oldestModified);
+
+        case 'most_linked':
+          // Most linked globally first
+          return b.globalCount - a.globalCount;
+
+        case 'least_linked':
+          // Least linked globally first
+          return a.globalCount - b.globalCount;
+
+        default:
+          return 0;
+      }
+    });
+
+    return aggregatedLinks;
+  } catch (error) {
+    console.error("Error getting aggregated user external links:", error);
+    return [];
+  }
+};
+
+/**
+ * Get the global count of how many times an external URL is linked across all public pages
+ */
+export const getGlobalExternalLinkCount = async (externalUrl: string): Promise<number> => {
+  try {
+    const { db } = await import('../config');
+    const { collection, query, where, getDocs } = await import('firebase/firestore');
+
+    // Query public pages only
+    const pagesQuery = query(
+      collection(db, 'pages'),
+      where('isPublic', '==', true),
+      where('deleted', '!=', true)
+    );
+
+    const snapshot = await getDocs(pagesQuery);
+    let count = 0;
+
+    // Search through page content for the external URL
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+
+      // Skip if no content
+      if (!data.content) continue;
+
+      try {
+        // Extract links from the page content
+        const links = extractLinksFromNodes(data.content);
+
+        // Count occurrences of the external URL in this page
+        const urlCount = links.filter(link =>
+          link.type === 'external' && link.url === externalUrl
+        ).length;
+
+        count += urlCount;
+      } catch (error) {
+        console.error(`Error processing page ${doc.id} for global count:`, error);
+        continue;
+      }
+    }
+
+    return count;
+  } catch (error) {
+    console.error("Error getting global external link count:", error);
+    return 0;
+  }
+};
+
+/**
+ * Get global counts for multiple external URLs efficiently
+ */
+export const getGlobalExternalLinkCounts = async (urls: string[]): Promise<Map<string, number>> => {
+  const counts = new Map<string, number>();
+
+  // Initialize all URLs with 0 count
+  urls.forEach(url => counts.set(url, 0));
+
+  try {
+    const { db } = await import('../config');
+    const { collection, query, where, getDocs } = await import('firebase/firestore');
+
+    // Query public pages only
+    const pagesQuery = query(
+      collection(db, 'pages'),
+      where('isPublic', '==', true),
+      where('deleted', '!=', true)
+    );
+
+    const snapshot = await getDocs(pagesQuery);
+
+    // Search through page content for all external URLs
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+
+      // Skip if no content
+      if (!data.content) continue;
+
+      try {
+        // Extract links from the page content
+        const links = extractLinksFromNodes(data.content);
+
+        // Count occurrences of each URL in this page
+        links.forEach(link => {
+          if (link.type === 'external' && link.url && urls.includes(link.url)) {
+            const currentCount = counts.get(link.url) || 0;
+            counts.set(link.url, currentCount + 1);
+          }
+        });
+      } catch (error) {
+        console.error(`Error processing page ${doc.id} for global counts:`, error);
+        continue;
+      }
+    }
+
+    return counts;
+  } catch (error) {
+    console.error("Error getting global external link counts:", error);
+    return counts;
+  }
+};
+
+/**
  * Convert plain text URLs to link objects
  */
-export const convertTextToLinks = (text: string): SlateContent[] => {
+export const convertTextToLinks = (text: string): EditorContent => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
-  const nodes: SlateContent[] = [];
+  const nodes: EditorContent = [];
   
   parts.forEach(part => {
     if (part.match(urlRegex)) {

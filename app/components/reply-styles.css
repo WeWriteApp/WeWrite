@@ -1,7 +1,7 @@
 /* Custom styles for reply content links */
 
 /* Base link styling */
-[data-slate-editor] a {
+[data-editor] a {
   color: var(--primary);
   text-decoration: none;
 }
@@ -13,9 +13,9 @@
  */
 
 /* Add @ symbol before user links */
-[data-slate-editor] a.user-link::before,
-[data-slate-editor] a[data-user-id]::before,
-[data-slate-editor] a.editor-link.user-link::before {
+[data-editor] a.user-link::before,
+[data-editor] a[data-user-id]::before,
+[data-editor] a.editor-link.user-link::before {
   content: "@";
   margin-right: 1px;
   opacity: 0.7;

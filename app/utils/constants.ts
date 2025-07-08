@@ -1,4 +1,4 @@
-// Type definitions for Slate editor node types
+// Type definitions for editor node types
 export interface NodeTypes {
   readonly PARAGRAPH: 'paragraph';
   readonly HEADING: 'heading';
@@ -8,7 +8,7 @@ export interface NodeTypes {
   readonly LINK: 'link';
 }
 
-// Node type constants for Slate editor
+// Node type constants for editor
 export const nodeTypes: NodeTypes = {
   PARAGRAPH: 'paragraph',
   HEADING: 'heading',

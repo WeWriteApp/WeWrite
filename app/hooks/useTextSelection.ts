@@ -52,7 +52,7 @@ export const useTextSelection = (options: TextSelectionOptions = {}) => {
         '[data-page-content]',           // Main page content
         '.user-bio-content',             // User biography content
         '.group-about-content',          // Group about page content
-        '[data-slate-editor]',           // Editor content
+        '[data-editor]',                 // Editor content
         '.page-content',                 // Page content areas
         '.content-area',                 // Generic content areas
         '.unified-text-content',         // Unified text content

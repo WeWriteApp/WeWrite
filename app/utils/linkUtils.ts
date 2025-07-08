@@ -26,11 +26,11 @@ interface ReplyAttributionOptions {
   username?: string;
 }
 
-interface SlateTextNode {
+interface EditorTextNode {
   text: string;
 }
 
-interface SlateLinkNode {
+interface EditorLinkNode {
   type: "link";
   url: string;
   pageId?: string;
@@ -41,14 +41,14 @@ interface SlateLinkNode {
   isUser?: boolean;
   userId?: string;
   username?: string;
-  children: SlateTextNode[];
+  children: EditorTextNode[];
 }
 
-interface SlateParagraphNode {
+interface EditorParagraphNode {
   type: "paragraph";
   isAttribution?: boolean;
   attributionType?: string;
-  children: (SlateTextNode | SlateLinkNode)[];
+  children: (EditorTextNode | EditorLinkNode)[];
 }
 
 /**

@@ -24,8 +24,8 @@ import { handlePaste, insertProcessedContent } from "../../utils/pasteHandler";
 
 // Types
 interface EditorProps {
-  initialContent?: string | any[]; // Support both string and Slate content
-  onChange?: (content: any[]) => void; // Always return Slate format
+  initialContent?: string | any[]; // Support both string and editor content
+  onChange?: (content: any[]) => void; // Always return editor format
   placeholder?: string;
   contentType?: 'wiki' | 'about' | 'bio';
   onKeyDown?: (event: React.KeyboardEvent) => void;
@@ -59,7 +59,7 @@ interface ParsedLink {
 }
 
 /**
- * Editor - A lightweight replacement for Slate.js
+ * Editor - WeWrite's custom content editor
  *
  * Handles plain text with embedded links in a simple format:
  * - Page links: [Page Title](page:pageId)
@@ -132,13 +132,13 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
   const { currentAccount } = useCurrentAccount();
   const pillStyleClasses = useMemo(() => getPillStyleClasses('editor'), [getPillStyleClasses]);
 
-  // Helper function to convert Slate to simple text (memoized for performance)
-  const convertSlateToSimpleText = useCallback((slateContent: any): string => {
-    if (!slateContent || !Array.isArray(slateContent)) return "";
+  // Helper function to convert editor content to simple text (memoized for performance)
+  const convertEditorToSimpleText = useCallback((editorContent: any): string => {
+    if (!editorContent || !Array.isArray(editorContent)) return "";
 
     let result = "";
 
-    for (const node of slateContent) {
+    for (const node of editorContent) {
       if (node.type === "paragraph" && node.children) {
         for (const child of node.children) {
           if (child.text) {
@@ -165,17 +165,17 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     return result.trim();
   }, []);
 
-  // Memoized Slate to HTML conversion with improved error handling
-  const convertSlateToHTML = useCallback((slateContent: any): string => {
+  // Memoized editor content to HTML conversion with improved error handling
+  const convertEditorToHTML = useCallback((editorContent: any): string => {
     try {
-      if (!slateContent || !Array.isArray(slateContent)) {
+      if (!editorContent || !Array.isArray(editorContent)) {
         return "<div><br></div>";
       }
 
       let result = "";
 
-      for (let paragraphIndex = 0; paragraphIndex < slateContent.length; paragraphIndex++) {
-        const node = slateContent[paragraphIndex];
+      for (let paragraphIndex = 0; paragraphIndex < editorContent.length; paragraphIndex++) {
+        const node = editorContent[paragraphIndex];
         if (node.type === "paragraph" && node.children) {
           result += "<div>";
           let hasContent = false;
@@ -229,19 +229,19 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
       return result || "<div><br></div>";
     } catch (error) {
-      console.error("Editor: Error in Slate to HTML conversion:", error);
+      console.error("Editor: Error in editor to HTML conversion:", error);
       return "<div><br></div>";
     }
   }, [pillStyleClasses]);
 
-  // Memoized HTML to Slate conversion with improved error handling
-  const convertHTMLToSlate = useCallback((html: string): any[] => {
+  // Memoized HTML to editor content conversion with improved error handling
+  const convertHTMLToEditor = useCallback((html: string): any[] => {
     if (typeof document === 'undefined') {
       return [{ type: "paragraph", children: [{ text: "" }] }];
     }
 
     try {
-      console.log("🔵 convertHTMLToSlate: Starting conversion with HTML:", html.substring(0, 500));
+      console.log("🔵 convertHTMLToEditor: Starting conversion with HTML:", html.substring(0, 500));
 
       // CRITICAL FIX: Declare variables outside try block to avoid scope issues
       const tempDiv = document.createElement('div');
@@ -249,7 +249,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
       const result = [];
       const children = Array.from(tempDiv.children);
-      console.log("🔵 convertHTMLToSlate: Found children:", children.length);
+      console.log("🔵 convertHTMLToEditor: Found children:", children.length);
 
       const contentDivs = children.filter(child => {
         try {
@@ -260,7 +260,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         }
       });
 
-      console.log("🔵 convertHTMLToSlate: Content divs after filtering:", contentDivs.length);
+      console.log("🔵 convertHTMLToEditor: Content divs after filtering:", contentDivs.length);
 
       if (contentDivs.length === 0) {
         // Check if there are any direct children that are not divs (like links)
@@ -268,7 +268,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
           child.tagName !== 'DIV' && !child.classList?.contains('unified-paragraph-number')
         );
 
-        console.log("🔵 convertHTMLToSlate: No content divs, direct children:", directChildren.length);
+        console.log("🔵 convertHTMLToEditor: No content divs, direct children:", directChildren.length);
 
         if (directChildren.length > 0) {
           // Process direct children as a single paragraph
@@ -281,7 +281,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
             if (node.nodeType === Node.TEXT_NODE) {
               const text = node.textContent || "";
               if (text && text !== '\u00A0') {
-                console.log("🔵 convertHTMLToSlate: Adding text node:", text);
+                console.log("🔵 convertHTMLToEditor: Adding text node:", text);
                 paragraph.children.push({ text });
               }
             } else if (node.nodeType === Node.ELEMENT_NODE) {
@@ -290,12 +290,12 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
               if (element.hasAttribute('data-link-type')) {
                 const linkType = element.getAttribute('data-link-type');
                 const text = element.textContent || "";
-                console.log(`🔵 convertHTMLToSlate: Processing direct link - type: ${linkType}, text: ${text}`);
+                console.log(`🔵 convertHTMLToEditor: Processing direct link - type: ${linkType}, text: ${text}`);
 
                 if (linkType === 'page') {
                   const pageId = element.getAttribute('data-id');
                   const pageTitle = element.getAttribute('data-page-title') || text;
-                  console.log(`🔵 convertHTMLToSlate: Direct page link - pageId: ${pageId}, pageTitle: ${pageTitle}`);
+                  console.log(`🔵 convertHTMLToEditor: Direct page link - pageId: ${pageId}, pageTitle: ${pageTitle}`);
 
                   const linkNode = {
                     type: "link",
@@ -308,7 +308,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                     children: [{ text: pageTitle }]
                   };
 
-                  console.log("🔵 convertHTMLToSlate: Adding direct page link node:", linkNode);
+                  console.log("🔵 convertHTMLToEditor: Adding direct page link node:", linkNode);
                   paragraph.children.push(linkNode);
                 }
               }
@@ -322,12 +322,12 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
             paragraph.children.push({ text: "" });
           }
 
-          console.log("🔵 convertHTMLToSlate: Direct children paragraph:", paragraph);
+          console.log("🔵 convertHTMLToEditor: Direct children paragraph:", paragraph);
           return [paragraph];
         }
 
         const textContent = tempDiv.textContent || "";
-        console.log("🔵 convertHTMLToSlate: No content divs, text content:", textContent);
+        console.log("🔵 convertHTMLToEditor: No content divs, text content:", textContent);
         if (textContent.trim()) {
           return [{ type: "paragraph", children: [{ text: textContent }] }];
         }
@@ -340,7 +340,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
       // First, process content divs
       contentDivs.forEach((div, divIndex) => {
-        console.log(`🔵 convertHTMLToSlate: Processing div ${divIndex}:`, div.innerHTML);
+        console.log(`🔵 convertHTMLToEditor: Processing div ${divIndex}:`, div.innerHTML);
         processedElements.add(div);
 
         const paragraph = {
@@ -353,7 +353,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
             const text = node.textContent || "";
             // CRITICAL FIX: Handle &nbsp; as empty content for proper contentEditable behavior
             if (text && text !== '\u00A0') { // \u00A0 is the non-breaking space character
-              console.log("🔵 convertHTMLToSlate: Adding text node:", text);
+              console.log("🔵 convertHTMLToEditor: Adding text node:", text);
               paragraph.children.push({ text });
             }
           } else if (node.nodeType === Node.ELEMENT_NODE) {
@@ -377,12 +377,12 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
             if (element.hasAttribute('data-link-type')) {
               const linkType = element.getAttribute('data-link-type');
               const text = element.textContent || "";
-              console.log(`🔵 convertHTMLToSlate: Processing link - type: ${linkType}, text: ${text}`);
+              console.log(`🔵 convertHTMLToEditor: Processing link - type: ${linkType}, text: ${text}`);
 
               if (linkType === 'page') {
                 const pageId = element.getAttribute('data-id');
                 const pageTitle = element.getAttribute('data-page-title') || text; // CRITICAL FIX: Use data-page-title if available
-                console.log(`🔵 convertHTMLToSlate: Page link - pageId: ${pageId}, pageTitle: ${pageTitle}`);
+                console.log(`🔵 convertHTMLToEditor: Page link - pageId: ${pageId}, pageTitle: ${pageTitle}`);
 
                 const linkNode = {
                   type: "link",
@@ -395,11 +395,11 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                   children: [{ text: pageTitle }] // FIXED: Use pageTitle for consistency
                 };
 
-                console.log("🔵 convertHTMLToSlate: Adding page link node:", linkNode);
+                console.log("🔵 convertHTMLToEditor: Adding page link node:", linkNode);
                 paragraph.children.push(linkNode);
               } else if (linkType === 'user') {
                 const userId = element.getAttribute('data-id');
-                console.log(`🔵 convertHTMLToSlate: User link - userId: ${userId}`);
+                console.log(`🔵 convertHTMLToEditor: User link - userId: ${userId}`);
 
                 const linkNode = {
                   type: "link",
@@ -411,11 +411,11 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                   children: [{ text }]
                 };
 
-                console.log("🔵 convertHTMLToSlate: Adding user link node:", linkNode);
+                console.log("🔵 convertHTMLToEditor: Adding user link node:", linkNode);
                 paragraph.children.push(linkNode);
               } else if (linkType === 'external') {
                 const url = element.getAttribute('data-url');
-                console.log('🔵 Converting external link to Slate:', { url, text, linkType, element });
+                console.log('🔵 Converting external link to editor:', { url, text, linkType, element });
 
                 const linkNode = {
                   type: "link",
@@ -425,7 +425,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                   children: [{ text }]
                 };
 
-                console.log("🔵 convertHTMLToSlate: Adding external link node:", linkNode);
+                console.log("🔵 convertHTMLToEditor: Adding external link node:", linkNode);
                 paragraph.children.push(linkNode);
               }
             } else if (element.classList?.contains('compound-link')) {
@@ -464,11 +464,11 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         div.childNodes.forEach(processNode);
 
         if (paragraph.children.length === 0) {
-          console.log("🔵 convertHTMLToSlate: Empty paragraph, adding empty text");
+          console.log("🔵 convertHTMLToEditor: Empty paragraph, adding empty text");
           paragraph.children.push({ text: "" });
         }
 
-        console.log(`🔵 convertHTMLToSlate: Final paragraph ${divIndex}:`, paragraph);
+        console.log(`🔵 convertHTMLToEditor: Final paragraph ${divIndex}:`, paragraph);
         result.push(paragraph);
       });
 
@@ -480,23 +480,23 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       );
 
       if (siblingElements.length > 0) {
-        console.log("🔵 convertHTMLToSlate: Processing sibling elements:", siblingElements.length);
+        console.log("🔵 convertHTMLToEditor: Processing sibling elements:", siblingElements.length);
 
         // Find the last paragraph to append sibling content to
         const lastParagraph = result[result.length - 1];
         if (lastParagraph) {
           siblingElements.forEach((element, index) => {
-            console.log(`🔵 convertHTMLToSlate: Processing sibling ${index}:`, element.outerHTML);
+            console.log(`🔵 convertHTMLToEditor: Processing sibling ${index}:`, element.outerHTML);
 
             if (element.hasAttribute('data-link-type')) {
               const linkType = element.getAttribute('data-link-type');
               const text = element.textContent || "";
-              console.log(`🔵 convertHTMLToSlate: Processing sibling link - type: ${linkType}, text: ${text}`);
+              console.log(`🔵 convertHTMLToEditor: Processing sibling link - type: ${linkType}, text: ${text}`);
 
               if (linkType === 'page') {
                 const pageId = element.getAttribute('data-id');
                 const pageTitle = element.getAttribute('data-page-title') || text;
-                console.log(`🔵 convertHTMLToSlate: Sibling page link - pageId: ${pageId}, pageTitle: ${pageTitle}`);
+                console.log(`🔵 convertHTMLToEditor: Sibling page link - pageId: ${pageId}, pageTitle: ${pageTitle}`);
 
                 const linkNode = {
                   type: "link",
@@ -509,7 +509,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                   children: [{ text: pageTitle }]
                 };
 
-                console.log("🔵 convertHTMLToSlate: Adding sibling page link node:", linkNode);
+                console.log("🔵 convertHTMLToEditor: Adding sibling page link node:", linkNode);
                 lastParagraph.children.unshift(linkNode); // Add at beginning of paragraph
               }
             }
@@ -517,10 +517,10 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         }
       }
 
-    console.log("🔵 convertHTMLToSlate: Final result:", result);
+    console.log("🔵 convertHTMLToEditor: Final result:", result);
     return result.length > 0 ? result : [{ type: "paragraph", children: [{ text: "" }] }];
     } catch (error) {
-      console.error("🔴 Editor: Error in HTML to Slate conversion:", error);
+      console.error("🔴 Editor: Error in HTML to editor conversion:", error);
       console.error("🔴 Error details:", {
         message: error.message,
         stack: error.stack,
@@ -570,7 +570,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         );
 
         if (hasContent) {
-          htmlContent = convertSlateToHTML(initialContent);
+          htmlContent = convertEditorToHTML(initialContent);
         }
       }
 
@@ -596,7 +596,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         }
       });
     }
-  }, [isClient, convertSlateToHTML, initialContent]);
+  }, [isClient, convertEditorToHTML, initialContent]);
 
   // Debug DOM attributes after render - REMOVED for production
 
@@ -806,30 +806,30 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
       // FIXED: Reduced debounce delay for better responsiveness
       changeTimeoutRef.current = setTimeout(() => {
         try {
-          const slateContent = convertHTMLToSlate(htmlContent);
+          const editorContent = convertHTMLToEditor(htmlContent);
 
           // Enhanced logging for external link debugging
           if (process.env.NODE_ENV === 'development') {
             const hasExternalLinks = htmlContent.includes('data-link-type="external"');
-            const externalLinksInSlate = slateContent.some(p =>
+            const externalLinksInEditor = editorContent.some(p =>
               p.children && p.children.some(c => c.isExternal === true)
             );
 
-            console.log("🔵 Editor.handleContentChange: Converting to Slate:", {
+            console.log("🔵 Editor.handleContentChange: Converting to editor content:", {
               htmlLength: htmlContent.length,
-              slateLength: slateContent.length,
-              hasContent: slateContent.some(p => p.children && p.children.some(c => c.text && c.text.trim())),
+              editorLength: editorContent.length,
+              hasContent: editorContent.some(p => p.children && p.children.some(c => c.text && c.text.trim())),
               hasExternalLinks,
-              externalLinksInSlate
+              externalLinksInEditor
             });
 
             if (hasExternalLinks) {
               console.log("🔍 HTML with external links:", htmlContent);
-              console.log("🔍 Slate content with external links:", JSON.stringify(slateContent, null, 2));
+              console.log("🔍 Editor content with external links:", JSON.stringify(editorContent, null, 2));
             }
           }
 
-          onChange?.(slateContent);
+          onChange?.(editorContent);
 
           // Add paragraph numbers after content changes
           addParagraphNumbers();
@@ -866,7 +866,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         addParagraphNumbers();
       }
     }
-  }, [isClient, onChange, onEmptyLinesChange, convertHTMLToSlate, addParagraphNumbers]);
+  }, [isClient, onChange, onEmptyLinesChange, convertHTMLToEditor, addParagraphNumbers]);
 
   // CRITICAL FIX: Input handling without interfering with normal editing
   const handleInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
@@ -981,9 +981,9 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
 
     // Just notify parent of current content on blur
     const htmlContent = editorRef.current.innerHTML;
-    const slateContent = convertHTMLToSlate(htmlContent);
-    onChange?.(slateContent);
-  }, [isClient, onChange, convertHTMLToSlate]);
+    const editorContent = convertHTMLToEditor(htmlContent);
+    onChange?.(editorContent);
+  }, [isClient, onChange, convertHTMLToEditor]);
 
   // Simplified delete key handling - no complex manipulation
   const handleDeleteKey = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -1833,20 +1833,20 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         fullHTML: htmlContent
       });
 
-      const slateContent = convertHTMLToSlate(htmlContent);
-      console.log("🔵 Editor.getContent: Converted to Slate:", {
-        paragraphCount: slateContent.length,
-        hasText: slateContent.some(p => p.children && p.children.some(c => c.text && c.text.trim())),
-        fullSlateContent: JSON.stringify(slateContent, null, 2)
+      const editorContent = convertHTMLToEditor(htmlContent);
+      console.log("🔵 Editor.getContent: Converted to editor content:", {
+        paragraphCount: editorContent.length,
+        hasText: editorContent.some(p => p.children && p.children.some(c => c.text && c.text.trim())),
+        fullEditorContent: JSON.stringify(editorContent, null, 2)
       });
 
       // CRITICAL FIX: Ensure we always return valid content
-      if (!slateContent || slateContent.length === 0) {
-        console.warn("🟡 Editor.getContent: Slate conversion failed, returning default");
+      if (!editorContent || editorContent.length === 0) {
+        console.warn("🟡 Editor.getContent: Editor conversion failed, returning default");
         return [{ type: "paragraph", children: [{ text: "" }] }];
       }
 
-      return slateContent;
+      return editorContent;
     },
     insertText: (text: string) => {
       if (readOnly) return false;
@@ -1938,7 +1938,7 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
     },
     deleteAllEmptyLines: readOnly ? () => false : deleteAllEmptyLines,
     processPendingPageLinks: readOnly ? () => false : processPendingPageLinks
-  }), [readOnly, handleContentChange, insertLink, saveSelection, convertHTMLToSlate, deleteAllEmptyLines, processPendingPageLinks]);
+  }), [readOnly, handleContentChange, insertLink, saveSelection, convertHTMLToEditor, deleteAllEmptyLines, processPendingPageLinks]);
 
   // Memoized class names to prevent re-computation
   const editorClassName = useMemo(() =>

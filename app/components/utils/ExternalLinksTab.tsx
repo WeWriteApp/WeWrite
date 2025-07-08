@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Loader2, Globe, Link } from 'lucide-react';
+import { ExternalLink, Loader2, Globe, Link, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { PillLink } from './PillLink';
 import ExternalLinkPreviewModal from '../ui/ExternalLinkPreviewModal';
 
@@ -12,18 +12,34 @@ interface ExternalLinkData {
   pageTitle: string;
 }
 
+interface AggregatedExternalLinkData {
+  url: string;
+  text: string;
+  globalCount: number;
+  userCount: number;
+  pages: Array<{
+    pageId: string;
+    pageTitle: string;
+    lastModified?: any;
+  }>;
+  mostRecentModified?: any;
+  oldestModified?: any;
+}
+
+type SortOption = 'recent' | 'oldest' | 'most_linked' | 'least_linked';
+
 interface ExternalLinksTabProps {
   userId: string;
   username?: string;
   currentUserId?: string | null;
 }
 
-export default function ExternalLinksTab({ 
-  userId, 
-  username = 'this user', 
-  currentUserId 
+export default function ExternalLinksTab({
+  userId,
+  username = 'this user',
+  currentUserId
 }: ExternalLinksTabProps) {
-  const [externalLinks, setExternalLinks] = useState<ExternalLinkData[]>([]);
+  const [externalLinks, setExternalLinks] = useState<AggregatedExternalLinkData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLink, setSelectedLink] = useState<{
@@ -31,19 +47,20 @@ export default function ExternalLinksTab({
     text: string;
   } | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('recent');
 
   useEffect(() => {
     loadExternalLinks();
-  }, [userId, currentUserId]);
+  }, [userId, currentUserId, sortBy]);
 
   const loadExternalLinks = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       // Import the function dynamically to avoid SSR issues
-      const { getUserExternalLinks } = await import('../../firebase/database/links');
-      const links = await getUserExternalLinks(userId, currentUserId);
+      const { getUserExternalLinksAggregated } = await import('../../firebase/database/links');
+      const links = await getUserExternalLinksAggregated(userId, currentUserId, sortBy);
       setExternalLinks(links);
     } catch (err) {
       console.error('Error loading external links:', err);
@@ -53,10 +70,10 @@ export default function ExternalLinksTab({
     }
   };
 
-  const handleLinkClick = (e: React.MouseEvent, link: ExternalLinkData) => {
+  const handleLinkClick = (e: React.MouseEvent, link: AggregatedExternalLinkData) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     setSelectedLink({
       url: link.url,
       text: link.text
@@ -67,6 +84,16 @@ export default function ExternalLinksTab({
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedLink(null);
+  };
+
+  const getSortLabel = (option: SortOption) => {
+    switch (option) {
+      case 'recent': return 'Most Recent';
+      case 'oldest': return 'Oldest';
+      case 'most_linked': return 'Most Linked';
+      case 'least_linked': return 'Least Linked';
+      default: return 'Most Recent';
+    }
   };
 
   if (loading) {
@@ -110,6 +137,32 @@ export default function ExternalLinksTab({
 
   return (
     <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Globe className="h-5 w-5 text-muted-foreground" />
+          <h3 className="text-lg font-semibold">External Links</h3>
+          <span className="text-sm text-muted-foreground">
+            ({externalLinks?.length || 0})
+          </span>
+        </div>
+
+        {/* Sort Controls */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Sort by:</span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="text-sm border border-border rounded px-2 py-1 bg-background"
+          >
+            <option value="recent">Most Recent</option>
+            <option value="oldest">Oldest</option>
+            <option value="most_linked">Most Linked</option>
+            <option value="least_linked">Least Linked</option>
+          </select>
+        </div>
+      </div>
+
       {/* Description */}
       <div className="mb-6">
         <p className="text-muted-foreground">
@@ -118,14 +171,14 @@ export default function ExternalLinksTab({
       </div>
 
       {/* External Links List */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         {externalLinks && externalLinks.map((link, index) => (
           <div
-            key={`${link.url}-${link.pageId}-${index}`}
-            className="flex items-center gap-2 p-3 border border-border rounded-lg hover:border-border/60 transition-colors"
+            key={`${link.url}-${index}`}
+            className="p-4 border border-border rounded-lg hover:border-border/60 transition-colors"
           >
-            {/* External Link Display */}
-            <div className="flex items-center gap-2 flex-wrap">
+            {/* External Link Header */}
+            <div className="flex items-center gap-2 mb-3">
               {/* External Link Pill */}
               <PillLink
                 href={link.url}
@@ -136,24 +189,43 @@ export default function ExternalLinksTab({
                 {link.text !== link.url ? link.text : new URL(link.url).hostname}
               </PillLink>
 
-              {/* Show URL if different from text */}
-              {link.text !== link.url && (
-                <span className="text-xs text-muted-foreground">
-                  ({link.url})
+              {/* Global Count Badge */}
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                {link.globalCount} {link.globalCount === 1 ? 'link' : 'links'} across WeWrite
+              </span>
+
+              {/* User Count Badge (if more than one page) */}
+              {link.userCount > 1 && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  {link.userCount} {link.userCount === 1 ? 'page' : 'pages'} by {username}
                 </span>
               )}
+            </div>
 
-              {/* "linked to from" text */}
-              <span className="text-muted-foreground text-sm flex-shrink-0">linked to from</span>
+            {/* Show URL if different from text */}
+            {link.text !== link.url && (
+              <div className="text-xs text-muted-foreground mb-2">
+                URL: {link.url}
+              </div>
+            )}
 
-              {/* Page Title Pill */}
-              <PillLink
-                href={`/${link.pageId}`}
-                isPublic={true}
-                className="flex-shrink-0"
-              >
-                {link.pageTitle}
-              </PillLink>
+            {/* Pages List */}
+            <div className="space-y-2">
+              <div className="text-sm text-muted-foreground">
+                Linked from {username}'s {link.pages.length === 1 ? 'page' : 'pages'}:
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {link.pages.map((page, pageIndex) => (
+                  <PillLink
+                    key={`${page.pageId}-${pageIndex}`}
+                    href={`/${page.pageId}`}
+                    isPublic={true}
+                    className="flex-shrink-0 text-sm"
+                  >
+                    {page.pageTitle}
+                  </PillLink>
+                ))}
+              </div>
             </div>
           </div>
         ))}

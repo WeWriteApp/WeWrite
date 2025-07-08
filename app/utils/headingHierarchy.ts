@@ -31,10 +31,10 @@ interface HeadingOutline {
   text: string;
 }
 
-interface SlateNode {
+interface EditorNode {
   type?: string;
   text?: string;
-  children?: SlateNode[];
+  children?: EditorNode[];
   [key: string]: any;
 }
 
@@ -231,20 +231,20 @@ export function extractHeadingOutline(content: SlateNode[] | string): HeadingOut
       }));
     }
   } else if (Array.isArray(content)) {
-    // Parse Slate content
-    headings = extractHeadingsFromSlate(content);
+    // Parse editor content
+    headings = extractHeadingsFromEditor(content);
   }
 
   return headings;
 }
 
 /**
- * Extracts headings from Slate content
+ * Extracts headings from editor content
  */
-function extractHeadingsFromSlate(nodes: SlateNode[]): HeadingOutline[] {
+function extractHeadingsFromEditor(nodes: EditorNode[]): HeadingOutline[] {
   const headings: HeadingOutline[] = [];
 
-  function traverse(nodeArray: SlateNode[]): void {
+  function traverse(nodeArray: EditorNode[]): void {
     nodeArray.forEach(node => {
       if (node.type && node.type.startsWith('heading-')) {
         const level = parseInt(node.type.split('-')[1]);
@@ -269,9 +269,9 @@ function extractHeadingsFromSlate(nodes: SlateNode[]): HeadingOutline[] {
 }
 
 /**
- * Extracts text from a Slate node
+ * Extracts text from an editor node
  */
-function extractTextFromNode(node: SlateNode): string {
+function extractTextFromNode(node: EditorNode): string {
   if (node.text !== undefined) {
     return node.text;
   }
