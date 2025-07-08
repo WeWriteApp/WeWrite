@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCurrentAccount } from "../providers/CurrentAccountProvider";
 import { getCacheItem, setCacheItem, generateCacheKey, cacheWarmingService } from '../utils/cacheUtils';
+import { deduplicatedFetch } from '../utils/requestDeduplication';
 
 interface DashboardData {
   recentPages: any[];
@@ -75,15 +76,12 @@ export function useOptimizedDashboard(): UseOptimizedDashboardReturn {
       
       console.log(`Dashboard: Fetching data (background: ${isBackground}, forceRefresh: ${forceRefresh})`);
       
-      const response = await fetch(`/api/home-dashboard?${params}`, {
-        signal: abortControllerRef.current.signal
+      const dashboardData: DashboardData = await deduplicatedFetch(`/api/home-dashboard?${params}`, {
+        signal: abortControllerRef.current.signal,
+        cacheTTL: forceRefresh ? 0 : 2 * 60 * 1000, // 2 minutes cache unless force refresh
+        skipCache: forceRefresh,
+        skipDedup: forceRefresh
       });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const dashboardData: DashboardData = await response.json();
       
       // Check if request was aborted
       if (abortControllerRef.current?.signal.aborted) {

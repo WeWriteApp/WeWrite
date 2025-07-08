@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { executeDeduplicatedBatch } from '../../../utils/serverRequestDeduplication';
 
 interface UserData {
   uid: string;
@@ -71,7 +72,38 @@ export async function POST(request: NextRequest) {
 
     console.log(`Batch user data: Fetching data for ${userIds.length} users`);
 
-    const results: Record<string, UserData> = {};
+    // Use deduplication for the entire batch operation
+    const results = await executeDeduplicatedOperation(
+      'batchUserData',
+      { userIds: userIds.sort() }, // Sort for consistent cache keys
+      async () => {
+        return await fetchBatchUserDataInternal(userIds, db, rtdb);
+      },
+      { cacheTTL: 3 * 60 * 1000 } // 3 minutes cache
+    );
+
+    console.log(`Batch user data: Successfully fetched data for ${Object.keys(results).length} users`);
+
+    return createApiResponse({
+      users: results,
+      count: Object.keys(results).length
+    });
+
+  } catch (error) {
+    console.error('Error fetching batch user data:', error);
+    return createErrorResponse('INTERNAL_ERROR', 'Failed to fetch user data');
+  }
+}
+
+/**
+ * Internal function to fetch batch user data
+ */
+async function fetchBatchUserDataInternal(
+  userIds: string[],
+  db: any,
+  rtdb: any
+): Promise<Record<string, UserData>> {
+  const results: Record<string, UserData> = {};
 
     // Batch fetch from Firestore (max 10 per query due to 'in' limitation)
     const batchSize = 10;
@@ -190,16 +222,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`Batch user data: Successfully fetched data for ${Object.keys(results).length} users`);
-
-    return createApiResponse({
-      users: results,
-      count: Object.keys(results).length
-    });
-
+    return results;
   } catch (error) {
-    console.error('Error fetching batch user data:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to fetch user data');
+    console.error('Error in fetchBatchUserDataInternal:', error);
+    return {};
   }
 }
 

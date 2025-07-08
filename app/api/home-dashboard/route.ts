@@ -3,6 +3,7 @@ import { collection, query, orderBy, limit, getDocs, where, select } from 'fireb
 import { db } from '../../firebase/config';
 import { rtdb } from '../../firebase/rtdb';
 import { ref, get } from 'firebase/database';
+import { executeDeduplicatedOperation } from '../../utils/serverRequestDeduplication';
 
 // Server-side cache for dashboard data
 const dashboardCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
@@ -45,13 +46,23 @@ export async function GET(request: NextRequest) {
 
     console.log('Home dashboard: Fetching fresh data');
     
-    // Fetch all data in a single batched operation for maximum performance
+    // Fetch all data in a single batched operation with deduplication
     const [
       allRecentPages,
       userStats
     ] = await Promise.all([
-      getRecentPagesOptimized(40, userId), // Get more pages to derive both recent and trending
-      userId ? getUserStatsOptimized(userId) : Promise.resolve(null)
+      executeDeduplicatedOperation(
+        'getRecentPages',
+        { limit: 40, userId },
+        () => getRecentPagesOptimized(40, userId),
+        { cacheTTL: 2 * 60 * 1000 } // 2 minutes cache for recent pages
+      ),
+      userId ? executeDeduplicatedOperation(
+        'getUserStats',
+        { userId },
+        () => getUserStatsOptimized(userId),
+        { cacheTTL: 5 * 60 * 1000 } // 5 minutes cache for user stats
+      ) : Promise.resolve(null)
     ]);
 
     // Derive trending pages from recent pages to avoid duplicate queries
@@ -64,13 +75,18 @@ export async function GET(request: NextRequest) {
       })
       .slice(0, 5);
 
-    // Batch fetch user subscription data for all page authors to avoid separate API calls
+    // Batch fetch user subscription data with deduplication
     const uniqueUserIds = [...new Set(recentPages.map(page => page.userId).filter(Boolean))];
     let batchUserData = {};
 
     if (uniqueUserIds.length > 0) {
       try {
-        batchUserData = await getBatchUserDataOptimized(uniqueUserIds);
+        batchUserData = await executeDeduplicatedOperation(
+          'getBatchUserData',
+          { userIds: uniqueUserIds.sort() }, // Sort for consistent cache keys
+          () => getBatchUserDataOptimized(uniqueUserIds),
+          { cacheTTL: 3 * 60 * 1000 } // 3 minutes cache for user data
+        );
       } catch (error) {
         console.warn('Error fetching batch user data:', error);
         // Continue without user data rather than failing the entire request
