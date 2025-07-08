@@ -9,6 +9,7 @@ interface DashboardData {
   userGroups: any[];
   trendingPages: any[];
   userStats?: any;
+  batchUserData?: Record<string, any>; // Include batched user subscription data
   timestamp: number;
   loadTime: number;
   cached?: boolean;

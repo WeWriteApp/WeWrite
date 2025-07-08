@@ -4,10 +4,15 @@ import { db } from '../../firebase/config';
 import { rtdb } from '../../firebase/rtdb';
 import { ref, get } from 'firebase/database';
 
+// Server-side cache for dashboard data
+const dashboardCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+const DASHBOARD_CACHE_TTL = 5 * 60 * 1000; // 5 minutes server-side cache
+
 interface DashboardData {
   recentPages: any[];
   trendingPages: any[];
   userStats?: any;
+  batchUserData?: Record<string, any>; // Include user subscription data
   timestamp: number;
   loadTime: number;
 }
@@ -16,27 +21,61 @@ interface DashboardData {
 
 /**
  * Optimized home dashboard endpoint that fetches all data in a single request
- * Uses batch queries and caching for maximum performance
+ * Uses batch queries, server-side caching, and consolidated operations for maximum performance
  */
 export async function GET(request: NextRequest) {
   const startTime = performance.now();
-  
+
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
-    
+
+    // Check server-side cache first
+    const cacheKey = `dashboard:${userId || 'anonymous'}`;
+    const cached = dashboardCache.get(cacheKey);
+
+    if (cached && Date.now() - cached.timestamp < cached.ttl) {
+      console.log('Home dashboard: Returning cached data');
+      return NextResponse.json({
+        ...cached.data,
+        cached: true,
+        cacheAge: Date.now() - cached.timestamp
+      });
+    }
+
     console.log('Home dashboard: Fetching fresh data');
     
-    // Fetch all data in parallel for maximum performance
+    // Fetch all data in a single batched operation for maximum performance
     const [
-      recentPages,
-      trendingPages,
+      allRecentPages,
       userStats
     ] = await Promise.all([
-      getRecentPagesOptimized(20, userId),
-      getTrendingPagesOptimized(5, userId),
+      getRecentPagesOptimized(40, userId), // Get more pages to derive both recent and trending
       userId ? getUserStatsOptimized(userId) : Promise.resolve(null)
     ]);
+
+    // Derive trending pages from recent pages to avoid duplicate queries
+    const recentPages = allRecentPages.slice(0, 20);
+    const trendingPages = allRecentPages
+      .filter(page => {
+        const lastModified = new Date(page.lastModified);
+        const daysSinceModified = (Date.now() - lastModified.getTime()) / (1000 * 60 * 60 * 24);
+        return daysSinceModified <= 7; // Only pages modified in last 7 days
+      })
+      .slice(0, 5);
+
+    // Batch fetch user subscription data for all page authors to avoid separate API calls
+    const uniqueUserIds = [...new Set(recentPages.map(page => page.userId).filter(Boolean))];
+    let batchUserData = {};
+
+    if (uniqueUserIds.length > 0) {
+      try {
+        batchUserData = await getBatchUserDataOptimized(uniqueUserIds);
+      } catch (error) {
+        console.warn('Error fetching batch user data:', error);
+        // Continue without user data rather than failing the entire request
+      }
+    }
     
     const endTime = performance.now();
     const loadTime = endTime - startTime;
@@ -45,11 +84,29 @@ export async function GET(request: NextRequest) {
       recentPages,
       trendingPages,
       userStats,
+      batchUserData,
       timestamp: Date.now(),
       loadTime
     };
 
-    console.log(`Home dashboard: Data fetched in ${loadTime.toFixed(2)}ms`);
+    // Cache the result for future requests
+    dashboardCache.set(cacheKey, {
+      data: dashboardData,
+      timestamp: Date.now(),
+      ttl: DASHBOARD_CACHE_TTL
+    });
+
+    // Clean up old cache entries periodically
+    if (Math.random() < 0.1) { // 10% chance to clean up
+      const now = Date.now();
+      for (const [key, value] of dashboardCache.entries()) {
+        if (now - value.timestamp > value.ttl) {
+          dashboardCache.delete(key);
+        }
+      }
+    }
+
+    console.log(`Home dashboard: Data fetched in ${loadTime.toFixed(2)}ms (${recentPages.length} recent, ${trendingPages.length} trending)`);
 
     return NextResponse.json(dashboardData);
     
@@ -130,29 +187,9 @@ async function getRecentPagesOptimized(limitCount: number, userId?: string | nul
  */
 
 /**
- * Get trending pages with optimized queries
+ * Trending pages logic is now consolidated into the main dashboard function
+ * to avoid duplicate queries and reduce Firebase reads
  */
-async function getTrendingPagesOptimized(limitCount: number, userId?: string | null): Promise<any[]> {
-  try {
-    // For now, use recent pages as trending (this could be enhanced with view counts)
-    const recentPages = await getRecentPagesOptimized(limitCount * 2, userId);
-    
-    // Simple trending algorithm: recent pages with more recent activity
-    const trendingPages = recentPages
-      .filter(page => {
-        const lastModified = new Date(page.lastModified);
-        const daysSinceModified = (Date.now() - lastModified.getTime()) / (1000 * 60 * 60 * 24);
-        return daysSinceModified <= 7; // Only pages modified in last 7 days
-      })
-      .slice(0, limitCount);
-    
-    return trendingPages;
-    
-  } catch (error) {
-    console.error('Error fetching trending pages:', error);
-    return [];
-  }
-}
 
 /**
  * Get user statistics (server-side version)
@@ -174,5 +211,66 @@ async function getUserStatsOptimized(userId: string): Promise<any> {
   } catch (error) {
     console.error('Error fetching user stats:', error);
     return null;
+  }
+}
+
+/**
+ * Batch fetch user subscription data (server-side optimized version)
+ */
+async function getBatchUserDataOptimized(userIds: string[]): Promise<Record<string, any>> {
+  try {
+    if (!userIds || userIds.length === 0) {
+      return {};
+    }
+
+    const results: Record<string, any> = {};
+    const batchSize = 10; // Process in batches to avoid overwhelming the database
+
+    for (let i = 0; i < userIds.length; i += batchSize) {
+      const batch = userIds.slice(i, i + batchSize);
+
+      // Fetch user data from RTDB in parallel
+      const userPromises = batch.map(async (userId) => {
+        try {
+          const userSnapshot = await get(ref(rtdb, `users/${userId}`));
+
+          if (userSnapshot.exists()) {
+            const userData = userSnapshot.val();
+            return {
+              userId,
+              data: {
+                uid: userId,
+                username: userData.username || userData.displayName ||
+                         (userData.email ? userData.email.split('@')[0] : undefined),
+                displayName: userData.displayName,
+                tier: userData.tier || 0,
+                subscriptionStatus: userData.subscriptionStatus || 'inactive',
+                subscriptionAmount: userData.subscriptionAmount || 0,
+                pageCount: userData.pageCount || 0,
+                followerCount: userData.followerCount || 0
+              }
+            };
+          }
+
+          return { userId, data: null };
+        } catch (error) {
+          console.warn(`Error fetching user ${userId}:`, error);
+          return { userId, data: null };
+        }
+      });
+
+      const batchResults = await Promise.all(userPromises);
+
+      batchResults.forEach(({ userId, data }) => {
+        if (data) {
+          results[userId] = data;
+        }
+      });
+    }
+
+    return results;
+  } catch (error) {
+    console.error('Error fetching batch user data:', error);
+    return {};
   }
 }

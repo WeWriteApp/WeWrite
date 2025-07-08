@@ -17,7 +17,7 @@ import { Input } from "../ui/input";
 import { Search } from "lucide-react";
 import DailyNotesSection from "../daily-notes/DailyNotesSection";
 import EmailVerificationAlert from "../utils/EmailVerificationAlert";
-import { getBatchUserData } from "../../firebase/batchUserData";
+
 
 const Dashboard: React.FC = () => {
   console.log(`🟡 Dashboard: Component rendering`);
@@ -113,57 +113,33 @@ const RecentPagesSection = () => {
   const [pagesWithSubscriptions, setPagesWithSubscriptions] = useState([]);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
-  // Fetch subscription data when pages are loaded
+  // Use batched subscription data from the dashboard API
   useEffect(() => {
-    const fetchSubscriptionData = async () => {
-      const recentPages = data?.recentPages || [];
+    const recentPages = data?.recentPages || [];
+    const batchUserData = data?.batchUserData || {};
 
-      if (recentPages.length === 0) {
-        setPagesWithSubscriptions([]);
-        return;
-      }
-
-      // Extract unique user IDs from pages
-      const uniqueUserIds = [...new Set(recentPages.map(page => page.userId).filter(Boolean))];
-
-      if (uniqueUserIds.length > 0) {
-        try {
-          setSubscriptionLoading(true);
-          console.log('RecentPagesSection: Fetching subscription data for', uniqueUserIds.length, 'users');
-
-          const batchUserData = await getBatchUserData(uniqueUserIds);
-
-          // Add subscription data to pages
-          const pagesWithSubs = recentPages.map(page => {
-            if (!page.userId) return page;
-
-            const userData = batchUserData[page.userId];
-            return {
-              ...page,
-              tier: userData?.tier,
-              subscriptionStatus: userData?.subscriptionStatus,
-              subscriptionAmount: userData?.subscriptionAmount,
-              username: userData?.username || page.username
-            };
-          });
-
-          setPagesWithSubscriptions(pagesWithSubs);
-        } catch (subscriptionError) {
-          console.error('Error fetching subscription data for recent pages:', subscriptionError);
-          // Still set the pages without subscription data
-          setPagesWithSubscriptions(recentPages);
-        } finally {
-          setSubscriptionLoading(false);
-        }
-      } else {
-        setPagesWithSubscriptions(recentPages);
-      }
-    };
-
-    if (data?.recentPages) {
-      fetchSubscriptionData();
+    if (recentPages.length === 0) {
+      setPagesWithSubscriptions([]);
+      return;
     }
-  }, [data?.recentPages]);
+
+    // Add subscription data to pages using the batched data from the API
+    const pagesWithSubs = recentPages.map(page => {
+      if (!page.userId) return page;
+
+      const userData = batchUserData[page.userId];
+      return {
+        ...page,
+        tier: userData?.tier,
+        subscriptionStatus: userData?.subscriptionStatus,
+        subscriptionAmount: userData?.subscriptionAmount,
+        username: userData?.username || page.username
+      };
+    });
+
+    setPagesWithSubscriptions(pagesWithSubs);
+    console.log('RecentPagesSection: Using batched user data for', Object.keys(batchUserData).length, 'users');
+  }, [data?.recentPages, data?.batchUserData]);
 
   if (loading) {
     return (
