@@ -23,6 +23,13 @@ export function SubscriptionTierBadge({
   isLoading = false
 }: SubscriptionTierBadgeProps) {
 
+  // Size configurations - moved to top to fix initialization error
+  const sizeConfig = {
+    sm: { icon: 12, gap: 'gap-0.5' },
+    md: { icon: 14, gap: 'gap-1' },
+    lg: { icon: 16, gap: 'gap-1' }
+  };
+
   // Show loading state if explicitly loading
   if (isLoading) {
     return (
@@ -43,13 +50,6 @@ export function SubscriptionTierBadge({
 
   // Use centralized tier determination logic with safety fallback
   const finalTier = getEffectiveTier(amount ?? null, tier ?? null, status ?? null) || 'inactive';
-
-  // Size configurations
-  const sizeConfig = {
-    sm: { icon: 12, gap: 'gap-0.5' },
-    md: { icon: 14, gap: 'gap-1' },
-    lg: { icon: 16, gap: 'gap-1' }
-  };
 
   const config = sizeConfig[size];
 
