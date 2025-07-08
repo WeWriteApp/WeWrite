@@ -1,8 +1,9 @@
 "use client";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { PillLink } from "../utils/PillLink";
 import { formatRelativeTime } from "../../utils/formatRelativeTime";
-import { generateSimpleDiff, generateTextDiff } from "../../utils/generateTextDiff";
+import { calculateDiff } from "../../utils/diffService";
 import DiffPreview, { DiffStats } from "./DiffPreview";
 import { SubscriptionTierBadge } from "../ui/SubscriptionTierBadge";
 
@@ -10,14 +11,41 @@ import { SubscriptionTierBadge } from "../ui/SubscriptionTierBadge";
  * ActivityCard component displays a single activity card
  */
 const ActivityCard = ({ activity }) => {
-  const { added, removed } = generateSimpleDiff(
-    activity.currentContent,
-    activity.previousContent
-  );
-  const textDiff = generateTextDiff(
-    activity.currentContent,
-    activity.previousContent
-  );
+  const [diffResult, setDiffResult] = useState(null);
+  const [diffLoading, setDiffLoading] = useState(false);
+
+  // Use pre-computed diff data from the activity API
+  useEffect(() => {
+    if (activity.diff) {
+      // Use pre-computed diff data from the new activity system
+      setDiffResult({
+        added: activity.diff.added,
+        removed: activity.diff.removed,
+        hasChanges: activity.diff.hasChanges,
+        operations: [],
+        preview: null
+      });
+      setDiffLoading(false);
+    } else if (activity.currentContent) {
+      // Fallback to client-side calculation for backward compatibility
+      setDiffLoading(true);
+
+      calculateDiff(activity.currentContent, activity.previousContent)
+        .then(result => {
+          setDiffResult(result);
+          setDiffLoading(false);
+        })
+        .catch(error => {
+          console.error('Error calculating diff in ActivityItem:', error);
+          setDiffResult(null);
+          setDiffLoading(false);
+        });
+    }
+  }, [activity.diff, activity.currentContent, activity.previousContent]);
+
+  // Extract values from diff result
+  const added = diffResult?.added || 0;
+  const removed = diffResult?.removed || 0;
 
   return (
     <Link
@@ -72,7 +100,8 @@ const ActivityCard = ({ activity }) => {
       <div className="mt-2 flex items-center justify-between gap-3">
         <div className="relative flex-grow min-w-0 max-h-16">
           <DiffPreview
-            textDiff={textDiff}
+            currentContent={activity.currentContent}
+            previousContent={activity.previousContent}
             isNewPage={false}
             className="relative"
           />

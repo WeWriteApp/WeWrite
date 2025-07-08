@@ -37,15 +37,15 @@ export async function getServerActivityData(limitCount = 30) {
       // Skip pages without content
       if (!pageData.content) return null;
 
-      // Get the page's history
-      const historyQuery = db.collection("pages").doc(pageId).collection("history")
-        .orderBy("timestamp", "desc")
+      // Get the page's versions (updated from 'history' to 'versions' to match current system)
+      const versionsQuery = db.collection("pages").doc(pageId).collection("versions")
+        .orderBy("createdAt", "desc")
         .limit(1);
 
       try {
-        const historySnapshot = await historyQuery.get();
+        const versionsSnapshot = await versionsQuery.get();
 
-        if (historySnapshot.empty) {
+        if (versionsSnapshot.empty) {
           // No history, use current content as the only version
           return {
             pageId,
@@ -59,17 +59,17 @@ export async function getServerActivityData(limitCount = 30) {
           };
         }
 
-        // Get the most recent history entry
-        const historyData = historySnapshot.docs[0].data();
+        // Get the most recent version entry
+        const versionData = versionsSnapshot.docs[0].data();
 
         return {
           pageId,
           pageName: pageData.title || "Untitled",
           userId: pageData.userId,
           username: await getUsernameById(db, rtdb, pageData.userId),
-          timestamp: historyData.timestamp?.toDate() || new Date(),
+          timestamp: versionData.createdAt?.toDate ? versionData.createdAt.toDate() : (versionData.createdAt ? new Date(versionData.createdAt) : new Date()),
           currentContent: pageData.content,
-          previousContent: historyData.content || "",
+          previousContent: versionData.content || "",
           isPublic: pageData.isPublic
         };
       } catch (err) {

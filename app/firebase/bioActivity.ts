@@ -15,7 +15,7 @@ import {
 } from "firebase/firestore";
 import { rtdb } from "./rtdb";
 import { ref, get } from "firebase/database";
-import { hasContentChanged } from "../utils/contentNormalization";
+import { hasContentChanged } from "../utils/diffService";
 
 // Type definitions for bio activity operations
 interface BioActivityData {

@@ -26,28 +26,27 @@ export async function GET(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const adminDb = admin.firestore();
 
-    // Build query to get pages with custom dates
-    // Use range query instead of != null to work with existing indexes
+    // Build query to get ALL pages for the user first, then filter for custom dates
+    // This ensures we catch pages that might have been migrated or have custom dates
+    // OPTIMIZATION: Remove deleted filter from query to avoid index requirement, filter in code instead
     let pagesQuery = adminDb.collection('pages')
-      .where('userId', '==', userId)
-      .where('customDate', '>=', '') // Only pages with custom dates (empty string is less than any date)
-      .orderBy('customDate', 'asc'); // Order by custom date
+      .where('userId', '==', userId);
 
-    // Apply date range filters if provided
-    if (startDate) {
-      pagesQuery = pagesQuery.where('customDate', '>=', startDate);
-    }
-    if (endDate) {
-      pagesQuery = pagesQuery.where('customDate', '<=', endDate);
-    }
+    // If we have date range, we'll filter after getting the results
+    // This is more reliable than trying to query on customDate field directly
 
-    console.log(`[daily-notes API] Querying pages with custom dates for user ${userId}`, {
+    console.log(`[daily-notes API] Querying all pages for user ${userId} (will filter deleted pages in code)`, {
       startDate,
       endDate
     });
 
     const pagesSnapshot = await pagesQuery.get();
-    
+
+    // Helper function to check if a string is in YYYY-MM-DD format
+    const isDateFormat = (str: string): boolean => {
+      return /^\d{4}-\d{2}-\d{2}$/.test(str);
+    };
+
     const pages = pagesSnapshot.docs
       .map(doc => {
         const data = doc.data();
@@ -81,9 +80,40 @@ export async function GET(request: NextRequest) {
           deleted: data.deleted || false
         };
       })
-      .filter(page => !page.deleted); // Filter out deleted pages client-side
+      .filter(page => {
+        // Filter out deleted pages
+        if (page.deleted) return false;
 
-    console.log(`[daily-notes API] Found ${pages.length} pages with custom dates`);
+        // Include pages with customDate field
+        if (page.customDate) {
+          // Apply date range filter if specified
+          if (startDate && page.customDate < startDate) return false;
+          if (endDate && page.customDate > endDate) return false;
+          return true;
+        }
+
+        // Include legacy pages with YYYY-MM-DD titles (for backward compatibility)
+        if (page.title && isDateFormat(page.title)) {
+          // Apply date range filter if specified
+          if (startDate && page.title < startDate) return false;
+          if (endDate && page.title > endDate) return false;
+          return true;
+        }
+
+        return false;
+      });
+
+    console.log(`[daily-notes API] Found ${pages.length} pages with custom dates or legacy date titles`);
+
+    // Debug: Show first few pages to understand what we're returning
+    if (pages.length > 0) {
+      console.log('[daily-notes API] Sample pages:', pages.slice(0, 3).map(page => ({
+        id: page.id,
+        title: page.title,
+        customDate: page.customDate,
+        hasCustomDate: !!page.customDate
+      })));
+    }
 
     return NextResponse.json({
       pages,

@@ -7,14 +7,15 @@ import {
   setDoc,
   query,
   orderBy,
-  limit
+  limit,
+  Timestamp
 } from "firebase/firestore";
 
 import { db } from "./core";
 import { extractLinksFromNodes } from "./links";
 // Notifications functionality removed
 import { recordUserActivity } from "../streaks";
-import { hasContentChanged } from "../../utils/contentNormalization";
+import { hasContentChangedSync } from "../../utils/diffService";
 
 import type { PageVersion } from "../../types/database";
 
@@ -355,7 +356,7 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
     if (pageData.content) {
       console.log('Checking if content has changed before creating version...');
 
-      if (!hasContentChanged(contentString, pageData.content)) {
+      if (!hasContentChangedSync(contentString, pageData.content)) {
         isNoOpEdit = true;
         console.log('Content unchanged after normalization - this is a no-op edit');
 
@@ -403,6 +404,67 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
       console.log("Recorded user activity for streak tracking");
     } catch (activityError) {
       console.error("Error recording user activity (non-fatal):", activityError);
+      // Don't fail save operation if activity recording fails
+    }
+
+    // Create activity record with pre-computed diff data
+    try {
+      // Get page data for activity creation
+      const pageRef = doc(db, "pages", pageId);
+      const pageSnap = await getDoc(pageRef);
+
+      if (pageSnap.exists()) {
+        const pageData = pageSnap.data();
+
+        // Calculate diff data using the centralized diff service
+        const { diff } = await import('../../utils/diffService');
+        const diffResult = await diff(contentString, pageData.content || '');
+
+        // Skip if no changes and this isn't a new page
+        const isNewPage = !currentVersionId;
+        console.log("Activity creation debug:", {
+          isNewPage,
+          diffAdded: diffResult.added,
+          diffRemoved: diffResult.removed,
+          hasChanges: diffResult.added > 0 || diffResult.removed > 0,
+          currentVersionId
+        });
+
+        if (!isNewPage && !diffResult.added && !diffResult.removed) {
+          console.log("Skipping activity creation - no meaningful changes detected");
+        } else {
+          // Create activity record directly in Firestore
+          const activityData = {
+            pageId,
+            pageName: pageData.title || 'Untitled',
+            userId: data.userId,
+            username: data.username || 'Anonymous',
+            timestamp: Timestamp.now(),
+            diff: {
+              added: diffResult.added,
+              removed: diffResult.removed,
+              hasChanges: diffResult.added > 0 || diffResult.removed > 0 || isNewPage
+            },
+            isPublic: pageData.isPublic || false,
+            isNewPage,
+            versionId: versionRef.id
+          };
+
+          // Store in activities collection
+          const activitiesRef = collection(db, 'activities');
+          const activityDocRef = await addDoc(activitiesRef, activityData);
+
+          console.log("Created activity record for version save", {
+            activityId: activityDocRef.id,
+            pageId,
+            added: diffResult.added,
+            removed: diffResult.removed,
+            hasChanges: activityData.diff.hasChanges
+          });
+        }
+      }
+    } catch (activityError) {
+      console.error("Error creating activity record (non-fatal):", activityError);
       // Don't fail save operation if activity recording fails
     }
 

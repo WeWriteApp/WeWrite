@@ -170,7 +170,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                       href={`/${page.id}`}
                       isPublic={page.isPublic}
                       groupId={page.groupId}
-                      className="text-sm max-w-full"
+                      className="text-sm hover:scale-105 transition-transform"
                     >
                       {page.title && isExactDateFormat(page.title)
                         ? formatDateString(page.title)

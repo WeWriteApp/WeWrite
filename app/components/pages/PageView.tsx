@@ -381,13 +381,11 @@ export default function PageView({
           setCompareVersionData(compareVersion);
         }
 
-        // Generate diff content
-        const { generateDiffContent } = await import('../../utils/diffUtils');
-        const diffResult = await generateDiffContent(
-          compareVersion?.content || '',
+        // Generate diff content using centralized diff service
+        const { calculateDiff } = await import('../../utils/diffService');
+        const diffResult = await calculateDiff(
           currentVersion.content || '',
-          compareVersion?.title || 'Previous Version',
-          currentVersion.title || 'Current Version'
+          compareVersion?.content || ''
         );
 
         setDiffContent(diffResult);

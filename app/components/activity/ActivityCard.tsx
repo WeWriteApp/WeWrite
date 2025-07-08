@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import PillLink from "../utils/PillLink";
 import { formatRelativeTime } from "../../utils/formatRelativeTime";
-import { generateSimpleDiff, generateTextDiff, extractTextContent } from "../../utils/generateTextDiff";
+import { calculateDiff, hasContentChanged as hasContentChangedAsync } from "../../utils/diffService";
 import { useTheme } from "next-themes";
 import { cn, interactiveCard } from "../../lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
@@ -22,7 +22,7 @@ import { useDateFormat } from "../../contexts/DateFormatContext";
 import { useToast } from "../ui/use-toast";
 import { Button } from "../ui/button";
 import { RotateCcw } from "lucide-react";
-import { hasContentChanged } from "../../utils/contentNormalization";
+
 
 /**
  * ActivityCard component displays a single activity card
@@ -180,34 +180,49 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
   // For newly created pages, adjust the display text
   const isNewPage = activity.isNewPage;
 
-  // Calculate diffs differently for new pages vs edited pages
-  let added = 0;
-  let removed = 0;
-  let textDiff = null;
+  // State for diff calculation using centralized service
+  const [diffResult, setDiffResult] = useState(null);
+  const [diffLoading, setDiffLoading] = useState(false);
 
-  if (isNewPage && hasValidContent) {
-    // For new pages, count all content as added
-    const contentLength = extractTextContent(activity.currentContent).length;
-    added = contentLength;
-    removed = 0;
-    textDiff = generateTextDiff(activity.currentContent, null);
-  } else if (hasValidContent) {
-    // For edited pages, calculate the diff normally
-    const diffResult = generateSimpleDiff(activity.currentContent, activity.previousContent);
-    added = diffResult.added;
-    removed = diffResult.removed;
-    textDiff = generateTextDiff(activity.currentContent, activity.previousContent);
-  }
+  // Use pre-computed diff data from the activity API
+  useEffect(() => {
+    if (activity.diff) {
+      // Use pre-computed diff data from the new activity system
+      setDiffResult({
+        added: activity.diff.added,
+        removed: activity.diff.removed,
+        hasChanges: activity.diff.hasChanges,
+        operations: [],
+        preview: null
+      });
+      setDiffLoading(false);
+    } else if (hasValidContent) {
+      // Fallback to client-side calculation for backward compatibility
+      setDiffLoading(true);
 
-  // Safety check: Don't render cards for no-op edits (activities with zero meaningful changes)
-  // This is a final safety net to catch any no-op activities that might have slipped through
-  if (!isNewPage && added === 0 && removed === 0 && activity.currentContent && activity.previousContent) {
-    // Double-check with robust content normalization
-    if (!hasContentChanged(activity.currentContent, activity.previousContent)) {
-      console.log(`ActivityCard: Refusing to render no-op activity card for page ${activity.pageId}`);
-      return null; // Don't render this card
+      const currentContent = activity.currentContent;
+      const previousContent = isNewPage ? null : activity.previousContent;
+
+      calculateDiff(currentContent, previousContent)
+        .then(result => {
+          setDiffResult(result);
+          setDiffLoading(false);
+        })
+        .catch(error => {
+          console.error('Error calculating diff in ActivityCard:', error);
+          setDiffResult(null);
+          setDiffLoading(false);
+        });
     }
-  }
+  }, [activity.diff, activity.currentContent, activity.previousContent, isNewPage, hasValidContent]);
+
+  // Extract values from diff result
+  const added = diffResult?.added || 0;
+  const removed = diffResult?.removed || 0;
+  const hasChanges = diffResult?.hasChanges || false;
+
+  // Note: No-op activity filtering is now handled at the data level in useRecentActivity hook
+  // This ensures no gaps appear in the UI while still filtering out meaningless activities
 
   // Handle card click to navigate to the page
   const handleCardClick = (e) => {
@@ -296,7 +311,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
   }
 
   // Determine if this card has diff content (for dynamic height on mobile)
-  const hasDiffContent = textDiff && (textDiff.added?.length > 0 || textDiff.removed?.length > 0);
+  const hasDiffContent = diffResult && (diffResult.added > 0 || diffResult.removed > 0);
 
   return (
     <div
@@ -399,7 +414,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
             : "h-[70px]" // Fixed height for all others
         )}>
           <DiffPreview
-            textDiff={textDiff}
+            currentContent={activity.currentContent}
+            previousContent={isNewPage ? null : activity.previousContent}
             isNewPage={isNewPage}
           />
         </div>

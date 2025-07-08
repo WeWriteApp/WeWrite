@@ -1,6 +1,7 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { DiffPreview as DiffPreviewType, calculateDiff } from '../../utils/diffService';
 
 /**
  * WeWrite Activity Diff Standardization - DiffPreview Component
@@ -37,21 +38,61 @@ import React from 'react';
  * - Performance: Optimized diff algorithm with proper context handling
  *
  * @param {Object} props
- * @param {Object} props.textDiff - The diff object from generateTextDiff
+ * @param {any} props.currentContent - Current content for diff calculation
+ * @param {any} props.previousContent - Previous content for diff calculation
+ * @param {Object} props.textDiff - Pre-calculated diff object (optional, for backward compatibility)
  * @param {boolean} props.isNewPage - Whether this is a new page creation
  * @param {string} props.className - Additional CSS classes
  */
-export default function DiffPreview({ textDiff, isNewPage = false, className = "" }) {
+export default function DiffPreview({
+  currentContent,
+  previousContent,
+  textDiff,
+  isNewPage = false,
+  className = ""
+}) {
+  const [diffPreview, setDiffPreview] = useState<DiffPreviewType | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Calculate diff using centralized service when content is provided
+  useEffect(() => {
+    if (currentContent !== undefined && previousContent !== undefined) {
+      setLoading(true);
+      calculateDiff(currentContent, previousContent)
+        .then(result => {
+          setDiffPreview(result.preview);
+          setLoading(false);
+        })
+        .catch(error => {
+          console.error('Error calculating diff preview:', error);
+          setDiffPreview(null);
+          setLoading(false);
+        });
+    } else if (textDiff?.preview) {
+      // Use pre-calculated diff for backward compatibility
+      setDiffPreview(textDiff.preview);
+    }
+  }, [currentContent, previousContent, textDiff]);
+
+  // Use the calculated preview or fallback to textDiff
+  const preview = diffPreview || textDiff?.preview;
+  // Show loading state
+  if (loading) {
+    return (
+      <div className={`text-xs text-muted-foreground h-full flex items-center ${className}`}>
+        Calculating diff...
+      </div>
+    );
+  }
+
   // If no diff data, show fallback message
-  if (!textDiff || !textDiff.preview) {
+  if (!preview) {
     return (
       <div className={`text-xs text-muted-foreground h-full flex items-center ${className}`}>
         {isNewPage ? "New page created" : "Page edited"}
       </div>
     );
   }
-
-  const { preview } = textDiff;
 
   return (
     <div className={`text-xs overflow-hidden h-full ${className}`}>

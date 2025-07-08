@@ -92,11 +92,11 @@ export const PillLink = forwardRef(({
   if (deleted) {
     return (
       <span
-        className={`inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-colors whitespace-nowrap max-w-full bg-muted text-muted-foreground opacity-60 cursor-not-allowed ${className}`}
+        className={`inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-colors max-w-full overflow-hidden bg-muted text-muted-foreground opacity-60 cursor-not-allowed ${className}`}
         style={{ pointerEvents: 'none' }}
       >
         <Trash2 size={14} className="mr-1 flex-shrink-0" />
-        <span className="pill-text">deleted page</span>
+        <span className="pill-text truncate">deleted page</span>
       </span>
     );
   }
@@ -166,8 +166,8 @@ export const PillLink = forwardRef(({
     }
   }
 
-  // Use centralized styling with any additional custom classes
-  const baseStyles = `${getPillStyleClasses()} ${className}`.trim();
+  // Use centralized styling with any additional custom classes and global truncation
+  const baseStyles = `${getPillStyleClasses()} max-w-full overflow-hidden ${className}`.trim();
 
   // External link with confirmation modal
   if (isExternalLinkType) {
@@ -192,7 +192,7 @@ export const PillLink = forwardRef(({
           tabIndex={0}
         >
           {showLock && <Lock size={14} className="flex-shrink-0" />}
-          <span className="pill-text">{formattedDisplayTitle}</span>
+          <span className="pill-text truncate">{formattedDisplayTitle}</span>
           <ExternalLink size={14} className="flex-shrink-0" />
           {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
         </a>
@@ -284,7 +284,7 @@ export const PillLink = forwardRef(({
     >
       {showLock && <Lock size={14} className="flex-shrink-0" />}
       {isGroupLinkType && <Users size={14} className="flex-shrink-0" />}
-      <span className="pill-text">{formattedDisplayTitle}</span>
+      <span className="pill-text truncate">{formattedDisplayTitle}</span>
       {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
     </a>
   );

@@ -1,7 +1,7 @@
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase/database/core';
 import { extractTextContent } from '../utils/text-extraction';
-import { hasContentChanged } from '../utils/contentNormalization';
+import { hasContentChangedSync } from '../utils/diffService';
 
 export interface ContentChangeEvent {
   pageId: string;
@@ -35,7 +35,7 @@ export class ContentChangesTrackingService {
   ): Promise<void> {
     try {
       // Enhanced no-op detection: Use robust content normalization
-      if (!hasContentChanged(newContent, previousContent)) {
+      if (!hasContentChangedSync(newContent, previousContent)) {
         console.log('Content tracking: No meaningful changes detected, skipping analytics recording');
         return;
       }
@@ -113,7 +113,7 @@ export class ContentChangesTrackingService {
   ): Promise<void> {
     try {
       // Enhanced no-op detection: Use robust content normalization
-      if (!hasContentChanged(newContent, previousContent)) {
+      if (!hasContentChangedSync(newContent, previousContent)) {
         console.log('Advanced content tracking: No meaningful changes detected, skipping analytics recording');
         return;
       }
@@ -122,8 +122,9 @@ export class ContentChangesTrackingService {
       const previousText = extractTextContent(previousContent);
       const newText = extractTextContent(newContent);
 
-      // Calculate more accurate character changes using LCS
-      const { added, removed } = this.calculateCharacterDiff(previousText, newText);
+      // Calculate more accurate character changes using centralized diff service
+      const { getDiff } = await import('../utils/diffService');
+      const { added, removed } = await getDiff(newText, previousText);
 
       // Additional check: Only track if there are actual character changes
       if (added === 0 && removed === 0) {
@@ -166,47 +167,5 @@ export class ContentChangesTrackingService {
       // Don't throw error to avoid disrupting the save process
     }
   }
-  
-  /**
-   * Simple character diff calculation using LCS approach
-   */
-  private static calculateCharacterDiff(oldText: string, newText: string): { added: number; removed: number } {
-    // For performance, use a simplified approach for large texts
-    if (oldText.length > 10000 || newText.length > 10000) {
-      // Fall back to simple length comparison for very large texts
-      const lengthDiff = newText.length - oldText.length;
-      return {
-        added: Math.max(0, lengthDiff),
-        removed: Math.max(0, -lengthDiff)
-      };
-    }
-    
-    // Use a simplified LCS-based approach
-    const lcs = this.longestCommonSubsequence(oldText, newText);
-    const added = newText.length - lcs;
-    const removed = oldText.length - lcs;
-    
-    return { added, removed };
-  }
-  
-  /**
-   * Calculate longest common subsequence length
-   */
-  private static longestCommonSubsequence(str1: string, str2: string): number {
-    const m = str1.length;
-    const n = str2.length;
-    const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-    
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
-        if (str1[i - 1] === str2[j - 1]) {
-          dp[i][j] = dp[i - 1][j - 1] + 1;
-        } else {
-          dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-        }
-      }
-    }
-    
-    return dp[m][n];
-  }
+
 }

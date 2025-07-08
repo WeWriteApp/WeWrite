@@ -3,8 +3,8 @@ const fetch = require('node-fetch');
 
 async function testDailyNotesAPI() {
   try {
-    // You'll need to replace this with your actual user ID
-    const userId = 'YOUR_USER_ID_HERE'; // Replace with actual user ID
+    // Using the actual user ID from the terminal logs
+    const userId = 'fWNeCuussPgYgkN2LGohFRCPXiy1';
     
     console.log('Testing /api/my-pages endpoint...');
     

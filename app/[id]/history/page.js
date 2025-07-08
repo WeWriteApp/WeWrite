@@ -8,7 +8,7 @@ import { ChevronLeft, Clock } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { Loader } from '../../components/utils/Loader';
 import ActivityCard from '../../components/activity/ActivityCard';
-import { generateSimpleDiff, generateTextDiff } from '../../utils/generateTextDiff';
+import { getDiff } from '../../utils/diffService';
 import PageHeader from '../../components/pages/PageHeader';
 
 export default function PageHistoryPage({ params }) {

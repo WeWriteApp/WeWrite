@@ -3,7 +3,7 @@ import { useCurrentAccount } from "../providers/CurrentAccountProvider";
 // Removed direct Firebase imports - now using API endpoints
 import { registerRecentActivityInvalidator, unregisterCacheInvalidator } from "../utils/cacheInvalidation";
 import { registerRecentActivityInvalidation } from "../utils/globalCacheInvalidation";
-import { hasContentChanged } from "../utils/contentNormalization";
+import { hasContentChangedSync } from "../utils/diffService";
 import { getEffectiveTier } from "../utils/subscriptionTiers";
 
 // Simple cache for recent activity data - RUTHLESS SIMPLIFICATION: Very short TTL
@@ -346,6 +346,40 @@ const useRecentActivity = (
             }
             return true;
           });
+
+          // Filter out no-op activities (activities with no meaningful changes)
+          // This prevents "No changes" cards from appearing in the carousel
+          console.warn(`🔥 useRecentActivity: About to filter no-op activities from ${validActivities.length} activities`);
+          const activitiesBeforeNoOpFilter = validActivities.length;
+          validActivities = validActivities.filter(activity => {
+            // Always include new pages (they represent meaningful creation events)
+            if (activity.isNewPage) {
+              return true;
+            }
+
+            // For edited pages, check if there are meaningful changes
+            if (activity.currentContent && activity.previousContent) {
+              try {
+                // Import the content comparison function from centralized diff service
+                const { hasContentChangedSync } = require('../utils/diffService');
+
+                // Use the same logic as the ActivityCard component
+                const hasChanges = hasContentChangedSync(activity.currentContent, activity.previousContent);
+
+                // Only include activities that have meaningful changes
+                return hasChanges;
+              } catch (error) {
+                console.warn('Error checking content changes, including activity:', error);
+                // If we can't determine, include the activity to be safe
+                return true;
+              }
+            }
+
+            // Include activities without content comparison (like bio edits)
+            return true;
+          });
+
+          console.warn(`🔥 useRecentActivity: No-op filtering complete: ${activitiesBeforeNoOpFilter} → ${validActivities.length} activities`);
 
           // Apply user filter if specified
           if (filterUserId) {

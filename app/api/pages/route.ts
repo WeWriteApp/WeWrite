@@ -176,6 +176,45 @@ export async function POST(request: NextRequest) {
     // Create the page
     const pageRef = await db.collection('pages').add(pageData);
 
+    // Create activity record with pre-computed diff data for new page
+    try {
+      // Import the diff service
+      const { diff } = await import('../../utils/diffService');
+
+      // For new pages, there's no previous content, so diff against empty string
+      const currentContent = content || '';
+      const diffResult = await diff(currentContent, '');
+
+      // Create activity record directly in Firestore
+      const activityData = {
+        pageId: pageRef.id,
+        pageName: pageData.title || 'Untitled',
+        userId: currentUserId,
+        username: username || 'Anonymous',
+        timestamp: admin.firestore.Timestamp.now(),
+        diff: {
+          added: diffResult.added,
+          removed: diffResult.removed,
+          hasChanges: diffResult.added > 0 || diffResult.removed > 0 || true // Always true for new pages
+        },
+        isPublic: pageData.isPublic || false,
+        isNewPage: true
+      };
+
+      // Store in activities collection
+      await db.collection('activities').add(activityData);
+
+      console.log("Created activity record for new page via API", {
+        pageId: pageRef.id,
+        added: diffResult.added,
+        removed: diffResult.removed,
+        hasChanges: activityData.diff.hasChanges
+      });
+    } catch (activityError) {
+      console.error("Error creating activity record (non-fatal):", activityError);
+      // Don't fail page creation if activity recording fails
+    }
+
     return createApiResponse({
       id: pageRef.id,
       ...pageData,

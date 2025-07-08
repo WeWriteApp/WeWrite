@@ -227,7 +227,7 @@ export default function FollowedPages({
               href={`/pages/${page.id}`}
               variant="primary"
               isPublic={page.isPublic}
-              className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
+              className="hover:scale-105 transition-transform"
             >
               {page.title || 'Untitled Page'}
             </PillLink>

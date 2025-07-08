@@ -1625,41 +1625,16 @@ select,
   color: inherit;
 }
 
-/* FIX: Allow pill links to display full text and only truncate when absolutely necessary */
+/* Global pill text truncation - handles overflow gracefully */
 .pill-text {
   display: inline-block;
   white-space: nowrap;
-  /* Remove aggressive max-width constraint - let content flow naturally */
-  max-width: none;
-  /* Only apply overflow handling when the parent container constrains width */
-  overflow: visible;
-}
-
-/* Only truncate when the container specifically requests it */
-.truncate-requested .pill-text {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Truncate pill links when the truncate class is applied */
-a.truncate[data-pill-style] {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: inline-block;
-}
-
-/* Ensure pill text inside truncated pill links also truncates */
-a.truncate[data-pill-style] .pill-text,
-a.truncate[data-pill-style] span {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: inline-block;
-}
+/* Removed redundant truncation rules - now handled globally by .pill-text */
 
 /* Truncate links in the editor only when they would cause layout issues */
 .truncate-link {

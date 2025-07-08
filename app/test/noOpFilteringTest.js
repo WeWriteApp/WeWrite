@@ -13,8 +13,8 @@ async function testContentNormalization() {
   console.log('🔍 Testing Content Normalization and No-Op Detection...');
   
   try {
-    // Import the content normalization utilities
-    const { hasContentChanged, compareContent } = await import('../utils/contentNormalization');
+    // Import the content comparison utilities from centralized diff service
+    const { hasContentChangedSync, calculateDiff } = await import('../utils/diffService');
     
     // Test cases for no-op detection
     const testCases = [

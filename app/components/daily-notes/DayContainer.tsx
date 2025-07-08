@@ -70,17 +70,16 @@ const DayContainer = React.memo(function DayContainer({
       </div>
 
       {/* Notes Pills */}
-      <div className="space-y-2 mb-3">
+      <div className="flex flex-wrap gap-2 mb-3">
         {notes.map((note) => (
-          <div key={note.id} className="w-full">
-            <PillLink
-              href={`/pages/${note.id}`}
-              isPublic={true}
-              className="inline-block max-w-full truncate"
-            >
-              {note.title}
-            </PillLink>
-          </div>
+          <PillLink
+            key={note.id}
+            href={`/pages/${note.id}`}
+            isPublic={true}
+            className="hover:scale-105 transition-transform"
+          >
+            {note.title}
+          </PillLink>
         ))}
       </div>
 

@@ -176,7 +176,7 @@ export default function PageList({
                   href={`/${page.id}`}
                   isPublic={page.isPublic}
                   byline={page.authorName}
-                  className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px]"
+                  className="hover:scale-105 transition-transform"
                   isOwned={page.userId === session?.uid}
                   isLoading={false}
                   label=""

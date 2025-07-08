@@ -103,11 +103,79 @@ const RecentActivity = forwardRef(({ limit = 8, showViewAll = true, isActivityPa
     !isHomepage // Enable pagination for non-homepage modes
   );
 
-  const { activities = [], loading = false, error = null, hasMore = false, loadingMore = false, loadMore = () => {} } = activityData;
+  const { activities: rawActivities = [], loading = false, error = null, hasMore = false, loadingMore = false, loadMore = () => {} } = activityData;
   const { currentAccount } = useCurrentAccount();
   const carouselRef = useRef(null);
   const [followedPages, setFollowedPages] = useState([]);
   const [isLoadingFollows, setIsLoadingFollows] = useState(true);
+
+  // Filter out no-op activities (activities with no meaningful changes)
+  // This prevents "No changes" cards from appearing in the carousel
+  const activities = React.useMemo(() => {
+    if (!rawActivities || rawActivities.length === 0) {
+      return rawActivities;
+    }
+
+    console.warn(`🔥 RecentActivity: Filtering no-op activities from ${rawActivities.length} activities`);
+
+    const filteredActivities = rawActivities.filter(activity => {
+      // Always include new pages (they represent meaningful creation events)
+      if (activity.isNewPage) {
+        console.log(`✅ RecentActivity: Including new page ${activity.pageId} (${activity.pageName})`);
+        return true;
+      }
+
+      // For edited pages, check if there are meaningful changes
+      if (activity.diff) {
+        // Use pre-computed diff data from the new activity system
+        const hasChanges = activity.diff.hasChanges;
+
+        if (!hasChanges) {
+          console.log(`🚫 RecentActivity: Filtering out no-op activity for page ${activity.pageId} (${activity.pageName})`);
+          return false;
+        } else {
+          console.log(`✅ RecentActivity: Including edited page ${activity.pageId} (${activity.pageName}) - has meaningful changes`);
+          return true;
+        }
+      } else if (activity.currentContent && activity.previousContent) {
+        try {
+          // Fallback to client-side calculation for backward compatibility
+          const { hasContentChangedSync } = require('../../utils/diffService');
+
+          // Use the same logic as the ActivityCard component
+          const hasChanges = hasContentChangedSync(activity.currentContent, activity.previousContent);
+
+          if (!hasChanges) {
+            console.log(`🚫 RecentActivity: Filtering out no-op activity for page ${activity.pageId} (${activity.pageName})`);
+            return false;
+          } else {
+            console.log(`✅ RecentActivity: Including edited page ${activity.pageId} (${activity.pageName}) - has meaningful changes`);
+            return true;
+          }
+        } catch (error) {
+          console.warn('Error checking content changes, including activity:', error);
+          // If we can't determine, include the activity to be safe
+          return true;
+        }
+      }
+
+      // Include activities without content comparison (like bio edits)
+      console.log(`✅ RecentActivity: Including activity ${activity.pageId} (${activity.pageName}) - no content comparison needed`);
+      return true;
+    });
+
+    console.warn(`🔥 RecentActivity: No-op filtering complete: ${rawActivities.length} → ${filteredActivities.length} activities`);
+    return filteredActivities;
+  }, [rawActivities]);
+
+  // Debug logging for activities data
+  console.log('🟢 RecentActivity: Activities data:', {
+    rawActivitiesLength: rawActivities.length,
+    filteredActivitiesLength: activities.length,
+    loading,
+    error,
+    firstActivity: activities[0]
+  });
 
   // Combine errors from hook and local errors
   const combinedError = error || localError;

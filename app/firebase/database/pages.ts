@@ -154,6 +154,49 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
           // Don't fail page creation if activity recording fails
         }
 
+        // Create activity record with pre-computed diff data for new page
+        try {
+          // Import the diff service and Firestore functions
+          const { diff } = await import('../../utils/diffService');
+          const { collection, addDoc, Timestamp } = await import('firebase/firestore');
+
+          // For new pages, there's no previous content, so diff against empty string
+          const currentContent = data.content || '';
+          const diffResult = await diff(currentContent, '');
+
+          // Create activity record directly in Firestore
+          const activityData = {
+            pageId: pageRef.id,
+            pageName: pageData.title || 'Untitled',
+            userId: data.userId,
+            username: username || 'Anonymous',
+            timestamp: Timestamp.now(),
+            diff: {
+              added: diffResult.added,
+              removed: diffResult.removed,
+              hasChanges: diffResult.added > 0 || diffResult.removed > 0 || true // Always true for new pages
+            },
+            isPublic: pageData.isPublic || false,
+            isNewPage: true,
+            versionId: version.id
+          };
+
+          // Store in activities collection
+          const activitiesRef = collection(db, 'activities');
+          const activityDocRef = await addDoc(activitiesRef, activityData);
+
+          console.log("Created activity record for new page", {
+            activityId: activityDocRef.id,
+            pageId: pageRef.id,
+            added: diffResult.added,
+            removed: diffResult.removed,
+            hasChanges: activityData.diff.hasChanges
+          });
+        } catch (activityError) {
+          console.error("Error creating activity record (non-fatal):", activityError);
+          // Don't fail page creation if activity recording fails
+        }
+
         // Update user page count
         try {
           const { incrementUserPageCount } = await import('../counters');

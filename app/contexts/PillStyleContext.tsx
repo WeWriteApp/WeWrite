@@ -69,13 +69,11 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         text-sm font-medium
         rounded-lg
         transition-colors
-        whitespace-nowrap
         text-indent-0
         float-none
         leading-tight
         w-fit
-        min-w-fit
-        max-w-none
+        min-w-0
         my-0.5
         vertical-align-baseline
       `.trim().replace(/\s+/g, ' ');

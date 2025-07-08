@@ -178,7 +178,7 @@ const SearchResultsDisplay = React.memo(({
                     href={`/${page.id}`}
                     isPublic={page.isPublic}
                     isOwned={page.userId === userId}
-                    className="max-w-full truncate"
+                    className="hover:scale-105 transition-transform"
                   >
                     {page.title && isExactDateFormat(page.title)
                       ? formatDateString(page.title)

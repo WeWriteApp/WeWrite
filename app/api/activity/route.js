@@ -137,8 +137,27 @@ export async function GET(request) {
   try {
     console.log('API: /api/activity endpoint called');
 
+    // Get parameters from query string
+    let limitCount = DEFAULT_LIMIT;
+    let filterUserId = null;
+
+    if (request.url) {
+      try {
+        const { searchParams } = new URL(request.url);
+        const limitParam = searchParams.get('limit');
+        if (limitParam) {
+          limitCount = parseInt(limitParam, 10);
+        }
+        filterUserId = searchParams.get('userId');
+      } catch (e) {
+        console.warn('Error parsing URL parameters, using default limit:', e);
+      }
+    }
+
+    console.log('API: Requested limit:', limitCount, 'filterUserId:', filterUserId);
+
     // Initialize Firebase lazily
-    const { db: firestore, rtdb: realtimeDb } = initializeFirebase();
+    const { db: firestore } = initializeFirebase();
 
     if (!firestore) {
       console.error('API: Firebase Firestore not available');
@@ -148,135 +167,76 @@ export async function GET(request) {
       }, { status: 500, headers: corsHeaders });
     }
 
-    // Update local references
-    db = firestore;
-    rtdb = realtimeDb;
+    // Get activities from the activities collection
+    // Start with a simple query to avoid index requirements, then filter in code
+    let activitiesQuery = firestore.collection('activities')
+      .orderBy('timestamp', 'desc')
+      .limit(limitCount * 3); // Get extra to account for filtering
 
-    // Get limit from query parameter - using a static approach
-    // Instead of directly using request.url which causes static rendering issues
-    let limitCount = DEFAULT_LIMIT;
+    const activitiesSnapshot = await activitiesQuery.get();
 
-    // Only parse URL params if we're in a dynamic context
-    if (request.url) {
-      try {
-        const { searchParams } = new URL(request.url);
-        const limitParam = searchParams.get('limit');
-        if (limitParam) {
-          limitCount = parseInt(limitParam, 10);
-        }
-      } catch (e) {
-        console.warn('Error parsing URL parameters, using default limit:', e);
-      }
-    }
-
-    console.log('API: Requested limit:', limitCount);
-
-    // Query to get recent pages (only public pages, exclude deleted)
-    // Fetch more pages than needed to account for deduplication
-    const fetchLimit = Math.max(limitCount * 3, 50); // Fetch 3x more to ensure variety after deduplication
-    const pagesQuery = db.collection("pages")
-      .where("isPublic", "==", true)
-      .where("deleted", "!=", true) // Exclude soft-deleted pages
-      .orderBy("lastModified", "desc")
-      .limit(fetchLimit);
-
-    console.log(`API: Fetching ${fetchLimit} pages for deduplication (target: ${limitCount} activities)`);
-
-    const pagesSnapshot = await pagesQuery.get();
-
-    if (pagesSnapshot.empty) {
+    if (activitiesSnapshot.empty) {
       return NextResponse.json({ activities: [] }, { headers: corsHeaders });
     }
 
-    // Process each page to get its activity data
-    const activitiesPromises = pagesSnapshot.docs.map(async (pageDoc) => {
-      const pageData = pageDoc.data();
-      const pageId = pageDoc.id;
-
-      // Skip pages without content
-      if (!pageData.content) return null;
-
-      // Get the page's history
-      const historyQuery = db.collection("pages").doc(pageId).collection("history")
-        .orderBy("timestamp", "desc")
-        .limit(1);
-
-      try {
-        const historySnapshot = await historyQuery.get();
-
-        if (historySnapshot.empty) {
-          // No history, use current content as the only version
-          return {
-            pageId,
-            pageName: pageData.title || "Untitled",
-            userId: pageData.userId,
-            username: await getServerUsername(pageData.userId),
-            timestamp: pageData.lastModified?.toDate ? pageData.lastModified.toDate() : (pageData.lastModified ? new Date(pageData.lastModified) : new Date()),
-            currentContent: pageData.content,
-            previousContent: "",
-            isPublic: pageData.isPublic
-          };
+    // Convert Firestore documents to activity objects
+    const activities = activitiesSnapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        timestamp: doc.data().timestamp.toDate()
+      }))
+      .filter(activity => {
+        // Apply user filter if specified
+        if (filterUserId && activity.userId !== filterUserId) {
+          return false;
         }
 
-        // Get the most recent history entry
-        const historyData = historySnapshot.docs[0].data();
+        // Apply public filter if no user filter
+        if (!filterUserId && !activity.isPublic) {
+          return false;
+        }
 
-        return {
-          pageId,
-          pageName: pageData.title || "Untitled",
-          userId: pageData.userId,
-          username: await getServerUsername(pageData.userId),
-          timestamp: historyData.timestamp?.toDate() || new Date(),
-          currentContent: pageData.content,
-          previousContent: historyData.content || "",
-          isPublic: pageData.isPublic
-        };
-      } catch (err) {
-        console.error(`Error fetching history for page ${pageId}:`, err);
-        return null;
-      }
-    });
-
-    // Wait for all promises to resolve
-    const activityResults = await Promise.all(activitiesPromises);
-
-    // Filter out null results and private pages
-    const filteredActivities = activityResults
-      .filter(activity => {
-        // Skip null activities
-        if (activity === null) return false;
-        // Only show public pages
-        return activity.isPublic === true;
-      });
-
-    // DEDUPLICATION LOGIC: Ensure variety by showing only the most recent activity per page
-    const deduplicatedActivities = deduplicateActivitiesByPage(filteredActivities);
-
-    // Sort by timestamp (most recent first) and limit results
-    const validActivities = deduplicatedActivities
-      .sort((a, b) => {
-        const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-        const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-        return timeB - timeA; // Descending order (newest first)
+        // Filter out activities with no meaningful changes (unless it's a new page)
+        return activity.isNewPage || (activity.diff && activity.diff.hasChanges);
       })
-      .slice(0, limitCount);
+      .slice(0, limitCount); // Limit to requested count after filtering
 
-    console.log(`API: Returning ${validActivities.length} activities after deduplication and sorting`);
-    if (validActivities.length > 0) {
+    console.log(`API: Retrieved ${activities.length} activities from activities collection`);
+
+    // Convert to the expected format for backward compatibility
+    const formattedActivities = activities.map(activity => ({
+      pageId: activity.pageId,
+      pageName: activity.pageName,
+      userId: activity.userId,
+      username: activity.username,
+      timestamp: activity.timestamp,
+      // For backward compatibility, include empty content fields
+      currentContent: '', // Not needed anymore since we have pre-computed diff
+      previousContent: '', // Not needed anymore since we have pre-computed diff
+      isPublic: activity.isPublic,
+      isNewPage: activity.isNewPage,
+      // Add the new diff data
+      diff: activity.diff,
+      versionId: activity.versionId
+    }));
+
+    if (formattedActivities.length > 0) {
       console.log('API: First activity sample:', {
-        pageId: validActivities[0].pageId,
-        pageName: validActivities[0].pageName,
-        userId: validActivities[0].userId,
-        username: validActivities[0].username,
-        timestamp: validActivities[0].timestamp
+        pageId: formattedActivities[0].pageId,
+        pageName: formattedActivities[0].pageName,
+        userId: formattedActivities[0].userId,
+        username: formattedActivities[0].username,
+        timestamp: formattedActivities[0].timestamp,
+        diff: formattedActivities[0].diff
       });
 
       // Log page variety for debugging
-      const uniquePages = new Set(validActivities.map(a => a.pageId));
-      console.log(`API: Activity variety - ${uniquePages.size} unique pages in ${validActivities.length} activities`);
+      const uniquePages = new Set(formattedActivities.map(a => a.pageId));
+      console.log(`API: Activity variety - ${uniquePages.size} unique pages in ${formattedActivities.length} activities`);
     }
 
-    return NextResponse.json({ activities: validActivities }, { headers: corsHeaders });
+    return NextResponse.json({ activities: formattedActivities }, { headers: corsHeaders });
   } catch (err) {
     console.error("Error fetching server activity data:", err);
     console.error("Error stack:", err.stack);
