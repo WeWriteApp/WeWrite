@@ -22,7 +22,8 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import Link from 'next/link';
-import { listenToUserPledges, listenToUserSubscription } from '../../firebase/subscription';
+import { listenToUserPledges } from '../../firebase/subscription';
+import { createOptimizedSubscriptionListener } from '../../firebase/optimizedSubscription';
 import { getDocById } from '../../firebase/database';
 import { PaymentMethodSetup } from './PaymentMethodSetup';
 import { FailedPaymentRecovery } from './FailedPaymentRecovery';
@@ -90,8 +91,8 @@ function CombinedSubscriptionSectionInner() {
       setSubscriptionLoading(true);
       setSubscriptionError(null);
 
-      // Set up real-time listener for subscription changes
-      const unsubscribe = listenToUserSubscription(session.uid, (subscriptionData) => {
+      // Set up optimized real-time listener for subscription changes
+      const unsubscribe = createOptimizedSubscriptionListener(session.uid, (subscriptionData) => {
         try {
           setSubscriptionError(null);
           setSubscription(subscriptionData);

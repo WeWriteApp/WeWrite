@@ -12,7 +12,7 @@ import { openExternalLink } from "../../utils/pwa-detection";
 import { useSidebarContext } from "./UnifiedSidebar";
 import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 import { useFeatureFlag } from "../../utils/feature-flags";
-import { listenToUserSubscription } from "../../firebase/subscription";
+import { createOptimizedSubscriptionListener } from "../../firebase/optimizedSubscription";
 import { getSubscriptionButtonText, getSubscriptionNavigationPath, isActiveSubscription } from "../../utils/subscriptionStatus";
 import { TokenService } from "../../services/tokenService";
 import { TokenBalance } from "../../types/database";
@@ -82,8 +82,8 @@ export default function Header() {
       return;
     }
 
-    console.log('🎯 Header: Setting up subscription listener for user:', currentAccount.uid);
-    const unsubscribe = listenToUserSubscription(currentAccount.uid, (subscriptionData) => {
+    console.log('🎯 Header: Setting up optimized subscription listener for user:', currentAccount.uid);
+    const unsubscribe = createOptimizedSubscriptionListener(currentAccount.uid, (subscriptionData) => {
       console.log('🎯 Header: Subscription updated:', subscriptionData);
       setSubscription(subscriptionData);
     }, { verbose: false });

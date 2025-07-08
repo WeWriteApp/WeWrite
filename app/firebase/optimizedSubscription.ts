@@ -8,7 +8,7 @@
  * - Field-selective reads: Only fetch required fields instead of entire documents
  * - Aggressive caching: 10-minute cache for subscription data, 5-minute for pledges
  * - Batched page info fetching: Reduce individual page reads
- * - Throttled real-time listeners: Limit update frequency to once per 2 seconds
+ * - Throttled real-time listeners: Smart throttling from 15 seconds to 3 minutes based on activity
  * - Read operation tracking: Monitor and log all read operations
  *
  * Functions:
@@ -55,6 +55,7 @@ import { db } from './database';
 import { generateCacheKey, getCacheItem, setCacheItem, BatchCache } from '../utils/cacheUtils';
 import { trackQueryPerformance } from '../utils/queryMonitor';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../utils/environmentConfig';
+import { createDedupedListener, notifyListenerCallbacks } from '../utils/listenerDeduplication';
 
 // Types
 interface SubscriptionData {
@@ -367,7 +368,7 @@ export const createOptimizedSubscriptionListener = (
   options: OptimizedSubscriptionOptions = {}
 ): Unsubscribe => {
   const { verbose = false } = options;
-  
+
   // First, try to get cached data immediately (only on client side)
   if (typeof window !== 'undefined') {
     const cacheKey = generateCacheKey('subscription', userId);
@@ -377,18 +378,56 @@ export const createOptimizedSubscriptionListener = (
       logReadOperation('subscriptionListener-cached', true);
     }
   }
-  
-  // Set up real-time listener with throttling
+
+  // Use deduplication system to prevent multiple listeners for the same user
+  const listenerKey = `subscription:${userId}`;
+
+  // Set up real-time listener with smart throttling
   let lastUpdate = 0;
-  const throttleMs = 5000; // Increased throttle to 5 seconds to reduce load
+  let isUserActive = true;
+
+  // Smart throttling based on user activity - optimized for reduced Firebase reads
+  const getThrottleInterval = () => {
+    // Check if user is actively using payment features
+    const isPaymentPageActive = window.location.pathname.includes('/account') ||
+                                window.location.pathname.includes('/subscription') ||
+                                window.location.pathname.includes('/billing');
+
+    if (isPaymentPageActive && isUserActive) {
+      return 15000; // 15 seconds for active payment pages (reduced from 10s)
+    } else if (isUserActive) {
+      return 45000; // 45 seconds for general active usage (increased from 30s)
+    } else {
+      return 180000; // 3 minutes for inactive users (increased from 2m)
+    }
+  };
+
+  // Track user activity for smart throttling
+  const updateUserActivity = () => {
+    isUserActive = true;
+    setTimeout(() => { isUserActive = false; }, 60000); // Consider inactive after 1 minute
+  };
+
+  // Listen for user activity
+  if (typeof window !== 'undefined') {
+    ['mousedown', 'keydown', 'scroll', 'touchstart'].forEach(event => {
+      document.addEventListener(event, updateUserActivity, { passive: true });
+    });
+  }
   
   const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
   const userSubRef = doc(db, parentPath, subCollectionName, "current");
-  
-  const unsubscribe = onSnapshot(userSubRef, (doc) => {
+
+  // Use deduplication system to prevent multiple listeners for the same user
+  const createListener = () => onSnapshot(userSubRef, (doc) => {
     const now = Date.now();
-    if (now - lastUpdate < throttleMs) {
-      return; // Skip this update due to throttling
+    const currentThrottleMs = getThrottleInterval();
+
+    if (now - lastUpdate < currentThrottleMs) {
+      if (verbose) {
+        console.log(`[OptimizedSubscriptionListener] Throttling update (${currentThrottleMs}ms interval)`);
+      }
+      return; // Skip this update due to smart throttling
     }
     lastUpdate = now;
     
@@ -423,8 +462,14 @@ export const createOptimizedSubscriptionListener = (
   }, (error) => {
     console.error('[OptimizedSubscriptionListener] Error:', error);
   });
-  
-  return unsubscribe;
+
+  // Return the deduped listener with smart throttling
+  return createDedupedListener(
+    listenerKey,
+    createListener,
+    callback,
+    getThrottleInterval()
+  );
 };
 
 /**

@@ -74,9 +74,9 @@ export default function SubscriptionManagePage() {
     try {
       setLoading(true);
 
-      // Set up real-time subscription listener for consistency
-      const { listenToUserSubscription } = await import('../../../firebase/subscription');
-      const unsubscribe = listenToUserSubscription(currentAccount?.uid || '', async (subscriptionData) => {
+      // Set up optimized real-time subscription listener for consistency
+      const { createOptimizedSubscriptionListener } = await import('../../../firebase/optimizedSubscription');
+      const unsubscribe = createOptimizedSubscriptionListener(currentAccount?.uid || '', async (subscriptionData) => {
         setSubscription(subscriptionData);
 
         if (subscriptionData?.status === 'active') {

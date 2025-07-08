@@ -456,11 +456,40 @@ export const createOptimizedPageListener = (
     logPageRead('pageListener-cached', true, pageId);
   }
   
-  // Set up real-time listener with throttling
+  // Set up real-time listener with smart throttling
   let lastUpdate = 0;
-  const throttleMs = 5000; // Increased throttle to 5 seconds to reduce load
-  let unsubscribeFunction: (() => void) | null = null;
+  let isUserActive = true;
 
+  // Smart throttling based on user activity and page context - optimized for reduced Firebase reads
+  const getThrottleInterval = () => {
+    // Check if user is actively editing or viewing this specific page
+    const isCurrentPage = window.location.pathname.includes(pageId);
+    const isEditMode = window.location.pathname.includes('/edit');
+
+    if (isCurrentPage && isEditMode && isUserActive) {
+      return 20000; // 20 seconds for active editing (increased from 15s)
+    } else if (isCurrentPage && isUserActive) {
+      return 45000; // 45 seconds for active viewing (increased from 30s)
+    } else if (isUserActive) {
+      return 120000; // 2 minutes for background pages while user is active (increased from 1m)
+    } else {
+      return 600000; // 10 minutes for inactive users (increased from 5m)
+    }
+  };
+
+  // Track user activity for smart throttling
+  const updateUserActivity = () => {
+    isUserActive = true;
+    setTimeout(() => { isUserActive = false; }, 90000); // Consider inactive after 1.5 minutes
+  };
+
+  // Listen for user activity (only if not already set up)
+  if (typeof window !== 'undefined' && !window._pageListenerActivitySetup) {
+    ['mousedown', 'keydown', 'scroll', 'touchstart'].forEach(event => {
+      document.addEventListener(event, updateUserActivity, { passive: true });
+    });
+    window._pageListenerActivitySetup = true;
+  }
   // TEMPORARY: Use dynamic import like the working API - but this needs to be synchronous
   // For now, we'll need to handle this differently
   let db: any = null;
@@ -468,18 +497,21 @@ export const createOptimizedPageListener = (
   // Get db instance asynchronously
   import('./database').then(({ db: dbInstance }) => {
     db = dbInstance;
-    unsubscribeFunction = setupListener();
   });
 
-  const setupListener = () => {
-    if (!db) return null;
+  // Use deduplication system to prevent multiple listeners for the same page
+  const listenerKey = `page:${pageId}`;
 
+  const createListener = () => {
     const pageRef = doc(db, "pages", pageId);
 
-    const unsubscribe = onSnapshot(pageRef, (doc) => {
+    return onSnapshot(pageRef, (doc) => {
       const now = Date.now();
-      if (now - lastUpdate < throttleMs) {
-        return; // Skip this update due to throttling
+      const currentThrottleMs = getThrottleInterval();
+
+      if (now - lastUpdate < currentThrottleMs) {
+        console.log(`[OptimizedPageListener] Throttling update for ${pageId} (${currentThrottleMs}ms interval)`);
+        return; // Skip this update due to smart throttling
       }
       lastUpdate = now;
 
@@ -510,17 +542,15 @@ export const createOptimizedPageListener = (
     }, (error) => {
       console.error('[OptimizedPageListener] Error:', error);
     });
-
-    return unsubscribe;
   };
 
-  // Return proper cleanup function
-  return () => {
-    if (unsubscribeFunction) {
-      unsubscribeFunction();
-      unsubscribeFunction = null;
-    }
-  };
+  // Return deduped listener with smart throttling
+  return createDedupedListener(
+    listenerKey,
+    createListener,
+    callback,
+    getThrottleInterval()
+  );
 };
 
 /**
