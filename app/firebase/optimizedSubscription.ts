@@ -6,7 +6,7 @@
  *
  * Key Optimizations:
  * - Field-selective reads: Only fetch required fields instead of entire documents
- * - Aggressive caching: 10-minute cache for subscription data, 5-minute for pledges
+ * - Aggressive caching: 2-hour cache for subscription data, 1-hour for pledges
  * - Batched page info fetching: Reduce individual page reads
  * - Throttled real-time listeners: Smart throttling from 15 seconds to 3 minutes based on activity
  * - Read operation tracking: Monitor and log all read operations
@@ -166,7 +166,7 @@ export const getOptimizedUserSubscription = async (
   userId: string,
   options: OptimizedSubscriptionOptions = {}
 ): Promise<SubscriptionData | null> => {
-  const { useCache = true, cacheTTL = 10 * 60 * 1000, fieldsOnly } = options;
+  const { useCache = true, cacheTTL = 2 * 60 * 60 * 1000, fieldsOnly } = options;
   
   return trackQueryPerformance('getOptimizedUserSubscription', async () => {
     // Check cache first (only on client side)
@@ -448,7 +448,7 @@ export const createOptimizedSubscriptionListener = (
       // Update cache (only on client side)
       if (typeof window !== 'undefined') {
         const cacheKey = generateCacheKey('subscription', userId);
-        setCacheItem(cacheKey, subscriptionData, 10 * 60 * 1000);
+        setCacheItem(cacheKey, subscriptionData, 2 * 60 * 60 * 1000);
       }
       
       if (verbose) {

@@ -146,8 +146,8 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
     if (userDoc.exists()) {
       const userData = { id: userDoc.id, ...userDoc.data() } as User;
       
-      // Cache the result
-      setCacheItem(cacheKey, userData, 10 * 60 * 1000); // Cache for 10 minutes
+      // Cache the result with aggressive TTL
+      setCacheItem(cacheKey, userData, 3 * 60 * 60 * 1000); // Cache for 3 hours
       
       return userData;
     }
@@ -201,9 +201,9 @@ export const getUserProfiles = async (userIds: string[]): Promise<Record<string,
           const userData = { id: doc.id, ...doc.data() } as User;
           profiles[doc.id] = userData;
           
-          // Cache the result
+          // Cache the result with aggressive TTL
           const cacheKey = generateCacheKey('userProfile', doc.id);
-          setCacheItem(cacheKey, userData, 10 * 60 * 1000);
+          setCacheItem(cacheKey, userData, 3 * 60 * 60 * 1000);
         });
       }
     }

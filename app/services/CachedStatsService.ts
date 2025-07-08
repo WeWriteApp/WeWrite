@@ -6,10 +6,10 @@ import { rtdb } from "../firebase/rtdb";
 import { ref, get, onValue, off } from "firebase/database";
 import { getCacheItem, setCacheItem, generateCacheKey } from "../utils/cacheUtils";
 
-// Cache TTL for different types of stats
-const STATS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const LIVE_STATS_CACHE_TTL = 30 * 1000; // 30 seconds for live stats
-const USER_STATS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes for user stats
+// Aggressive cache TTL for different types of stats
+const STATS_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours (increased from 5 minutes)
+const LIVE_STATS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes for live stats (increased from 30s)
+const USER_STATS_CACHE_TTL = 3 * 60 * 60 * 1000; // 3 hours for user stats (increased from 10m)
 
 export interface PageStats {
   pageId: string;

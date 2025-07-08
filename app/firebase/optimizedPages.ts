@@ -533,8 +533,8 @@ export const createOptimizedPageListener = (
           currentVersion: data.currentVersion
         };
 
-        // Update cache
-        setCacheItem(cacheKey, pageData, 15 * 60 * 1000);
+        // Update cache with aggressive TTL
+        setCacheItem(cacheKey, pageData, 2.5 * 60 * 60 * 1000);
         callback(pageData);
       } else {
         callback(null);

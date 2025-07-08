@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCurrentAccount } from "../providers/CurrentAccountProvider";
-import { getCacheItem, setCacheItem, generateCacheKey } from '../utils/cacheUtils';
+import { getCacheItem, setCacheItem, generateCacheKey, cacheWarmingService } from '../utils/cacheUtils';
 
 interface DashboardData {
   recentPages: any[];
@@ -24,9 +24,9 @@ interface UseOptimizedDashboardReturn {
   lastUpdated: number | null;
 }
 
-// Cache TTL for dashboard data
-const DASHBOARD_CACHE_TTL = 3 * 60 * 1000; // 3 minutes
-const STALE_THRESHOLD = 2 * 60 * 1000; // 2 minutes
+// Aggressive cache TTL for dashboard data
+const DASHBOARD_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours (increased from 3 minutes)
+const STALE_THRESHOLD = 1 * 60 * 60 * 1000; // 1 hour (increased from 2 minutes)
 
 /**
  * Optimized dashboard hook that fetches all home page data in a single request
@@ -139,7 +139,15 @@ export function useOptimizedDashboard(): UseOptimizedDashboardReturn {
   // Initial data load
   useEffect(() => {
     fetchDashboardData(false, false);
-  }, [fetchDashboardData]);
+
+    // Warm cache for user-specific data after initial load
+    if (session?.uid) {
+      setTimeout(() => {
+        cacheWarmingService.warmUserCache(session.uid);
+        console.log('Dashboard: Cache warming initiated for user data');
+      }, 2000); // Delay to avoid interfering with initial load
+    }
+  }, [fetchDashboardData, session?.uid]);
 
   // Set up background refresh for stale data
   useEffect(() => {
