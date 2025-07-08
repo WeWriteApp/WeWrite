@@ -105,6 +105,7 @@ async function fetchBatchUserDataInternal(
 ): Promise<Record<string, UserData>> {
   const results: Record<string, UserData> = {};
 
+  try {
     // Batch fetch from Firestore (max 10 per query due to 'in' limitation)
     const batchSize = 10;
 
