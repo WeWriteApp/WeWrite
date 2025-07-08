@@ -19,6 +19,7 @@ interface PageData {
   createdAt?: string;
   deleted?: boolean;
   deletedAt?: string;
+  customDate?: string; // YYYY-MM-DD format for daily notes and date-based pages
 }
 
 interface PageQuery {

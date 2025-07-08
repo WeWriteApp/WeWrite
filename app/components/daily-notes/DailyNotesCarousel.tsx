@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import DayCard from './DayCard';
+import DayContainer from './DayContainer';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 // Removed direct Firebase imports - now using API endpoints
 import { format, subDays, addDays } from 'date-fns';
@@ -31,12 +31,13 @@ interface DailyNotesCarouselProps {
 /**
  * DailyNotesCarousel Component
  *
- * Horizontal scrolling carousel showing calendar days with infinite loading.
+ * Horizontal scrolling carousel showing day containers with multiple notes.
  * Features:
  * - Symmetric date range (equal days before and after today)
  * - Infinite loading with "Load 15 More" buttons at both ends
  * - Today positioned in the center of the initial range
- * - Checks for existing notes with exact YYYY-MM-DD format titles only
+ * - Shows multiple notes per day in container format
+ * - Supports both customDate field and legacy YYYY-MM-DD titles
  * - Maintains scroll position when loading new dates
  */
 export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNotesCarouselProps) {
@@ -49,9 +50,8 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
   const [daysBefore, setDaysBefore] = useState(15); // Days before today
   const [daysAfter, setDaysAfter] = useState(15);   // Days after today
 
-  // State for existing notes
-  const [existingNotes, setExistingNotes] = useState<Set<string>>(new Set());
-  const [notePageIds, setNotePageIds] = useState<Map<string, string>>(new Map());
+  // State for existing notes - now organized by date
+  const [notesByDate, setNotesByDate] = useState<Map<string, Array<{id: string, title: string}>>>(new Map());
   const [loading, setLoading] = useState(true);
   const [loadingPast, setLoadingPast] = useState(false);
   const [loadingFuture, setLoadingFuture] = useState(false);
@@ -92,11 +92,11 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     // Expand the range by 15 days in the past
     setDaysBefore(prev => prev + 15);
 
-    // After state update, restore scroll position accounting for new cards
+    // After state update, restore scroll position accounting for new containers
     requestAnimationFrame(() => {
       if (carousel) {
-        const cardWidth = 88; // 80px width + 8px gap
-        const newScrollPosition = currentScrollLeft + (15 * cardWidth);
+        const containerWidth = 208; // w-48 (192px) + 16px gap
+        const newScrollPosition = currentScrollLeft + (15 * containerWidth);
         carousel.scrollTo({ left: newScrollPosition, behavior: 'instant' });
       }
       setLoadingPast(false);
@@ -137,19 +137,37 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
         throw new Error(result.error || 'Failed to fetch pages')
       }
 
-      const foundNotes = new Set<string>();
-      const pageIdMap = new Map<string, string>();
+      const notesByDateMap = new Map<string, Array<{id: string, title: string}>>();
 
       // Filter pages to find ALL daily notes (not just those in current range)
       result.pages.forEach((page: any) => {
-        // Client-side filtering: only include pages with exact YYYY-MM-DD format titles
-        if (page.title && isExactDateFormat(page.title)) {
-          foundNotes.add(page.title);
-          pageIdMap.set(page.title, page.id);
+        let dateString: string | null = null;
+        let noteTitle = page.title;
+
+        // Check for pages with customDate field (new format)
+        if (page.customDate) {
+          dateString = page.customDate;
+          // For migrated daily notes, show as "Daily note"
+          if (page.title === page.customDate) {
+            noteTitle = "Daily note";
+          }
+        }
+        // Check legacy format (title as YYYY-MM-DD, only if no customDate)
+        else if (page.title && isExactDateFormat(page.title)) {
+          dateString = page.title;
+          noteTitle = "Daily note"; // Legacy daily notes become "Daily note"
+        }
+
+        // If we found a date, add it to the map
+        if (dateString) {
+          if (!notesByDateMap.has(dateString)) {
+            notesByDateMap.set(dateString, []);
+          }
+          notesByDateMap.get(dateString)!.push({ id: page.id, title: noteTitle });
         }
       });
-      setExistingNotes(foundNotes);
-      setNotePageIds(pageIdMap);
+
+      setNotesByDate(notesByDateMap);
     } catch (error) {
       console.error('Error checking existing notes:', error);
     }
@@ -171,27 +189,25 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     loadNotes();
   }, [currentAccount?.uid, daysBefore, daysAfter, dates, checkExistingNotes]);
 
-  // Handle day card click with enhanced error handling
-  const handleDayClick = (date: Date) => {
+  // Handle note pill click - navigate to specific note
+  const handleNoteClick = (noteId: string) => {
+    try {
+      router.push(`/pages/${noteId}`);
+    } catch (error) {
+      console.error('Error handling note click:', error);
+      // Fallback to home page if navigation fails
+      router.push('/');
+    }
+  };
+
+  // Handle add new click - create new note for specific date
+  const handleAddNewClick = (date: Date) => {
     try {
       const dateString = format(date, 'yyyy-MM-dd');
-      const hasNote = existingNotes.has(dateString);
-
-      if (hasNote) {
-        // Navigate to existing note using the page ID
-        const pageId = notePageIds.get(dateString);
-        if (pageId) {
-          router.push(`/pages/${pageId}`);
-        } else {
-          // Fallback to search if page ID not found
-          router.push(`/search?q=${encodeURIComponent(dateString)}`);
-        }
-      } else {
-        // Navigate to page creation with pre-filled title and daily note flag
-        router.push(`/new?title=${encodeURIComponent(dateString)}&type=daily-note`);
-      }
+      // Use the correct URL parameter format that the /new page expects
+      router.push(`/new?title=${encodeURIComponent(dateString)}&type=daily-note`);
     } catch (error) {
-      console.error('Error handling day click:', error);
+      console.error('Error handling add new click:', error);
       // Fallback to home page if navigation fails
       router.push('/');
     }
@@ -207,22 +223,22 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     if (todayIndex !== -1) {
       const carousel = carouselRef.current;
       if (carousel) {
-        const cardWidth = 88; // 80px width + 8px gap
-        const loadMoreButtonWidth = 88; // Same as card width
+        const containerWidth = 208; // w-48 (192px) + 16px gap
+        const loadMoreButtonWidth = 208; // Same as container width
 
         // Calculate the exact center position accounting for the "Load More Past" button and container padding
-        // The target position should center today's card in the visible area
+        // The target position should center today's container in the visible area
         const containerPadding = 24; // px-6 = 24px on each side
         const visibleWidth = carousel.clientWidth - (containerPadding * 2);
         const visibleCenter = visibleWidth / 2;
-        const cardCenter = cardWidth / 2;
+        const containerCenter = containerWidth / 2;
 
-        // Position of today's card relative to the start of content (after load button)
-        const todayCardStart = loadMoreButtonWidth + (todayIndex * cardWidth);
-        const todayCardCenter = todayCardStart + cardCenter;
+        // Position of today's container relative to the start of content (after load button)
+        const todayContainerStart = loadMoreButtonWidth + (todayIndex * containerWidth);
+        const todayContainerCenter = todayContainerStart + containerCenter;
 
-        // Calculate scroll position to center today's card in the visible area
-        const targetScrollPosition = Math.max(0, todayCardCenter - visibleCenter);
+        // Calculate scroll position to center today's container in the visible area
+        const targetScrollPosition = Math.max(0, todayContainerCenter - visibleCenter);
 
         // Start from the leftmost position (showing past days)
         carousel.scrollTo({ left: 0, behavior: 'instant' });
@@ -240,7 +256,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     }
   }, [dates]);
 
-  // Regular scroll to today's card (used by "Today" button)
+  // Regular scroll to today's container (used by "Today" button)
   const scrollToToday = useCallback(() => {
     const today = new Date();
     const todayIndex = dates.findIndex(date =>
@@ -250,21 +266,21 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     if (todayIndex !== -1) {
       const carousel = carouselRef.current;
       if (carousel) {
-        const cardWidth = 88; // 80px width + 8px gap
-        const loadMoreButtonWidth = 88; // Same as card width
+        const containerWidth = 208; // w-48 (192px) + 16px gap
+        const loadMoreButtonWidth = 208; // Same as container width
 
         // Calculate the exact center position accounting for the "Load More Past" button and container padding
         const containerPadding = 24; // px-6 = 24px on each side
         const visibleWidth = carousel.clientWidth - (containerPadding * 2);
         const visibleCenter = visibleWidth / 2;
-        const cardCenter = cardWidth / 2;
+        const containerCenter = containerWidth / 2;
 
-        // Position of today's card relative to the start of content (after load button)
-        const todayCardStart = loadMoreButtonWidth + (todayIndex * cardWidth);
-        const todayCardCenter = todayCardStart + cardCenter;
+        // Position of today's container relative to the start of content (after load button)
+        const todayContainerStart = loadMoreButtonWidth + (todayIndex * containerWidth);
+        const todayContainerCenter = todayContainerStart + containerCenter;
 
-        // Calculate scroll position to center today's card in the visible area
-        const scrollPosition = Math.max(0, todayCardCenter - visibleCenter);
+        // Calculate scroll position to center today's container in the visible area
+        const scrollPosition = Math.max(0, todayContainerCenter - visibleCenter);
         carousel.scrollTo({ left: scrollPosition, behavior: 'smooth' });
       }
     }
@@ -295,11 +311,11 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
 
   if (loading) {
     return (
-      <div className="flex gap-2 overflow-x-auto pb-2 px-6 pt-2">
-        {Array.from({ length: 10 }).map((_, index) => (
+      <div className="flex gap-4 overflow-x-auto pb-2 px-6 pt-2">
+        {Array.from({ length: 5 }).map((_, index) => (
           <div
             key={index}
-            className="flex-shrink-0 w-[80px] h-[90px] bg-muted/50 rounded-2xl animate-pulse"
+            className="flex-shrink-0 w-48 h-[200px] bg-muted/50 rounded-xl animate-pulse border-theme-light"
           />
         ))}
       </div>
@@ -310,7 +326,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     <div
       ref={carouselRef}
       id="daily-notes-carousel"
-      className="flex gap-2 overflow-x-auto pb-2 px-6 pt-2 scrollbar-hide"
+      className="flex gap-4 overflow-x-auto pb-2 px-6 pt-2 scrollbar-hide"
       style={{
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
@@ -318,13 +334,13 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
       }}
     >
       {/* Load More Past Button */}
-      <div className="flex-shrink-0 flex items-center justify-center min-w-[80px] h-[90px]">
+      <div className="flex-shrink-0 flex items-center justify-center min-w-48 h-[200px]">
         <Button
           variant="outline"
           size="sm"
           onClick={loadMorePast}
           disabled={loadingPast}
-          className="h-[90px] w-[80px] rounded-2xl flex flex-col items-center justify-center gap-1 text-xs border-dashed"
+          className="h-[200px] w-48 rounded-xl flex flex-col items-center justify-center gap-2 text-sm border-dashed"
         >
           {loadingPast ? (
             <div className="animate-spin">⟳</div>
@@ -337,41 +353,33 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
         </Button>
       </div>
 
-      {/* Date Cards */}
+      {/* Day Containers */}
       {dates.map((date, index) => {
         const dateString = format(date, 'yyyy-MM-dd');
-        const hasNote = existingNotes.has(dateString);
+        const notesForDate = notesByDate.get(dateString) || [];
         const isToday = new Date().toDateString() === date.toDateString();
 
         return (
-          <div key={dateString} className="flex-shrink-0 flex flex-col items-center">
-            <DayCard
-              date={date}
-              hasNote={hasNote}
-              onClick={() => handleDayClick(date)}
-              accentColor={accentColor}
-            />
-            {/* Today chip positioned below today's card */}
-            {isToday && (
-              <div
-                className="mt-2 px-2 py-1 bg-primary text-xs font-medium rounded-full"
-                style={{ color: '#ffffff' }}
-              >
-                Today
-              </div>
-            )}
-          </div>
+          <DayContainer
+            key={dateString}
+            date={date}
+            notes={notesForDate}
+            onNoteClick={handleNoteClick}
+            onAddNewClick={handleAddNewClick}
+            accentColor={accentColor}
+            isToday={isToday}
+          />
         );
       })}
 
       {/* Load More Future Button */}
-      <div className="flex-shrink-0 flex items-center justify-center min-w-[80px] h-[90px]">
+      <div className="flex-shrink-0 flex items-center justify-center min-w-48 h-[200px]">
         <Button
           variant="outline"
           size="sm"
           onClick={loadMoreFuture}
           disabled={loadingFuture}
-          className="h-[90px] w-[80px] rounded-2xl flex flex-col items-center justify-center gap-1 text-xs border-dashed"
+          className="h-[200px] w-48 rounded-xl flex flex-col items-center justify-center gap-2 text-sm border-dashed"
         >
           {loadingFuture ? (
             <div className="animate-spin">⟳</div>

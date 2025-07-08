@@ -1,10 +1,11 @@
 "use client";
 
-import React from 'react';
-import { Eye, Clock, DollarSign } from 'lucide-react';
+import React, { useState } from 'react';
+import { Eye, Clock, DollarSign, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SimpleSparkline from "../utils/SimpleSparkline";
 import { useAccentColor, ACCENT_COLOR_VALUES } from "../../contexts/AccentColorContext";
+import { useDateFormat } from "../../contexts/DateFormatContext";
 
 /**
  * PageStats Component
@@ -20,6 +21,9 @@ import { useAccentColor, ACCENT_COLOR_VALUES } from "../../contexts/AccentColorC
  * @param {number} props.supporterCount - Number of supporters pledging tokens
  * @param {Array} props.supporterData - Hourly supporter data for sparkline
  * @param {string} props.pageId - The ID of the page for navigation
+ * @param {string} props.customDate - Custom date for the page (YYYY-MM-DD format)
+ * @param {boolean} props.canEdit - Whether the user can edit the page
+ * @param {Function} props.onCustomDateChange - Callback when custom date is changed
  */
 export default function PageStats({
   viewCount = 0,
@@ -28,10 +32,14 @@ export default function PageStats({
   changeData = [],
   supporterCount = 0,
   supporterData = [],
-  pageId
+  pageId,
+  customDate,
+  canEdit = false,
+  onCustomDateChange
 }) {
   const router = useRouter();
   const { accentColor, customColors } = useAccentColor();
+  const { formatDateString } = useDateFormat();
 
   // Get the actual color value based on the selected accent color
   const getAccentColorValue = () => {
@@ -47,9 +55,16 @@ export default function PageStats({
     router.push(`/${pageId}/history`);
   };
 
-  // Determine grid layout based on whether supporters data is provided
+
+
+  // Determine grid layout based on available data
   const hasSupporters = supporterCount !== undefined && supporterData !== undefined;
-  const gridCols = hasSupporters ? "md:grid-cols-3" : "md:grid-cols-2";
+
+  // Calculate grid columns based on available cards
+  let gridCols = "md:grid-cols-2"; // Default: views + changes
+  if (hasSupporters) {
+    gridCols = "md:grid-cols-3"; // Three cards
+  }
 
   return (
     <div className={`mt-8 grid grid-cols-1 ${gridCols} gap-4`}>
@@ -126,6 +141,8 @@ export default function PageStats({
           </div>
         </div>
       )}
+
+
     </div>
   );
 }

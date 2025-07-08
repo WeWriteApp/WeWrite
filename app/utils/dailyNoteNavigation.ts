@@ -48,24 +48,45 @@ export async function findPreviousExistingDailyNote(userId: string, currentDate:
     if (!userId || !isExactDateFormat(currentDate)) return null;
 
     try {
-      // Try query with deleted filter first
-      const pagesQuery = query(
+      // First try to find notes with customDate field (new format)
+      const customDateQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('customDate', '<', currentDate),
+        where('deleted', '!=', true),
+        orderBy('customDate', 'desc'),
+        limit(50)
+      );
+
+      const customDateSnapshot = await getDocs(customDateQuery);
+
+      // Find the most recent daily note with customDate
+      for (const doc of customDateSnapshot.docs) {
+        const pageData = doc.data();
+        if (pageData.customDate && !pageData.deleted) {
+          return pageData.customDate;
+        }
+      }
+
+      // Fallback to legacy title-based search
+      const titleQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
         where('title', '<', currentDate),
         where('deleted', '!=', true),
         orderBy('title', 'desc'),
-        limit(50) // Limit to avoid large queries
+        limit(50)
       );
 
-      const snapshot = await getDocs(pagesQuery);
+      const titleSnapshot = await getDocs(titleQuery);
 
-      // Find the most recent daily note (double-check it's not deleted)
-      for (const doc of snapshot.docs) {
+      // Find the most recent daily note with title format (legacy)
+      for (const doc of titleSnapshot.docs) {
         const pageData = doc.data();
         if (pageData.title &&
             isExactDateFormat(pageData.title) &&
-            !pageData.deleted) {
+            !pageData.deleted &&
+            !pageData.customDate) { // Only include legacy notes without customDate
           return pageData.title;
         }
       }
@@ -78,9 +99,8 @@ export async function findPreviousExistingDailyNote(userId: string, currentDate:
       const fallbackQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
-        where('title', '<', currentDate),
         orderBy('title', 'desc'),
-        limit(50)
+        limit(200) // Larger limit for client-side filtering
       );
 
       const fallbackSnapshot = await getDocs(fallbackQuery);
@@ -88,9 +108,18 @@ export async function findPreviousExistingDailyNote(userId: string, currentDate:
       // Find the most recent daily note with client-side filtering
       for (const doc of fallbackSnapshot.docs) {
         const pageData = doc.data();
+
+        // Check customDate first (new format)
+        if (pageData.customDate && pageData.customDate < currentDate && !pageData.deleted) {
+          return pageData.customDate;
+        }
+
+        // Then check title format (legacy)
         if (pageData.title &&
             isExactDateFormat(pageData.title) &&
-            !pageData.deleted) {
+            pageData.title < currentDate &&
+            !pageData.deleted &&
+            !pageData.customDate) {
           return pageData.title;
         }
       }
@@ -114,24 +143,45 @@ export async function findNextExistingDailyNote(userId: string, currentDate: str
     if (!userId || !isExactDateFormat(currentDate)) return null;
 
     try {
-      // Try query with deleted filter first
-      const pagesQuery = query(
+      // First try to find notes with customDate field (new format)
+      const customDateQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('customDate', '>', currentDate),
+        where('deleted', '!=', true),
+        orderBy('customDate', 'asc'),
+        limit(50)
+      );
+
+      const customDateSnapshot = await getDocs(customDateQuery);
+
+      // Find the earliest daily note with customDate
+      for (const doc of customDateSnapshot.docs) {
+        const pageData = doc.data();
+        if (pageData.customDate && !pageData.deleted) {
+          return pageData.customDate;
+        }
+      }
+
+      // Fallback to legacy title-based search
+      const titleQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
         where('title', '>', currentDate),
         where('deleted', '!=', true),
         orderBy('title', 'asc'),
-        limit(50) // Limit to avoid large queries
+        limit(50)
       );
 
-      const snapshot = await getDocs(pagesQuery);
+      const titleSnapshot = await getDocs(titleQuery);
 
-      // Find the earliest daily note after current date (double-check it's not deleted)
-      for (const doc of snapshot.docs) {
+      // Find the earliest daily note with title format (legacy)
+      for (const doc of titleSnapshot.docs) {
         const pageData = doc.data();
         if (pageData.title &&
             isExactDateFormat(pageData.title) &&
-            !pageData.deleted) {
+            !pageData.deleted &&
+            !pageData.customDate) { // Only include legacy notes without customDate
           return pageData.title;
         }
       }
@@ -144,19 +194,27 @@ export async function findNextExistingDailyNote(userId: string, currentDate: str
       const fallbackQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
-        where('title', '>', currentDate),
         orderBy('title', 'asc'),
-        limit(50)
+        limit(200) // Larger limit for client-side filtering
       );
 
       const fallbackSnapshot = await getDocs(fallbackQuery);
 
-      // Find the earliest daily note after current date with client-side filtering
+      // Find the earliest daily note with client-side filtering
       for (const doc of fallbackSnapshot.docs) {
         const pageData = doc.data();
+
+        // Check customDate first (new format)
+        if (pageData.customDate && pageData.customDate > currentDate && !pageData.deleted) {
+          return pageData.customDate;
+        }
+
+        // Then check title format (legacy)
         if (pageData.title &&
             isExactDateFormat(pageData.title) &&
-            !pageData.deleted) {
+            pageData.title > currentDate &&
+            !pageData.deleted &&
+            !pageData.customDate) {
           return pageData.title;
         }
       }
@@ -216,8 +274,22 @@ export async function checkDailyNoteExists(userId: string, dateString: string): 
     if (!userId || !isExactDateFormat(dateString)) return false;
 
     try {
-      // Try query with deleted filter first
-      const pagesQuery = query(
+      // First check for notes with customDate field (new format)
+      const customDateQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('customDate', '==', dateString),
+        where('deleted', '!=', true),
+        limit(1)
+      );
+
+      const customDateSnapshot = await getDocs(customDateQuery);
+      if (!customDateSnapshot.empty) {
+        return true;
+      }
+
+      // Then check for legacy title-based notes
+      const titleQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
         where('title', '==', dateString),
@@ -225,8 +297,17 @@ export async function checkDailyNoteExists(userId: string, dateString: string): 
         limit(1)
       );
 
-      const snapshot = await getDocs(pagesQuery);
-      return !snapshot.empty;
+      const titleSnapshot = await getDocs(titleQuery);
+
+      // Only count legacy notes that don't have customDate field
+      for (const doc of titleSnapshot.docs) {
+        const pageData = doc.data();
+        if (!pageData.customDate) {
+          return true;
+        }
+      }
+
+      return false;
     } catch (queryError) {
       console.warn('Daily note exists query with deleted filter failed, falling back to client-side filtering:', queryError);
 
@@ -234,17 +315,23 @@ export async function checkDailyNoteExists(userId: string, dateString: string): 
       const fallbackQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
-        where('title', '==', dateString),
-        limit(1)
+        limit(100) // Larger limit for client-side filtering
       );
 
       const fallbackSnapshot = await getDocs(fallbackQuery);
 
-      // Check if any non-deleted page exists
+      // Check if any non-deleted page exists with the date
       for (const doc of fallbackSnapshot.docs) {
         const pageData = doc.data();
         if (!pageData.deleted) {
-          return true;
+          // Check customDate first (new format)
+          if (pageData.customDate === dateString) {
+            return true;
+          }
+          // Then check title (legacy format, only if no customDate)
+          if (pageData.title === dateString && !pageData.customDate) {
+            return true;
+          }
         }
       }
 
@@ -267,8 +354,22 @@ export async function getDailyNotePageId(userId: string, dateString: string): Pr
     if (!userId || !isExactDateFormat(dateString)) return null;
 
     try {
-      // Try query with deleted filter first
-      const pagesQuery = query(
+      // First check for notes with customDate field (new format)
+      const customDateQuery = query(
+        collection(db, 'pages'),
+        where('userId', '==', userId),
+        where('customDate', '==', dateString),
+        where('deleted', '!=', true),
+        limit(1)
+      );
+
+      const customDateSnapshot = await getDocs(customDateQuery);
+      if (!customDateSnapshot.empty) {
+        return customDateSnapshot.docs[0].id;
+      }
+
+      // Then check for legacy title-based notes
+      const titleQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
         where('title', '==', dateString),
@@ -276,10 +377,14 @@ export async function getDailyNotePageId(userId: string, dateString: string): Pr
         limit(1)
       );
 
-      const snapshot = await getDocs(pagesQuery);
+      const titleSnapshot = await getDocs(titleQuery);
 
-      if (!snapshot.empty) {
-        return snapshot.docs[0].id;
+      // Only return legacy notes that don't have customDate field
+      for (const doc of titleSnapshot.docs) {
+        const pageData = doc.data();
+        if (!pageData.customDate) {
+          return doc.id;
+        }
       }
 
       return null;
@@ -290,17 +395,23 @@ export async function getDailyNotePageId(userId: string, dateString: string): Pr
       const fallbackQuery = query(
         collection(db, 'pages'),
         where('userId', '==', userId),
-        where('title', '==', dateString),
-        limit(1)
+        limit(100) // Larger limit for client-side filtering
       );
 
       const fallbackSnapshot = await getDocs(fallbackQuery);
 
-      // Find the first non-deleted page
+      // Check if any non-deleted page exists with the date
       for (const doc of fallbackSnapshot.docs) {
         const pageData = doc.data();
         if (!pageData.deleted) {
-          return doc.id;
+          // Check customDate first (new format)
+          if (pageData.customDate === dateString) {
+            return doc.id;
+          }
+          // Then check title (legacy format, only if no customDate)
+          if (pageData.title === dateString && !pageData.customDate) {
+            return doc.id;
+          }
         }
       }
 

@@ -29,6 +29,7 @@ This directory contains utility scripts for WeWrite development and maintenance.
 ### Database Maintenance
 - `create-firestore-index.js` - Create Firestore indexes
 - `create-indexes.js` - Create database indexes
+- `migrate-daily-notes.js` - Migrate daily notes from YYYY-MM-DD titles to customDate field
 
 ### Utilities
 - `seo-audit.js` - SEO audit tool
@@ -43,7 +44,30 @@ For Firebase-related scripts, ensure you have the necessary environment variable
 - `FIREBASE_CLIENT_EMAIL`
 - Or `GOOGLE_CLOUD_KEY_JSON` (base64-encoded service account JSON)
 
+## Daily Notes Migration
+
+The `migrate-daily-notes.js` script migrates existing daily notes from YYYY-MM-DD titles to "Daily note" titles with customDate field.
+
+### Usage
+```bash
+# Dry run (recommended first)
+node scripts/migrate-daily-notes.js --dry-run
+
+# Live migration
+node scripts/migrate-daily-notes.js
+
+# Custom batch size
+node scripts/migrate-daily-notes.js --batch-size=25
+```
+
+### Safety Features
+- **Dry run mode**: Test without making changes
+- **Batch processing**: Configurable batch sizes
+- **Idempotent**: Safe to run multiple times
+- **Validation**: Skips invalid dates and already migrated pages
+
 ## Notes
 
 - One-time migration scripts have been removed after successful execution to keep the codebase clean
 - All remaining scripts are utilities that may be used multiple times during development
+- Always backup your database before running migration scripts

@@ -15,6 +15,7 @@ interface DayCardProps {
   hasNote: boolean;
   onClick: () => void;
   accentColor?: string;
+  noteCount?: number; // Number of notes for this day (for multiple notes per day)
 }
 
 /**
@@ -25,7 +26,7 @@ interface DayCardProps {
  * - Filled State: Solid card with accent color (respects pill style settings)
  * - Classic Mode: Uses outlined style instead of filled
  */
-const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColor = '#1768FF' }: DayCardProps) {
+const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColor = '#1768FF', noteCount = 0 }: DayCardProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { pillStyle } = usePillStyle();
@@ -101,7 +102,7 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
             aria-label={`${hasNote ? 'View note for' : 'Create note for'} ${date.toLocaleDateString()}`}
           >
       {/* Checkmark icon for filled notes - positioned in top-right corner */}
-      {hasNote && (
+      {hasNote && noteCount <= 1 && (
         <div className="absolute top-1.5 right-1.5 z-10">
           <Check
             className="h-3 w-3 drop-shadow-sm"
@@ -111,6 +112,25 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
                 : '#ffffff'
             }}
           />
+        </div>
+      )}
+
+      {/* Count indicator for multiple notes - positioned in top-right corner */}
+      {hasNote && noteCount > 1 && (
+        <div className="absolute top-1 right-1 z-10">
+          <div
+            className="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold drop-shadow-sm"
+            style={{
+              backgroundColor: (pillStyle === PILL_STYLES.CLASSIC || pillStyle === PILL_STYLES.OUTLINE)
+                ? accentColor
+                : '#ffffff',
+              color: (pillStyle === PILL_STYLES.CLASSIC || pillStyle === PILL_STYLES.OUTLINE)
+                ? '#ffffff'
+                : accentColor
+            }}
+          >
+            {noteCount}
+          </div>
         </div>
       )}
 

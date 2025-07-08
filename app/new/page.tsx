@@ -64,6 +64,7 @@ interface PageData {
   replyToTitle?: string | null;
   replyToUsername?: string | null;
   groupId?: string | null;
+  customDate?: string; // YYYY-MM-DD format for daily notes
 }
 
 /**
@@ -151,11 +152,10 @@ function NewPageContent() {
       if (urlTitle && urlTitle.trim()) {
         const trimmedTitle = urlTitle.trim();
 
-        // For daily notes, automatically format the title using user's preferred date format
+        // For daily notes, set display title to "Daily note" but keep the date for customDate
         if (pageType === 'daily-note' && isExactDateFormat(trimmedTitle)) {
-          // Keep the original YYYY-MM-DD format for storage, but the display will be formatted
-          // The PageHeader component will handle the display formatting
-          setTitle(trimmedTitle);
+          // Store the date internally for customDate field, but display "Daily note"
+          setTitle(trimmedTitle); // Keep the date for now, will be converted during save
         } else {
           setTitle(trimmedTitle);
         }
@@ -236,9 +236,9 @@ function NewPageContent() {
         try {
           const decodedTitle = decodeURIComponent(titleParam);
 
-          // For daily notes, ensure we store the YYYY-MM-DD format for consistency
+          // For daily notes, store the date for customDate field
           if (pageType === 'daily-note' && isExactDateFormat(decodedTitle)) {
-            setTitle(decodedTitle); // Keep YYYY-MM-DD format for storage
+            setTitle(decodedTitle); // Keep date for now, will be converted during save
           } else {
             setTitle(decodedTitle);
           }
@@ -446,8 +446,18 @@ function NewPageContent() {
         replyToUsername = searchParams.get('username');
       }
 
+      // Prepare page data with custom date handling for daily notes
+      let pageTitle = title;
+      let customDate = undefined;
+
+      // For daily notes, use "Daily note" as title and set customDate
+      if (isDailyNote && isExactDateFormat(title)) {
+        pageTitle = "Daily note";
+        customDate = title; // Original YYYY-MM-DD becomes customDate
+      }
+
       const data: PageData = {
-        title: title, // FIXED: Always use title for both replies and regular pages
+        title: pageTitle,
         isPublic,
         location,
         content: JSON.stringify(finalContent),
@@ -458,7 +468,9 @@ function NewPageContent() {
         replyTo: replyToId,
         replyToTitle: replyToTitle,
         replyToUsername: replyToUsername,
-        groupId: selectedGroupId};
+        groupId: selectedGroupId,
+        customDate: customDate
+      };
 
       // Note: For new pages, no link propagation is needed since the page doesn't exist yet
       // Link propagation only applies when updating existing page titles
@@ -552,15 +564,25 @@ function NewPageContent() {
           // CRITICAL FIX: Dispatch event with new page data to immediately update UI
           // This bypasses Firestore indexing delays by directly updating the local state
           try {
+            // Use the same title logic as the page creation
+            let eventTitle = title || 'Untitled';
+            let eventCustomDate = undefined;
+
+            if (isDailyNote && isExactDateFormat(title)) {
+              eventTitle = "Daily note";
+              eventCustomDate = title;
+            }
+
             const newPageData = {
               id: pageId,
-              title: title || 'Untitled',
+              title: eventTitle,
               userId: userId,
               username: username,
               lastModified: new Date().toISOString(),
               createdAt: new Date().toISOString(),
               isPublic: isPublic,
-              deleted: false
+              deleted: false,
+              customDate: eventCustomDate
             };
 
             if (typeof window !== 'undefined') {
@@ -766,7 +788,7 @@ function NewPageContent() {
           <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
         </Head>
         <PageHeader
-          title={title}
+          title={isDailyNote && isExactDateFormat(title) ? "Daily note" : title}
           username={username}
           userId={currentAccount?.uid}
           isLoading={isLoading}
@@ -792,7 +814,7 @@ function NewPageContent() {
               <div className="animate-in fade-in-0 duration-300">
                 <PageProvider>
                   <PageEditor
-                    title={isReply ? "" : title}
+                    title={isReply ? "" : (isDailyNote && isExactDateFormat(title) ? "Daily note" : title)}
                     setTitle={isDailyNote ? () => {} : handleTitleChange} // Lock title for daily notes
                     initialContent={editorState}
                     onContentChange={handleContentChange}

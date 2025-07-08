@@ -50,6 +50,8 @@ export interface Page {
   followerCount?: number;
   // Token earnings (subscription-based only)
   monthlyEarnings?: number;
+  // Custom date field for daily notes and other date-based pages
+  customDate?: string; // YYYY-MM-DD format
   // Soft delete fields
   deleted?: boolean;
   deletedAt?: string | Timestamp;

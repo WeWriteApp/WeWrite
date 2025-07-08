@@ -110,6 +110,7 @@ export interface CreatePageData {
   replyTo?: string | null;
   replyToTitle?: string | null;
   replyToUsername?: string | null;
+  customDate?: string; // YYYY-MM-DD format for daily notes and date-based pages
 }
 
 export interface PageUpdateData {
