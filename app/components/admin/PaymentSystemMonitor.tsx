@@ -9,6 +9,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { CopyErrorButton } from '../ui/CopyErrorButton';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { 
   CreditCard, 
   TrendingUp, 
@@ -55,6 +56,7 @@ interface TransactionVolume {
 }
 
 export function PaymentSystemMonitor() {
+  const { currentAccount, isAuthenticated } = useCurrentAccount();
   const [metrics, setMetrics] = useState<PaymentMetrics | null>(null);
   const [alerts, setAlerts] = useState<PaymentAlert[]>([]);
   const [transactionVolume, setTransactionVolume] = useState<TransactionVolume[]>([]);
@@ -63,6 +65,13 @@ export function PaymentSystemMonitor() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const refreshData = async () => {
+    // Don't fetch data if user is not authenticated
+    if (!isAuthenticated || !currentAccount) {
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
     setRefreshing(true);
     try {
       // Fetch payment metrics
@@ -77,6 +86,8 @@ export function PaymentSystemMonitor() {
       if (metricsResponse.ok) {
         const metricsData = await metricsResponse.json();
         setMetrics(metricsData.data);
+      } else {
+        console.warn('Failed to fetch payment metrics:', metricsResponse.status, metricsResponse.statusText);
       }
 
       // Fetch payment alerts
@@ -96,6 +107,8 @@ export function PaymentSystemMonitor() {
           timestamp: new Date(alert.timestamp)
         }));
         setAlerts(processedAlertsData);
+      } else {
+        console.warn('Failed to fetch payment alerts:', alertsResponse.status, alertsResponse.statusText);
       }
 
       // Fetch transaction volume data
@@ -115,32 +128,35 @@ export function PaymentSystemMonitor() {
           timestamp: new Date(item.timestamp)
         }));
         setTransactionVolume(processedVolumeData);
+      } else {
+        console.warn('Failed to fetch transaction volume:', volumeResponse.status, volumeResponse.statusText);
       }
 
       setLastUpdated(new Date());
     } catch (error: any) {
-      console.error('Error fetching payment monitoring data:', error);
+      console.warn('Error fetching payment monitoring data:', error);
 
-      // Add a synthetic error alert for display
-      const errorAlert = {
-        id: `fetch-error-${Date.now()}`,
-        title: 'Data Fetch Error',
-        message: `Failed to load payment monitoring data: ${error.message || 'Unknown error'}`,
-        type: 'system_error',
-        severity: 'critical' as const,
-        timestamp: new Date(),
-        resolved: false,
-        metadata: {
-          errorType: 'FETCH_ERROR',
-          endpoint: 'payment-monitoring',
-          errorMessage: error.message,
-          errorStack: error.stack,
-          userAgent: navigator.userAgent,
-          url: window.location.href
-        }
-      };
+      // Only add critical alerts for unexpected errors, not authentication failures
+      if (!error.message?.includes('Failed to fetch') && !error.message?.includes('Unauthorized')) {
+        const errorAlert = {
+          id: `fetch-error-${Date.now()}`,
+          title: 'Data Fetch Error',
+          message: `Failed to load payment monitoring data: ${error.message || 'Unknown error'}`,
+          type: 'system_error',
+          severity: 'warning' as const,
+          timestamp: new Date(),
+          resolved: false,
+          metadata: {
+            errorType: 'FETCH_ERROR',
+            endpoint: 'payment-monitoring',
+            errorMessage: error.message,
+            userAgent: navigator.userAgent,
+            url: window.location.href
+          }
+        };
 
-      setAlerts(prev => [errorAlert, ...prev]);
+        setAlerts(prev => [errorAlert, ...prev]);
+      }
     } finally {
       setRefreshing(false);
       setLoading(false);
@@ -148,12 +164,17 @@ export function PaymentSystemMonitor() {
   };
 
   useEffect(() => {
-    refreshData();
-    
-    // Set up auto-refresh every 30 seconds
-    const interval = setInterval(refreshData, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    // Only start monitoring if user is authenticated
+    if (isAuthenticated && currentAccount) {
+      refreshData();
+
+      // Set up auto-refresh every 30 seconds
+      const interval = setInterval(refreshData, 30000);
+      return () => clearInterval(interval);
+    } else {
+      setLoading(false);
+    }
+  }, [isAuthenticated, currentAccount]);
 
   const getAlertIcon = (type: string) => {
     switch (type) {
@@ -189,6 +210,17 @@ export function PaymentSystemMonitor() {
   const formatPercentage = (value: number) => {
     return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
   };
+
+  if (!isAuthenticated || !currentAccount) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <AlertTriangle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+          <p className="text-muted-foreground">Authentication required to view payment monitoring</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
