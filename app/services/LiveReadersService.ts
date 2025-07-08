@@ -24,11 +24,30 @@ class LiveReadersService {
   private batchUpdates = new Map<string, BatchUpdate>();
   private updateInterval: NodeJS.Timeout | null = null;
 
-  // Cost optimization settings
-  private readonly BATCH_INTERVAL = 10000; // 10 seconds - reduced from real-time
-  private readonly THROTTLE_INTERVAL = 5000; // 5 seconds minimum between updates per user
-  private readonly MAX_READERS_PER_PAGE = 50; // Limit to prevent excessive costs
-  private readonly CACHE_CLEANUP_INTERVAL = 60000; // 1 minute
+  // Enhanced cost optimization settings with smart throttling
+  private readonly BATCH_INTERVAL = 15000; // 15 seconds - increased for better cost efficiency
+  private readonly BASE_THROTTLE_INTERVAL = 10000; // 10 seconds base minimum between updates per user
+  private readonly MAX_READERS_PER_PAGE = 30; // Reduced limit to prevent excessive costs
+  private readonly CACHE_CLEANUP_INTERVAL = 120000; // 2 minutes - less frequent cleanup
+
+  // Smart throttling based on page activity
+  private getThrottleInterval(pageId: string): number {
+    const isCurrentPage = typeof window !== 'undefined' && window.location.pathname.includes(pageId);
+    const now = Date.now();
+
+    // Check recent activity on this page
+    const recentActivity = Array.from(this.readerCache.values())
+      .filter(entry => entry.pageId === pageId && (now - entry.timestamp) < 60000)
+      .length;
+
+    if (isCurrentPage && recentActivity > 5) {
+      return this.BASE_THROTTLE_INTERVAL; // 10 seconds for active pages
+    } else if (isCurrentPage) {
+      return this.BASE_THROTTLE_INTERVAL * 2; // 20 seconds for current but less active pages
+    } else {
+      return this.BASE_THROTTLE_INTERVAL * 4; // 40 seconds for background pages
+    }
+  }
 
   constructor() {
     this.db = getDatabase();
@@ -48,9 +67,10 @@ class LiveReadersService {
     const now = Date.now();
     const existingEntry = this.readerCache.get(cacheKey);
 
-    // Throttle updates per user to reduce costs
-    if (existingEntry && (now - existingEntry.timestamp) < this.THROTTLE_INTERVAL) {
-      console.log(`[LiveReaders] Throttling reader update for ${userId} on ${pageId}`);
+    // Smart throttle updates per user to reduce costs
+    const throttleInterval = this.getThrottleInterval(pageId);
+    if (existingEntry && (now - existingEntry.timestamp) < throttleInterval) {
+      console.log(`[LiveReaders] Smart throttling reader update for ${userId} on ${pageId} (${throttleInterval}ms interval)`);
       return;
     }
 

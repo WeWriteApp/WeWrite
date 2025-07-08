@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useContext } from 'react';
+import { createLogger } from './logger';
 
 // Define feature flag types
 export type FeatureFlag =
@@ -29,6 +30,8 @@ let globalFeatureFlags: Record<string, boolean> = {};
 let isInitialized = false;
 let initializationPromise: Promise<void> | null = null;
 
+const logger = createLogger('FeatureFlags');
+
 /**
  * Initialize feature flags from database
  */
@@ -46,13 +49,13 @@ const initializeFeatureFlags = async (): Promise<void> => {
 
     if (featureFlagsDoc.exists()) {
       const flagsData = featureFlagsDoc.data();
-      console.log('[FeatureFlags] Feature flags loaded:', flagsData);
+      logger.debug('Feature flags loaded', { count: Object.keys(flagsData).length });
 
       // Store all flags globally
       globalFeatureFlags = { ...flagsData };
       isInitialized = true;
     } else {
-      console.log('[FeatureFlags] No feature flags document found, using defaults');
+      logger.debug('No feature flags document found, using defaults');
 
       // Set default flags
       globalFeatureFlags = {
@@ -109,7 +112,6 @@ export const isFeatureEnabledForUser = async (flag: FeatureFlag, userId?: string
 
   // If no user ID, return global status
   if (!userId) {
-    console.log(`[FeatureFlags] No user ID provided, returning global flag ${flag}: ${globalEnabled}`);
     return globalEnabled;
   }
 
@@ -124,11 +126,10 @@ export const isFeatureEnabledForUser = async (flag: FeatureFlag, userId?: string
     if (featureOverrideDoc.exists()) {
       const data = featureOverrideDoc.data();
       const userOverride = data.enabled;
-      console.warn(`[FeatureFlags] User override found for ${flag} (user: ${userId}): ${userOverride}`, data);
+      logger.debug('User override found', { flag, userId: userId.substring(0, 8), override: userOverride });
       return userOverride;
     } else {
       // No override, use global setting
-      console.warn(`[FeatureFlags] No user override for ${flag} (user: ${userId}), using global: ${globalEnabled}`);
       return globalEnabled;
     }
   } catch (error) {
@@ -158,14 +159,11 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null, use
 
     const checkFeatureFlag = async () => {
       try {
-        console.log(`[FeatureFlags] useFeatureFlag called for ${flag} with userId: ${userId}, userEmail: ${userEmail}`);
-
         // Special case for inactive_subscription - check localStorage testing tool
         if (flag === 'inactive_subscription') {
           if (typeof window !== 'undefined') {
             const testingEnabled = localStorage.getItem('admin-inactive-subscription-test');
             const enabled = testingEnabled ? JSON.parse(testingEnabled) : false;
-            console.log(`[FeatureFlags] Inactive subscription testing tool result: ${enabled}`);
             if (isMounted) {
               setIsEnabled(enabled);
               setInitialized(true);
@@ -176,15 +174,12 @@ export const useFeatureFlag = (flag: FeatureFlag, userEmail?: string | null, use
 
         // If userId is provided, check user-specific overrides
         if (userId) {
-          console.log(`[FeatureFlags] Checking user-specific overrides for ${flag}`);
           const enabled = await isFeatureEnabledForUser(flag, userId);
-          console.warn(`[FeatureFlags] User-specific result for ${flag}: ${enabled}`);
           if (isMounted) {
             setIsEnabled(enabled);
             setInitialized(true);
           }
         } else {
-          console.log(`[FeatureFlags] No userId provided, using legacy behavior for ${flag}`);
           // Fallback to legacy behavior for backward compatibility
           if (!initializationPromise) {
             initializationPromise = initializeFeatureFlags();

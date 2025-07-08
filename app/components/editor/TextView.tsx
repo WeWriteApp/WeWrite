@@ -175,11 +175,8 @@ const TextView: React.FC<TextViewProps> = ({
     )
   );
 
-  // Check if current user can view this page (public or owner)
-  const canView = Boolean(
-    page?.isPublic ||
-    (session?.uid && page?.userId && session.uid === page.userId)
-  );
+  // All pages are now public, so everyone can view
+  const canView = true;
 
   // Use lineMode from context as the primary mode, but force normal mode when editing
   const effectiveMode = isEditing ? LINE_MODES.NORMAL : (lineMode || LINE_MODES.NORMAL);

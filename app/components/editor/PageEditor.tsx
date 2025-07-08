@@ -19,7 +19,7 @@ import { Button } from "../ui/button";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Switch } from "../ui/switch";
 import { useLineSettings, LINE_MODES } from "../../contexts/LineSettingsContext";
-import { AlertTriangle, X, Link, Check, Grid3X3 } from "lucide-react";
+import { AlertTriangle, X, Link, Check, Grid3X3, Trash2 } from "lucide-react";
 // Remove Slate-specific types - using simple text format now
 import { PageEditorSkeleton } from "../skeletons/PageEditorSkeleton";
 import { useAlert } from "../../hooks/useAlert";
@@ -43,8 +43,6 @@ interface PageEditorProps {
   setTitle: (title: string) => void;
   initialContent?: any; // Changed from SlateContent to any for Editor compatibility
   onContentChange: (content: any) => void; // Changed from SlateContent to any
-  isPublic: boolean;
-  setIsPublic: (isPublic: boolean) => void;
   location?: { lat: number; lng: number } | null;
   setLocation?: (location: { lat: number; lng: number } | null) => void;
   onSave: (content?: any) => void;
@@ -76,8 +74,6 @@ const PageEditor: React.FC<PageEditorProps> = ({
   setTitle,
   initialContent,
   onContentChange,
-  isPublic,
-  setIsPublic,
   location,
   setLocation,
   onSave,
@@ -657,8 +653,6 @@ const PageEditor: React.FC<PageEditorProps> = ({
 
   return (
     <EditorProvider
-      isPublic={isPublic}
-      setIsPublic={setIsPublic}
       location={location}
       setLocation={setLocation}
       onCancel={onCancel}
@@ -828,7 +822,7 @@ const PageEditor: React.FC<PageEditorProps> = ({
         )}
       </div>
 
-      {/* Bottom Button Row - Insert Link, Cancel, and Save */}
+      {/* Bottom Button Row - Insert Link, Cancel, Save, and Delete */}
       {/* Mobile: Vertical stack with full width, Desktop: Horizontal centered */}
       <div className="flex flex-col gap-3 mt-4 w-full md:flex-row md:justify-center">
         {/* Insert Link Button */}
@@ -922,6 +916,20 @@ const PageEditor: React.FC<PageEditorProps> = ({
             </>
           )}
         </Button>
+
+        {/* Delete Button - only show for existing pages */}
+        {onDelete && !isNewPage && (
+          <Button
+            variant="destructive"
+            size="lg"
+            onClick={onDelete}
+            disabled={isSaving}
+            className="gap-2 w-full md:w-auto rounded-2xl font-medium"
+          >
+            <Trash2 className="h-5 w-5" />
+            <span>Delete</span>
+          </Button>
+        )}
       </div>
 
       {/* Error message */}

@@ -27,7 +27,7 @@ export default function SubscriptionSuccessPage() {
   // If payments feature flag is disabled, show OpenCollective support instead
   if (!isPaymentsEnabled) {
     return (
-      <div className="max-w-md mx-auto p-4">
+      <div className="max-w-md mx-auto p-4 pb-32 md:pb-4">
         <div className="mb-4">
           <Link href="/settings" className="inline-flex items-center text-primary hover:text-primary/80 text-sm">
             <ArrowLeft className="h-3 w-3 mr-1" />

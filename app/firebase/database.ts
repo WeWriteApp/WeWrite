@@ -72,6 +72,17 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
       }
     }
 
+    // Trigger cache invalidation for page updates
+    if (result && pageData?.pageData?.userId) {
+      try {
+        const { invalidateUserPagesCache } = await import('../utils/cacheInvalidation');
+        invalidateUserPagesCache(pageData.pageData.userId);
+        console.log('✅ Cache invalidation triggered after page update for user:', pageData.pageData.userId);
+      } catch (cacheError) {
+        console.error('Error triggering cache invalidation (non-fatal):', cacheError);
+      }
+    }
+
     return result;
   } catch (error) {
     console.error('Error updating page:', error);

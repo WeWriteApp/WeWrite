@@ -16,17 +16,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Only available in development' }, { status: 403 })
     }
 
-    // Handle malformed JSON gracefully
-    let body;
-    try {
-      body = await request.json()
-    } catch (jsonError) {
-      console.error('Invalid JSON in log-console-error request:', jsonError.message)
-      return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 })
+    // Parse request body to check log level
+    const body = await request.json()
+    const { level } = body
+
+    // Only process errors and warnings, skip regular logs and info to reduce terminal spam
+    if (level === 'log' || level === 'info') {
+      return NextResponse.json({ success: true, skipped: true })
     }
 
+    // JSON already parsed above for level check
+
     const {
-      level,
       message,
       timestamp,
       url,

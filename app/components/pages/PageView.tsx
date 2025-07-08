@@ -12,6 +12,7 @@ import { TextSelectionProvider } from "../../providers/TextSelectionProvider";
 import { PageProvider } from "../../contexts/PageContext";
 import { useRecentPages } from "../../contexts/RecentPagesContext";
 import { useLineSettings } from "../../contexts/LineSettingsContext";
+import { createLogger } from '../../utils/logger';
 
 // UI Components
 import PublicLayout from "../layout/PublicLayout";
@@ -127,76 +128,72 @@ export default function PageView({
   const { currentAccount } = useCurrentAccount();
   const { addRecentPage } = useRecentPages();
 
+  // Logger
+  const logger = createLogger('PageView');
+
   // Constants
   const maxLoadAttempts = 3;
   const isPreviewingDeleted = searchParams?.get('preview') === 'deleted';
 
   // Handle params Promise
   useEffect(() => {
-    console.log('📄 PageView params effect:', { params, unwrappedParams });
     if (params && typeof params.then === 'function') {
-      console.log('📄 PageView: params is a Promise, resolving...');
+      logger.debug('Resolving params Promise');
       params.then((resolvedParams) => {
-        console.log('📄 PageView: resolved params:', resolvedParams);
         setPageId(resolvedParams.id || '');
+        logger.debug('Params resolved', { id: resolvedParams.id });
       });
     } else if (unwrappedParams) {
-      console.log('📄 PageView: using unwrappedParams:', unwrappedParams);
       setPageId(unwrappedParams.id || '');
+      logger.debug('Using unwrapped params', { id: unwrappedParams.id });
     }
   }, [params, unwrappedParams]);
 
   // Page loading effect
   useEffect(() => {
-    console.log('📄 PageView useEffect triggered:', { pageId, currentAccountUid: currentAccount?.uid });
     if (!pageId) {
-      console.log('📄 PageView: No pageId, returning early');
+      logger.debug('No pageId provided');
       return;
     }
 
-    console.log('📄 PageView: Starting page load for pageId:', pageId);
+    logger.debug('Starting page load', { pageId, userId: currentAccount?.uid });
     setIsLoading(true);
     setError(null);
 
     // If showing version or diff, load version data instead of live page
     if (showVersion && versionId) {
-      console.log('📄 PageView: Loading version data');
+      logger.debug('Loading version data', { versionId });
       loadVersionData();
     } else if (showDiff && versionId) {
-      console.log('📄 PageView: Loading diff data');
+      logger.debug('Loading diff data', { versionId });
       loadDiffData();
     } else {
-      console.log('📄 PageView: Setting up Firebase listener for pageId:', pageId);
+      logger.debug('Setting up Firebase listener', { pageId });
       // Set up Firebase listener for live page
       const unsubscribe = listenToPageById(pageId, (data) => {
-        console.log('📄 PageView received data:', {
-          hasError: !!data.error,
-          error: data.error,
-          hasPageData: !!(data.pageData || data),
-          hasVersionData: !!data.versionData,
-          pageId: pageId,
-          currentUser: currentAccount?.uid || 'anonymous'
-        });
+        if (data.error) {
+          logger.warn('Page load error', { error: data.error, pageId });
+        } else {
+          logger.debug('Page data received', {
+            hasPageData: !!(data.pageData || data),
+            hasVersionData: !!data.versionData
+          });
+        }
 
         if (data.error) {
-          console.log('📄 PageView error:', data.error);
           setError(data.error);
           setIsLoading(false);
         } else {
           const pageData = data.pageData || data;
           const versionData = data.versionData;
-          console.log('📄 PageView page data:', {
-            id: pageData.id,
-            title: pageData.title,
-            isPublic: pageData.isPublic,
-            hasContent: !!pageData.content,
-            contentLength: pageData.content ? pageData.content.length : 0,
-            userId: pageData.userId,
-            hasVersionData: !!versionData,
-            versionContentLength: versionData?.content ? versionData.content.length : 0
-          });
 
           setPage(pageData);
+          if (pageData.title !== title) {
+            logger.debug('Title updated from page data', {
+              oldTitle: title,
+              newTitle: pageData.title
+            });
+          }
           setTitle(pageData.title || '');
           setIsPublic(pageData.isPublic !== false);
           setLocation(pageData.location || '');
@@ -427,10 +424,13 @@ export default function PageView({
   }, []);
 
   const handleTitleChange = useCallback((newTitle: string) => {
+    if (newTitle !== title) {
+      logger.debug('Title changed', { oldTitle: title, newTitle });
+    }
     setTitle(newTitle);
     setHasUnsavedChanges(true);
     setTitleError(null);
-  }, []);
+  }, [title]);
 
   const handleVisibilityChange = useCallback((newIsPublic: boolean) => {
     setIsPublic(newIsPublic);
@@ -481,22 +481,19 @@ export default function PageView({
         skipIfUnchanged: true // Enable no-op detection
       };
 
-      console.log('🔄 Updating page with version creation and no-op detection:', pageId);
+      logger.debug('Saving page with version creation', { pageId });
       const versionResult = await saveNewVersion(pageId, versionData);
 
       // Check if the save was skipped due to no changes
+      let contentWasSkipped = false;
       if (versionResult && !versionResult.success && versionResult.message === 'Content unchanged') {
-        console.log('✅ No changes detected, skipping version creation');
-        setHasUnsavedChanges(false);
-        setIsEditing(false);
-        return;
-      }
-
-      if (!versionResult) {
+        logger.debug('Content unchanged, skipping version creation');
+        contentWasSkipped = true;
+      } else if (!versionResult) {
         throw new Error('Failed to create new version');
       }
 
-      // Update page metadata (title, isPublic, location) if they changed
+      // Update page metadata (title, isPublic, location) - this should happen even if content didn't change
       const { updatePage } = await import('../../firebase/database');
       const updateData = {
         title: title.trim(),
@@ -505,14 +502,30 @@ export default function PageView({
         lastModified: new Date().toISOString()
       };
 
-      console.log('🔄 Updating page metadata:', pageId);
+      logger.debug('Updating page metadata', {
+        pageId,
+        titleChanged: page?.title !== title.trim()
+      });
       const metadataSuccess = await updatePage(pageId, updateData);
 
       if (!metadataSuccess) {
         throw new Error('Failed to update page metadata');
       }
 
-      console.log('✅ Page updated successfully with version creation and no-op detection');
+      logger.info('Page saved successfully', {
+        contentUpdated: !contentWasSkipped,
+        metadataUpdated: true
+      });
+
+      // Trigger cache invalidation to refresh daily notes and other components
+      try {
+        const { invalidateUserPagesCache } = await import('../../utils/cacheInvalidation');
+        invalidateUserPagesCache(page?.userId);
+        console.log('✅ Cache invalidation triggered after page update for user:', page?.userId);
+      } catch (cacheError) {
+        console.error('Error triggering cache invalidation (non-fatal):', cacheError);
+      }
+
       setHasUnsavedChanges(false);
       setIsEditing(false);
     } catch (error) {

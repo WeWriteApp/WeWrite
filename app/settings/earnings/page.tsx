@@ -25,7 +25,7 @@ export default function EarningsPage() {
         description="Track your earnings and manage payouts"
       />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
 
         {/* Tabbed Interface */}
             <Tabs defaultValue="earnings" className="space-y-4 sm:space-y-6" urlNavigation="hash">

@@ -200,7 +200,7 @@ export default function ProfilePage() {
         description="Manage your personal information"
       />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
 
         {/* Profile Section */}
         <Card className="wewrite-card">

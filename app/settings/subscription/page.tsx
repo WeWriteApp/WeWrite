@@ -20,7 +20,8 @@ import {
   Calendar,
   DollarSign,
   Settings,
-  ArrowLeft
+  ArrowLeft,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 import SubscriptionTierSlider from '../../components/subscription/SubscriptionTierSlider';
@@ -375,7 +376,7 @@ export default function SubscriptionPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto p-4 md:p-6">
+      <div className="max-w-4xl mx-auto p-4 md:p-6 pb-32 md:pb-6">
         <div className="flex justify-center my-8 md:my-12">
           <div className="animate-spin rounded-full h-8 w-8 md:h-12 md:w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
@@ -390,7 +391,7 @@ export default function SubscriptionPage() {
         description="Manage your WeWrite subscription and get monthly tokens to support creators."
       />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
 
         <div className="space-y-4 md:space-y-6">
 
@@ -465,12 +466,21 @@ export default function SubscriptionPage() {
                     ) : (
                       <Button
                         variant="outline"
-                        onClick={() => setShowInlineTierSelector(true)}
+                        onClick={() => setShowInlineTierSelector(!showInlineTierSelector)}
                         className="w-full sm:w-auto"
                         size="sm"
                       >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Change Plan
+                        {showInlineTierSelector ? (
+                          <>
+                            <X className="h-4 w-4 mr-2" />
+                            Cancel
+                          </>
+                        ) : (
+                          <>
+                            <Settings className="h-4 w-4 mr-2" />
+                            Change Plan
+                          </>
+                        )}
                       </Button>
                     )}
                   </div>
@@ -529,48 +539,58 @@ export default function SubscriptionPage() {
           )}
 
           {/* Inline Tier Selector for Plan Changes */}
-          {showInlineTierSelector && currentSubscription && (
-            <div className="mt-4 md:mt-6 animate-in slide-in-from-top-2 duration-300">
-              <div className="mb-4">
-                <h3 className="text-base md:text-lg font-semibold">Choose Your New Plan</h3>
-                <p className="text-sm text-muted-foreground">
-                  Select a tier to update your subscription
-                </p>
-              </div>
+          <div className={`overflow-hidden transition-all duration-500 ease-in-out ${
+            showInlineTierSelector
+              ? 'max-h-[800px] opacity-100 mt-4 md:mt-6'
+              : 'max-h-0 opacity-0 mt-0'
+          }`}>
+            {currentSubscription && (
+              <div className={`transform transition-all duration-500 ease-in-out ${
+                showInlineTierSelector
+                  ? 'translate-y-0 scale-100'
+                  : '-translate-y-4 scale-95'
+              }`}>
+                <div className="mb-4">
+                  <h3 className="text-base md:text-lg font-semibold">Choose Your New Plan</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Select a tier to update your subscription
+                  </p>
+                </div>
 
-              <SubscriptionTierSlider
-                selectedAmount={selectedAmount}
-                onAmountSelect={handleAmountSelect}
-                currentSubscription={currentSubscription}
-                showCurrentOption={false}
-              />
+                <SubscriptionTierSlider
+                  selectedAmount={selectedAmount}
+                  onAmountSelect={handleAmountSelect}
+                  currentSubscription={currentSubscription}
+                  showCurrentOption={false}
+                />
 
-              <div className="flex flex-col sm:flex-row gap-3 mt-4 md:mt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowInlineTierSelector(false)}
-                  className="w-full sm:w-auto"
-                  size="sm"
-                >
-                  Cancel
-                </Button>
-                {(() => {
-                  const buttonState = getButtonState();
-                  return (
-                    <Button
-                      onClick={handleSubscribe}
-                      variant={buttonState.variant}
-                      disabled={loading || buttonState.disabled}
-                      className={`w-full sm:w-auto ${buttonState.className}`}
-                      size="sm"
-                    >
-                      {loading ? 'Processing...' : buttonState.text}
-                    </Button>
-                  );
-                })()}
+                <div className="flex flex-col sm:flex-row gap-3 mt-4 md:mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowInlineTierSelector(false)}
+                    className="w-full sm:w-auto"
+                    size="sm"
+                  >
+                    Cancel
+                  </Button>
+                  {(() => {
+                    const buttonState = getButtonState();
+                    return (
+                      <Button
+                        onClick={handleSubscribe}
+                        variant={buttonState.variant}
+                        disabled={loading || buttonState.disabled}
+                        className={`w-full sm:w-auto ${buttonState.className}`}
+                        size="sm"
+                      >
+                        {loading ? 'Processing...' : buttonState.text}
+                      </Button>
+                    );
+                  })()}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Cancel Subscription Confirmation Dialog */}

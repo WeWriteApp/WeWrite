@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "../ui/button";
-import { Loader, ChevronLeft, ChevronRight, Share2, Lock, Globe, MoreHorizontal, Edit2, Plus, MessageSquare, Trash2, Link as LinkIcon, AlignJustify, AlignLeft } from "lucide-react";
+import { Loader, ChevronLeft, ChevronRight, Share2, MoreHorizontal, Edit2, Plus, MessageSquare, Trash2, Link as LinkIcon, AlignJustify, AlignLeft, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ref, get } from "firebase/database";
 import { rtdb } from "../../firebase/rtdb";
@@ -90,10 +90,11 @@ export interface PageHeaderProps {
   userId?: string;
   /** Whether the page is currently loading */
   isLoading?: boolean;
-  /** Current scroll direction for header behavior */
-  scrollDirection?: string;
   /** Whether the page is private */
   isPrivate?: boolean;
+  /** Current scroll direction for header behavior */
+  scrollDirection?: string;
+
   /** Subscription tier (deprecated - now fetched internally via userId) */
   tier?: string;
   /** Subscription status (deprecated - now fetched internally via userId) */
@@ -112,8 +113,7 @@ export interface PageHeaderProps {
   pageId?: string | null;
   /** Flag to indicate this is a new page */
   isNewPage?: boolean;
-  /** Handler for privacy toggle */
-  onPrivacyChange?: (isPublic: boolean) => void;
+
   /** Handler for delete page */
   onDelete?: () => void;
   /** Handler for insert link */
@@ -125,8 +125,8 @@ export default function PageHeader({
   username,
   userId,
   isLoading = false,
-  // scrollDirection is not used but kept for compatibility
   isPrivate = false,
+  // scrollDirection is not used but kept for compatibility
   tier: initialTier,
   subscriptionStatus: initialStatus,
   isEditing = false,
@@ -137,7 +137,6 @@ export default function PageHeader({
   pageId: propPageId = null,
   onOwnershipChange,
   isNewPage = false,
-  onPrivacyChange,
   onDelete,
   onInsertLink}: PageHeaderProps) {
 
@@ -248,9 +247,15 @@ export default function PageHeader({
   const [isNavigating, setIsNavigating] = React.useState<boolean>(false);
   const [showDateFormatPicker, setShowDateFormatPicker] = React.useState<boolean>(false);
 
-  // Check if this is a daily note
+  // Check if this is a daily note - now based on customDate field, not title format
+  // After migration, daily notes have "Daily note" title and customDate field
   const isDailyNote = React.useMemo(() => {
-    return title ? isExactDateFormat(title) : false;
+    // Legacy check: title matches YYYY-MM-DD format (for unmigrated daily notes)
+    const isLegacyDailyNote = title ? isExactDateFormat(title) : false;
+    // New check: has customDate field (for migrated daily notes)
+    // Note: We don't have access to customDate in PageHeader, so we'll rely on legacy check for now
+    // TODO: Pass customDate as prop if needed for more accurate detection
+    return isLegacyDailyNote;
   }, [title]);
 
   // Function to determine if the current user can edit the page
@@ -337,9 +342,10 @@ export default function PageHeader({
 
   // Handle title editing
   const handleTitleClick = () => {
-    // For daily notes, open date format picker instead of editing title
-    if (isExactDateFormat(title || "")) {
-      console.log('Opening date format picker for daily note:', title);
+    // Allow title editing for all pages, including migrated daily notes
+    // Only show date format picker for legacy daily notes (unmigrated ones with YYYY-MM-DD titles)
+    if (isExactDateFormat(title || "") && title !== "Daily note") {
+      console.log('Opening date format picker for legacy daily note:', title);
       setShowDateFormatPicker(true);
       return;
     }
@@ -872,41 +878,8 @@ export default function PageHeader({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
-                        {/* For new pages, show only the privacy toggle */}
-                        {isNewPage ? (
-                          <DropdownMenuItem
-                            className="flex items-center justify-between cursor-pointer py-3"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              if (onPrivacyChange) {
-                                onPrivacyChange(!isPrivate);
-                              }
-                            }}
-                          >
-                            <div className="flex items-center gap-3">
-                              {!isPrivate ? (
-                                <Globe className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <Lock className="h-4 w-4 text-muted-foreground" />
-                              )}
-                              <div className="flex flex-col">
-                                <span className="font-medium">{!isPrivate ? "Public" : "Private"}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {!isPrivate ? "Anyone can view this page" : "Only you can view this page"}
-                                </span>
-                              </div>
-                            </div>
-                            <Switch
-                              checked={!isPrivate}
-                              onCheckedChange={(checked) => {
-                                if (onPrivacyChange) {
-                                  onPrivacyChange(checked);
-                                }
-                              }}
-                              aria-label="Toggle page visibility"
-                            />
-                          </DropdownMenuItem>
-                        ) : (
+                        {/* Menu items for existing pages */}
+                        {!isNewPage && (
                           <>
                             {/* Edit option - only visible if user can edit */}
                             {canEdit && setIsEditing && (
@@ -1042,8 +1015,8 @@ export default function PageHeader({
                           <span className="text-muted-foreground">Loading title...</span>
                         </div>
                       ) : (
-                        <div className={`flex items-center justify-center ${isPrivate ? 'gap-1.5' : ''}`}>
-                          {isEditing && canEdit && isEditingTitle && !isDailyNote ? (
+                        <div className="flex items-center justify-center">
+                          {isEditing && canEdit && isEditingTitle && !(isExactDateFormat(title || "") && title !== "Daily note") ? (
                             <textarea
                               ref={titleInputRef}
                               value={editingTitle}
@@ -1097,13 +1070,13 @@ export default function PageHeader({
                               }}
                               onClick={handleTitleClick}
                               title={
-                                isDailyNote
+                                (isExactDateFormat(title || "") && title !== "Daily note")
                                   ? "Click to change date format"
                                   : (canEdit ? (isEditing ? "Click to edit title" : "Click to edit page") : undefined)
                               }
                             >
                               <span className={!title && isNewPage ? "text-muted-foreground" : ""}>
-                                {isDailyNote && title
+                                {(isExactDateFormat(title || "") && title !== "Daily note") && title
                                   ? formatDate(title)
                                   : title
                                   ? title

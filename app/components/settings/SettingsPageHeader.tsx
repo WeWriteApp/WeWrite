@@ -36,7 +36,7 @@ export function SettingsPageHeader({
       </div>
 
       {/* Desktop Header */}
-      <div className="hidden lg:block mb-8">
+      <div className="hidden lg:block mb-8 px-4 sm:px-6 lg:px-8 pt-8">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
         {description && (
           <p className="text-muted-foreground mt-1">{description}</p>

@@ -103,6 +103,15 @@ export async function PATCH(request, { params }) {
 
     console.log(`API: Successfully updated custom date for page ${id}`);
 
+    // Trigger cache invalidation to refresh daily notes and other components
+    try {
+      const { invalidateUserPagesCache } = await import('../../../../utils/cacheInvalidation');
+      invalidateUserPagesCache(userId);
+      console.log('✅ Cache invalidation triggered after custom date update for user:', userId);
+    } catch (cacheError) {
+      console.error('Error triggering cache invalidation (non-fatal):', cacheError);
+    }
+
     return NextResponse.json({
       success: true,
       customDate: customDate,

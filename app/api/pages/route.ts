@@ -24,7 +24,6 @@ interface PageData {
 
 interface PageQuery {
   userId?: string;
-  isPublic?: boolean;
   includeDeleted?: boolean;
   limit?: number;
   startAfter?: string;
@@ -48,7 +47,6 @@ export async function GET(request: NextRequest) {
     // Parse query parameters
     const query: PageQuery = {
       userId: searchParams.get('userId') || undefined,
-      isPublic: searchParams.get('isPublic') === 'true' ? true : searchParams.get('isPublic') === 'false' ? false : undefined,
       includeDeleted: searchParams.get('includeDeleted') === 'true',
       limit: parseInt(searchParams.get('limit') || '20'),
       startAfter: searchParams.get('startAfter') || undefined,
@@ -151,7 +149,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, isPublic = false, groupId } = body;
+    const { title, content, isPublic = false, groupId, customDate } = body;
 
     if (!title || title.trim() === '') {
       return createErrorResponse('BAD_REQUEST', 'Page title is required');
@@ -171,7 +169,8 @@ export async function POST(request: NextRequest) {
       groupId: groupId || null,
       lastModified: new Date().toISOString(),
       createdAt: new Date().toISOString(),
-      deleted: false
+      deleted: false,
+      customDate: customDate || null
     };
 
     // Create the page
@@ -201,7 +200,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, title, content, isPublic, groupId } = body;
+    const { id, title, content, groupId } = body;
 
     if (!id) {
       return createErrorResponse('BAD_REQUEST', 'Page ID is required');

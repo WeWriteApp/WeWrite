@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { FileText, Lock, Globe, ChevronRight, Plus, Search } from "lucide-react";
+import { FileText, ChevronRight, Plus, Search } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -208,18 +208,8 @@ export default function PageList({
                 <TableRow key={page.id}>
                   <TableCell className="font-medium">{page.title}</TableCell>
                   <TableCell>
-                    <Badge variant={page.isPublic ? "default" : "outline"} className="flex items-center w-fit gap-1">
-                      {page.isPublic ? (
-                        <>
-                          <Globe className="h-3 w-3" />
-                          <span>Public</span>
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="h-3 w-3" />
-                          <span>Private</span>
-                        </>
-                      )}
+                    <Badge variant="default" className="flex items-center w-fit gap-1">
+                      <span>Published</span>
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -261,17 +251,7 @@ export default function PageList({
                       {new Date(page.lastModified || page.createdAt).toLocaleDateString()}
                     </span>
                     <Badge variant="outline" className="flex items-center gap-1">
-                      {page.isPublic ? (
-                        <>
-                          <Globe className="h-3 w-3" />
-                          <span>Public</span>
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="h-3 w-3" />
-                          <span>Private</span>
-                        </>
-                      )}
+                      <span>Published</span>
                     </Badge>
                   </div>
                 </div>

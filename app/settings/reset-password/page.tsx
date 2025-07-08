@@ -51,7 +51,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="container max-w-md mx-auto px-4 py-8">
+    <div className="container max-w-md mx-auto px-4 py-8 pb-32 md:pb-8">
       <NavHeader
         title="Reset Password"
         backUrl="/settings"

@@ -15,8 +15,6 @@ interface SubscriptionCheckoutFormProps {
   initialTier?: string;
   /** Custom amount for custom tier */
   initialAmount?: number;
-  /** Show PWA optimization notice */
-  showPWANotice?: boolean;
   /** Callback when checkout is completed */
   onSuccess?: (subscriptionId: string) => void;
   /** Callback when checkout is cancelled */
@@ -35,7 +33,6 @@ interface SubscriptionCheckoutFormProps {
 export function SubscriptionCheckoutForm({
   initialTier = 'tier2',
   initialAmount,
-  showPWANotice = true,
   onSuccess,
   onCancel
 }: SubscriptionCheckoutFormProps) {
@@ -126,16 +123,7 @@ export function SubscriptionCheckoutForm({
 
   return (
     <div className="space-y-6">
-      {/* PWA Optimization Notice */}
-      {showPWANotice && isPWA && (
-        <Alert className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
-          <Smartphone className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-700 dark:text-green-300">
-            <strong>PWA Optimized:</strong> This checkout flow is optimized for app-like experience 
-            with no external redirects. Your payment stays secure within the WeWrite app.
-          </AlertDescription>
-        </Alert>
-      )}
+
 
 
 
@@ -154,7 +142,7 @@ export function SubscriptionCheckoutForm({
         initialAmount={initialAmount}
         onSuccess={handleSuccess}
         onCancel={handleCancel}
-        showBackButton={true}
+        showBackButton={false}
         successUrl={`${window.location.origin}/settings/subscription?success=true`}
         cancelUrl={`${window.location.origin}/settings/subscription?cancelled=true`}
       />
@@ -178,7 +166,6 @@ export function QuickSubscriptionCheckout({
     <SubscriptionCheckoutForm
       initialTier={tier}
       initialAmount={amount}
-      showPWANotice={false}
       onSuccess={onComplete}
       onCancel={() => {
         // Close modal or return to previous state

@@ -169,41 +169,39 @@ export default function PageFooter({
 
       {/* Similar pages section removed to conserve resources */}
 
-      {/* Custom Date Field - show in both edit and view modes */}
-      {page.customDate && (
-        <div className="mb-6">
-          <CustomDateField
-            customDate={page.customDate}
-            canEdit={isOwner}
-            onCustomDateChange={async (newDate) => {
-              try {
-                const response = await fetch(`/api/pages/${page.id}/custom-date`, {
-                  method: 'PATCH',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({ customDate: newDate }),
-                });
+      {/* Custom Date Field - show in both edit and view modes for all pages */}
+      <div className="mb-6">
+        <CustomDateField
+          customDate={page.customDate}
+          canEdit={isOwner}
+          onCustomDateChange={async (newDate) => {
+            try {
+              const response = await fetch(`/api/pages/${page.id}/custom-date`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ customDate: newDate }),
+              });
 
-                if (!response.ok) {
-                  const errorData = await response.json();
-                  throw new Error(errorData.error || 'Failed to update custom date');
-                }
-
-                // Update the page object to reflect the change
-                if (page) {
-                  page.customDate = newDate;
-                }
-
-                console.log('Custom date updated successfully to:', newDate);
-              } catch (error) {
-                console.error('Error updating custom date:', error);
-                // TODO: Show user-friendly error message
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update custom date');
               }
-            }}
-          />
-        </div>
-      )}
+
+              // Update the page object to reflect the change
+              if (page) {
+                page.customDate = newDate;
+              }
+
+              console.log('Custom date updated successfully to:', newDate);
+            } catch (error) {
+              console.error('Error updating custom date:', error);
+              // TODO: Show user-friendly error message
+            }
+          }}
+        />
+      </div>
 
       {/* Page stats section - only in view mode */}
       {!isEditing && (

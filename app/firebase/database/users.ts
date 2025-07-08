@@ -7,8 +7,7 @@ import {
   where,
   orderBy,
   limit,
-  startAfter,
-  select
+  startAfter
 } from "firebase/firestore";
 
 import { get, ref } from "firebase/database";
@@ -65,8 +64,7 @@ export async function getUserPages(
           pagesRef,
           where("userId", "==", userId),
           where("deleted", "!=", true),
-          orderBy("lastModified", "desc"),
-          select(...pageMetadataFields)
+          orderBy("lastModified", "desc")
         );
       } else {
         // If viewing someone else's profile, only get public, non-deleted pages
@@ -75,8 +73,7 @@ export async function getUserPages(
           where("userId", "==", userId),
           where("isPublic", "==", true),
           where("deleted", "!=", true),
-          orderBy("lastModified", "desc"),
-          select(...pageMetadataFields)
+          orderBy("lastModified", "desc")
         );
       }
 
@@ -207,8 +204,7 @@ export const getUserProfiles = async (userIds: string[]): Promise<Record<string,
 
         const batchQuery = query(
           collection(db, 'users'),
-          where('__name__', 'in', batch),
-          select(...userProfileFields)
+          where('__name__', 'in', batch)
         );
         
         const batchSnapshot = await getDocs(batchQuery);

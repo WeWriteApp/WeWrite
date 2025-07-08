@@ -48,8 +48,7 @@ import {
   limit,
   onSnapshot,
   type Unsubscribe,
-  type DocumentData,
-  select
+  type DocumentData
 } from 'firebase/firestore';
 import { db } from './database';
 import { generateCacheKey, getCacheItem, setCacheItem, BatchCache } from '../utils/cacheUtils';
@@ -137,7 +136,8 @@ const logReadOperation = (operation: string, cached: boolean = false) => {
     readOperations.shift();
   }
   
-  if (process.env.NODE_ENV === 'development') {
+  // Reduced logging - only log non-cached operations or every 10th operation
+  if (process.env.NODE_ENV === 'development' && (!cached || readOperationCount % 10 === 0)) {
     console.log(`[Firebase Read] ${operation} - ${cached ? 'CACHED' : 'FIRESTORE'} (Total: ${readOperationCount})`);
   }
 };

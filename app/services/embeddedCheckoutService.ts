@@ -104,20 +104,31 @@ export class EmbeddedCheckoutService {
    * Refresh user subscription data from Stripe
    */
   private static async refreshUserSubscription(userId: string) {
-    const response = await fetch('/api/subscription/sync', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${await auth.currentUser?.getIdToken()}`
-      },
-      body: JSON.stringify({ userId })
-    });
+    console.log(`[EMBEDDED CHECKOUT] Starting subscription sync for user: ${userId}`);
 
-    if (!response.ok) {
-      throw new Error('Failed to sync subscription data');
+    try {
+      const response = await fetch('/api/subscription/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await auth.currentUser?.getIdToken()}`
+        },
+        body: JSON.stringify({ userId })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[EMBEDDED CHECKOUT] Sync failed with status ${response.status}:`, errorText);
+        throw new Error(`Failed to sync subscription data: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log(`[EMBEDDED CHECKOUT] Subscription sync successful:`, result);
+      return result;
+    } catch (error) {
+      console.error(`[EMBEDDED CHECKOUT] Error during subscription sync:`, error);
+      throw error;
     }
-
-    return response.json();
   }
 
   /**

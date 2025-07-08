@@ -212,7 +212,7 @@ export default function SubscriptionManagePage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-4xl mx-auto p-6 pb-32 md:pb-6">
         <div className="flex justify-center my-12">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
@@ -222,7 +222,7 @@ export default function SubscriptionManagePage() {
 
   if (!subscription || subscription.status !== 'active') {
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-4xl mx-auto p-6 pb-32 md:pb-6">
         <div className="mb-8">
           <Link href="/settings/subscription" className="inline-flex items-center text-blue-500 hover:text-blue-600">
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -248,7 +248,7 @@ export default function SubscriptionManagePage() {
   const usagePercentage = tokenBalance ? (tokenBalance.allocatedTokens / tokenBalance.totalTokens) * 100 : 0;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6 pb-32 md:pb-6">
       <div className="mb-8">
         <Link href="/settings/subscription" className="inline-flex items-center text-blue-500 hover:text-blue-600">
           <ArrowLeft className="h-4 w-4 mr-2" />

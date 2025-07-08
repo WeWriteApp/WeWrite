@@ -11,38 +11,36 @@ const nextConfig = {
   // Enable all source maps for debugging
   productionBrowserSourceMaps: true,
 
-  // Maximum webpack error reporting
+  // Minimal webpack logging for development
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // Enable maximum webpack output
+    // Reduce webpack output for cleaner development
     if (dev) {
       config.stats = {
-        all: true,
-        modules: true,
         errors: true,
-        errorDetails: true,
-        errorStack: true,
         warnings: true,
-        publicPath: true,
-        reasons: true,
-        source: true,
-        timings: true,
-        version: true,
-        builtAt: true,
-        assets: true,
-        chunks: true,
-        chunkModules: true,
-        chunkOrigins: true,
-        depth: true,
-        env: true,
-        orphanModules: true,
-        providedExports: true,
-        usedExports: true,
-        optimizationBailout: true,
+        timings: false,
+        assets: false,
+        chunks: false,
+        modules: false,
+        reasons: false,
+        source: false,
+        publicPath: false,
+        builtAt: false,
+        version: false,
+        hash: false,
+        chunkModules: false,
+        chunkOrigins: false,
+        depth: false,
+        env: false,
+        orphanModules: false,
+        providedExports: false,
+        usedExports: false,
+        optimizationBailout: false,
       };
-      
+
       config.infrastructureLogging = {
-        level: 'verbose',
-        debug: true,
+        level: 'warn',
+        debug: false,
       };
     }
 
@@ -81,11 +79,11 @@ const nextConfig = {
   // External packages for server components
   serverExternalPackages: [],
 
-  // Enable detailed logging
+  // Minimal logging for development
   logging: {
     fetches: {
-      fullUrl: true,
-      hmrRefreshes: true,
+      fullUrl: false,
+      hmrRefreshes: false,
     },
   },
 

@@ -55,7 +55,13 @@ export async function POST(request: NextRequest) {
     }
 
     const userData = userDoc.data();
-    let stripeCustomerId = userData.subscription?.stripeCustomerId;
+    let stripeCustomerId = userData.stripeCustomerId || userData.subscription?.stripeCustomerId;
+
+    console.log(`[SUBSCRIPTION SYNC] User data structure:`, {
+      hasStripeCustomerId: !!userData.stripeCustomerId,
+      hasSubscriptionStripeCustomerId: !!userData.subscription?.stripeCustomerId,
+      finalCustomerId: stripeCustomerId
+    });
 
     // If no customer ID in user doc, try to find by metadata
     if (!stripeCustomerId) {
@@ -74,23 +80,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get active subscriptions for the customer
+    // Get all subscriptions for the customer (not just active ones)
     const subscriptions = await stripe.subscriptions.list({
       customer: stripeCustomerId,
-      status: 'active',
-      limit: 1
+      limit: 10 // Get more to find the most recent one
     });
 
     if (subscriptions.data.length === 0) {
-      // No active subscription found
+      // No subscriptions found
       return NextResponse.json({
         success: true,
         subscription: null,
-        message: 'No active subscription found'
+        message: 'No subscriptions found'
       });
     }
 
-    const stripeSubscription = subscriptions.data[0];
+    // Find the most recent subscription (active, trialing, or incomplete)
+    const stripeSubscription = subscriptions.data.find(sub =>
+      sub.status === 'active' || sub.status === 'trialing' || sub.status === 'incomplete'
+    ) || subscriptions.data[0]; // Fallback to most recent if none match
+
+    console.log(`[SUBSCRIPTION SYNC] Found subscription ${stripeSubscription.id} with status: ${stripeSubscription.status}`);
+
+
     const price = stripeSubscription.items.data[0].price;
     const amount = price.unit_amount ? price.unit_amount / 100 : 0;
 

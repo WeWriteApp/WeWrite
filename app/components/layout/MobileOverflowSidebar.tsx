@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect } from "react"
-import { X, ChevronLeft, Settings, Check, User, Users, Shield, Globe, Lock, Link as LinkIcon, Trash2, Clock, Shuffle, LogOut } from "lucide-react"
+import { X, ChevronLeft, Settings, Check, User, Users, Shield, Link as LinkIcon, Trash2, Clock, Shuffle, LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
 // Removed direct Firebase auth imports - using session management system
 import { cn } from "../../lib/utils"
@@ -212,25 +212,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium text-muted-foreground px-2">Editor</h3>
 
-                  {/* Public/Private visibility switcher */}
-                  <div
-                    className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted cursor-pointer"
-                    onClick={() => editorProps?.setIsPublic?.(!editorProps?.isPublic)}
-                  >
-                    <div className="flex items-center">
-                      {editorProps?.isPublic ? (
-                        <Globe className="h-5 w-5 mr-2 text-green-500" />
-                      ) : (
-                        <Lock className="h-5 w-5 mr-2 text-muted-foreground" />
-                      )}
-                      <span>{editorProps?.isPublic ? "Public" : "Private"}</span>
-                    </div>
-                    <Switch
-                      checked={editorProps?.isPublic || false}
-                      onCheckedChange={editorProps?.setIsPublic}
-                      aria-label="Toggle page visibility"
-                    />
-                  </div>
+
 
                   {/* Insert Link button removed - editing controls should only be in editing contexts */}
 

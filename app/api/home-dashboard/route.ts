@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, query, orderBy, limit, getDocs, where, select } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { rtdb } from '../../firebase/rtdb';
 import { ref, get } from 'firebase/database';
@@ -158,8 +158,7 @@ async function getRecentPagesOptimized(limitCount: number, userId?: string | nul
       pagesQuery = query(
         collection(db, 'pages'),
         orderBy('lastModified', 'desc'),
-        limit(limitCount * 3), // Get more to account for filtering deleted pages
-        select(...dashboardPageFields)
+        limit(limitCount * 3) // Get more to account for filtering deleted pages
       );
     } else {
       // For anonymous users, only public pages
@@ -167,8 +166,7 @@ async function getRecentPagesOptimized(limitCount: number, userId?: string | nul
         collection(db, 'pages'),
         where('isPublic', '==', true),
         orderBy('lastModified', 'desc'),
-        limit(limitCount * 2), // Get more to account for filtering deleted pages
-        select(...dashboardPageFields)
+        limit(limitCount * 2) // Get more to account for filtering deleted pages
       );
     }
 

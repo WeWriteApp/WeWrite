@@ -42,15 +42,23 @@ export * from './analytics';
 
 import { db, updateDoc, getDoc, doc } from './core';
 import { getPageById } from './pages';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger('Database');
 
 /**
  * Update a page with new data
  */
 export const updatePage = async (pageId: string, data: any): Promise<boolean> => {
   try {
-    return await updateDoc('pages', pageId, data);
+    logger.debug('Updating page', { pageId, hasTitle: !!data.title });
+    const result = await updateDoc('pages', pageId, data);
+    if (result) {
+      logger.debug('Page updated successfully', { pageId });
+    }
+    return result;
   } catch (error) {
-    console.error('Error updating page:', error);
+    logger.error('Failed to update page', { pageId, error: error.message });
     return false;
   }
 };

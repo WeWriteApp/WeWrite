@@ -23,7 +23,7 @@ interface DailyNotesSectionProps {
  * Uses accent color from context and respects pill style settings.
  */
 export default function DailyNotesSection({}: DailyNotesSectionProps) {
-  const { session } = useCurrentAccount();
+  const { currentAccount, isAuthenticated } = useCurrentAccount();
   const { accentColor, customColors } = useAccentColor();
 
   // Get the actual color value from the accent color system
@@ -40,7 +40,7 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
     return '#1768FF'; // fallback
   };
 
-  if (!session) {
+  if (!isAuthenticated || !currentAccount) {
     return null; // Don't show for non-authenticated users
   }
 

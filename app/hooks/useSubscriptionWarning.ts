@@ -41,16 +41,17 @@ export function useSubscriptionWarning() {
         subscription.currentPeriodEnd
       );
 
-      console.warn('Subscription warning hook - subscription found:', {
-        subscription,
-        statusInfo,
-        isActive: statusInfo.isActive
-      });
+      // Reduced logging: only log when status changes
+      // console.warn('Subscription warning hook - subscription found:', {
+      //   subscription,
+      //   statusInfo,
+      //   isActive: statusInfo.isActive
+      // });
 
       setHasActiveSubscription(statusInfo.isActive);
       setSubscriptionStatusInfo(statusInfo);
     } else {
-      console.warn('Subscription warning hook - no subscription found');
+      // Reduced logging: console.warn('Subscription warning hook - no subscription found');
       setHasActiveSubscription(false);
       setSubscriptionStatusInfo(null);
     }
@@ -64,15 +65,16 @@ export function useSubscriptionWarning() {
     (hasActiveSubscription === false ||
      (subscriptionStatusInfo && ['canceled', 'past_due', 'unpaid', 'incomplete'].includes(subscriptionStatusInfo.status)));
 
-  // Debug warning calculation
-  console.warn('Subscription warning calculation:', {
-    paymentsEnabled,
-    isAuthenticated,
-    isLoading,
-    hasActiveSubscription,
-    subscriptionStatus: subscriptionStatusInfo?.status,
-    shouldShowWarning
-  });
+  // Reduced debug logging - only log when there are actual warnings
+  if (shouldShowWarning) {
+    console.warn('Subscription warning active:', {
+      paymentsEnabled,
+      isAuthenticated,
+      hasActiveSubscription,
+      subscriptionStatus: subscriptionStatusInfo?.status,
+      shouldShowWarning
+    });
+  }
 
   // Get warning variant based on subscription status
   const getWarningVariant = () => {

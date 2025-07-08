@@ -1,5 +1,6 @@
 import React from "react"
 import "./globals.css"
+import "./utils/init-logger" // Initialize logging system early
 import ErrorBoundary from "./components/utils/ErrorBoundary"
 import NextJSErrorBoundary, { GlobalErrorHandler } from "./components/utils/NextJSErrorHandler"
 

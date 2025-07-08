@@ -15,6 +15,7 @@ import { usePWA } from '../../providers/PWAProvider';
 import { getAnalyticsService } from "../../utils/analytics-service";
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
+import logger, { getCacheStats, clearCache } from "../../utils/logger";
 
 interface AdminPanelProps {
   userEmail: string;
@@ -87,6 +88,10 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
     },
 
   ]);
+
+  // Logger cache state
+  const [loggerStats, setLoggerStats] = useState<any>(null);
+  const [verboseLogging, setVerboseLogging] = useState(false);
 
   // Load admin users and feature flags on mount
   useEffect(() => {
@@ -575,6 +580,77 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
                       <RefreshCw className="h-4 w-4" />
                       Trigger PWA Alert
                     </Button>
+                  </div>
+
+                  {/* Logger Management Section */}
+                  <div className="space-y-2 mt-6">
+                    <h3 className="text-lg font-semibold">Logger Management</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Manage the deduplication cache and view logging statistics.
+                    </p>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => setLoggerStats(getCacheStats())}
+                      >
+                        <Database className="h-4 w-4" />
+                        View Stats
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => {
+                          clearCache();
+                          setLoggerStats(null);
+                          toast({
+                            title: "Logger Cache Cleared",
+                            description: "All cached log entries have been cleared",
+                            variant: "default"
+                          });
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                        Clear Cache
+                      </Button>
+                      <Button
+                        variant={verboseLogging ? "default" : "outline"}
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => {
+                          setVerboseLogging(!verboseLogging);
+                          if (typeof window !== 'undefined') {
+                            (window as any).enableVerboseLogging = !verboseLogging;
+                          }
+                          toast({
+                            title: verboseLogging ? "Verbose Logging Disabled" : "Verbose Logging Enabled",
+                            description: verboseLogging ? "Debug logs will be filtered" : "All debug logs will be shown",
+                            variant: "default"
+                          });
+                        }}
+                      >
+                        <Database className="h-4 w-4" />
+                        {verboseLogging ? "Disable" : "Enable"} Verbose
+                      </Button>
+                    </div>
+                    {loggerStats && (
+                      <div className="mt-3 p-3 border rounded-lg bg-muted/50">
+                        <div className="text-sm">
+                          <div className="font-medium">Cache Statistics:</div>
+                          <div>Total entries: {loggerStats.size}</div>
+                          <div>Top duplicates:</div>
+                          <div className="ml-2 text-xs">
+                            {loggerStats.entries.slice(0, 5).map((entry: any, i: number) => (
+                              <div key={i}>
+                                {entry.key.substring(0, 50)}... (×{entry.count})
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </TabsContent>

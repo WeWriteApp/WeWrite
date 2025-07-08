@@ -250,7 +250,7 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
     }
 
     // Import Firestore modules
-    const { collection, query, where, orderBy, limit, getDocs, select } = await import('firebase/firestore');
+    const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
     const { db } = await import('../../firebase/database');
 
     const searchTermLower = searchTerm.toLowerCase().trim();
@@ -273,7 +273,6 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
         where('deleted', '!=', true), // Server-side filtering - MAJOR PERFORMANCE BOOST
         orderBy('deleted'), // Required for != queries
         orderBy('lastModified', 'desc'),
-        select(...fieldsToSelect), // Only fetch needed fields - MAJOR OPTIMIZATION
         limit(isEmptySearch ? 50 : 100) // Reasonable limits - MAJOR OPTIMIZATION
       );
 
@@ -343,7 +342,6 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
         where('deleted', '!=', true), // Server-side filtering - MAJOR PERFORMANCE BOOST
         orderBy('deleted'), // Required for != queries
         orderBy('lastModified', 'desc'),
-        select(...fieldsToSelect), // Only fetch needed fields - MAJOR OPTIMIZATION
         limit(Math.min(remainingSlots * 2, isEmptySearch ? 100 : 200)) // Reasonable limits - MAJOR OPTIMIZATION
       );
 

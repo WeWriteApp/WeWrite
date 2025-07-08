@@ -162,6 +162,36 @@ export const LoggingProvider = ({ children }: LoggingProviderProps) => {
           return String(arg);
         }).join(' ');
 
+        // Filter out noisy debug messages that aren't useful in terminal
+        // (unless verbose logging is enabled)
+        const isVerboseEnabled = typeof window !== 'undefined' && (window as any).enableVerboseLogging;
+
+        if (!isVerboseEnabled) {
+          const noisyPatterns = [
+            'PillStyleContext debug',
+            'LineSettingsProvider - render',
+            'TextView - render',
+            'PWA Debug Mode Enabled',
+            'Logger initialized',
+            '[FeatureFlags] User override found',
+            'Firebase Auth state changed',
+            'Page data received',
+            'Setting title from page data',
+            'Resolving params Promise',
+            'Subscription warning calculation',
+            'Subscription warning hook',
+            'Sidebar subscription status',
+            'MultiAuthProvider: Rendering',
+            'CurrentAccountProvider: Rendering',
+            'HomePage: Component rendering',
+            'HomePage Auth State'
+          ];
+
+          if (noisyPatterns.some(pattern => message.includes(pattern))) {
+            return; // Skip sending to terminal
+          }
+        }
+
         await fetch('/api/log-console-error', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -218,11 +248,10 @@ export const LoggingProvider = ({ children }: LoggingProviderProps) => {
       // Call original console.log first
       originalConsoleLog.apply(console, args);
 
-      // Temporarily disable console.log forwarding to reduce spam
-      // TODO: Re-enable once we fix the undefined message issue
-      // if (process.env.NODE_ENV === 'development') {
-      //   sendConsoleToTerminal('log', args);
-      // }
+      // Forward to terminal in development (now that we have deduplication)
+      if (process.env.NODE_ENV === 'development') {
+        sendConsoleToTerminal('log', args);
+      }
     };
 
     console.warn = (...args: any[]) => {

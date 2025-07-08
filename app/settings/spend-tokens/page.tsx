@@ -257,7 +257,7 @@ export default function SpendTokensPage() {
         description="Allocate your monthly tokens to support creators"
       />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
 
       {loading ? (
         <div className="flex justify-center my-12">
@@ -282,11 +282,11 @@ export default function SpendTokensPage() {
             if (!currentSubscription && simulatedTokenBalance) {
               return (
                 <TokenAllocationDisplay
-                  subscriptionAmount={5} // Default $5 for demo
+                  subscriptionAmount={0} // No subscription = $0
                   tokenBalance={{
-                    totalTokens: 100,
+                    totalTokens: 0, // No subscription = 0 tokens per month
                     allocatedTokens: simulatedTokenBalance.allocatedTokens,
-                    availableTokens: 100 - simulatedTokenBalance.allocatedTokens,
+                    availableTokens: 0 - simulatedTokenBalance.allocatedTokens, // Always negative
                     pendingTokens: 0
                   }}
                   className="mb-6"
@@ -309,7 +309,7 @@ export default function SpendTokensPage() {
             // Default case - no subscription, no simulated tokens
             return (
               <TokenAllocationDisplay
-                subscriptionAmount={5} // Default $5 for preview
+                subscriptionAmount={0} // No subscription = $0
                 tokenBalance={null}
                 className="mb-6"
               />

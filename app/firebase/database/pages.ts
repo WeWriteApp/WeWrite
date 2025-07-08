@@ -12,7 +12,6 @@ import {
   orderBy,
   limit,
   startAfter,
-  select,
   type Unsubscribe
 } from "firebase/firestore";
 
@@ -98,7 +97,7 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
 
     const pageData = {
       title: data.title || "Untitled",
-      isPublic: data.isPublic !== undefined ? data.isPublic : true,
+      isPublic: true, // All pages are now public
       userId: data.userId,
       username: username || "Anonymous", // Ensure username is saved with the page
       createdAt: now,
@@ -116,13 +115,18 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
       isReply: data.isReply || false,
       replyTo: data.replyTo || null,
       replyToTitle: data.replyToTitle || null,
-      replyToUsername: data.replyToUsername || null};
+      replyToUsername: data.replyToUsername || null,
+      // Add custom date field for daily notes
+      customDate: data.customDate || null
+    };
 
     console.log("Creating page with username:", username);
+    console.log("🔍 DEBUG: Page data being saved:", { ...pageData, content: '(omitted)' });
 
     try {
       const pageRef = await addDoc(collection(db, "pages"), pageData);
       console.log("Created page with ID:", pageRef.id);
+      console.log("🔍 DEBUG: Page created successfully with customDate:", pageData.customDate);
 
       // Ensure we have content before creating a version
       const versionData = {
@@ -722,8 +726,7 @@ export const getEditablePagesByUser = async (userId: string): Promise<any[]> => 
       collection(db, 'pages'),
       where('userId', '==', userId),
       where('deleted', '!=', true),
-      orderBy('lastModified', 'desc'),
-      select(...editablePageFields)
+      orderBy('lastModified', 'desc')
     );
 
     const snapshot = await getDocs(pagesQuery);

@@ -31,20 +31,51 @@ export default function TokenAllocationDisplay({
   // Get current usage data
   const totalTokens = tokenBalance?.totalTokens || monthlyAllocation;
   const allocatedTokens = tokenBalance?.allocatedTokens || 0;
+
+  // Special case: if subscription amount is 0, treat all allocated tokens as unfunded
+  const hasNoSubscription = subscriptionAmount === 0;
+
   // Calculate available tokens as total minus allocated (can be negative)
   const availableTokens = totalTokens - allocatedTokens;
 
-  // Check for overspending
-  const isOverspent = availableTokens < 0;
+  // Check for overspending (or no subscription at all)
+  const isOverspent = availableTokens < 0 || hasNoSubscription;
 
   // Calculate funded vs unfunded tokens
-  const unfundedTokens = isOverspent ? Math.abs(availableTokens) : 0;
-  const fundedTokens = allocatedTokens - unfundedTokens;
+  let unfundedTokens: number;
+  let fundedTokens: number;
 
-  // Calculate percentages for progress bar (cap at 100% even if overspent)
-  const allocationPercentage = totalTokens > 0 ? Math.min((allocatedTokens / totalTokens) * 100, 100) : 0;
-  const fundedPercentage = totalTokens > 0 ? (fundedTokens / totalTokens) * 100 : 0;
-  const unfundedPercentage = totalTokens > 0 ? (unfundedTokens / totalTokens) * 100 : 0;
+  if (hasNoSubscription) {
+    // If no subscription, all allocated tokens are unfunded
+    unfundedTokens = allocatedTokens;
+    fundedTokens = 0;
+  } else {
+    // Normal overspending logic
+    unfundedTokens = isOverspent ? Math.abs(availableTokens) : 0;
+    fundedTokens = allocatedTokens - unfundedTokens;
+  }
+
+  // Calculate percentages for progress bar
+  let allocationPercentage: number;
+  let fundedPercentage: number;
+  let unfundedPercentage: number;
+
+  if (hasNoSubscription && allocatedTokens > 0) {
+    // When no subscription, show all allocated tokens as 100% unfunded
+    allocationPercentage = 100;
+    fundedPercentage = 0;
+    unfundedPercentage = 100;
+  } else if (totalTokens > 0) {
+    // Normal calculation when there's a subscription
+    allocationPercentage = Math.min((allocatedTokens / totalTokens) * 100, 100);
+    fundedPercentage = (fundedTokens / totalTokens) * 100;
+    unfundedPercentage = (unfundedTokens / totalTokens) * 100;
+  } else {
+    // No tokens at all
+    allocationPercentage = 0;
+    fundedPercentage = 0;
+    unfundedPercentage = 0;
+  }
 
   // Check if this is a preview mode (no actual token balance yet)
   const isPreviewMode = !tokenBalance;
@@ -62,22 +93,28 @@ export default function TokenAllocationDisplay({
       </CardHeader>
       
       <CardContent className="space-y-6">
-        {/* Overspending Warning with Buy More Tokens Button */}
+        {/* Overspending/No Subscription Warning with Buy Tokens Button */}
         {!isPreviewMode && isOverspent && (
           <div className="p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 flex-shrink-0" />
               <p className="font-medium text-orange-800 dark:text-orange-200">
-                You've allocated {Math.abs(availableTokens)} more tokens than your subscription provides.
+                {hasNoSubscription
+                  ? `You've allocated ${allocatedTokens} tokens but have no subscription.`
+                  : `You've allocated ${Math.abs(availableTokens)} more tokens than your subscription provides.`
+                }
               </p>
             </div>
             <p className="text-sm text-orange-700 dark:text-orange-300 mb-3">
-              The highest allocations will be unfunded until you upgrade your subscription.
+              {hasNoSubscription
+                ? 'All your allocations are unfunded. Purchase a subscription to fund them.'
+                : 'The highest allocations will be unfunded until you upgrade your subscription.'
+              }
             </p>
             {(() => {
-              const overspendAmount = Math.abs(availableTokens);
+              const tokensToFund = hasNoSubscription ? allocatedTokens : Math.abs(availableTokens);
               // Calculate tokens needed in 100-token increments
-              const tokensNeeded = Math.ceil(overspendAmount / 100) * 100;
+              const tokensNeeded = Math.ceil(tokensToFund / 100) * 100;
               const dollarAmount = tokensNeeded / 10; // 100 tokens = $10
 
               return (
@@ -86,7 +123,10 @@ export default function TokenAllocationDisplay({
                   className="bg-orange-600 hover:bg-orange-700 text-white"
                   size="sm"
                 >
-                  Buy {tokensNeeded} more tokens (${dollarAmount}/mo)
+                  {hasNoSubscription
+                    ? `Get ${tokensNeeded} tokens (${dollarAmount}/mo subscription)`
+                    : `Buy ${tokensNeeded} more tokens (${dollarAmount}/mo)`
+                  }
                 </Button>
               );
             })()}
@@ -96,7 +136,9 @@ export default function TokenAllocationDisplay({
         {/* Main Allocation Stats */}
         <div className="grid grid-cols-3 gap-3 sm:gap-6">
           <div className="text-center">
-            <div className="text-xl sm:text-2xl md:text-3xl font-bold text-muted-foreground">{totalTokens}</div>
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold text-muted-foreground">
+              {hasNoSubscription ? 0 : totalTokens}
+            </div>
             <div className="text-xs sm:text-sm text-muted-foreground">Tokens per month</div>
           </div>
 
@@ -113,10 +155,14 @@ export default function TokenAllocationDisplay({
               isOverspent ? 'text-orange-600' :
               'text-green-600'
             }`}>
-              {isPreviewMode ? totalTokens : Math.abs(availableTokens)}
+              {isPreviewMode ? totalTokens :
+               hasNoSubscription ? allocatedTokens :
+               Math.abs(availableTokens)}
             </div>
             <div className="text-xs sm:text-sm text-muted-foreground">
-              {isPreviewMode ? 'Available' : isOverspent ? 'Unfunded tokens' : 'Available'}
+              {isPreviewMode ? 'Available' :
+               hasNoSubscription ? 'Unfunded tokens' :
+               isOverspent ? 'Unfunded tokens' : 'Available'}
             </div>
           </div>
         </div>
@@ -127,6 +173,7 @@ export default function TokenAllocationDisplay({
             <span className="text-muted-foreground">Token Usage</span>
             <span className={`font-medium ${isOverspent ? 'text-orange-600' : ''}`}>
               {isPreviewMode ? '0% allocated' :
+               hasNoSubscription ? `${allocatedTokens} tokens allocated (no subscription)` :
                isOverspent ? `${Math.round(allocationPercentage)}% allocated (overspent)` :
                `${Math.round(allocationPercentage)}% allocated`}
             </span>
@@ -154,7 +201,7 @@ export default function TokenAllocationDisplay({
 
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>0 tokens</span>
-            <span>{totalTokens} tokens</span>
+            <span>{hasNoSubscription ? `${allocatedTokens} tokens` : `${totalTokens} tokens`}</span>
           </div>
         </div>
 

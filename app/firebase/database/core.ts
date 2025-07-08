@@ -100,7 +100,6 @@ export interface VersionData {
 export interface CreatePageData {
   title?: string;
   content?: string;
-  isPublic?: boolean;
   userId: string;
   username?: string;
   // Groups functionality removed
@@ -174,7 +173,7 @@ export const updateDoc = async (collectionName: string, docId: string, data: any
     await setDoc(docRef, data, { merge: true });
     return true;
   } catch (error) {
-    console.error(`Error updating document in ${collectionName}:`, error);
+    console.error(`Error updating ${collectionName} document:`, error);
     return false;
   }
 };

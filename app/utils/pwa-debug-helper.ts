@@ -276,12 +276,6 @@ export function enableDebugMode(): void {
     isPWA: isPWAMode
   };
   
-  console.log('🔧 PWA Debug mode enabled. Use window.pwaDebug for debugging utilities.');
-  console.log('Available methods:');
-  console.log('  - window.pwaDebug.getInfo() - Get debug information');
-  console.log('  - window.pwaDebug.printInfo() - Print debug info to console');
-  console.log('  - window.pwaDebug.clearData() - Clear all account switcher data');
-  console.log('  - window.pwaDebug.simulateLogout(uid) - Simulate account logout');
-  console.log('  - window.pwaDebug.validate() - Validate account switcher state');
-  console.log('  - window.pwaDebug.isPWA() - Check if running in PWA mode');
+  // PWA debug utilities are now available on window.pwaDebug
+  // Use window.pwaDebug.printInfo() to see available methods
 }

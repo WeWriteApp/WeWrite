@@ -57,8 +57,6 @@ export interface PageEditorProps extends BaseProps {
   setTitle: (title: string) => void;
   initialContent: SlateContent;
   onContentChange: (content: SlateContent) => void;
-  isPublic: boolean;
-  setIsPublic: (isPublic: boolean) => void;
   location?: string;
   setLocation?: (location: string) => void;
   onSave: () => void;

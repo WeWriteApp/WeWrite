@@ -6,7 +6,7 @@ import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import {
   Home, Search, User, Settings, ChevronLeft, ChevronRight, Bell, Plus,
-  Globe, Lock, Link as LinkIcon, X, Check, Trash2, MapPin, Shield,
+  Link as LinkIcon, X, Check, Trash2, MapPin, Shield,
   Clock, Shuffle, LogOut
 } from "lucide-react";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
@@ -43,8 +43,6 @@ export const useSidebarContext = () => useContext(SidebarContext);
 
 // Context for editor functions
 interface EditorContextType {
-  isPublic?: boolean;
-  setIsPublic?: (value: boolean) => void;
   location?: { lat: number; lng: number } | null;
   setLocation?: (location: { lat: number; lng: number } | null) => void;
   onCancel?: () => void;
@@ -408,33 +406,7 @@ function UnifiedSidebarContent({
               <div className="border-t border-border mb-4" />
               
               <div className="flex flex-col gap-4 flex-1">
-                {/* Public/Private visibility switcher */}
-                <div
-                  className={cn(
-                    "flex items-center gap-3 p-3 rounded-lg border border-input cursor-pointer hover:bg-primary/10 transition-colors duration-300",
-                    !showContent && "justify-center"
-                  )}
-                  onClick={() => editorContext.setIsPublic?.(!editorContext.isPublic)}
-                  title={showContent ? "" : (editorContext.isPublic ? "Public" : "Private")}
-                >
-                  {editorContext.isPublic ? (
-                    <Globe className="h-4 w-4 text-green-500 flex-shrink-0" />
-                  ) : (
-                    <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  )}
-                  {showContent && (
-                    <>
-                      <span className="text-sm font-medium flex-1 transition-opacity duration-200">
-                        {editorContext.isPublic ? "Public" : "Private"}
-                      </span>
-                      <Switch
-                        checked={editorContext.isPublic || false}
-                        onCheckedChange={editorContext.setIsPublic}
-                        aria-label="Toggle page visibility"
-                      />
-                    </>
-                  )}
-                </div>
+
 
                 {/* Insert Link button removed - editing controls should only be in editing contexts */}
 

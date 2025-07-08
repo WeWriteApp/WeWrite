@@ -13,8 +13,6 @@ import { Badge } from '../ui/badge';
 import { CheckCircle, ArrowLeft, CreditCard, Shield, Zap } from 'lucide-react';
 import { SubscriptionCheckoutForm } from './SubscriptionCheckoutForm';
 import { PricingDisplay } from './PricingDisplay';
-import { CheckoutProgressIndicator } from './CheckoutProgressIndicator';
-
 // Initialize Stripe
 const stripePromise = loadStripe(getStripePublishableKey() || '');
 
@@ -33,14 +31,6 @@ export interface SubscriptionCheckoutProps {
   successUrl?: string;
   /** Custom cancel URL */
   cancelUrl?: string;
-}
-
-export interface CheckoutStep {
-  id: string;
-  title: string;
-  description: string;
-  completed: boolean;
-  current: boolean;
 }
 
 export interface SelectedPlan {
@@ -74,7 +64,7 @@ export function SubscriptionCheckout({
   const { currentAccount } = useCurrentAccount();
   
   // Checkout flow state
-  const [currentStep, setCurrentStep] = useState<'plan' | 'payment' | 'confirmation'>('plan');
+  const [currentStep, setCurrentStep] = useState<'payment' | 'confirmation'>('payment');
   const [selectedPlan, setSelectedPlan] = useState<SelectedPlan | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -160,30 +150,8 @@ export function SubscriptionCheckout({
     }
   };
 
-  // Checkout steps configuration
-  const steps: CheckoutStep[] = [
-    {
-      id: 'plan',
-      title: 'Choose Plan',
-      description: 'Select your subscription tier',
-      completed: currentStep !== 'plan',
-      current: currentStep === 'plan'
-    },
-    {
-      id: 'payment',
-      title: 'Payment Details',
-      description: 'Enter your payment information',
-      completed: currentStep === 'confirmation',
-      current: currentStep === 'payment'
-    },
-    {
-      id: 'confirmation',
-      title: 'Confirmation',
-      description: 'Review and confirm your subscription',
-      completed: false,
-      current: currentStep === 'confirmation'
-    }
-  ];
+  // Skip plan selection step since we now use the tier slider system
+  // Start directly at payment step
 
   const handlePaymentSuccess = (subscriptionId: string) => {
     setSubscriptionId(subscriptionId);
@@ -194,9 +162,7 @@ export function SubscriptionCheckout({
   };
 
   const handleBack = () => {
-    if (currentStep === 'payment') {
-      setCurrentStep('plan');
-    } else if (currentStep === 'confirmation') {
+    if (currentStep === 'confirmation') {
       setCurrentStep('payment');
     } else if (onCancel) {
       onCancel();
@@ -205,16 +171,6 @@ export function SubscriptionCheckout({
 
   const renderStepContent = () => {
     switch (currentStep) {
-      case 'plan':
-        return (
-          <PlanSelectionStep
-            selectedPlan={selectedPlan}
-            onPlanSelect={handlePlanSelection}
-            onNext={() => setCurrentStep('payment')}
-            isLoading={isLoading}
-          />
-        );
-      
       case 'payment':
         return selectedPlan && clientSecret ? (
           <Elements
@@ -244,7 +200,7 @@ export function SubscriptionCheckout({
             />
           </Elements>
         ) : null;
-      
+
       case 'confirmation':
         return (
           <ConfirmationStep
@@ -253,7 +209,7 @@ export function SubscriptionCheckout({
             onComplete={() => onSuccess?.(subscriptionId || '')}
           />
         );
-      
+
       default:
         return null;
     }
@@ -272,12 +228,9 @@ export function SubscriptionCheckout({
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-6">
-      {/* Progress Indicator */}
-      <CheckoutProgressIndicator steps={steps} />
-      
       {/* Header */}
       <div className="flex items-center gap-4">
-        {showBackButton && (
+        {showBackButton && currentStep === 'payment' && (
           <Button
             variant="ghost"
             size="sm"
@@ -289,9 +242,14 @@ export function SubscriptionCheckout({
           </Button>
         )}
         <div>
-          <h1 className="text-2xl font-bold">Subscribe to WeWrite</h1>
+          <h1 className="text-2xl font-bold">
+            {currentStep === 'confirmation' ? 'Subscription Confirmed!' : 'Subscribe to WeWrite'}
+          </h1>
           <p className="text-muted-foreground">
-            Support creators and get monthly tokens to allocate
+            {currentStep === 'confirmation'
+              ? 'Your subscription is now active'
+              : 'Support creators and get monthly tokens to allocate'
+            }
           </p>
         </div>
       </div>
@@ -311,7 +269,6 @@ export function SubscriptionCheckout({
   );
 }
 
-// Import the step components that we'll create next
-import { PlanSelectionStep } from './checkout-steps/PlanSelectionStep';
+// Import the step components
 import { PaymentStep } from './checkout-steps/PaymentStep';
 import { ConfirmationStep } from './checkout-steps/ConfirmationStep';

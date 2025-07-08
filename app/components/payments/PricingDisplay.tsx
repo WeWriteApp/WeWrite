@@ -125,101 +125,56 @@ export function PricingDisplay({
   return (
     <Card className="w-full">
       <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">
-            {planName}
-            {isCustom && <Badge variant="secondary" className="ml-2">Custom</Badge>}
-          </CardTitle>
-          <div className="text-right">
-            <div className="text-2xl font-bold">{formatCurrency(breakdown.total)}</div>
-            <div className="text-sm text-muted-foreground">per month</div>
-          </div>
-        </div>
+        <CardTitle className="text-lg">Order Summary</CardTitle>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Token Allocation Preview */}
-        <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border">
-          <div className="flex items-center justify-center w-10 h-10 bg-primary/10 rounded-full">
-            <Zap className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <p className="font-medium">Monthly Token Allocation</p>
-            <p className="text-sm text-muted-foreground">
-              {breakdown.tokens} tokens to support creators
-            </p>
+        {/* Plan and Amount */}
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="font-medium">{planName}</p>
+            {isCustom && <Badge variant="secondary" className="mt-1">Custom Amount</Badge>}
           </div>
           <div className="text-right">
-            <div className="text-lg font-semibold">{breakdown.tokens}</div>
-            <div className="text-xs text-muted-foreground">tokens</div>
+            <div className="text-xl font-bold">{formatCurrency(breakdown.total)}</div>
+            <div className="text-sm text-muted-foreground">per month</div>
           </div>
         </div>
 
-        {/* Pricing Breakdown */}
-        {showBreakdown && (
-          <div className="space-y-3">
+        <Separator />
+
+        {/* Token Allocation */}
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-primary" />
+            <span className="font-medium">Monthly Tokens</span>
+          </div>
+          <div className="text-lg font-semibold">{breakdown.tokens}</div>
+        </div>
+
+        {/* Tax if applicable */}
+        {(breakdown.tax > 0 || isCalculatingTax) && (
+          <>
             <Separator />
-            
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Subscription</span>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="flex justify-between">
+                <span>Subtotal</span>
                 <span>{formatCurrency(breakdown.subtotal)}</span>
               </div>
-              
-              {(breakdown.tax > 0 || isCalculatingTax) && (
-                <div className="flex justify-between text-sm">
-                  <span className="flex items-center gap-2">
-                    Tax {!isCalculatingTax && `(${(calculatedTaxRate * 100).toFixed(1)}%)`}
-                    {isCalculatingTax && (
-                      <div className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin" />
-                    )}
-                  </span>
-                  <span>
-                    {isCalculatingTax ? 'Calculating...' : formatCurrency(breakdown.tax)}
-                  </span>
-                </div>
-              )}
-              
-              {breakdown.processingFee > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span>Processing Fee</span>
-                  <span>{formatCurrency(breakdown.processingFee)}</span>
-                </div>
-              )}
-              
-              <Separator />
-              
-              <div className="flex justify-between font-medium">
-                <span>Total</span>
-                <span>{formatCurrency(breakdown.total)}</span>
+              <div className="flex justify-between">
+                <span className="flex items-center gap-2">
+                  Tax {!isCalculatingTax && `(${(calculatedTaxRate * 100).toFixed(1)}%)`}
+                  {isCalculatingTax && (
+                    <div className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin" />
+                  )}
+                </span>
+                <span>
+                  {isCalculatingTax ? 'Calculating...' : formatCurrency(breakdown.tax)}
+                </span>
               </div>
             </div>
-          </div>
+          </>
         )}
-
-        {/* Payment Security Notice */}
-        <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
-          <CreditCard className="w-4 h-4 text-muted-foreground mt-0.5" />
-          <div className="text-xs text-muted-foreground">
-            <p className="font-medium mb-1">Secure Payment</p>
-            <p>
-              Your payment information is encrypted and processed securely by Stripe. 
-              We never store your card details.
-            </p>
-          </div>
-        </div>
-
-        {/* Token Economy Info */}
-        <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-          <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5" />
-          <div className="text-xs text-blue-700 dark:text-blue-300">
-            <p className="font-medium mb-1">How Tokens Work</p>
-            <p>
-              Each month, you'll receive {breakdown.tokens} tokens to allocate to your favorite creators. 
-              Unallocated tokens automatically support WeWrite platform development.
-            </p>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

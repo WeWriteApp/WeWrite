@@ -72,14 +72,15 @@ const DayContainer = React.memo(function DayContainer({
       {/* Notes Pills */}
       <div className="space-y-2 mb-3">
         {notes.map((note) => (
-          <PillLink
-            key={note.id}
-            href={`/pages/${note.id}`}
-            isPublic={true}
-            className="w-full justify-start"
-          >
-            {note.title}
-          </PillLink>
+          <div key={note.id} className="w-full">
+            <PillLink
+              href={`/pages/${note.id}`}
+              isPublic={true}
+              className="inline-block max-w-full truncate"
+            >
+              {note.title}
+            </PillLink>
+          </div>
         ))}
       </div>
 

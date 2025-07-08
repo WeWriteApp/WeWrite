@@ -50,7 +50,7 @@ function CheckoutPageContent() {
 
   if (!paymentsEnabled) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-4xl mx-auto p-6 pb-32 md:pb-6">
         <div className="text-center py-12">
           <CreditCard className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
           <h2 className="text-2xl font-bold mb-2">Payments Coming Soon</h2>
@@ -73,32 +73,20 @@ function CheckoutPageContent() {
       {/* Header */}
       <div className="border-b bg-card">
         <div className="max-w-4xl mx-auto p-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancel}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-            <div>
-              <h1 className="text-xl font-semibold">Subscribe to WeWrite</h1>
-              <p className="text-sm text-muted-foreground">
-                Secure embedded checkout - no external redirects
-              </p>
-            </div>
+          <div>
+            <h1 className="text-xl font-semibold">Subscribe to WeWrite</h1>
+            <p className="text-sm text-muted-foreground">
+              Secure embedded checkout - no external redirects
+            </p>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto p-4 py-8">
+      <div className="max-w-4xl mx-auto p-4 py-8 pb-32 md:pb-8">
         <SubscriptionCheckoutForm
           initialTier={tier}
           initialAmount={amount}
-          showPWANotice={true}
           onSuccess={handleSuccess}
           onCancel={handleCancel}
         />
@@ -114,7 +102,7 @@ export default function CheckoutPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-background">
-        <div className="max-w-4xl mx-auto p-4 py-8">
+        <div className="max-w-4xl mx-auto p-4 py-8 pb-32 md:pb-8">
           <Card>
             <CardContent className="p-8 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>

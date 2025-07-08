@@ -139,11 +139,11 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                   lastUpdated: new Date(balance.lastUpdated)
                 });
               } else {
-                // Default balance if no subscription yet, but still use actual allocated tokens
+                // No subscription - show 0 tokens per month, all allocations are unfunded
                 setTokenBalance({
-                  totalTokens: 100,
+                  totalTokens: 0,
                   allocatedTokens: actualAllocatedTokens,
-                  availableTokens: 100 - actualAllocatedTokens,
+                  availableTokens: 0 - actualAllocatedTokens, // Always negative when no subscription
                   lastUpdated: new Date()
                 });
               }

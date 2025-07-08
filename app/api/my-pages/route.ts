@@ -46,20 +46,24 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'lastModified';
     const sortDirection = searchParams.get('sortDirection') || 'desc';
     const searchTerm = searchParams.get('searchTerm') || '';
-    const limitCount = parseInt(searchParams.get('limit') || '100');
+    const limitParam = searchParams.get('limit');
+    const limitCount = limitParam ? parseInt(limitParam) : 100;
+    const noLimit = limitParam === null; // If no limit param provided, get ALL pages
 
-    console.log('[my-pages API] CRITICAL FIX - Request params:', {
-      userId, sortBy, sortDirection, searchTerm, limitCount
-    });
+    // Only log when getting all pages (daily notes) or when there are issues
+    if (noLimit) {
+      console.log('[my-pages API] Getting ALL pages for daily notes:', { userId, sortBy });
+    }
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
     // PERFORMANCE OPTIMIZATION: Use reasonable query limits and server-side filtering
+    // BUT if no limit is specified (daily notes case), get ALL pages
     let pagesQuery;
     let actualSortField; // Track what field we're actually using
-    let queryLimit = Math.max(limitCount * 2, 200); // Reduced limit for better performance
+    let queryLimit = noLimit ? null : Math.max(limitCount * 2, 200); // No limit for daily notes
 
     if (sortBy === 'lastModified' || sortBy === 'recently-edited') {
       // CRITICAL FIX: Use proper lastModified index with deleted filter
@@ -67,10 +71,11 @@ export async function GET(request: NextRequest) {
       actualSortField = 'lastModified';
       pagesQuery = adminDb.collection('pages')
         .where('userId', '==', userId)
-        .where('deleted', '==', false) // Filter out deleted pages
+        .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
+        .orderBy('deleted') // Required for != queries
         .orderBy('lastModified', 'desc'); // Always use desc to avoid index issues
 
-      if (queryLimit) {
+      if (queryLimit !== null) {
         pagesQuery = pagesQuery.limit(queryLimit);
       }
     } else if (sortBy === 'createdAt' || sortBy === 'recently-created') {
@@ -80,10 +85,11 @@ export async function GET(request: NextRequest) {
       actualSortField = 'createdAt';
       pagesQuery = adminDb.collection('pages')
         .where('userId', '==', userId)
-        .where('deleted', '==', false) // Filter out deleted pages
+        .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
+        .orderBy('deleted') // Required for != queries
         .orderBy('createdAt', 'desc'); // Always use desc to avoid index issues
 
-      if (queryLimit) {
+      if (queryLimit !== null) {
         pagesQuery = pagesQuery.limit(queryLimit);
       }
     } else if (sortBy === 'title' || sortBy === 'alphabetical') {
@@ -92,10 +98,11 @@ export async function GET(request: NextRequest) {
       const titleDirection = sortDirection === 'asc' ? 'asc' : 'desc';
       pagesQuery = adminDb.collection('pages')
         .where('userId', '==', userId)
-        .where('deleted', '==', false) // Filter out deleted pages
+        .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
+        .orderBy('deleted') // Required for != queries
         .orderBy('title', titleDirection); // Use the requested direction
 
-      if (queryLimit) {
+      if (queryLimit !== null) {
         pagesQuery = pagesQuery.limit(queryLimit);
       }
     } else {
@@ -104,17 +111,21 @@ export async function GET(request: NextRequest) {
       actualSortField = 'lastModified (fallback)';
       pagesQuery = adminDb.collection('pages')
         .where('userId', '==', userId)
-        .where('deleted', '==', false) // Filter out deleted pages
+        .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
+        .orderBy('deleted') // Required for != queries
         .orderBy('lastModified', 'desc'); // Always use desc to avoid index issues
 
-      if (queryLimit) {
+      if (queryLimit !== null) {
         pagesQuery = pagesQuery.limit(queryLimit);
       }
     }
 
-    console.log(`[my-pages API] CRITICAL FIX - Executing database-level sort by ${actualSortField} ${sortDirection} for user ${userId} (requested: ${sortBy}, limit: ${queryLimit || 'ALL'})`);
     const pagesSnapshot = await pagesQuery.get();
-    console.log('[my-pages API] CRITICAL FIX - Query successful, found', pagesSnapshot.docs.length, 'pages from entire database');
+
+    // Only log for daily notes (no limit) or when there are many pages
+    if (noLimit || pagesSnapshot.docs.length > 500) {
+      console.log(`[my-pages API] Query found ${pagesSnapshot.docs.length} pages (${queryLimit === null ? 'ALL' : 'limited'})`);
+    }
 
     const pages: any[] = [];
 
@@ -187,8 +198,8 @@ export async function GET(request: NextRequest) {
       console.log('[my-pages API] CRITICAL FIX - Using database sort order as-is');
     }
 
-    // Limit results after client-side filtering and potential reversal
-    const limitedPages = pages.slice(0, limitCount);
+    // Limit results after client-side filtering and potential reversal (unless noLimit is true)
+    const limitedPages = noLimit ? pages : pages.slice(0, limitCount);
 
     console.log(`[my-pages API] CRITICAL FIX - Processed ${pages.length} total pages, returning ${limitedPages.length} after limiting`);
 
@@ -200,14 +211,11 @@ export async function GET(request: NextRequest) {
       return ageMinutes < 5; // Pages created in last 5 minutes
     });
 
-    if (recentPages.length > 0) {
-      console.log(`[my-pages API] CRITICAL FIX - Found ${recentPages.length} recent pages (< 5 min old):`,
-        recentPages.map(p => ({ id: p.id, title: p.title, lastModified: p.lastModified })));
-    } else {
-      console.log(`[my-pages API] CRITICAL FIX - No recent pages found in results (this might indicate indexing delay)`);
+    // Only log for daily notes or when there are issues
+    if (noLimit && limitedPages.length > 0) {
+      const pagesWithCustomDate = limitedPages.filter(p => p.customDate).length;
+      console.log(`[my-pages API] Daily notes: returning ${limitedPages.length} total pages, ${pagesWithCustomDate} with custom dates`);
     }
-
-    console.log(`[my-pages API] CRITICAL FIX - Returning ${limitedPages.length} pages sorted by ${sortBy} ${sortDirection} from entire database`);
 
     return NextResponse.json({
       pages: limitedPages,

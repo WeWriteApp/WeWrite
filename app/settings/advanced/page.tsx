@@ -30,7 +30,7 @@ export default function AdvancedPage() {
         description="Advanced settings and data management"
       />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
 
         {/* Advanced Settings Sections */}
         <div className="space-y-8">

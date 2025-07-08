@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from 'next-themes';
 import { getBestTextColor } from "../utils/accessibility";
 
@@ -49,82 +49,70 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
     }
   }, []);
 
-  // Change pill style and save to localStorage
-  const changePillStyle = (style: PillStyle): void => {
+  // Change pill style and save to localStorage - memoized to prevent re-renders
+  const changePillStyle = useCallback((style: PillStyle): void => {
     if (Object.values(PILL_STYLES).includes(style)) {
       setPillStyle(style);
       localStorage.setItem('pillStyle', style);
     }
-  };
+  }, []);
 
-  // Get the complete pill styling classes - single source of truth
-  const getPillStyleClasses = (context?: string): string => {
-    // Base classes that apply to all pill styles
-    // Use inline-flex for external links to properly align icons, inline-block for others
-    const displayClass = 'inline-flex';
+  // Get the complete pill styling classes - memoized to prevent re-computation on every render
+  const getPillStyleClasses = useMemo(() => {
+    return (context?: string): string => {
+      // Base classes that apply to all pill styles
+      const displayClass = 'inline-flex';
 
-    const baseClasses = `
-      ${displayClass}
-      items-center
-      text-sm font-medium
-      rounded-lg
-      transition-colors
-      whitespace-nowrap
-      text-indent-0
-      float-none
-      leading-tight
-      w-fit
-      min-w-fit
-      max-w-none
-      my-0.5
-      vertical-align-baseline
-    `.trim().replace(/\s+/g, ' ');
+      const baseClasses = `
+        ${displayClass}
+        items-center
+        text-sm font-medium
+        rounded-lg
+        transition-colors
+        whitespace-nowrap
+        text-indent-0
+        float-none
+        leading-tight
+        w-fit
+        min-w-fit
+        max-w-none
+        my-0.5
+        vertical-align-baseline
+      `.trim().replace(/\s+/g, ' ');
 
-    // Style-specific classes
-    let styleClasses = '';
-    if (pillStyle === PILL_STYLES.OUTLINE) {
-      styleClasses = `
-        bg-transparent text-primary
-        border-[1.5px] border-primary/40
-        hover:bg-primary/10 hover:border-primary/60
-        px-2 py-0.5
-      `;
-    } else if (pillStyle === PILL_STYLES.CLASSIC) {
-      styleClasses = `
-        bg-transparent text-primary font-bold
-        border-none
-        hover:underline
-        shadow-none
-      `;
-    } else {
-      // Default filled style - ensure white text on accent color background
-      styleClasses = `
-        bg-primary
-        border-[1.5px] border-primary/20
-        hover:bg-primary/90 hover:border-primary/30
-        text-white !important
-        px-2 py-0.5
-      `;
-    }
+      // Style-specific classes
+      let styleClasses = '';
+      if (pillStyle === PILL_STYLES.OUTLINE) {
+        styleClasses = `
+          bg-transparent text-primary
+          border-[1.5px] border-primary/40
+          hover:bg-primary/10 hover:border-primary/60
+          px-2 py-0.5
+        `;
+      } else if (pillStyle === PILL_STYLES.CLASSIC) {
+        styleClasses = `
+          bg-transparent text-primary font-bold
+          border-none
+          hover:underline
+          shadow-none
+        `;
+      } else {
+        // Default filled style - ensure white text on accent color background
+        styleClasses = `
+          bg-primary
+          border-[1.5px] border-primary/20
+          hover:bg-primary/90 hover:border-primary/30
+          text-white !important
+          px-2 py-0.5
+        `;
+      }
 
-    const finalClasses = `${baseClasses} ${styleClasses}`.trim().replace(/\s+/g, ' ');
+      return `${baseClasses} ${styleClasses}`.trim().replace(/\s+/g, ' ');
+    };
+  }, [pillStyle]); // Only recompute when pillStyle changes
 
-    // Debug output for filled pills
-    if (styleClasses.includes('bg-primary')) {
-      console.log('PillStyleContext debug - filled pill:', {
-        baseClasses,
-        styleClasses,
-        finalClasses,
-        pillStyle
-      });
-    }
-
-    return finalClasses;
-  };
-
-  // Get the best text color for a pill based on its background
-  // This ensures proper contrast for accessibility
-  const getTextColorForPill = (backgroundColor: string): string => {
+  // Get the best text color for a pill based on its background - memoized for performance
+  const getTextColorForPill = useCallback((backgroundColor: string): string => {
     // Force white text on dark backgrounds for better readability
     // This is a more aggressive approach to ensure contrast
     try {
@@ -182,23 +170,25 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
       // Use black text for lighter backgrounds (brightness >= 0.6)
       return brightness < 0.6 ? '#ffffff' : '#000000';
     } catch (error) {
-      console.error('Error determining text color:', error);
-      // Fall back to the standard contrast function if there's an error
+      // Fall back to the standard contrast function if there's an error (no logging to prevent spam)
       return getBestTextColor(backgroundColor, {
         level: 'AAA',
         size: 'normal',
         preferredColors: ['#ffffff', '#000000']
       });
     }
-  };
+  }, []); // No dependencies since this is a pure function
+
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    pillStyle,
+    changePillStyle,
+    getPillStyleClasses,
+    getTextColorForPill
+  }), [pillStyle, changePillStyle, getPillStyleClasses, getTextColorForPill]);
 
   return (
-    <PillStyleContext.Provider value={{
-      pillStyle,
-      changePillStyle,
-      getPillStyleClasses,
-      getTextColorForPill
-    }}>
+    <PillStyleContext.Provider value={contextValue}>
       {children}
     </PillStyleContext.Provider>
   );

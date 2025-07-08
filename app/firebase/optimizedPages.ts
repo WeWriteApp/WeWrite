@@ -48,7 +48,6 @@ import {
   limit,
   startAfter,
   onSnapshot,
-  select,
   type Unsubscribe,
   type DocumentData,
   type QueryDocumentSnapshot
@@ -332,8 +331,7 @@ export const getOptimizedPageList = async (
         where("userId", "==", userId),
         where("deleted", "!=", true),
         orderBy("lastModified", "desc"),
-        limit(maxResults),
-        select(...metadataFields)
+        limit(maxResults)
       );
 
       // Add pagination if lastDoc is provided (exclude deleted pages)
@@ -344,8 +342,7 @@ export const getOptimizedPageList = async (
           where("deleted", "!=", true),
           orderBy("lastModified", "desc"),
           startAfter(lastDoc),
-          limit(maxResults),
-          select(...metadataFields)
+          limit(maxResults)
         );
       }
       

@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { executeDeduplicatedBatch } from '../../../utils/serverRequestDeduplication';
+import { executeDeduplicatedOperation } from '../../../utils/serverRequestDeduplication';
 
 interface UserData {
   uid: string;
@@ -50,7 +50,14 @@ export async function POST(request: NextRequest) {
   try {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
-    const rtdb = admin.database();
+
+    // Try to initialize realtime database, but don't fail if it's not available
+    let rtdb = null;
+    try {
+      rtdb = admin.database();
+    } catch (rtdbError) {
+      console.warn('Realtime Database not available, continuing without it:', rtdbError.message);
+    }
 
     // Authentication is optional for this endpoint since it's used for public user data
     const currentUserId = await getUserIdFromRequest(request);
@@ -166,10 +173,10 @@ async function fetchBatchUserDataInternal(
           firestoreUserIds.add(doc.id);
         });
 
-        // Fallback to RTDB for users not found in Firestore
+        // Fallback to RTDB for users not found in Firestore (if RTDB is available)
         const rtdbUserIds = batch.filter(id => !firestoreUserIds.has(id));
 
-        if (rtdbUserIds.length > 0) {
+        if (rtdbUserIds.length > 0 && rtdb) {
           console.log(`Batch user data: Falling back to RTDB for ${rtdbUserIds.length} users`);
 
           const rtdbPromises = rtdbUserIds.map(async (userId) => {
@@ -205,6 +212,15 @@ async function fetchBatchUserDataInternal(
             if (user) {
               results[userId] = user;
             }
+          });
+        } else if (rtdbUserIds.length > 0 && !rtdb) {
+          // If RTDB is not available, create fallback user data for missing users
+          console.log(`Batch user data: RTDB not available, creating fallback data for ${rtdbUserIds.length} users`);
+          rtdbUserIds.forEach(userId => {
+            results[userId] = {
+              uid: userId,
+              username: 'Unknown User'
+            };
           });
         }
 
