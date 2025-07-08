@@ -278,27 +278,7 @@ const SingleProfileView = ({ profile }) => {
 
 
 
-        {!currentAccount && (
-          <div className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg p-5 mb-6 mx-2 shadow-sm">
-            <div className="flex flex-col space-y-4">
-              <p className="text-center font-medium">
-                You need to be logged in to continue
-              </p>
-              <div className="flex justify-center space-x-4">
-                <Link href="/auth/register">
-                  <Button variant="outline" size="sm" className="gap-1 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/50">
-                    <span>Create Account</span>
-                  </Button>
-                </Link>
-                <Link href="/auth/login">
-                  <Button variant="default" size="sm" className="gap-1 bg-blue-600 hover:bg-blue-700 text-white">
-                    <span>Log In</span>
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
+
 
         <UserProfileTabs profile={profile} />
       </div>
