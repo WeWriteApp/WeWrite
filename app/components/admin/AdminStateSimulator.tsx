@@ -247,16 +247,16 @@ export default function AdminStateSimulator({ className }: AdminStateSimulatorPr
         </Button>
       ) : (
         // Expanded state - draggable window
-        <Card className="w-80 shadow-2xl border-2 border-orange-200 bg-white">
+        <Card className="w-80 shadow-2xl border-2 border-orange-200 dark:border-orange-700 bg-white dark:bg-gray-800">
           <CardHeader
-            className="pb-2 cursor-grab active:cursor-grabbing bg-orange-50"
+            className="pb-2 cursor-grab active:cursor-grabbing bg-orange-50 dark:bg-orange-900/20"
             onMouseDown={handleMouseDown}
             onTouchStart={handleTouchStart}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <GripHorizontal className="h-4 w-4 text-orange-600" />
-                <CardTitle className="text-sm font-medium text-orange-800">
+                <GripHorizontal className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                <CardTitle className="text-sm font-medium text-orange-800 dark:text-orange-200">
                   Admin State Simulator
                 </CardTitle>
               </div>
@@ -264,7 +264,7 @@ export default function AdminStateSimulator({ className }: AdminStateSimulatorPr
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 text-orange-600 hover:text-orange-800"
+                  className="h-6 w-6 text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-200"
                   onClick={hideForSession}
                 >
                   <EyeOff className="h-3 w-3" />
@@ -272,7 +272,7 @@ export default function AdminStateSimulator({ className }: AdminStateSimulatorPr
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 text-orange-600 hover:text-orange-800"
+                  className="h-6 w-6 text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-200"
                   onClick={toggleExpanded}
                 >
                   <X className="h-3 w-3" />
@@ -280,7 +280,7 @@ export default function AdminStateSimulator({ className }: AdminStateSimulatorPr
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4 text-sm bg-white">
+          <CardContent className="space-y-4 text-sm bg-white dark:bg-gray-800">
             {/* Dynamic State Categories */}
             {STATE_CATEGORIES.map((category) => {
               const IconComponent = category.icon;
@@ -362,7 +362,7 @@ export default function AdminStateSimulator({ className }: AdminStateSimulatorPr
             </div>
 
             {/* Action Buttons */}
-            <div className="pt-4 border-t border-orange-100 space-y-2">
+            <div className="pt-4 border-t border-orange-100 dark:border-orange-800 space-y-2">
               <Button
                 variant="default"
                 size="sm"
@@ -375,7 +375,7 @@ export default function AdminStateSimulator({ className }: AdminStateSimulatorPr
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full text-orange-700 border-orange-200 hover:bg-orange-50"
+                className="w-full text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700 hover:bg-orange-50 dark:hover:bg-orange-900/20"
                 onClick={async () => {
                   try {
                     const detectedState = await adminStateHook.resetToActualState();

@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Ban, Star } from 'lucide-react';
+import { Ban, Star, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
 import { getEffectiveTier } from '../../utils/subscriptionTiers';
 
@@ -11,6 +11,7 @@ interface SubscriptionTierBadgeProps {
   amount?: number | null;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  isLoading?: boolean;
 }
 
 export function SubscriptionTierBadge({
@@ -18,8 +19,27 @@ export function SubscriptionTierBadge({
   status,
   amount,
   size = 'sm',
-  className = ''
+  className = '',
+  isLoading = false
 }: SubscriptionTierBadgeProps) {
+
+  // Show loading state if explicitly loading
+  if (isLoading) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className={`inline-flex items-center ${className}`}>
+              <Loader2 size={sizeConfig[size].icon} className="text-muted-foreground animate-spin" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Loading subscription...</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
 
   // Use centralized tier determination logic with safety fallback
   const finalTier = getEffectiveTier(amount ?? null, tier ?? null, status ?? null) || 'inactive';

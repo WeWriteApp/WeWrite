@@ -185,7 +185,7 @@ export default function PageHeader({
    * The subscriptionStatus can be null for inactive users, so we don't require it.
    */
   const shouldShowSubscriptionBadge = React.useMemo(() => {
-    return subscriptionEnabled && tier && !isLoadingTier;
+    return subscriptionEnabled && (tier || isLoadingTier);
   }, [subscriptionEnabled, tier, isLoadingTier]);
 
   /**
@@ -1200,6 +1200,7 @@ export default function PageHeader({
                                 status={subscriptionStatus || DEFAULT_SUBSCRIPTION.status}
                                 amount={subscriptionAmount || DEFAULT_SUBSCRIPTION.amount}
                                 size="sm"
+                                isLoading={isLoadingTier}
                               />
                             </div>
                           </SubscriptionInfoModal>
