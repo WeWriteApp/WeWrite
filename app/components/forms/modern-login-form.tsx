@@ -120,6 +120,15 @@ export function ModernLoginForm({
           // The Firebase auth state change will trigger the session management
           // and handle the redirect automatically through SessionAuthInitializer
 
+          // Add fallback redirect in case SessionAuthInitializer doesn't handle it
+          setTimeout(() => {
+            if (localStorage.getItem('authRedirectPending')) {
+              console.log("Fallback redirect triggered - SessionAuthInitializer didn't handle redirect")
+              localStorage.removeItem('authRedirectPending')
+              window.location.href = "/"
+            }
+          }, 2000) // Wait 2 seconds for SessionAuthInitializer to handle it first
+
         } catch (firebaseError: any) {
           console.error("Firebase sign-in error:", firebaseError)
           localStorage.removeItem('authRedirectPending')

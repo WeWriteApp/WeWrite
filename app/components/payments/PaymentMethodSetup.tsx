@@ -9,6 +9,7 @@ import { CreditCard, Plus, AlertTriangle, CheckCircle } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { getStripePublishableKey } from '../../utils/stripeConfig';
+import { useTheme } from 'next-themes';
 
 // Initialize Stripe
 const stripePromise = loadStripe(getStripePublishableKey() || '');
@@ -21,6 +22,7 @@ interface PaymentMethodSetupProps {
 
 const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCancel }) => {
   const { session } = useCurrentAccount();
+  const { theme } = useTheme();
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -113,9 +115,20 @@ const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCan
               style: {
                 base: {
                   fontSize: '16px',
-                  color: 'hsl(var(--foreground))',
+                  color: theme === 'dark' ? '#ffffff' : '#424770',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontSmoothing: 'antialiased',
                   '::placeholder': {
-                    color: 'hsl(var(--muted-foreground))'}}}}}
+                    color: theme === 'dark' ? 'rgba(255, 255, 255, 0.6)' : '#aab7c4'
+                  },
+                  iconColor: theme === 'dark' ? '#ffffff' : '#424770'
+                },
+                invalid: {
+                  color: '#fa755a',
+                  iconColor: '#fa755a'
+                }
+              }
+            }}
           />
         </div>
       </div>
@@ -164,6 +177,7 @@ export const PaymentMethodSetup: React.FC<PaymentMethodSetupProps> = ({
   showTitle = true
 }) => {
   const { currentAccount } = useCurrentAccount();
+  const { theme } = useTheme();
 
   if (!currentAccount) {
     return (
@@ -178,7 +192,20 @@ export const PaymentMethodSetup: React.FC<PaymentMethodSetupProps> = ({
   }
 
   const content = (
-    <Elements stripe={stripePromise}>
+    <Elements
+      stripe={stripePromise}
+      options={{
+        appearance: {
+          theme: theme === 'dark' ? 'night' : 'stripe',
+          variables: {
+            colorPrimary: '#0057FF',
+            colorBackground: theme === 'dark' ? '#1a1a1a' : '#ffffff',
+            colorText: theme === 'dark' ? '#ffffff' : '#000000',
+            borderRadius: '8px'
+          }
+        }
+      }}
+    >
       <PaymentMethodForm onSuccess={onSuccess} onCancel={onCancel} />
     </Elements>
   );
