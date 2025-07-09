@@ -63,13 +63,26 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
   const verbose = options.verbose || false;
 
   try {
-    // Only log in verbose mode
+    // Log environment info for debugging
     if (verbose) {
+      console.log(`[getUserSubscriptionServer] Environment info:`, {
+        VERCEL_ENV: process.env.VERCEL_ENV,
+        NODE_ENV: process.env.NODE_ENV
+      });
       console.log(`[getUserSubscriptionServer] Fetching subscription for user: ${userId}`);
     }
 
     // Check the primary location (user path) using environment-aware path
     const { parentPath, subCollectionName } = getSubCollectionPath(PAYMENT_COLLECTIONS.USERS, userId, PAYMENT_COLLECTIONS.SUBSCRIPTIONS);
+
+    if (verbose) {
+      console.log(`[getUserSubscriptionServer] Using collection path:`, {
+        parentPath,
+        subCollectionName,
+        fullPath: `${parentPath}/${subCollectionName}/current`
+      });
+    }
+
     const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc("current");
     const subscriptionSnap = await subscriptionRef.get();
 

@@ -271,6 +271,7 @@ export default function SubscriptionPage() {
 
     // Check if this is a reactivation (subscription exists and is set to cancel or is cancelled)
     const isReactivation = currentSubscription &&
+                          currentSubscription.status !== null &&
                           (currentSubscription.cancelAtPeriodEnd || currentSubscription.status === 'cancelled') &&
                           currentSubscription.stripeSubscriptionId;
 
@@ -436,7 +437,7 @@ export default function SubscriptionPage() {
           )}
 
           {/* Current Subscription Status */}
-          {currentSubscription && (currentSubscription.status || currentSubscription.amount) && (
+          {currentSubscription && currentSubscription.status !== null && currentSubscription.status !== undefined && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -531,7 +532,7 @@ export default function SubscriptionPage() {
           )}
 
           {/* Show tier selector only for new subscriptions or when reactivating */}
-          {(!currentSubscription || ((currentSubscription.cancelAtPeriodEnd || currentSubscription.status === 'cancelled') && showReactivationFlow)) && (
+          {(!currentSubscription || currentSubscription.status === null || ((currentSubscription.cancelAtPeriodEnd || currentSubscription.status === 'cancelled') && showReactivationFlow)) && (
             <div>
               {/* PWA Embedded Checkout Notice */}
               {isPWA && (

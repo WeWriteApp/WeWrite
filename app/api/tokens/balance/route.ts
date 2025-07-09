@@ -11,11 +11,21 @@ import { ServerTokenService } from '../../../services/tokenService.server';
 
 export async function GET(request: NextRequest) {
   try {
+    // Log environment info for debugging
+    console.log('[TOKEN BALANCE] Environment info:', {
+      VERCEL_ENV: process.env.VERCEL_ENV,
+      NODE_ENV: process.env.NODE_ENV,
+      url: request.url
+    });
+
     // Get authenticated user
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
+      console.log('[TOKEN BALANCE] No userId found, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    console.log('[TOKEN BALANCE] Authenticated user:', userId);
 
     console.log(`🎯 Token Balance API: Getting balance for user ${userId}`);
 

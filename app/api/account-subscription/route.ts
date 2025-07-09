@@ -10,14 +10,24 @@ import { getUserSubscriptionServer } from '../../firebase/subscription-server';
 
 export async function GET(request: NextRequest) {
   try {
+    // Log environment info for debugging
+    console.log('[ACCOUNT SUBSCRIPTION] Environment info:', {
+      VERCEL_ENV: process.env.VERCEL_ENV,
+      NODE_ENV: process.env.NODE_ENV,
+      url: request.url
+    });
+
     // Get authenticated user
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
+      console.log('[ACCOUNT SUBSCRIPTION] No userId found, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    console.log('[ACCOUNT SUBSCRIPTION] Authenticated user:', userId);
+
     // Get the user's subscription from Firestore using server-side function
-    const subscription = await getUserSubscriptionServer(userId, { verbose: false });
+    const subscription = await getUserSubscriptionServer(userId, { verbose: true });
 
     console.log(`[ACCOUNT SUBSCRIPTION] Subscription data for user ${userId}:`, {
       hasSubscription: !!subscription,

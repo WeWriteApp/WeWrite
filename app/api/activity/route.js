@@ -137,6 +137,13 @@ export async function GET(request) {
   try {
     console.log('API: /api/activity endpoint called');
 
+    // Log environment info for debugging
+    console.log('[ACTIVITY] Environment info:', {
+      VERCEL_ENV: process.env.VERCEL_ENV,
+      NODE_ENV: process.env.NODE_ENV,
+      url: request.url
+    });
+
     // Get parameters from query string
     let limitCount = DEFAULT_LIMIT;
     let filterUserId = null;
