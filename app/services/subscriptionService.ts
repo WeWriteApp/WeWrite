@@ -134,14 +134,28 @@ export class SubscriptionService {
    */
   static async getUserSubscription(userId: string): Promise<SubscriptionData | null> {
     try {
-      const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
-      const subscriptionDoc = await getDoc(subscriptionRef);
-      
-      if (!subscriptionDoc.exists()) {
+      // Use API endpoint instead of direct Firestore access for consistency
+      const response = await fetch(`/api/user-subscription?userId=${userId}`);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error(`Failed to fetch subscription: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Transform API response to match expected SubscriptionData format
+      if (!data || !data.status) {
         return null;
       }
-      
-      return subscriptionDoc.data() as SubscriptionData;
+
+      return {
+        status: data.status,
+        amount: data.amount,
+        tier: data.tier
+      } as SubscriptionData;
     } catch (error) {
       console.error('Error getting user subscription:', error);
       throw error;

@@ -111,14 +111,23 @@ export const getBatchUserData = async (userIds: string[]): Promise<Record<string
       
       const usersSnapshot = await getDocs(usersQuery);
       
-      // Fetch subscription data in parallel using correct path
+      // Fetch subscription data in parallel using API endpoint for consistency
       const subscriptionPromises = batch.map(async (userId) => {
         try {
-          const subDoc = await getDoc(doc(db, 'users', userId, 'subscription', 'current'));
-          return {
-            userId,
-            subscription: subDoc.exists() ? subDoc.data() : null
-          };
+          const response = await fetch(`/api/user-subscription?userId=${userId}`);
+          if (response.ok) {
+            const data = await response.json();
+            return {
+              userId,
+              subscription: data.status ? {
+                status: data.status,
+                amount: data.amount,
+                tier: data.tier
+              } : null
+            };
+          } else {
+            return { userId, subscription: null };
+          }
         } catch (error) {
           console.warn(`Error fetching subscription for user ${userId}:`, error);
           return { userId, subscription: null };

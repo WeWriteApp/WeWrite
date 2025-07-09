@@ -89,7 +89,8 @@ export default function SubscriptionPage() {
     try {
       setLoading(true);
 
-      const url = '/api/account-subscription';
+      // Use the working user-subscription endpoint instead of account-subscription
+      const url = `/api/user-subscription?userId=${currentAccount.uid}`;
 
       const response = await fetch(url);
       if (response.ok) {
@@ -100,19 +101,28 @@ export default function SubscriptionPage() {
         console.log('Subscription data keys:', data ? Object.keys(data) : 'null');
         console.log('Subscription status:', data?.status);
         console.log('Subscription amount:', data?.amount);
-        setCurrentSubscription(data);
+
+        // Transform the data to match the expected format
+        // user-subscription returns { tier, status, amount } while account-subscription returns full subscription object
+        const transformedData = data.status ? {
+          status: data.status,
+          amount: data.amount,
+          tier: data.tier
+        } : null;
+
+        setCurrentSubscription(transformedData);
 
         // Set amount from current subscription
-        if (data && data.amount) {
-          setSelectedAmount(data.amount);
-          setPreviousCustomAmount(data.amount);
+        if (transformedData && transformedData.amount) {
+          setSelectedAmount(transformedData.amount);
+          setPreviousCustomAmount(transformedData.amount);
 
           // Set tier based on amount
-          if (data.amount === 10) {
+          if (transformedData.amount === 10) {
             setSelectedTier('tier1');
-          } else if (data.amount === 20) {
+          } else if (transformedData.amount === 20) {
             setSelectedTier('tier2');
-          } else if (data.amount >= 30) {
+          } else if (transformedData.amount >= 30) {
             setSelectedTier('tier3');
           }
         }

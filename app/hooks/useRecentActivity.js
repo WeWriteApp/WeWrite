@@ -113,13 +113,18 @@ const useRecentActivity = (
           }
         }
 
-        // Get subscription information from correct path
-        const subscriptionDoc = await getDoc(doc(db, 'users', userId, 'subscription', 'current'));
-        if (subscriptionDoc.exists()) {
-          const subscriptionData = subscriptionDoc.data();
-          tier = subscriptionData.tier;
-          subscriptionStatus = subscriptionData.status;
-          subscriptionAmount = subscriptionData.amount;
+        // Get subscription information from API instead of direct Firestore access
+        try {
+          const response = await fetch(`/api/user-subscription?userId=${userId}`);
+          if (response.ok) {
+            const subscriptionData = await response.json();
+            tier = subscriptionData.tier;
+            subscriptionStatus = subscriptionData.status;
+            subscriptionAmount = subscriptionData.amount;
+          }
+        } catch (error) {
+          console.error('Error fetching subscription data for activity:', error);
+          // Keep defaults (null values)
         }
       } catch (firestoreErr) {
         console.error("Error fetching user data from Firestore:", firestoreErr);
