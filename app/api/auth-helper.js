@@ -73,6 +73,15 @@ export async function getUserIdFromRequest(request) {
     return null;
   }
 
+  // Debug: Log all available cookies
+  const allCookies = {};
+  request.cookies.forEach((value, name) => {
+    allCookies[name] = value;
+  });
+  console.log('[AUTH DEBUG] Available cookies:', Object.keys(allCookies));
+  console.log('[AUTH DEBUG] Session cookie exists:', !!request.cookies.get('session')?.value);
+  console.log('[AUTH DEBUG] UserSession cookie exists:', !!request.cookies.get('userSession')?.value);
+
   // Get user ID from cookies or query parameters
   let userId;
 
@@ -86,23 +95,24 @@ export async function getUserIdFromRequest(request) {
   const sessionCookie = request.cookies.get('session')?.value;
 
   if (sessionCookie) {
+    console.log('[AUTH DEBUG] Found session cookie, length:', sessionCookie.length);
     try {
       // Try to verify as session cookie first
       const decodedClaims = await auth.verifySessionCookie(sessionCookie);
       userId = decodedClaims.uid;
-      console.log('Using userId from session cookie:', userId);
+      console.log('[AUTH DEBUG] Session cookie verified successfully, userId:', userId);
       return userId;
     } catch (sessionError) {
-      console.log('Session cookie verification failed, trying as ID token:', sessionError.message);
+      console.log('[AUTH DEBUG] Session cookie verification failed:', sessionError.message);
 
       try {
         // If session cookie fails, try as ID token
         const decodedToken = await auth.verifyIdToken(sessionCookie);
         userId = decodedToken.uid;
-        console.log('Using userId from session cookie (as ID token):', userId);
+        console.log('[AUTH DEBUG] Session cookie verified as ID token, userId:', userId);
         return userId;
       } catch (tokenError) {
-        console.error('Error verifying session cookie as ID token:', tokenError);
+        console.error('[AUTH DEBUG] Error verifying session cookie as ID token:', tokenError.message);
 
         // Fall back to other methods
       }
@@ -112,15 +122,20 @@ export async function getUserIdFromRequest(request) {
   // If still no userId, try userSession cookie (standard WeWrite auth)
   const userSessionCookie = request.cookies.get('userSession')?.value;
   if (userSessionCookie) {
+    console.log('[AUTH DEBUG] Found userSession cookie, length:', userSessionCookie.length);
     try {
       const userSession = JSON.parse(userSessionCookie);
       if (userSession && userSession.uid) {
-        console.log('Using userId from userSession cookie:', userSession.uid);
+        console.log('[AUTH DEBUG] Using userId from userSession cookie:', userSession.uid);
         return userSession.uid;
+      } else {
+        console.log('[AUTH DEBUG] userSession cookie missing uid:', userSession);
       }
     } catch (error) {
-      console.error('Error parsing userSession cookie:', error);
+      console.error('[AUTH DEBUG] Error parsing userSession cookie:', error);
     }
+  } else {
+    console.log('[AUTH DEBUG] No userSession cookie found');
   }
 
   // Try to get from Authorization header (Bearer token)
@@ -162,5 +177,6 @@ export async function getUserIdFromRequest(request) {
   // }
 
   // No user ID found
+  console.log('[AUTH DEBUG] No valid authentication found, returning null');
   return null;
 }
