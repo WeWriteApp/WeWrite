@@ -71,15 +71,15 @@ export function PaymentStep({
   const [billingAddressCollapsed, setBillingAddressCollapsed] = useState(false);
   const [billingAddressComplete, setBillingAddressComplete] = useState(false);
 
-  // Computed form validity based on both payment and address completion
-  const formValid = useExistingPayment
-    ? !!selectedExistingMethod
-    : paymentElementComplete && billingAddressComplete;
-
   // Existing payment methods state
   const [existingPaymentMethods, setExistingPaymentMethods] = useState<PaymentMethod[]>([]);
   const [selectedExistingMethod, setSelectedExistingMethod] = useState<string | null>(null);
   const [useExistingPayment, setUseExistingPayment] = useState(false);
+
+  // Computed form validity based on both payment and address completion
+  const formValid = useExistingPayment
+    ? !!selectedExistingMethod
+    : paymentElementComplete && billingAddressComplete;
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
   const [deletingPaymentMethod, setDeletingPaymentMethod] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
