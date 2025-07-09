@@ -17,16 +17,33 @@ const stripe = new Stripe(getStripeSecretKey() || '', {
  */
 export async function POST(request: NextRequest) {
   try {
+    console.log('🚀 [CREATE-SETUP-INTENT] Starting request...');
+
     // Verify authentication
     const userId = await getUserIdFromRequest(request);
+    console.log('🔐 [CREATE-SETUP-INTENT] User ID from auth:', userId);
+
     if (!userId) {
+      console.log('❌ [CREATE-SETUP-INTENT] No user ID found');
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
-    const { userId: requestUserId, tier, amount, tierName, tokens, successUrl, cancelUrl } = await request.json();
+    let requestBody;
+    try {
+      requestBody = await request.json();
+      console.log('📋 [CREATE-SETUP-INTENT] Request body:', requestBody);
+    } catch (parseError) {
+      console.error('❌ [CREATE-SETUP-INTENT] Failed to parse request body:', parseError);
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+
+    const { userId: requestUserId, tier, amount, tierName, tokens, successUrl, cancelUrl } = requestBody;
 
     // Validate required fields
     if (!requestUserId || !tier || !amount) {
@@ -84,9 +101,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Get or create Stripe customer
+    console.log('👤 [CREATE-SETUP-INTENT] Getting or creating Stripe customer...');
     let stripeCustomerId: string;
 
     try {
+      console.log('🔍 [CREATE-SETUP-INTENT] Checking for existing customer ID in Firebase...');
       // First, check if user already has a customer ID in their subscription data
       const { initAdmin } = await import('../../../firebase/admin');
       const adminDb = initAdmin();
@@ -132,6 +151,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Setup Intent for payment method collection
+    console.log('💳 [CREATE-SETUP-INTENT] Creating Stripe Setup Intent...');
+    console.log('💳 [CREATE-SETUP-INTENT] Customer ID:', stripeCustomerId);
+    console.log('💳 [CREATE-SETUP-INTENT] Tier:', tier, 'Amount:', finalAmount);
+
     try {
       const setupIntent = await stripe.setupIntents.create({
         customer: stripeCustomerId,
@@ -229,10 +252,22 @@ export async function GET(request: NextRequest) {
       metadata: setupIntent.metadata
     });
 
-  } catch (error) {
-    console.error('Error retrieving Setup Intent:', error);
+  } catch (error: any) {
+    console.error('❌ [CREATE-SETUP-INTENT] Unhandled error occurred:');
+    console.error('❌ [CREATE-SETUP-INTENT] Error message:', error?.message);
+    console.error('❌ [CREATE-SETUP-INTENT] Error type:', error?.type);
+    console.error('❌ [CREATE-SETUP-INTENT] Error code:', error?.code);
+    console.error('❌ [CREATE-SETUP-INTENT] Error stack:', error?.stack);
+    console.error('❌ [CREATE-SETUP-INTENT] Full error object:', JSON.stringify(error, null, 2));
+
+    // Return detailed error for debugging
     return NextResponse.json(
-      { error: 'Failed to retrieve setup status' },
+      {
+        error: 'Internal server error in create-setup-intent',
+        details: error?.message || 'Unknown error',
+        type: error?.type || 'unknown',
+        code: error?.code || 'unknown'
+      },
       { status: 500 }
     );
   }
