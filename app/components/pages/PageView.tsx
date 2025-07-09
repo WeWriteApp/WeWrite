@@ -530,7 +530,7 @@ export default function PageView({
 
       // Show success feedback to user
       try {
-        const { toast } = await import('../../hooks/use-toast');
+        const { toast } = await import('../../components/ui/use-toast');
         toast({
           title: "Page Saved",
           description: "Your changes have been saved successfully.",

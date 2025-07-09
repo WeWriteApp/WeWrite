@@ -75,6 +75,8 @@ const PAYMENT_NEVER_CACHE_PATTERNS = [
   '/api/subscription/create-setup-intent',
   '/api/subscription/create-with-payment-method',
   '/api/subscription/create-checkout',
+  '/api/account-subscription',
+  '/api/user-subscription',
   '/api/webhooks/',
   'stripe.com',
   'js.stripe.com'
@@ -172,7 +174,7 @@ async function handleRequest(request) {
 
     // Strategy 4: Never cache payment-related requests
     if (isPaymentNeverCache(request.url)) {
-      console.log('Service Worker: Payment request - bypassing cache:', pathname);
+      // Silently bypass cache for payment requests to reduce console noise
       return fetch(request);
     }
 
@@ -207,7 +209,11 @@ async function cacheFirstStrategy(request, cacheName) {
   try {
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
+      try {
+        cache.put(request, networkResponse.clone());
+      } catch (cacheError) {
+        // Silently ignore cache errors to reduce console noise
+      }
     }
     return networkResponse;
   } catch (error) {
@@ -230,8 +236,12 @@ async function networkFirstStrategy(request, cacheName, timeout = 3000) {
     
     if (networkResponse.ok) {
       // Cache successful responses with short TTL
-      const responseToCache = networkResponse.clone();
-      cache.put(request, responseToCache);
+      try {
+        const responseToCache = networkResponse.clone();
+        cache.put(request, responseToCache);
+      } catch (cacheError) {
+        // Silently ignore cache errors to reduce console noise
+      }
     }
     
     return networkResponse;
@@ -253,7 +263,11 @@ async function staleWhileRevalidateStrategy(request, cacheName) {
   // Always try to update cache in background
   const fetchPromise = fetch(request).then((networkResponse) => {
     if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
+      try {
+        cache.put(request, networkResponse.clone());
+      } catch (cacheError) {
+        // Silently ignore cache errors to reduce console noise
+      }
     }
     return networkResponse;
   }).catch(() => {

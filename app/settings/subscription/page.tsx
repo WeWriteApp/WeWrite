@@ -27,6 +27,7 @@ import Link from 'next/link';
 import SubscriptionTierSlider from '../../components/subscription/SubscriptionTierSlider';
 import { SubscriptionTierBadge } from '../../components/ui/SubscriptionTierBadge';
 import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
+import { getEffectiveTier } from '../../utils/subscriptionTiers';
 // PaymentFeatureGuard removed
 // Define the Subscription interface
 interface Subscription {
@@ -34,6 +35,7 @@ interface Subscription {
   amount: number;
   status: string;
   billingCycleEnd?: string;
+  currentPeriodEnd?: Date | string;
   pledgedAmount?: number;
   stripeCustomerId?: string;
   stripePriceId?: string;
@@ -41,6 +43,7 @@ interface Subscription {
   cancelAtPeriodEnd?: boolean;
   createdAt?: any; // Firebase Timestamp
   updatedAt?: any; // Firebase Timestamp
+  tier?: string | null;
 }
 
 export default function SubscriptionPage() {
@@ -85,6 +88,7 @@ export default function SubscriptionPage() {
       if (response.ok) {
         const data = await response.json();
 
+        console.log('Subscription data received:', data);
         setCurrentSubscription(data);
 
         // Set amount from current subscription
@@ -101,6 +105,10 @@ export default function SubscriptionPage() {
             setSelectedTier('tier3');
           }
         }
+      } else {
+        console.error('Failed to fetch subscription:', response.status, response.statusText);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error response:', errorData);
       }
     } catch (error) {
       console.error('Error fetching subscription:', error);
@@ -396,7 +404,7 @@ export default function SubscriptionPage() {
         <div className="space-y-4 md:space-y-6">
 
           {/* Current Subscription Status */}
-          {currentSubscription && (
+          {currentSubscription && currentSubscription.status && currentSubscription.status !== null && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -411,9 +419,9 @@ export default function SubscriptionPage() {
                     {/* Amount and tier badge */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl md:text-3xl font-bold">${currentSubscription.amount}/month</span>
+                        <span className="text-2xl md:text-3xl font-bold">${currentSubscription.amount || 0}/month</span>
                         <SubscriptionTierBadge
-                          tier={currentSubscription.tier}
+                          tier={getEffectiveTier(currentSubscription.amount || null, currentSubscription.tier || null, currentSubscription.status || null)}
                           status={currentSubscription.status}
                           amount={currentSubscription.amount}
                           size="md"
@@ -429,10 +437,11 @@ export default function SubscriptionPage() {
                       >
                         {currentSubscription.status}
                       </Badge>
-                      {currentSubscription.cancelAtPeriodEnd && currentSubscription.billingCycleEnd && (
+                      {currentSubscription.cancelAtPeriodEnd && (currentSubscription.billingCycleEnd || currentSubscription.currentPeriodEnd) && (
                         <Badge variant="destructive">
                           {(() => {
-                            const daysLeft = getDaysUntilCancellation(currentSubscription.billingCycleEnd);
+                            const endDate = currentSubscription.billingCycleEnd || currentSubscription.currentPeriodEnd;
+                            const daysLeft = getDaysUntilCancellation(endDate);
                             if (daysLeft <= 0) return 'Cancels today';
                             if (daysLeft === 1) return 'Cancels in 1 day';
                             return `Cancels in ${daysLeft} days`;
@@ -443,11 +452,11 @@ export default function SubscriptionPage() {
 
                     {/* Billing info */}
                     <p className="text-sm text-muted-foreground">
-                      {currentSubscription.billingCycleEnd && !currentSubscription.cancelAtPeriodEnd && (
-                        <>Next billing: {new Date(currentSubscription.billingCycleEnd).toLocaleDateString()}</>
+                      {(currentSubscription.billingCycleEnd || currentSubscription.currentPeriodEnd) && !currentSubscription.cancelAtPeriodEnd && (
+                        <>Next billing: {new Date(currentSubscription.billingCycleEnd || currentSubscription.currentPeriodEnd).toLocaleDateString()}</>
                       )}
-                      {currentSubscription.cancelAtPeriodEnd && currentSubscription.billingCycleEnd && (
-                        <>Subscription ends: {new Date(currentSubscription.billingCycleEnd).toLocaleDateString()}</>
+                      {currentSubscription.cancelAtPeriodEnd && (currentSubscription.billingCycleEnd || currentSubscription.currentPeriodEnd) && (
+                        <>Subscription ends: {new Date(currentSubscription.billingCycleEnd || currentSubscription.currentPeriodEnd).toLocaleDateString()}</>
                       )}
                     </p>
                   </div>
