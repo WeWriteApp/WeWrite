@@ -14,6 +14,7 @@ import {
   getTierById,
   CUSTOM_TIER_CONFIG
 } from '../../../utils/subscriptionTiers';
+import { ServerTokenService } from '../../../services/tokenService.server';
 
 // Initialize Firebase Admin and Stripe
 const adminApp = initAdmin();
@@ -109,10 +110,10 @@ export async function POST(request: NextRequest) {
       recurring: {
         interval: 'month'},
       product_data: {
-        name: `WeWrite ${newTier === 'tier3' ? 'Champion' : newTier === 'custom' ? 'Custom' : getTierById(newTier)?.name}`},
-      metadata: {
-        tier: newTier,
-        tokens: finalTokens.toString()}});
+        name: `WeWrite ${newTier === 'tier3' ? 'Champion' : newTier === 'custom' ? 'Custom' : getTierById(newTier)?.name}`,
+        metadata: {
+          tier: newTier,
+          tokens: finalTokens.toString()}}});
 
     // Update subscription with new price
     const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
@@ -137,7 +138,8 @@ export async function POST(request: NextRequest) {
       tokens: finalTokens,
       updatedAt: new Date()});
 
-    // Note: Monthly token allocation is now handled by TokenService, not stored on user document
+    // Update user's monthly token allocation using ServerTokenService
+    await ServerTokenService.updateMonthlyTokenAllocation(userId, finalAmount);
 
     console.log(`Subscription updated for user ${userId}: ${newTier} - $${finalAmount}/mo - ${finalTokens} tokens`);
 
