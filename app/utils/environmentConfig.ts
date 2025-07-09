@@ -1,13 +1,14 @@
 /**
  * Environment Configuration Utility
- * 
- * Provides environment-specific collection naming to prevent data collisions
- * between production, preview, and development environments.
- * 
- * This is critical for the payments system to ensure:
- * - Preview deployments don't contaminate production data
+ *
+ * Provides environment-specific collection naming to ensure proper data separation:
+ * - Production and Preview deployments use production data (no prefix)
+ * - Development (localhost) uses dev-prefixed collections (dev_)
+ *
+ * This ensures:
+ * - Preview deployments show real production data for testing
  * - Development testing doesn't affect production subscriptions
- * - Safe rollout of payments feature flag
+ * - Proper environment separation for development work
  */
 
 /**
@@ -19,12 +20,13 @@ export const getEnvironmentType = (): 'production' | 'preview' | 'development' =
     return 'production';
   }
 
-  // Check for preview environment (Vercel preview deployments)
+  // IMPORTANT: Preview deployments should use production data
+  // Only local development should use dev collections
   if (process.env.VERCEL_ENV === 'preview') {
-    return 'preview';
+    return 'production'; // Changed from 'preview' to 'production'
   }
 
-  // Check for development environment
+  // Check for development environment (localhost only)
   if (process.env.NODE_ENV === 'development') {
     return 'development';
   }
@@ -62,8 +64,6 @@ export const getEnvironmentPrefix = (): string => {
   switch (envType) {
     case 'production':
       return ''; // No prefix for production (keep existing collection names)
-    case 'preview':
-      return 'preview_';
     case 'development':
       return 'dev_';
     default:
@@ -80,8 +80,6 @@ export const getSubscriptionEnvironmentPrefix = (): string => {
   switch (envType) {
     case 'production':
       return ''; // No prefix for production (keep existing collection names)
-    case 'preview':
-      return 'preview_';
     case 'development':
       return 'dev_';
     default:
