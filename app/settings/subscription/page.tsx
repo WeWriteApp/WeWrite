@@ -415,26 +415,27 @@ export default function SubscriptionPage() {
 
         <div className="space-y-4 md:space-y-6">
 
-          {/* Debug info - remove after fixing */}
-          {process.env.NODE_ENV === 'development' && (
-            <Card className="bg-yellow-50 border-yellow-200">
-              <CardContent className="p-4">
-                <h4 className="font-medium mb-2">Debug Info:</h4>
-                <pre className="text-xs bg-white p-2 rounded border overflow-auto">
-                  {JSON.stringify({
-                    loading,
-                    currentSubscription,
-                    paymentsEnabled,
-                    hasSubscription: !!currentSubscription,
-                    subscriptionKeys: currentSubscription ? Object.keys(currentSubscription) : null,
-                    currentAccount: currentAccount?.uid,
-                    session: session?.uid,
-                    isAuthenticated
-                  }, null, 2)}
-                </pre>
-              </CardContent>
-            </Card>
-          )}
+          {/* Debug info - show in all environments for now */}
+          <Card className="bg-yellow-50 border-yellow-200">
+            <CardContent className="p-4">
+              <h4 className="font-medium mb-2">Debug Info (Subscription API Response):</h4>
+              <pre className="text-xs bg-white p-2 rounded border overflow-auto">
+                {JSON.stringify({
+                  loading,
+                  currentSubscription,
+                  paymentsEnabled,
+                  hasSubscription: !!currentSubscription,
+                  subscriptionKeys: currentSubscription ? Object.keys(currentSubscription) : null,
+                  subscriptionStatus: currentSubscription?.status,
+                  subscriptionStatusType: typeof currentSubscription?.status,
+                  currentAccount: currentAccount?.uid,
+                  session: session?.uid,
+                  isAuthenticated,
+                  showStatusCard: !!(currentSubscription && currentSubscription.status !== null && currentSubscription.status !== undefined)
+                }, null, 2)}
+              </pre>
+            </CardContent>
+          </Card>
 
           {/* Current Subscription Status */}
           {currentSubscription && currentSubscription.status !== null && currentSubscription.status !== undefined && (
