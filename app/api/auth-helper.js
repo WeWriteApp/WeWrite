@@ -75,10 +75,26 @@ export async function getUserIdFromRequest(request) {
 
   // Debug: Log all available cookies
   const allCookies = {};
-  // Next.js App Router: request.cookies is a RequestCookies object, not a Map
-  for (const [name, value] of request.cookies.entries()) {
-    allCookies[name] = value;
+  try {
+    // Next.js App Router: request.cookies is a RequestCookies object, not a Map
+    // Handle different cookie implementations between environments
+    if (request.cookies && typeof request.cookies.entries === 'function') {
+      for (const [name, value] of request.cookies.entries()) {
+        allCookies[name] = value;
+      }
+    } else if (request.cookies && typeof request.cookies.getAll === 'function') {
+      // Alternative method for some environments
+      const cookieArray = request.cookies.getAll();
+      for (const cookie of cookieArray) {
+        allCookies[cookie.name] = cookie.value;
+      }
+    } else {
+      console.log('[AUTH DEBUG] Unable to enumerate cookies, using direct access only');
+    }
+  } catch (cookieError) {
+    console.warn('[AUTH DEBUG] Error enumerating cookies:', cookieError.message);
   }
+
   console.log('[AUTH DEBUG] Available cookies:', Object.keys(allCookies));
   console.log('[AUTH DEBUG] Session cookie exists:', !!request.cookies.get('session')?.value);
   console.log('[AUTH DEBUG] UserSession cookie exists:', !!request.cookies.get('userSession')?.value);
