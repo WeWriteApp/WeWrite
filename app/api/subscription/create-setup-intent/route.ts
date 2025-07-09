@@ -85,21 +85,34 @@ export async function POST(request: NextRequest) {
 
     // Get or create Stripe customer
     let stripeCustomerId: string;
-    
+
     try {
-      // Try to find existing customer by Firebase UID
-      const existingCustomers = await stripe.customers.list({
-        limit: 100 // Search through more customers to find the right one
-      });
+      // First, check if user already has a customer ID in their subscription data
+      const { initAdmin } = await import('../../../firebase/admin');
+      const adminDb = initAdmin();
 
-      // Filter by metadata since Stripe's list API doesn't support metadata filtering directly
-      const matchingCustomers = existingCustomers.data.filter(customer =>
-        customer.metadata?.firebaseUID === requestUserId
-      );
+      const subscriptionDoc = await adminDb.collection('users').doc(requestUserId).collection('subscriptions').doc('current').get();
 
-      if (matchingCustomers.length > 0) {
-        stripeCustomerId = matchingCustomers[0].id;
+      if (subscriptionDoc.exists && subscriptionDoc.data()?.stripeCustomerId) {
+        // Use existing customer ID from subscription data
+        const existingCustomerId = subscriptionDoc.data()?.stripeCustomerId;
+
+        try {
+          // Verify the customer still exists in Stripe
+          await stripe.customers.retrieve(existingCustomerId);
+          stripeCustomerId = existingCustomerId;
+          console.log('✅ Using existing customer ID from subscription:', existingCustomerId);
+        } catch (customerError) {
+          console.log('⚠️ Existing customer ID not found in Stripe, will create new one');
+          throw new Error('Customer not found');
+        }
       } else {
+        throw new Error('No existing customer ID found');
+      }
+    } catch (error) {
+      console.log('🔍 Creating new customer for user:', requestUserId);
+
+      try {
         // Create new customer
         const customer = await stripe.customers.create({
           metadata: {
@@ -108,13 +121,14 @@ export async function POST(request: NextRequest) {
           description: `WeWrite user ${requestUserId}`,
         });
         stripeCustomerId = customer.id;
+        console.log('✅ Created new customer:', customer.id);
+      } catch (createError) {
+        console.error('Error creating Stripe customer:', createError);
+        return NextResponse.json(
+          { error: 'Failed to setup customer account' },
+          { status: 500 }
+        );
       }
-    } catch (error) {
-      console.error('Error managing Stripe customer:', error);
-      return NextResponse.json(
-        { error: 'Failed to setup customer account' },
-        { status: 500 }
-      );
     }
 
     // Create Setup Intent for payment method collection
