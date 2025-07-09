@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
         tokens: finalTokens.toString()}});
 
     // Update subscription in Firestore
-    const subscriptionRef = adminDb.collection('users').doc(userId).collection('subscription').doc('current');
+    const subscriptionRef = adminDb.collection('users').doc(userId).collection('subscriptions').doc('current');
     await subscriptionRef.update({
       stripePriceId: newPrice.id,
       tier: newTier,
@@ -137,11 +137,7 @@ export async function POST(request: NextRequest) {
       tokens: finalTokens,
       updatedAt: new Date()});
 
-    // Update user's monthly token allocation
-    const userRef = adminDb.collection('users').doc(userId);
-    await userRef.update({
-      monthlyTokenAllocation: finalAmount, // $1 = 1 token allocation
-      updatedAt: new Date()});
+    // Note: Monthly token allocation is now handled by TokenService, not stored on user document
 
     console.log(`Subscription updated for user ${userId}: ${newTier} - $${finalAmount}/mo - ${finalTokens} tokens`);
 

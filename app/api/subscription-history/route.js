@@ -43,8 +43,11 @@ export async function GET(request) {
     }
 
     const userData = userDoc.data();
-    const stripeCustomerId = userData.stripeCustomerId;
-    
+
+    // Get stripeCustomerId from subscription subcollection
+    const subscriptionDoc = await userDocRef.collection('subscriptions').doc('current').get();
+    const stripeCustomerId = subscriptionDoc.exists ? subscriptionDoc.data()?.stripeCustomerId : null;
+
     if (!stripeCustomerId) {
       return NextResponse.json({ subscriptions: [] });
     }

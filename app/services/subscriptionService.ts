@@ -194,7 +194,7 @@ export class SubscriptionService {
         updatedAt: serverTimestamp()
       };
 
-      const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
+      const subscriptionRef = doc(db, 'users', userId, 'subscriptions', 'current');
       await updateDoc(subscriptionRef, subscriptionData);
 
       console.log(`Subscription updated for user ${userId}: ${tier} - $${amount}/mo - ${tokens} tokens`);

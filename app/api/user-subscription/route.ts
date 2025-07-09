@@ -33,11 +33,11 @@ export async function GET(request: NextRequest) {
     });
 
     const subscriptionDoc = await admin.firestore().doc(parentPath).collection(subCollectionName).doc('current').get();
-    
+
     // Get subscription data (or null if document doesn't exist)
     const subscriptionData = subscriptionDoc.exists ? subscriptionDoc.data() : null;
 
-    console.log('[USER SUBSCRIPTION] Raw subscription data:', {
+    console.log('[USER SUBSCRIPTION] Subscription data:', {
       exists: subscriptionDoc.exists,
       data: subscriptionData,
       status: subscriptionData?.status,

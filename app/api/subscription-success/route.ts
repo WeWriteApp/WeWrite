@@ -122,10 +122,8 @@ export async function POST(request: NextRequest) {
       console.log(`Created new subscription document for user ${userId}`);
     }
 
-    // Update the user's subscription tier in Firestore
-    await db.collection('users').doc(userId).update({
-      subscriptionTier: tier,
-      subscriptionStatus: subscription.status});
+    // Note: User subscription data is now stored in subcollection only
+    // No need to update legacy fields on user document
 
     console.log(`Subscription success processing completed for user ${userId}`);
 

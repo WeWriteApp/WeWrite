@@ -234,8 +234,8 @@ export class SubscriptionSynchronizationService {
     operation: SyncOperation
   ): Promise<{ success: boolean; message: string }> {
     try {
-      const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
-      
+      const subscriptionRef = doc(db, 'users', userId, 'subscriptions', 'current');
+
       // Merge operation data with existing subscription data
       await updateDoc(subscriptionRef, {
         ...operation.subscriptionData,
@@ -243,15 +243,15 @@ export class SubscriptionSynchronizationService {
         syncSource: operation.type,
         syncCorrelationId: operation.correlationId
       });
-      
-      return { 
-        success: true, 
-        message: `Subscription updated successfully via ${operation.type}` 
+
+      return {
+        success: true,
+        message: `Subscription updated successfully via ${operation.type}`
       };
     } catch (error: any) {
-      return { 
-        success: false, 
-        message: `Failed to update subscription: ${error.message}` 
+      return {
+        success: false,
+        message: `Failed to update subscription: ${error.message}`
       };
     }
   }

@@ -179,23 +179,22 @@ export async function POST(request: NextRequest) {
           subscriptionData
         );
 
-        // Update user document with subscription info
+        // Update user subscription subcollection
         await setDoc(
-          doc(db, 'users', userId),
+          doc(db, 'users', userId, 'subscriptions', 'current'),
           {
-            subscription: {
-              id: subscription.id,
-              status: subscription.status,
-              tier,
-              amount: finalAmount,
-              tokens: finalTokens,
-              tierName: finalTierName,
-              stripeCustomerId,
-              stripeSubscriptionId: subscription.id,
-              currentPeriodStart: new Date(subscription.current_period_start * 1000),
-              currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-              updatedAt: serverTimestamp()
-            }
+            id: 'current',
+            userId,
+            status: subscription.status,
+            tier,
+            amount: finalAmount,
+            tokens: finalTokens,
+            tierName: finalTierName,
+            stripeCustomerId,
+            stripeSubscriptionId: subscription.id,
+            currentPeriodStart: new Date(subscription.current_period_start * 1000),
+            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+            updatedAt: serverTimestamp()
           },
           { merge: true }
         );

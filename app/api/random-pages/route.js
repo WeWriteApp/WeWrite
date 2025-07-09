@@ -140,7 +140,7 @@ export async function GET(request) {
 
         // Fetch subscription information using Firebase Admin from correct path
         try {
-          const subscriptionDoc = await adminDb.collection('users').doc(page.userId).collection('subscription').doc('current').get();
+          const subscriptionDoc = await adminDb.collection('users').doc(page.userId).collection('subscriptions').doc('current').get();
           if (subscriptionDoc.exists) {
             const subscriptionData = subscriptionDoc.data();
             // Use centralized tier determination logic

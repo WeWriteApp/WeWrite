@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
           }
 
           // Update subscription record in Firestore
-          await updateDoc(doc(db, 'users', userId, 'subscription', 'current'), {
+          await updateDoc(doc(db, 'users', userId, 'subscriptions', 'current'), {
             currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000).toISOString(),
             currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000).toISOString(),
             lastBillingProcessed: targetPeriod,
