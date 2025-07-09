@@ -75,9 +75,10 @@ export async function getUserIdFromRequest(request) {
 
   // Debug: Log all available cookies
   const allCookies = {};
-  request.cookies.forEach((value, name) => {
+  // Next.js App Router: request.cookies is a RequestCookies object, not a Map
+  for (const [name, value] of request.cookies.entries()) {
     allCookies[name] = value;
-  });
+  }
   console.log('[AUTH DEBUG] Available cookies:', Object.keys(allCookies));
   console.log('[AUTH DEBUG] Session cookie exists:', !!request.cookies.get('session')?.value);
   console.log('[AUTH DEBUG] UserSession cookie exists:', !!request.cookies.get('userSession')?.value);
