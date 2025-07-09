@@ -279,6 +279,12 @@ export default function SubscriptionPage() {
       return;
     }
 
+    // Check if this is a modification of an active subscription
+    const isActiveModification = currentSubscription &&
+                                currentSubscription.status === 'active' &&
+                                currentSubscription.stripeSubscriptionId &&
+                                selectedAmount !== currentSubscription.amount;
+
     // Check if this is a reactivation (subscription exists and is set to cancel or is cancelled)
     const isReactivation = currentSubscription &&
                           currentSubscription.status !== null &&
@@ -286,6 +292,54 @@ export default function SubscriptionPage() {
                           currentSubscription.stripeSubscriptionId;
 
 
+    if (isActiveModification) {
+      // Handle active subscription modification - use update API
+      try {
+        const user = auth.currentUser;
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
+        const token = await user.getIdToken();
+
+        const response = await fetch('/api/subscription/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            subscriptionId: currentSubscription.stripeSubscriptionId,
+            newTier: selectedTier,
+            newAmount: selectedAmount
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          toast({
+            title: "Success",
+            description: `Subscription updated to $${selectedAmount}/month successfully!`,
+            variant: "default"
+          });
+
+          // Force refresh subscription data
+          if (typeof window !== 'undefined') {
+            window.location.reload();
+          }
+        } else {
+          throw new Error(data.error || 'Failed to update subscription');
+        }
+      } catch (error) {
+        console.error('Error updating subscription:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update subscription. Please try again.",
+          variant: "destructive"
+        });
+      }
+      return;
+    }
 
     if (isReactivation) {
       // Handle reactivation
@@ -358,6 +412,16 @@ export default function SubscriptionPage() {
           variant: "destructive"
         });
       }
+      return;
+    }
+
+    // Prevent new subscription creation if user already has an active subscription
+    if (currentSubscription && currentSubscription.status === 'active') {
+      toast({
+        title: "Active Subscription Detected",
+        description: "You already have an active subscription. Use the modification options above to change your plan.",
+        variant: "default"
+      });
       return;
     }
 
