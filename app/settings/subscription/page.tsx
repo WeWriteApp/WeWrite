@@ -47,7 +47,7 @@ interface Subscription {
 }
 
 export default function SubscriptionPage() {
-  const { currentAccount } = useCurrentAccount();
+  const { currentAccount, session, isAuthenticated } = useCurrentAccount();
   const router = useRouter();
   const { toast } = useToast();
   const { trackInteractionEvent } = useWeWriteAnalytics();
@@ -77,7 +77,14 @@ export default function SubscriptionPage() {
 
   // Fetch current subscription
   const fetchSubscription = useCallback(async () => {
-    if (!currentAccount || !paymentsEnabled) return;
+    if (!currentAccount || !paymentsEnabled) {
+      console.log('Skipping subscription fetch:', {
+        hasCurrentAccount: !!currentAccount,
+        paymentsEnabled,
+        currentAccountUid: currentAccount?.uid
+      });
+      return;
+    }
 
     try {
       setLoading(true);
@@ -89,6 +96,10 @@ export default function SubscriptionPage() {
         const data = await response.json();
 
         console.log('Subscription data received:', data);
+        console.log('Subscription data type:', typeof data);
+        console.log('Subscription data keys:', data ? Object.keys(data) : 'null');
+        console.log('Subscription status:', data?.status);
+        console.log('Subscription amount:', data?.amount);
         setCurrentSubscription(data);
 
         // Set amount from current subscription
@@ -403,8 +414,29 @@ export default function SubscriptionPage() {
 
         <div className="space-y-4 md:space-y-6">
 
+          {/* Debug info - remove after fixing */}
+          {process.env.NODE_ENV === 'development' && (
+            <Card className="bg-yellow-50 border-yellow-200">
+              <CardContent className="p-4">
+                <h4 className="font-medium mb-2">Debug Info:</h4>
+                <pre className="text-xs bg-white p-2 rounded border overflow-auto">
+                  {JSON.stringify({
+                    loading,
+                    currentSubscription,
+                    paymentsEnabled,
+                    hasSubscription: !!currentSubscription,
+                    subscriptionKeys: currentSubscription ? Object.keys(currentSubscription) : null,
+                    currentAccount: currentAccount?.uid,
+                    session: session?.uid,
+                    isAuthenticated
+                  }, null, 2)}
+                </pre>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Current Subscription Status */}
-          {currentSubscription && currentSubscription.status && currentSubscription.status !== null && (
+          {currentSubscription && (currentSubscription.status || currentSubscription.amount) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
