@@ -61,7 +61,7 @@ export function PaymentStep({
 
   const [paymentError, setPaymentError] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [formValid, setFormValid] = useState(false);
+  const [paymentElementComplete, setPaymentElementComplete] = useState(false);
   const [customerLocation, setCustomerLocation] = useState<{
     country: string;
     state?: string;
@@ -70,6 +70,11 @@ export function PaymentStep({
   const [isCalculatingTax, setIsCalculatingTax] = useState(false);
   const [billingAddressCollapsed, setBillingAddressCollapsed] = useState(false);
   const [billingAddressComplete, setBillingAddressComplete] = useState(false);
+
+  // Computed form validity based on both payment and address completion
+  const formValid = useExistingPayment
+    ? !!selectedExistingMethod
+    : paymentElementComplete && billingAddressComplete;
 
   // Existing payment methods state
   const [existingPaymentMethods, setExistingPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -137,10 +142,12 @@ export function PaymentStep({
       // Mark billing address as complete
       setBillingAddressComplete(true);
 
-      // Auto-collapse if complete and not already collapsed
-      if (!billingAddressCollapsed) {
-        setBillingAddressCollapsed(true);
-      }
+      // Only auto-collapse after a delay to allow user to finish entering data
+      setTimeout(() => {
+        if (event.complete && !billingAddressCollapsed) {
+          setBillingAddressCollapsed(true);
+        }
+      }, 3000); // 3 second delay before auto-collapse
 
       // Trigger tax calculation
       if (address.country && address.state) {
@@ -158,7 +165,7 @@ export function PaymentStep({
   // Handle payment element changes for validation
   const handlePaymentElementChange = (event: any) => {
     if (!useExistingPayment) {
-      setFormValid(event.complete);
+      setPaymentElementComplete(event.complete);
       if (event.error) {
         setPaymentError(event.error.message);
       } else {
@@ -172,17 +179,15 @@ export function PaymentStep({
     setUseExistingPayment(useExisting);
     setPaymentError('');
 
-    if (useExisting && selectedExistingMethod) {
-      setFormValid(true);
-    } else {
-      setFormValid(false);
+    // Reset payment element state when switching
+    if (!useExisting) {
+      setPaymentElementComplete(false);
     }
   };
 
   // Handle existing payment method selection
   const handleExistingMethodSelect = (methodId: string) => {
     setSelectedExistingMethod(methodId);
-    setFormValid(true);
     setPaymentError('');
   };
 
