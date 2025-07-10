@@ -275,23 +275,15 @@ export default function TrendingPages({ limit = 5 }) {
                 <div className="text-sm text-muted-foreground flex items-center gap-2">
                   <span>by{' '}</span>
                   {page.userId ? (
-                    <>
-                      <span
-                        className="text-primary hover:underline cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.location.href = `/user/${page.userId}`;
-                        }}
-                      >
-                        {page.username || 'Anonymous'}
-                      </span>
-                      <SubscriptionTierBadge
-                        tier={page.tier}
-                        status={page.subscriptionStatus}
-                        amount={page.subscriptionAmount}
-                        size="sm"
-                      />
-                    </>
+                    <UsernameBadge
+                      userId={page.userId}
+                      username={page.username || 'Anonymous'}
+                      tier={page.tier}
+                      subscriptionStatus={page.subscriptionStatus}
+                      subscriptionAmount={page.subscriptionAmount}
+                      size="sm"
+                      onClick={(e) => e.stopPropagation()}
+                    />
                   ) : (
                     <span>Anonymous</span>
                   )}
