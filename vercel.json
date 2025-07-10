@@ -1,20 +1,25 @@
 {
-    "buildCommand": "npm run build",
-    "env": {
-        "SKIP_TYPE_CHECK": "1",
-        "NODE_OPTIONS": "--max_old_space_size=4096",
-        "GOOGLE_APPLICATION_CREDENTIALS": ""
-    },
-    "github": {
-        "silent": false,
-        "autoJobCancelation": true,
-        "enabled": true
-    },
-    "git": {
-        "deploymentEnabled": {
-            "main": true,
-            "dev": true
-        }
-    },
-    "ignoreCommand": "if [[ \"$VERCEL_GIT_COMMIT_REF\" == \"dependabot\"* ]]; then exit 0; else exit 1; fi"
+  "buildCommand": "npm run build",
+  "env": {
+    "SKIP_TYPE_CHECK": "1",
+    "NODE_OPTIONS": "--max_old_space_size=4096",
+    "GOOGLE_APPLICATION_CREDENTIALS": ""
+  },
+  "github": {
+    "silent": false,
+    "autoJobCancelation": true,
+    "enabled": true
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "dev": true
+    }
+  },
+  "functions": {
+    "app/api/**/*.{js,ts}": {
+      "maxDuration": 30
+    }
+  },
+  "ignoreCommand": "if [[ \"$VERCEL_GIT_COMMIT_REF\" == \"dependabot\"* ]]; then exit 0; else exit 1; fi"
 }
