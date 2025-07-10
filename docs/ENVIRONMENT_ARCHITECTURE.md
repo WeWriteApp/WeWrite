@@ -24,7 +24,8 @@ WeWrite uses a **four-environment architecture** with strict data separation to 
 The system automatically detects environments using:
 - `VERCEL_ENV` (set by Vercel: `production`, `preview`, or undefined)
 - `NODE_ENV` (standard Node.js environment variable)
-- `SUBSCRIPTION_ENV` (optional override for subscription data)
+
+Vercel automatically handles environment switching - no manual configuration needed!
 
 ### 3. **Safe Defaults**
 - Unknown environments default to development mode (isolated data)
@@ -36,7 +37,6 @@ The system automatically detects environments using:
 ```bash
 # Environment Detection
 NODE_ENV=development
-SUBSCRIPTION_ENV=development
 # VERCEL_ENV is undefined (not on Vercel)
 
 # Result: Uses dev_ prefixed collections
