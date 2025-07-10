@@ -270,26 +270,24 @@ export default function SpendTokensPage() {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
 
-      {/* Debug info for spend tokens */}
-      <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded p-4">
-        <h4 className="font-medium mb-2">Debug Info (Spend Tokens):</h4>
-        <pre className="text-xs bg-white p-2 rounded border overflow-auto">
-          {JSON.stringify({
-            hasCurrentAccount: !!currentAccount,
-            currentAccountUid: currentAccount?.uid,
-            paymentsEnabled,
-            loading,
-            hasCurrentSubscription: !!currentSubscription,
-            currentSubscription,
-            hasTokenBalance: !!tokenBalance,
-            tokenBalance,
-            hasAllocationData: !!allocationData,
-            allocationData,
-            hasSimulatedTokenBalance: !!simulatedTokenBalance,
-            simulatedTokenBalance
-          }, null, 2)}
-        </pre>
-      </div>
+      {/* Debug info moved to console */}
+      {process.env.NODE_ENV === 'development' && (() => {
+        console.log('[SpendTokensPage] Debug Info:', {
+          hasCurrentAccount: !!currentAccount,
+          currentAccountUid: currentAccount?.uid,
+          paymentsEnabled,
+          loading,
+          hasCurrentSubscription: !!currentSubscription,
+          currentSubscription,
+          hasTokenBalance: !!tokenBalance,
+          tokenBalance,
+          hasAllocationData: !!allocationData,
+          allocationData,
+          hasSimulatedTokenBalance: !!simulatedTokenBalance,
+          simulatedTokenBalance
+        });
+        return null;
+      })()}
 
       {loading ? (
         <div className="flex justify-center my-12">

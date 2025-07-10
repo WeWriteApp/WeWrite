@@ -197,16 +197,18 @@ function UnifiedSidebarContent({
 
   const criticalSettingsStatus = getMostCriticalSettingsStatus();
 
-  // Debug subscription status
+  // Debug subscription status (console only, less spammy)
   React.useEffect(() => {
-    console.warn('Sidebar subscription status:', {
-      paymentsEnabled,
-      hasActiveSubscription,
-      shouldShowSubscriptionWarning,
-      warningVariant,
-      bankSetupStatus: bankSetupStatus.isSetup,
-      criticalSettingsStatus
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[UnifiedSidebar] Subscription status:', {
+        paymentsEnabled,
+        hasActiveSubscription,
+        shouldShowSubscriptionWarning,
+        warningVariant,
+        bankSetupStatus: bankSetupStatus.isSetup,
+        criticalSettingsStatus
+      });
+    }
   }, [paymentsEnabled, hasActiveSubscription, shouldShowSubscriptionWarning, warningVariant, bankSetupStatus.isSetup, criticalSettingsStatus]);
 
   // Check if map feature is enabled

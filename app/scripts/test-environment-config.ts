@@ -88,7 +88,7 @@ function testEnvironmentScenarios() {
   
   const scenarios = [
     { VERCEL_ENV: 'production', NODE_ENV: 'production', expected: '' },
-    { VERCEL_ENV: 'preview', NODE_ENV: 'production', expected: 'preview_' },
+    { VERCEL_ENV: 'preview', NODE_ENV: 'production', expected: '' }, // Preview uses production data
     { VERCEL_ENV: undefined, NODE_ENV: 'development', expected: 'dev_' },
     { VERCEL_ENV: undefined, NODE_ENV: 'test', expected: 'dev_' }
   ];

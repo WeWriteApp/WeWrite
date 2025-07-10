@@ -91,72 +91,7 @@ const useRecentActivity = (
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Helper function to get username and subscription info from Firestore (primary) or Firebase Realtime Database (fallback)
-  const getUsernameById = async (userId) => {
-    try {
-      if (!userId) return { username: null };
-
-      let username = null;
-      let tier = null;
-      let subscriptionStatus = null;
-    let subscriptionAmount = null;
-
-      // First try to get username from Firestore (this is the primary source)
-      try {
-        const userDocRef = doc(db, "users", userId);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          if (userData.username) {
-            username = userData.username;
-          }
-        }
-
-        // Get subscription information from API instead of direct Firestore access
-        try {
-          const response = await fetch(`/api/user-subscription?userId=${userId}`);
-          if (response.ok) {
-            const subscriptionData = await response.json();
-            tier = subscriptionData.tier;
-            subscriptionStatus = subscriptionData.status;
-            subscriptionAmount = subscriptionData.amount;
-          }
-        } catch (error) {
-          console.error('Error fetching subscription data for activity:', error);
-          // Keep defaults (null values)
-        }
-      } catch (firestoreErr) {
-        console.error("Error fetching user data from Firestore:", firestoreErr);
-        // Continue to try RTDB as fallback for username
-      }
-
-      // Fallback to RTDB if Firestore doesn't have the username
-      if (!username) {
-        const rtdb = getDatabase();
-        const userRef = ref(rtdb, `users/${userId}`);
-        const snapshot = await get(userRef);
-
-        if (snapshot.exists()) {
-          const userData = snapshot.val();
-          username = userData.username || userData.displayName || (userData.email ? userData.email.split('@')[0] : null);
-        }
-      }
-
-      // Use centralized tier determination logic
-      const effectiveTier = getEffectiveTier(subscriptionAmount, tier, subscriptionStatus);
-
-      return {
-        username,
-        tier: effectiveTier,
-        subscriptionStatus,
-        subscriptionAmount
-      };
-    } catch (err) {
-      console.error("Error fetching user data:", err);
-      return { username: null };
-    }
-  };
+  // Note: Individual user data fetching has been replaced with batch API calls for efficiency
 
   // Simplified page access check - all pages are now public
   const checkPageGroupAccess = async (pageData) => {

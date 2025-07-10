@@ -23,6 +23,17 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Documentation
+
+### Subscription System
+- **[Subscription System Overview](docs/SUBSCRIPTION_SYSTEM.md)** - Complete architecture and implementation details
+- **[Troubleshooting Guide](docs/SUBSCRIPTION_TROUBLESHOOTING.md)** - Common issues and solutions
+- **[Quick Reference](docs/SUBSCRIPTION_QUICK_REFERENCE.md)** - Developer cheat sheet
+
+### Development
+- Environment setup and configuration
+- API endpoint documentation
+- Database schema and relationships
 
 ## Tools & Platforms
 

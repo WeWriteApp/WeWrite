@@ -109,8 +109,8 @@ export function EmbeddedCheckoutSummary() {
       description: "Migrates unfunded allocations to funded subscription"
     },
     {
-      endpoint: "/api/subscription/sync",
-      description: "Synchronizes subscription data between Stripe and Firebase"
+      endpoint: "/api/subscription/simple",
+      description: "Simple subscription management API (GET/POST/PATCH/DELETE)"
     }
   ];
 

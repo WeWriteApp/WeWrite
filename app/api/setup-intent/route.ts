@@ -67,10 +67,24 @@ export async function POST(request: NextRequest) {
       // Get user email from Firebase Auth
       const userRecord = await auth.getUser(userId);
 
+      // Get username from Firestore
+      let username = 'Unknown User';
+      try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          username = userData?.username || userData?.displayName || userRecord.email?.split('@')[0] || 'Unknown User';
+        }
+      } catch (error) {
+        console.warn('Could not fetch username for Stripe customer:', error);
+      }
+
       const customer = await stripe.customers.create({
         email: userRecord.email,
+        description: `WeWrite user ${username} (${userId})`,
         metadata: {
-          firebaseUID: userId}});
+          firebaseUID: userId,
+          username: username}});
 
       customerId = customer.id;
 

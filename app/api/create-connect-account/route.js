@@ -62,11 +62,26 @@ export async function POST(request) {
 
     // If the user doesn't have a connected account, create one
     if (!accountId) {
+      // Get username for better account identification
+      let username = 'Unknown User';
+      try {
+        if (userData.username) {
+          username = userData.username;
+        } else if (userData.displayName) {
+          username = userData.displayName;
+        } else if (userEmail) {
+          username = userEmail.split('@')[0];
+        }
+      } catch (error) {
+        console.warn('Could not determine username for Stripe account:', error);
+      }
+
       const account = await stripe.accounts.create({
         type: 'express',
         email: userEmail,
         metadata: {
-          firebaseUID: userId}});
+          firebaseUID: userId,
+          username: username}});
 
       accountId = account.id;
 

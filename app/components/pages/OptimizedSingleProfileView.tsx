@@ -65,21 +65,23 @@ export default function OptimizedSingleProfileView({
       try {
         setIsLoadingTier(true);
         
-        // Import subscription functions dynamically
-        const { setupOptimizedSubscriptionListener } = await import("../../firebase/optimizedSubscription");
-        
-        const unsubscribe = setupOptimizedSubscriptionListener(
-          profile.uid,
-          (subscription) => {
+        // Use API-first approach instead of complex optimized subscription
+        try {
+          const response = await fetch(`/api/account-subscription?userId=${profile.uid}`);
+          if (response.ok) {
+            const data = await response.json();
+            const subscription = data.hasSubscription ? data.fullData : null;
             setSupporterTier(subscription?.tier || null);
-            setIsLoadingTier(false);
-          },
-          (error) => {
-            console.error('Error loading subscription:', error);
+          } else {
             setSupporterTier(null);
-            setIsLoadingTier(false);
           }
-        );
+        } catch (error) {
+          console.error('Error loading subscription:', error);
+          setSupporterTier(null);
+        }
+        setIsLoadingTier(false);
+
+        const unsubscribe = () => {}; // No cleanup needed for API calls
 
         return unsubscribe;
       } catch (error) {

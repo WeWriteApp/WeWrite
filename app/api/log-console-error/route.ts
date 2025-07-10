@@ -20,15 +20,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { level } = body
 
-    // Only process errors and warnings, skip regular logs and info to reduce terminal spam
-    if (level === 'log' || level === 'info') {
-      return NextResponse.json({ success: true, skipped: true })
-    }
-
-    // JSON already parsed above for level check
-
+    // Extract all fields from body, including message for filtering
     const {
-      message,
+      message = '',
       timestamp,
       url,
       userAgent,
@@ -55,6 +49,28 @@ export async function POST(request: NextRequest) {
       errorName,
       additionalContext
     } = body
+
+    // Skip common non-critical errors to reduce spam
+    const ignoredErrors = [
+      'ResizeObserver loop limit exceeded',
+      'Non-Error promise rejection captured',
+      'Script error',
+      'Network request failed',
+      'Loading chunk',
+      'ChunkLoadError',
+      'Loading CSS chunk',
+      'Unsupported prop change: options.clientSecret', // Stripe warning
+      'You may test your Stripe.js integration over HTTP' // Stripe dev warning
+    ]
+
+    if (ignoredErrors.some(ignored => message.includes(ignored))) {
+      return NextResponse.json({ success: true, skipped: true })
+    }
+
+    // Only process errors and important warnings
+    if (level === 'log' || level === 'info') {
+      return NextResponse.json({ success: true, skipped: true })
+    }
 
     // Check if this is a subscription error for enhanced logging
     const isSubscriptionError = [

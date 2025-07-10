@@ -18,18 +18,24 @@ export async function GET(request: NextRequest) {
     });
 
     // Get authenticated user
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      console.log('[ACCOUNT SUBSCRIPTION] No userId found, returning 401');
+    const authenticatedUserId = await getUserIdFromRequest(request);
+    if (!authenticatedUserId) {
+      console.log('[ACCOUNT SUBSCRIPTION] No authenticated user found, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('[ACCOUNT SUBSCRIPTION] Authenticated user:', userId);
+    // Check if a specific userId is requested via query parameter
+    const url = new URL(request.url);
+    const requestedUserId = url.searchParams.get('userId');
+    const targetUserId = requestedUserId || authenticatedUserId;
+
+    console.log('[ACCOUNT SUBSCRIPTION] Authenticated user:', authenticatedUserId);
+    console.log('[ACCOUNT SUBSCRIPTION] Target user:', targetUserId);
 
     // Get the user's subscription from Firestore using server-side function
-    const subscription = await getUserSubscriptionServer(userId, { verbose: true });
+    const subscription = await getUserSubscriptionServer(targetUserId, { verbose: true });
 
-    console.log(`[ACCOUNT SUBSCRIPTION] Subscription data for user ${userId}:`, {
+    console.log(`[ACCOUNT SUBSCRIPTION] Subscription data for user ${targetUserId}:`, {
       hasSubscription: !!subscription,
       status: subscription?.status,
       amount: subscription?.amount,
@@ -39,11 +45,22 @@ export async function GET(request: NextRequest) {
     });
 
     if (!subscription) {
-      return NextResponse.json({ status: null });
+      return NextResponse.json({
+        hasSubscription: false,
+        status: null,
+        fullData: null
+      });
     }
 
-    // Return the subscription data
-    return NextResponse.json(subscription);
+    // Return the subscription data in the expected format
+    return NextResponse.json({
+      hasSubscription: true,
+      status: subscription.status,
+      amount: subscription.amount,
+      tokens: subscription.tokens,
+      cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+      fullData: subscription
+    });
   } catch (error) {
     console.error('Error fetching user subscription data:', error);
     return NextResponse.json(

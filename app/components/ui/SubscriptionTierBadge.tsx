@@ -30,8 +30,9 @@ export function SubscriptionTierBadge({
     lg: { icon: 16, gap: 'gap-1' }
   };
 
-  // Show loading state if explicitly loading
-  if (isLoading) {
+  // Show loading state if explicitly loading OR if no data is provided (fallback loading state)
+  // Note: tier can be 0 (which is falsy), so check for null/undefined specifically
+  if (isLoading || (tier == null && status == null && amount == null)) {
     return (
       <TooltipProvider>
         <Tooltip>

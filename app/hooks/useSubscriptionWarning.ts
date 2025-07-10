@@ -1,130 +1,109 @@
-"use client";
+/**
+ * useSubscriptionWarning Hook
+ *
+ * Provides subscription warning state and status information for UI components
+ */
 
 import { useState, useEffect } from 'react';
 import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 import { useFeatureFlag } from '../utils/feature-flags';
-import { getSubscriptionStatusInfo } from '../utils/subscriptionStatus';
-import { useSmartSubscriptionState } from './useSmartSubscriptionState';
 
-/**
- * Hook to determine when to show subscription warning indicators
- * 
- * Returns information about whether warning dots should be shown
- * based on the user's subscription status.
- */
-export function useSubscriptionWarning() {
-  const { session, isAuthenticated } = useCurrentAccount();
+interface UseSubscriptionWarningReturn {
+  shouldShowWarning: boolean;
+  warningVariant: 'warning' | 'error' | 'critical';
+  hasActiveSubscription: boolean | null;
+  paymentsEnabled: boolean;
+  subscriptionStatus: string | null;
+  isLoading: boolean;
+}
+
+export function useSubscriptionWarning(): UseSubscriptionWarningReturn {
+  const { session } = useCurrentAccount();
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
-  const [subscriptionStatusInfo, setSubscriptionStatusInfo] = useState<any>(null);
-  // Check payments feature flag with proper user ID for real-time updates
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check if payments feature is enabled
   const paymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
 
-  // Use smart subscription state with optimized polling for warning checks
-  const { subscription, isLoading } = useSmartSubscriptionState({
-    enableRealTime: false, // Use polling for warning checks to reduce real-time listeners
-    pollInterval: 10 * 60 * 1000, // 10 minutes for warning checks
-    staleThreshold: 15 * 60 * 1000, // 15 minutes stale threshold
-    offlineFirst: true
-  });
-
   useEffect(() => {
-    if (!isAuthenticated || !session?.uid || !paymentsEnabled) {
+    if (!session?.uid || !paymentsEnabled) {
+      setIsLoading(false);
       setHasActiveSubscription(null);
-      setSubscriptionStatusInfo(null);
+      setSubscriptionStatus(null);
       return;
     }
 
-    if (subscription) {
-      const statusInfo = getSubscriptionStatusInfo(
-        subscription.status,
-        subscription.cancelAtPeriodEnd,
-        subscription.currentPeriodEnd
-      );
+    const checkSubscriptionStatus = async () => {
+      try {
+        setIsLoading(true);
 
-      // Reduced logging: only log when status changes
-      // console.warn('Subscription warning hook - subscription found:', {
-      //   subscription,
-      //   statusInfo,
-      //   isActive: statusInfo.isActive
-      // });
+        // Use the single source of truth API
+        const response = await fetch('/api/account-subscription');
 
-      setHasActiveSubscription(statusInfo.isActive);
-      setSubscriptionStatusInfo(statusInfo);
-    } else {
-      // Reduced logging: console.warn('Subscription warning hook - no subscription found');
-      setHasActiveSubscription(false);
-      setSubscriptionStatusInfo(null);
-    }
-  }, [isAuthenticated, session?.uid, paymentsEnabled, subscription]);
+        if (!response.ok) {
+          console.warn('Failed to fetch subscription data:', response.status);
+          setHasActiveSubscription(false);
+          setSubscriptionStatus(null);
+          return;
+        }
 
-  // Determine if warning should be shown
-  // Only show warnings for truly problematic states, not for active subscriptions that are cancelling
-  const shouldShowWarning = paymentsEnabled &&
-    isAuthenticated &&
-    !isLoading &&
-    (hasActiveSubscription === false ||
-     (subscriptionStatusInfo && ['canceled', 'past_due', 'unpaid', 'incomplete'].includes(subscriptionStatusInfo.status)));
+        const data = await response.json();
 
-  // Reduced debug logging - only log when there are actual warnings
-  if (shouldShowWarning) {
-    console.warn('Subscription warning active:', {
-      paymentsEnabled,
-      isAuthenticated,
-      hasActiveSubscription,
-      subscriptionStatus: subscriptionStatusInfo?.status,
-      shouldShowWarning
-    });
-  }
+        if (data?.hasSubscription && data.fullData) {
+          const subscription = data.fullData;
 
-  // Get warning variant based on subscription status
-  const getWarningVariant = () => {
-    if (!subscriptionStatusInfo) {
+          // Proper active check - active status and not cancelled at period end
+          const isActive = subscription.status === 'active' && !subscription.cancelAtPeriodEnd;
+
+          setHasActiveSubscription(isActive);
+          setSubscriptionStatus(subscription.status);
+        } else {
+          // No subscription found
+          setHasActiveSubscription(false);
+          setSubscriptionStatus(null);
+        }
+      } catch (error) {
+        console.error('Error checking subscription status:', error);
+        setHasActiveSubscription(false);
+        setSubscriptionStatus(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkSubscriptionStatus();
+  }, [session?.uid, paymentsEnabled]);
+
+  // Determine if we should show a warning
+  const shouldShowWarning = paymentsEnabled && 
+    hasActiveSubscription !== null && 
+    hasActiveSubscription === false;
+
+  // Determine warning variant based on subscription status
+  const getWarningVariant = (): 'warning' | 'error' | 'critical' => {
+    if (!subscriptionStatus) {
       return 'warning'; // No subscription
     }
 
-    switch (subscriptionStatusInfo.status) {
+    switch (subscriptionStatus.toLowerCase()) {
       case 'past_due':
       case 'unpaid':
         return 'critical';
+      case 'canceled':
       case 'incomplete':
         return 'error';
-      case 'cancelling':
-      case 'canceled':
-        return 'warning';
       default:
         return 'warning';
-    }
-  };
-
-  // Get user-friendly warning message
-  const getWarningMessage = () => {
-    if (!subscriptionStatusInfo) {
-      return 'No active subscription';
-    }
-
-    switch (subscriptionStatusInfo.status) {
-      case 'past_due':
-        return 'Payment failed - subscription at risk';
-      case 'unpaid':
-        return 'Payment required to continue';
-      case 'incomplete':
-        return 'Payment information needed';
-      case 'cancelling':
-        return 'Subscription cancelling soon';
-      case 'canceled':
-        return 'Subscription has been canceled';
-      default:
-        return 'Subscription needs attention';
     }
   };
 
   return {
     shouldShowWarning,
     warningVariant: getWarningVariant(),
-    warningMessage: getWarningMessage(),
-    subscriptionStatus: subscriptionStatusInfo?.status,
     hasActiveSubscription,
-    isLoading,
-    paymentsEnabled
+    paymentsEnabled,
+    subscriptionStatus,
+    isLoading
   };
 }

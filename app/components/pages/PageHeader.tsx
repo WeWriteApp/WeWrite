@@ -808,7 +808,7 @@ export default function PageHeader({
                       )}
                     </h1>
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      by {displayUsername}
+                      by <span className={subscriptionStatus === 'active' ? 'text-accent-foreground' : 'text-muted-foreground'}>{displayUsername}</span>
                       {shouldShowSubscriptionBadge && (
                         <SubscriptionInfoModal
                           currentTier={tier || DEFAULT_SUBSCRIPTION.tier}
@@ -1139,7 +1139,7 @@ export default function PageHeader({
                                 Loading...
                               </span>
                             ) : (
-                              <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">
+                              <span data-component-name="PageHeader" className={`overflow-hidden text-ellipsis ${subscriptionStatus === 'active' ? 'text-accent-foreground' : ''}`}>
                                 {displayUsername}
                               </span>
                             )}
@@ -1152,7 +1152,7 @@ export default function PageHeader({
                                 Loading...
                               </span>
                             ) : (
-                              <span data-component-name="PageHeader" className="overflow-hidden text-ellipsis">
+                              <span data-component-name="PageHeader" className={`overflow-hidden text-ellipsis ${subscriptionStatus === 'active' ? 'text-accent-foreground' : ''}`}>
                                 {displayUsername}
                               </span>
                             )}

@@ -15,7 +15,7 @@ import { TokenService } from '../../../services/tokenService';
 import { calculateTokensForAmount } from '../../../utils/subscriptionTiers';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
 import { PaymentRecoveryService } from '../../../services/paymentRecoveryService';
-import { SubscriptionSynchronizationService } from '../../../services/subscriptionSynchronizationService';
+// Removed SubscriptionSynchronizationService - using simplified approach
 import { FinancialUtils, CorrelationId } from '../../../types/financial';
 
 // Initialize Stripe
@@ -250,37 +250,37 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
       return;
     }
 
-    // Use synchronization service to prevent race conditions
-    const syncService = SubscriptionSynchronizationService.getInstance();
-    const correlationId = FinancialUtils.generateCorrelationId();
+    // Simplified approach - directly update subscription without complex synchronization
+    const correlationId = `payment_${invoice.id}_${Date.now()}`;
 
-    const syncOperation = {
-      type: 'webhook' as const,
-      source: 'invoice.payment_succeeded',
-      timestamp: new Date(),
-      correlationId,
-      subscriptionData: {
-        stripeSubscriptionId: subscription.id,
-        status: 'active', // Always set to active on successful payment
-        currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-        cancelAtPeriodEnd: subscription.cancel_at_period_end,
-        lastPaymentAt: new Date(invoice.created * 1000).toISOString(),
-        failureCount: 0, // Reset failure count on successful payment
-        lastFailedPaymentAt: null, // Clear failed payment timestamp
+    const subscriptionData = {
+      stripeSubscriptionId: subscription.id,
+      status: 'active', // Always set to active on successful payment
+      currentPeriodStart: new Date(subscription.current_period_start * 1000),
+      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      lastPaymentAt: new Date(invoice.created * 1000),
+      failureCount: 0, // Reset failure count on successful payment
+      lastFailedPaymentAt: null, // Clear failed payment timestamp
         lastFailedInvoiceId: null, // Clear failed invoice ID
-        updatedAt: serverTimestamp()}
+        updatedAt: serverTimestamp()
     };
 
-    const syncResult = await syncService.synchronizeSubscription(userId, subscription.id, syncOperation);
+    // Simplified direct update to Firestore
+    try {
+      const { parentPath, subCollectionName } = getSubCollectionPath(
+        PAYMENT_COLLECTIONS.USERS,
+        userId,
+        PAYMENT_COLLECTIONS.SUBSCRIPTIONS
+      );
 
-    if (!syncResult.success) {
-      console.error(`[SUBSCRIPTION WEBHOOK] Failed to synchronize subscription for user ${userId}:`, syncResult.message);
-      if (syncResult.conflict) {
-        console.warn(`[SUBSCRIPTION WEBHOOK] Sync conflict detected, will be resolved automatically`);
-      }
-    } else {
-      console.log(`[SUBSCRIPTION WEBHOOK] Successfully synchronized subscription for user ${userId}`);
+      const subscriptionRef = doc(db, parentPath, subCollectionName, 'current');
+      await updateDoc(subscriptionRef, subscriptionData);
+
+      console.log(`[SUBSCRIPTION WEBHOOK] Successfully updated subscription for user ${userId}`);
+    } catch (error) {
+      console.error(`[SUBSCRIPTION WEBHOOK] Failed to update subscription for user ${userId}:`, error);
+      throw error;
     }
 
     // Ensure token allocation is up to date

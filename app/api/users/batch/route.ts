@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { executeDeduplicatedOperation } from '../../../utils/serverRequestDeduplication';
+import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getEffectiveTier } from '../../../utils/subscriptionTiers';
 
 interface UserData {
   uid: string;
@@ -124,10 +126,16 @@ async function fetchBatchUserDataInternal(
         const usersQuery = db.collection('users').where('__name__', 'in', batch);
         const usersSnapshot = await usersQuery.get();
 
-        // Fetch subscription data in parallel
+        // Fetch subscription data in parallel using environment-aware paths
         const subscriptionPromises = batch.map(async (userId) => {
           try {
-            const subDoc = await db.collection('users').doc(userId).collection('subscription').doc('current').get();
+            // Use environment-aware collection paths
+            const { parentPath, subCollectionName } = getSubCollectionPath(
+              PAYMENT_COLLECTIONS.USERS,
+              userId,
+              PAYMENT_COLLECTIONS.SUBSCRIPTIONS
+            );
+            const subDoc = await db.doc(parentPath).collection(subCollectionName).doc('current').get();
             return {
               userId,
               subscription: subDoc.exists ? subDoc.data() : null
@@ -156,12 +164,14 @@ async function fetchBatchUserDataInternal(
             subscription?.status || null
           );
 
+
+
           const user: UserData = {
             uid: doc.id,
             username: userData.username,
             displayName: userData.displayName,
             email: userData.email,
-            tier: effectiveTier,
+            tier: String(effectiveTier), // Ensure tier is always a string
             subscriptionStatus: subscription?.status,
             subscriptionAmount: subscription?.amount,
             pageCount: userData.pageCount || 0,

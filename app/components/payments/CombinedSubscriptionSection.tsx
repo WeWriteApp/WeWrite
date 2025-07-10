@@ -22,8 +22,7 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import Link from 'next/link';
-import { listenToUserPledges } from '../../firebase/subscription';
-import { createOptimizedSubscriptionListener } from '../../firebase/optimizedSubscription';
+// Removed old optimized subscription import - using API-first approach
 import { getDocById } from '../../firebase/database';
 import { PaymentMethodSetup } from './PaymentMethodSetup';
 import { FailedPaymentRecovery } from './FailedPaymentRecovery';
@@ -91,23 +90,27 @@ function CombinedSubscriptionSectionInner() {
       setSubscriptionLoading(true);
       setSubscriptionError(null);
 
-      // Set up optimized real-time listener for subscription changes
-      const unsubscribe = createOptimizedSubscriptionListener(session.uid, (subscriptionData) => {
-        try {
+      // Use API-first approach instead of complex optimized subscription
+      try {
+        const response = await fetch('/api/account-subscription');
+        if (response.ok) {
+          const data = await response.json();
+          const subscriptionData = data.hasSubscription ? data.fullData : null;
           setSubscriptionError(null);
           setSubscription(subscriptionData);
-        } catch (error) {
-          console.error('Error processing subscription:', error);
+          console.log('[CombinedSubscriptionSection] Received subscription data:', subscriptionData);
+        } else {
           setSubscriptionError('Failed to load subscription details');
-        } finally {
-          setSubscriptionLoading(false);
         }
-      }, { verbose: process.env.NODE_ENV === 'development' });
+      } catch (error) {
+        console.error('Error processing subscription:', error);
+        setSubscriptionError('Failed to load subscription details');
+      } finally {
+        setSubscriptionLoading(false);
+      }
 
-      // Store unsubscribe function for cleanup
-      return () => {
-        if (unsubscribe) unsubscribe();
-      };
+      // No cleanup needed for API calls
+      return () => {};
     } catch (error) {
       console.error('Error setting up subscription listener:', error);
       setSubscriptionError('Failed to load subscription');
@@ -143,46 +146,21 @@ function CombinedSubscriptionSectionInner() {
       setPledgesLoading(true);
       setPledgesError(null);
 
-      const unsubscribe = listenToUserPledges(currentAccount.uid, async (pledgesData) => {
-        try {
-          if (!pledgesData || pledgesData.length === 0) {
-            setPledges([]);
-            setPledgesLoading(false);
-            return;
-          }
-
-          // Fetch page details for each pledge
-          const pledgesWithDetails = await Promise.all(
-            pledgesData.map(async (pledge) => {
-              try {
-                const pageDoc = await getDocById('pages', pledge.pageId);
-                if (pageDoc) {
-                  return {
-                    ...pledge,
-                    pageTitle: pageDoc.title || 'Untitled Page',
-                    authorUsername: pageDoc.username,
-                    authorDisplayName: pageDoc.displayName};
-                }
-                return {
-                  ...pledge,
-                  pageTitle: 'Unknown Page'};
-              } catch (error) {
-                console.error('Error fetching page details for pledge:', error);
-                return {
-                  ...pledge,
-                  pageTitle: 'Unknown Page'};
-              }
-            })
-          );
-
-          setPledges(pledgesWithDetails);
-        } catch (error) {
-          console.error('Error processing pledges:', error);
-          setPledgesError('Failed to load pledge details');
-        } finally {
-          setPledgesLoading(false);
-        }
-      });
+      // Use API-first approach for pledges instead of real-time listeners
+      const response = await fetch('/api/pledges/list');
+      if (response.ok) {
+        const data = await response.json();
+        setPledges(data.pledges || []);
+      } else {
+        setPledgesError('Failed to load pledges');
+      }
+    } catch (error) {
+      console.error('Error fetching pledges:', error);
+      setPledgesError('Failed to load pledges');
+    } finally {
+      setPledgesLoading(false);
+    }
+  }
 
       return () => unsubscribe();
     } catch (error) {

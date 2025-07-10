@@ -80,6 +80,9 @@ export function PaymentStep({
   const formValid = useExistingPayment
     ? !!selectedExistingMethod
     : paymentElementComplete && billingAddressComplete;
+
+  // Debug log to verify component is updated
+  console.log('[PaymentStep] Form validity computed:', { formValid, useExistingPayment, selectedExistingMethod, paymentElementComplete, billingAddressComplete });
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
   const [deletingPaymentMethod, setDeletingPaymentMethod] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -100,9 +103,14 @@ export function PaymentStep({
           },
         });
 
-        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-        if (response.ok && data.paymentMethods) {
+        const data = await response.json();
+        console.log('Payment methods response:', data);
+
+        if (data.paymentMethods) {
           setExistingPaymentMethods(data.paymentMethods);
 
           // If user has payment methods, default to using existing
@@ -112,15 +120,18 @@ export function PaymentStep({
             const primaryMethod = data.paymentMethods.find((pm: PaymentMethod) => pm.isPrimary);
             if (primaryMethod) {
               setSelectedExistingMethod(primaryMethod.id);
-              setFormValid(true); // Existing payment method is already valid
+              // Form validity is computed automatically based on selectedExistingMethod
             } else {
               setSelectedExistingMethod(data.paymentMethods[0].id);
-              setFormValid(true);
+              // Form validity is computed automatically based on selectedExistingMethod
             }
           }
         }
       } catch (error) {
-        console.error('Error fetching payment methods:', error);
+        console.error('Error fetching payment methods:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          error: error
+        });
       } finally {
         setLoadingPaymentMethods(false);
       }
@@ -215,7 +226,7 @@ export function PaymentStep({
       // If this was the selected method, clear selection
       if (selectedExistingMethod === methodId) {
         setSelectedExistingMethod(null);
-        setFormValid(false);
+        // Form validity is computed automatically based on selectedExistingMethod
       }
 
       // If no payment methods left, switch to new payment method

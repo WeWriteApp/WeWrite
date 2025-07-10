@@ -241,8 +241,10 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
           if (subscriptionEnabled) {
             try {
               // Use optimized Firebase function for subscription data
-              const { getOptimizedUserSubscription } = await import('../firebase/optimizedSubscription');
-              const subscriptionData = await getOptimizedUserSubscription(session.uid, { useCache: true });
+              // Use API-first approach instead of complex optimized subscription
+              const response = await fetch('/api/account-subscription');
+              const data = response.ok ? await response.json() : null;
+              const subscriptionData = data?.hasSubscription ? data.fullData : null;
 
               if (subscriptionData && subscriptionData.status) {
                 setSubscriptions([{ ...subscriptionData }]);

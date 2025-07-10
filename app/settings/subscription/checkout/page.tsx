@@ -22,9 +22,14 @@ function CheckoutPageContent() {
   const { currentAccount } = useCurrentAccount();
   const paymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
 
-  // Debug logging
-  console.log('Checkout page - paymentsEnabled:', paymentsEnabled);
-  console.log('Checkout page - currentAccount:', currentAccount?.email, currentAccount?.uid);
+  // Debug logging (development only)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[CheckoutPage] Debug Info:', {
+      paymentsEnabled,
+      currentAccount: currentAccount?.email,
+      currentAccountUid: currentAccount?.uid
+    });
+  }
 
   // Get checkout parameters from URL
   const tier = searchParams.get('tier') || 'tier2';

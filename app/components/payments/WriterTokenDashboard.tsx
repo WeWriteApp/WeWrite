@@ -24,7 +24,7 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import EarningsChart from './EarningsChart';
 import { CompactAllocationTimer } from '../AllocationCountdownTimer';
 import { getLoggedOutTokenBalance } from '../../utils/simulatedTokens';
-import { useSimulatedState } from '../../hooks/useAdminStateSimulator';
+import { useSimulatedState } from '../../providers/AdminStateSimulatorProvider';
 
 interface WriterTokenDashboardProps {
   className?: string;

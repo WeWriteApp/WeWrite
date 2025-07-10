@@ -1,184 +1,133 @@
 /**
  * Subscription Update API
+ * 
+ * Modifies existing subscription amount/tier with test subscription detection
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
+import { getUserIdFromRequest } from '../../auth-helper';
+import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
+import { determineTierFromAmount, calculateTokensForAmount } from '../../../utils/subscriptionTiers';
+import { TokenService } from '../../../services/tokenService';
 import { initAdmin } from '../../../firebase/admin';
-import { getStripeSecretKey } from '../../../utils/stripeConfig';
-import { getUserIdFromRequest } from '../../../api/auth-helper';
-import { checkPaymentsFeatureFlag } from '../../feature-flag-helper';
-import {
-  validateCustomAmount,
-  calculateTokensForAmount,
-  getTierById,
-  CUSTOM_TIER_CONFIG
-} from '../../../utils/subscriptionTiers';
-import { ServerTokenService } from '../../../services/tokenService.server';
 
-// Initialize Firebase Admin and Stripe
-const adminApp = initAdmin();
-const adminDb = adminApp.firestore();
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-06-20'});
+// Initialize Firebase Admin
+const admin = initAdmin();
+const adminDb = admin.firestore();
+import { serverTimestamp } from 'firebase-admin/firestore';
+
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request: NextRequest) {
   try {
-    // Get authenticated user first
+    // Get authenticated user
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if payments feature is enabled for this user
-    const featureCheckResponse = await checkPaymentsFeatureFlag(userId);
-    if (featureCheckResponse) {
-      return featureCheckResponse;
-    }
-
     const body = await request.json();
-    const { subscriptionId, newTier, newAmount, skipValidation } = body;
+    const { subscriptionId, newTier, newAmount } = body;
 
-    if (!subscriptionId || !newTier) {
+    if (!subscriptionId || !newAmount) {
       return NextResponse.json({ 
-        error: 'Subscription ID and new tier are required' 
+        error: 'subscriptionId and newAmount are required' 
       }, { status: 400 });
     }
 
-    // Validate new tier and amount
-    let finalAmount: number;
-    let finalTokens: number;
+    console.log(`[SUBSCRIPTION UPDATE] User ${userId} updating subscription ${subscriptionId} to $${newAmount}`);
 
-    if (newTier === 'tier3') {
-      // Champion tier - custom amount starting at $30
-      if (!newAmount || newAmount < 30) {
-        return NextResponse.json({
-          error: 'Champion tier requires amount of $30 or more'
-        }, { status: 400 });
-      }
-
-      if (newAmount > CUSTOM_TIER_CONFIG.maxAmount) {
-        return NextResponse.json({
-          error: `Amount cannot exceed $${CUSTOM_TIER_CONFIG.maxAmount}`
-        }, { status: 400 });
-      }
-
-      finalAmount = newAmount;
-      finalTokens = calculateTokensForAmount(newAmount);
-    } else if (newTier === 'custom') {
-      // Legacy custom tier support
-      if (!newAmount || newAmount <= 0) {
-        return NextResponse.json({
-          error: 'Valid amount is required for custom tier'
-        }, { status: 400 });
-      }
-
-      // Skip minimum validation if skipValidation flag is set (for amount additions like +$10)
-      if (!skipValidation) {
-        const validation = validateCustomAmount(newAmount);
-        if (!validation.valid) {
-          return NextResponse.json({ error: validation.error }, { status: 400 });
-        }
-      } else {
-        // For skipValidation, only check maximum
-        if (newAmount > CUSTOM_TIER_CONFIG.maxAmount) {
-          return NextResponse.json({
-            error: `Amount cannot exceed $${CUSTOM_TIER_CONFIG.maxAmount}`
-          }, { status: 400 });
-        }
-      }
-
-      finalAmount = newAmount;
-      finalTokens = calculateTokensForAmount(newAmount);
-    } else {
-      const tierData = getTierById(newTier);
-      if (!tierData) {
-        return NextResponse.json({ error: 'Invalid tier selected' }, { status: 400 });
-      }
-
-      finalAmount = tierData.amount;
-      finalTokens = tierData.tokens;
-    }
-
-    // Get current subscription from Stripe
-    const currentSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+    // Check if this is a test subscription
+    const isTestSubscription = subscriptionId.startsWith('sub_test_');
     
-    // Create new price
-    const newPrice = await stripe.prices.create({
-      unit_amount: Math.round(finalAmount * 100), // Convert to cents
-      currency: 'usd',
-      recurring: {
-        interval: 'month'},
-      product_data: {
-        name: `WeWrite ${newTier === 'tier3' ? 'Champion' : newTier === 'custom' ? 'Custom' : getTierById(newTier)?.name}`,
-        metadata: {
-          tier: newTier,
-          tokens: finalTokens.toString()}}});
+    let updatedSubscription;
+    
+    if (isTestSubscription) {
+      // Handle test subscription - skip Stripe API calls
+      console.log(`[SUBSCRIPTION UPDATE] Detected test subscription ${subscriptionId}, skipping Stripe API`);
+      
+      updatedSubscription = {
+        id: subscriptionId,
+        status: 'active',
+        cancel_at_period_end: false,
+        current_period_end: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),
+        items: {
+          data: [{
+            price: {
+              unit_amount: newAmount * 100,
+              currency: 'usd'
+            }
+          }]
+        }
+      };
+    } else {
+      // Handle real subscription - call Stripe API
+      try {
+        // Get current subscription to find the price ID
+        const currentSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+        const currentPriceId = currentSubscription.items.data[0].price.id;
+        
+        // Create new price for the new amount
+        const newPrice = await stripe.prices.create({
+          unit_amount: newAmount * 100,
+          currency: 'usd',
+          recurring: { interval: 'month' },
+          product: currentSubscription.items.data[0].price.product,
+        });
 
-    // Update subscription with new price
-    const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
-      items: [
-        {
-          id: currentSubscription.items.data[0].id,
-          price: newPrice.id},
-      ],
-      proration_behavior: 'create_prorations',
-      metadata: {
-        firebaseUID: userId,
-        tier: newTier,
-        amount: finalAmount.toString(),
-        tokens: finalTokens.toString()}});
+        // Update subscription with new price
+        updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
+          items: [{
+            id: currentSubscription.items.data[0].id,
+            price: newPrice.id,
+          }],
+          proration_behavior: 'create_prorations',
+        });
+
+        console.log(`[SUBSCRIPTION UPDATE] Successfully updated Stripe subscription ${subscriptionId}`);
+      } catch (stripeError) {
+        console.error('[SUBSCRIPTION UPDATE] Stripe API error:', stripeError);
+        return NextResponse.json({ 
+          error: 'Failed to update subscription in Stripe' 
+        }, { status: 500 });
+      }
+    }
 
     // Update subscription in Firestore
-    const subscriptionRef = adminDb.collection('users').doc(userId).collection('subscriptions').doc('current');
-    await subscriptionRef.update({
-      stripePriceId: newPrice.id,
-      tier: newTier,
-      amount: finalAmount,
-      tokens: finalTokens,
-      updatedAt: new Date()});
+    const tier = newTier || determineTierFromAmount(newAmount);
+    const tokens = calculateTokensForAmount(newAmount);
+    
+    const subscriptionData = {
+      status: updatedSubscription.status,
+      amount: newAmount,
+      tier,
+      tokens,
+      cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end,
+      currentPeriodEnd: new Date(updatedSubscription.current_period_end * 1000),
+      updatedAt: serverTimestamp()
+    };
 
-    // Update user's monthly token allocation using ServerTokenService
-    await ServerTokenService.updateMonthlyTokenAllocation(userId, finalAmount);
+    const { parentPath, subCollectionName } = getSubCollectionPath(
+      PAYMENT_COLLECTIONS.USERS, 
+      userId, 
+      PAYMENT_COLLECTIONS.SUBSCRIPTIONS
+    );
+    
+    const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc('current');
+    await subscriptionRef.update(subscriptionData);
 
-    console.log(`Subscription updated for user ${userId}: ${newTier} - $${finalAmount}/mo - ${finalTokens} tokens`);
+    // Update user's token allocation
+    await TokenService.updateMonthlyTokenAllocation(userId, newAmount);
 
-    return NextResponse.json({
-      success: true,
-      message: 'Subscription updated successfully',
-      subscription: {
-        tier: newTier,
-        amount: finalAmount,
-        tokens: finalTokens,
-        currentPeriodEnd: new Date(updatedSubscription.current_period_end * 1000).toISOString(),
-        previousAmount: currentSubscription.items.data[0].price.unit_amount / 100, // Previous amount for comparison
-      }});
+    console.log(`[SUBSCRIPTION UPDATE] Successfully updated subscription for user ${userId}`);
 
-  } catch (error: any) {
+    return NextResponse.json({ 
+      success: true, 
+      subscription: subscriptionData 
+    });
+
+  } catch (error) {
     console.error('Error updating subscription:', error);
-
-    // Handle specific Stripe errors
-    if (error.type === 'StripeCardError') {
-      return NextResponse.json({
-        error: 'Payment method error: ' + error.message
-      }, { status: 402 });
-    } else if (error.type === 'StripeInvalidRequestError') {
-      // Check for specific customer-related errors
-      if (error.message.includes('No such customer') || error.message.includes('customer')) {
-        return NextResponse.json({
-          error: 'Customer account error. Please try creating a new subscription.',
-          code: 'INVALID_CUSTOMER'
-        }, { status: 400 });
-      }
-      return NextResponse.json({
-        error: 'Invalid request: ' + error.message
-      }, { status: 400 });
-    } else if (error.type === 'StripePermissionError') {
-      return NextResponse.json({
-        error: 'Permission denied: ' + error.message
-      }, { status: 403 });
-    }
-
     return NextResponse.json(
       { error: error.message || 'Failed to update subscription' },
       { status: 500 }
@@ -188,7 +137,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return NextResponse.json(
-    { error: 'Method not allowed' },
+    { error: 'Method not allowed. Use POST to update subscription.' },
     { status: 405 }
   );
 }

@@ -37,8 +37,8 @@ function testEnvironmentDetection() {
     }
   } else if (process.env.VERCEL_ENV === 'preview') {
     console.log('✅ Preview environment detected correctly');
-    if (prefix !== 'preview_') {
-      console.error('❌ ERROR: Preview should have "preview_" prefix!');
+    if (prefix !== '') {
+      console.error('❌ ERROR: Preview should have no prefix (uses production data)!');
     }
   } else {
     console.log('✅ Development environment detected correctly');

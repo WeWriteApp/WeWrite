@@ -41,9 +41,9 @@ export function TokenPieChart({
   const gapPercentage = 8; // 8% gap for clear visual separation
 
   if (isOverspent && totalTokens > 0) {
-    // When overspent, show funded (blue) and unfunded (orange) segments with gaps
-    // Reserve space for gaps before and after each segment (2 gaps total)
-    const totalVisualPercentage = 100 - (gapPercentage * 2); // Reserve space for 2 gaps
+    // When overspent, show greyed background and orange segment with gaps on both sides of orange
+    // Reserve space for gaps before and after the orange segment (2 gaps total)
+    const totalVisualPercentage = 100 - (gapPercentage * 2); // Reserve space for 2 gaps around orange
     const adjustedFundedPercentage = (fundedTokens / (fundedTokens + unfundedTokens)) * totalVisualPercentage;
     const adjustedUnfundedPercentage = (unfundedTokens / (fundedTokens + unfundedTokens)) * totalVisualPercentage;
 
@@ -100,25 +100,23 @@ export function TokenPieChart({
           )}
 
           {isOverspent ? (
-            // When overspent: show funded (blue) and unfunded (orange) segments with gaps
+            // When overspent: show greyed out background and highlight only the orange (problematic) portion with gaps on both sides
             <>
-              {/* Funded tokens segment (blue) - starts after initial gap */}
-              {fundedPercentage > 0 && (
-                <circle
-                  cx={size / 2}
-                  cy={size / 2}
-                  r={radius}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={`${(fundedPercentage / 100) * circumference} ${circumference}`}
-                  strokeDashoffset={-(gapPercentage / 100) * circumference}
-                  strokeLinecap="round"
-                  className="text-blue-600 transition-all duration-300 ease-in-out"
-                />
-              )}
+              {/* Background circle for the full allocation (greyed out) */}
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={strokeWidth}
+                strokeDasharray={`${((fundedPercentage + unfundedPercentage) / 100) * circumference} ${circumference}`}
+                strokeDashoffset={0}
+                strokeLinecap="round"
+                className="text-muted-foreground/30 transition-all duration-300 ease-in-out"
+              />
 
-              {/* Unfunded tokens segment (orange) - starts after funded + gap */}
+              {/* Unfunded tokens segment (orange) - positioned with gaps on both sides */}
               {unfundedPercentage > 0 && (
                 <circle
                   cx={size / 2}
@@ -128,7 +126,7 @@ export function TokenPieChart({
                   stroke="currentColor"
                   strokeWidth={strokeWidth}
                   strokeDasharray={`${(unfundedPercentage / 100) * circumference} ${circumference}`}
-                  strokeDashoffset={-((fundedPercentage + gapPercentage * 2) / 100) * circumference}
+                  strokeDashoffset={-((fundedPercentage + gapPercentage) / 100) * circumference}
                   strokeLinecap="round"
                   className="text-orange-600 transition-all duration-300 ease-in-out"
                 />

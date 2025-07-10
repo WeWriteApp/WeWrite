@@ -8,7 +8,7 @@ import { Badge } from '../ui/badge';
 import { CreditCard, Settings, AlertTriangle, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import { StatusIcon } from '../ui/status-icon';
 import { useFeatureFlag } from '../../utils/feature-flags';
-import { useSmartSubscriptionState } from '../../hooks/useSmartSubscriptionState';
+// Removed old smart subscription state hook - using API-first approach
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { getSubscriptionStatusInfo, getSubscriptionGuidanceMessage, getSubscriptionActionText, getCancellationTooltip } from '../../utils/subscriptionStatus';
@@ -28,13 +28,35 @@ export function SubscriptionOverview() {
   const { currentAccount } = useCurrentAccount();
   const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email);
 
-  // Use smart subscription state with real-time updates for subscription overview
-  const { subscription, isLoading: loading, error } = useSmartSubscriptionState({
-    enableRealTime: true, // Enable real-time for subscription overview
-    pollInterval: 2 * 60 * 1000, // 2 minutes fallback polling
-    staleThreshold: 5 * 60 * 1000, // 5 minutes stale threshold
-    offlineFirst: true
-  });
+  // Use API-first approach instead of complex smart subscription state
+  const [subscription, setSubscription] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetch('/api/account-subscription');
+        if (response.ok) {
+          const data = await response.json();
+          setSubscription(data.hasSubscription ? data.fullData : null);
+        } else {
+          setError('Failed to load subscription');
+        }
+      } catch (err) {
+        console.error('Error fetching subscription:', err);
+        setError('Failed to load subscription');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (currentAccount && isPaymentsEnabled) {
+      fetchSubscription();
+    }
+  }, [currentAccount, isPaymentsEnabled]);
 
   // If payments feature flag is disabled, don't render anything
   if (!isPaymentsEnabled) {

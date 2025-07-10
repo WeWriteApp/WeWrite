@@ -117,34 +117,45 @@ const SingleProfileView = ({ profile }) => {
         try {
           setIsLoadingTier(true);
 
-          // Set up a real-time listener for subscription changes
-          const { listenToUserSubscription } = await import('../../firebase/subscription');
+          // Use API-first approach for subscription data
+          const fetchSubscription = async () => {
+            try {
+              const response = await fetch(`/api/account-subscription?userId=${profile.uid}`);
+              if (response.ok) {
+                const data = await response.json();
+                const subscription = data.hasSubscription ? data.fullData : null;
+                console.log(`🔍 SingleProfileView: Fetched subscription data for user ${profile.uid}:`, subscription);
 
-          unsubscribe = listenToUserSubscription(profile.uid, (subscription) => {
-            console.log(`🔍 SingleProfileView: Fetched subscription data for user ${profile.uid}:`, subscription);
+                // Always set the subscription status if available
+                if (subscription) {
+                  setSubscriptionStatus(subscription.status);
+                  setSubscriptionAmount(subscription.amount);
 
-            // Always set the subscription status if available
-            if (subscription) {
-              setSubscriptionStatus(subscription.status);
-              setSubscriptionAmount(subscription.amount);
+                  // Use centralized tier determination logic
+                  const effectiveTier = getEffectiveTier(
+                    subscription.amount,
+                    subscription.tier,
+                    subscription.status
+                  );
 
-              // Use centralized tier determination logic
-              const effectiveTier = getEffectiveTier(
-                subscription.amount,
-                subscription.tier,
-                subscription.status
-              );
+                  setSupporterTier(effectiveTier === 'inactive' ? null : effectiveTier);
+                } else {
+                  // No subscription data
+                  setSubscriptionStatus(null);
+                  setSubscriptionAmount(null);
+                  setSupporterTier(null);
+                }
 
-              setSupporterTier(effectiveTier === 'inactive' ? null : effectiveTier);
-            } else {
-              // No subscription data
-              setSubscriptionStatus(null);
-              setSubscriptionAmount(null);
+                setIsLoadingTier(false);
+              }
+            } catch (error) {
+              console.error('Error fetching subscription data:', error);
               setSupporterTier(null);
+              setIsLoadingTier(false);
             }
+          };
 
-            setIsLoadingTier(false);
-          });
+          fetchSubscription();
         } catch (error) {
           console.error('Error setting up subscription listener:', error);
           setSupporterTier(null);
@@ -155,12 +166,8 @@ const SingleProfileView = ({ profile }) => {
 
     setupSubscriptionListener();
 
-    // Clean up the listener when the component unmounts
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
+    // No cleanup needed since we're not using real-time listeners
+    return () => {};
   }, [profile.uid, hasProvidedSubscriptionData, subscriptionEnabled]);
 
   return (
@@ -239,6 +246,7 @@ const SingleProfileView = ({ profile }) => {
               status={subscriptionStatus}
               amount={subscriptionAmount}
               size="lg"
+              isLoading={isLoadingTier}
             />
           </div>
 

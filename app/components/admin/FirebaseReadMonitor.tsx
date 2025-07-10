@@ -45,7 +45,7 @@ import {
   RefreshCw,
   AlertTriangle
 } from 'lucide-react';
-import { getReadStats } from '../../firebase/optimizedSubscription';
+// Removed old optimized subscription import - read stats no longer needed
 import { getPageReadStats } from '../../firebase/optimizedPages';
 import { getQueryStatsSummary } from '../../utils/queryMonitor';
 import { getCacheStats } from '../../utils/cacheUtils';
@@ -84,8 +84,8 @@ export const FirebaseReadMonitor: React.FC = () => {
   const refreshStats = async () => {
     setIsRefreshing(true);
     try {
-      // Get all stats
-      const subStats = getReadStats();
+      // Get all stats (subscription stats no longer available since we removed optimized subscription)
+      const subStats = { totalReads: 0, cacheHits: 0, cacheMisses: 0 }; // Placeholder
       const pgStats = getPageReadStats();
       const cStats = getCacheStats();
       const qStats = getQueryStatsSummary();

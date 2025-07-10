@@ -223,7 +223,9 @@ export default function SubscriptionTierSlider({
                 <div className="p-3 bg-white dark:bg-muted/30 rounded-lg border border-gray-200 dark:border-border/50 shadow-sm">
                   <p className="text-xs text-muted-foreground mb-2">Your username will appear as:</p>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm text-foreground">{currentAccount.username}</span>
+                    <span className={`font-medium text-sm ${selectedAmount > 0 ? "text-accent-foreground" : "text-muted-foreground"}`}>
+                      {currentAccount.username}
+                    </span>
                     <SubscriptionTierBadge
                       tier={currentTierInfo.tier}
                       amount={selectedAmount}

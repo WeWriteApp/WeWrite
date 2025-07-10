@@ -33,8 +33,9 @@ const stripeSecretKey = getStripeSecretKey();
 const stripe = new Stripe(stripeSecretKey, {
   apiVersion: '2025-04-30.basil' as any});
 
-// GET /api/payment-methods - Get all payment methods for the current user
+// GET /api/payment-methods - Get all payment methods for the current user (v4)
 export async function GET(request: NextRequest) {
+  console.log('🔥🔥🔥 PAYMENT METHODS API CALLED v4 🔥🔥🔥');
   try {
     // Initialize Firebase lazily
     const { db: firestore } = initializeFirebase();
@@ -63,18 +64,25 @@ export async function GET(request: NextRequest) {
     const userDoc = await db.collection('users').doc(userId).get();
     const userData = userDoc.data();
 
+    console.log('[PAYMENT METHODS] User data:', { userId, hasUserData: !!userData, stripeCustomerId: userData?.stripeCustomerId });
+
     if (!userData || !userData.stripeCustomerId) {
+      console.log('[PAYMENT METHODS] No Stripe customer ID found, returning empty array');
       return NextResponse.json({ paymentMethods: [] }, { status: 200 });
     }
 
     // Get the user's payment methods from Stripe
+    console.log('[PAYMENT METHODS] Fetching payment methods from Stripe for customer:', userData.stripeCustomerId);
     const paymentMethods = await stripe.paymentMethods.list({
       customer: userData.stripeCustomerId,
       type: 'card'});
 
+    console.log('[PAYMENT METHODS] Stripe response:', { count: paymentMethods.data.length, methods: paymentMethods.data.map(pm => ({ id: pm.id, last4: pm.card?.last4, brand: pm.card?.brand })) });
+
     // Get the user's payment methods metadata from Firestore
     const paymentMethodsDoc = await db.collection('users').doc(userId).collection('paymentMethods').doc('metadata').get();
     const paymentMethodsData = paymentMethodsDoc.exists ? paymentMethodsDoc.data() : { primary: null, order: [] };
+    console.log('[PAYMENT METHODS] Firestore metadata:', paymentMethodsData);
 
     // Format the payment methods
     const formattedPaymentMethods = paymentMethods.data.map(method => {
@@ -135,9 +143,10 @@ export async function GET(request: NextRequest) {
       return aIndex - bIndex;
     });
 
+    console.log('[PAYMENT METHODS] Returning payment methods:', { count: formattedPaymentMethods.length, methods: formattedPaymentMethods });
     return NextResponse.json({ paymentMethods: formattedPaymentMethods }, { status: 200 });
   } catch (error: any) {
-    console.error('Error getting payment methods:', error);
+    console.error('[PAYMENT METHODS] Error getting payment methods:', error);
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

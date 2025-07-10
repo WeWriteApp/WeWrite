@@ -11,6 +11,7 @@ import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import Link from 'next/link';
 import { PillLink } from "./PillLink";
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
+import { UsernameBadge } from '../ui/UsernameBadge';
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { useAlert } from '../../hooks/useAlert';
 import AlertModal from './AlertModal';
@@ -197,16 +198,16 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
               className="flex items-center gap-2 flex-grow"
             >
               <div className="flex flex-col">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-medium">{followedUser.username || 'Anonymous User'}</span>
-                  {false && subscriptionEnabled && followedUser.tier && (
-                    <SubscriptionTierBadge
-                      tier={followedUser.tier}
-                      status={followedUser.subscriptionStatus}
-                      size="sm"
-                    />
-                  )}
-                </div>
+                <UsernameBadge
+                  userId={followedUser.id}
+                  username={followedUser.username || 'Anonymous User'}
+                  tier={followedUser.tier}
+                  subscriptionStatus={followedUser.subscriptionStatus}
+                  subscriptionAmount={followedUser.subscriptionAmount}
+                  size="sm"
+                  showBadge={false}
+                  className="font-medium"
+                />
                 {followedUser.bio && (
                   <p className="text-xs text-muted-foreground line-clamp-1">{followedUser.bio}</p>
                 )}

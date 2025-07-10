@@ -37,36 +37,39 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
   try {
     const result = await updateDoc('pages', pageId, data);
 
+    // Get the current page data for cache invalidation and backlinks
+    let pageData = null;
+    try {
+      pageData = await getPageById(pageId);
+    } catch (pageDataError) {
+      console.error('⚠️ Error getting page data for post-update operations (non-fatal):', pageDataError);
+    }
+
     // If the update includes content changes, update the backlinks index
-    if (result && data.content) {
+    if (result && data.content && pageData?.pageData) {
       try {
-        // Get the current page data to get title, username, etc.
-        const pageData = await getPageById(pageId);
+        const { updateBacklinksIndex } = await import('./database/backlinks');
 
-        if (pageData.pageData) {
-          const { updateBacklinksIndex } = await import('./database/backlinks');
-
-          // Parse content to extract links
-          let contentNodes = [];
-          if (data.content && typeof data.content === 'string') {
-            try {
-              contentNodes = JSON.parse(data.content);
-            } catch (parseError) {
-              console.warn('Could not parse content for backlinks indexing:', parseError);
-            }
+        // Parse content to extract links
+        let contentNodes = [];
+        if (data.content && typeof data.content === 'string') {
+          try {
+            contentNodes = JSON.parse(data.content);
+          } catch (parseError) {
+            console.warn('Could not parse content for backlinks indexing:', parseError);
           }
-
-          await updateBacklinksIndex(
-            pageId,
-            pageData.pageData.title,
-            pageData.pageData.username,
-            contentNodes,
-            pageData.pageData.isPublic,
-            data.lastModified || pageData.pageData.lastModified
-          );
-
-          console.log('✅ Backlinks index updated for page update');
         }
+
+        await updateBacklinksIndex(
+          pageId,
+          pageData.pageData.title,
+          pageData.pageData.username,
+          contentNodes,
+          pageData.pageData.isPublic,
+          data.lastModified || pageData.pageData.lastModified
+        );
+
+        console.log('✅ Backlinks index updated for page update');
       } catch (backlinkError) {
         console.error('⚠️ Error updating backlinks index (non-fatal):', backlinkError);
       }

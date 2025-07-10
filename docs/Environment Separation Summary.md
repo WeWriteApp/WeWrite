@@ -12,7 +12,7 @@
 - **Environment Detection**: Properly identifies production, preview, and development environments
 - **Collection Prefixes**:
   - **Production**: No prefix (keeps existing collection names)
-  - **Preview**: `preview_` prefix
+  - **Preview**: No prefix (uses production data for realistic testing)
   - **Development**: `dev_` prefix
 - **Helper Functions**:
   - `getEnvironmentType()`: Detects current environment
@@ -23,11 +23,10 @@
 
 ### 2. **Updated Services**
 
-#### **Subscription Service** (`app/firebase/subscription.ts`)
-- ✅ `createSubscription()`
-- ✅ `updateSubscription()`
-- ✅ `getUserSubscription()`
-- ✅ `listenToUserSubscription()`
+#### **Subscription Service** (REMOVED - now using API-first approach)
+- ❌ Old complex subscription service removed
+- ✅ New simplified `/api/account-subscription` endpoint
+- ✅ Single source of truth for subscription data
 
 #### **Token Service** (`app/services/tokenService.ts`)
 - ✅ All `tokenBalances` collection references
@@ -65,15 +64,17 @@
 
 ### 4. **Collection Mapping**
 
+**Important**: Preview deployments use production data (no prefix) to enable realistic testing with actual user data and subscriptions. This allows for proper testing of features before production release while maintaining development isolation.
+
 | **Base Collection** | **Production** | **Preview** | **Development** |
 |-------------------|--------------|-------------|----------------|
-| `users` | `users` | `preview_users` | `dev_users` |
-| `subscriptions` | `subscriptions` | `preview_subscriptions` | `dev_subscriptions` |
-| `tokenBalances` | `tokenBalances` | `preview_tokenBalances` | `dev_tokenBalances` |
-| `tokenAllocations` | `tokenAllocations` | `preview_tokenAllocations` | `dev_tokenAllocations` |
-| `writerTokenBalances` | `writerTokenBalances` | `preview_writerTokenBalances` | `dev_writerTokenBalances` |
-| `writerTokenEarnings` | `writerTokenEarnings` | `preview_writerTokenEarnings` | `dev_writerTokenEarnings` |
-| `tokenPayouts` | `tokenPayouts` | `preview_tokenPayouts` | `dev_tokenPayouts` |
+| `users` | `users` | `users` | `dev_users` |
+| `subscriptions` | `subscriptions` | `subscriptions` | `dev_subscriptions` |
+| `tokenBalances` | `tokenBalances` | `tokenBalances` | `dev_tokenBalances` |
+| `tokenAllocations` | `tokenAllocations` | `tokenAllocations` | `dev_tokenAllocations` |
+| `writerTokenBalances` | `writerTokenBalances` | `writerTokenBalances` | `dev_writerTokenBalances` |
+| `writerTokenEarnings` | `writerTokenEarnings` | `writerTokenEarnings` | `dev_writerTokenEarnings` |
+| `tokenPayouts` | `tokenPayouts` | `tokenPayouts` | `dev_tokenPayouts` |
 
 ## 🧪 **Testing**
 

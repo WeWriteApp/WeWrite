@@ -105,14 +105,7 @@ export function LiveVisitorsWidget({ className = "" }: LiveVisitorsWidgetProps) 
         <div className="flex items-center gap-2">
           <Eye className="h-5 w-5 text-primary" />
           <h3 className="text-lg font-semibold">Live Visitors</h3>
-          {process.env.NODE_ENV === 'development' && (
-            <button
-              onClick={() => setDebugMode(!debugMode)}
-              className="text-xs px-2 py-1 bg-muted rounded text-muted-foreground hover:bg-muted/80"
-            >
-              {debugMode ? 'Hide Debug' : 'Debug'}
-            </button>
-          )}
+
         </div>
 
         {/* Live indicator */}
@@ -179,12 +172,15 @@ export function LiveVisitorsWidget({ className = "" }: LiveVisitorsWidgetProps) 
             <span>Last updated: {formatLastUpdated(lastUpdated)}</span>
             <span>Bot filtering: Active</span>
           </div>
-          {debugMode && (
-            <div className="mt-2 text-xs text-muted-foreground">
-              <div>Legitimate: {counts.legitimateVisitors} | Bots: {counts.bots}</div>
-              <div>Refresh: 15s | Session timeout: 30m</div>
-            </div>
-          )}
+          {process.env.NODE_ENV === 'development' && debugMode && (() => {
+            console.log('[LiveVisitorsWidget] Debug Info:', {
+              legitimateVisitors: counts.legitimateVisitors,
+              bots: counts.bots,
+              refreshInterval: '15s',
+              sessionTimeout: '30m'
+            });
+            return null;
+          })()}
         </div>
       )}
     </div>

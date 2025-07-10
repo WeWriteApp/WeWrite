@@ -10,16 +10,17 @@ export const getStripeSecretKey = (): string | undefined => {
   const isPreview = process.env.VERCEL_ENV === 'preview';
   const isDevelopment = process.env.NODE_ENV === 'development';
 
-  // Use test keys for preview deployments and development
-  if (isPreview || isDevelopment) {
+  // Use test keys only for local development
+  // Preview uses production data, so it should use production Stripe keys
+  if (isDevelopment) {
     const key = process.env.STRIPE_TEST_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
-    console.log(`Using Stripe test keys (${isDevelopment ? 'development' : 'preview'} environment): ${key?.substring(0, 8)}...`);
+    console.log(`Using Stripe test keys (development environment): ${key?.substring(0, 8)}...`);
     return key;
   }
 
-  // Use production keys for production deployments
+  // Use production keys for preview and production deployments
   const key = process.env.STRIPE_PROD_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
-  console.log(`Using Stripe production keys: ${key?.substring(0, 8)}...`);
+  console.log(`Using Stripe production keys (${isPreview ? 'preview' : 'production'} environment): ${key?.substring(0, 8)}...`);
   return key;
 };
 
@@ -33,24 +34,25 @@ export const getStripePublishableKey = (): string | undefined => {
     !window.location.hostname.includes('wewrite.app');
   const isDevelopment = process.env.NODE_ENV === 'development';
 
-  // Use test keys for preview deployments and development
-  if (isPreview || isDevelopment) {
+  // Use test keys only for local development
+  // Preview uses production data, so it should use production Stripe keys
+  if (isDevelopment) {
     const key = process.env.NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY ||
            process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
     if (typeof window !== 'undefined') {
-      console.log(`Using Stripe test publishable key (${isDevelopment ? 'development' : 'preview'} environment): ${key?.substring(0, 8)}...`);
+      console.log(`Using Stripe test publishable key (development environment): ${key?.substring(0, 8)}...`);
     }
 
     return key;
   }
 
-  // Use production keys for production deployments
+  // Use production keys for preview and production deployments
   const key = process.env.NEXT_PUBLIC_STRIPE_PROD_PUBLISHABLE_KEY ||
          process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
   if (typeof window !== 'undefined') {
-    console.log(`Using Stripe production publishable key: ${key?.substring(0, 8)}...`);
+    console.log(`Using Stripe production publishable key (${isPreview ? 'preview' : 'production'} environment): ${key?.substring(0, 8)}...`);
   }
 
   return key;

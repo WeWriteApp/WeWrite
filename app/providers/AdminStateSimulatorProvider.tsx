@@ -1,17 +1,11 @@
 'use client';
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useAdminStateSimulator, useSimulatedState, AdminSimulatorState } from '../hooks/useAdminStateSimulator';
 
+// Simplified admin state simulator - old complex system removed
 interface AdminStateSimulatorContextType {
-  // Simulated state for components to use
-  simulatedState: ReturnType<typeof useSimulatedState>;
-  
-  // Admin controls (only available to admin users)
-  adminControls: ReturnType<typeof useAdminStateSimulator>;
-  
-  // Helper to check if a state is being simulated
-  isSimulating: (category: keyof AdminSimulatorState) => boolean;
+  // Default state - no simulation functionality
+  isSimulating: () => boolean;
 }
 
 const AdminStateSimulatorContext = createContext<AdminStateSimulatorContextType | null>(null);
@@ -21,32 +15,8 @@ interface AdminStateSimulatorProviderProps {
 }
 
 export function AdminStateSimulatorProvider({ children }: AdminStateSimulatorProviderProps) {
-  const adminControls = useAdminStateSimulator();
-  const simulatedState = useSimulatedState();
-
-  const isSimulating = (category: keyof AdminSimulatorState): boolean => {
-    // Check if any non-default values are set for this category
-    switch (category) {
-      case 'authState':
-        return adminControls.authState !== 'logged-in';
-      case 'subscriptionState':
-        return adminControls.subscriptionState !== 'active';
-      case 'spendingState':
-        return adminControls.spendingState.pastMonthTokensSent;
-      case 'tokenEarningsState':
-        return !adminControls.tokenEarningsState.none || 
-               Object.entries(adminControls.tokenEarningsState)
-                 .filter(([key]) => key !== 'none')
-                 .some(([, value]) => value);
-      default:
-        return false;
-    }
-  };
-
   const contextValue: AdminStateSimulatorContextType = {
-    simulatedState,
-    adminControls,
-    isSimulating
+    isSimulating: () => false // No simulation functionality
   };
 
   return (
@@ -64,19 +34,23 @@ export function useAdminStateSimulatorContext() {
   return context;
 }
 
-// Convenience hook for components that just need to read simulated state
+// Simplified hook that returns default state (no simulation)
 export function useSimulatedAppState() {
-  const context = useContext(AdminStateSimulatorContext);
-  return context?.simulatedState || {
+  return {
     auth: { isLoggedIn: true, isLoggedOut: false },
     subscription: { hasNone: false, isActive: true, isCancelling: false, hasPaymentFailed: false },
     spending: { pastMonthTokensSent: false },
-    tokenEarnings: { 
-      none: true, 
-      unfundedLoggedOut: false, 
-      unfundedNoSubscription: false, 
-      fundedPending: false, 
-      lockedAvailable: false 
+    tokenEarnings: {
+      none: true,
+      unfundedLoggedOut: false,
+      unfundedNoSubscription: false,
+      fundedPending: false,
+      lockedAvailable: false
     }
   };
+}
+
+// Simplified hook for backward compatibility
+export function useSimulatedState() {
+  return useSimulatedAppState();
 }

@@ -248,9 +248,17 @@ export const LoggingProvider = ({ children }: LoggingProviderProps) => {
       // Call original console.log first
       originalConsoleLog.apply(console, args);
 
-      // Forward to terminal in development (now that we have deduplication)
+      // Forward to terminal in development, but filter out spam
       if (process.env.NODE_ENV === 'development') {
-        sendConsoleToTerminal('log', args);
+        const message = args.join(' ');
+        // Only forward important logs, skip routine ones
+        if (!message.includes('🟠 MultiAuthProvider') &&
+            !message.includes('🟢 CurrentAccountProvider') &&
+            !message.includes('[AUTH DEBUG]') &&
+            !message.includes('Firebase Admin initialized') &&
+            !message.includes('Logger initialized')) {
+          sendConsoleToTerminal('log', args);
+        }
       }
     };
 
@@ -258,8 +266,7 @@ export const LoggingProvider = ({ children }: LoggingProviderProps) => {
       // Call original console.warn first
       originalConsoleWarn.apply(console, args);
 
-      // Send to terminal
-      sendConsoleToTerminal('warn', args);
+      // Skip forwarding warnings to terminal to reduce spam
     };
 
     console.info = (...args: any[]) => {

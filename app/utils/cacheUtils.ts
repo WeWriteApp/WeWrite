@@ -508,9 +508,13 @@ export class CacheWarmingService {
     this.addWarmingTask(
       generateCacheKey('subscription', userId),
       async () => {
-        // This would be replaced with actual subscription fetching logic
-        const { getUserSubscription } = await import('../firebase/subscription');
-        return getUserSubscription(userId);
+        // Use API-first approach for subscription data
+        const response = await fetch(`/api/account-subscription?userId=${userId}`);
+        if (response.ok) {
+          const data = await response.json();
+          return data.hasSubscription ? data.fullData : null;
+        }
+        return null;
       },
       2 // Medium priority
     );

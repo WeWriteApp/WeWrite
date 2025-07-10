@@ -172,8 +172,14 @@ export function SubscriptionCheckout({
   const renderStepContent = () => {
     switch (currentStep) {
       case 'payment':
-        return selectedPlan && clientSecret ? (
+        // Only render Elements once clientSecret is stable to avoid Stripe warnings
+        if (!selectedPlan || !clientSecret) {
+          return null;
+        }
+
+        return (
           <Elements
+            key={clientSecret} // Force remount if clientSecret changes
             stripe={stripePromise}
             options={{
               clientSecret,
@@ -199,7 +205,7 @@ export function SubscriptionCheckout({
               cancelUrl={cancelUrl}
             />
           </Elements>
-        ) : null;
+        );
 
       case 'confirmation':
         return (

@@ -27,6 +27,7 @@ export async function GET(request) {
     const { rtdb } = await import('../../firebase/rtdb.ts');
     const { initAdmin } = await import('../../firebase/admin');
     const { getEffectiveTier } = await import('../../utils/subscriptionTiers');
+    const { executeDeduplicatedOperation } = await import('../../utils/serverRequestDeduplication');
 
     // Initialize Firebase Admin
     const adminApp = initAdmin();
@@ -212,10 +213,42 @@ export async function GET(request) {
     // Take only the requested number of pages
     const randomPages = shuffledPages.slice(0, limitCount);
 
-    console.log(`Random pages API: Returning ${randomPages.length} pages from ${accessiblePages.length} accessible pages`);
+    // Batch fetch user subscription data
+    const uniqueUserIds = [...new Set(randomPages.map(page => page.userId).filter(Boolean))];
+    let batchUserData = {};
+
+    if (uniqueUserIds.length > 0) {
+      try {
+        batchUserData = await executeDeduplicatedOperation(
+          'getBatchUserData',
+          { userIds: uniqueUserIds.sort() }, // Sort for consistent cache keys
+          () => getBatchUserDataOptimized(uniqueUserIds, adminDb, rtdb, getEffectiveTier),
+          { cacheTTL: 3 * 60 * 1000 } // 3 minutes cache for user data
+        );
+      } catch (error) {
+        console.warn('Error fetching batch user data for random pages:', error);
+        // Continue without user data rather than failing the entire request
+      }
+    }
+
+    // Add subscription data to pages
+    const randomPagesWithUserData = randomPages.map(page => {
+      if (!page.userId) return page;
+
+      const userData = batchUserData[page.userId];
+      return {
+        ...page,
+        tier: userData?.tier,
+        subscriptionStatus: userData?.subscriptionStatus,
+        subscriptionAmount: userData?.subscriptionAmount,
+        username: userData?.username || page.username
+      };
+    });
+
+    console.log(`Random pages API: Returning ${randomPagesWithUserData.length} pages from ${accessiblePages.length} accessible pages`);
 
     return NextResponse.json({
-      randomPages,
+      randomPages: randomPagesWithUserData,
       totalAvailable: accessiblePages.length
     }, { headers });
 
@@ -232,6 +265,68 @@ export async function GET(request) {
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization'}
     });
+  }
+}
+
+/**
+ * Batch fetch user subscription data (server-side optimized version)
+ */
+async function getBatchUserDataOptimized(userIds, adminDb, rtdb, getEffectiveTier) {
+  try {
+    if (!userIds || userIds.length === 0) {
+      return {};
+    }
+
+    const results = {};
+    const batchSize = 10; // Process in batches to avoid overwhelming the database
+
+    for (let i = 0; i < userIds.length; i += batchSize) {
+      const batch = userIds.slice(i, i + batchSize);
+
+      // Fetch user data from RTDB in parallel
+      const userPromises = batch.map(async (userId) => {
+        try {
+          const { ref, get } = await import('firebase/database');
+          const userSnapshot = await get(ref(rtdb, `users/${userId}`));
+
+          if (userSnapshot.exists()) {
+            const userData = userSnapshot.val();
+            return {
+              userId,
+              data: {
+                uid: userId,
+                username: userData.username || userData.displayName ||
+                         (userData.email ? userData.email.split('@')[0] : undefined),
+                displayName: userData.displayName,
+                tier: userData.tier || 0,
+                subscriptionStatus: userData.subscriptionStatus || 'inactive',
+                subscriptionAmount: userData.subscriptionAmount || 0,
+                pageCount: userData.pageCount || 0,
+                followerCount: userData.followerCount || 0
+              }
+            };
+          }
+
+          return { userId, data: null };
+        } catch (error) {
+          console.warn(`Error fetching user ${userId}:`, error);
+          return { userId, data: null };
+        }
+      });
+
+      const batchResults = await Promise.all(userPromises);
+
+      batchResults.forEach(({ userId, data }) => {
+        if (data) {
+          results[userId] = data;
+        }
+      });
+    }
+
+    return results;
+  } catch (error) {
+    console.error('Error fetching batch user data:', error);
+    return {};
   }
 }
 

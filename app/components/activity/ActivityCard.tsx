@@ -9,6 +9,7 @@ import { useTheme } from "next-themes";
 import { cn, interactiveCard } from "../../lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { SubscriptionTierBadge } from "../ui/SubscriptionTierBadge";
+import { UsernameBadge } from "../ui/UsernameBadge";
 import { format } from "date-fns";
 import { getPageById } from "../../firebase/database/pages";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
@@ -364,24 +365,17 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
                     {activity.username || "Missing username"}
                   </span>
                 ) : (
-                  <span className="text-primary">
-                    <Link
-                      href={`/user/${activity.userId}`}
-                      className="hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {activity.username || "Missing username"}
-                    </Link>
-                    {subscriptionEnabled && (
-                      <SubscriptionTierBadge
-                        tier={activity.tier}
-                        status={activity.subscriptionStatus}
-                        amount={activity.subscriptionAmount}
-                        size="sm"
-                        className="ml-1"
-                      />
-                    )}
-                  </span>
+                  <UsernameBadge
+                    userId={activity.userId}
+                    username={activity.username || "Missing username"}
+                    tier={activity.tier}
+                    subscriptionStatus={activity.subscriptionStatus}
+                    subscriptionAmount={activity.subscriptionAmount}
+                    size="sm"
+                    showBadge={subscriptionEnabled}
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex"
+                  />
                 )}
               </>
             )}

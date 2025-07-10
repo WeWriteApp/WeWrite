@@ -12,7 +12,7 @@ import { openExternalLink } from "../../utils/pwa-detection";
 import { useSidebarContext } from "./UnifiedSidebar";
 import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 import { useFeatureFlag } from "../../utils/feature-flags";
-import { createOptimizedSubscriptionListener } from "../../firebase/optimizedSubscription";
+// Removed old optimized subscription import - using API-first approach
 import { getSubscriptionButtonText, getSubscriptionNavigationPath, isActiveSubscription } from "../../utils/subscriptionStatus";
 import { TokenService } from "../../services/tokenService";
 import { TokenBalance } from "../../types/database";
@@ -82,14 +82,28 @@ export default function Header() {
       return;
     }
 
-    console.log('🎯 Header: Setting up optimized subscription listener for user:', currentAccount.uid);
-    const unsubscribe = createOptimizedSubscriptionListener(currentAccount.uid, (subscriptionData) => {
-      console.log('🎯 Header: Subscription updated:', subscriptionData);
-      setSubscription(subscriptionData);
-    }, { verbose: false });
+    console.log('🎯 Header: Fetching subscription data for user:', currentAccount.uid);
+
+    // Use API-first approach instead of complex optimized subscription
+    const fetchSubscription = async () => {
+      try {
+        const response = await fetch('/api/account-subscription');
+        if (response.ok) {
+          const data = await response.json();
+          const subscriptionData = data.hasSubscription ? data.fullData : null;
+          console.log('🎯 Header: Subscription data:', subscriptionData);
+          setSubscription(subscriptionData);
+        }
+      } catch (error) {
+        console.error('🎯 Header: Error fetching subscription:', error);
+        setSubscription(null);
+      }
+    };
+
+    fetchSubscription();
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      console.log('🎯 Header: No cleanup needed for API calls');
     };
   }, [currentAccount, isPaymentsEnabled]);
 

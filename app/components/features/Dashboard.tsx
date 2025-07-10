@@ -123,6 +123,9 @@ const RecentPagesSection = () => {
       return;
     }
 
+    // Process pages immediately if we have data, don't wait for user data
+    // The batchUserData might be empty if there are no users with subscriptions
+
     // Add subscription data to pages using the batched data from the API
     const pagesWithSubs = recentPages.map(page => {
       if (!page.userId) return page;
@@ -138,7 +141,6 @@ const RecentPagesSection = () => {
     });
 
     setPagesWithSubscriptions(pagesWithSubs);
-    console.log('RecentPagesSection: Using batched user data for', Object.keys(batchUserData).length, 'users');
   }, [data?.recentPages, data?.batchUserData]);
 
   if (loading) {
@@ -197,7 +199,7 @@ const RecentPagesSection = () => {
         <SectionTitle icon={Clock} title="Recent Pages" />
       }
     >
-      <RandomPagesTable pages={recentPages} loading={subscriptionLoading} denseMode={false} />
+      <RandomPagesTable pages={pagesWithSubscriptions} loading={subscriptionLoading} denseMode={false} />
     </StickySection>
   );
 };

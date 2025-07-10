@@ -11,10 +11,10 @@ import { cn } from '../../lib/utils';
 import { isPWA, isMobileDevice } from '../../utils/pwa-detection';
 import NotificationBadge from '../utils/NotificationBadge';
 import useOptimisticNavigation from '../../hooks/useOptimisticNavigation';
-import { WarningDot } from '../ui/warning-dot';
-import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
 import { useUserEarnings } from '../../hooks/useUserEarnings';
+import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
+import { WarningDot } from '../ui/warning-dot';
 
 /**
  * MobileBottomNav Component
@@ -50,9 +50,10 @@ export default function MobileBottomNav() {
   const pathname = usePathname();
   const { session } = useCurrentAccount();
   const editorContext = useEditorContext();
-  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription, paymentsEnabled } = useSubscriptionWarning();
+
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
+  const { hasActiveSubscription, paymentsEnabled } = useSubscriptionWarning();
 
   // Calculate the most critical status from all settings sections (same logic as UnifiedSidebar)
   const getMostCriticalSettingsStatus = () => {

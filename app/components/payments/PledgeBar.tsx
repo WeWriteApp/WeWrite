@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { Plus, Minus } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useFeatureFlag } from "../../utils/feature-flags";
-import { getOptimizedUserSubscription } from "../../firebase/optimizedSubscription";
+// Removed old optimized subscription import - using API-first approach
 import { isActiveSubscription } from "../../utils/subscriptionStatus";
 
 import {
@@ -116,9 +116,12 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     const loadTokenData = async () => {
       try {
         if (currentAccount && currentAccount.uid && isSubscriptionEnabled) {
-          // Logged in user with payments enabled
-          const userSubscription = await getOptimizedUserSubscription(currentAccount.uid);
-          setSubscription(userSubscription as any);
+          // Logged in user with payments enabled - use API-first approach
+          const response = await fetch('/api/account-subscription');
+          if (response.ok) {
+            const data = await response.json();
+            setSubscription(data.hasSubscription ? data.fullData : null);
+          }
 
           // Load actual token allocations data
           const allocationsResponse = await fetch('/api/tokens/allocations');
@@ -531,7 +534,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                 {/* Other pages */}
                 {otherPagesPercentage > 0 && (
                   <div
-                    className="h-full bg-muted-foreground/30 rounded-full flex items-center justify-center"
+                    className="h-full bg-muted-foreground/30 rounded-md flex items-center justify-center"
                     style={{ width: `${otherPagesPercentage}%`, minWidth: '20px' }}
                   >
                     <span className="text-white font-medium text-xs">
@@ -543,7 +546,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                 {/* Current page */}
                 {currentPagePercentage > 0 && (
                   <div
-                    className="h-full bg-primary rounded-full flex items-center justify-center"
+                    className="h-full bg-primary rounded-md flex items-center justify-center"
                     style={{ width: `${currentPagePercentage}%`, minWidth: '20px' }}
                   >
                     <span className="text-white font-medium text-xs">
@@ -555,7 +558,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                 {/* Available/Unfunded */}
                 {availablePercentage > 0 && (
                   <div
-                    className="h-full bg-muted-foreground/10 rounded-full flex items-center justify-center"
+                    className="h-full bg-muted-foreground/10 rounded-md flex items-center justify-center"
                     style={{ width: `${availablePercentage}%`, minWidth: '20px' }}
                   >
                     <span className="text-muted-foreground font-medium text-xs">

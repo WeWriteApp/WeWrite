@@ -1,250 +1,230 @@
-import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
-import { getStripeSecretKey } from '../../../utils/stripeConfig';
-import { getUserIdFromRequest } from '../../auth-helper';
-import { getTierById, calculateTokensForAmount } from '../../../utils/subscriptionTiers';
-import { getOrCreatePriceForTier, createCustomPrice } from '../../../utils/stripeProductManager';
-import { db } from '../../../firebase/database/core';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { getCollectionName, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
-
-const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia'
-});
-
 /**
  * Create Subscription with Payment Method
  * 
- * This endpoint creates a Stripe subscription using a payment method
- * that was collected via Setup Intent in the embedded checkout flow.
+ * Creates subscription after payment method setup is complete
  */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserIdFromRequest } from '../../auth-helper';
+import { determineTierFromAmount, calculateTokensForAmount } from '../../../utils/subscriptionTiers';
+import { initAdmin } from '../../../firebase/admin';
+
+// Initialize Firebase Admin
+const admin = initAdmin();
+const adminDb = admin.firestore();
+const FieldValue = admin.firestore.FieldValue;
+
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication
-    const authenticatedUserId = await getUserIdFromRequest(request);
-    if (!authenticatedUserId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+    // Get authenticated user
+    const userId = await getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { 
-      userId, 
-      paymentMethodId, 
-      tier, 
-      amount, 
-      tierName, 
-      tokens 
-    } = await request.json();
+    const body = await request.json();
+    const { paymentMethodId, tier, amount, tierName, tokens } = body;
 
-    // Validate required fields
-    if (!userId || !paymentMethodId || !tier || !amount) {
-      return NextResponse.json(
-        { error: 'Missing required fields: userId, paymentMethodId, tier, amount' },
-        { status: 400 }
-      );
+    if (!paymentMethodId || !amount || !tier) {
+      return NextResponse.json({ 
+        error: 'paymentMethodId, amount, and tier are required' 
+      }, { status: 400 });
     }
 
-    // Validate user matches authenticated user
-    if (userId !== authenticatedUserId) {
-      return NextResponse.json(
-        { error: 'User ID mismatch' },
-        { status: 403 }
-      );
+    console.log(`[CREATE SUBSCRIPTION] Creating subscription for user ${userId}, tier: ${tier}, amount: $${amount}`);
+
+    // Force recompilation after serverTimestamp fix
+
+    // Get user's Stripe customer ID
+    const userDoc = await adminDb.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    const customerId = userData?.stripeCustomerId;
+
+    if (!customerId) {
+      return NextResponse.json({ 
+        error: 'No Stripe customer found for user' 
+      }, { status: 400 });
     }
 
-    // Validate tier and calculate final values
-    let finalAmount = amount;
-    let finalTokens = tokens;
-    let finalTierName = tierName;
-
-    if (tier === 'custom') {
-      if (amount < 5 || amount > 1000) {
-        return NextResponse.json(
-          { error: 'Custom amount must be between $5 and $1000' },
-          { status: 400 }
-        );
-      }
-      finalTokens = calculateTokensForAmount(amount);
-      finalTierName = 'Custom Plan';
-    } else {
-      const tierData = getTierById(tier);
-      if (!tierData) {
-        return NextResponse.json(
-          { error: 'Invalid tier selected' },
-          { status: 400 }
-        );
-      }
-      finalAmount = tierData.amount;
-      finalTokens = tierData.tokens;
-      finalTierName = tierData.name;
-    }
-
-    // Get customer from payment method
-    let stripeCustomerId: string;
-    
+    // Create or get product for subscriptions
+    let product;
     try {
-      const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+      // Try to get existing WeWrite subscription product
+      const products = await stripe.products.list({ limit: 10 });
+      product = products.data.find(p => p.name === 'WeWrite Subscription');
       
-      if (!paymentMethod.customer) {
-        return NextResponse.json(
-          { error: 'Payment method must be attached to a customer' },
-          { status: 400 }
-        );
-      }
-      
-      stripeCustomerId = paymentMethod.customer as string;
-    } catch (error) {
-      console.error('Error retrieving payment method:', error);
-      return NextResponse.json(
-        { error: 'Invalid payment method' },
-        { status: 400 }
-      );
-    }
-
-    // Get or create Stripe price
-    let priceId: string;
-    
-    try {
-      if (tier === 'custom') {
-        priceId = await createCustomPrice(finalAmount);
-      } else {
-        const tierData = getTierById(tier);
-        if (!tierData) {
-          throw new Error('Invalid tier');
-        }
-        priceId = await getOrCreatePriceForTier(tierData);
+      if (!product) {
+        // Create new product
+        product = await stripe.products.create({
+          name: 'WeWrite Subscription',
+          description: 'Monthly subscription to WeWrite platform',
+          type: 'service'
+        });
       }
     } catch (error) {
-      console.error('Error creating price:', error);
-      return NextResponse.json(
-        { error: 'Failed to setup pricing' },
-        { status: 500 }
-      );
+      console.error('Error handling product:', error);
+      return NextResponse.json({ 
+        error: 'Failed to setup subscription product' 
+      }, { status: 500 });
     }
 
-    // Create the subscription
-    try {
-      const subscription = await stripe.subscriptions.create({
-        customer: stripeCustomerId,
-        items: [{ price: priceId }],
-        default_payment_method: paymentMethodId,
-        expand: ['latest_invoice.payment_intent'],
-        metadata: {
-          firebaseUID: userId,
-          tier,
-          amount: finalAmount.toString(),
-          tokens: finalTokens.toString(),
-          tierName: finalTierName,
-          source: 'embedded_checkout'
-        },
-        description: `WeWrite subscription: ${finalTierName}`
-      });
-
-      console.log('✅ Subscription created:', {
-        subscriptionId: subscription.id,
-        customerId: stripeCustomerId,
+    // Create price for this subscription amount
+    const price = await stripe.prices.create({
+      unit_amount: amount * 100, // Convert to cents
+      currency: 'usd',
+      recurring: { interval: 'month' },
+      product: product.id,
+      metadata: {
         tier,
-        amount: finalAmount,
-        tokens: finalTokens,
-        status: subscription.status
-      });
-
-      // Save subscription to Firebase
-      try {
-        const subscriptionData = {
-          id: subscription.id,
-          userId,
-          stripeCustomerId,
-          stripeSubscriptionId: subscription.id,
-          tier,
-          amount: finalAmount,
-          tokens: finalTokens,
-          tierName: finalTierName,
-          status: subscription.status,
-          currentPeriodStart: new Date(subscription.current_period_start * 1000),
-          currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          metadata: {
-            source: 'embedded_checkout',
-            paymentMethodId
-          }
-        };
-
-        // Save to subscriptions collection
-        await setDoc(
-          doc(db, getCollectionName(PAYMENT_COLLECTIONS.SUBSCRIPTIONS), subscription.id),
-          subscriptionData
-        );
-
-        // Update user subscription subcollection
-        await setDoc(
-          doc(db, 'users', userId, 'subscriptions', 'current'),
-          {
-            id: 'current',
-            userId,
-            status: subscription.status,
-            tier,
-            amount: finalAmount,
-            tokens: finalTokens,
-            tierName: finalTierName,
-            stripeCustomerId,
-            stripeSubscriptionId: subscription.id,
-            currentPeriodStart: new Date(subscription.current_period_start * 1000),
-            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-            updatedAt: serverTimestamp()
-          },
-          { merge: true }
-        );
-
-        console.log('✅ Subscription saved to Firebase');
-
-      } catch (firebaseError) {
-        console.error('Error saving subscription to Firebase:', firebaseError);
-        // Don't fail the request since Stripe subscription was created successfully
-        // The webhook will handle Firebase sync as backup
+        tokens: tokens?.toString() || (amount * 10).toString()
       }
+    });
 
-      return NextResponse.json({
-        success: true,
-        subscriptionId: subscription.id,
-        status: subscription.status,
-        subscription: {
-          id: subscription.id,
-          tier,
-          amount: finalAmount,
-          tokens: finalTokens,
-          tierName: finalTierName,
-          status: subscription.status,
-          currentPeriodStart: subscription.current_period_start,
-          currentPeriodEnd: subscription.current_period_end
-        }
-      });
+    // Create subscription
+    const subscription = await stripe.subscriptions.create({
+      customer: customerId,
+      items: [{ price: price.id }],
+      default_payment_method: paymentMethodId,
+      metadata: {
+        userId,
+        tier,
+        tierName: tierName || tier,
+        tokens: tokens?.toString() || (amount * 10).toString()
+      },
+      expand: ['latest_invoice.payment_intent']
+    });
 
-    } catch (error) {
-      console.error('Error creating subscription:', error);
-      
-      // Handle specific Stripe errors
-      if (error instanceof Stripe.errors.StripeError) {
-        return NextResponse.json(
-          { error: error.message },
-          { status: 400 }
-        );
-      }
-      
-      return NextResponse.json(
-        { error: 'Failed to create subscription' },
-        { status: 500 }
-      );
+    console.log(`[CREATE SUBSCRIPTION] Created Stripe subscription ${subscription.id} for user ${userId}`);
+
+    // Extract period timestamps from subscription items (Stripe stores them there)
+    const subscriptionItem = subscription.items?.data?.[0];
+    if (!subscriptionItem) {
+      throw new Error('No subscription items found in Stripe subscription');
     }
+
+    console.log(`[CREATE SUBSCRIPTION] Subscription item periods:`, {
+      current_period_start: subscriptionItem.current_period_start,
+      current_period_end: subscriptionItem.current_period_end,
+      start_type: typeof subscriptionItem.current_period_start,
+      end_type: typeof subscriptionItem.current_period_end,
+      status: subscription.status
+    });
+
+    const startTimestamp = subscriptionItem.current_period_start;
+    const endTimestamp = subscriptionItem.current_period_end;
+
+    if (!startTimestamp || !endTimestamp || isNaN(startTimestamp) || isNaN(endTimestamp)) {
+      throw new Error(`Invalid timestamps from Stripe: start=${startTimestamp}, end=${endTimestamp}`);
+    }
+
+    const startDate = new Date(startTimestamp * 1000);
+    const endDate = new Date(endTimestamp * 1000);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      throw new Error(`Invalid dates after conversion: start=${startDate}, end=${endDate}`);
+    }
+
+    console.log(`[CREATE SUBSCRIPTION] Converted dates:`, {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
+    });
+
+    // Save subscription to Firestore
+    const finalTier = tier || determineTierFromAmount(amount);
+    const finalTokens = tokens || calculateTokensForAmount(amount);
+
+    const subscriptionData = {
+      id: 'current',
+      userId,
+      stripeSubscriptionId: subscription.id,
+      stripeCustomerId: customerId,
+      stripePriceId: price.id,
+      status: subscription.status,
+      tier: finalTier,
+      amount,
+      tokens: finalTokens,
+      currency: 'usd',
+      interval: 'month',
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      currentPeriodStart: startDate,
+      currentPeriodEnd: endDate,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    };
+
+    console.log(`[CREATE SUBSCRIPTION] Subscription data to save:`, {
+      ...subscriptionData,
+      currentPeriodStart: subscriptionData.currentPeriodStart.toISOString(),
+      currentPeriodEnd: subscriptionData.currentPeriodEnd.toISOString(),
+      createdAt: 'FieldValue.serverTimestamp()',
+      updatedAt: 'FieldValue.serverTimestamp()'
+    });
+
+    // Save subscription via API (following API-first architecture)
+    console.log(`[CREATE SUBSCRIPTION] Saving subscription via API...`);
+    const saveResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/subscription/save`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': request.headers.get('cookie') || '', // Forward auth cookies
+      },
+      body: JSON.stringify(subscriptionData)
+    });
+
+    if (!saveResponse.ok) {
+      const errorText = await saveResponse.text();
+      throw new Error(`Failed to save subscription: ${saveResponse.status} ${errorText}`);
+    }
+
+    console.log(`[CREATE SUBSCRIPTION] Successfully saved subscription via API`);
+
+    // Initialize user's token balance via API (following API-first architecture)
+    if (subscription.status === 'active') {
+      console.log(`[CREATE SUBSCRIPTION] Updating token allocation via API...`);
+      const tokenResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/tokens/update-allocation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': request.headers.get('cookie') || '', // Forward auth cookies
+        },
+        body: JSON.stringify({
+          userId,
+          monthlyTokens: finalTokens
+        })
+      });
+
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text();
+        console.warn(`[CREATE SUBSCRIPTION] Failed to update token allocation: ${tokenResponse.status} ${errorText}`);
+        // Don't throw here - subscription was created successfully, token update is secondary
+      } else {
+        console.log(`[CREATE SUBSCRIPTION] Successfully updated token allocation via API`);
+      }
+    }
+
+    console.log(`[CREATE SUBSCRIPTION] Successfully created subscription for user ${userId}, status: ${subscription.status}`);
+
+    return NextResponse.json({
+      success: true,
+      subscriptionId: subscription.id,
+      status: subscription.status,
+      subscription: subscriptionData
+    });
 
   } catch (error) {
-    console.error('Subscription creation error:', error);
+    console.error('Error creating subscription:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error.message || 'Failed to create subscription' },
       { status: 500 }
     );
   }
+}
+
+export async function GET() {
+  return NextResponse.json(
+    { error: 'Method not allowed. Use POST to create subscription.' },
+    { status: 405 }
+  );
 }

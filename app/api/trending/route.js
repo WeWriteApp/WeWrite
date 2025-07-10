@@ -54,7 +54,6 @@ export async function GET(request) {
         views: 0, // Will be replaced with views24h for trending display
         views24h: 0, // Will be populated with real data below
         userId: pageData.userId,
-        username: pageData.username,
         lastModified: pageData.lastModified,
         hourlyViews: [] // Will be populated with real data below
       });
@@ -77,6 +76,13 @@ export async function GET(request) {
         // Keep defaults: views24h = 0, hourlyViews = [], views = 0
       }
     }));
+
+    // Note: User data (including usernames and subscription info) should be fetched
+    // by the client using the standardized /api/users/batch endpoint.
+    // This keeps the trending API focused on page data only and ensures consistency
+    // across all components that display user information.
+
+
 
     // Sort by 24h activity first, then by total views as fallback
     trendingPages.sort((a, b) => {

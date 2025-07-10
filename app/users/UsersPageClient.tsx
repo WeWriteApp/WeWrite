@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
 import { SupporterIcon } from "../components/payments/SupporterIcon";
 import { SubscriptionTierBadge } from "../components/ui/SubscriptionTierBadge";
+import { UsernameBadge } from "../components/ui/UsernameBadge";
 import { collection, getDocs, query, orderBy, limit as firestoreLimit, getDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
 import SimpleSparkline from "../components/utils/SimpleSparkline";
@@ -130,7 +131,7 @@ export default function UsersPageClient() {
           let subscriptionAmount = null;
           try {
             // Use API endpoint to fetch subscription data server-side
-            const subscriptionResponse = await fetch(`/api/user-subscription?userId=${userId}`);
+            const subscriptionResponse = await fetch(`/api/account-subscription?userId=${userId}`);
             if (subscriptionResponse.ok) {
               const subscriptionData = await subscriptionResponse.json();
               tier = subscriptionData.tier;
@@ -268,21 +269,17 @@ export default function UsersPageClient() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <PillLink
-                            href={`/user/${user.id}`}
-                            variant="primary"
+                          <UsernameBadge
+                            userId={user.id}
+                            username={user.username || "Unknown User"}
+                            tier={user.tier}
+                            subscriptionStatus={user.subscriptionStatus}
+                            subscriptionAmount={user.subscriptionAmount}
+                            size="sm"
+                            variant="pill"
+                            pillVariant="primary"
                             onClick={(e) => e.stopPropagation()} // Prevent double navigation
-                          >
-                            <span className="flex items-center gap-1">
-                              {user.username || "Unknown User"}
-                              <SubscriptionTierBadge
-                                tier={user.tier}
-                                status={user.subscriptionStatus}
-                                amount={user.subscriptionAmount}
-                                size="sm"
-                              />
-                            </span>
-                          </PillLink>
+                          />
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>View profile</p>

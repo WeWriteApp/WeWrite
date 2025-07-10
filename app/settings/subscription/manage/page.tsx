@@ -10,8 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Progress } from '../../../components/ui/progress';
 import { Badge } from '../../../components/ui/badge';
 import { useToast } from '../../../components/ui/use-toast';
-import { getOptimizedUserSubscription } from "../../../firebase/optimizedSubscription";
-import { SubscriptionService } from '../../../services/subscriptionService';
+// Removed old optimized subscription import - using API-first approach
+// Removed SubscriptionService - using API-first approach
 import { TokenService } from '../../../services/tokenService';
 import { calculateTokensForAmount, getCurrentMonth } from '../../../utils/subscriptionTiers';
 import { useConfirmation } from '../../../hooks/useConfirmation';
@@ -74,38 +74,32 @@ export default function SubscriptionManagePage() {
     try {
       setLoading(true);
 
-      // Set up optimized real-time subscription listener for consistency
-      const { createOptimizedSubscriptionListener } = await import('../../../firebase/optimizedSubscription');
-      const unsubscribe = createOptimizedSubscriptionListener(currentAccount?.uid || '', async (subscriptionData) => {
+      // Use API-first approach instead of complex optimized subscription
+      const response = await fetch('/api/account-subscription');
+      if (response.ok) {
+        const data = await response.json();
+        const subscriptionData = data.hasSubscription ? data.fullData : null;
         setSubscription(subscriptionData);
 
         if (subscriptionData?.status === 'active') {
-          // Set up real-time token balance listener
-          const unsubscribeTokenBalance = TokenService.listenToTokenBalance(session.uid, (balance) => {
-            setTokenBalance(balance);
-          });
+          // Fetch token balance using API
+          const balanceResponse = await fetch('/api/tokens/balance');
+          if (balanceResponse.ok) {
+            const balanceData = await balanceResponse.json();
+            setTokenBalance(balanceData);
+          }
 
-          // Fetch token allocations
-          const allocations = await TokenService.getUserTokenAllocations(session.uid);
-
-          // Enhance allocations with page/group titles
-          const enhancedAllocations = await Promise.all(
-            allocations.map(async (allocation) => {
-              // TODO: Fetch page/group titles from database
-              return {
-                ...allocation,
-                pageTitle: allocation.resourceType === 'page' ? `Page ${allocation.resourceId.slice(0, 8)}...` : undefined,
-                groupName: allocation.resourceType === 'group' ? `Group ${allocation.resourceId.slice(0, 8)}...` : undefined};
-            })
-          );
-
-          setTokenAllocations(enhancedAllocations);
+          // Fetch token allocations using API
+          const allocationsResponse = await fetch('/api/tokens/allocations');
+          if (allocationsResponse.ok) {
+            const allocationsData = await allocationsResponse.json();
+            setTokenAllocations(allocationsData.allocations || []);
+          }
         }
-        setLoading(false);
-      });
-
-      // Store unsubscribe function for cleanup
-      return unsubscribe;
+      } else {
+        setSubscription(null);
+      }
+      setLoading(false);
 
     } catch (error) {
       console.error('Error setting up subscription listener:', error);
@@ -191,9 +185,20 @@ export default function SubscriptionManagePage() {
 
   const handleManageSubscription = async () => {
     try {
-      const result = await SubscriptionService.createPortalSession(session.uid);
+      // Use simplified API approach instead of complex service
+      const response = await fetch('/api/subscription/portal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: session.uid
+        })
+      });
 
-      if (result.url) {
+      const result = await response.json();
+
+      if (response.ok && result.url) {
         window.open(result.url, '_blank');
       } else {
         toast({

@@ -149,29 +149,29 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
     setError(null);
 
     try {
-      const response = await fetch('/api/subscription/update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          subscriptionId: subscription.stripeSubscriptionId,
-          newTier: selectedTier,
-          newAmount: selectedTier === 'custom' ? customAmount : undefined})});
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update subscription');
-      }
-
-      toast.success('Subscription updated successfully!');
+      // For now, show a message that subscription updates are coming soon
+      toast.success('Subscription updates will be available soon. Please contact support for changes.');
       setShowConfirmDialog(false);
       setSelectedTier('');
       setProrationPreview(null);
-      
+
       if (onModificationSuccess) {
         onModificationSuccess();
       }
+
+      // TODO: Implement subscription update with simple API
+      // This would require creating a new price and updating the subscription
+      // const response = await fetch('/api/subscription/simple', {
+      //   method: 'PATCH',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `Bearer ${await auth.currentUser?.getIdToken()}`
+      //   },
+      //   body: JSON.stringify({
+      //     subscriptionId: subscription.stripeSubscriptionId,
+      //     newPriceId: newPriceId // Would need to create price first
+      //   })
+      // });
     } catch (err: any) {
       console.error('Error updating subscription:', err);
       const errorMessage = err.message || 'Failed to update subscription';

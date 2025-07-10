@@ -184,7 +184,7 @@ export const getUserSubscriptionTier = async (userId: string): Promise<Subscript
 
   try {
     // Use API endpoint instead of direct Firebase calls to avoid permission issues
-    const response = await fetch(`/api/user-subscription?userId=${userId}`);
+    const response = await fetch(`/api/account-subscription?userId=${userId}`);
 
     if (!response.ok) {
       console.log('No subscription data found for user:', userId);

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { StatusIcon } from '../components/ui/status-icon';
 import { useFeatureFlag } from '../utils/feature-flags';
-import { getOptimizedUserSubscription } from '../firebase/optimizedSubscription';
+// Removed old optimized subscription import - using API-first approach
 import { isActiveSubscription, getSubscriptionStatusInfo } from '../utils/subscriptionStatus';
 import { WarningDot } from '../components/ui/warning-dot';
 import { useSubscriptionWarning } from '../hooks/useSubscriptionWarning';
@@ -109,10 +109,10 @@ export default function SettingsIndexPage() {
 
     const checkSubscriptionStatus = async () => {
       try {
-        const subscription = await getOptimizedUserSubscription(session.uid, {
-          useCache: true,
-          cacheTTL: 5 * 60 * 1000 // 5 minute cache
-        });
+        // Use API-first approach instead of complex optimized subscription
+        const response = await fetch('/api/account-subscription');
+        const data = response.ok ? await response.json() : null;
+        const subscription = data?.hasSubscription ? data.fullData : null;
 
         if (subscription) {
           const isActive = isActiveSubscription(

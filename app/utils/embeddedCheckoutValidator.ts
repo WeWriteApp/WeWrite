@@ -58,7 +58,7 @@ export async function validateEmbeddedCheckout(): Promise<ValidationResult> {
     '/api/subscription/create-with-payment-method',
     '/api/tokens/initialize-balance',
     '/api/tokens/migrate-unfunded',
-    '/api/subscription/sync'
+    '/api/subscription/simple'
   ];
 
   for (const endpoint of endpoints) {

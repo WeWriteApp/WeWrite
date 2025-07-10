@@ -48,11 +48,11 @@ export const getBatchUserData = async (userIds: string[]): Promise<Record<string
     return {};
   }
 
-  console.log(`getBatchUserData: Fetching data for ${userIds.length} users`);
-  
+  console.log(`getBatchUserData: Fetching data for ${userIds.length} users via API`);
+
   const results: Record<string, UserData> = {};
   const uncachedIds: string[] = [];
-  
+
   // Check memory cache first
   userIds.forEach(userId => {
     const cached = userDataMemoryCache.get(userId);
@@ -68,187 +68,63 @@ export const getBatchUserData = async (userIds: string[]): Promise<Record<string
     return results;
   }
 
-  console.log(`getBatchUserData: ${uncachedIds.length} users not in memory cache`);
 
-  // Check localStorage cache
-  const stillUncachedIds: string[] = [];
-  
-  for (const userId of uncachedIds) {
-    const cacheKey = generateCacheKey('userData', userId);
-    const cachedData = getCacheItem(cacheKey);
-    
-    if (cachedData) {
-      results[userId] = cachedData;
-      // Also update memory cache
-      userDataMemoryCache.set(userId, {
-        data: cachedData,
-        timestamp: Date.now()
-      });
-    } else {
-      stillUncachedIds.push(userId);
+
+  // Use API endpoint to fetch user data with subscription information
+  try {
+    const response = await fetch('/api/users/batch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userIds: uncachedIds }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
     }
-  }
 
-  if (stillUncachedIds.length === 0) {
-    console.log('getBatchUserData: All remaining data found in localStorage cache');
-    return results;
-  }
+    const apiData = await response.json();
 
-  console.log(`getBatchUserData: Fetching ${stillUncachedIds.length} users from database`);
+    // Process API response and update caches
+    // The API returns data in format: { success: true, data: { users: { userId: userData }, count: number } }
+    const usersData = apiData.data?.users || {};
 
-  // Batch fetch from Firestore (max 10 per query due to 'in' limitation)
-  const batchSize = 10;
-  
-  for (let i = 0; i < stillUncachedIds.length; i += batchSize) {
-    const batch = stillUncachedIds.slice(i, i + batchSize);
-    
-    try {
-      // Fetch user profiles from Firestore
-      const usersQuery = query(
-        collection(db, 'users'),
-        where('__name__', 'in', batch)
-      );
-      
-      const usersSnapshot = await getDocs(usersQuery);
-      
-      // Fetch subscription data in parallel using API endpoint for consistency
-      const subscriptionPromises = batch.map(async (userId) => {
-        try {
-          const response = await fetch(`/api/user-subscription?userId=${userId}`);
-          if (response.ok) {
-            const data = await response.json();
-            return {
-              userId,
-              subscription: data.status ? {
-                status: data.status,
-                amount: data.amount,
-                tier: data.tier
-              } : null
-            };
-          } else {
-            return { userId, subscription: null };
-          }
-        } catch (error) {
-          console.warn(`Error fetching subscription for user ${userId}:`, error);
-          return { userId, subscription: null };
-        }
-      });
-      
-      const subscriptionResults = await Promise.all(subscriptionPromises);
-      const subscriptionMap = new Map(
-        subscriptionResults.map(result => [result.userId, result.subscription])
-      );
+    uncachedIds.forEach(userId => {
+      const userData = usersData[userId];
+      if (userData) {
+        results[userId] = userData;
 
-      // Process Firestore results
-      const firestoreUserIds = new Set<string>();
-      usersSnapshot.forEach(doc => {
-        const userData = doc.data();
-        const subscription = subscriptionMap.get(doc.id);
-        
-        // Use centralized tier determination logic
-        const effectiveTier = getEffectiveTier(
-          subscription?.amount || null,
-          subscription?.tier || null,
-          subscription?.status || null
-        );
-
-        const user: UserData = {
-          uid: doc.id,
-          username: userData.username,
-          displayName: userData.displayName,
-          email: userData.email,
-          tier: effectiveTier,
-          subscriptionStatus: subscription?.status,
-          subscriptionAmount: subscription?.amount,
-          pageCount: userData.pageCount || 0,
-          followerCount: userData.followerCount || 0,
-          viewCount: userData.viewCount || 0
-        };
-        
-        results[doc.id] = user;
-        firestoreUserIds.add(doc.id);
-        
-        // Cache the result
-        const cacheKey = generateCacheKey('userData', doc.id);
-        setCacheItem(cacheKey, user, USER_DATA_CACHE_TTL);
-        
         // Update memory cache
-        userDataMemoryCache.set(doc.id, {
-          data: user,
+        userDataMemoryCache.set(userId, {
+          data: userData,
           timestamp: Date.now()
         });
-      });
 
-      // Fallback to RTDB for users not found in Firestore
-      const rtdbUserIds = batch.filter(id => !firestoreUserIds.has(id));
-      
-      if (rtdbUserIds.length > 0) {
-        console.log(`getBatchUserData: Falling back to RTDB for ${rtdbUserIds.length} users`);
-        
-        const rtdbPromises = rtdbUserIds.map(async (userId) => {
-          try {
-            const userRef = ref(rtdb, `users/${userId}`);
-            const snapshot = await get(userRef);
-            
-            if (snapshot.exists()) {
-              const userData = snapshot.val();
-              const user: UserData = {
-                uid: userId,
-                username: userData.username || userData.displayName || 
-                         (userData.email ? userData.email.split('@')[0] : undefined),
-                displayName: userData.displayName,
-                email: userData.email,
-                pageCount: userData.pageCount || 0,
-                followerCount: userData.followerCount || 0,
-                viewCount: userData.viewCount || 0
-              };
-              
-              return { userId, user };
-            }
-            
-            return { userId, user: null };
-          } catch (error) {
-            console.warn(`Error fetching user ${userId} from RTDB:`, error);
-            return { userId, user: null };
-          }
-        });
-        
-        const rtdbResults = await Promise.all(rtdbPromises);
-        
-        rtdbResults.forEach(({ userId, user }) => {
-          if (user) {
-            results[userId] = user;
-
-            // Cache the result
-            const cacheKey = generateCacheKey('userData', userId);
-            setCacheItem(cacheKey, user, USER_DATA_CACHE_TTL);
-
-            // Update memory cache
-            userDataMemoryCache.set(userId, {
-              data: user,
-              timestamp: Date.now()
-            });
-          }
-        });
+        // Update localStorage cache
+        const cacheKey = generateCacheKey('userData', userId);
+        setCacheItem(cacheKey, userData, USER_DATA_CACHE_TTL);
       }
-      
-    } catch (error) {
-      console.error(`Error fetching batch ${i}-${i + batchSize}:`, error);
-      
-      // Create fallback user data for failed fetches
-      batch.forEach(userId => {
-        if (!results[userId]) {
-          results[userId] = {
-            uid: userId,
-            username: 'Unknown User'
-          };
-        }
-      });
-    }
-  }
+    });
 
-  console.log(`getBatchUserData: Successfully fetched data for ${Object.keys(results).length} users`);
-  return results;
+
+    return results;
+
+  } catch (error) {
+    console.error('Error fetching user data via API:', error);
+
+    // Create fallback user data for failed fetches
+    uncachedIds.forEach(userId => {
+      if (!results[userId]) {
+        results[userId] = {
+          uid: userId,
+          username: 'Unknown User'
+        };
+      }
+    });
+
+    return results;
+  }
 };
 
 /**

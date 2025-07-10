@@ -1,0 +1,28 @@
+{
+  "name": "wewrite-dev",
+  "buildCommand": "npm run build",
+  "env": {
+    "SKIP_TYPE_CHECK": "1",
+    "NODE_OPTIONS": "--max_old_space_size=4096",
+    "NODE_ENV": "development",
+    "SUBSCRIPTION_ENV": "development",
+    "VERCEL_ENV": "development"
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "development",
+      "SUBSCRIPTION_ENV": "development"
+    }
+  },
+  "github": {
+    "silent": false,
+    "autoJobCancelation": true,
+    "enabled": true
+  },
+  "git": {
+    "deploymentEnabled": {
+      "dev": true
+    }
+  },
+  "ignoreCommand": "if [[ \"$VERCEL_GIT_COMMIT_REF\" == \"dependabot\"* ]]; then exit 0; else exit 1; fi"
+}
