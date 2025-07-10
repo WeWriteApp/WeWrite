@@ -8,7 +8,8 @@ import { Sparkline } from '../ui/sparkline';
 // import { getTrendingPages } from '../../firebase/pageViews';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { getUsernameById } from '../../utils/userUtils';
+import { getBatchUserData } from '../../firebase/batchUserData';
+import { UsernameBadge } from '../ui/UsernameBadge';
 
 interface TrendingPage {
   id: string;
@@ -17,6 +18,9 @@ interface TrendingPage {
   hourlyViews: number[];
   userId?: string;
   username?: string;
+  tier?: string;
+  subscriptionStatus?: string;
+  subscriptionAmount?: number;
 }
 
 export default function TrendingPagesSection({ limit = 3 }) {
@@ -46,38 +50,35 @@ export default function TrendingPagesSection({ limit = 3 }) {
 
         const pages = response.data?.trendingPages || [];
 
-        // For each page, get the username (hourly view data already included from trending API)
-        const pagesWithUsernames = await Promise.all(
-          pages.map(async (page) => {
-            try {
-              // Get username if userId exists
-              let username = "Anonymous";
-              if (page.userId) {
-                try {
-                  username = await getUsernameById(page.userId);
-                } catch (usernameError) {
-                  console.error(`Error getting username for user ${page.userId}:`, usernameError);
-                }
-              }
+        // Get unique user IDs for batch fetching subscription data
+        const uniqueUserIds = [...new Set(pages.map(page => page.userId).filter(Boolean))];
 
-              return {
-                ...page,
-                // Use hourlyViews from trending API if available, otherwise fallback to empty array
-                hourlyViews: page.hourlyViews || Array(24).fill(0),
-                username: username || "Anonymous"
-              };
-            } catch (err) {
-              console.error(`Error processing page ${page.id}:`, err);
-              return {
-                ...page,
-                hourlyViews: page.hourlyViews || Array(24).fill(0),
-                username: page.username || "Anonymous"
-              };
-            }
-          })
-        );
+        let batchUserData = {};
+        if (uniqueUserIds.length > 0) {
+          try {
+            console.log('TrendingPagesSection: Fetching subscription data for', uniqueUserIds.length, 'users');
+            batchUserData = await getBatchUserData(uniqueUserIds);
+          } catch (error) {
+            console.warn('TrendingPagesSection: Error fetching batch user data:', error);
+            // Continue without subscription data rather than failing
+          }
+        }
 
-        setTrendingPages(pagesWithUsernames);
+        // Add subscription data to pages
+        const pagesWithUserData = pages.map(page => {
+          const userData = batchUserData[page.userId];
+          return {
+            ...page,
+            // Use hourlyViews from trending API if available, otherwise fallback to empty array
+            hourlyViews: page.hourlyViews || Array(24).fill(0),
+            username: userData?.username || page.username || "Anonymous",
+            tier: userData?.tier,
+            subscriptionStatus: userData?.subscriptionStatus,
+            subscriptionAmount: userData?.subscriptionAmount
+          };
+        });
+
+        setTrendingPages(pagesWithUserData);
       } catch (err) {
         console.error('Error fetching trending pages:', err);
         setError('Failed to load trending pages');
@@ -177,15 +178,20 @@ export default function TrendingPagesSection({ limit = 3 }) {
                     </CardTitle>
                     <CardDescription className="text-xs">
                       <span className="text-foreground">by{" "}</span>
-                      <span
-                        className="hover:underline text-primary cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.location.href = `/user/${page.userId}`;
-                        }}
-                      >
-                        {page.username || 'Anonymous'}
-                      </span>
+                      {page.userId ? (
+                        <UsernameBadge
+                          userId={page.userId}
+                          username={page.username || 'Anonymous'}
+                          tier={page.tier}
+                          subscriptionStatus={page.subscriptionStatus}
+                          subscriptionAmount={page.subscriptionAmount}
+                          size="sm"
+                          variant="link"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <span className="text-muted-foreground">Anonymous</span>
+                      )}
                     </CardDescription>
                   </CardHeader>
                   <div className="px-3 pb-3 pt-0 mt-auto">
