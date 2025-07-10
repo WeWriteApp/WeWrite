@@ -7,6 +7,8 @@ import { Sparkline } from '../ui/sparkline';
 import Link from 'next/link';
 import ContentCarousel from './ContentCarousel';
 import { Loader } from 'lucide-react';
+import { UsernameBadge } from '../ui/UsernameBadge';
+import { getBatchUserData } from '../../firebase/batchUserData';
 // import { getTrendingPages } from '../../firebase/pageViews';
 
 interface TrendingPage {
@@ -16,6 +18,9 @@ interface TrendingPage {
   hourlyViews: number[];
   userId?: string;
   username?: string;
+  tier?: string;
+  subscriptionStatus?: string;
+  subscriptionAmount?: number;
 }
 
 /**
@@ -28,6 +33,42 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
   const [trendingPages, setTrendingPages] = useState<TrendingPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Function to fetch subscription data for users
+  const fetchSubscriptionData = async (pages: TrendingPage[]) => {
+    try {
+      // Get unique user IDs
+      const userIds = [...new Set(pages.map(page => page.userId).filter(Boolean))];
+
+      if (userIds.length === 0) {
+        console.log('SimpleTrendingCarousel: No user IDs found for subscription data');
+        setTrendingPages(pages);
+        return;
+      }
+
+      console.log(`SimpleTrendingCarousel: Fetching subscription data for ${userIds.length} users`);
+
+      // Fetch user data with subscription information
+      const userData = await getBatchUserData(userIds);
+
+      // Merge subscription data with pages
+      const pagesWithSubscriptions = pages.map(page => ({
+        ...page,
+        tier: page.userId ? userData[page.userId]?.tier : null,
+        subscriptionStatus: page.userId ? userData[page.userId]?.subscriptionStatus : null,
+        subscriptionAmount: page.userId ? userData[page.userId]?.subscriptionAmount : null,
+        username: page.userId ? (userData[page.userId]?.username || page.username) : page.username
+      }));
+
+      console.log('SimpleTrendingCarousel: Updated pages with subscription data');
+      setTrendingPages(pagesWithSubscriptions);
+
+    } catch (error) {
+      console.error('SimpleTrendingCarousel: Error fetching subscription data:', error);
+      // Fall back to pages without subscription data
+      setTrendingPages(pages);
+    }
+  };
 
   useEffect(() => {
     const fetchTrendingPages = async () => {
@@ -65,7 +106,9 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
           const limitedPages = pages.slice(0, Math.min(20, pages.length));
           console.log(`SimpleTrendingCarousel: Setting ${limitedPages.length} trending pages`);
           console.log('Page sample:', limitedPages[0]);
-          setTrendingPages(limitedPages);
+
+          // Fetch subscription data for users
+          await fetchSubscriptionData(limitedPages);
         }
       } catch (err) {
         console.error('SimpleTrendingCarousel: Exception fetching trending pages:', err);
@@ -113,21 +156,19 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
                   </CardTitle>
                   <CardDescription className="text-xs mt-1">
                     <span className="text-foreground">by{" "}</span>
-                    {/* Only make the user link clickable if we have a valid userId */}
                     {page.userId ? (
-                      <span
-                        className="hover:underline text-primary cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.location.href = `/user/${page.userId}`;
-                        }}
-                      >
-                        {page.username || 'Anonymous'}
-                      </span>
+                      <UsernameBadge
+                        userId={page.userId}
+                        username={page.username || 'Anonymous'}
+                        tier={page.tier}
+                        subscriptionStatus={page.subscriptionStatus}
+                        subscriptionAmount={page.subscriptionAmount}
+                        size="sm"
+                        variant="link"
+                        onClick={(e) => e.stopPropagation()}
+                      />
                     ) : (
-                      <span className="text-primary">
-                        {page.username || 'Anonymous'}
-                      </span>
+                      <span className="text-muted-foreground">Anonymous</span>
                     )}
                   </CardDescription>
                 </CardHeader>
