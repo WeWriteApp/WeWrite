@@ -270,6 +270,7 @@ export async function GET(request) {
 
 /**
  * Batch fetch user subscription data (server-side optimized version)
+ * Uses the same logic as the batch user API to ensure consistency
  */
 async function getBatchUserDataOptimized(userIds, adminDb, rtdb, getEffectiveTier) {
   try {
@@ -277,55 +278,154 @@ async function getBatchUserDataOptimized(userIds, adminDb, rtdb, getEffectiveTie
       return {};
     }
 
+    // Import environment config modules
+    const { getSubCollectionPath, PAYMENT_COLLECTIONS } = await import('../../utils/environmentConfig');
+
     const results = {};
     const batchSize = 10; // Process in batches to avoid overwhelming the database
 
     for (let i = 0; i < userIds.length; i += batchSize) {
       const batch = userIds.slice(i, i + batchSize);
 
-      // Fetch user data from RTDB in parallel
-      const userPromises = batch.map(async (userId) => {
-        try {
-          const { ref, get } = await import('firebase/database');
-          const userSnapshot = await get(ref(rtdb, `users/${userId}`));
+      try {
+        // Fetch user profiles from Firestore
+        const usersQuery = adminDb.collection('users').where('__name__', 'in', batch);
+        const usersSnapshot = await usersQuery.get();
 
-          if (userSnapshot.exists()) {
-            const userData = userSnapshot.val();
+        // Fetch subscription data in parallel using environment-aware paths
+        const subscriptionPromises = batch.map(async (userId) => {
+          try {
+            // Use environment-aware collection paths
+            const { parentPath, subCollectionName } = getSubCollectionPath(
+              PAYMENT_COLLECTIONS.USERS,
+              userId,
+              PAYMENT_COLLECTIONS.SUBSCRIPTIONS
+            );
+            const subDoc = await adminDb.doc(parentPath).collection(subCollectionName).doc('current').get();
             return {
               userId,
-              data: {
-                uid: userId,
-                username: userData.username || userData.displayName ||
-                         (userData.email ? userData.email.split('@')[0] : undefined),
-                displayName: userData.displayName,
-                tier: userData.tier || 0,
-                subscriptionStatus: userData.subscriptionStatus || 'inactive',
-                subscriptionAmount: userData.subscriptionAmount || 0,
-                pageCount: userData.pageCount || 0,
-                followerCount: userData.followerCount || 0
+              subscription: subDoc.exists ? subDoc.data() : null
+            };
+          } catch (error) {
+            console.warn(`Error fetching subscription for user ${userId}:`, error);
+            return { userId, subscription: null };
+          }
+        });
+
+        const subscriptionResults = await Promise.all(subscriptionPromises);
+        const subscriptionMap = new Map(
+          subscriptionResults.map(result => [result.userId, result.subscription])
+        );
+
+        // Process Firestore results
+        const firestoreUserIds = new Set();
+        usersSnapshot.forEach(doc => {
+          const userData = doc.data();
+          const subscription = subscriptionMap.get(doc.id);
+
+          // Use centralized tier determination logic
+          const effectiveTier = getEffectiveTier(
+            subscription?.amount || null,
+            subscription?.tier || null,
+            subscription?.status || null
+          );
+
+          const user = {
+            uid: doc.id,
+            username: userData.username,
+            displayName: userData.displayName,
+            email: userData.email,
+            tier: String(effectiveTier), // Ensure tier is always a string
+            subscriptionStatus: subscription?.status,
+            subscriptionAmount: subscription?.amount,
+            pageCount: userData.pageCount || 0,
+            followerCount: userData.followerCount || 0,
+            viewCount: userData.viewCount || 0
+          };
+
+          results[doc.id] = user;
+          firestoreUserIds.add(doc.id);
+        });
+
+        // Fallback to RTDB for users not found in Firestore (if RTDB is available)
+        const rtdbUserIds = batch.filter(id => !firestoreUserIds.has(id));
+
+        if (rtdbUserIds.length > 0 && rtdb) {
+          console.log(`Random pages API: Falling back to RTDB for ${rtdbUserIds.length} users`);
+
+          const rtdbPromises = rtdbUserIds.map(async (userId) => {
+            try {
+              const { ref, get } = await import('firebase/database');
+              const userSnapshot = await get(ref(rtdb, `users/${userId}`));
+
+              if (userSnapshot.exists()) {
+                const userData = userSnapshot.val();
+                const user = {
+                  uid: userId,
+                  username: userData.username || userData.displayName ||
+                           (userData.email ? userData.email.split('@')[0] : undefined),
+                  displayName: userData.displayName,
+                  email: userData.email,
+                  tier: '0', // No subscription data in RTDB
+                  subscriptionStatus: null,
+                  subscriptionAmount: null,
+                  pageCount: userData.pageCount || 0,
+                  followerCount: userData.followerCount || 0,
+                  viewCount: userData.viewCount || 0
+                };
+
+                return { userId, user };
               }
+
+              return { userId, user: null };
+            } catch (error) {
+              console.warn(`Error fetching user ${userId} from RTDB:`, error);
+              return { userId, user: null };
+            }
+          });
+
+          const rtdbResults = await Promise.all(rtdbPromises);
+
+          rtdbResults.forEach(({ userId, user }) => {
+            if (user) {
+              results[userId] = user;
+            }
+          });
+        } else if (rtdbUserIds.length > 0 && !rtdb) {
+          // If RTDB is not available, create fallback user data for missing users
+          console.log(`Random pages API: RTDB not available, creating fallback data for ${rtdbUserIds.length} users`);
+          rtdbUserIds.forEach(userId => {
+            results[userId] = {
+              uid: userId,
+              username: 'Unknown User',
+              tier: '0',
+              subscriptionStatus: null,
+              subscriptionAmount: null
+            };
+          });
+        }
+
+      } catch (error) {
+        console.error(`Error fetching batch ${i}-${i + batchSize}:`, error);
+
+        // Create fallback user data for failed fetches
+        batch.forEach(userId => {
+          if (!results[userId]) {
+            results[userId] = {
+              uid: userId,
+              username: 'Unknown User',
+              tier: '0',
+              subscriptionStatus: null,
+              subscriptionAmount: null
             };
           }
-
-          return { userId, data: null };
-        } catch (error) {
-          console.warn(`Error fetching user ${userId}:`, error);
-          return { userId, data: null };
-        }
-      });
-
-      const batchResults = await Promise.all(userPromises);
-
-      batchResults.forEach(({ userId, data }) => {
-        if (data) {
-          results[userId] = data;
-        }
-      });
+        });
+      }
     }
 
     return results;
   } catch (error) {
-    console.error('Error fetching batch user data:', error);
+    console.error('Error in getBatchUserDataOptimized:', error);
     return {};
   }
 }
