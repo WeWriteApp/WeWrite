@@ -205,7 +205,7 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
                   subscriptionStatus={followedUser.subscriptionStatus}
                   subscriptionAmount={followedUser.subscriptionAmount}
                   size="sm"
-                  showBadge={false}
+                  showBadge={true}
                   className="font-medium"
                 />
                 {followedUser.bio && (

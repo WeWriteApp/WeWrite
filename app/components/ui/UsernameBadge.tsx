@@ -54,32 +54,26 @@ export function UsernameBadge({
     return 'Active subscription';
   };
 
-  const content = (
-    <>
-      <span className={cn(
-        isInactive
-          ? "text-muted-foreground"
-          : "text-accent-foreground"
-      )}>
-        {username}
-      </span>
-      {showBadge && (
-        <SubscriptionTierBadge
-          tier={tier}
-          status={subscriptionStatus}
-          amount={subscriptionAmount}
-          size={size}
-        />
-      )}
-    </>
-  );
-
   const wrappedContent = (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="inline-flex items-center gap-1">
-            {content}
+            <span className={cn(
+              isInactive
+                ? "text-muted-foreground"
+                : "text-accent-foreground"
+            )}>
+              {username}
+            </span>
+            {showBadge && (
+              <SubscriptionTierBadge
+                tier={tier}
+                status={subscriptionStatus}
+                amount={subscriptionAmount}
+                size={size}
+              />
+            )}
           </span>
         </TooltipTrigger>
         <TooltipContent>

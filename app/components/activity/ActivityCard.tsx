@@ -372,7 +372,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
                     subscriptionStatus={activity.subscriptionStatus}
                     subscriptionAmount={activity.subscriptionAmount}
                     size="sm"
-                    showBadge={subscriptionEnabled}
+                    showBadge={true}
                     onClick={(e) => e.stopPropagation()}
                     className="inline-flex"
                   />
