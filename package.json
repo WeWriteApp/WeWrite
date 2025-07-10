@@ -100,7 +100,19 @@
     "errors:clear": "node scripts/clear-error-logs.cjs",
     "vercel:check": "node scripts/check-vercel-build.cjs",
     "vercel:fix": "node scripts/fix-vercel-build-errors.cjs",
-    "vercel:build": "SKIP_TYPE_CHECK=1 NODE_OPTIONS='--max_old_space_size=4096' npm run build"
+    "vercel:build": "SKIP_TYPE_CHECK=1 NODE_OPTIONS='--max_old_space_size=4096' npm run build",
+    "firebase": "firebase",
+    "firebase:login": "firebase login",
+    "firebase:list": "firebase projects:list",
+    "firebase:use": "firebase use",
+    "firebase:collections": "firebase firestore:collections",
+    "vercel": "vercel",
+    "vercel:login": "vercel login",
+    "vercel:list": "vercel list",
+    "vercel:env": "vercel env",
+    "firebase:audit": "node -r dotenv/config scripts/audit-firebase-collections.js dotenv_config_path=.env.local",
+    "firebase:cleanup": "node -r dotenv/config scripts/cleanup-firebase-collections.js dotenv_config_path=.env.local",
+    "firebase:cleanup:execute": "node -r dotenv/config scripts/cleanup-firebase-collections.js dotenv_config_path=.env.local -- --execute --force"
   },
   "dependencies": {
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
@@ -191,6 +203,7 @@
     "jest-html-reporters": "^3.1.7",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
-    "util": "^0.12.5"
+    "util": "^0.12.5",
+    "vercel": "^39.2.4"
   }
 }
