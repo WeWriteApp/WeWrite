@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { SubscriptionTierBadge } from './SubscriptionTierBadge';
 import { PillLink } from '../utils/PillLink';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
 import { cn } from '../../lib/utils';
 
 interface UsernameBadgeProps {
@@ -36,6 +37,23 @@ export function UsernameBadge({
   // Determine if user is inactive (no active subscription)
   const isInactive = !subscriptionStatus || subscriptionStatus !== 'active';
 
+  // Generate tooltip text for subscription status
+  const getTooltipText = () => {
+    if (!subscriptionStatus || subscriptionStatus !== 'active') {
+      return 'No active subscription - $0/mo';
+    }
+
+    if (subscriptionAmount && subscriptionAmount > 30) {
+      return 'Active subscription - above $30/mo';
+    }
+
+    if (subscriptionAmount) {
+      return `Active subscription - $${subscriptionAmount}/mo`;
+    }
+
+    return 'Active subscription';
+  };
+
   const content = (
     <>
       <span className={cn(
@@ -56,6 +74,21 @@ export function UsernameBadge({
     </>
   );
 
+  const wrappedContent = (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex items-center gap-1">
+            {content}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{getTooltipText()}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+
   if (variant === 'pill') {
     return (
       <PillLink
@@ -64,9 +97,7 @@ export function UsernameBadge({
         onClick={onClick}
         className={className}
       >
-        <span className="flex items-center gap-1">
-          {content}
-        </span>
+        {wrappedContent}
       </PillLink>
     );
   }
@@ -76,28 +107,14 @@ export function UsernameBadge({
       href={`/user/${userId}`}
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-2 px-2 py-1 rounded-md transition-colors w-fit",
+        "inline-flex items-center gap-1 px-2 py-1 rounded-md transition-colors w-fit",
         isInactive
           ? "hover:bg-muted/50"
           : "hover:bg-accent/50",
         className
       )}
     >
-      <span className={cn(
-        isInactive
-          ? "text-muted-foreground"
-          : "text-accent-foreground"
-      )}>
-        {username}
-      </span>
-      {showBadge && (
-        <SubscriptionTierBadge
-          tier={tier}
-          status={subscriptionStatus}
-          amount={subscriptionAmount}
-          size={size}
-        />
-      )}
+      {wrappedContent}
     </Link>
   );
 }

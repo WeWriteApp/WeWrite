@@ -148,13 +148,13 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
               onClick={() => window.location.href = `/${page.id}`}
             >
               <div className="wewrite-card h-full flex flex-col justify-between border-0 shadow-none" style={{ transform: 'none' }}>
-                <CardHeader className="p-4">
-                  <CardTitle className="text-lg mb-2 break-words h-[56px] overflow-hidden">
+                <CardHeader className="p-3">
+                  <CardTitle className="text-lg mb-1 break-words h-[52px] overflow-hidden">
                     <PillLink href={`/${page.id}`}>
                       {page.title || 'Untitled'}
                     </PillLink>
                   </CardTitle>
-                  <CardDescription className="text-xs mt-1">
+                  <CardDescription className="text-xs mt-0.5">
                     <span className="text-foreground">by{" "}</span>
                     {page.userId ? (
                       <UsernameBadge
@@ -172,15 +172,15 @@ export default function SimpleTrendingCarousel({ limit = 20 }: { limit?: number 
                     )}
                   </CardDescription>
                 </CardHeader>
-                <div className="px-4 pb-4 pt-0 mt-auto">
-                  <div className="flex items-center justify-between mb-1">
+                <div className="px-3 pb-3 pt-0 mt-auto">
+                  <div className="flex items-center justify-between mb-0.5">
                     <span className="text-sm font-medium">{page.views} views</span>
                     <span className="text-sm text-muted-foreground">last 24h</span>
                   </div>
-                  <div className="h-12 w-full pb-1">
+                  <div className="h-10 w-full">
                     <Sparkline
                       data={page.hourlyViews}
-                      height={44}
+                      height={36}
                       strokeWidth={0.8}
                       fillOpacity={0.08}
                     />

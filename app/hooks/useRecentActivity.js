@@ -5,6 +5,7 @@ import { registerRecentActivityInvalidator, unregisterCacheInvalidator } from ".
 import { registerRecentActivityInvalidation } from "../utils/globalCacheInvalidation";
 import { hasContentChangedSync } from "../utils/diffService";
 import { getEffectiveTier } from "../utils/subscriptionTiers";
+import { getBatchUserData } from "../firebase/batchUserData";
 
 // Simple cache for recent activity data - RUTHLESS SIMPLIFICATION: Very short TTL
 const activityCache = new Map();
