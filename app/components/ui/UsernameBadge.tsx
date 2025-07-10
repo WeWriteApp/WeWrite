@@ -62,7 +62,7 @@ export function UsernameBadge({
             <span className={cn(
               isInactive
                 ? "text-muted-foreground"
-                : "text-accent-foreground"
+                : "text-primary"
             )}>
               {username}
             </span>
@@ -101,12 +101,17 @@ export function UsernameBadge({
       href={`/user/${userId}`}
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1 px-2 py-1 rounded-md transition-colors w-fit",
+        "username-badge-link inline-flex items-center gap-1 px-2 py-1 rounded-md transition-colors w-fit no-underline",
         isInactive
-          ? "hover:bg-muted/50"
-          : "hover:bg-accent/50",
+          ? "hover:bg-muted/50 text-muted-foreground"
+          : "hover:bg-accent/50 text-primary",
+        "hover:no-underline focus:no-underline",
         className
       )}
+      style={{
+        color: isInactive ? undefined : 'hsl(var(--primary))',
+        textDecoration: 'none'
+      }}
     >
       {wrappedContent}
     </Link>

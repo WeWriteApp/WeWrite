@@ -457,6 +457,21 @@ input, textarea, select {
 /* This ensures consistent styling across the entire application */
 /* Import editor-styles.css in components that need pill link styling */
 
+/* UsernameBadge specific styling - ensure proper colors for subscription status */
+.username-badge-link {
+  text-decoration: none !important;
+}
+
+.username-badge-link.text-primary,
+.username-badge-link:has(.text-primary) {
+  color: hsl(var(--primary)) !important;
+}
+
+.username-badge-link.text-muted-foreground,
+.username-badge-link:has(.text-muted-foreground) {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
 /* Custom Spinner Animation */
 .loader {
   color: hsl(var(--primary)); /* Blue in light mode (from primary color) */
