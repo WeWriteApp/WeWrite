@@ -149,7 +149,15 @@ async function handleDevelopmentLogin(emailOrUsername: string, password: string)
  */
 async function handleProductionLogin(emailOrUsername: string, password: string) {
   try {
+    console.log('[Production Login] Starting authentication process');
+    console.log('[Production Login] Environment:', getEnvironmentType());
+    console.log('[Production Login] Collection prefix example:', getCollectionName('users'));
+
     const admin = getFirebaseAdmin();
+    if (!admin) {
+      throw new Error('Firebase Admin not initialized');
+    }
+
     const auth = admin.auth();
     const db = admin.firestore();
 
@@ -159,7 +167,6 @@ async function handleProductionLogin(emailOrUsername: string, password: string) 
     // Check if the input is a username (doesn't contain @)
     if (!emailOrUsername.includes('@')) {
       // Look up the email by username using environment-aware collection
-      const { getCollectionName } = await import('../../../utils/environmentConfig');
       const usernameQuery = await db.collection(getCollectionName('usernames'))
         .where('username', '==', emailOrUsername)
         .limit(1)
@@ -246,7 +253,14 @@ async function handleProductionLogin(emailOrUsername: string, password: string) 
 
   } catch (error: any) {
     console.error('Production login error:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Production authentication failed');
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+      emailOrUsername,
+      environment: getEnvironmentType()
+    });
+    return createErrorResponse('INTERNAL_ERROR', `Production authentication failed: ${error.message}`);
   }
 }
 
