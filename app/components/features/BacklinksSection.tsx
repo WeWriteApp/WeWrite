@@ -9,25 +9,9 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "../ui/tooltip";
+import { usePageConnections } from '../../hooks/usePageConnections';
 
-// Import the efficient backlinks function
-const getBacklinksAsync = async (pageId: string, limit?: number) => {
-  const { getBacklinks } = await import('../../firebase/database/backlinks');
-  return getBacklinks(pageId, limit);
-};
-
-// Import navigation tracking functions
-const getNavigationBacklinksAsync = async (pageId: string) => {
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const { getNavigationBacklinks } = await import('../../utils/navigationTracking');
-    return getNavigationBacklinks(pageId);
-  } catch (error) {
-    console.warn('Could not load navigation tracking:', error);
-    return [];
-  }
-};
+// These are no longer needed - using consolidated hook
 
 interface BacklinksSectionProps {
   page: {
@@ -40,90 +24,26 @@ interface BacklinksSectionProps {
 }
 
 export default function BacklinksSection({ page, linkedPageIds = [] }: BacklinksSectionProps) {
-  const [backlinks, setBacklinks] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  // Use consolidated page connections hook
+  const { incoming, loading, error } = usePageConnections(page.id, page.title);
+  // Process backlinks data from consolidated hook
+  const processedBacklinks = incoming.map(backlink => ({
+    ...backlink,
+    isAlreadyLinked: linkedPageIds && linkedPageIds.includes(backlink.id)
+  }));
 
-  // Set mounted state
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // Sort: non-linked pages first, then linked pages
+  processedBacklinks.sort((a, b) => a.isAlreadyLinked ? 1 : -1);
 
-  // Fetch backlinks
-  useEffect(() => {
-    if (!page?.id || !mounted) return;
+  // Limit to 20 for display
+  const backlinks = processedBacklinks.slice(0, 20);
 
-    const fetchBacklinks = async () => {
-      try {
-        setLoading(true);
-        console.log('🔗 BacklinksSection: Fetching backlinks for page:', page.id);
-
-        // Get content-based backlinks using the efficient index
-        const contentBacklinks = await getBacklinksAsync(page.id, 40);
-        console.log('🔗 BacklinksSection: Content backlinks found:', contentBacklinks.length, contentBacklinks);
-
-        // Get navigation-based backlinks
-        const navigationBacklinkIds = await getNavigationBacklinksAsync(page.id);
-        
-        // Fetch page data for navigation backlinks
-        const navigationBacklinks = [];
-        if (navigationBacklinkIds.length > 0) {
-          const { getPageById } = await import('../../firebase/database');
-
-          for (const pageId of navigationBacklinkIds) {
-            try {
-              const pageData = await getPageById(pageId);
-              if (pageData && pageData.title) {
-                navigationBacklinks.push(pageData);
-              }
-            } catch (error) {
-              console.warn(`Could not fetch navigation backlink page ${pageId}:`, error);
-            }
-          }
-        }
-
-        // Combine and deduplicate backlinks
-        const allBacklinks = [...contentBacklinks];
-
-        // Add navigation backlinks that aren't already in content backlinks
-        navigationBacklinks.forEach(navBacklink => {
-          if (!allBacklinks.find(existing => existing.id === navBacklink.id)) {
-            allBacklinks.push(navBacklink);
-          }
-        });
-
-        // Mark already linked pages
-        const processedBacklinks = allBacklinks.map(backlink => ({
-          ...backlink,
-          isAlreadyLinked: linkedPageIds && linkedPageIds.includes(backlink.id)
-        }));
-
-        // Sort: non-linked pages first, then linked pages
-        processedBacklinks.sort((a, b) => a.isAlreadyLinked ? 1 : -1);
-
-        // Limit to 20 for display
-        const limitedBacklinks = processedBacklinks.slice(0, 20);
-        console.log('🔗 BacklinksSection: Final backlinks to display:', limitedBacklinks.length, limitedBacklinks);
-
-        setBacklinks(limitedBacklinks);
-      } catch (error) {
-        console.error('Error fetching backlinks:', error);
-        console.error('Backlinks error details:', {
-          message: error.message,
-          code: error.code,
-          pageId: page.id
-        });
-        setBacklinks([]);
-      }
-      setLoading(false);
-    };
-
-    fetchBacklinks();
-  }, [page?.id, linkedPageIds, mounted]);
-
-  if (!mounted) {
-    return null;
-  }
+  console.log('🔗 BacklinksSection: Using consolidated hook data:', {
+    incoming: incoming.length,
+    processed: backlinks.length,
+    loading,
+    error
+  });
 
   return (
     <div className="space-y-3">
