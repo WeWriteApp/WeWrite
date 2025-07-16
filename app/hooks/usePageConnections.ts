@@ -36,11 +36,12 @@ export interface PageConnectionData {
  * 
  * This replaces separate data fetching in BacklinksSection and PageGraphView
  */
-export function usePageConnections(pageId: string, pageTitle?: string): PageConnectionData {
+export function usePageConnections(pageId: string, pageTitle?: string): PageConnectionData & { refresh: () => void } {
   const [incoming, setIncoming] = useState<PageConnection[]>([]);
   const [outgoing, setOutgoing] = useState<PageConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const fetchConnections = useCallback(async () => {
     if (!pageId) return;
@@ -111,7 +112,12 @@ export function usePageConnections(pageId: string, pageTitle?: string): PageConn
 
   useEffect(() => {
     fetchConnections();
-  }, [fetchConnections]);
+  }, [fetchConnections, refreshTrigger]);
+
+  const refresh = useCallback(() => {
+    console.log('🔄 [CONNECTIONS] Manual refresh triggered for page:', pageId);
+    setRefreshTrigger(prev => prev + 1);
+  }, [pageId]);
 
   // Calculate derived data
   const bidirectional = incoming.filter(incomingPage => 
@@ -131,7 +137,8 @@ export function usePageConnections(pageId: string, pageTitle?: string): PageConn
     bidirectional,
     allConnections,
     loading,
-    error
+    error,
+    refresh
   };
 }
 

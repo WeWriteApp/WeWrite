@@ -127,17 +127,33 @@ export async function updateBacklinksIndex(
   lastModified: any
 ): Promise<void> {
   try {
-    console.log(`🔄 Updating backlinks index for page ${pageId}`);
-    
+    console.log(`🔄 [BACKLINKS] Updating backlinks index for page ${pageId}`);
+    console.log(`🔄 [BACKLINKS] Page details:`, {
+      pageId,
+      pageTitle,
+      username,
+      isPublic,
+      contentType: typeof content,
+      contentLength: Array.isArray(content) ? content.length : 'not array',
+      environment: getCollectionName('backlinks')
+    });
+
     // First, remove all existing backlinks from this page
     await removeBacklinksFromPage(pageId);
-    
+
     // Extract links from the page content
     const links = extractLinksFromNodes(content);
+    console.log(`🔄 [BACKLINKS] Extracted ${links.length} total links from content`);
+
     const pageLinks = links.filter(link => link.type === 'page' && link.pageId);
-    
+    console.log(`🔄 [BACKLINKS] Found ${pageLinks.length} page links:`, pageLinks.map(link => ({
+      pageId: link.pageId,
+      text: link.text,
+      url: link.url
+    })));
+
     if (pageLinks.length === 0) {
-      console.log(`📝 No page links found in ${pageId}, backlinks index updated`);
+      console.log(`📝 [BACKLINKS] No page links found in ${pageId}, backlinks index updated`);
       return;
     }
     
@@ -166,9 +182,10 @@ const backlinkRef = doc(db, getCollectionName("backlinks"), backlinkId);
     }
     
     // Commit the batch
+    console.log(`🔄 [BACKLINKS] Committing batch with ${pageLinks.length} backlink entries...`);
     await batch.commit();
-    
-    console.log(`✅ Updated backlinks index: ${pageLinks.length} links from page ${pageId}`);
+
+    console.log(`✅ [BACKLINKS] Successfully updated backlinks index: ${pageLinks.length} links from page ${pageId}`);
     
   } catch (error) {
     console.error('Error updating backlinks index:', error);

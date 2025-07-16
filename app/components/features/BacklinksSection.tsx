@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PillLink } from "../utils/PillLink";
-import { Loader2, Info } from 'lucide-react';
+import { Loader2, Info, RefreshCw } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -25,7 +25,7 @@ interface BacklinksSectionProps {
 
 export default function BacklinksSection({ page, linkedPageIds = [] }: BacklinksSectionProps) {
   // Use consolidated page connections hook
-  const { incoming, loading, error } = usePageConnections(page.id, page.title);
+  const { incoming, loading, error, refresh } = usePageConnections(page.id, page.title);
   // Process backlinks data from consolidated hook
   const processedBacklinks = incoming.map(backlink => ({
     ...backlink,
@@ -47,20 +47,31 @@ export default function BacklinksSection({ page, linkedPageIds = [] }: Backlinks
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-          Backlinks
-        </h3>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-3 w-3 text-gray-400 cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">Pages that link to this page</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            Backlinks
+          </h3>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-3 w-3 text-gray-400 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Pages that link to this page</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        <button
+          onClick={refresh}
+          disabled={loading}
+          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
+          title="Refresh backlinks"
+        >
+          <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       {loading ? (

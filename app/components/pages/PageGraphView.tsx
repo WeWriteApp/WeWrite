@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as d3 from 'd3';
 import { useRouter } from 'next/navigation';
 import { usePillStyle } from '../../contexts/PillStyleContext';
-import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
+import { Loader2, Maximize2, Minimize2, RefreshCw } from 'lucide-react';
 import { Button } from '../ui/button';
 import { usePageConnectionsGraph, getLinkDirection } from '../../hooks/usePageConnections';
 
@@ -58,7 +58,8 @@ export default function PageGraphView({ pageId, pageTitle, className = "" }: Pag
     bidirectional,
     allConnections,
     secondHopConnections,
-    graphLoading: loading
+    graphLoading: loading,
+    refresh
   } = usePageConnectionsGraph(pageId, pageTitle);
 
   // Build graph data from consolidated connections
@@ -357,13 +358,23 @@ export default function PageGraphView({ pageId, pageTitle, className = "" }: Pag
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold">Page Connections</h3>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsFullscreen(!isFullscreen)}
-        >
-          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refresh}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+          >
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
+        </div>
       </div>
 
       {/* Graph container */}
