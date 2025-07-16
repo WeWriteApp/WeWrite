@@ -119,9 +119,16 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
     const fetchRelatedPages = async () => {
       try {
         setLoading(true);
+        console.log('📄 RelatedPagesSection: Fetching related pages for:', {
+          pageId: page.id,
+          pageTitle: page.title,
+          hasContent: !!page.content,
+          linkedPageIds: linkedPageIds?.length || 0
+        });
 
         // Get related pages based on content similarity
         const related = await getRelatedPagesAsync(page.id, page.title, page.content || '', linkedPageIds, 10);
+        console.log('📄 RelatedPagesSection: Related pages found:', related.length, related);
         setRelatedPages(related);
       } catch (error) {
         console.error('Error fetching related pages:', error);

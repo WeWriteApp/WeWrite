@@ -56,9 +56,11 @@ export default function BacklinksSection({ page, linkedPageIds = [] }: Backlinks
     const fetchBacklinks = async () => {
       try {
         setLoading(true);
+        console.log('🔗 BacklinksSection: Fetching backlinks for page:', page.id);
 
         // Get content-based backlinks using the efficient index
         const contentBacklinks = await getBacklinksAsync(page.id, 40);
+        console.log('🔗 BacklinksSection: Content backlinks found:', contentBacklinks.length, contentBacklinks);
 
         // Get navigation-based backlinks
         const navigationBacklinkIds = await getNavigationBacklinksAsync(page.id);
@@ -101,6 +103,7 @@ export default function BacklinksSection({ page, linkedPageIds = [] }: Backlinks
 
         // Limit to 20 for display
         const limitedBacklinks = processedBacklinks.slice(0, 20);
+        console.log('🔗 BacklinksSection: Final backlinks to display:', limitedBacklinks.length, limitedBacklinks);
 
         setBacklinks(limitedBacklinks);
       } catch (error) {
