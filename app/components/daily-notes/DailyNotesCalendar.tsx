@@ -42,36 +42,46 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
 
   // Fetch notes for the current month
   const fetchNotesForMonth = useCallback(async (date: Date) => {
-    if (!currentAccount?.uid) return;
+    if (!currentAccount?.uid) {
+      console.log('📅 DailyNotesCalendar: No current account, skipping fetch');
+      return;
+    }
 
     try {
       setLoading(true);
-      
+
       const startDate = startOfMonth(date);
       const endDate = endOfMonth(date);
-      
+
       console.log('📅 DailyNotesCalendar: Fetching notes for month:', {
         month: format(date, 'yyyy-MM'),
         startDate: format(startDate, 'yyyy-MM-dd'),
-        endDate: format(endDate, 'yyyy-MM-dd')
+        endDate: format(endDate, 'yyyy-MM-dd'),
+        userId: currentAccount.uid
       });
 
       // Use the same API endpoint as the carousel
-      const response = await fetch('/api/pages?' + new URLSearchParams({
+      const apiUrl = '/api/pages?' + new URLSearchParams({
         userId: currentAccount.uid,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         sortBy: 'createdAt',
         sortOrder: 'desc',
         limit: '1000'
-      }));
+      });
+
+      console.log('📅 DailyNotesCalendar: API URL:', apiUrl);
+      const response = await fetch(apiUrl);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('📅 DailyNotesCalendar: API error:', response.status, errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
       const pages = await response.json();
-      console.log('📅 DailyNotesCalendar: API returned', pages.length, 'pages');
+      console.log('📅 DailyNotesCalendar: API returned', pages?.length || 0, 'pages');
+      console.log('📅 DailyNotesCalendar: Sample pages:', pages?.slice(0, 3));
 
       // Group pages by creation date (YYYY-MM-DD format)
       const notesByDateMap = new Map<string, Note[]>();
@@ -169,6 +179,10 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
 
   const selectedDateNotes = selectedDate ? notesByDate.get(format(selectedDate, 'yyyy-MM-dd')) || [] : [];
 
+  // Calculate total notes for the month
+  const totalNotesInMonth = Array.from(notesByDate.values()).reduce((total, notes) => total + notes.length, 0);
+  const daysWithNotes = notesByDate.size;
+
   return (
     <div className="w-full">
       {/* Calendar Header */}
@@ -181,11 +195,24 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        
-        <h3 className="text-lg font-semibold">
-          {format(currentDate, 'MMMM yyyy')}
-        </h3>
-        
+
+        <div className="flex items-center gap-4">
+          <h3 className="text-lg font-semibold">
+            {format(currentDate, 'MMMM yyyy')}
+          </h3>
+
+          {/* Debug refresh button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => fetchNotesForMonth(currentDate)}
+            disabled={loading}
+            className="text-xs opacity-60 hover:opacity-100"
+          >
+            🔄 Refresh
+          </Button>
+        </div>
+
         <Button
           variant="outline"
           size="sm"
@@ -224,25 +251,35 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
               onClick={() => handleDayClick(day)}
               disabled={!hasNotes}
               className={`
-                p-2 h-16 border border-border rounded-lg transition-all duration-200
+                p-2 h-16 border rounded-lg transition-all duration-200 relative
                 ${isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'}
-                ${isTodayDate ? 'ring-2 ring-primary' : ''}
-                ${hasNotes 
-                  ? 'hover:bg-accent hover:text-accent-foreground cursor-pointer' 
-                  : 'cursor-default'
+                ${isTodayDate ? 'ring-2 ring-primary border-primary' : 'border-border'}
+                ${hasNotes
+                  ? 'hover:bg-accent hover:text-accent-foreground cursor-pointer hover:border-accent-foreground/20'
+                  : 'cursor-default hover:bg-muted/50'
                 }
                 ${!isCurrentMonth ? 'opacity-50' : ''}
+                ${hasNotes ? 'bg-accent/5' : ''}
                 flex flex-col items-center justify-center
               `}
             >
-              <span className="text-sm font-medium">{format(day, 'd')}</span>
+              <span className={`text-sm font-medium ${hasNotes ? 'font-semibold' : ''}`}>
+                {format(day, 'd')}
+              </span>
               {hasNotes && (
-                <span 
-                  className="text-xs px-1.5 py-0.5 rounded-full text-white mt-1"
+                <span
+                  className="text-xs px-1.5 py-0.5 rounded-full text-white mt-1 font-medium shadow-sm"
                   style={{ backgroundColor: accentColor }}
                 >
                   {notesForDay.length}
                 </span>
+              )}
+              {/* Subtle indicator for days with notes */}
+              {hasNotes && (
+                <div
+                  className="absolute top-1 right-1 w-2 h-2 rounded-full"
+                  style={{ backgroundColor: accentColor, opacity: 0.6 }}
+                />
               )}
             </button>
           );
@@ -251,8 +288,33 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
 
       {/* Loading indicator */}
       {loading && (
-        <div className="text-center py-4 text-muted-foreground">
-          <span>Loading calendar...</span>
+        <div className="text-center py-8 text-muted-foreground">
+          <div className="flex items-center justify-center gap-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+            <span>Loading calendar...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && totalNotesInMonth === 0 && (
+        <div className="text-center py-12">
+          <div className="text-muted-foreground mb-2">
+            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <h4 className="text-lg font-medium mb-2">No notes this month</h4>
+            <p className="text-sm">
+              Start writing to see your daily notes appear on the calendar.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Summary when notes exist */}
+      {!loading && totalNotesInMonth > 0 && (
+        <div className="text-center py-4 text-sm text-muted-foreground border-t border-border">
+          <span>
+            {totalNotesInMonth} note{totalNotesInMonth !== 1 ? 's' : ''} across {daysWithNotes} day{daysWithNotes !== 1 ? 's' : ''} this month
+          </span>
         </div>
       )}
 
