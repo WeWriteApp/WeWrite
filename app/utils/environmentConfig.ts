@@ -8,8 +8,8 @@
  * Environment Configuration Requirements:
  * - Local development: use dev data with DEV_ prefixed collections
  * - Vercel dev deployment: use dev data with DEV_ prefixed collections
- * - Vercel preview deployment: use prod data with PROD_ prefixed collections
- * - Vercel production deployment: use prod data with base collection names
+ * - Vercel preview deployment: use actual production data (base collection names)
+ * - Vercel production deployment: use actual production data (base collection names)
  *
  * This architecture enables seamless migration to separate Firebase projects
  * by simply updating Firebase config objects without changing collection logic.
@@ -77,7 +77,7 @@ export const getEnvironmentPrefix = (): string => {
     case 'production':
       return ''; // No prefix for production (base collection names)
     case 'preview':
-      return 'PROD_'; // Preview uses prod data with PROD_ prefix
+      return ''; // Preview uses actual production data (base collection names)
     case 'development':
       return 'DEV_'; // Development uses dev data with DEV_ prefix
     default:
@@ -95,7 +95,7 @@ export const getSubscriptionEnvironmentPrefix = (): string => {
     case 'production':
       return ''; // No prefix for production (base collection names)
     case 'preview':
-      return 'PROD_'; // Preview uses prod data with PROD_ prefix
+      return ''; // Preview uses actual production data (base collection names)
     case 'development':
       return 'DEV_'; // Development uses dev data with DEV_ prefix
     default:
@@ -115,8 +115,8 @@ export const getSubscriptionEnvironmentPrefix = (): string => {
  *
  * Current behavior (single Firebase project):
  * - Production: 'users' -> 'users' (base collection names)
- * - Preview: 'users' -> 'PROD_users' (prod data with PROD_ prefix)
- * - Development: 'users' -> 'DEV_users' (dev data with DEV_ prefix)
+ * - Preview: 'users' -> 'users' (actual production data)
+ * - Development: 'users' -> 'DEV_users' (isolated dev data with DEV_ prefix)
  *
  * Future behavior (separate Firebase projects):
  * - Production: 'users' -> 'users' (in production Firebase project)
@@ -138,7 +138,7 @@ export const getCollectionName = (baseName: string): string => {
  *
  * Current behavior (single Firebase project):
  * - Production: ('users', 'userId', 'subscriptions') -> 'users/userId/subscriptions'
- * - Preview: ('users', 'userId', 'subscriptions') -> 'PROD_users/userId/PROD_subscriptions'
+ * - Preview: ('users', 'userId', 'subscriptions') -> 'users/userId/subscriptions'
  * - Development: ('users', 'userId', 'subscriptions') -> 'DEV_users/userId/DEV_subscriptions'
  */
 export const getSubCollectionPath = (
@@ -235,9 +235,9 @@ export const validateEnvironmentConfig = (): boolean => {
       break;
 
     case 'preview':
-      if (prefix !== 'PROD_') {
-        console.error('[Environment Config] ERROR: Preview environment should use PROD_ prefix!');
-        console.error(`[Environment Config] Expected: 'PROD_', Got: '${prefix}'`);
+      if (prefix !== '') {
+        console.error('[Environment Config] ERROR: Preview environment should use base collection names!');
+        console.error(`[Environment Config] Expected: '', Got: '${prefix}'`);
         return false;
       }
       break;

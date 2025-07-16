@@ -200,31 +200,14 @@ async function handleProductionLogin(emailOrUsername: string, password: string) 
     // The client will need to verify the password on their end
     const customToken = await auth.createCustomToken(userRecord.uid);
 
-    // Try to find user data in multiple collections (for preview environment compatibility)
+    const userDoc = await db.collection(getCollectionName('users')).doc(userRecord.uid).get();
     let userData = {};
-    let userDoc;
 
-    const collectionsToTry = [
-      getCollectionName('users'), // PROD_users in preview
-      'users', // base users collection
-      'DEV_users' // dev collection as fallback
-    ];
-
-    for (const collectionName of collectionsToTry) {
-      try {
-        userDoc = await db.collection(collectionName).doc(userRecord.uid).get();
-        if (userDoc.exists) {
-          userData = userDoc.data() || {};
-          console.log(`[Production Login] Found user data in collection: ${collectionName}`);
-          break;
-        }
-      } catch (error) {
-        console.log(`[Production Login] Collection ${collectionName} not accessible:`, error);
-      }
-    }
-
-    if (!userDoc || !userDoc.exists) {
-      console.log(`[Production Login] User data not found in any collection for UID: ${userRecord.uid}`);
+    if (userDoc.exists) {
+      userData = userDoc.data() || {};
+      console.log(`[Production Login] Found user data in collection: ${getCollectionName('users')}`);
+    } else {
+      console.log(`[Production Login] User data not found for UID: ${userRecord.uid}`);
       // Create minimal user data if not found
       userData = {
         username: userRecord.email?.split('@')[0] || 'user',
@@ -232,27 +215,14 @@ async function handleProductionLogin(emailOrUsername: string, password: string) 
       };
     }
 
-    // Update last login time (try multiple collections)
-    let updateSuccessful = false;
-    for (const collectionName of collectionsToTry) {
-      try {
-        const docRef = db.collection(collectionName).doc(userRecord.uid);
-        const docSnapshot = await docRef.get();
-        if (docSnapshot.exists) {
-          await docRef.update({
-            lastLoginAt: new Date().toISOString()
-          });
-          console.log(`[Production Login] Updated lastLoginAt in collection: ${collectionName}`);
-          updateSuccessful = true;
-          break;
-        }
-      } catch (error) {
-        console.log(`[Production Login] Failed to update in collection ${collectionName}:`, error);
-      }
-    }
-
-    if (!updateSuccessful) {
-      console.log(`[Production Login] Could not update lastLoginAt for user: ${userRecord.uid}`);
+    // Update last login time
+    try {
+      await db.collection(getCollectionName('users')).doc(userRecord.uid).update({
+        lastLoginAt: new Date().toISOString()
+      });
+      console.log(`[Production Login] Updated lastLoginAt in collection: ${getCollectionName('users')}`);
+    } catch (updateError) {
+      console.log(`[Production Login] Could not update lastLoginAt for user: ${userRecord.uid}`, updateError);
     }
 
     // Set authentication cookies
