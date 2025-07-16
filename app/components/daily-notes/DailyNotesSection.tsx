@@ -69,45 +69,48 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
         <SectionTitle
           icon={Calendar}
           title="My Daily Notes"
-        >
-          <div className="flex items-center gap-2">
-            {/* View Toggle */}
-            <div className="flex items-center border border-border rounded-lg p-1">
-              <Button
-                variant={viewMode === 'timeline' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('timeline')}
-                className="h-7 px-2 rounded-md"
-              >
-                <List className="h-3 w-3 mr-1" />
-                Timeline
-              </Button>
-              <Button
-                variant={viewMode === 'calendar' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('calendar')}
-                className="h-7 px-2 rounded-md"
-              >
-                <Calendar className="h-3 w-3 mr-1" />
-                Calendar
-              </Button>
-            </div>
-
-            {/* Today Button - only show in timeline mode */}
-            {viewMode === 'timeline' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={scrollToToday}
-                className="rounded-2xl"
-              >
-                Today
-              </Button>
-            )}
-          </div>
-        </SectionTitle>
+        />
       }
     >
+      {/* View Toggle - below sticky header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          {/* View Toggle */}
+          <div className="flex items-center border border-border rounded-lg p-1">
+            <Button
+              variant={viewMode === 'timeline' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('timeline')}
+              className="h-7 px-2 rounded-md"
+            >
+              <List className="h-3 w-3 mr-1" />
+              Timeline
+            </Button>
+            <Button
+              variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('calendar')}
+              className="h-7 px-2 rounded-md"
+            >
+              <Calendar className="h-3 w-3 mr-1" />
+              Calendar
+            </Button>
+          </div>
+        </div>
+
+        {/* Today Button - only show in timeline mode */}
+        {viewMode === 'timeline' && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={scrollToToday}
+            className="rounded-2xl"
+          >
+            Today
+          </Button>
+        )}
+      </div>
+
       {/* Content container */}
       <div className="relative">
         {viewMode === 'timeline' ? (

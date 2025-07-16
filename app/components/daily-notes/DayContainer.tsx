@@ -67,15 +67,8 @@ const DayContainer = React.memo(function DayContainer({
           </div>
         </div>
 
-        {/* Notes Pills - with consistent height based on maxNotesCount */}
-        <div
-          className="flex flex-wrap gap-2 items-start mb-3"
-          style={{
-            // Calculate minimum height based on max notes count
-            // Assuming ~32px per row (pill height + gap), with at least one row
-            minHeight: maxNotesCount > 0 ? `${Math.max(32, Math.ceil(maxNotesCount / 2) * 40)}px` : '32px'
-          }}
-        >
+        {/* Notes Pills - dense wrapping layout */}
+        <div className="flex flex-wrap gap-2 items-start mb-3">
           {notes.map((note) => (
             <PillLink
               key={note.id}
