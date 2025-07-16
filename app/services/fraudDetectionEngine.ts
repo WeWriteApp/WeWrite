@@ -23,7 +23,6 @@ import {
   Timestamp
 } from 'firebase/firestore';
 
-import { getCollectionName } from "../utils/environmentConfig";
 import {
   FinancialOperationResult,
   FinancialError,

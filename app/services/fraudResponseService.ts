@@ -287,7 +287,8 @@ export class FraudResponseService {
     fraudResult: FraudDetectionResult,
     correlationId: CorrelationId
   ): Promise<boolean> {
-await updateDoc(doc(db, getCollectionName("users"), userId), {
+    try {
+      await updateDoc(doc(db, getCollectionName("users"), userId), {
         fraudFlags: increment(1),
         lastFraudFlagAt: serverTimestamp(),
         fraudFlagReason: `Risk score: ${fraudResult.riskScore}`,
@@ -642,8 +643,10 @@ await updateDoc(doc(db, getCollectionName("users"), userId), {
         updatedAt: serverTimestamp()
       });
 
-const userDoc = await getDoc(doc(db, getCollectionName("users"), userId));
-await updateDoc(doc(db, getCollectionName("users"), userId), {
+      // Update user status if suspended
+      const userDoc = await getDoc(doc(db, getCollectionName("users"), userId));
+      if (userDoc.exists() && userDoc.data().status === 'suspended') {
+        await updateDoc(doc(db, getCollectionName("users"), userId), {
           status: 'active',
           suspendedAt: null,
           suspensionReason: null,

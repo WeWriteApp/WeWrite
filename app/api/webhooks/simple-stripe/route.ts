@@ -206,13 +206,13 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     }
 
     // Update subscription with failed payment info
-doc(db, getCollectionName("users"), userId, 'subscriptions', 'current'),
+    await updateDoc(
+      doc(db, getCollectionName("users"), userId, 'subscriptions', 'current'),
       {
         lastFailedPaymentAt: new Date(invoice.created * 1000),
         failureCount: (invoice.attempt_count || 1),
         updatedAt: serverTimestamp()
-      },
-      { merge: true }
+      }
     );
 
     console.log(`[SIMPLE WEBHOOK] Payment failed for user ${userId}, attempt ${invoice.attempt_count}`);

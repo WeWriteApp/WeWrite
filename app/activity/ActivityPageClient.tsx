@@ -60,4 +60,4 @@ export default function ActivityPageClient({
       <RecentPagesActivity limit={50} isCarousel={false} />
     </div>
   );
-
+}

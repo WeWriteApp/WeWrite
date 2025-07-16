@@ -27,7 +27,6 @@ import Stripe from 'stripe';
 import { getStripeSecretKey } from '../utils/stripeConfig';
 import { TransactionTrackingService } from './transactionTrackingService';
 import {
-import { getCollectionName } from "../utils/environmentConfig";
   FinancialOperationResult,
   FinancialError,
   FinancialErrorCode,

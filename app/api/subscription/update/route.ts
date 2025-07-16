@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionName } from '../../../utils/environmentConfig';
 import { determineTierFromAmount, calculateTokensForAmount } from '../../../utils/subscriptionTiers';
+import { initAdmin } from '../../../firebase/admin';
 
 // Initialize Firebase Admin
 const admin = initAdmin();
