@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getEnvironmentType } from '../../../utils/environmentConfig';
+import { getEnvironmentType, getCollectionName } from '../../../utils/environmentConfig';
 import { DEV_TEST_USERS } from '../../../firebase/developmentAuth';
 import { cookies } from 'next/headers';
 
