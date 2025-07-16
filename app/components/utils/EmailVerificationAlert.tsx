@@ -148,11 +148,6 @@ function EmailVerificationAlert({
     }
   };
 
-  const handleDismiss = () => {
-    setIsDismissed(true);
-    onDismiss?.();
-  };
-
   // Render banner variant (full-width top banner)
   if (variant === 'banner') {
     return (
