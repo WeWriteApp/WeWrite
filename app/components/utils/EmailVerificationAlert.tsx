@@ -39,6 +39,48 @@ function EmailVerificationAlert({
   const [isDismissed, setIsDismissed] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
 
+  // Optimistic verification state management
+  const [shouldShowAlert, setShouldShowAlert] = useState(false);
+  const [isAnimatingIn, setIsAnimatingIn] = useState(false);
+  const [hasCheckedVerification, setHasCheckedVerification] = useState(false);
+
+  // Optimistic verification check - only show alert if actually unverified
+  useEffect(() => {
+    if (!isAuthenticated || !session || isDismissed) {
+      return;
+    }
+
+    // Optimistically assume verified, then check
+    const checkVerificationStatus = async () => {
+      try {
+        // Wait a bit for auth state to settle
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Check if user is actually unverified
+        const isUnverified = auth.currentUser && !auth.currentUser.emailVerified;
+
+        if (isUnverified) {
+          // User is actually unverified, show alert with animation
+          setShouldShowAlert(true);
+          // Trigger animation after state update
+          setTimeout(() => setIsAnimatingIn(true), 50);
+        }
+
+        setHasCheckedVerification(true);
+      } catch (error) {
+        console.warn('Error checking email verification status:', error);
+        // On error, assume unverified for safety
+        setShouldShowAlert(true);
+        setTimeout(() => setIsAnimatingIn(true), 50);
+        setHasCheckedVerification(true);
+      }
+    };
+
+    if (!hasCheckedVerification) {
+      checkVerificationStatus();
+    }
+  }, [isAuthenticated, session, isDismissed, hasCheckedVerification]);
+
   // Update cooldown timer
   useEffect(() => {
     const updateCooldown = () => {
@@ -54,10 +96,20 @@ function EmailVerificationAlert({
     return () => clearInterval(interval);
   }, []);
 
-  // Only show alert for authenticated users with unverified emails
-  if (!isAuthenticated || !session || auth.currentUser?.emailVerified || isDismissed) {
+  // Only show alert if we've confirmed the user is unverified
+  if (!shouldShowAlert || isDismissed) {
     return null;
   }
+
+  // Handle dismissal with animation
+  const handleDismiss = () => {
+    setIsAnimatingIn(false);
+    // Wait for animation to complete before hiding
+    setTimeout(() => {
+      setIsDismissed(true);
+      onDismiss?.();
+    }, 300);
+  };
 
   const handleResendVerification = async () => {
     if (!auth.currentUser) {
@@ -104,7 +156,11 @@ function EmailVerificationAlert({
   // Render banner variant (full-width top banner)
   if (variant === 'banner') {
     return (
-      <div className="bg-amber-50 dark:bg-amber-950/20 border-b border-amber-200 dark:border-amber-800/30">
+      <div className={`
+        bg-amber-50 dark:bg-amber-950/20 border-b border-amber-200 dark:border-amber-800/30
+        transition-all duration-300 ease-in-out overflow-hidden
+        ${isAnimatingIn ? 'opacity-100 max-h-20' : 'opacity-0 max-h-0'}
+      `}>
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           {/* Mobile-first responsive layout */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 sm:py-3 gap-2 sm:gap-0">
@@ -180,7 +236,11 @@ function EmailVerificationAlert({
 
   // Render alert variant (contained alert box)
   return (
-    <Alert className={`border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/30 ${className}`}>
+    <div className={`
+      transition-all duration-300 ease-in-out overflow-hidden
+      ${isAnimatingIn ? 'opacity-100 max-h-32 mb-4' : 'opacity-0 max-h-0 mb-0'}
+    `}>
+      <Alert className={`border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/30 ${className}`}>
       <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
       <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-2 sm:gap-4">
         <div className="flex-1 min-w-0">
@@ -240,6 +300,7 @@ function EmailVerificationAlert({
         </div>
       </AlertDescription>
     </Alert>
+    </div>
   );
 }
 
