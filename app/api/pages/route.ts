@@ -111,7 +111,8 @@ export async function GET(request: NextRequest) {
         lastModified: data.lastModified,
         createdAt: data.createdAt,
         deleted: data.deleted || false,
-        deletedAt: data.deletedAt
+        deletedAt: data.deletedAt,
+        customDate: data.customDate || null // Include customDate for Timeline functionality
       });
     });
 

@@ -115,7 +115,14 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
             hasCustomDate: !!pages[0].customDate,
             customDate: pages[0].customDate,
             allFields: Object.keys(pages[0])
-          } : null
+          } : null,
+          // Show first few pages with their customDate status
+          pagesWithCustomDate: pages.slice(0, 5).map(page => ({
+            id: page.id,
+            title: page.title,
+            customDate: page.customDate,
+            hasCustomDate: !!page.customDate
+          }))
         });
 
         pages.forEach((page: any) => {
