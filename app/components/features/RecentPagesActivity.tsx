@@ -140,6 +140,7 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
         });
 
         const pagesWithActivity = [...pagesWithDiff, ...recentPagesWithoutDiff];
+        console.log('🔍 [RECENT_EDITS] Final pages with activity:', pagesWithActivity.length);
 
         // Enrich pages with subscription data from batch user data
         const enrichedPages = pagesWithActivity.map(page => {
@@ -152,6 +153,9 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
             username: userData?.username || page.username
           };
         });
+
+        console.log('🔍 [RECENT_EDITS] Final enriched pages:', enrichedPages.length);
+        console.log('🔍 [RECENT_EDITS] Sample enriched pages:', enrichedPages.slice(0, 2));
 
         setPages(enrichedPages);
       } catch (err) {
@@ -194,17 +198,32 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
 
   // Filter activities based on current view mode
   const filteredActivities = React.useMemo(() => {
+    console.log('🔍 [RECENT_EDITS] Filtering activities:', {
+      totalPages: pages.length,
+      currentViewMode,
+      hasCurrentAccount: !!currentAccount,
+      followedPagesCount: followedPages.length,
+      limit
+    });
+
     let filtered = pages;
 
     if (currentViewMode === 'following' && currentAccount) {
       filtered = pages.filter(page =>
         followedPages.some(followedPage => followedPage.id === page.id)
       );
+      console.log('🔍 [RECENT_EDITS] Following filter result:', filtered.length);
     } else if (currentViewMode === 'mine' && currentAccount) {
       filtered = pages.filter(page => page.userId === currentAccount.uid);
+      console.log('🔍 [RECENT_EDITS] Mine filter result:', filtered.length);
+    } else {
+      console.log('🔍 [RECENT_EDITS] No filter applied, using all pages:', filtered.length);
     }
 
-    return filtered.slice(0, limit).map(convertPageToActivity);
+    const finalActivities = filtered.slice(0, limit).map(convertPageToActivity);
+    console.log('🔍 [RECENT_EDITS] Final activities after limit and conversion:', finalActivities.length);
+
+    return finalActivities;
   }, [pages, currentViewMode, followedPages, currentAccount, limit]);
 
   // Function to render the filter dropdown button
@@ -294,13 +313,6 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
         icon={Activity}
         title="No recent edits"
         description={getEmptyMessage()}
-        showDebugInfo={true}
-        debugInfo={{
-          dataSource: 'Home API - recentPages with diff data',
-          apiEndpoint: '/api/home',
-          environment: getEnvironmentType(),
-          lastFetch: new Date().toISOString()
-        }}
       />
     );
   }

@@ -201,13 +201,6 @@ export default function TrendingPages({ limit = 5 }) {
         icon={Flame}
         title="No trending pages yet"
         description="Pages will appear here as they gain popularity"
-        showDebugInfo={true}
-        debugInfo={{
-          dataSource: 'Trending API - public pages with views',
-          apiEndpoint: '/api/trending',
-          environment: getEnvironmentType(),
-          lastFetch: new Date().toISOString()
-        }}
       />
     );
   }

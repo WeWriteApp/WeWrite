@@ -10,14 +10,6 @@ interface EmptyStateProps {
   description: string;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
-  showDebugInfo?: boolean;
-  debugInfo?: {
-    dataSource?: string;
-    lastFetch?: string;
-    errorCount?: number;
-    apiEndpoint?: string;
-    environment?: string;
-  };
 }
 
 /**
@@ -31,9 +23,7 @@ export default function EmptyState({
   title,
   description,
   className,
-  size = 'md',
-  showDebugInfo = false,
-  debugInfo
+  size = 'md'
 }: EmptyStateProps) {
   const sizeClasses = {
     sm: {
@@ -71,32 +61,6 @@ export default function EmptyState({
       <p className={classes.description}>
         {description}
       </p>
-      
-      {/* Debug Information - only show in development */}
-      {showDebugInfo && debugInfo && process.env.NODE_ENV === 'development' && (
-        <details className="mt-4 text-left">
-          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
-            🔍 Debug Info
-          </summary>
-          <div className="mt-2 p-3 bg-muted/30 rounded text-xs font-mono space-y-1">
-            {debugInfo.dataSource && (
-              <div><span className="text-primary">Source:</span> {debugInfo.dataSource}</div>
-            )}
-            {debugInfo.apiEndpoint && (
-              <div><span className="text-primary">API:</span> {debugInfo.apiEndpoint}</div>
-            )}
-            {debugInfo.environment && (
-              <div><span className="text-primary">Env:</span> {debugInfo.environment}</div>
-            )}
-            {debugInfo.lastFetch && (
-              <div><span className="text-primary">Last Fetch:</span> {debugInfo.lastFetch}</div>
-            )}
-            {debugInfo.errorCount !== undefined && (
-              <div><span className="text-primary">Errors:</span> {debugInfo.errorCount}</div>
-            )}
-          </div>
-        </details>
-      )}
     </div>
   );
 }

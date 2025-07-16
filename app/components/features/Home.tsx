@@ -129,13 +129,6 @@ const RecentPagesSection = () => {
           icon={Clock}
           title="No recently viewed pages"
           description="Pages you visit will appear here for quick access"
-          showDebugInfo={true}
-          debugInfo={{
-            dataSource: 'Home API - recentPages from lastModified',
-            apiEndpoint: '/api/home',
-            environment: getEnvironmentType(),
-            lastFetch: new Date().toISOString()
-          }}
         />
       </StickySection>
     );
