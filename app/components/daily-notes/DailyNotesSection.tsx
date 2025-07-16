@@ -1,9 +1,15 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Calendar, List } from 'lucide-react';
+import { Calendar, List, ChevronDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import { SectionTitle } from '../ui/section-title';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
 import StickySection from "../utils/StickySection";
 import DailyNotesCarousel from './DailyNotesCarousel';
 import DailyNotesCalendar from './DailyNotesCalendar';
@@ -70,45 +76,57 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
           icon={Calendar}
           title="My Daily Notes"
         >
-          {/* Today Button - only show in timeline mode */}
-          {viewMode === 'timeline' && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={scrollToToday}
-              className="rounded-2xl"
-            >
-              Today
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* View Mode Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-3 rounded-2xl hover:bg-muted/80 transition-colors"
+                  aria-label="Switch view mode"
+                >
+                  {viewMode === 'timeline' ? (
+                    <>
+                      <List className="h-3 w-3 mr-1" />
+                      Timeline
+                    </>
+                  ) : (
+                    <>
+                      <Calendar className="h-3 w-3 mr-1" />
+                      Calendar
+                    </>
+                  )}
+                  <ChevronDown className="h-3 w-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setViewMode('timeline')}>
+                  <List className="h-4 w-4 mr-2" />
+                  Timeline
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode('calendar')}>
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Calendar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Today Button - only show in timeline mode */}
+            {viewMode === 'timeline' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={scrollToToday}
+                className="rounded-2xl"
+              >
+                Today
+              </Button>
+            )}
+          </div>
         </SectionTitle>
       }
     >
-      {/* View Toggle - below sticky header */}
-      <div className="flex justify-center md:justify-end mb-6">
-        {/* View Toggle - full width on mobile, right-aligned on desktop */}
-        <div className="flex items-center border border-border rounded-lg p-1 w-full md:w-auto">
-          <Button
-            variant={viewMode === 'timeline' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('timeline')}
-            className="h-7 px-2 rounded-md flex-1 md:flex-none"
-          >
-            <List className="h-3 w-3 mr-1" />
-            Timeline
-          </Button>
-          <Button
-            variant={viewMode === 'calendar' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('calendar')}
-            className="h-7 px-2 rounded-md flex-1 md:flex-none"
-          >
-            <Calendar className="h-3 w-3 mr-1" />
-            Calendar
-          </Button>
-        </div>
-      </div>
-
       {/* Content container */}
       <div className="relative">
         {viewMode === 'timeline' ? (
