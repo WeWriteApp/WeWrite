@@ -247,14 +247,6 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
 
   return (
     <div className={`w-full ${className}`}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-foreground">Timeline</h2>
-        <p className="text-sm text-muted-foreground">
-          Pages organized by custom date
-        </p>
-      </div>
-
       {/* Loading state */}
       {loading && (
         <div className="text-center py-8 text-muted-foreground">
