@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { format, addDays, subDays, startOfDay, endOfDay } from 'date-fns';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Info } from 'lucide-react';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useRouter } from 'next/navigation';
 import DayContainer from '../daily-notes/DayContainer';
@@ -48,6 +48,10 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
   const [notesByDate, setNotesByDate] = useState<Map<string, Note[]>>(new Map());
   const [loading, setLoading] = useState(false);
   const [maxNotesCount, setMaxNotesCount] = useState(0);
+
+  // State for info card dismissal
+  const [isInfoCardDismissed, setIsInfoCardDismissed] = useState(false);
+  const [isInfoCardAnimating, setIsInfoCardAnimating] = useState(false);
 
   // Generate array of dates for the current range
   const dateRange = useMemo(() => {
@@ -237,6 +241,16 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
     setEndDate(prevEnd => addDays(prevEnd, 15));
   }, []);
 
+  // Handle info card dismissal with animation
+  const handleDismissInfoCard = useCallback(() => {
+    setIsInfoCardAnimating(true);
+    // Wait for animation to complete before removing from DOM
+    setTimeout(() => {
+      setIsInfoCardDismissed(true);
+      setIsInfoCardAnimating(false);
+    }, 300); // Match the animation duration
+  }, []);
+
   if (!currentAccount) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -300,13 +314,36 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
         </button>
       </div>
 
-      {/* Empty state */}
-      {!loading && notesByDate.size === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-          <p className="mb-4">No pages with custom dates found</p>
-          <p className="text-sm">
-            Create a new page and assign it a custom date to see it in your timeline
-          </p>
+      {/* Info card for empty state */}
+      {!loading && notesByDate.size === 0 && !isInfoCardDismissed && (
+        <div
+          className={`
+            transition-all duration-300 ease-in-out overflow-hidden
+            ${isInfoCardAnimating ? 'opacity-0 max-h-0 py-0' : 'opacity-100 max-h-96 py-4'}
+          `}
+        >
+          <div className="bg-muted/50 border border-border rounded-lg p-4 mx-auto max-w-md">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 mt-0.5">
+                <Info className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-foreground font-medium mb-1">
+                  Timeline shows pages with custom dates
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Create a new page and assign it a custom date to see it appear in your timeline
+                </p>
+              </div>
+              <button
+                onClick={handleDismissInfoCard}
+                className="flex-shrink-0 p-1 -m-1 text-muted-foreground hover:text-foreground transition-colors rounded"
+                aria-label="Dismiss"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
