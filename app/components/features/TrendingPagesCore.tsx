@@ -197,12 +197,6 @@ export default function TrendingPages({ limit = 5 }) {
             <Flame className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p className="font-medium mb-1">No trending pages yet</p>
             <p className="text-sm">Pages will appear here as they gain popularity</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="text-sm text-primary underline hover:no-underline mt-2"
-            >
-              🔄 Refresh
-            </button>
           </div>
         </div>
       </div>

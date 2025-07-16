@@ -194,6 +194,19 @@ async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: str
       })
       .slice(0, limitCount);
 
+    console.log(`🏠 [HOME_API] Filtered pages result:`, {
+      totalPages: pages.length,
+      afterDeletedFilter: pages.filter(page => page.deleted !== true).length,
+      afterVisibilityFilter: filteredPages.length,
+      samplePages: filteredPages.slice(0, 3).map(p => ({
+        id: p.id,
+        title: p.title,
+        isPublic: p.isPublic,
+        deleted: p.deleted,
+        userId: p.userId
+      }))
+    });
+
     // Return pages without subscription data - client will fetch this using getBatchUserData
     const pagesWithCompleteInfo = filteredPages;
 

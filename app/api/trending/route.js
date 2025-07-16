@@ -44,8 +44,12 @@ export async function GET(request) {
     pagesSnapshot.forEach(doc => {
       const pageData = doc.data();
 
-      // Skip private pages, deleted pages, pages without titles, or with very low views
-      if (!pageData.isPublic || pageData.deleted || !pageData.title || (pageData.views || 0) < 1) {
+      // Skip private pages, deleted pages, or pages without titles
+      // For development, be less restrictive about view counts
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      const minViews = isDevelopment ? 0 : 1;
+
+      if (!pageData.isPublic || pageData.deleted || !pageData.title || (pageData.views || 0) < minViews) {
         return;
       }
 
