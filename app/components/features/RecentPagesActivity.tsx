@@ -52,6 +52,8 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
   renderFilterInHeader = false,
   isCarousel = true
 }, ref) => {
+  console.log('🚀 [RECENT_EDITS] Component mounted/rendered');
+
   const [pages, setPages] = useState<RecentPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

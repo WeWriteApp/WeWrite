@@ -30,6 +30,8 @@ interface TrendingPagesResponse {
 }
 
 export default function TrendingPages({ limit = 5 }) {
+  console.log('🚀 [TRENDING] Component mounted/rendered');
+
   const [trendingPages, setTrendingPages] = useState<TrendingPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

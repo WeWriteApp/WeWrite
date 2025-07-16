@@ -22,7 +22,7 @@ import { getEnvironmentType } from "../../utils/environmentConfig";
 
 // Recently Viewed Section Component - moved outside to prevent infinite re-renders
 const RecentPagesSection = () => {
-  console.log('🟠 [RECENT_VIEWED] Component rendering');
+  console.log('🚀 [RECENT_VIEWED] Component mounted/rendered');
   const { data, loading, error } = useOptimizedHome();
   console.log('🟠 [RECENT_VIEWED] useOptimizedHome returned:', {
     hasData: !!data,
