@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, addMonths, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '../ui/button';
+import { useRouter } from 'next/navigation';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useDateFormat } from '../../contexts/DateFormatContext';
 
@@ -32,6 +33,7 @@ interface DailyNotesCalendarProps {
  */
 export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSelect }: DailyNotesCalendarProps) {
   const { currentAccount } = useCurrentAccount();
+  const router = useRouter();
   const { formatDateString } = useDateFormat();
   
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -123,27 +125,10 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
     setCurrentDate(prev => addMonths(prev, 1));
   };
 
-  // Handle day click
+  // Handle day click - navigate to timeline view for that date
   const handleDayClick = (date: Date) => {
     const dateKey = format(date, 'yyyy-MM-dd');
-    const notesForDay = notesByDate.get(dateKey) || [];
-
-    if (notesForDay.length === 0) {
-      // No notes for this day - could create a new one
-      return;
-    } else if (notesForDay.length === 1) {
-      // Single note - navigate directly
-      const note = notesForDay[0];
-      if (onPageSelect) {
-        onPageSelect(note.id);
-      } else {
-        window.location.href = `/${note.id}`;
-      }
-    } else {
-      // Multiple notes - show modal
-      setSelectedDate(date);
-      setShowModal(true);
-    }
+    router.push(`/timeline?type=daily-notes&date=${dateKey}`);
   };
 
   // Handle page selection from modal
@@ -238,7 +223,6 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
             <button
               key={dateKey}
               onClick={() => handleDayClick(day)}
-              disabled={!hasNotes}
               className={`
                 p-2 h-16 border rounded-lg transition-all duration-200 relative
                 ${isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'}

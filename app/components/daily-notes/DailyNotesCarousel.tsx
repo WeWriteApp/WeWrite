@@ -26,6 +26,8 @@ const isExactDateFormat = (title: string): boolean => {
 
 interface DailyNotesCarouselProps {
   accentColor?: string;
+  isFullPage?: boolean;
+  focusDate?: string | null;
 }
 
 /**
@@ -40,7 +42,11 @@ interface DailyNotesCarouselProps {
  * - Groups pages by their creation date (createdAt field)
  * - Maintains scroll position when loading new dates
  */
-export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNotesCarouselProps) {
+export default function DailyNotesCarousel({
+  accentColor = '#1768FF',
+  isFullPage = false,
+  focusDate = null
+}: DailyNotesCarouselProps) {
   const { currentAccount } = useCurrentAccount();
   const router = useRouter();
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -516,6 +522,8 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
               accentColor={accentColor}
               isToday={isToday}
               maxNotesCount={maxNotesCount}
+              isFullPage={isFullPage}
+              timelineType="daily-notes"
             />
           );
         });

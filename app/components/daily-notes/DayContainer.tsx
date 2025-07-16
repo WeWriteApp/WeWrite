@@ -4,6 +4,7 @@ import React from 'react';
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 import { useTheme } from 'next-themes';
+import { useRouter } from 'next/navigation';
 import { PillLink } from '../utils/PillLink';
 import { Plus } from 'lucide-react';
 
@@ -21,6 +22,8 @@ interface DayContainerProps {
   isToday?: boolean;
   className?: string;
   maxNotesCount?: number; // Maximum number of notes across all cards for consistent height
+  isFullPage?: boolean; // Whether this is in full-page view
+  timelineType?: 'daily-notes' | 'timeline'; // Type of timeline for navigation
 }
 
 /**
@@ -37,14 +40,35 @@ const DayContainer = React.memo(function DayContainer({
   accentColor = '#1768FF',
   isToday = false,
   className,
-  maxNotesCount = 0
+  maxNotesCount = 0,
+  isFullPage = false,
+  timelineType = 'daily-notes'
 }: DayContainerProps) {
   const { theme } = useTheme();
+  const router = useRouter();
   const isDark = theme === 'dark';
 
   // Format date for display
   const dayName = format(date, 'EEE'); // Mon, Tue, etc.
   const monthDay = format(date, 'MMM d'); // Jul 7, etc.
+
+  // Truncation logic - show only 4 rows (approximately 8 pills) in non-full-page view
+  const maxPillsToShow = isFullPage ? notes.length : 8;
+  const visibleNotes = notes.slice(0, maxPillsToShow);
+  const hasMoreNotes = notes.length > maxPillsToShow;
+
+  // Navigation handlers
+  const handleHeaderClick = () => {
+    if (!isFullPage) {
+      const dateStr = format(date, 'yyyy-MM-dd');
+      router.push(`/timeline?type=${timelineType}&date=${dateStr}`);
+    }
+  };
+
+  const handleViewMore = () => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    router.push(`/timeline?type=${timelineType}&date=${dateStr}`);
+  };
 
   return (
     <div className="flex flex-col items-center">
@@ -60,16 +84,26 @@ const DayContainer = React.memo(function DayContainer({
         )}
         style={isToday ? { borderColor: accentColor } : undefined}
       >
-        {/* Date Header - Centered */}
-        <div className="mb-3 text-center">
+        {/* Date Header - Centered and clickable if not in full page */}
+        <div
+          className={cn(
+            "mb-3 text-center",
+            !isFullPage && "cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors"
+          )}
+          onClick={handleHeaderClick}
+          data-date={format(date, 'yyyy-MM-dd')}
+        >
           <div className="text-lg font-semibold text-foreground">
             {dayName} {monthDay}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {notes.length} {notes.length === 1 ? 'page' : 'pages'}
           </div>
         </div>
 
         {/* Notes Pills - dense wrapping layout */}
         <div className="flex flex-wrap gap-2 items-start mb-3">
-          {notes.map((note) => (
+          {visibleNotes.map((note) => (
             <PillLink
               key={note.id}
               href={`/pages/${note.id}`}
@@ -87,6 +121,16 @@ const DayContainer = React.memo(function DayContainer({
             </div>
           )}
         </div>
+
+        {/* View More Button - only show if there are more notes and not in full page */}
+        {hasMoreNotes && !isFullPage && (
+          <button
+            onClick={handleViewMore}
+            className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors mb-3 py-1 hover:bg-muted/50 rounded"
+          >
+            View {notes.length - maxPillsToShow} more...
+          </button>
+        )}
 
         {/* Add New Button - only show if onAddNewClick is provided (Timeline) */}
         {onAddNewClick && (

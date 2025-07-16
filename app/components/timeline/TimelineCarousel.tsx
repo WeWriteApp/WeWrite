@@ -16,6 +16,8 @@ interface Note {
 interface TimelineCarouselProps {
   accentColor?: string;
   className?: string;
+  isFullPage?: boolean;
+  focusDate?: string | null;
 }
 
 /**
@@ -34,7 +36,9 @@ interface TimelineCarouselProps {
 
 const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
   accentColor = '#1768FF',
-  className = ''
+  className = '',
+  isFullPage = false,
+  focusDate = null
 }) => {
   console.log('📅 TimelineCarousel: Component rendering');
 
@@ -304,6 +308,8 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
                     accentColor={accentColor}
                     isToday={isToday}
                     maxNotesCount={maxNotesCount}
+                    isFullPage={isFullPage}
+                    timelineType="timeline"
                   />
                 </div>
               );
