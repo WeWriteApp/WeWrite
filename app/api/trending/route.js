@@ -23,14 +23,18 @@ export async function GET(request) {
 
     // Simple trending algorithm: get pages with most views
     // Simplified to avoid complex index requirements
+    console.log(`🔥 [TRENDING_API] Querying pages ordered by views, limit: ${limitCount * 3}`);
+    console.log(`🔥 [TRENDING_API] Using collection:`, getCollectionName('pages'));
+
     const pagesQuery = db.collection(getCollectionName('pages'))
       .orderBy('views', 'desc')
       .limit(limitCount * 3); // Get more to filter out private/deleted pages
 
     const pagesSnapshot = await pagesQuery.get();
+    console.log(`🔥 [TRENDING_API] Raw query returned ${pagesSnapshot.size} documents`);
 
     if (pagesSnapshot.empty) {
-      console.log('No trending pages found');
+      console.log('🔥 [TRENDING_API] No pages found in query - collection might be empty');
       return createApiResponse({
         trendingPages: []
       });
@@ -41,15 +45,29 @@ export async function GET(request) {
     const userIds = new Set();
     const pageIds = [];
 
+    let filteredCount = 0;
+    let publicCount = 0;
+    let deletedCount = 0;
+    let noTitleCount = 0;
+    let lowViewsCount = 0;
+
     pagesSnapshot.forEach(doc => {
       const pageData = doc.data();
+
+      // Track filtering reasons
+      if (!pageData.isPublic) publicCount++;
+      if (pageData.deleted) deletedCount++;
+      if (!pageData.title) noTitleCount++;
 
       // Skip private pages, deleted pages, or pages without titles
       // For development, be less restrictive about view counts
       const isDevelopment = process.env.NODE_ENV === 'development';
       const minViews = isDevelopment ? 0 : 1;
 
+      if ((pageData.views || 0) < minViews) lowViewsCount++;
+
       if (!pageData.isPublic || pageData.deleted || !pageData.title || (pageData.views || 0) < minViews) {
+        filteredCount++;
         return;
       }
 
@@ -67,6 +85,22 @@ export async function GET(request) {
       if (pageData.userId) {
         userIds.add(pageData.userId);
       }
+    });
+
+    console.log(`🔥 [TRENDING_API] Filtering results:`, {
+      totalDocuments: pagesSnapshot.size,
+      filteredOut: filteredCount,
+      notPublic: publicCount,
+      deleted: deletedCount,
+      noTitle: noTitleCount,
+      lowViews: lowViewsCount,
+      finalTrendingPages: trendingPages.length,
+      samplePages: trendingPages.slice(0, 3).map(p => ({
+        id: p.id,
+        title: p.title,
+        views: p.views,
+        isPublic: p.isPublic
+      }))
     });
 
     // Get real 24-hour view data from pageViews collection

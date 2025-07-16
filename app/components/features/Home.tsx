@@ -17,6 +17,8 @@ import { Search } from "lucide-react";
 import DailyNotesSection from "../daily-notes/DailyNotesSection";
 import TimelineSection from "../timeline/TimelineSection";
 import EmailVerificationAlert from "../utils/EmailVerificationAlert";
+import EmptyState from "../ui/EmptyState";
+import { getEnvironmentType } from "../../utils/environmentConfig";
 
 // Recently Viewed Section Component - moved outside to prevent infinite re-renders
 const RecentPagesSection = () => {
@@ -66,6 +68,17 @@ const RecentPagesSection = () => {
       };
     });
 
+    console.log('🟠 [RECENT_VIEWED] Final processed pages:', {
+      finalCount: pagesWithSubs.length,
+      sampleProcessedPages: pagesWithSubs.slice(0, 2).map(p => ({
+        id: p.id,
+        title: p.title,
+        username: p.username,
+        tier: p.tier,
+        hasSubscriptionData: !!(p.tier || p.subscriptionStatus)
+      }))
+    });
+
     setPagesWithSubscriptions(pagesWithSubs);
   }, [data?.recentPages, data?.batchUserData]);
 
@@ -104,6 +117,7 @@ const RecentPagesSection = () => {
   const recentPages = pagesWithSubscriptions.length > 0 ? pagesWithSubscriptions : (data?.recentPages || []);
 
   if (recentPages.length === 0) {
+    console.log('🟠 [RECENT_VIEWED] Showing empty state - no recent pages available');
     return (
       <StickySection
         sectionId="recently-viewed"
@@ -111,9 +125,18 @@ const RecentPagesSection = () => {
           <SectionTitle icon={Clock} title="Recently Viewed" />
         }
       >
-        <div className="border border-muted rounded-lg p-8 text-center text-muted-foreground">
-          No recently viewed pages available
-        </div>
+        <EmptyState
+          icon={Clock}
+          title="No recently viewed pages"
+          description="Pages you visit will appear here for quick access"
+          showDebugInfo={true}
+          debugInfo={{
+            dataSource: 'Home API - recentPages from lastModified',
+            apiEndpoint: '/api/home',
+            environment: getEnvironmentType(),
+            lastFetch: new Date().toISOString()
+          }}
+        />
       </StickySection>
     );
   }

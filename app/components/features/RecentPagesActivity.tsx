@@ -19,6 +19,8 @@ import {
   TooltipTrigger,
 } from '../ui/tooltip';
 import { getFollowedPages } from '../../firebase/follows';
+import EmptyState from '../ui/EmptyState';
+import { getEnvironmentType } from '../../utils/environmentConfig';
 
 interface RecentPage {
   id: string;
@@ -109,21 +111,35 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
 
         // Filter pages that have meaningful changes
         // For backward compatibility, also include recent pages without diff data
-        const pagesWithActivity = recentPages.filter((page: RecentPage) => {
-          // Prioritize pages with diff data and changes
-          if (page.lastDiff && page.lastDiff.hasChanges) {
-            return true;
-          }
+        console.log('🔍 [RECENT_EDITS] Analyzing pages for activity...');
 
-          // For pages without diff data (legacy), include if recently modified
-          if (!page.lastDiff) {
-            const lastModified = new Date(page.lastModified);
-            const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-            return lastModified > oneDayAgo;
-          }
-
-          return false;
+        const pagesWithDiff = recentPages.filter(page => page.lastDiff && page.lastDiff.hasChanges);
+        const pagesWithoutDiff = recentPages.filter(page => !page.lastDiff);
+        const recentPagesWithoutDiff = pagesWithoutDiff.filter(page => {
+          const lastModified = new Date(page.lastModified);
+          const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+          return lastModified > oneDayAgo;
         });
+
+        console.log('🔍 [RECENT_EDITS] Activity analysis:', {
+          totalPages: recentPages.length,
+          pagesWithDiff: pagesWithDiff.length,
+          pagesWithoutDiff: pagesWithoutDiff.length,
+          recentPagesWithoutDiff: recentPagesWithoutDiff.length,
+          samplePagesWithDiff: pagesWithDiff.slice(0, 2).map(p => ({
+            id: p.id,
+            title: p.title,
+            hasChanges: p.lastDiff?.hasChanges,
+            diffType: p.lastDiff?.type
+          })),
+          sampleRecentPages: recentPagesWithoutDiff.slice(0, 2).map(p => ({
+            id: p.id,
+            title: p.title,
+            lastModified: p.lastModified
+          }))
+        });
+
+        const pagesWithActivity = [...pagesWithDiff, ...recentPagesWithoutDiff];
 
         // Enrich pages with subscription data from batch user data
         const enrichedPages = pagesWithActivity.map(page => {
@@ -265,16 +281,27 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
   }
 
   if (filteredActivities.length === 0) {
+    const getEmptyMessage = () => {
+      switch (currentViewMode) {
+        case 'following': return 'No edits from pages you follow';
+        case 'mine': return 'No edits from your pages';
+        default: return 'Recent page edits will appear here';
+      }
+    };
+
     return (
-      <div className="text-center p-8 border rounded-lg">
-        <Clock className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-        <p className="text-muted-foreground">No recent edits</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          {currentViewMode === 'following' ? 'No edits from pages you follow' :
-           currentViewMode === 'mine' ? 'No edits from your pages' :
-           'Recent page edits will appear here'}
-        </p>
-      </div>
+      <EmptyState
+        icon={Activity}
+        title="No recent edits"
+        description={getEmptyMessage()}
+        showDebugInfo={true}
+        debugInfo={{
+          dataSource: 'Home API - recentPages with diff data',
+          apiEndpoint: '/api/home',
+          environment: getEnvironmentType(),
+          lastFetch: new Date().toISOString()
+        }}
+      />
     );
   }
 

@@ -180,10 +180,24 @@ async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: str
     }
 
     const snapshot = await pagesQuery.get();
+    console.log(`🏠 [HOME_API] Raw query returned ${snapshot.size} documents`);
+
     const pages = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
+
+    console.log(`🏠 [HOME_API] Raw pages analysis:`, {
+      totalDocs: snapshot.size,
+      samplePages: pages.slice(0, 3).map(p => ({
+        id: p.id,
+        title: p.title,
+        isPublic: p.isPublic,
+        deleted: p.deleted,
+        userId: p.userId,
+        lastModified: p.lastModified
+      }))
+    });
 
     // Filter out deleted pages in application code to avoid composite index requirement
     const filteredPages = pages

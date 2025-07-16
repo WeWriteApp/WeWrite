@@ -10,6 +10,8 @@ import { Button } from '../ui/button';
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 import { UsernameBadge } from '../ui/UsernameBadge';
 import { getBatchUserData } from '../../firebase/batchUserData';
+import EmptyState from '../ui/EmptyState';
+import { getEnvironmentType } from '../../utils/environmentConfig';
 // import { getTrendingPages } from '../../firebase/pageViews';
 
 interface TrendingPage {
@@ -121,7 +123,11 @@ export default function TrendingPages({ limit = 5 }) {
         console.log('🔥 [TRENDING] Sample pages:', pages.slice(0, 3));
 
         if (pages.length === 0) {
-          console.log('TrendingPages: No trending pages found');
+          console.log('🔥 [TRENDING] No trending pages found in API response');
+          console.log('🔥 [TRENDING] This could mean:');
+          console.log('  - No public pages exist');
+          console.log('  - No pages have sufficient views');
+          console.log('  - Pages are filtered out by trending criteria');
           setTrendingPages([]);
           setLoading(false);
           return;
@@ -191,15 +197,18 @@ export default function TrendingPages({ limit = 5 }) {
 
   if (trendingPages.length === 0) {
     return (
-      <div className="space-y-4">
-        <div className="border border-theme-medium rounded-lg overflow-hidden">
-          <div className="text-muted-foreground p-8 text-center">
-            <Flame className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="font-medium mb-1">No trending pages yet</p>
-            <p className="text-sm">Pages will appear here as they gain popularity</p>
-          </div>
-        </div>
-      </div>
+      <EmptyState
+        icon={Flame}
+        title="No trending pages yet"
+        description="Pages will appear here as they gain popularity"
+        showDebugInfo={true}
+        debugInfo={{
+          dataSource: 'Trending API - public pages with views',
+          apiEndpoint: '/api/trending',
+          environment: getEnvironmentType(),
+          lastFetch: new Date().toISOString()
+        }}
+      />
     );
   }
 
