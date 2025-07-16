@@ -1,11 +1,12 @@
 "use client";
 
-import React from 'react';
-import { Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+import { Calendar, List } from 'lucide-react';
 import { Button } from '../ui/button';
 import { SectionTitle } from '../ui/section-title';
 import StickySection from "../utils/StickySection";
 import DailyNotesCarousel from './DailyNotesCarousel';
+import DailyNotesCalendar from './DailyNotesCalendar';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 
@@ -25,6 +26,7 @@ interface DailyNotesSectionProps {
 export default function DailyNotesSection({}: DailyNotesSectionProps) {
   const { currentAccount, isAuthenticated } = useCurrentAccount();
   const { accentColor, customColors } = useAccentColor();
+  const [viewMode, setViewMode] = useState<'timeline' | 'calendar'>('timeline');
 
   // Get the actual color value from the accent color system
   const getAccentColorValue = () => {
@@ -68,24 +70,62 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
           icon={Calendar}
           title="My Daily Notes"
         >
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={scrollToToday}
-            className="rounded-2xl"
-          >
-            Today
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* View Toggle */}
+            <div className="flex items-center border border-border rounded-lg p-1">
+              <Button
+                variant={viewMode === 'timeline' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('timeline')}
+                className="h-7 px-2 rounded-md"
+              >
+                <List className="h-3 w-3 mr-1" />
+                Timeline
+              </Button>
+              <Button
+                variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('calendar')}
+                className="h-7 px-2 rounded-md"
+              >
+                <Calendar className="h-3 w-3 mr-1" />
+                Calendar
+              </Button>
+            </div>
+
+            {/* Today Button - only show in timeline mode */}
+            {viewMode === 'timeline' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={scrollToToday}
+                className="rounded-2xl"
+              >
+                Today
+              </Button>
+            )}
+          </div>
         </SectionTitle>
       }
     >
-      {/* Carousel container */}
+      {/* Content container */}
       <div className="relative">
-        <DailyNotesCarousel accentColor={getAccentColorValue()} />
-
-        {/* Gradient fade on edges for better visual indication of scrollability */}
-        <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+        {viewMode === 'timeline' ? (
+          <>
+            <DailyNotesCarousel accentColor={getAccentColorValue()} />
+            {/* Gradient fade on edges for better visual indication of scrollability */}
+            <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+          </>
+        ) : (
+          <DailyNotesCalendar
+            accentColor={getAccentColorValue()}
+            onPageSelect={(pageId) => {
+              // Navigate to the selected page
+              window.location.href = `/${pageId}`;
+            }}
+          />
+        )}
       </div>
 
     </StickySection>
