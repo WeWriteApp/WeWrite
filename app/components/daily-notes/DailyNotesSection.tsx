@@ -77,27 +77,49 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
           title="My Daily Notes"
         >
           <div className="flex items-center gap-2">
-            {/* View Mode Dropdown */}
+            {/* Today Button - show in both modes, positioned left */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={scrollToToday}
+              className="rounded-2xl"
+            >
+              Today
+            </Button>
+
+            {/* View Mode Dropdown - positioned right */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 px-3 rounded-2xl hover:bg-muted/80 transition-colors"
+                  className="h-8 rounded-2xl hover:bg-muted/80 transition-colors md:px-3 px-2"
                   aria-label="Switch view mode"
                 >
-                  {viewMode === 'timeline' ? (
-                    <>
-                      <List className="h-3 w-3 mr-1" />
-                      Timeline
-                    </>
-                  ) : (
-                    <>
-                      <Calendar className="h-3 w-3 mr-1" />
-                      Calendar
-                    </>
-                  )}
-                  <ChevronDown className="h-3 w-3 ml-1" />
+                  {/* Mobile: Icon only */}
+                  <span className="md:hidden">
+                    {viewMode === 'timeline' ? (
+                      <List className="h-4 w-4" />
+                    ) : (
+                      <Calendar className="h-4 w-4" />
+                    )}
+                  </span>
+
+                  {/* Desktop: Icon + Text + Chevron */}
+                  <span className="hidden md:flex md:items-center">
+                    {viewMode === 'timeline' ? (
+                      <>
+                        <List className="h-3 w-3 mr-1" />
+                        Timeline
+                      </>
+                    ) : (
+                      <>
+                        <Calendar className="h-3 w-3 mr-1" />
+                        Calendar
+                      </>
+                    )}
+                    <ChevronDown className="h-3 w-3 ml-1" />
+                  </span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -111,18 +133,6 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
-            {/* Today Button - only show in timeline mode */}
-            {viewMode === 'timeline' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={scrollToToday}
-                className="rounded-2xl"
-              >
-                Today
-              </Button>
-            )}
           </div>
         </SectionTitle>
       }

@@ -81,24 +81,14 @@ export default function TimelineSection({}: TimelineSectionProps) {
           icon={Clock}
           title="Timeline"
         >
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={scrollToToday}
-              className="rounded-2xl"
-            >
-              Today
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNewPage}
-              className="rounded-2xl"
-            >
-              New page
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={scrollToToday}
+            className="rounded-2xl"
+          >
+            Today
+          </Button>
         </SectionTitle>
       }
     >

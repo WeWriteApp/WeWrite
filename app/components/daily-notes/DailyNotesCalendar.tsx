@@ -61,13 +61,10 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
       });
 
       // Use the same API endpoint as the carousel
-      const apiUrl = '/api/pages?' + new URLSearchParams({
+      const apiUrl = '/api/daily-notes?' + new URLSearchParams({
         userId: currentAccount.uid,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
-        limit: '1000'
+        startDate: format(startDate, 'yyyy-MM-dd'),
+        endDate: format(endDate, 'yyyy-MM-dd')
       });
 
       console.log('📅 DailyNotesCalendar: API URL:', apiUrl);
@@ -79,32 +76,24 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
         throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
-      const pages = await response.json();
-      console.log('📅 DailyNotesCalendar: API returned', pages?.length || 0, 'pages');
-      console.log('📅 DailyNotesCalendar: Sample pages:', pages?.slice(0, 3));
+      const data = await response.json();
+      console.log('📅 DailyNotesCalendar: API returned data:', data);
 
-      // Group pages by creation date (YYYY-MM-DD format)
+      // The daily-notes API returns { notesByDate: { "2025-07-16": [pages...] } }
       const notesByDateMap = new Map<string, Note[]>();
 
-      if (pages && pages.length > 0) {
-        pages.forEach((page: any) => {
-          if (page.createdAt) {
-            const createdDate = new Date(page.createdAt);
-            const dateKey = format(createdDate, 'yyyy-MM-dd');
-            
-            if (!notesByDateMap.has(dateKey)) {
-              notesByDateMap.set(dateKey, []);
-            }
-            
-            notesByDateMap.get(dateKey)!.push({
-              id: page.id,
-              title: page.title || 'Untitled',
-              createdAt: page.createdAt,
-              lastModified: page.lastModified,
-              username: page.username,
-              isPublic: page.isPublic
-            });
-          }
+      if (data && data.notesByDate) {
+        Object.entries(data.notesByDate).forEach(([dateKey, pages]: [string, any[]]) => {
+          const notesForDate = pages.map((page: any) => ({
+            id: page.id,
+            title: page.title || 'Untitled',
+            createdAt: page.createdAt,
+            lastModified: page.lastModified,
+            username: page.username,
+            isPublic: page.isPublic
+          }));
+
+          notesByDateMap.set(dateKey, notesForDate);
         });
       }
 
@@ -296,18 +285,7 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
         </div>
       )}
 
-      {/* Empty state */}
-      {!loading && totalNotesInMonth === 0 && (
-        <div className="text-center py-12">
-          <div className="text-muted-foreground mb-2">
-            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <h4 className="text-lg font-medium mb-2">No notes this month</h4>
-            <p className="text-sm">
-              Start writing to see your daily notes appear on the calendar.
-            </p>
-          </div>
-        </div>
-      )}
+
 
       {/* Summary when notes exist */}
       {!loading && totalNotesInMonth > 0 && (
