@@ -83,18 +83,24 @@ export default function TrendingPages({ limit = 5 }) {
         localStorage.setItem(lastFetchKey, now.toString());
 
         setLoading(true);
-        console.log('TrendingPages: Fetching trending pages with limit:', limit);
+        console.log('🔥 [TRENDING] Fetching trending pages with limit:', limit);
 
         // Get trending pages for the last 24 hours using API endpoint
-        const apiResponse = await fetch(`/api/trending?limit=${limit}`);
+        const apiUrl = `/api/trending?limit=${limit}`;
+        console.log('🔥 [TRENDING] API URL:', apiUrl);
+
+        const apiResponse = await fetch(apiUrl);
         if (!apiResponse.ok) {
-          throw new Error(`API request failed: ${apiResponse.status}`);
+          const errorText = await apiResponse.text();
+          console.error('🔥 [TRENDING] API error:', apiResponse.status, errorText);
+          throw new Error(`API request failed: ${apiResponse.status} - ${errorText}`);
         }
         const response = await apiResponse.json();
+        console.log('🔥 [TRENDING] API response:', response);
 
         // Check if we got the expected response format
         if (!response || typeof response !== 'object') {
-          console.error('TrendingPages: Unexpected response format:', response);
+          console.error('🔥 [TRENDING] Unexpected response format:', response);
           setError('Failed to load trending pages: Invalid response format');
           setLoading(false);
           return;
@@ -102,7 +108,7 @@ export default function TrendingPages({ limit = 5 }) {
 
         // Check for API error
         if (!response.success) {
-          console.error('TrendingPages: API returned error:', response.error);
+          console.error('🔥 [TRENDING] API returned error:', response.error);
           setError(response.error || 'Failed to load trending pages');
           setLoading(false);
           setTrendingPages([]);
@@ -111,8 +117,8 @@ export default function TrendingPages({ limit = 5 }) {
 
         // Get pages from standardized API response
         const pages = response.data?.trendingPages || [];
-
-        console.log('TrendingPages: Received pages:', pages.length);
+        console.log(`🔥 [TRENDING] Found ${pages.length} trending pages`);
+        console.log('🔥 [TRENDING] Sample pages:', pages.slice(0, 3));
 
         if (pages.length === 0) {
           console.log('TrendingPages: No trending pages found');
@@ -187,8 +193,16 @@ export default function TrendingPages({ limit = 5 }) {
     return (
       <div className="space-y-4">
         <div className="border border-theme-medium rounded-lg overflow-hidden">
-          <div className="text-muted-foreground p-4 text-center">
-            No trending pages found
+          <div className="text-muted-foreground p-8 text-center">
+            <Flame className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="font-medium mb-1">No trending pages yet</p>
+            <p className="text-sm">Pages will appear here as they gain popularity</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="text-sm text-primary underline hover:no-underline mt-2"
+            >
+              🔄 Refresh
+            </button>
           </div>
         </div>
       </div>

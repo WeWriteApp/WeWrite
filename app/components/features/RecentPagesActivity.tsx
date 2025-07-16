@@ -84,16 +84,28 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
         setLoading(true);
         setError(null);
 
+        console.log('🔍 [RECENT_EDITS] Starting fetch for recent pages activity...');
+
         // Add cache-busting timestamp to get fresh data
         const timestamp = Date.now();
-        const response = await fetch(`/api/home?t=${timestamp}`);
+        const apiUrl = `/api/home?t=${timestamp}`;
+        console.log('🔍 [RECENT_EDITS] API URL:', apiUrl);
+
+        const response = await fetch(apiUrl);
         if (!response.ok) {
-          throw new Error(`Failed to fetch recent pages: ${response.status}`);
+          const errorText = await response.text();
+          console.error('🔍 [RECENT_EDITS] API error:', response.status, errorText);
+          throw new Error(`Failed to fetch recent pages: ${response.status} - ${errorText}`);
         }
 
         const data = await response.json();
+        console.log('🔍 [RECENT_EDITS] API response data:', data);
+
         const recentPages = data.recentPages || [];
         const batchUserData = data.batchUserData || {};
+
+        console.log(`📊 [RECENT_EDITS] Found ${recentPages.length} recent pages`);
+        console.log('📊 [RECENT_EDITS] Sample pages:', recentPages.slice(0, 3));
 
         // Filter pages that have meaningful changes
         // For backward compatibility, also include recent pages without diff data

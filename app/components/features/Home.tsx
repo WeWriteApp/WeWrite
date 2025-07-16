@@ -20,9 +20,15 @@ import EmailVerificationAlert from "../utils/EmailVerificationAlert";
 
 // Recently Viewed Section Component - moved outside to prevent infinite re-renders
 const RecentPagesSection = () => {
-  console.log('🟠 RECENT_PAGES RENDER: Component rendering');
+  console.log('🟠 [RECENT_VIEWED] Component rendering');
   const { data, loading, error } = useOptimizedHome();
-  console.log('🟠 RECENT_PAGES RENDER: useOptimizedHome returned:', { data: !!data, loading, error });
+  console.log('🟠 [RECENT_VIEWED] useOptimizedHome returned:', {
+    hasData: !!data,
+    loading,
+    error,
+    recentPagesCount: data?.recentPages?.length || 0,
+    batchUserDataKeys: data?.batchUserData ? Object.keys(data.batchUserData).length : 0
+  });
   const [pagesWithSubscriptions, setPagesWithSubscriptions] = useState([]);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
@@ -31,7 +37,14 @@ const RecentPagesSection = () => {
     const recentPages = data?.recentPages || [];
     const batchUserData = data?.batchUserData || {};
 
+    console.log('🟠 [RECENT_VIEWED] Processing data:', {
+      recentPagesCount: recentPages.length,
+      batchUserDataKeys: Object.keys(batchUserData).length,
+      sampleRecentPages: recentPages.slice(0, 2)
+    });
+
     if (recentPages.length === 0) {
+      console.log('🟠 [RECENT_VIEWED] No recent pages found');
       setPagesWithSubscriptions([]);
       return;
     }
