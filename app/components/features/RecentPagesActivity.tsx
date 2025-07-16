@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Filter, Clock } from 'lucide-react';
+import { Filter, Clock, Activity } from 'lucide-react';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import ActivityCard from '../activity/ActivityCard';
 import { Button } from '../ui/button';
