@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getCollectionName } from '../../utils/environmentConfig';
 
 // Initialize Firebase Admin SDK
 if (!getApps().length) {
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
       // CRITICAL FIX: Use proper lastModified index with deleted filter
       // TEMPORARY WORKAROUND: Always use DESC for database query, reverse on client if needed
       actualSortField = 'lastModified';
-      pagesQuery = adminDb.collection('pages')
+      pagesQuery = adminDb.collection(getCollectionName('pages'))
         .where('userId', '==', userId)
         .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
         .orderBy('deleted') // Required for != queries
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
       // TEMPORARY WORKAROUND: Always use DESC for database query, reverse on client if needed
       console.log('[my-pages API] CRITICAL FIX - Using proper createdAt index with deleted filter');
       actualSortField = 'createdAt';
-      pagesQuery = adminDb.collection('pages')
+      pagesQuery = adminDb.collection(getCollectionName('pages'))
         .where('userId', '==', userId)
         .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
         .orderBy('deleted') // Required for != queries
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
       // CRITICAL FIX: Use proper title index with deleted filter and correct direction
       actualSortField = 'title';
       const titleDirection = sortDirection === 'asc' ? 'asc' : 'desc';
-      pagesQuery = adminDb.collection('pages')
+      pagesQuery = adminDb.collection(getCollectionName('pages'))
         .where('userId', '==', userId)
         .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
         .orderBy('deleted') // Required for != queries
@@ -109,7 +110,7 @@ export async function GET(request: NextRequest) {
       // Fallback to lastModified with proper deleted filter
       // TEMPORARY WORKAROUND: Always use DESC for database query, reverse on client if needed
       actualSortField = 'lastModified (fallback)';
-      pagesQuery = adminDb.collection('pages')
+      pagesQuery = adminDb.collection(getCollectionName('pages'))
         .where('userId', '==', userId)
         .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
         .orderBy('deleted') // Required for != queries

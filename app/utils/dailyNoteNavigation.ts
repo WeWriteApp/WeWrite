@@ -1,5 +1,6 @@
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase/database';
+import { getCollectionName } from './environmentConfig';
 import { format, addDays, subDays } from 'date-fns';
 
 /**
@@ -50,7 +51,7 @@ export async function findPreviousExistingDailyNote(userId: string, currentDate:
     try {
       // First try to find notes with customDate field (new format)
       const customDateQuery = query(
-        collection(db, 'pages'),
+collection(db, 'pages'),
         where('userId', '==', userId),
         where('customDate', '<', currentDate),
         where('deleted', '!=', true),
@@ -70,7 +71,7 @@ export async function findPreviousExistingDailyNote(userId: string, currentDate:
 
       // Fallback to legacy title-based search
       const titleQuery = query(
-        collection(db, 'pages'),
+collection(db, 'pages'),
         where('userId', '==', userId),
         where('title', '<', currentDate),
         where('deleted', '!=', true),
@@ -97,7 +98,7 @@ export async function findPreviousExistingDailyNote(userId: string, currentDate:
 
       // Fallback: query without deleted filter and filter client-side
       const fallbackQuery = query(
-        collection(db, 'pages'),
+collection(db, 'pages'),
         where('userId', '==', userId),
         orderBy('title', 'desc'),
         limit(200) // Larger limit for client-side filtering
@@ -145,7 +146,7 @@ export async function findNextExistingDailyNote(userId: string, currentDate: str
     try {
       // First try to find notes with customDate field (new format)
       const customDateQuery = query(
-        collection(db, 'pages'),
+collection(db, 'pages'),
         where('userId', '==', userId),
         where('customDate', '>', currentDate),
         where('deleted', '!=', true),
@@ -165,7 +166,7 @@ export async function findNextExistingDailyNote(userId: string, currentDate: str
 
       // Fallback to legacy title-based search
       const titleQuery = query(
-        collection(db, 'pages'),
+collection(db, 'pages'),
         where('userId', '==', userId),
         where('title', '>', currentDate),
         where('deleted', '!=', true),
@@ -192,7 +193,7 @@ export async function findNextExistingDailyNote(userId: string, currentDate: str
 
       // Fallback: query without deleted filter and filter client-side
       const fallbackQuery = query(
-        collection(db, 'pages'),
+        collection(db, getCollectionName('pages')),
         where('userId', '==', userId),
         orderBy('title', 'asc'),
         limit(200) // Larger limit for client-side filtering
@@ -276,7 +277,7 @@ export async function checkDailyNoteExists(userId: string, dateString: string): 
     try {
       // First check for notes with customDate field (new format)
       const customDateQuery = query(
-        collection(db, 'pages'),
+collection(db, 'pages'),
         where('userId', '==', userId),
         where('customDate', '==', dateString),
         where('deleted', '!=', true),
@@ -290,7 +291,7 @@ export async function checkDailyNoteExists(userId: string, dateString: string): 
 
       // Then check for legacy title-based notes
       const titleQuery = query(
-        collection(db, 'pages'),
+collection(db, 'pages'),
         where('userId', '==', userId),
         where('title', '==', dateString),
         where('deleted', '!=', true),
@@ -313,7 +314,7 @@ export async function checkDailyNoteExists(userId: string, dateString: string): 
 
       // Fallback: query without deleted filter and filter client-side
       const fallbackQuery = query(
-        collection(db, 'pages'),
+        collection(db, getCollectionName('pages')),
         where('userId', '==', userId),
         limit(100) // Larger limit for client-side filtering
       );
@@ -356,7 +357,7 @@ export async function getDailyNotePageId(userId: string, dateString: string): Pr
     try {
       // First check for notes with customDate field (new format)
       const customDateQuery = query(
-        collection(db, 'pages'),
+collection(db, 'pages'),
         where('userId', '==', userId),
         where('customDate', '==', dateString),
         where('deleted', '!=', true),
@@ -370,7 +371,7 @@ export async function getDailyNotePageId(userId: string, dateString: string): Pr
 
       // Then check for legacy title-based notes
       const titleQuery = query(
-        collection(db, 'pages'),
+collection(db, 'pages'),
         where('userId', '==', userId),
         where('title', '==', dateString),
         where('deleted', '!=', true),
@@ -393,7 +394,7 @@ export async function getDailyNotePageId(userId: string, dateString: string): Pr
 
       // Fallback: query without deleted filter and filter client-side
       const fallbackQuery = query(
-        collection(db, 'pages'),
+        collection(db, getCollectionName('pages')),
         where('userId', '==', userId),
         limit(100) // Larger limit for client-side filtering
       );

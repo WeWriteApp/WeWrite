@@ -144,7 +144,7 @@ SUBSCRIPTION_ENV=development/production
 - **Description Format**: `WeWrite user {username} ({userId})`
 - **Metadata**: `{ firebaseUID: userId, username: username }`
 - **Email**: From Firebase Auth user record
-- **Username Fallback**: `username → displayName → email prefix → "Unknown User"`
+- **Username Fallback**: `username → email prefix → "Unknown User"`
 
 ### Customer Updates
 - Username changes should update Stripe customer description

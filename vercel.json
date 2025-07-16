@@ -9,5 +9,15 @@
       "maxDuration": 30
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/automated-payouts",
+      "schedule": "0 9 1 * *"
+    },
+    {
+      "path": "/api/tokens/process-monthly",
+      "schedule": "0 10 1 * *"
+    }
+  ],
   "ignoreCommand": "if [[ \"$VERCEL_GIT_COMMIT_REF\" == \"dependabot\"* ]]; then exit 0; else exit 1; fi"
 }

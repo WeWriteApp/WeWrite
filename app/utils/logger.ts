@@ -94,6 +94,7 @@ class Logger {
 
   /**
    * Actually perform the console logging
+   * Only shows warnings and errors to reduce noise
    */
   private actualLog(level: LogLevel, message: string, data?: any): void {
     const timestamp = new Date().toISOString().substring(11, 23); // HH:mm:ss.SSS
@@ -101,12 +102,10 @@ class Logger {
 
     switch (level) {
       case 'debug':
-        if (this.isDevelopment) {
-          console.debug(`${prefix} 🔍 ${message}`, data || '');
-        }
+        // Skip debug logs to reduce noise
         break;
       case 'info':
-        console.info(`${prefix} ℹ️ ${message}`, data || '');
+        // Skip info logs to reduce noise
         break;
       case 'warn':
         console.warn(`${prefix} ⚠️ ${message}`, data || '');

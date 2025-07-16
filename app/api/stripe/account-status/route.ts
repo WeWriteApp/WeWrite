@@ -3,6 +3,7 @@ import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../../auth-helper';
+import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
 
 // Initialize Firebase Admin
 const admin = getFirebaseAdmin();
@@ -16,22 +17,27 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { stripeConnectedAccountId } = body;
+    const { stripeConnectedAccountId: providedAccountId } = body;
+
+    // Get user data to find their connected account ID
+    const db = admin.firestore();
+    const userDoc = await db.collection(getCollectionName(COLLECTIONS.USERS)).doc(userId).get();
+    const userData = userDoc.data();
+
+    // Use provided account ID or get it from user data
+    const stripeConnectedAccountId = providedAccountId || userData?.stripeConnectedAccountId;
 
     if (!stripeConnectedAccountId) {
-      return NextResponse.json({ 
-        error: 'Stripe connected account ID is required' 
+      return NextResponse.json({
+        error: 'No Stripe connected account found. Please set up your bank account first.',
+        needsSetup: true
       }, { status: 400 });
     }
 
-    // Verify the connected account belongs to this user
-    const db = admin.firestore();
-    const userDoc = await db.collection('users').doc(userId).get();
-    const userData = userDoc.data();
-
-    if (userData?.stripeConnectedAccountId !== stripeConnectedAccountId) {
-      return NextResponse.json({ 
-        error: 'Invalid connected account' 
+    // Verify the connected account belongs to this user (if account ID was provided)
+    if (providedAccountId && userData?.stripeConnectedAccountId !== providedAccountId) {
+      return NextResponse.json({
+        error: 'Invalid connected account'
       }, { status: 400 });
     }
 

@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 interface DatabaseStats {
   totalUsers: number;
@@ -33,8 +34,8 @@ export async function GET(request: NextRequest) {
 
     // Get basic counts in parallel for better performance
     const [usersSnapshot, pagesSnapshot] = await Promise.all([
-      db.collection('users').count().get(),
-      db.collection('pages').count().get()
+      db.collection(getCollectionName('users')).count().get(),
+      db.collection(getCollectionName('pages')).count().get()
     ]);
 
     const totalUsers = usersSnapshot.data().count;
@@ -42,8 +43,8 @@ export async function GET(request: NextRequest) {
 
     // Get more detailed page statistics
     const [publicPagesSnapshot, deletedPagesSnapshot] = await Promise.all([
-      db.collection('pages').where('isPublic', '==', true).count().get(),
-      db.collection('pages').where('deleted', '==', true).count().get()
+      db.collection(getCollectionName('pages')).where('isPublic', '==', true).count().get(),
+      db.collection(getCollectionName('pages')).where('deleted', '==', true).count().get()
     ]);
 
     const totalPublicPages = publicPagesSnapshot.data().count;
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const recentActivitySnapshot = await db.collection('pages')
+    const recentActivitySnapshot = await db.collection(getCollectionName('pages'))
       .where('lastModified', '>=', sevenDaysAgo.toISOString())
       .count()
       .get();

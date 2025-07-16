@@ -13,7 +13,6 @@ import { getEffectiveTier } from '../../../utils/subscriptionTiers';
 interface UserData {
   uid: string;
   username?: string;
-  displayName?: string;
   email?: string;
   tier?: number;
   subscriptionStatus?: string;
@@ -197,9 +196,8 @@ async function fetchBatchUserDataInternal(
                 const userData = userSnapshot.val();
                 const user: UserData = {
                   uid: userId,
-                  username: userData.username || userData.displayName ||
+                  username: userData.username ||
                            (userData.email ? userData.email.split('@')[0] : undefined),
-                  displayName: userData.displayName,
                   email: userData.email,
                   pageCount: userData.pageCount || 0,
                   followerCount: userData.followerCount || 0,

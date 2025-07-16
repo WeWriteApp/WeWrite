@@ -2,7 +2,8 @@
 
 import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '../../firebase/config';
+import { getEnvironmentAwareAuth } from '../../firebase/environmentAwareConfig';
+import { isDevelopmentAuthActive, getGlobalAuthWrapper } from '../../firebase/authWrapper';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useMultiAuth } from '../../providers/MultiAuthProvider';
 import { transferLoggedOutAllocationsToUser } from '../../utils/simulatedTokens';

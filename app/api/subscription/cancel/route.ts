@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { initAdmin } from '../../../firebase/admin';
+import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
 
 // Initialize Firebase Admin
 const admin = initAdmin();
@@ -92,9 +93,30 @@ export async function POST(request: NextRequest) {
 
     console.log(`[SUBSCRIPTION CANCEL] Successfully updated subscription status for user ${userId}`);
 
-    return NextResponse.json({ 
-      success: true, 
-      subscription: subscriptionData 
+    // Log subscription cancellation for audit trail
+    try {
+      await subscriptionAuditService.logSubscriptionCancelled(
+        userId,
+        { ...subscriptionData, stripeSubscriptionId: subscriptionId },
+        {
+          source: 'user',
+          correlationId: `cancel_${subscriptionId}`,
+          reason: cancelImmediately ? 'immediate_cancellation' : 'cancel_at_period_end',
+          metadata: {
+            cancelImmediately,
+            isTestSubscription,
+            stripeSubscriptionId: subscriptionId
+          }
+        }
+      );
+    } catch (auditError) {
+      console.warn('[SUBSCRIPTION CANCEL] Failed to log audit event:', auditError);
+      // Don't fail the request if audit logging fails
+    }
+
+    return NextResponse.json({
+      success: true,
+      subscription: subscriptionData
     });
 
   } catch (error) {

@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/button';
 import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 import TokenAllocationDisplay from '../../components/subscription/TokenAllocationDisplay';
 import TokenAllocationBreakdown from '../../components/subscription/TokenAllocationBreakdown';
+import { TokenPieChart } from '../../components/ui/TokenPieChart';
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { NAVIGATION_EVENTS } from '../../constants/analytics-events';
@@ -344,6 +345,67 @@ export default function SpendTokensPage() {
                 className="mb-6"
               />
             );
+          })()}
+
+          {/* Token Allocation Pie Chart Visualization */}
+          {(() => {
+            // Use live allocation data if available, otherwise fall back to initial data
+            const currentAllocationData = liveAllocationData || allocationData;
+            const actualAllocatedTokens = currentAllocationData?.summary?.totalTokensAllocated || 0;
+
+            // Create enhanced token balance with real-time allocation data
+            const enhancedTokenBalance = tokenBalance ? {
+              ...tokenBalance,
+              allocatedTokens: actualAllocatedTokens,
+              availableTokens: tokenBalance.totalTokens - actualAllocatedTokens
+            } : null;
+
+            // Determine which token balance to use for the pie chart
+            let pieChartTokenBalance = null;
+
+            if (!currentSubscription && simulatedTokenBalance) {
+              // For users without subscription, show simulated data
+              pieChartTokenBalance = {
+                totalTokens: 0, // No subscription = 0 tokens per month
+                allocatedTokens: simulatedTokenBalance.allocatedTokens,
+                availableTokens: 0 - simulatedTokenBalance.allocatedTokens, // Always negative
+              };
+            } else if (currentSubscription && enhancedTokenBalance) {
+              // For users with subscription
+              pieChartTokenBalance = enhancedTokenBalance;
+            } else if (enhancedTokenBalance) {
+              // Default case with token balance
+              pieChartTokenBalance = enhancedTokenBalance;
+            }
+
+            // Only show pie chart if we have token data to display
+            if (pieChartTokenBalance && (pieChartTokenBalance.totalTokens > 0 || pieChartTokenBalance.allocatedTokens > 0)) {
+              return (
+                <div className="flex justify-center mb-6">
+                  <div className="flex flex-col items-center space-y-3">
+                    <h3 className="text-lg font-semibold text-center">Token Allocation Overview</h3>
+                    <TokenPieChart
+                      allocatedTokens={pieChartTokenBalance.allocatedTokens}
+                      totalTokens={Math.max(pieChartTokenBalance.totalTokens, pieChartTokenBalance.allocatedTokens)}
+                      size={120}
+                      strokeWidth={8}
+                      className="hover:opacity-80 transition-opacity"
+                      showFraction={true}
+                    />
+                    <p className="text-sm text-muted-foreground text-center max-w-md">
+                      {pieChartTokenBalance.totalTokens === 0
+                        ? "You've allocated tokens but don't have an active subscription. Consider upgrading to fund your allocations."
+                        : pieChartTokenBalance.allocatedTokens > pieChartTokenBalance.totalTokens
+                        ? "You've allocated more tokens than your subscription provides. Consider upgrading your plan."
+                        : "Visual representation of your monthly token allocation to creators."
+                      }
+                    </p>
+                  </div>
+                </div>
+              );
+            }
+
+            return null;
           })()}
 
           {/* Token Allocation Breakdown - Always show so users can see their allocations */}

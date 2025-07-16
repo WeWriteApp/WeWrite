@@ -20,6 +20,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { db } from './database/core';
+import { getCollectionName } from '../utils/environmentConfig';
 
 export interface NotificationData {
   userId: string;
@@ -60,7 +61,8 @@ export const getNotifications = async (
       throw new Error('User ID is required');
     }
 
-    const notificationsRef = collection(db, 'users', userId, 'notifications');
+    const { getCollectionName } = await import('../utils/environmentConfig');
+    const notificationsRef = collection(db, getCollectionName('users'), userId, getCollectionName('notifications'));
     
     // Build query with ordering by createdAt (newest first)
     let notificationQuery = query(
@@ -127,7 +129,7 @@ export const getUnreadNotificationsCount = async (userId: string): Promise<numbe
     }
 
     // Check if user document has cached unread count
-    const userDocRef = doc(db, 'users', userId);
+    const userDocRef = doc(db, getCollectionName('users'), userId);
     const userDoc = await getDoc(userDocRef);
     
     if (userDoc.exists() && userDoc.data().unreadNotificationsCount !== undefined) {
@@ -137,7 +139,7 @@ export const getUnreadNotificationsCount = async (userId: string): Promise<numbe
     }
 
     // Fallback: Count unread notifications directly
-    const notificationsRef = collection(db, 'users', userId, 'notifications');
+    const notificationsRef = collection(db, getCollectionName('users'), userId, getCollectionName('notifications'));
     const unreadQuery = query(
       notificationsRef,
       where('read', '==', false)
@@ -178,14 +180,14 @@ export const markNotificationAsRead = async (userId: string, notificationId: str
     const batch = writeBatch(db);
     
     // Update the notification
-    const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
+    const notificationRef = doc(db, getCollectionName('users'), userId, getCollectionName('notifications'), notificationId);
     batch.update(notificationRef, {
       read: true,
       readAt: serverTimestamp()
     });
 
     // Decrement unread count in user document
-    const userDocRef = doc(db, 'users', userId);
+    const userDocRef = doc(db, getCollectionName('users'), userId);
     batch.update(userDocRef, {
       unreadNotificationsCount: increment(-1)
     });
@@ -212,14 +214,14 @@ export const markNotificationAsUnread = async (userId: string, notificationId: s
     const batch = writeBatch(db);
     
     // Update the notification
-    const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
+    const notificationRef = doc(db, getCollectionName('users'), userId, getCollectionName('notifications'), notificationId);
     batch.update(notificationRef, {
       read: false,
       readAt: null
     });
 
     // Increment unread count in user document
-    const userDocRef = doc(db, 'users', userId);
+    const userDocRef = doc(db, getCollectionName('users'), userId);
     batch.update(userDocRef, {
       unreadNotificationsCount: increment(1)
     });
@@ -244,7 +246,7 @@ export const markAllNotificationsAsRead = async (userId: string): Promise<void> 
     }
 
     // Get all unread notifications
-    const notificationsRef = collection(db, 'users', userId, 'notifications');
+const notificationsRef = collection(db, getCollectionName("users"), userId, 'notifications');
     const unreadQuery = query(
       notificationsRef,
       where('read', '==', false)
@@ -269,7 +271,7 @@ export const markAllNotificationsAsRead = async (userId: string): Promise<void> 
     });
 
     // Reset unread count in user document
-    const userDocRef = doc(db, 'users', userId);
+    const userDocRef = doc(db, getCollectionName('users'), userId);
     batch.update(userDocRef, {
       unreadNotificationsCount: 0
     });
@@ -296,7 +298,7 @@ export const createNotification = async (notificationData: NotificationData): Pr
     const batch = writeBatch(db);
 
     // Create the notification document
-    const notificationsRef = collection(db, 'users', notificationData.userId, 'notifications');
+    const notificationsRef = collection(db, getCollectionName('users'), notificationData.userId, getCollectionName('notifications'));
     const notificationRef = doc(notificationsRef);
 
     const notification = {
@@ -309,7 +311,7 @@ export const createNotification = async (notificationData: NotificationData): Pr
 
     // Increment unread count if notification is unread
     if (!notificationData.read) {
-      const userDocRef = doc(db, 'users', notificationData.userId);
+      const userDocRef = doc(db, getCollectionName('users'), notificationData.userId);
       batch.update(userDocRef, {
         unreadNotificationsCount: increment(1)
       });
@@ -337,7 +339,7 @@ export const fixUnreadNotificationsCount = async (userId: string): Promise<numbe
     }
 
     // Count actual unread notifications
-    const notificationsRef = collection(db, 'users', userId, 'notifications');
+const notificationsRef = collection(db, getCollectionName("users"), userId, 'notifications');
     const unreadQuery = query(
       notificationsRef,
       where('read', '==', false)
@@ -349,7 +351,7 @@ export const fixUnreadNotificationsCount = async (userId: string): Promise<numbe
     console.log('🔔 fixUnreadNotificationsCount: Found', actualCount, 'actual unread notifications');
 
     // Update the cached count in user document
-    const userDocRef = doc(db, 'users', userId);
+    const userDocRef = doc(db, getCollectionName('users'), userId);
     await updateDoc(userDocRef, {
       unreadNotificationsCount: actualCount
     });
@@ -407,7 +409,7 @@ export const deleteNotification = async (userId: string, notificationId: string)
     }
 
     // Get the notification to check if it was unread
-    const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
+    const notificationRef = doc(db, getCollectionName('users'), userId, getCollectionName('notifications'), notificationId);
     const notificationDoc = await getDoc(notificationRef);
 
     if (!notificationDoc.exists()) {
@@ -424,7 +426,7 @@ export const deleteNotification = async (userId: string, notificationId: string)
 
     // Decrement unread count if notification was unread
     if (wasUnread) {
-      const userDocRef = doc(db, 'users', userId);
+      const userDocRef = doc(db, getCollectionName('users'), userId);
       batch.update(userDocRef, {
         unreadNotificationsCount: increment(-1)
       });

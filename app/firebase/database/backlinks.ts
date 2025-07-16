@@ -21,6 +21,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config';
 import { extractLinksFromNodes } from './links';
+import { getCollectionName } from '../../utils/environmentConfig';
 
 export interface BacklinkEntry {
   id: string;
@@ -56,7 +57,7 @@ export async function getBacklinks(
     
     // Query the backlinks index
     let backlinksQuery = query(
-      collection(db, 'backlinks'),
+      collection(db, getCollectionName('backlinks')),
       where('targetPageId', '==', targetPageId),
       where('isPublic', '==', true),
       orderBy('lastModified', 'desc')
@@ -146,7 +147,7 @@ export async function updateBacklinksIndex(
     // Add new backlink entries
     for (const link of pageLinks) {
       const backlinkId = `${pageId}_to_${link.pageId}`;
-      const backlinkRef = doc(db, 'backlinks', backlinkId);
+const backlinkRef = doc(db, getCollectionName("backlinks"), backlinkId);
       
       const backlinkEntry: BacklinkEntry = {
         id: backlinkId,
@@ -181,7 +182,7 @@ export async function updateBacklinksIndex(
 export async function removeBacklinksFromPage(sourcePageId: string): Promise<void> {
   try {
     const backlinksQuery = query(
-      collection(db, 'backlinks'),
+      collection(db, getCollectionName('backlinks')),
       where('sourcePageId', '==', sourcePageId)
     );
     
@@ -220,7 +221,7 @@ export async function removePageFromBacklinksIndex(pageId: string): Promise<void
     
     // Remove backlinks TO this page
     const backlinksToPageQuery = query(
-      collection(db, 'backlinks'),
+      collection(db, getCollectionName('backlinks')),
       where('targetPageId', '==', pageId)
     );
     
@@ -250,7 +251,7 @@ export async function removePageFromBacklinksIndex(pageId: string): Promise<void
 export async function getBacklinksCount(targetPageId: string): Promise<number> {
   try {
     const backlinksQuery = query(
-      collection(db, 'backlinks'),
+      collection(db, getCollectionName('backlinks')),
       where('targetPageId', '==', targetPageId),
       where('isPublic', '==', true)
     );
@@ -264,39 +265,3 @@ export async function getBacklinksCount(targetPageId: string): Promise<number> {
   }
 }
 
-/**
- * Update backlink visibility when page privacy changes
- */
-export async function updateBacklinkVisibility(
-  pageId: string, 
-  isPublic: boolean
-): Promise<void> {
-  try {
-    console.log(`🔄 Updating backlink visibility for page ${pageId} to ${isPublic ? 'public' : 'private'}`);
-    
-    const backlinksQuery = query(
-      collection(db, 'backlinks'),
-      where('sourcePageId', '==', pageId)
-    );
-    
-    const snapshot = await getDocs(backlinksQuery);
-    
-    if (snapshot.empty) {
-      return;
-    }
-    
-    const batch = writeBatch(db);
-    
-    snapshot.docs.forEach(doc => {
-      batch.update(doc.ref, { isPublic });
-    });
-    
-    await batch.commit();
-    
-    console.log(`✅ Updated visibility for ${snapshot.docs.length} backlinks from page ${pageId}`);
-    
-  } catch (error) {
-    console.error('Error updating backlink visibility:', error);
-    throw error;
-  }
-}

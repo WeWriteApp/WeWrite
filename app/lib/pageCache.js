@@ -1,7 +1,6 @@
 "use client";
 
-import { db } from "../firebase/database";
-import { collection, query, where, orderBy, limit, getDocs, startAfter } from "firebase/firestore";
+// Removed Firebase imports - now using API endpoints
 
 // Cache configuration - RUTHLESS SIMPLIFICATION: Very short TTL
 const CACHE_EXPIRY = 0; // DISABLE CACHE - force fresh queries every time
@@ -96,7 +95,7 @@ const getCachedData = (cacheKey) => {
 };
 
 /**
- * Fetch pages with optimized caching
+ * Fetch pages with optimized caching - now using API endpoint
  */
 export const fetchPages = async (userId, isPublic = null, currentUserId = null, pageLimit = 20, startAfterDoc = null) => {
   // Determine if current user is the owner
@@ -111,89 +110,57 @@ export const fetchPages = async (userId, isPublic = null, currentUserId = null, 
     return getCachedData(cacheKey);
   }
 
-  // Build the query
-  let pagesQuery;
-
   try {
-    // Optimize queries by avoiding compound where clauses that require complex indexes
-    // Instead, filter out deleted pages client-side to reduce index requirements
-    if (isPublic === null && isOwner) {
-      // Get all pages (public and private) for the owner
-      pagesQuery = query(
-        collection(db, 'pages'),
-        where('userId', '==', userId),
-        orderBy('lastModified', 'desc'),
-        ...(startAfterDoc ? [startAfter(startAfterDoc)] : []),
-        limit(pageLimit + 10) // Get extra to account for deleted pages we'll filter out
-      );
-    } else if (isPublic === true || !isOwner) {
-      // Get only public pages
-      pagesQuery = query(
-        collection(db, 'pages'),
-        where('userId', '==', userId),
-        where('isPublic', '==', true),
-        orderBy('lastModified', 'desc'),
-        ...(startAfterDoc ? [startAfter(startAfterDoc)] : []),
-        limit(pageLimit + 5) // Get extra to account for deleted pages we'll filter out
-      );
-    } else {
-      // Get only private pages for the owner
-      pagesQuery = query(
-        collection(db, 'pages'),
-        where('userId', '==', userId),
-        where('isPublic', '==', false),
-        orderBy('lastModified', 'desc'),
-        ...(startAfterDoc ? [startAfter(startAfterDoc)] : []),
-        limit(pageLimit + 5) // Get extra to account for deleted pages we'll filter out
-      );
-    }
-
-    // Execute the query
-    const snapshot = await getDocs(pagesQuery);
-    const pagesArray = [];
-    let lastValidDoc = null;
-
-    snapshot.forEach((doc) => {
-      try {
-        const pageData = { id: doc.id, ...doc.data() };
-
-        // Filter out deleted pages client-side
-        if (!pageData.deleted) {
-          pagesArray.push(pageData);
-          lastValidDoc = doc; // Track the last valid document for pagination
-
-          // Stop when we have enough pages
-          if (pagesArray.length >= pageLimit) {
-            return;
-          }
-        }
-      } catch (docError) {
-        console.error(`Error processing document ${doc.id}:`, docError);
-      }
+    // Build API query parameters
+    const params = new URLSearchParams({
+      userId: userId,
+      limit: pageLimit.toString(),
+      orderBy: 'lastModified',
+      orderDirection: 'desc'
     });
 
-    // Trim to exact page limit if we got more than requested
-    const finalPagesArray = pagesArray.slice(0, pageLimit);
+    // Set filter based on ownership and isPublic parameter
+    if (!isOwner && isPublic !== null) {
+      params.append('isPublic', 'true');
+    }
 
-    // Get the last document for pagination (use the last valid document)
-    const lastDoc = lastValidDoc;
+    // Add pagination cursor if provided
+    if (startAfterDoc?.id) {
+      params.append('startAfter', startAfterDoc.id);
+    }
+
+    // Call API endpoint to get pages
+    console.log(`fetchPages: Fetching ${isOwner ? 'all pages' : 'public pages'} for user ${userId}...`);
+    const response = await fetch(`/api/pages?${params.toString()}`, {
+      credentials: 'include' // Include cookies for authentication
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch pages: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const pagesArray = data.pages || [];
+    const pagination = data.pagination || {};
 
     // Cache the results if this is not a pagination request
     if (!startAfterDoc) {
-      cacheData(cacheKey, finalPagesArray, lastDoc);
+      cacheData(cacheKey, pagesArray, pagination.lastPageId ? { id: pagination.lastPageId } : null);
     }
 
     return {
-      data: finalPagesArray,
+      data: pagesArray,
       timestamp: Date.now(),
-      lastKey: lastDoc,
-      hasMore: finalPagesArray.length === pageLimit && snapshot.docs.length > finalPagesArray.length
+      lastKey: pagination.lastPageId ? { id: pagination.lastPageId } : null,
+      hasMore: pagination.hasMore || false
     };
   } catch (error) {
     console.error('Error fetching pages:', error);
     throw error;
   }
 };
+
+
 
 /**
  * Clear cache for a specific user or all cache

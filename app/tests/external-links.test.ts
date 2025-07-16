@@ -214,7 +214,7 @@ describe('External Links Functionality', () => {
   });
 
   describe('getGlobalExternalLinkCount', () => {
-    it('should count occurrences of external URL across all public pages', async () => {
+    it('should count occurrences of external URL across all pages', async () => {
       const { getDocs } = require('firebase/firestore');
       getDocs.mockResolvedValue({
         docs: [

@@ -2,7 +2,7 @@
 
 import React, { useState, forwardRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, ExternalLink, Users, Trash2 } from "lucide-react";
+import { ExternalLink, Users, Trash2 } from "lucide-react";
 import { ShimmerEffect } from "../ui/skeleton";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink, isGroupLink } from "../../utils/linkFormatters";
@@ -31,7 +31,8 @@ export const PillLink = forwardRef(({
   byline,
   isLoading,
   deleted = false,
-  isFallback = false
+  isFallback = false,
+  clickable = true
 }, ref) => {
   // Hooks
   const { session } = useCurrentAccount();
@@ -43,7 +44,6 @@ export const PillLink = forwardRef(({
   const { trackInteractionEvent, events } = useWeWriteAnalytics();
 
   // Determine link properties early (before useEffect hooks)
-  const showLock = isPublic === false;
   const isUserLinkType = isUserLink(href);
   const isGroupLinkType = isGroupLink(href);
   const isPageLinkType = isPageLink(href);
@@ -92,7 +92,7 @@ export const PillLink = forwardRef(({
   if (deleted) {
     return (
       <span
-        className={`inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-colors max-w-full overflow-hidden bg-muted text-muted-foreground opacity-60 cursor-not-allowed ${className}`}
+        className={`inline-flex items-center my-0.5 text-sm font-medium rounded-lg transition-all duration-150 ease-out max-w-full overflow-hidden bg-muted text-muted-foreground opacity-60 cursor-not-allowed px-2 py-0.5 ${className}`}
         style={{ pointerEvents: 'none' }}
       >
         <Trash2 size={14} className="mr-1 flex-shrink-0" />
@@ -180,6 +180,11 @@ export const PillLink = forwardRef(({
             e.preventDefault();
             e.stopPropagation(); // Prevent event bubbling to parent containers
 
+            // Don't handle click if component is not clickable
+            if (!clickable) {
+              return;
+            }
+
             // Remove focus from the clicked element to prevent focus ring on page
             if (e.target && typeof e.target.blur === 'function') {
               e.target.blur();
@@ -191,7 +196,6 @@ export const PillLink = forwardRef(({
           data-pill-style={pillStyle}
           tabIndex={0}
         >
-          {showLock && <Lock size={14} className="flex-shrink-0" />}
           <span className="pill-text truncate">{formattedDisplayTitle}</span>
           <ExternalLink size={14} className="flex-shrink-0" />
           {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
@@ -219,6 +223,13 @@ export const PillLink = forwardRef(({
       data-user-id={isUserLinkType ? pageId : undefined}
       data-group-id={isGroupLinkType ? pageId : undefined}
       onClick={(e) => {
+        // Don't handle click if component is not clickable
+        if (!clickable) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+
         // Only prevent default and navigate if we have a valid href
         if (href && href !== '#') {
           e.preventDefault(); // Prevent default to handle navigation manually
@@ -282,7 +293,6 @@ export const PillLink = forwardRef(({
         }
       }}
     >
-      {showLock && <Lock size={14} className="flex-shrink-0" />}
       {isGroupLinkType && <Users size={14} className="flex-shrink-0" />}
       <span className="pill-text truncate">{formattedDisplayTitle}</span>
       {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}

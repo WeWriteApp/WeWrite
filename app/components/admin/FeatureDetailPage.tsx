@@ -34,6 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { doc, getDoc, setDoc, collection, getDocs, query, where, orderBy, limit, updateDoc, arrayUnion, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import { getCollectionName } from '../../utils/environmentConfig';
 import { useToast } from '../ui/use-toast';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ColumnDef } from '@tanstack/react-table';
@@ -189,11 +190,11 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
         setLoadingUsers(true);
 
         // Get all users
-        const usersRef = collection(db, 'users');
+        const usersRef = collection(db, getCollectionName('users'));
         const usersSnapshot = await getDocs(usersRef);
 
         // Get user-specific feature overrides
-        const featureOverridesRef = collection(db, 'featureOverrides');
+        const featureOverridesRef = collection(db, getCollectionName('featureOverrides'));
         const featureOverridesQuery = query(
           featureOverridesRef,
           where('featureId', '==', feature.id)
@@ -251,7 +252,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
         setLoadingHistory(true);
 
         // Get feature history
-        const historyRef = collection(db, 'featureHistory');
+        const historyRef = collection(db, getCollectionName('featureHistory'));
         const historyQuery = query(
           historyRef,
           where('featureId', '==', feature.id),
@@ -333,7 +334,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
       }
 
       // Record history
-      const historyRef = collection(db, 'featureHistory');
+      const historyRef = collection(db, getCollectionName('featureHistory'));
       await setDoc(doc(historyRef), {
         featureId: feature.id,
         timestamp: serverTimestamp(),
@@ -345,7 +346,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
       // If not exempting overrides, update all user overrides
       if (!exemptOverrides) {
         // Get all user overrides for this feature
-        const featureOverridesRef = collection(db, 'featureOverrides');
+        const featureOverridesRef = collection(db, getCollectionName('featureOverrides'));
         const featureOverridesQuery = query(
           featureOverridesRef,
           where('featureId', '==', feature.id)
@@ -395,7 +396,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
       const newStatus = !currentUserFeatureEnabled;
 
       // Update user-specific feature override
-      const featureOverrideRef = doc(db, 'featureOverrides', `${session.uid}_${feature.id}`);
+      const featureOverrideRef = doc(db, getCollectionName('featureOverrides'), `${session.uid}_${feature.id}`);
 
       await setDoc(featureOverrideRef, {
         userId: session.uid,
@@ -405,7 +406,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
       });
 
       // Record history
-      const historyRef = collection(db, 'featureHistory');
+      const historyRef = collection(db, getCollectionName('featureHistory'));
       await setDoc(doc(historyRef), {
         featureId: feature.id,
         userId: session.uid,
@@ -450,7 +451,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
     try {
       setIsLoading(true);
       // Update user-specific feature override
-      const featureOverrideRef = doc(db, 'featureOverrides', `${userId}_${feature.id}`);
+      const featureOverrideRef = doc(db, getCollectionName('featureOverrides'), `${userId}_${feature.id}`);
 
       await setDoc(featureOverrideRef, {
         userId,
@@ -460,7 +461,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
       });
 
       // Record history
-      const historyRef = collection(db, 'featureHistory');
+      const historyRef = collection(db, getCollectionName('featureHistory'));
       await setDoc(doc(historyRef), {
         featureId: feature.id,
         userId,
@@ -541,7 +542,7 @@ export default function FeatureDetailPage({ feature }: FeatureDetailPageProps) {
       await batch.commit();
 
       // Record history
-      const historyRef = collection(db, 'featureHistory');
+      const historyRef = collection(db, getCollectionName('featureHistory'));
       await setDoc(doc(historyRef), {
         featureId: feature.id,
         timestamp: serverTimestamp(),

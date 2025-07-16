@@ -8,7 +8,8 @@ import { getBestTextColor } from "../utils/accessibility";
 export const PILL_STYLES = {
   FILLED: 'filled',
   OUTLINE: 'outline',
-  CLASSIC: 'classic'
+  TEXT_ONLY: 'text_only',
+  UNDERLINED: 'underlined'
 } as const;
 
 export type PillStyle = typeof PILL_STYLES[keyof typeof PILL_STYLES];
@@ -44,8 +45,14 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
   // Load saved preference on mount
   useEffect(() => {
     const savedStyle = localStorage.getItem('pillStyle');
-    if (savedStyle && Object.values(PILL_STYLES).includes(savedStyle)) {
-      setPillStyle(savedStyle);
+    if (savedStyle) {
+      // Handle backward compatibility: migrate 'classic' to 'text_only'
+      if (savedStyle === 'classic') {
+        setPillStyle(PILL_STYLES.TEXT_ONLY);
+        localStorage.setItem('pillStyle', PILL_STYLES.TEXT_ONLY);
+      } else if (Object.values(PILL_STYLES).includes(savedStyle)) {
+        setPillStyle(savedStyle);
+      }
     }
   }, []);
 
@@ -68,7 +75,10 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         items-center
         text-sm font-medium
         rounded-lg
-        transition-colors
+        transition-all duration-150 ease-out
+        hover:scale-105
+        active:scale-95
+        transform-gpu
         text-indent-0
         float-none
         leading-tight
@@ -84,22 +94,36 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         styleClasses = `
           bg-transparent text-primary
           border-[1.5px] border-primary/40
-          hover:bg-primary/10 hover:border-primary/60
+          hover:bg-primary/15 hover:border-primary/70 hover:shadow-sm
+          active:bg-primary/20
           px-2 py-0.5
         `;
-      } else if (pillStyle === PILL_STYLES.CLASSIC) {
+      } else if (pillStyle === PILL_STYLES.TEXT_ONLY) {
         styleClasses = `
           bg-transparent text-primary font-bold
           border-none
-          hover:underline
+          hover:underline hover:bg-primary/5
+          active:bg-primary/10
           shadow-none
+          px-1
+        `;
+      } else if (pillStyle === PILL_STYLES.UNDERLINED) {
+        styleClasses = `
+          bg-transparent text-primary font-bold
+          border-none
+          underline
+          hover:bg-primary/5 hover:decoration-2
+          active:bg-primary/10
+          shadow-none
+          px-1
         `;
       } else {
         // Default filled style - ensure white text on accent color background
         styleClasses = `
           bg-primary
           border-[1.5px] border-primary/20
-          hover:bg-primary/90 hover:border-primary/30
+          hover:bg-primary/90 hover:border-primary/30 hover:shadow-md
+          active:bg-primary/80
           text-white !important
           px-2 py-0.5
         `;

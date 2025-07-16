@@ -22,7 +22,7 @@ import {
  * ActivitySectionHeader Component
  *
  * A header component that includes the section title and filter dropdown
- * for the Recent Activity section. This is specifically designed to work
+ * for the Recent Edits section. This is specifically designed to work
  * with sticky headers while preserving all interactive functionality.
  */
 const ActivitySectionHeader = () => {
@@ -38,8 +38,13 @@ const ActivitySectionHeader = () => {
     const fetchFollowedPages = async () => {
       setIsLoadingFollows(true);
       try {
-        const pages = await getFollowedPages(session.uid);
-        setFollowedPages(pages || []);
+        const response = await fetch('/api/followed-pages');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch followed pages: ${response.status}`);
+        }
+        const data = await response.json();
+        const pages = data.followedPages || [];
+        setFollowedPages(pages);
       } catch (error) {
         console.error('Error fetching followed pages:', error);
         // If there's an error fetching followed pages and we're in following mode, switch to all
@@ -146,7 +151,7 @@ const ActivitySectionHeader = () => {
   return (
     <SectionTitle
       icon={Clock}
-      title="Recent Activity"
+      title="Recent Edits"
       rightContent={renderFilterDropdown()}
     />
   );

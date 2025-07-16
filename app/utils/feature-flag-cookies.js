@@ -17,9 +17,10 @@ export const setFeatureFlagCookie = (flag, enabled) => {
  * Hook to sync feature flag state to cookies for middleware
  * @param {string} flag - The feature flag to sync
  * @param {string|null} userEmail - The user's email
+ * @param {string|null} userId - The user's UID
  */
-export const useSyncFeatureFlagToCookie = (flag, userEmail) => {
-  const isEnabled = useFeatureFlag(flag, userEmail);
+export const useSyncFeatureFlagToCookie = (flag, userEmail, userId) => {
+  const isEnabled = useFeatureFlag(flag, userEmail, userId);
   
   useEffect(() => {
     setFeatureFlagCookie(flag, isEnabled);

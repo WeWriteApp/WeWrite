@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../utils/environmentConfig';
 
 // Initialize Firebase Admin
 const admin = getFirebaseAdmin();
@@ -25,7 +26,7 @@ export async function POST(request) {
     
     try {
       // Fetch earnings transactions for the user
-      const earningsRef = db.collection('earnings')
+      const earningsRef = db.collection(getCollectionName('earnings'))
         .where('userId', '==', userId)
         .orderBy('createdAt', 'desc')
         .limit(50);
@@ -41,7 +42,7 @@ export async function POST(request) {
         let pageTitle = 'Unknown Page';
         if (earningData.sourcePageId) {
           try {
-            const pageDoc = await db.collection('pages').doc(earningData.sourcePageId).get();
+            const pageDoc = await db.collection(getCollectionName('pages')).doc(earningData.sourcePageId).get();
             if (pageDoc.exists) {
               pageTitle = pageDoc.data().title || 'Untitled Page';
             }

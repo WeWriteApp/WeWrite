@@ -42,8 +42,8 @@ export function PageEditorSkeleton({
         </div>
       )}
 
-      {/* Editor content skeleton */}
-      <div className="border border-border rounded-lg p-4 bg-background" style={{ minHeight: "300px" }}>
+      {/* Editor content skeleton - clean layout without visual container */}
+      <div className="w-full" style={{ minHeight: "300px" }}>
         <div className="space-y-3">
           {/* Paragraph skeletons */}
           <div className="space-y-2">

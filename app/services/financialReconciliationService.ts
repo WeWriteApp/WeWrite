@@ -19,6 +19,7 @@ import {
   CorrelationId
 } from '../types/financial';
 import { WriterTokenEarnings, WriterTokenBalance, TokenAllocation } from '../types/database';
+import { getCollectionName } from "../utils/environmentConfig";
 
 const stripe = new Stripe(getStripeSecretKey());
 
@@ -219,7 +220,7 @@ export class FinancialReconciliationService {
     try {
       // Get all token allocations for the period
       const allocationsQuery = query(
-        collection(db, 'tokenAllocations'),
+        collection(db, getCollectionName('tokenAllocations')),
         where('createdAt', '>=', startDate),
         where('createdAt', '<=', endDate),
         orderBy('createdAt', 'desc')

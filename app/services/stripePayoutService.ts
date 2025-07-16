@@ -21,6 +21,11 @@ import {
   increment
 } from 'firebase/firestore';
 
+import { getCollectionName } from "../utils/environmentConfig";
+import { payoutStatusService } from './payoutStatusService';
+import { payoutRetryService } from './payoutRetryService';
+import { payoutErrorLogger, PayoutErrorCategory, PayoutErrorSeverity } from './payoutErrorLogger';
+import { stripeApiRateLimiter, checkStripeApiLimit, delay } from '../utils/rateLimiter';
 import type {
   Payout,
   PayoutRecipient,
@@ -46,7 +51,7 @@ class StripePayoutService {
   // Process individual payout
   async processPayout(payoutId: string): Promise<PayoutApiResponse<Payout>> {
     try {
-      const payoutDoc = await getDoc(doc(db, 'payouts', payoutId));
+      const payoutDoc = await getDoc(doc(db, getCollectionName("payouts"), payoutId));
       if (!payoutDoc.exists()) {
         return {
           success: false,
@@ -55,7 +60,7 @@ class StripePayoutService {
       }
 
       const payout = payoutDoc.data() as Payout;
-      
+
       // Get recipient details
       const recipientDoc = await getDoc(doc(db, 'payoutRecipients', payout.recipientId));
       if (!recipientDoc.exists()) {
@@ -70,10 +75,11 @@ class StripePayoutService {
       // Verify Stripe account status
       const accountStatus = await this.verifyStripeAccount(recipient.stripeConnectedAccountId);
       if (!accountStatus.canReceivePayouts) {
-        await updateDoc(doc(db, 'payouts', payoutId), {
+        await payoutStatusService.updatePayoutStatus({
+          payoutId,
           status: 'failed',
-          failureReason: accountStatus.reason,
-          updatedAt: serverTimestamp()
+          reason: `Account cannot receive payouts: ${accountStatus.reason}`,
+          updateRecipientBalance: true
         });
 
         return {
@@ -95,29 +101,28 @@ class StripePayoutService {
       );
 
       if (!transferResult.success) {
-        await updateDoc(doc(db, 'payouts', payoutId), {
+        await payoutStatusService.updatePayoutStatus({
+          payoutId,
           status: 'failed',
-          failureReason: transferResult.error,
-          retryCount: increment(1),
-          updatedAt: serverTimestamp()
+          reason: transferResult.error,
+          updateRecipientBalance: true
         });
 
         return transferResult;
       }
 
-      // Update payout status
-      await updateDoc(doc(db, 'payouts', payoutId), {
+      await payoutStatusService.updatePayoutStatus({
+        payoutId,
         status: 'processing',
         stripeTransferId: transferResult.data?.id,
-        processedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
         metadata: {
           stripeTransferData: transferResult.data
-        }
+        },
+        updateRecipientBalance: true
       });
 
-      // Update recipient balance
-      await updateDoc(doc(db, 'payoutRecipients', payout.recipientId), {
+      // Update recipient balance - use environment-aware collection
+      await updateDoc(doc(db, getCollectionName('payoutRecipients'), payout.recipientId), {
         availableBalance: increment(-payout.amount),
         pendingBalance: increment(payout.amount),
         lastPayoutAt: serverTimestamp(),
@@ -132,6 +137,19 @@ class StripePayoutService {
 
     } catch (error) {
       console.error('Error processing payout:', error);
+
+      // Log error with full context
+      await payoutErrorLogger.logError(
+        error as Error,
+        PayoutErrorCategory.STRIPE_API,
+        PayoutErrorSeverity.HIGH,
+        {
+          payoutId,
+          operation: 'processPayout',
+          service: 'StripePayoutService'
+        }
+      );
+
       return {
         success: false,
         error: 'Failed to process payout'
@@ -147,6 +165,18 @@ class StripePayoutService {
     metadata: any
   ): Promise<PayoutApiResponse<Stripe.Transfer>> {
     try {
+      // Check Stripe API rate limits before making request
+      const apiLimitCheck = await checkStripeApiLimit();
+      if (!apiLimitCheck.safe) {
+        console.warn('Approaching Stripe API rate limit, delaying request');
+        const waitTime = Math.min(apiLimitCheck.resetTime - Date.now(), 5000); // Max 5 second delay
+        if (waitTime > 0) {
+          await delay(waitTime);
+        }
+      }
+
+      // Record API call for rate limiting
+      await stripeApiRateLimiter.checkLimit('stripe:api');
       // Convert to cents for Stripe
       const amountInCents = Math.round(amount * 100);
 
@@ -168,7 +198,21 @@ class StripePayoutService {
 
     } catch (error: any) {
       console.error('Stripe transfer error:', error);
-      
+
+      // Log Stripe API error with detailed context
+      await payoutErrorLogger.logError(
+        error,
+        PayoutErrorCategory.STRIPE_API,
+        PayoutErrorSeverity.HIGH,
+        {
+          stripeAccountId: connectedAccountId,
+          amount,
+          currency,
+          operation: 'createStripeTransfer',
+          service: 'StripePayoutService'
+        }
+      );
+
       let errorMessage = 'Failed to create transfer';
       if (error.type === 'StripeCardError') {
         errorMessage = error.message;
@@ -307,106 +351,260 @@ class StripePayoutService {
   // Handle Stripe webhook events
   async handleWebhookEvent(event: Stripe.Event): Promise<void> {
     try {
+      console.log(`Processing webhook event: ${event.type} (${event.id})`);
+
       switch (event.type) {
         case 'transfer.created':
           await this.handleTransferCreated(event.data.object as Stripe.Transfer);
           break;
-        
+
         case 'transfer.paid':
           await this.handleTransferPaid(event.data.object as Stripe.Transfer);
           break;
-        
+
         case 'transfer.failed':
           await this.handleTransferFailed(event.data.object as Stripe.Transfer);
           break;
-        
+
         case 'account.updated':
           await this.handleAccountUpdated(event.data.object as Stripe.Account);
           break;
-        
+
+        case 'payout.created':
+          await this.handlePayoutCreated(event.data.object as Stripe.Payout);
+          break;
+
+        case 'payout.paid':
+          await this.handlePayoutPaid(event.data.object as Stripe.Payout);
+          break;
+
+        case 'payout.failed':
+          await this.handlePayoutFailed(event.data.object as Stripe.Payout);
+          break;
+
         default:
           console.log(`Unhandled webhook event type: ${event.type}`);
+          // Don't throw error for unhandled events - just log them
+          return;
       }
+
+      console.log(`Successfully processed webhook event: ${event.type} (${event.id})`);
     } catch (error) {
-      console.error('Error handling webhook event:', error);
+      console.error(`Error handling webhook event ${event.type} (${event.id}):`, error);
+
+      // Log webhook processing error
+      await payoutErrorLogger.logError(
+        error as Error,
+        PayoutErrorCategory.STRIPE_API,
+        PayoutErrorSeverity.HIGH,
+        {
+          operation: 'handleWebhookEvent',
+          service: 'StripePayoutService',
+          endpoint: '/api/webhooks/stripe-payouts',
+          requestId: event.id
+        },
+        undefined,
+        ['webhook', event.type]
+      );
+
+      // Re-throw to ensure webhook returns error status for retry
       throw error;
     }
   }
 
   private async handleTransferPaid(transfer: Stripe.Transfer): Promise<void> {
-    const payoutId = transfer.metadata?.payoutId;
-    if (!payoutId) return;
+    try {
+      console.log('Transfer paid:', transfer.id);
 
-    await updateDoc(doc(db, 'payouts', payoutId), {
-      status: 'completed',
-      completedAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+      const payoutId = transfer.metadata?.payoutId;
+      if (!payoutId) {
+        console.warn('Transfer paid without payoutId metadata:', transfer.id);
+        return;
+      }
 
-    // Update recipient balance
-    const recipientId = transfer.metadata?.recipientId;
-    if (recipientId) {
-      const amount = transfer.amount / 100; // Convert from cents
-      await updateDoc(doc(db, 'payoutRecipients', recipientId), {
-        pendingBalance: increment(-amount),
-        updatedAt: serverTimestamp()
+      // Update payout status to completed using centralized service
+      await payoutStatusService.updatePayoutStatus({
+        payoutId,
+        status: 'completed',
+        metadata: {
+          stripeTransferData: {
+            id: transfer.id,
+            amount: transfer.amount,
+            currency: transfer.currency,
+            destination: transfer.destination,
+            created: transfer.created
+          }
+        },
+        updateRecipientBalance: true
       });
+
+      console.log(`Payout ${payoutId} completed successfully`);
+    } catch (error) {
+      console.error('Error handling transfer.paid:', error);
+      throw error;
     }
   }
 
   private async handleTransferFailed(transfer: Stripe.Transfer): Promise<void> {
-    const payoutId = transfer.metadata?.payoutId;
-    if (!payoutId) return;
+    try {
+      console.log('Transfer failed:', transfer.id);
 
-    await updateDoc(doc(db, 'payouts', payoutId), {
-      status: 'failed',
-      failureReason: 'Transfer failed',
-      retryCount: increment(1),
-      updatedAt: serverTimestamp(),
-      metadata: {
-        stripeFailureData: transfer
+      const payoutId = transfer.metadata?.payoutId;
+      if (!payoutId) {
+        console.warn('Transfer failed without payoutId metadata:', transfer.id);
+        return;
       }
-    });
 
-    // Restore recipient balance
-    const recipientId = transfer.metadata?.recipientId;
-    if (recipientId) {
-      const amount = transfer.amount / 100; // Convert from cents
-      await updateDoc(doc(db, 'payoutRecipients', recipientId), {
-        availableBalance: increment(amount),
-        pendingBalance: increment(-amount),
-        updatedAt: serverTimestamp()
+      // Extract failure reason from transfer
+      const failureReason = transfer.failure_message ||
+                           transfer.failure_code ||
+                           'Transfer failed - no specific reason provided';
+
+      // Update payout status to failed using centralized service
+      await payoutStatusService.updatePayoutStatus({
+        payoutId,
+        status: 'failed',
+        reason: failureReason,
+        metadata: {
+          stripeFailureData: {
+            id: transfer.id,
+            failure_code: transfer.failure_code,
+            failure_message: transfer.failure_message,
+            amount: transfer.amount,
+            currency: transfer.currency,
+            destination: transfer.destination,
+            created: transfer.created
+          }
+        },
+        updateRecipientBalance: true
       });
+
+      // Attempt to schedule retry if failure is retryable
+      const retryResult = await payoutRetryService.scheduleRetry(payoutId, failureReason);
+      if (retryResult.success) {
+        console.log(`Payout ${payoutId} scheduled for retry at ${retryResult.nextRetryAt}`);
+      } else {
+        console.log(`Payout ${payoutId} failed permanently: ${failureReason}`);
+      }
+
+    } catch (error) {
+      console.error('Error handling transfer.failed:', error);
+      throw error;
     }
   }
 
   private async handleTransferCreated(transfer: Stripe.Transfer): Promise<void> {
-    console.log('Transfer created:', transfer.id);
+    try {
+      console.log('Transfer created:', transfer.id);
+
+      const payoutId = transfer.metadata?.payoutId;
+      if (!payoutId) {
+        console.warn('Transfer created without payoutId metadata:', transfer.id);
+        return;
+      }
+
+      // Update payout status to processing using centralized service
+      await payoutStatusService.updatePayoutStatus({
+        payoutId,
+        status: 'processing',
+        stripeTransferId: transfer.id,
+        metadata: {
+          stripeTransferData: {
+            id: transfer.id,
+            amount: transfer.amount,
+            currency: transfer.currency,
+            destination: transfer.destination,
+            created: transfer.created
+          }
+        }
+        // Note: Don't update recipient balance here as it was already updated when transfer was created
+      });
+
+      console.log(`Payout ${payoutId} updated to processing status`);
+    } catch (error) {
+      console.error('Error handling transfer.created:', error);
+      throw error;
+    }
   }
 
   private async handleAccountUpdated(account: Stripe.Account): Promise<void> {
-    // Update recipient verification status based on account changes
-    const recipientQuery = query(
-      collection(db, 'payoutRecipients'),
-      where('stripeConnectedAccountId', '==', account.id)
-    );
-    
-    const recipientSnapshot = await getDocs(recipientQuery);
-    
-    for (const recipientDoc of recipientSnapshot.docs) {
-      const updates: any = {
-        updatedAt: serverTimestamp()
-      };
+    try {
+      console.log('Account updated:', account.id);
 
-      if (account.payouts_enabled) {
-        updates.accountStatus = 'verified';
-        updates.verificationStatus = 'verified';
-      } else if (account.requirements?.currently_due?.length > 0) {
-        updates.accountStatus = 'restricted';
-        updates.verificationStatus = 'pending';
+      // Update recipient verification status based on account changes
+      const recipientQuery = query(
+        collection(db, getCollectionName('payoutRecipients')),
+        where('stripeConnectedAccountId', '==', account.id)
+      );
+
+      const recipientSnapshot = await getDocs(recipientQuery);
+
+      if (recipientSnapshot.empty) {
+        console.warn('No recipients found for account:', account.id);
+        return;
       }
 
-      await updateDoc(recipientDoc.ref, updates);
+      for (const recipientDoc of recipientSnapshot.docs) {
+        const updates: any = {
+          updatedAt: serverTimestamp()
+        };
+
+        // Determine account status based on Stripe account state
+        if (account.payouts_enabled) {
+          updates.accountStatus = 'verified';
+          updates.verificationStatus = 'verified';
+        } else if (account.requirements?.currently_due?.length > 0) {
+          updates.accountStatus = 'restricted';
+          updates.verificationStatus = 'pending';
+        } else if (account.requirements?.disabled_reason) {
+          updates.accountStatus = 'rejected';
+          updates.verificationStatus = 'rejected';
+        }
+
+        await updateDoc(recipientDoc.ref, updates);
+        console.log(`Updated recipient ${recipientDoc.id} status to ${updates.accountStatus}`);
+      }
+    } catch (error) {
+      console.error('Error handling account.updated:', error);
+      throw error;
+    }
+  }
+
+  // Handle Stripe payout events (different from transfers)
+  private async handlePayoutCreated(payout: Stripe.Payout): Promise<void> {
+    try {
+      console.log('Payout created:', payout.id);
+      // Stripe payouts are automatic - just log for monitoring
+    } catch (error) {
+      console.error('Error handling payout.created:', error);
+      throw error;
+    }
+  }
+
+  private async handlePayoutPaid(payout: Stripe.Payout): Promise<void> {
+    try {
+      console.log('Payout paid:', payout.id);
+      // Stripe payout completed - funds are now in the connected account
+    } catch (error) {
+      console.error('Error handling payout.paid:', error);
+      throw error;
+    }
+  }
+
+  private async handlePayoutFailed(payout: Stripe.Payout): Promise<void> {
+    try {
+      console.log('Payout failed:', payout.id);
+      console.error('Stripe payout failed:', {
+        id: payout.id,
+        amount: payout.amount,
+        currency: payout.currency,
+        failure_code: payout.failure_code,
+        failure_message: payout.failure_message
+      });
+      // Could implement alerting here for failed automatic payouts
+    } catch (error) {
+      console.error('Error handling payout.failed:', error);
+      throw error;
     }
   }
 }

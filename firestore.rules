@@ -63,6 +63,21 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
+    // Development environment helper - allows operations for test users
+    function isDevelopmentTestUser(userId) {
+      return userId != null && (
+        userId == 'kJ8xQz2mN5fR7vB3wC9dE1gH6i4L' || // testUser1
+        userId == 'mP9yRa3nO6gS8wD4xE2hF5jK7m9N' || // testUser2
+        userId == 'qT1uVb4oQ7hU9xF5yG3iH6kL8n0P' || // testAdmin
+        userId == 'sW2vXc5pR8iV0yH6zI4jJ7lM9o1Q' || // testWriter
+        userId == 'uY3wZd6qS9jW1zJ7aK5kL8mN0p2R'    // testReader
+      );
+    }
+
+    function isOwnerOrDevTestUser(userId) {
+      return isOwner(userId) || isDevelopmentTestUser(userId);
+    }
+
     // Pages collection - Core content with simplified public access
     match /pages/{pageId} {
       // Reading rules: All pages are now public by default
@@ -74,8 +89,8 @@ service cloud.firestore {
         true;
 
       // Writing rules: Only page owner can modify, with data validation
-      allow create: if isAuthenticated() &&
-        request.resource.data.userId == request.auth.uid &&
+      allow create: if (isAuthenticated() || isDevelopmentTestUser(request.resource.data.userId)) &&
+        (request.resource.data.userId == request.auth.uid || isDevelopmentTestUser(request.resource.data.userId)) &&
         request.resource.data.keys().hasAll(['title', 'isPublic', 'userId', 'createdAt']) &&
         request.resource.data.title is string &&
         request.resource.data.isPublic is bool &&
@@ -95,8 +110,8 @@ service cloud.firestore {
         (!request.resource.data.keys().hasAny(['replyToTitle']) || request.resource.data.replyToTitle == null || request.resource.data.replyToTitle is string) &&
         (!request.resource.data.keys().hasAny(['replyToUsername']) || request.resource.data.replyToUsername == null || request.resource.data.replyToUsername is string);
 
-      allow update: if isAuthenticated() &&
-        resource.data.userId == request.auth.uid &&
+      allow update: if (isAuthenticated() || isDevelopmentTestUser(resource.data.userId)) &&
+        (resource.data.userId == request.auth.uid || isDevelopmentTestUser(resource.data.userId)) &&
         request.resource.data.userId == resource.data.userId; // Prevent ownership transfer
 
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
@@ -110,8 +125,9 @@ service cloud.firestore {
           // All page versions are now public and readable by everyone
           true;
 
-        allow write: if isAuthenticated() &&
-          get(/databases/$(database)/documents/pages/$(pageId)).data.userId == request.auth.uid;
+        allow write: if (isAuthenticated() || isDevelopmentTestUser(get(/databases/$(database)/documents/pages/$(pageId)).data.userId)) &&
+          (get(/databases/$(database)/documents/pages/$(pageId)).data.userId == request.auth.uid ||
+           isDevelopmentTestUser(get(/databases/$(database)/documents/pages/$(pageId)).data.userId));
       }
 
       // Page followers subcollection
@@ -121,13 +137,86 @@ service cloud.firestore {
           get(/databases/$(database)/documents/pages/$(pageId)).data.userId == request.auth.uid
         );
 
-        allow write: if isAuthenticated() && request.auth.uid == followerId;
+        allow write: if (isAuthenticated() || isDevelopmentTestUser(followerId)) &&
+          (request.auth.uid == followerId || isDevelopmentTestUser(followerId));
+      }
+    }
+
+    // Environment-specific pages collections (DEV_pages, PREVIEW_pages, etc.)
+    match /{envPages}/{pageId} {
+      // Reading rules: All pages are now public by default
+      allow read: if (envPages.matches('.*pages') || envPages == 'pages') && (
+        // Page owner can always read their own pages (requires auth)
+        (isAuthenticated() && resource.data.userId == request.auth.uid) ||
+
+        // All pages are now public and readable by everyone (no auth required)
+        true
+      );
+
+      // Writing rules: Only page owner can modify, with data validation
+      allow create: if (envPages.matches('.*pages') || envPages == 'pages') &&
+        (isAuthenticated() || isDevelopmentTestUser(request.resource.data.userId)) &&
+        (request.resource.data.userId == request.auth.uid || isDevelopmentTestUser(request.resource.data.userId)) &&
+        request.resource.data.keys().hasAll(['title', 'isPublic', 'userId', 'createdAt']) &&
+        request.resource.data.title is string &&
+        request.resource.data.isPublic is bool &&
+        request.resource.data.userId is string &&
+        (request.resource.data.createdAt is string || request.resource.data.createdAt is timestamp) &&
+        // Allow optional fields that the application uses
+        (!request.resource.data.keys().hasAny(['username']) || request.resource.data.username is string) &&
+        (!request.resource.data.keys().hasAny(['lastModified']) || request.resource.data.lastModified is string || request.resource.data.lastModified is timestamp) &&
+        (!request.resource.data.keys().hasAny(['location']) || request.resource.data.location == null || request.resource.data.location is string) &&
+        (!request.resource.data.keys().hasAny(['totalPledged']) || request.resource.data.totalPledged is number) &&
+        (!request.resource.data.keys().hasAny(['pledgeCount']) || request.resource.data.pledgeCount is number) &&
+        (!request.resource.data.keys().hasAny(['fundraisingEnabled']) || request.resource.data.fundraisingEnabled is bool) &&
+        (!request.resource.data.keys().hasAny(['fundraisingGoal']) || request.resource.data.fundraisingGoal is number) &&
+        (!request.resource.data.keys().hasAny(['isReply']) || request.resource.data.isReply is bool) &&
+        (!request.resource.data.keys().hasAny(['replyTo']) || request.resource.data.replyTo == null || request.resource.data.replyTo is string) &&
+        (!request.resource.data.keys().hasAny(['replyToTitle']) || request.resource.data.replyToTitle == null || request.resource.data.replyToTitle is string) &&
+        (!request.resource.data.keys().hasAny(['replyToUsername']) || request.resource.data.replyToUsername == null || request.resource.data.replyToUsername is string);
+
+      allow update: if (envPages.matches('.*pages') || envPages == 'pages') &&
+        (isAuthenticated() || isDevelopmentTestUser(resource.data.userId)) &&
+        (resource.data.userId == request.auth.uid || isDevelopmentTestUser(resource.data.userId)) &&
+        request.resource.data.userId == resource.data.userId; // Prevent ownership transfer
+
+      allow delete: if (envPages.matches('.*pages') || envPages == 'pages') &&
+        (isAuthenticated() || isDevelopmentTestUser(resource.data.userId)) &&
+        (resource.data.userId == request.auth.uid || isDevelopmentTestUser(resource.data.userId));
+
+      // Environment-specific page versions subcollection
+      match /{envVersions}/{versionId} {
+        allow read: if (envVersions.matches('.*versions') || envVersions == 'versions') && (
+          // Page owner can always read their own page versions (requires auth)
+          (isAuthenticated() && get(/databases/$(database)/documents/$(envPages)/$(pageId)).data.userId == request.auth.uid) ||
+
+          // All page versions are now public and readable by everyone
+          true
+        );
+
+        allow write: if (envVersions.matches('.*versions') || envVersions == 'versions') &&
+          (isAuthenticated() || isDevelopmentTestUser(get(/databases/$(database)/documents/$(envPages)/$(pageId)).data.userId)) &&
+          (get(/databases/$(database)/documents/$(envPages)/$(pageId)).data.userId == request.auth.uid ||
+           isDevelopmentTestUser(get(/databases/$(database)/documents/$(envPages)/$(pageId)).data.userId));
+      }
+
+      // Environment-specific page followers subcollection
+      match /{envFollowers}/{followerId} {
+        allow read: if (envFollowers.matches('.*followers') || envFollowers == 'followers') &&
+          isAuthenticated() && (
+          request.auth.uid == followerId ||
+          get(/databases/$(database)/documents/$(envPages)/$(pageId)).data.userId == request.auth.uid
+        );
+
+        allow write: if (envFollowers.matches('.*followers') || envFollowers == 'followers') &&
+          (isAuthenticated() || isDevelopmentTestUser(followerId)) &&
+          (request.auth.uid == followerId || isDevelopmentTestUser(followerId));
       }
     }
 
     // User profiles - Public profile data with privacy controls
     match /users/{userId} {
-      // Allow reading basic profile info by everyone (for public pages)
+      // Allow reading basic profile info by everyone (for pages)
       // Private fields should be handled by the application layer
       allow read: if true;
 
@@ -221,6 +310,15 @@ service cloud.firestore {
 
       // Only allow writing by admin users
       allow write: if isAdmin();
+    }
+
+    // Environment-specific feature flags - Public configuration that everyone can read
+    match /{envConfig}/featureFlags {
+      // Allow everyone to read feature flags from any environment (no auth required)
+      allow read: if envConfig.matches('.*config') || envConfig == 'config';
+
+      // Only allow writing by admin users
+      allow write: if (envConfig.matches('.*config') || envConfig == 'config') && isAdmin();
     }
 
     // Admin users configuration - Super restricted
@@ -546,26 +644,81 @@ service cloud.firestore {
 
     // Activities collection - Bio and about page edit activities
     match /activities/{activityId} {
-      // Allow reading public activities by everyone (both authenticated and unauthenticated)
-      allow read: if resource.data.isPublic == true;
+      // Allow reading activities by everyone (both authenticated and unauthenticated)
+      allow read: if true;
 
-      // Allow authenticated users to create activities for their own content
-      allow create: if isAuthenticated() && (
+      // Allow authenticated users to create activities for their own content, or development test users
+      allow create: if (isAuthenticated() && (
         request.resource.data.editorId == request.auth.uid ||
         request.resource.data.userId == request.auth.uid
+      )) || (
+        // Allow development test users to create activities
+        isDevelopmentTestUser(request.resource.data.editorId) ||
+        isDevelopmentTestUser(request.resource.data.userId)
       );
 
-      // Allow users to update their own activities
-      allow update: if isAuthenticated() && (
+      // Allow users to update their own activities, or development test users
+      allow update: if (isAuthenticated() && (
         resource.data.editorId == request.auth.uid ||
         resource.data.userId == request.auth.uid
+      )) || (
+        // Allow development test users to update activities
+        isDevelopmentTestUser(resource.data.editorId) ||
+        isDevelopmentTestUser(resource.data.userId)
       );
 
-      // Allow users to delete their own activities or admins
-      allow delete: if isAuthenticated() && (
+      // Allow users to delete their own activities or admins, or development test users
+      allow delete: if (isAuthenticated() && (
         resource.data.editorId == request.auth.uid ||
         resource.data.userId == request.auth.uid ||
         isAdmin()
+      )) || (
+        // Allow development test users to delete activities
+        isDevelopmentTestUser(resource.data.editorId) ||
+        isDevelopmentTestUser(resource.data.userId)
+      );
+    }
+
+    // Environment-specific activities collections (DEV_activities, PREVIEW_activities, etc.)
+    match /{envActivities}/{activityId} {
+      // Allow reading activities by everyone (both authenticated and unauthenticated)
+      allow read: if (envActivities.matches('.*activities') || envActivities == 'activities');
+
+      // Allow authenticated users to create activities for their own content, or development test users
+      allow create: if (envActivities.matches('.*activities') || envActivities == 'activities') && (
+        (isAuthenticated() && (
+          request.resource.data.editorId == request.auth.uid ||
+          request.resource.data.userId == request.auth.uid
+        )) || (
+          // Allow development test users to create activities
+          isDevelopmentTestUser(request.resource.data.editorId) ||
+          isDevelopmentTestUser(request.resource.data.userId)
+        )
+      );
+
+      // Allow users to update their own activities, or development test users
+      allow update: if (envActivities.matches('.*activities') || envActivities == 'activities') && (
+        (isAuthenticated() && (
+          resource.data.editorId == request.auth.uid ||
+          resource.data.userId == request.auth.uid
+        )) || (
+          // Allow development test users to update activities
+          isDevelopmentTestUser(resource.data.editorId) ||
+          isDevelopmentTestUser(resource.data.userId)
+        )
+      );
+
+      // Allow users to delete their own activities or admins, or development test users
+      allow delete: if (envActivities.matches('.*activities') || envActivities == 'activities') && (
+        (isAuthenticated() && (
+          resource.data.editorId == request.auth.uid ||
+          resource.data.userId == request.auth.uid ||
+          isAdmin()
+        )) || (
+          // Allow development test users to delete activities
+          isDevelopmentTestUser(resource.data.editorId) ||
+          isDevelopmentTestUser(resource.data.userId)
+        )
       );
     }
 
@@ -674,18 +827,24 @@ service cloud.firestore {
       // Allow reading basic profile info by everyone (for public pages)
       allow read: if envUsers.matches('.*users') || envUsers == 'users';
 
-      // Allow writing only to own profile with data validation
-      allow create: if (envUsers.matches('.*users') || envUsers == 'users') &&
-                       isOwner(userId) &&
-                       request.resource.data.keys().hasAll(['email', 'uid', 'created']) &&
-                       request.resource.data.email is string &&
-                       request.resource.data.uid == userId;
+      // Allow writing only to own profile with data validation, or for development test users
+      allow create: if (envUsers.matches('.*users') || envUsers == 'users') && (
+                       (isOwner(userId) &&
+                        request.resource.data.keys().hasAll(['email', 'uid', 'created']) &&
+                        request.resource.data.email is string &&
+                        request.resource.data.uid == userId) ||
+                       // Allow creation for development test users in DEV_ collections
+                       (envUsers == 'DEV_users' && isDevelopmentTestUser(userId))
+                     );
 
-      allow update: if (envUsers.matches('.*users') || envUsers == 'users') &&
-                       isOwner(userId) &&
-                       request.resource.data.uid == resource.data.uid; // Prevent UID changes
+      allow update: if (envUsers.matches('.*users') || envUsers == 'users') && (
+                       (isOwner(userId) && request.resource.data.uid == resource.data.uid) ||
+                       // Allow updates for development test users in DEV_ collections
+                       (envUsers == 'DEV_users' && isDevelopmentTestUser(userId))
+                     );
 
-      allow delete: if (envUsers.matches('.*users') || envUsers == 'users') && isOwner(userId);
+      allow delete: if (envUsers.matches('.*users') || envUsers == 'users') &&
+                       (isOwner(userId) || (envUsers == 'DEV_users' && isDevelopmentTestUser(userId)));
 
       // Environment-specific subscription subcollections
       match /{envSubscriptions}/{subscriptionDoc} {

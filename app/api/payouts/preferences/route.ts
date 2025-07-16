@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { payoutService } from '../../../services/payoutService';
 import type { PayoutPreferences } from '../../../types/payout';
+import { getMinimumPayoutThreshold } from '../../../utils/feeCalculations';
 
 export async function GET(request: NextRequest) {
   try {
@@ -52,9 +53,10 @@ export async function PUT(request: NextRequest) {
 
     // Validate preferences
     if (preferences.minimumThreshold !== undefined) {
-      if (typeof preferences.minimumThreshold !== 'number' || preferences.minimumThreshold < 25) {
+      const systemMinimum = getMinimumPayoutThreshold();
+      if (typeof preferences.minimumThreshold !== 'number' || preferences.minimumThreshold < systemMinimum) {
         return NextResponse.json({
-          error: 'Minimum threshold must be at least $25'
+          error: `Minimum threshold must be at least $${systemMinimum}`
         }, { status: 400 });
       }
     }

@@ -140,8 +140,8 @@ const usePages = (
     }, 20000); // 20 second final timeout
 
     try {
-      // CRITICAL FIX: Show ALL pages (public + private) when viewing your own profile
-      // Only show public pages when viewing someone else's profile
+      // CRITICAL FIX: Show ALL pages when viewing your own profile
+      // Only show pages when viewing someone else's profile
       const isOwner = currentUserId && userId === currentUserId;
 
       // Build API query parameters
@@ -152,13 +152,13 @@ const usePages = (
         orderDirection: 'desc'
       });
 
-      // Set public filter based on ownership
+      // Set filter based on ownership
       if (!isOwner) {
         params.append('isPublic', 'true');
       }
 
       // Call API endpoint to get pages
-      console.log(`usePages: Fetching ${isOwner ? 'all pages' : 'public pages'} for user ${userId}...`);
+      console.log(`usePages: Fetching ${isOwner ? 'all pages' : 'pages'} for user ${userId}...`);
       const response = await fetch(`/api/pages?${params.toString()}`);
 
       if (!response.ok) {
@@ -251,70 +251,53 @@ const usePages = (
   // Function to refresh data in the background without showing loading state
   const refreshDataInBackground = async (): Promise<void> => {
     try {
-      // TEMPORARY: Use dynamic import like the working API
-      const { db } = await import('../firebase/database');
-
-      // This is a simplified version of fetchInitialPages that doesn't update loading state
+      // Use API endpoint instead of direct Firebase calls
       const isOwner = currentUserId && userId === currentUserId;
 
-      // Define query based on ownership (same logic as fetchInitialPages)
-      let pagesQuery;
-      if (isOwner) {
-        // Owner sees all their pages (public + private, exclude deleted)
-        pagesQuery = query(
-          collection(db, 'pages'),
-          where('userId', '==', userId),
-          orderBy('lastModified', 'desc'),
-          limit(initialLimitCount)
-        );
-      } else {
-        // Others only see public pages (exclude deleted)
-        pagesQuery = query(
-          collection(db, 'pages'),
-          where('userId', '==', userId),
-          where('isPublic', '==', true),
-          orderBy('lastModified', 'desc'),
-          limit(initialLimitCount)
-        );
+      // Build API query parameters
+      const params = new URLSearchParams({
+        userId: userId,
+        limit: initialLimitCount.toString(),
+        orderBy: 'lastModified',
+        orderDirection: 'desc'
+      });
+
+      // Set filter based on ownership
+      if (!isOwner) {
+        params.append('isPublic', 'true');
       }
 
-      // Execute the query
-      const pagesSnapshot = await getDocs(pagesQuery);
+      // Call API endpoint to get pages
+      const response = await fetch(`/api/pages?${params.toString()}`);
 
-      // Process results and update state with client-side filtering
-      const pagesArray = [];
-      pagesSnapshot.forEach((doc) => {
-        try {
-          const pageData = { id: doc.id, ...doc.data() };
-          // Filter out deleted pages client-side
-          if (!pageData.deleted) {
-            pagesArray.push(pageData);
-          }
-        } catch (docError) {
-          console.error(`Error processing public document ${doc.id}:`, docError);
-        }
-      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch pages: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const pagesArray = data.pages || [];
 
       // Update state with fresh data
       setPages(pagesArray);
 
-      // Update pagination state based on RAW query results, not filtered results
-      // This accounts for client-side filtering of deleted pages
-      setHasMorePages(pagesSnapshot.docs.length >= initialLimitCount);
+      // Update pagination state (API returns pagination object)
+      const pagination = data.pagination || {};
+      setHasMorePages(pagination.hasMore || false);
 
-      // Update last key for pagination
-      if (pagesSnapshot.docs.length > 0) {
-        setLastPageKey(pagesSnapshot.docs[pagesSnapshot.docs.length - 1]);
+      // Update last key for pagination (API returns lastPageId)
+      if (pagination.lastPageId) {
+        setLastPageKey({ id: pagination.lastPageId });
       }
 
       // Update cache with fresh data
       try {
         if (typeof window !== 'undefined' && window.localStorage) {
           const cacheKey = `user_pages_${userId}_${isOwner ? 'owner' : 'visitor'}_${initialLimitCount}`;
+          const pagination = data.pagination || {};
           const cacheData = {
             pages: pagesArray,
-            lastPageKey: pagesSnapshot.docs.length > 0 ? { id: pagesSnapshot.docs[pagesSnapshot.docs.length - 1].id } : null,
-            hasMorePages: pagesSnapshot.docs.length >= initialLimitCount,
+            lastPageKey: pagination.lastPageId ? { id: pagination.lastPageId } : null,
+            hasMorePages: pagination.hasMore || false,
             timestamp: Date.now()
           };
           localStorage.setItem(cacheKey, JSON.stringify(cacheData));
@@ -331,9 +314,6 @@ const usePages = (
   // Function to fetch more pages
   const fetchMorePages = async (): Promise<PageData[]> => {
     try {
-      // TEMPORARY: Use dynamic import like the working API
-      const { db } = await import('../firebase/database');
-
       if (!lastPageKey) {
         setHasMorePages(false);
         throw new Error("No more pages to load");
@@ -342,30 +322,22 @@ const usePages = (
       // Check if the current user is the owner of the pages
       const isOwner = currentUserId && userId === currentUserId;
 
-      // Define the fields we need to reduce data transfer
-      const requiredFields = ['title', 'lastModified', 'isPublic', 'userId', 'groupId', 'createdAt'];
+      // Build API query parameters for pagination
+      const params = new URLSearchParams({
+        userId: userId,
+        limit: loadMoreLimitCount.toString(),
+        orderBy: 'lastModified',
+        orderDirection: 'desc'
+      });
 
-      // Query for more pages (same logic as initial fetch)
-      let moreQuery;
-      if (isOwner) {
-        // Owner sees all their pages (public + private, exclude deleted)
-        moreQuery = query(
-          collection(db, 'pages'),
-          where('userId', '==', userId),
-          orderBy('lastModified', 'desc'),
-          startAfter(lastPageKey),
-          limit(loadMoreLimitCount)
-        );
-      } else {
-        // Others only see public pages (exclude deleted)
-        moreQuery = query(
-          collection(db, 'pages'),
-          where('userId', '==', userId),
-          where('isPublic', '==', true),
-          orderBy('lastModified', 'desc'),
-          startAfter(lastPageKey),
-          limit(loadMoreLimitCount)
-        );
+      // Set filter based on ownership
+      if (!isOwner) {
+        params.append('isPublic', 'true');
+      }
+
+      // Add pagination cursor
+      if (lastPageKey?.id) {
+        params.append('startAfter', lastPageKey.id);
       }
 
       setIsMoreLoading(true);
@@ -377,31 +349,26 @@ const usePages = (
         setError("Failed to load more pages. Please try again later.");
       }, 5000);
 
-      const snapshot = await getDocs(moreQuery);
+      // Call API endpoint to get more pages
+      const response = await fetch(`/api/pages?${params.toString()}`);
       clearTimeout(timeoutId);
 
-      const newPagesArray = [];
+      if (!response.ok) {
+        throw new Error(`Failed to fetch more pages: ${response.status} ${response.statusText}`);
+      }
 
-      snapshot.forEach((doc) => {
-        try {
-          const pageData = { id: doc.id, ...doc.data() };
-          // Filter out deleted pages client-side
-          if (!pageData.deleted) {
-            newPagesArray.push(pageData);
-          }
-        } catch (docError) {
-          console.error(`Error processing document ${doc.id}:`, docError);
-        }
-      });
+      const data = await response.json();
+      const newPagesArray = data.pages || [];
 
       setPages((prevPages) => [...prevPages, ...newPagesArray]);
 
-      // Update pagination state based on RAW query results, not filtered results
-      setHasMorePages(snapshot.docs.length >= loadMoreLimitCount);
+      // Update pagination state (API returns pagination object)
+      const pagination = data.pagination || {};
+      setHasMorePages(pagination.hasMore || false);
 
-      // Update last key for pagination
-      if (snapshot.docs.length > 0) {
-        setLastPageKey(snapshot.docs[snapshot.docs.length - 1]);
+      // Update last key for pagination (API returns lastPageId)
+      if (pagination.lastPageId) {
+        setLastPageKey({ id: pagination.lastPageId });
       } else {
         setHasMorePages(false);
       }
@@ -414,11 +381,12 @@ const usePages = (
 
           if (cachedData) {
             const parsed = JSON.parse(cachedData);
+            const pagination = data.pagination || {};
             const updatedCache = {
               ...parsed,
               pages: [...(parsed.pages || []), ...newPagesArray],
-              lastPageKey: snapshot.docs.length > 0 ? { id: snapshot.docs[snapshot.docs.length - 1].id } : parsed.lastPageKey,
-              hasMorePages: snapshot.docs.length >= loadMoreLimitCount,
+              lastPageKey: pagination.lastPageId ? { id: pagination.lastPageId } : parsed.lastPageKey,
+              hasMorePages: pagination.hasMore || false,
               timestamp: Date.now()
             };
             localStorage.setItem(cacheKey, JSON.stringify(updatedCache));

@@ -11,7 +11,7 @@ import { doc, updateDoc, getDoc, setDoc, serverTimestamp, collection, addDoc } f
 import { db } from '../../../firebase/config';
 import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/stripeConfig';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
-import { TokenService } from '../../../services/tokenService';
+import { ServerTokenService } from '../../../services/tokenService.server';
 import { calculateTokensForAmount } from '../../../utils/subscriptionTiers';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
 import { PaymentRecoveryService } from '../../../services/paymentRecoveryService';
@@ -196,7 +196,7 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
 
     // Update user's token allocation
     if (subscription.status === 'active') {
-      await TokenService.updateMonthlyTokenAllocation(userId, amount);
+      await ServerTokenService.updateMonthlyTokenAllocation(userId, amount);
     }
 
     console.log(`[SUBSCRIPTION WEBHOOK] Successfully updated subscription for user ${userId}, final status: ${subscriptionData.status}`);
@@ -226,7 +226,7 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
       updatedAt: serverTimestamp()});
 
     // Reset token allocation to 0
-    await TokenService.updateMonthlyTokenAllocation(userId, 0);
+    await ServerTokenService.updateMonthlyTokenAllocation(userId, 0);
 
     console.log(`[SUBSCRIPTION WEBHOOK] Subscription deleted for user ${userId} - Status set to cancelled`);
 
@@ -286,7 +286,7 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     // Ensure token allocation is up to date
     const price = subscription.items.data[0].price;
     const amount = price.unit_amount ? price.unit_amount / 100 : 0;
-    await TokenService.updateMonthlyTokenAllocation(userId, amount);
+    await ServerTokenService.updateMonthlyTokenAllocation(userId, amount);
 
     // Track the subscription payment transaction - MANDATORY for audit compliance
     // Reuse the correlationId from the sync operation above

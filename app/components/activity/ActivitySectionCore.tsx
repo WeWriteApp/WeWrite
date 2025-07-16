@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
 import { SectionTitle } from "../ui/section-title";
-import RecentActivity from '../features/RecentActivity';
+import RecentEdits from '../features/RecentEdits';
 
 /**
  * ActivitySectionCore Component
@@ -27,10 +27,11 @@ const ActivitySectionCore: React.FC = () => {
 
   return (
     <div style={{ minHeight: '200px' }}>
-      <RecentActivity
+      <RecentEdits
         ref={activityRef}
         limit={4}
         renderFilterInHeader={true}
+        isCarousel={true}
       />
     </div>
   );

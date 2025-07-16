@@ -25,6 +25,7 @@ import {
 } from 'firebase/firestore';
 import { db, createPageQuery } from './core';
 import { trackQueryPerformance } from '../../utils/queryMonitor';
+import { getCollectionName } from '../../utils/environmentConfig';
 
 // Analytics data types
 export interface GlobalCounters {
@@ -71,7 +72,7 @@ export class AnalyticsDataLayer {
   static async getGlobalCounters(): Promise<GlobalCounters | null> {
     return await trackQueryPerformance('analytics.getGlobalCounters', async () => {
       try {
-        const counterDoc = await getDoc(doc(db, 'analytics_counters', 'global'));
+        const counterDoc = await getDoc(doc(db, getCollectionName('analytics_counters'), 'global'));
         
         if (counterDoc.exists()) {
           return counterDoc.data() as GlobalCounters;
@@ -91,7 +92,7 @@ export class AnalyticsDataLayer {
   static async setGlobalCounters(counters: GlobalCounters): Promise<void> {
     return await trackQueryPerformance('analytics.setGlobalCounters', async () => {
       try {
-        await setDoc(doc(db, 'analytics_counters', 'global'), counters);
+await setDoc(doc(db, getCollectionName("analytics_counters"), 'global'), counters);
       } catch (error) {
         console.error('Error setting global counters:', error);
         throw error;
@@ -105,7 +106,7 @@ export class AnalyticsDataLayer {
   static async updateGlobalCounters(updates: Partial<GlobalCounters>): Promise<void> {
     return await trackQueryPerformance('analytics.updateGlobalCounters', async () => {
       try {
-        await updateDoc(doc(db, 'analytics_counters', 'global'), {
+await updateDoc(doc(db, getCollectionName("analytics_counters"), 'global'), {
           ...updates,
           lastUpdated: Timestamp.now()
         });
@@ -125,7 +126,7 @@ export class AnalyticsDataLayer {
         const startDateStr = startDate.toISOString().split('T')[0];
         const endDateStr = endDate.toISOString().split('T')[0];
         
-        const dailyRef = collection(db, 'analytics_daily');
+        const dailyRef = collection(db, getCollectionName('analytics_daily'));
         const q = query(
           dailyRef,
           where('date', '>=', startDateStr),
@@ -159,7 +160,7 @@ export class AnalyticsDataLayer {
         const startDateStr = startDate.toISOString().split('T')[0];
         const endDateStr = endDate.toISOString().split('T')[0];
         
-        const hourlyRef = collection(db, 'analytics_hourly');
+        const hourlyRef = collection(db, getCollectionName('analytics_hourly'));
         const q = query(
           hourlyRef,
           where('datetime', '>=', `${startDateStr}-00`),
@@ -190,7 +191,7 @@ export class AnalyticsDataLayer {
   static async setDailyAggregation(date: string, data: Omit<DailyAggregation, 'date'>): Promise<void> {
     return await trackQueryPerformance('analytics.setDailyAggregation', async () => {
       try {
-        await setDoc(doc(db, 'analytics_daily', date), {
+await setDoc(doc(db, getCollectionName("analytics_daily"), date), {
           date,
           ...data
         });

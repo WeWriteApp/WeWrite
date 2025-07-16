@@ -14,6 +14,7 @@ import {
   Timestamp,
   serverTimestamp
 } from 'firebase/firestore';
+import { getCollectionName } from "../utils/environmentConfig";
 
 /**
  * Calculate streaks from past activity data
@@ -24,7 +25,7 @@ export async function calculatePastStreaks() {
     console.log('Starting past streak calculation...');
 
     // Get all pages to analyze versions
-    const pagesRef = collection(db, 'pages');
+    const pagesRef = collection(db, getCollectionName('pages'));
     const pagesSnapshot = await getDocs(pagesRef);
 
     // Map to store user activity dates

@@ -1,21 +1,7 @@
-// Type definitions for editor node types
-export interface NodeTypes {
-  readonly PARAGRAPH: 'paragraph';
-  readonly HEADING: 'heading';
-  readonly CODE_BLOCK: 'code-block';
-  readonly LIST: 'list';
-  readonly LIST_ITEM: 'list-item';
-  readonly LINK: 'link';
-}
-
-// Node type constants for editor
-export const nodeTypes: NodeTypes = {
+// Simplified content types - only text and links
+export const CONTENT_TYPES = {
   PARAGRAPH: 'paragraph',
-  HEADING: 'heading',
-  CODE_BLOCK: 'code-block',
-  LIST: 'list',
-  LIST_ITEM: 'list-item',
-  LINK: 'link'} as const;
+  LINK: 'link'
+} as const;
 
-// Type for individual node type values
-export type NodeType = NodeTypes[keyof NodeTypes];
+export type ContentType = typeof CONTENT_TYPES[keyof typeof CONTENT_TYPES];

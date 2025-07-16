@@ -29,7 +29,7 @@ export default function StartOfMonthExplainer({
           </button>
         </p>
         {isExpanded && (
-          <div className="mt-2 p-3 bg-gray-50 rounded border text-xs">
+          <div className="mt-2 p-3 bg-gray-50 rounded border-theme-strong text-xs">
             <ul className="space-y-1">
               <li>• Your allocations are finalized and sent to writers</li>
               <li>• Writers can request payouts</li>
@@ -44,7 +44,7 @@ export default function StartOfMonthExplainer({
 
   if (variant === 'compact') {
     return (
-      <div className={`bg-blue-50 border border-blue-200 rounded-lg p-3 ${className}`}>
+      <div className={`bg-blue-50 border-theme-strong rounded-lg p-3 ${className}`}>
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-blue-800 text-sm">Start-of-Month Processing</h3>
           <button
@@ -90,7 +90,7 @@ export default function StartOfMonthExplainer({
 
   // Full variant
   return (
-    <div className={`bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 ${className}`}>
+    <div className={`bg-gradient-to-r from-blue-50 to-indigo-50 border-theme-strong rounded-lg p-6 ${className}`}>
       <div className="flex items-center space-x-3 mb-4">
         <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
           <span className="text-blue-800 font-bold text-lg">1</span>

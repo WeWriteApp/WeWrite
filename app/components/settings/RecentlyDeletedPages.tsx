@@ -210,13 +210,18 @@ export default function RecentlyDeletedPages() {
       setLoading(true)
       setError(null)
 
-      // Dynamic import
-      const { db } = await import('../../firebase/database')
-      const { doc, deleteDoc } = await import('firebase/firestore')
-
-      // Delete all pages
+      // Use API instead of direct Firebase calls
       await Promise.all(
-        deletedPages.map(page => deleteDoc(doc(db, 'pages', page.id)))
+        deletedPages.map(async (page) => {
+          const response = await fetch(`/api/pages?id=${page.id}&permanent=true`, {
+            method: 'DELETE'
+          });
+
+          if (!response.ok) {
+            const errorResult = await response.json();
+            throw new Error(errorResult.error || `Failed to permanently delete page ${page.id}`);
+          }
+        })
       )
 
       setDeletedPages([])

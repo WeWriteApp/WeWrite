@@ -84,6 +84,54 @@ export const containsWhitespace = (username: string): boolean => {
 };
 
 /**
+ * Validates if input is a valid email format
+ * @param email - The email to validate
+ * @returns True if valid email format
+ */
+export const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+/**
+ * Validates login input (email or username)
+ * @param input - The email or username input
+ * @returns Validation result with specific error messages
+ */
+export const validateLoginInput = (input: string): UsernameValidationResult => {
+  // Check if input is empty or only whitespace
+  if (!input || input.trim().length === 0) {
+    return {
+      isValid: false,
+      error: "EMPTY_INPUT",
+      message: "Please enter your email or username"
+    };
+  }
+
+  const trimmedInput = input.trim();
+
+  // If it contains @ symbol, treat it as an email
+  if (trimmedInput.includes('@')) {
+    if (isValidEmail(trimmedInput)) {
+      return {
+        isValid: true,
+        error: null,
+        message: null
+      };
+    } else {
+      return {
+        isValid: false,
+        error: "INVALID_EMAIL",
+        message: "Please enter a valid email address"
+      };
+    }
+  }
+
+  // Otherwise, validate as username
+  return validateUsernameFormat(trimmedInput);
+};
+
+/**
  * Suggests a cleaned version of the username by removing/replacing invalid characters
  * @param username - The original username
  * @returns Cleaned username suggestion

@@ -9,7 +9,6 @@ interface UserData {
   uid: string;
   email?: string | null;
   username?: string;
-  displayName?: string | null;
   isCurrent?: boolean;
 }
 

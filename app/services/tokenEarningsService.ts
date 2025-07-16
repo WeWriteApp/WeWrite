@@ -47,16 +47,25 @@ export class TokenEarningsService {
    */
   static async getWriterTokenBalance(userId: string): Promise<WriterTokenBalance | null> {
     try {
-      const balanceRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_BALANCES), userId);
+      console.log('[TokenEarningsService] Getting writer token balance for:', userId);
+      const balanceRef = doc(db, getCollectionName('WRITER_TOKEN_BALANCES'), userId);
       const balanceDoc = await getDoc(balanceRef);
-      
+
       if (balanceDoc.exists()) {
-        return balanceDoc.data() as WriterTokenBalance;
+        const balance = balanceDoc.data() as WriterTokenBalance;
+        console.log('[TokenEarningsService] Found writer token balance:', balance);
+        return balance;
       }
-      
+
+      console.log('[TokenEarningsService] No writer token balance found for user:', userId);
       return null;
-    } catch (error) {
-      console.error('Error getting writer token balance:', error);
+    } catch (error: any) {
+      // Handle permission errors gracefully (expected for non-writers)
+      if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
+        console.log('[TokenEarningsService] Permission denied for writer token balance (expected for non-writers)');
+        return null;
+      }
+      console.error('[TokenEarningsService] Error getting writer token balance:', error);
       return null;
     }
   }
@@ -66,13 +75,13 @@ export class TokenEarningsService {
    */
   static async getWriterEarningsForMonth(userId: string, month: string): Promise<WriterTokenEarnings | null> {
     try {
-      const earningsRef = doc(db, 'writerTokenEarnings', `${userId}_${month}`);
+const earningsRef = doc(db, getCollectionName('WRITER_TOKEN_EARNINGS'), `${userId}_${month}`);
       const earningsDoc = await getDoc(earningsRef);
-      
+
       if (earningsDoc.exists()) {
         return earningsDoc.data() as WriterTokenEarnings;
       }
-      
+
       return null;
     } catch (error) {
       console.error('Error getting writer earnings for month:', error);
@@ -85,17 +94,20 @@ export class TokenEarningsService {
    */
   static async getWriterEarningsHistory(userId: string, limitCount: number = 12): Promise<WriterTokenEarnings[]> {
     try {
+      console.log('[TokenEarningsService] Getting writer earnings history for:', userId);
       const earningsQuery = query(
-        collection(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_EARNINGS)),
+        collection(db, getCollectionName('WRITER_TOKEN_EARNINGS')),
         where('userId', '==', userId),
         orderBy('month', 'desc'),
         limit(limitCount)
       );
-      
+
       const earningsSnapshot = await getDocs(earningsQuery);
-      return earningsSnapshot.docs.map(doc => doc.data() as WriterTokenEarnings);
+      const earnings = earningsSnapshot.docs.map(doc => doc.data() as WriterTokenEarnings);
+      console.log('[TokenEarningsService] Found earnings history:', earnings.length, 'records');
+      return earnings;
     } catch (error) {
-      console.error('Error getting writer earnings history:', error);
+      console.error('[TokenEarningsService] Error getting writer earnings history:', error);
       return [];
     }
   }
@@ -177,8 +189,8 @@ export class TokenEarningsService {
       // Use transaction to ensure atomicity
       await runTransaction(db, async (transaction) => {
         const earningsId = `${recipientUserId}_${month}`;
-        const earningsRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_EARNINGS), earningsId);
-        const balanceRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_BALANCES), recipientUserId);
+        const earningsRef = doc(db, getCollectionName('WRITER_TOKEN_EARNINGS'), earningsId);
+        const balanceRef = doc(db, getCollectionName('WRITER_TOKEN_BALANCES'), recipientUserId);
 
         // Read current state within transaction
         const earningsDoc = await transaction.get(earningsRef);
@@ -330,7 +342,7 @@ export class TokenEarningsService {
   static async updateWriterBalance(userId: string): Promise<void> {
     try {
       await runTransaction(db, async (transaction) => {
-        const balanceRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_BALANCES), userId);
+        const balanceRef = doc(db, getCollectionName('WRITER_TOKEN_BALANCES'), userId);
         const balanceDoc = await transaction.get(balanceRef);
 
         await this.updateWriterBalanceInTransaction(transaction, userId, balanceRef, balanceDoc);
@@ -356,7 +368,7 @@ export class TokenEarningsService {
 
     // Get all earnings for this writer within the transaction
     const earningsQuery = query(
-      collection(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_EARNINGS)),
+      collection(db, getCollectionName('WRITER_TOKEN_EARNINGS')),
       where('userId', '==', userId)
     );
 
@@ -444,7 +456,7 @@ export class TokenEarningsService {
 
       // Get all earnings for the specified month
       const earningsQuery = query(
-        collection(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_EARNINGS)),
+        collection(db, getCollectionName('WRITER_TOKEN_EARNINGS')),
         where('month', '==', month),
         where('status', '==', 'pending')
       );
@@ -578,7 +590,7 @@ export class TokenEarningsService {
         correlationId: corrId
       };
 
-      await setDoc(doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_PAYOUTS), payoutId), {
+      await setDoc(doc(db, getCollectionName('TOKEN_PAYOUTS'), payoutId), {
         id: payoutId,
         ...payout
       });
@@ -624,17 +636,99 @@ export class TokenEarningsService {
   static async getPayoutHistory(userId: string, limitCount: number = 10): Promise<TokenPayout[]> {
     try {
       const payoutsQuery = query(
-        collection(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_PAYOUTS)),
+        collection(db, getCollectionName('TOKEN_PAYOUTS')),
         where('userId', '==', userId),
         orderBy('requestedAt', 'desc'),
         limit(limitCount)
       );
-      
+
       const payoutsSnapshot = await getDocs(payoutsQuery);
       return payoutsSnapshot.docs.map(doc => doc.data() as TokenPayout);
     } catch (error) {
       console.error('Error getting payout history:', error);
       return [];
+    }
+  }
+
+  /**
+   * Get unfunded token earnings for a writer
+   * Aggregates tokens from logged-out users and users without subscriptions
+   */
+  static async getUnfundedEarnings(userId: string): Promise<{
+    totalUnfundedTokens: number;
+    totalUnfundedUsdValue: number;
+    loggedOutTokens: number;
+    loggedOutUsdValue: number;
+    noSubscriptionTokens: number;
+    noSubscriptionUsdValue: number;
+    allocations: any[];
+    message: string;
+  } | null> {
+    try {
+      const response = await fetch('/api/tokens/unfunded-earnings');
+      if (!response.ok) {
+        console.error('Failed to fetch unfunded earnings:', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : null;
+    } catch (error) {
+      console.error('Error getting unfunded earnings:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get complete writer earnings data including funded, pending, and unfunded tokens
+   */
+  static async getCompleteWriterEarnings(userId: string): Promise<{
+    balance: WriterTokenBalance | null;
+    earnings: WriterTokenEarnings[];
+    unfunded: any | null;
+    pendingAllocations: any | null;
+  }> {
+    try {
+      console.log('[TokenEarningsService] Loading complete writer earnings for user:', userId);
+
+      const [balance, earnings, unfunded, pendingData] = await Promise.all([
+        this.getWriterTokenBalance(userId),
+        this.getWriterEarningsHistory(userId, 6),
+        this.getUnfundedEarnings(userId),
+        // Fetch pending allocations for this user as recipient
+        fetch('/api/tokens/pending-allocations?mode=recipient')
+          .then(res => res.json())
+          .then(data => {
+            console.log('[TokenEarningsService] Pending allocations response:', data);
+            return data.success ? data.data : null;
+          })
+          .catch(err => {
+            console.warn('[TokenEarningsService] Failed to load pending allocations:', err);
+            return null;
+          })
+      ]);
+
+      console.log('[TokenEarningsService] Complete earnings data loaded:', {
+        balance,
+        earnings: earnings.length,
+        unfunded,
+        pendingAllocations: pendingData
+      });
+
+      return {
+        balance,
+        earnings,
+        unfunded,
+        pendingAllocations: pendingData
+      };
+    } catch (error) {
+      console.error('[TokenEarningsService] Error getting complete writer earnings:', error);
+      return {
+        balance: null,
+        earnings: [],
+        unfunded: null,
+        pendingAllocations: null
+      };
     }
   }
 }

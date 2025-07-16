@@ -10,6 +10,7 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { PendingTokenAllocationService } from '../../../services/pendingTokenAllocationService';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
+import { getCollectionName } from "../../../utils/environmentConfig";
 
 // GET - Get user's pending allocations summary
 export async function GET(request: NextRequest) {
@@ -19,12 +20,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const summary = await PendingTokenAllocationService.getUserAllocationSummary(userId);
+    const { searchParams } = new URL(request.url);
+    const mode = searchParams.get('mode'); // 'allocator' (default) or 'recipient'
 
-    return NextResponse.json({
-      success: true,
-      data: summary
-    });
+    if (mode === 'recipient') {
+      // Get pending allocations where this user is the recipient
+      const recipientData = await PendingTokenAllocationService.getRecipientPendingAllocations(userId);
+
+      return NextResponse.json({
+        success: true,
+        data: recipientData
+      });
+    } else {
+      // Default: Get allocations where this user is the allocator
+      const summary = await PendingTokenAllocationService.getUserAllocationSummary(userId);
+
+      return NextResponse.json({
+        success: true,
+        data: summary
+      });
+    }
 
   } catch (error) {
     console.error('Error getting pending allocations:', error);
@@ -69,11 +84,11 @@ export async function POST(request: NextRequest) {
     let resourceDoc;
     try {
       if (resourceType === 'page') {
-        resourceDoc = await getDoc(doc(db, 'pages', resourceId));
+        resourceDoc = await getDoc(doc(db, getCollectionName("pages"), resourceId));
       } else if (resourceType === 'group') {
         resourceDoc = await getDoc(doc(db, 'groups', resourceId));
       } else if (resourceType === 'user_bio') {
-        resourceDoc = await getDoc(doc(db, 'users', resourceId));
+        resourceDoc = await getDoc(doc(db, getCollectionName("users"), resourceId));
         // For user_bio, the resourceId should match recipientUserId
         if (resourceId !== recipientUserId) {
           return NextResponse.json({

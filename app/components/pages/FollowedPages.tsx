@@ -80,8 +80,13 @@ export default function FollowedPages({
 
       setError(null);
 
-      // Get the IDs of pages the user follows
-      const followedPageIds = await getFollowedPages(userId);
+      // Get the IDs of pages the user follows via API
+      const response = await fetch('/api/followed-pages');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch followed pages: ${response.status}`);
+      }
+      const data = await response.json();
+      const followedPageIds = data.followedPages || [];
 
       if (followedPageIds.length === 0) {
         setPages([]);

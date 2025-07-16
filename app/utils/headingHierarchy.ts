@@ -4,6 +4,8 @@
  * Heading hierarchy validation and optimization utilities for SEO
  */
 
+import type { EditorNode } from '../types/database';
+
 // Types
 interface HeadingValidationResult {
   valid: boolean;
@@ -168,10 +170,10 @@ function generateHeadingId(text: string): string {
 }
 
 /**
- * Adds proper heading structure to Slate content
+ * Adds proper heading structure to editor content
  */
-export function optimizeSlateHeadings(slateContent: SlateNode[]): SlateNode[] {
-  if (!Array.isArray(slateContent)) return slateContent;
+export function optimizeEditorHeadings(editorContent: EditorNode[]): EditorNode[] {
+  if (!Array.isArray(editorContent)) return editorContent;
   
   let hasH1 = false;
   let lastHeadingLevel = 0;
@@ -213,7 +215,7 @@ export function optimizeSlateHeadings(slateContent: SlateNode[]): SlateNode[] {
 /**
  * Extracts heading outline from content for SEO
  */
-export function extractHeadingOutline(content: SlateNode[] | string): HeadingOutline[] {
+export function extractHeadingOutline(content: EditorNode[] | string): HeadingOutline[] {
   if (!content) return [];
 
   let headings: HeadingOutline[] = [];

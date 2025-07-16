@@ -215,6 +215,7 @@ export default function UsernameEnforcementModal() {
           <Button
             onClick={handleSave}
             disabled={!isAvailable || isSaving || !isValidFormat}
+            variant="success"
             className="w-full"
           >
             {isSaving ? (

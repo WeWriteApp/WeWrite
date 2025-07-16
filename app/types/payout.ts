@@ -92,6 +92,21 @@ export interface Payout {
   completedAt?: Timestamp;
   failureReason?: string;
   retryCount: number;
+  nextRetryAt?: Timestamp;
+  retryAttempts?: Array<{
+    attemptNumber: number;
+    timestamp: Timestamp;
+    failureReason: string;
+    nextRetryAt?: Timestamp;
+    isRetryable: boolean;
+  }>;
+  statusHistory?: Array<{
+    from: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+    to: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+    timestamp: Timestamp;
+    reason?: string;
+    metadata?: any;
+  }>;
   metadata?: {
     stripeTransferData?: any;
     failureDetails?: any;

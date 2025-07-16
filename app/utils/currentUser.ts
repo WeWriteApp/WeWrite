@@ -14,7 +14,6 @@ interface UserData {
   uid: string;
   email: string;
   username?: string;
-  displayName?: string;
   authToken?: string;
   isFirebaseUser?: boolean;
   isCurrent?: boolean;

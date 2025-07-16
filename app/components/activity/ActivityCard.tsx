@@ -44,8 +44,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
   const { toast } = useToast();
   const [isRestoring, setIsRestoring] = useState(false);
 
-  // Check if user can restore this version (is page owner and in history context)
-  const canRestore = activity.isHistoryContext &&
+  // Check if user can restore this version (is page owner and in activity context)
+  const canRestore = (activity.isActivityContext || activity.isHistoryContext) &&
                     !activity.isCurrentVersion &&
                     currentAccount &&
                     pageData &&
@@ -180,6 +180,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
 
   // For newly created pages, adjust the display text
   const isNewPage = activity.isNewPage;
+  const isTitleChange = activity.isTitleChange || false;
 
   // State for diff calculation using centralized service
   const [diffResult, setDiffResult] = useState(null);
@@ -222,7 +223,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
   const removed = diffResult?.removed || 0;
   const hasChanges = diffResult?.hasChanges || false;
 
-  // Note: No-op activity filtering is now handled at the data level in useRecentActivity hook
+  // Note: Activity filtering is now handled at the data level in RecentPagesActivity component
   // This ensures no gaps appear in the UI while still filtering out meaningless activities
 
   // Handle card click to navigate to the page
@@ -240,11 +241,11 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
       console.log('ActivityCard: Card clicked, navigation data:', {
         pageId: activity.pageId,
         versionId: activity.versionId,
-        isHistoryContext: activity.isHistoryContext,
+        isActivityContext: activity.isActivityContext || activity.isHistoryContext,
         isCurrentVersion: activity.isCurrentVersion,
-        willNavigateTo: activity.isHistoryContext && activity.versionId
+        willNavigateTo: (activity.isActivityContext || activity.isHistoryContext) && activity.versionId
           ? `/${activity.pageId}/version/${activity.versionId}`
-          : `/${activity.pageId}` // Always go to current page for non-history contexts
+          : `/${activity.pageId}` // Always go to current page for non-activity contexts
       });
     }
 
@@ -268,11 +269,11 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
     }
 
     // For regular page activities, determine navigation based on context and version status
-    if (activity.isHistoryContext && activity.versionId) {
-      // From history page - always go to version page to view that specific version
+    if ((activity.isActivityContext || activity.isHistoryContext) && activity.versionId) {
+      // From activity page - always go to version page to view that specific version
       const url = `/${activity.pageId}/version/${activity.versionId}`;
       if (process.env.NODE_ENV === 'development') {
-        console.log('ActivityCard: History context detected, navigating to version page:', url);
+        console.log('ActivityCard: Activity context detected, navigating to version page:', url);
       }
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       window.location.href = url;
@@ -282,7 +283,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
       // Use simple navigation to avoid permission checking issues
       const url = `/${activity.pageId}`;
       if (process.env.NODE_ENV === 'development') {
-        console.log('ActivityCard: Non-history context, navigating to main page:', url);
+        console.log('ActivityCard: Non-activity context, navigating to main page:', url);
       }
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       window.location.href = url;
@@ -301,8 +302,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
     activityUrl = `/group/${groupId}`;
   } else {
     // Regular page edits - determine URL based on context
-    if (activity.isHistoryContext && activity.versionId) {
-      // From history page - always link to version page
+    if ((activity.isActivityContext || activity.isHistoryContext) && activity.versionId) {
+      // From activity page - always link to version page
       activityUrl = `/${activity.pageId}/version/${activity.versionId}`;
     } else {
       // For home page and other contexts - always go to current page
@@ -347,7 +348,9 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
           <div className="text-xs">
             {activity.groupId && activity.groupName ? (
               <>
-                <span className="text-foreground">{isNewPage ? "created in" : "edited in"}{" "}</span>
+                <span className="text-foreground">
+                  {isNewPage ? "created in" : isTitleChange ? "renamed in" : "edited in"}{" "}
+                </span>
                 <Link
                   href={`/group/${activity.groupId}`}
                   className="hover:underline text-primary"
@@ -358,7 +361,9 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
               </>
             ) : (
               <>
-                <span className="text-foreground">{isNewPage ? "created by" : "edited by"}{" "}</span>
+                <span className="text-foreground">
+                  {isNewPage ? "created by" : isTitleChange ? "renamed by" : "edited by"}{" "}
+                </span>
                 {/* Don't make user links clickable for sample data */}
                 {activity.isSample ? (
                   <span className="text-primary">
@@ -407,24 +412,42 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
             ? "min-h-[70px] md:h-[70px]" // Dynamic height on mobile, fixed on desktop
             : "h-[70px]" // Fixed height for all others
         )}>
-          <DiffPreview
-            currentContent={activity.currentContent}
-            previousContent={isNewPage ? null : activity.previousContent}
-            isNewPage={isNewPage}
-          />
+          {isTitleChange ? (
+            <div className="flex items-center justify-center h-full text-sm text-muted-foreground italic">
+              Page title was changed
+            </div>
+          ) : (
+            <DiffPreview
+              currentContent={activity.currentContent}
+              previousContent={isNewPage ? null : activity.previousContent}
+              textDiff={{
+                preview: activity.diffPreview, // Use stored diff preview
+                added: activity.diff?.added || 0,
+                removed: activity.diff?.removed || 0,
+                hasChanges: activity.diff?.hasChanges || false
+              }}
+              isNewPage={isNewPage}
+            />
+          )}
         </div>
 
         {/* Character count stats positioned at the bottom of the card with proper padding */}
         <div className="flex-shrink-0 pb-2 pt-2 px-1 border-t border-border/20 mt-auto">
           <div className="flex justify-between items-center">
-            <DiffStats
-              added={added}
-              removed={removed}
-              isNewPage={isNewPage}
-              showTooltips={true}
-            />
+            {isTitleChange ? (
+              <div className="text-xs text-muted-foreground">
+                Title change
+              </div>
+            ) : (
+              <DiffStats
+                added={added}
+                removed={removed}
+                isNewPage={isNewPage}
+                showTooltips={true}
+              />
+            )}
 
-            {/* Restore button for history context */}
+            {/* Restore button for activity context */}
             {canRestore && (
               <Button
                 variant="outline"

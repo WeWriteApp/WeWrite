@@ -37,7 +37,7 @@ interface DailyNotesCarouselProps {
  * - Infinite loading with "Load 15 More" buttons at both ends
  * - Today positioned in the center of the initial range
  * - Shows multiple notes per day in container format
- * - Supports both customDate field and legacy YYYY-MM-DD titles
+ * - Groups pages by their creation date (createdAt field)
  * - Maintains scroll position when loading new dates
  */
 export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNotesCarouselProps) {
@@ -161,7 +161,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
       // Reduced logging to prevent terminal spam
       // console.log(`Daily notes: querying date range ${startDate} to ${endDate} (${dateRange.length} days)`);
 
-      // Call efficient daily notes API that only returns pages with custom dates
+      // Call efficient daily notes API that groups pages by creation date
       const response = await fetch(`/api/daily-notes?userId=${currentAccount?.uid}&startDate=${startDate}&endDate=${endDate}`)
 
       if (!response.ok) {
@@ -205,78 +205,38 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
 
       console.log('🔍 DailyNotesCarousel: Processing', result.pages.length, 'pages for daily notes');
 
-      // Debug: Check for the specific page that's not showing up
-      const targetPage = result.pages.find(p => p.id === 'Kkflv9WNbGxg09JPLVU6');
-      if (targetPage) {
-        console.log('🔍 DailyNotesCarousel: Found specific page Kkflv9WNbGxg09JPLVU6:', {
-          id: targetPage.id,
-          title: targetPage.title,
-          customDate: targetPage.customDate,
-          hasCustomDate: !!targetPage.customDate,
-          deleted: targetPage.deleted,
-          userId: targetPage.userId
-        });
-      } else {
-        console.log('🔍 DailyNotesCarousel: Specific page Kkflv9WNbGxg09JPLVU6 NOT FOUND in API response');
-      }
-
       // Debug: Show what we're getting from the API
-      const pagesWithCustomDateDebug = result.pages.filter(p => p.customDate);
-      console.log('🔍 DailyNotesCarousel: Pages with customDate from API:', pagesWithCustomDateDebug.length);
-      pagesWithCustomDateDebug.forEach(page => {
-        console.log(`  - ${page.id}: "${page.title}" (customDate: ${page.customDate})`);
-      });
-
-      // Debug: Show first few pages to see what we're getting
+      console.log('🔍 DailyNotesCarousel: API returned', result.pages.length, 'pages');
       console.log('🔍 DailyNotesCarousel: First 5 pages from API:',
         result.pages.slice(0, 5).map(p => ({
           id: p.id,
           title: p.title,
-          customDate: p.customDate,
-          lastModified: p.lastModified
+          createdDate: p.createdDate,
+          createdAt: p.createdAt,
+          customDate: p.customDate // Show both for comparison
         }))
       );
 
-      let pagesWithCustomDate = 0;
-      let pagesWithDateTitle = 0;
+      // Check if any pages have createdDate
+      const pagesWithCreatedDate = result.pages.filter(p => p.createdDate);
+      const pagesWithCustomDate = result.pages.filter(p => p.customDate);
+      console.log('🔍 DailyNotesCarousel: Pages with createdDate:', pagesWithCreatedDate.length);
+      console.log('🔍 DailyNotesCarousel: Pages with customDate:', pagesWithCustomDate.length);
 
-      // Filter pages to find ALL pages with custom dates
+      let processedPagesCount = 0;
+
+      // Group pages by their creation date
       result.pages.forEach((page: any) => {
-        let dateString: string | null = null;
-        let noteTitle = page.title || 'Untitled'; // Use the actual page title
+        const dateString = page.createdDate; // Use the createdDate field from API
+        const noteTitle = page.title || 'Untitled';
 
-        // Check for pages with customDate field
-        if (page.customDate) {
-          dateString = page.customDate;
-          pagesWithCustomDate++;
-        }
-        // Check legacy format (title as YYYY-MM-DD, only if no customDate)
-        else if (page.title && isExactDateFormat(page.title)) {
-          dateString = page.title;
-          pagesWithDateTitle++;
-          // For legacy pages, keep the date as title since they haven't been migrated yet
-          console.log('🔍 DailyNotesCarousel: Found legacy page with date title:', {
-            id: page.id,
-            title: page.title
-          });
-        }
-
-        // If we found a date, add it to the map with the actual page title
+        // Only process pages with valid creation dates
         if (dateString) {
           if (!notesByDateMap.has(dateString)) {
             notesByDateMap.set(dateString, []);
           }
           notesByDateMap.get(dateString)!.push({ id: page.id, title: noteTitle });
-
-          // Special logging for the specific page
-          if (page.id === 'Kkflv9WNbGxg09JPLVU6') {
-            console.log('🔍 DailyNotesCarousel: SPECIFIC PAGE ADDED TO MAP:', {
-              date: dateString,
-              id: page.id,
-              title: noteTitle,
-              mapSize: notesByDateMap.get(dateString)!.length
-            });
-          }
+          processedPagesCount++;
 
           console.log('🔍 DailyNotesCarousel: Added to map:', {
             date: dateString,
@@ -286,54 +246,13 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
         }
       });
 
-      // Show title variations for debugging
-      const allPagesWithCustomDate = result.pages.filter((page: any) => page.customDate);
-      const titleVariations = {};
-      allPagesWithCustomDate.forEach(page => {
-        const title = page.title || 'NO_TITLE';
-        titleVariations[title] = (titleVariations[title] || 0) + 1;
-      });
-
-      console.log('🔍 DailyNotesCarousel: Title variations for pages with custom dates:', titleVariations);
-
-      // Check specifically for yesterday's date
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayString = yesterday.toISOString().split('T')[0];
-
-      // Reduced debug logging to prevent terminal spam
-      // console.log('🔍 DailyNotesCarousel: Checking for yesterday:', yesterdayString);
-      const yesterdayPages = result.pages.filter(page => page.customDate === yesterdayString);
-
-      // Simplified logging - only log if there are issues
-      if (yesterdayPages.length === 0) {
-        // Only log when debugging is needed
-        // console.log('🔍 DailyNotesCarousel: NO pages found for yesterday');
-      }
-
       console.log('🔍 DailyNotesCarousel: Summary:', {
         totalPages: result.pages.length,
-        pagesWithCustomDate,
-        pagesWithDateTitle,
+        pagesWithCreatedDate: pagesWithCreatedDate.length,
+        processedPagesCount,
         totalDailyNotes: notesByDateMap.size,
-        dateKeys: Array.from(notesByDateMap.keys()).sort(),
-        yesterdayString,
-        yesterdayPagesFound: yesterdayPages.length
+        dateKeys: Array.from(notesByDateMap.keys()).sort()
       });
-
-      // Debug: Check if specific page is in the final map
-      const specificPageInMap = Array.from(notesByDateMap.entries()).find(([date, notes]) =>
-        notes.some(note => note.id === 'Kkflv9WNbGxg09JPLVU6')
-      );
-
-      if (specificPageInMap) {
-        console.log('🔍 DailyNotesCarousel: SPECIFIC PAGE IS IN FINAL MAP:', {
-          date: specificPageInMap[0],
-          notes: specificPageInMap[1]
-        });
-      } else {
-        console.log('🔍 DailyNotesCarousel: SPECIFIC PAGE NOT IN FINAL MAP');
-      }
 
       setNotesByDate(notesByDateMap);
     } catch (error) {
@@ -420,18 +339,7 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
     }
   };
 
-  // Handle add new click - create new note for specific date
-  const handleAddNewClick = (date: Date) => {
-    try {
-      const dateString = format(date, 'yyyy-MM-dd');
-      // Pass the date as a separate parameter so user can choose their own title
-      router.push(`/new?customDate=${encodeURIComponent(dateString)}&type=daily-note`);
-    } catch (error) {
-      console.error('Error handling add new click:', error);
-      // Fallback to home page if navigation fails
-      router.push('/');
-    }
-  };
+
 
   // Animated scroll to today's card for initial load
   const animatedScrollToToday = useCallback(() => {
@@ -574,32 +482,44 @@ export default function DailyNotesCarousel({ accentColor = '#1768FF' }: DailyNot
       </div>
 
       {/* Day Containers */}
-      {dates.map((date, index) => {
-        const dateString = format(date, 'yyyy-MM-dd');
-        const notesForDate = notesByDate.get(dateString) || [];
-        const isToday = new Date().toDateString() === date.toDateString();
-
-        // Reduced debug logging to prevent terminal spam
-        // if (notesForDate.length > 0) {
-        //   console.log('🔍 DailyNotesCarousel: Rendering date with notes:', {
-        //     date: dateString,
-        //     notesCount: notesForDate.length,
-        //     notes: notesForDate.map(note => ({ id: note.id, title: note.title }))
-        //   });
-        // }
-
-        return (
-          <DayContainer
-            key={dateString}
-            date={date}
-            notes={notesForDate}
-            onNoteClick={handleNoteClick}
-            onAddNewClick={handleAddNewClick}
-            accentColor={accentColor}
-            isToday={isToday}
-          />
+      {(() => {
+        // Calculate the maximum number of notes across all dates for consistent card heights
+        const maxNotesCount = Math.max(
+          ...dates.map(date => {
+            const dateString = format(date, 'yyyy-MM-dd');
+            const notesForDate = notesByDate.get(dateString) || [];
+            return notesForDate.length;
+          }),
+          0 // Ensure we have at least 0 as minimum
         );
-      })}
+
+        return dates.map((date, index) => {
+          const dateString = format(date, 'yyyy-MM-dd');
+          const notesForDate = notesByDate.get(dateString) || [];
+          const isToday = new Date().toDateString() === date.toDateString();
+
+          // Reduced debug logging to prevent terminal spam
+          // if (notesForDate.length > 0) {
+          //   console.log('🔍 DailyNotesCarousel: Rendering date with notes:', {
+          //     date: dateString,
+          //     notesCount: notesForDate.length,
+          //     notes: notesForDate.map(note => ({ id: note.id, title: note.title }))
+          //   });
+          // }
+
+          return (
+            <DayContainer
+              key={dateString}
+              date={date}
+              notes={notesForDate}
+              onNoteClick={handleNoteClick}
+              accentColor={accentColor}
+              isToday={isToday}
+              maxNotesCount={maxNotesCount}
+            />
+          );
+        });
+      })()}
 
       {/* Load More Future Button */}
       <div className="flex-shrink-0 flex items-center justify-center min-w-48 h-[200px]">

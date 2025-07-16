@@ -127,9 +127,9 @@ export async function getServerTrendingData(limitCount = 10) {
 
     // If we don't have enough trending pages from the last 24 hours, get the most viewed pages overall
     if (trendingPages.length < limitCount) {
-      // Query for pages with the most total views (only public pages)
+      // Query for pages with the most total views (only pages)
       const pagesQuery = db.collection("pages")
-        .where("isPublic", "==", true) // Only get public pages
+        .where("isPublic", "==", true) // Only get pages
         .where("views", ">", 0) // Only get pages with views > 0
         .orderBy("views", "desc")
         .limit(limitCount - trendingPages.length);
@@ -166,7 +166,7 @@ export async function getServerTrendingData(limitCount = 10) {
           if (pageDoc.exists) {
             const pageData = pageDoc.data();
 
-            // Only include public pages
+            // Only include pages
             if (pageData.isPublic === false) {
               return null;
             }
@@ -178,7 +178,7 @@ export async function getServerTrendingData(limitCount = 10) {
                 const userDoc = await db.collection("users").doc(pageData.userId).get();
                 if (userDoc.exists) {
                   const userData = userDoc.data();
-                  username = userData.username || userData.displayName || "Missing username";
+                  username = userData.username || "Missing username";
                 }
               } catch (usernameError) {
                 console.error(`Error getting username for user ${pageData.userId}:`, usernameError);
@@ -201,10 +201,10 @@ export async function getServerTrendingData(limitCount = 10) {
     );
 
     // Filter out null entries (private pages)
-    const publicPages = pagesWithTitles.filter(page => page !== null);
+    const pages = pagesWithTitles.filter(page => page !== null);
 
-    console.log(`Successfully retrieved ${publicPages.length} trending pages`);
-    return { trendingPages: publicPages };
+    console.log(`Successfully retrieved ${pages.length} trending pages`);
+    return { trendingPages: pages };
   } catch (error) {
     console.error("Error getting trending pages:", error);
     console.error("Error stack:", error.stack);

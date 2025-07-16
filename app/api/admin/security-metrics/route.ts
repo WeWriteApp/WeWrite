@@ -13,6 +13,7 @@ import { FinancialUtils } from '../../../types/financial';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { db } from '../../../firebase/config';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { getCollectionName } from "../../../utils/environmentConfig";
 
 // GET endpoint for security metrics
 export async function GET(request: NextRequest) {
@@ -221,10 +222,7 @@ async function getAuditTrailMetrics(correlationId: string) {
 async function getUserSecurityMetrics(correlationId: string) {
   try {
     // Get user statistics
-    const usersQuery = query(
-      collection(db, 'users'),
-      limit(10000)
-    );
+const usersQuery = db.collection(getCollectionName('users')).limit(10000);
 
     const usersSnapshot = await getDocs(usersQuery);
     const users = usersSnapshot.docs.map(doc => doc.data());

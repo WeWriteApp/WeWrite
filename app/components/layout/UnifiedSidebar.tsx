@@ -212,7 +212,7 @@ function UnifiedSidebarContent({
   }, [paymentsEnabled, hasActiveSubscription, shouldShowSubscriptionWarning, warningVariant, bankSetupStatus.isSetup, criticalSettingsStatus]);
 
   // Check if map feature is enabled
-  const mapFeatureEnabled = useFeatureFlag('map_view', session?.email);
+  const mapFeatureEnabled = useFeatureFlag('map_view', session?.email, session?.uid);
 
   // Check if account is admin
   const isAdmin = session?.email === 'jamiegray2234@gmail.com';
@@ -237,7 +237,7 @@ function UnifiedSidebarContent({
     { icon: Home, label: 'Home', href: '/' },
     { icon: Search, label: 'Search', href: '/search' },
     { icon: Shuffle, label: 'Random Page', action: () => navigateToRandomPage(router, session?.uid) },
-    { icon: Clock, label: 'Recents', href: '/recents' },
+    { icon: Clock, label: 'Recently viewed', href: '/recents' },
     { icon: Plus, label: 'New Page', href: '/new' },
     { icon: Bell, label: 'Notifications', href: '/notifications' },
     { icon: User, label: 'Profile', href: session ? `/user/${session.uid}` : '/login' },
@@ -437,7 +437,7 @@ function UnifiedSidebarContent({
                     <Button
                       onClick={editorContext.onSave}
                       disabled={editorContext.isSaving}
-                      variant="default"
+                      variant="success"
                       className={cn(
                         "flex items-center gap-3 h-auto p-3 justify-start",
                         !showContent && "justify-center w-12 h-12 p-0",
@@ -489,14 +489,27 @@ function UnifiedSidebarContent({
             </>
           )}
 
-          {/* Logout Button - sticky at bottom for non-edit mode */}
-          {!isEditMode && (
+          {/* User info and logout at bottom for non-edit mode */}
+          {!isEditMode && session && (
             <div className="mt-auto pt-4 border-t border-border">
+              {/* User Information - only show when expanded */}
+              {showContent && (
+                <div className="mb-3 px-3 py-2">
+                  <div className="text-sm font-medium text-foreground truncate">
+                    {session.username || 'User'}
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {session.email}
+                  </div>
+                </div>
+              )}
+
+              {/* Logout Button */}
               {showContent ? (
                 <Button
                   variant="ghost"
                   onClick={() => logoutUser()}
-                  className="w-full justify-start"
+                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
                   Logout
@@ -504,7 +517,16 @@ function UnifiedSidebarContent({
               ) : (
                 <Button
                   variant="ghost"
-                  onClick={() => logoutUser()}
+                  onClick={(e) => {
+                    console.log('🔴 SIDEBAR: Logout button clicked (collapsed)', e);
+                    console.log('🔴 SIDEBAR: About to call logoutUser function');
+                    try {
+                      logoutUser();
+                      console.log('🔴 SIDEBAR: logoutUser called successfully');
+                    } catch (error) {
+                      console.error('🔴 SIDEBAR: Error calling logoutUser:', error);
+                    }
+                  }}
                   className={cn(
                     "relative flex items-center h-12 w-full text-foreground hover:bg-primary/10 hover:text-primary transition-all duration-300 sidebar-nav-button",
                     showContent && "sidebar-nav-button-expanded"

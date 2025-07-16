@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useCurrentAccount } from './providers/CurrentAccountProvider';
 import { ActivityFilterProvider } from './contexts/ActivityFilterContext';
 import LandingPage from './components/landing/LandingPage';
-import Dashboard from './components/features/Dashboard';
+import Home from './components/features/Home';
 
 export default function HomePage() {
   console.log('🔴 HomePage: Component rendering');
@@ -78,10 +78,10 @@ export default function HomePage() {
     );
   }
 
-  // Show dashboard for authenticated users, landing page for others
+  // Show home for authenticated users, landing page for others
   return isAuthenticated ? (
     <ActivityFilterProvider>
-      <Dashboard />
+      <Home />
     </ActivityFilterProvider>
   ) : (
     <LandingPage />

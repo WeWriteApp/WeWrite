@@ -155,7 +155,7 @@ class PageRouteTestGenerator {
   }
 
   /**
-   * Test public pages (accessible to everyone)
+   * Test pages (accessible to everyone)
    */
   async testPublicPage(pagePath, authState = 'unauthenticated') {
     this.auth.setupAuthState(authState);
@@ -591,10 +591,10 @@ describe('Advanced Page Route Testing', () => {
   });
 
   describe('SEO and Metadata', () => {
-    test('should have proper metadata for public pages', async () => {
-      const publicPages = ['/', '/auth/login', '/auth/register'];
+    test('should have proper metadata for pages', async () => {
+      const pages = ['/', '/auth/login', '/auth/register'];
 
-      for (const page of publicPages) {
+      for (const page of pages) {
         const result = await testGenerator.testPublicPage(page);
         expect(result.accessible).toBe(true);
 

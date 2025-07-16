@@ -24,6 +24,7 @@ export interface PayoutFees {
 
 /**
  * WeWrite fee structure (default/fallback values)
+ * CENTRALIZED CONFIGURATION - All payout thresholds should reference this
  */
 export const WEWRITE_FEE_STRUCTURE = {
   // WeWrite platform fee (0% for now, but configurable for future)
@@ -31,12 +32,20 @@ export const WEWRITE_FEE_STRUCTURE = {
 
   // Stripe Connect fees for Express accounts
   stripeConnectFeePercentage: 0.0025, // 0.25% for Express accounts
-  
-  // Minimum payout threshold
-  minimumPayoutThreshold: 25.00, // $25 minimum
-  
+
+  // Minimum payout threshold - SINGLE SOURCE OF TRUTH
+  minimumPayoutThreshold: 25.00, // $25 minimum (standardized across all systems)
+
   // Reserve period for new accounts (days)
   newAccountReservePeriod: 7} as const;
+
+/**
+ * Get the current minimum payout threshold
+ * This function allows for future dynamic configuration while maintaining backwards compatibility
+ */
+export function getMinimumPayoutThreshold(): number {
+  return WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold;
+}
 
 /**
  * Function to get current fee structure from database

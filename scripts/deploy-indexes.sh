@@ -53,7 +53,7 @@ echo "📊 Deploying $INDEX_COUNT composite indexes..."
 # Show some key indexes being deployed
 echo "🔍 Key optimization indexes:"
 echo "  - pages: userId + deleted + lastModified (user page lists)"
-echo "  - pages: isPublic + deleted + lastModified (public page lists)"
+echo "  - pages: isPublic + deleted + lastModified (page lists)"
 echo "  - pages: userId + customDate (daily notes)"
 echo "  - pages: isPublic + title (search optimization)"
 echo "  - subscriptions: status + currentPeriodEnd (subscription queries)"

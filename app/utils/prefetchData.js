@@ -4,6 +4,7 @@ import { db } from "../firebase/config";
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 import { getFollowedPages } from "../firebase/follows";
 import { generateCacheKey, setCacheItem } from "./cacheUtils";
+import { getCollectionName } from "./environmentConfig";
 
 /**
  * Prefetch critical data for the authenticated user
@@ -44,7 +45,7 @@ const prefetchUserPages = async (userId) => {
   try {
     // Query to get the user's pages (exclude deleted pages)
     const pagesQuery = query(
-      collection(db, 'pages'),
+      collection(db, getCollectionName('pages')),
       where('userId', '==', userId),
       where('deleted', '!=', true),
       orderBy('lastModified', 'desc'),
@@ -57,14 +58,14 @@ const prefetchUserPages = async (userId) => {
       return;
     }
     
-    const publicPages = [];
+    const pages = [];
     const privatePages = [];
-    
+
     snapshot.forEach((doc) => {
       const pageData = { id: doc.id, ...doc.data() };
-      
+
       if (pageData.isPublic) {
-        publicPages.push(pageData);
+        pages.push(pageData);
       } else {
         privatePages.push(pageData);
       }
@@ -73,15 +74,15 @@ const prefetchUserPages = async (userId) => {
     // Cache the results
     const cacheKey = generateCacheKey('pages', userId, 'all_' + userId);
     const cacheData = {
-      public: publicPages,
+      public: pages,
       private: privatePages,
-      hasMorePublic: publicPages.length >= 20,
+      hasMorePublic: pages.length >= 20,
       hasMorePrivate: privatePages.length >= 20
     };
     
     setCacheItem(cacheKey, cacheData, 5 * 60 * 1000); // Cache for 5 minutes
     
-    console.log(`Prefetched ${publicPages.length} public and ${privatePages.length} private pages for user:`, userId);
+    console.log(`Prefetched ${pages.length} pages and ${privatePages.length} private pages for user:`, userId);
   } catch (error) {
     console.error('Error prefetching user pages:', error);
   }
@@ -95,9 +96,9 @@ const prefetchUserPages = async (userId) => {
  */
 const prefetchRecentActivity = async (userId) => {
   try {
-    // Query to get recent public pages (exclude deleted pages)
+    // Query to get recent pages (exclude deleted pages)
     const pagesQuery = query(
-      collection(db, 'pages'),
+      collection(db, getCollectionName('pages')),
       where('isPublic', '==', true),
       where('deleted', '!=', true),
       orderBy('lastModified', 'desc'),

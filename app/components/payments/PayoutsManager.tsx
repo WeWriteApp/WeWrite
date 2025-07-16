@@ -7,6 +7,7 @@ import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Input } from '../ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Wallet, DollarSign, Settings, AlertTriangle, CheckCircle, Clock, TrendingUp } from 'lucide-react';
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { useToast } from '../ui/use-toast';
@@ -14,12 +15,9 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { TokenEarningsService } from '../../services/tokenEarningsService';
 import { TokenPayout } from '../../types/database';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
-import { getStripePublishableKey } from '../../utils/stripeConfig';
-
-// Initialize Stripe
-const stripePromise = loadStripe(getStripePublishableKey() || '');
+import { EmbeddedBankAccountSetup } from './EmbeddedBankAccountSetup';
+import { BankAccountManager } from './BankAccountManager';
+import { PayoutsHistoryTable } from './PayoutsHistoryTable';
 
 interface PayoutData {
   totalEarnings: number;
@@ -43,93 +41,14 @@ interface AutoPayoutSettings {
   frequency: 'daily' | 'weekly' | 'monthly';
 }
 
-// Embedded Bank Setup Component
-function EmbeddedBankSetup({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { currentAccount } = useCurrentAccount();
-  const { toast } = useToast();
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!stripe || !elements || !currentAccount) {
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Create or update Stripe Connect account with bank details
-      const response = await fetch('/api/create-connect-account', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: currentAccount.uid,
-          embedded: true
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        toast({
-          title: "Bank Account Connected",
-          description: "Your bank account has been successfully connected for payouts."
-        });
-        onSuccess();
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to connect bank account');
-      }
-    } catch (err) {
-      setError('An unexpected error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+// Bank Setup Component - Now uses embedded Stripe Connect components
+function BankSetup({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
   return (
-    <div className="space-y-4">
-      <div className="text-center">
-        <Wallet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <h3 className="text-lg font-medium mb-2">Connect Your Bank Account</h3>
-        <p className="text-sm text-muted-foreground mb-6">
-          Securely connect your bank account to receive payouts from your supporters.
-        </p>
-      </div>
-
-      {error && (
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <PaymentElement />
-
-        <div className="flex gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            className="flex-1"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={!stripe || loading}
-            className="flex-1"
-          >
-            {loading ? 'Connecting...' : 'Connect Bank Account'}
-          </Button>
-        </div>
-      </form>
-    </div>
+    <EmbeddedBankAccountSetup
+      onSuccess={onSuccess}
+      onCancel={onCancel}
+      showTitle={false}
+    />
   );
 }
 
@@ -155,19 +74,14 @@ function EmbeddedBankSetup({ onSuccess, onCancel }: { onSuccess: () => void; onC
     }
   };
 
-  const handleBankSetupSuccess = () => {
-    setShowBankSetup(false);
-    loadBankAccountStatus();
-    toast({
-      title: "Bank Account Connected",
-      description: "Your bank account has been successfully connected for payouts."
-    });
-  };
+
 
 export function PayoutsManager() {
   const { currentAccount } = useCurrentAccount();
   const { toast } = useToast();
   const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+
+
 
   const [payoutData, setPayoutData] = useState<PayoutData | null>(null);
   const [bankAccountStatus, setBankAccountStatus] = useState<BankAccountStatus>({
@@ -180,7 +94,6 @@ export function PayoutsManager() {
     frequency: 'weekly'
   });
   const [loading, setLoading] = useState(true);
-  const [showBankSetup, setShowBankSetup] = useState(false);
   const [payouts, setPayouts] = useState<TokenPayout[]>([]);
   const [updatingSettings, setUpdatingSettings] = useState(false);
 
@@ -287,13 +200,14 @@ export function PayoutsManager() {
   };
 
   const handleBankSetupSuccess = () => {
-    setShowBankSetup(false);
     loadBankAccountStatus();
     toast({
       title: "Bank Account Connected",
       description: "Your bank account has been successfully connected for payouts."
     });
   };
+
+
 
   // If payments feature flag is disabled, don't render anything
   if (!isPaymentsEnabled) {
@@ -310,103 +224,41 @@ export function PayoutsManager() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Balance Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-background border rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="h-4 w-4 text-green-600" />
-            <span className="text-sm font-medium text-muted-foreground">Available</span>
-          </div>
-          <p className="text-2xl font-bold text-green-600">
-            {formatCurrency(payoutData?.availableBalance || 0)}
-          </p>
-        </div>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Bank Account Section - Mobile-optimized container */}
+      <Card className="wewrite-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wallet className="h-5 w-5" />
+            Bank Account Management
+          </CardTitle>
+          <CardDescription>
+            Manage your bank accounts for receiving payouts. Set one account as primary for automatic payouts.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <BankAccountManager
+            onUpdate={loadBankAccountStatus}
+            showTitle={false}
+          />
+        </CardContent>
+      </Card>
 
-        <div className="bg-background border rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Clock className="h-4 w-4 text-yellow-600" />
-            <span className="text-sm font-medium text-muted-foreground">Pending</span>
-          </div>
-          <p className="text-2xl font-bold text-yellow-600">
-            {formatCurrency(payoutData?.pendingBalance || 0)}
-          </p>
-        </div>
-
-        <div className="bg-background border rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="h-4 w-4 text-blue-600" />
-            <span className="text-sm font-medium text-muted-foreground">Total Earned</span>
-          </div>
-          <p className="text-2xl font-bold text-blue-600">
-            {formatCurrency(payoutData?.totalEarnings || 0)}
-          </p>
-        </div>
-      </div>
-
-      {/* Bank Account Section */}
-      <div className="bg-background border rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Wallet className="h-5 w-5 text-muted-foreground" />
-            <h3 className="text-lg font-medium">Bank Account</h3>
-          </div>
-          {bankAccountStatus.isConnected && bankAccountStatus.isVerified && (
-            <CheckCircle className="h-5 w-5 text-green-600" />
-          )}
-        </div>
-
-        {!bankAccountStatus.isConnected ? (
-          <div className="text-center py-6">
-            <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h4 className="text-lg font-medium mb-2">No Bank Account Connected</h4>
-            <p className="text-muted-foreground mb-4">
-              Connect your bank account to receive payouts from supporters.
-            </p>
-            <Button onClick={() => setShowBankSetup(true)}>
-              Connect Bank Account
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-              <div>
-                <p className="font-medium">{bankAccountStatus.bankName || 'Bank Account'}</p>
-                <p className="text-sm text-muted-foreground">
-                  ****{bankAccountStatus.last4} • {bankAccountStatus.accountType}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {bankAccountStatus.isVerified ? (
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                ) : (
-                  <Clock className="h-4 w-4 text-yellow-600" />
-                )}
-                <span className="text-sm text-muted-foreground">
-                  {bankAccountStatus.isVerified ? 'Verified' : 'Pending Verification'}
-                </span>
-              </div>
-            </div>
-
-            {bankAccountStatus.isVerified && (
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Manage Account
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
 
       {/* Automatic Payout Settings */}
       {bankAccountStatus.isConnected && bankAccountStatus.isVerified && (
-        <div className="bg-background border rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Settings className="h-5 w-5 text-muted-foreground" />
-            <h3 className="text-lg font-medium">Automatic Payouts</h3>
-          </div>
-
-          <div className="space-y-4">
+        <Card className="wewrite-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Automatic Payouts
+            </CardTitle>
+            <CardDescription>
+              Configure automatic payout settings for your earnings
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <Label htmlFor="auto-payout" className="text-base font-medium">
@@ -427,7 +279,7 @@ export function PayoutsManager() {
             </div>
 
             {autoPayoutSettings.enabled && (
-              <div className="space-y-4 pt-4 border-t">
+              <div className="space-y-4 pt-4 border-t border-theme-medium">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="minimum-amount">Minimum Amount</Label>
@@ -487,23 +339,27 @@ export function PayoutsManager() {
                 </Alert>
               </div>
             )}
-          </div>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Embedded Bank Setup Modal */}
-      {showBankSetup && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-background rounded-lg p-6 w-full max-w-md">
-            <Elements stripe={stripePromise}>
-              <EmbeddedBankSetup
-                onSuccess={handleBankSetupSuccess}
-                onCancel={() => setShowBankSetup(false)}
-              />
-            </Elements>
-          </div>
-        </div>
-      )}
+      {/* Payout History Section */}
+      <Card className="wewrite-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Payout History
+          </CardTitle>
+          <CardDescription>
+            View and download your complete payout history including status, amounts, and bank account details.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PayoutsHistoryTable showTitle={false} />
+        </CardContent>
+      </Card>
+
     </div>
   );
 }

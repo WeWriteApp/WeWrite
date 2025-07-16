@@ -84,19 +84,19 @@ const RecentPages = React.memo(function RecentPages() {
 
       setRecentPages(validPages);
     } catch (error) {
-      console.error("Error fetching recent pages:", error);
+      console.error("Error fetching recently viewed pages:", error);
       setRecentPages([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Load recent pages on mount
+  // Load recently viewed pages on mount
   useEffect(() => {
     fetchRecentPages();
   }, [, session]);
 
-  // If there are no recent pages and not loading, don't render anything
+  // If there are no recently viewed pages and not loading, don't render anything
   if (!loading && !recentPages.length) {
     return null;
   }
@@ -105,7 +105,7 @@ const RecentPages = React.memo(function RecentPages() {
     <div className="mt-6 mb-8">
       <h3 className="text-sm font-medium text-muted-foreground flex items-center mb-3">
         <Clock className="h-4 w-4 mr-2" />
-        Recently Viewed Pages
+        Recently Viewed
       </h3>
 
       <div className="space-y-2">
@@ -118,7 +118,7 @@ const RecentPages = React.memo(function RecentPages() {
             </div>
           ))
         ) : (
-          // Recent pages list
+          // Recently viewed pages list
           recentPages.map(page => (
             <PillLink
               key={page.id}

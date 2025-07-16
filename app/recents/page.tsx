@@ -13,9 +13,9 @@ import Header from '../components/layout/Header';
 import { RecentPagesContext } from '../contexts/RecentPagesContext';
 
 /**
- * Recents Page Component
- * 
- * Displays a comprehensive list of recently visited pages for authenticated users.
+ * Recently Viewed Page Component
+ *
+ * Displays a comprehensive list of recently viewed pages for authenticated users.
  * Features search, filtering, and detailed page information.
  */
 export default function RecentsPage() {
@@ -74,9 +74,9 @@ export default function RecentsPage() {
             </Button>
             <Clock className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Recent Pages</h1>
+              <h1 className="text-3xl font-bold text-foreground">Recently Viewed</h1>
               <p className="text-muted-foreground">
-                Pages you've visited recently
+                Pages you've viewed recently
               </p>
             </div>
           </div>
@@ -103,10 +103,10 @@ export default function RecentsPage() {
             <div className="text-center py-12">
               <Clock className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-foreground mb-2">
-                No recent pages yet
+                No recently viewed pages yet
               </h3>
               <p className="text-muted-foreground mb-6">
-                Start exploring pages to see them appear here
+                Start viewing pages to see them appear here
               </p>
               <Link href="/">
                 <Button>
@@ -115,7 +115,7 @@ export default function RecentsPage() {
               </Link>
             </div>
           ) : (
-            // Recent pages list
+            // Recently viewed pages list
             <div className="space-y-3">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-muted-foreground">

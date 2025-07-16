@@ -7,13 +7,13 @@ export function middleware(request) {
   const url = request.nextUrl.clone();
   const path = url.pathname;
 
-  // Define paths that are always public
-  const isPublicPath = path === "/auth/login" ||
-                      path === "/auth/register" ||
-                      path === "/auth/forgot-password" ||
-                      path.startsWith("/api/") ||
-                      path.startsWith("/pages/") ||
-                      path === "/"; // Allow access to home page
+  // Define paths that are always accessible
+  const isAccessiblePath = path === "/auth/login" ||
+                           path === "/auth/register" ||
+                           path === "/auth/forgot-password" ||
+                           path.startsWith("/api/") ||
+                           path.startsWith("/pages/") ||
+                           path === "/"; // Allow access to home page
 
   // Define paths that always require authentication
   const requiresAuth = path === "/new" ||
@@ -118,8 +118,8 @@ export function middleware(request) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Redirect unverified users to email verification page
-  if (isAuthenticated && !isEmailVerified && path !== "/auth/verify-email") {
+  // Redirect unverified users to email verification page (except for homepage)
+  if (isAuthenticated && !isEmailVerified && path !== "/auth/verify-email" && path !== "/") {
     return NextResponse.redirect(new URL("/auth/verify-email", request.url));
   }
 

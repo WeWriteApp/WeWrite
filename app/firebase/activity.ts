@@ -182,7 +182,7 @@ export const getRecentActivity = async (
     // NEW APPROACH: Query all versions across all pages, sorted by creation time
     // This will give us individual edit operations rather than just latest page states
 
-    // First, get recent public pages to know which pages to include
+    // First, get recent pages to know which pages to include
     // TEMPORARY: Remove deleted filter to avoid failed-precondition errors
     const pagesQuery = query(
       collection(db, getCollectionName("pages")),
@@ -215,9 +215,9 @@ export const getRecentActivity = async (
       };
     }
 
-    console.log(`getRecentActivity: Found ${pagesSnapshot.size} public pages`);
+    console.log(`getRecentActivity: Found ${pagesSnapshot.size} pages`);
 
-    // Collect all versions from all public pages
+    // Collect all versions from all pages
     const allVersionsPromises = pagesSnapshot.docs.map(async (pageDoc: QueryDocumentSnapshot<DocumentData>) => {
       const pageData = pageDoc.data() as Page;
       const pageId = pageDoc.id;
@@ -231,7 +231,7 @@ export const getRecentActivity = async (
       try {
         // Get ALL versions for this page, not just the latest one
         const versionsQuery = query(
-          collection(db, "pages", pageId, "versions"),
+          collection(db, getCollectionName("pages"), pageId, "versions"),
           orderBy("createdAt", "desc"),
           firestoreLimit(10) // Get up to 10 recent versions per page
         );

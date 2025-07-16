@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { SubscriptionTierBadge } from './SubscriptionTierBadge';
 import { PillLink } from '../utils/PillLink';
@@ -34,6 +34,99 @@ export function UsernameBadge({
   variant = 'link',
   pillVariant = 'primary'
 }: UsernameBadgeProps) {
+  // State for fresh username fetching
+  const [freshUsername, setFreshUsername] = useState<string | null>(null);
+  const [isLoadingUsername, setIsLoadingUsername] = useState(false);
+
+  // Fetch fresh username on mount to ensure consistency
+  useEffect(() => {
+    const fetchFreshUsername = async () => {
+      if (!userId) return;
+
+      // Only fetch if we don't have a username or it looks stale
+      const needsFreshFetch = !username ||
+        username === 'Missing username' ||
+        username === 'Anonymous' ||
+        username.trim() === '';
+
+      if (!needsFreshFetch) {
+        // Still fetch in background to verify, but don't show loading
+        try {
+          const response = await fetch(`/api/users/profile?id=${encodeURIComponent(userId)}`);
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data?.username && result.data.username !== username) {
+              // Username has changed, update it
+              setFreshUsername(result.data.username);
+            }
+          }
+        } catch (error) {
+          console.warn('Background username fetch failed:', error);
+        }
+        return;
+      }
+
+      // Show loading and fetch fresh username
+      setIsLoadingUsername(true);
+      try {
+        const response = await fetch(`/api/users/profile?id=${encodeURIComponent(userId)}`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data?.username) {
+            setFreshUsername(result.data.username);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch fresh username:', error);
+      } finally {
+        setIsLoadingUsername(false);
+      }
+    };
+
+    fetchFreshUsername();
+  }, [userId, username]);
+
+  // Listen for global username update events
+  useEffect(() => {
+    const handleUsernameUpdate = (event: CustomEvent) => {
+      const { userId: updatedUserId } = event.detail || {};
+
+      // If this is for our user, refresh the username
+      if (updatedUserId === userId) {
+        console.log('🔄 Username update detected for user:', userId);
+        setFreshUsername(null); // Clear cached username
+        setIsLoadingUsername(true);
+
+        // Fetch fresh username
+        fetch(`/api/users/profile?id=${encodeURIComponent(userId)}`)
+          .then(response => response.json())
+          .then(result => {
+            if (result.success && result.data?.username) {
+              setFreshUsername(result.data.username);
+            }
+          })
+          .catch(error => {
+            console.error('Failed to refresh username after update:', error);
+          })
+          .finally(() => {
+            setIsLoadingUsername(false);
+          });
+      }
+    };
+
+    // Listen for username update events
+    window.addEventListener('userDataUpdated', handleUsernameUpdate as EventListener);
+    window.addEventListener('invalidate-user-pages', handleUsernameUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('userDataUpdated', handleUsernameUpdate as EventListener);
+      window.removeEventListener('invalidate-user-pages', handleUsernameUpdate as EventListener);
+    };
+  }, [userId]);
+
+  // Use fresh username if available, otherwise fall back to provided username
+  const displayUsername = freshUsername || username || 'Missing username';
+
   // Determine if user is inactive (no active subscription)
   const isInactive = !subscriptionStatus || subscriptionStatus !== 'active';
 
@@ -64,7 +157,7 @@ export function UsernameBadge({
                 ? "text-muted-foreground"
                 : "text-primary"
             )}>
-              {username}
+              {isLoadingUsername ? 'Loading...' : displayUsername}
             </span>
             {showBadge && (
               <SubscriptionTierBadge

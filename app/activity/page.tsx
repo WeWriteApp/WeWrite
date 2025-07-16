@@ -6,7 +6,7 @@ import { ActivityFilterProvider } from '../contexts/ActivityFilterContext';
  * This now uses client-side data fetching for better reliability
  */
 export default function ActivityPage() {
-  // We're now using client-side data fetching with unified useRecentActivity hook
+  // We're now using client-side data fetching with RecentPagesActivity component
   // This is more reliable than server-side fetching with Firebase Admin
   return (
     <ActivityFilterProvider>

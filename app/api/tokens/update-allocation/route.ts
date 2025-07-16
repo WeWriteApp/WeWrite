@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { TokenService } from '../../../services/tokenService';
+import { ServerTokenService } from '../../../services/tokenService.server';
 
 // POST /api/tokens/update-allocation - Update user's monthly token allocation
 export async function POST(request: NextRequest) {
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update token allocation
-    await TokenService.updateMonthlyTokenAllocation(userId, monthlyTokens);
+    await ServerTokenService.updateMonthlyTokenAllocation(userId, monthlyTokens);
 
     console.log(`[TOKEN UPDATE] Successfully updated allocation for user ${userId}`);
 

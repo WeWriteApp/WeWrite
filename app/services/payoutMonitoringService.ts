@@ -21,6 +21,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 
+import { getCollectionName } from "../utils/environmentConfig";
 import {
   FinancialOperationResult,
   FinancialError,
@@ -181,7 +182,7 @@ export class PayoutMonitoringService {
 
       // Get payouts from last 24 hours
       const payoutsQuery = query(
-        collection(db, 'payouts'),
+        collection(db, getCollectionName('payouts')),
         where('createdAt', '>=', last24Hours),
         orderBy('createdAt', 'desc')
       );
@@ -510,14 +511,14 @@ export class PayoutMonitoringService {
     try {
       // Get processing queue count
       const processingQuery = query(
-        collection(db, 'payouts'),
+        collection(db, getCollectionName('payouts')),
         where('status', '==', 'processing')
       );
       const processingSnapshot = await getDocs(processingQuery);
 
       // Get retry queue count (pending with retry count > 0)
       const retryQuery = query(
-        collection(db, 'payouts'),
+        collection(db, getCollectionName('payouts')),
         where('status', '==', 'pending'),
         where('retryCount', '>', 0)
       );
@@ -526,7 +527,7 @@ export class PayoutMonitoringService {
       // Get failed payouts count (last 24 hours)
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
       const failedQuery = query(
-        collection(db, 'payouts'),
+        collection(db, getCollectionName('payouts')),
         where('status', '==', 'failed'),
         where('updatedAt', '>=', yesterday)
       );

@@ -12,6 +12,7 @@ import {
   CorrelationId
 } from '../types/financial';
 import { TokenAllocation, WriterTokenEarnings, WriterTokenBalance, TokenPayout } from '../types/database';
+import { getMinimumPayoutThreshold } from '../utils/feeCalculations';
 
 /**
  * Validation result interface
@@ -345,8 +346,8 @@ export class FinancialValidationService {
       ));
     }
     
-    // Minimum threshold check
-    const minimumThreshold = 25;
+    // Minimum threshold check - use centralized configuration
+    const minimumThreshold = getMinimumPayoutThreshold();
     if (amount < minimumThreshold) {
       errors.push(FinancialUtils.createError(
         FinancialErrorCode.MINIMUM_THRESHOLD_NOT_MET,

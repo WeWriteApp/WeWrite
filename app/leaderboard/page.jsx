@@ -112,7 +112,7 @@ export default function LeaderboardPage() {
                 // Use an async IIFE to be able to use await inside the onValue callback
                 (async () => {
                   try {
-                    const pagesRef = collection(db, 'pages');
+                    const pagesRef = collection(db, getCollectionName('pages'));
                     // No limit here as we want to get all pages for accurate counts
                     const pagesSnapshot = await getDocs(pagesRef);
 

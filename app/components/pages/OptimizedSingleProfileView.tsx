@@ -107,7 +107,7 @@ export default function OptimizedSingleProfileView({
       {/* Username and supporter badge */}
       <div className="flex items-center justify-center gap-2 mb-2">
         <h1 className="text-2xl font-bold">
-          {profile.username || profile.displayName || 'Anonymous'}
+          {profile.username || 'Anonymous'}
         </h1>
         {supporterTier && (
           <Suspense fallback={<div className="h-5 w-16 bg-muted rounded-full animate-pulse" />}>

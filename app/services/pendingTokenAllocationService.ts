@@ -5,27 +5,16 @@
  * and finalized at month-end for dispersement to writers.
  */
 
+import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
+import { getCollectionName, PAYMENT_COLLECTIONS } from "../utils/environmentConfig";
+
+// Initialize Firebase Admin
+const admin = getFirebaseAdmin();
+const db = admin ? admin.firestore() : null;
 import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-  writeBatch,
-  serverTimestamp,
-  increment,
-  orderBy,
-  limit
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
-import { 
-  getCurrentMonth, 
+  getCurrentMonth,
   getTimeUntilAllocationDeadline,
-  TOKEN_ECONOMY 
+  TOKEN_ECONOMY
 } from '../utils/subscriptionTiers';
 
 export interface PendingTokenAllocation {
@@ -97,10 +86,14 @@ export class PendingTokenAllocationService {
         };
       }
 
+      if (!db) {
+        throw new Error('Firebase Admin not initialized');
+      }
+
       // Create or update allocation
       const allocationId = `${userId}_${resourceType}_${resourceId}_${currentMonth}`;
-      const allocationRef = doc(db, 'pendingTokenAllocations', allocationId);
-      const existingAllocation = await getDoc(allocationRef);
+      const allocationRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.PENDING_TOKEN_ALLOCATIONS)).doc(allocationId);
+      const existingAllocation = await allocationRef.get();
 
       const allocationData: Omit<PendingTokenAllocation, 'id'> = {
         userId,
@@ -110,11 +103,11 @@ export class PendingTokenAllocationService {
         tokens,
         month: currentMonth,
         status: 'pending',
-        createdAt: existingAllocation.exists() ? existingAllocation.data()?.createdAt : serverTimestamp(),
-        updatedAt: serverTimestamp()
+        createdAt: existingAllocation.exists ? existingAllocation.data()?.createdAt : admin?.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin?.firestore.FieldValue.serverTimestamp()
       };
 
-      await setDoc(allocationRef, {
+      await allocationRef.set({
         id: allocationId,
         ...allocationData
       });
@@ -147,7 +140,7 @@ export class PendingTokenAllocationService {
       }
 
       const allocationId = `${userId}_${resourceType}_${resourceId}_${currentMonth}`;
-      await deleteDoc(doc(db, 'pendingTokenAllocations', allocationId));
+      await deleteDoc(doc(db, getCollectionName(PAYMENT_COLLECTIONS.PENDING_TOKEN_ALLOCATIONS), allocationId));
 
       return { success: true };
 
@@ -158,30 +151,60 @@ export class PendingTokenAllocationService {
   }
 
   /**
+   * Get current pending allocation for a specific page
+   */
+  static async getCurrentPageAllocation(userId: string, pageId: string): Promise<number> {
+    try {
+      if (!db) {
+        throw new Error('Firebase Admin not initialized');
+      }
+
+      const currentMonth = getCurrentMonth();
+      const allocationId = `${userId}_page_${pageId}_${currentMonth}`;
+
+      const allocationRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.PENDING_TOKEN_ALLOCATIONS)).doc(allocationId);
+      const allocationDoc = await allocationRef.get();
+
+      if (allocationDoc.exists) {
+        const allocation = allocationDoc.data() as PendingTokenAllocation;
+        return allocation.tokens;
+      }
+
+      return 0;
+    } catch (error) {
+      console.error('Error getting current page allocation:', error);
+      return 0;
+    }
+  }
+
+  /**
    * Get user's allocation summary for current month
    */
   static async getUserAllocationSummary(userId: string): Promise<TokenAllocationSummary> {
     try {
+      if (!db) {
+        throw new Error('Firebase Admin not initialized');
+      }
+
       const currentMonth = getCurrentMonth();
-      
-      // Get user's token balance
-      const balanceRef = doc(db, 'tokenBalances', userId);
-      const balanceDoc = await getDoc(balanceRef);
-      const totalAvailable = balanceDoc.exists() ? balanceDoc.data()?.totalTokens || 0 : 0;
 
-      // Get pending allocations
-      const allocationsQuery = query(
-        collection(db, 'pendingTokenAllocations'),
-        where('userId', '==', userId),
-        where('month', '==', currentMonth),
-        where('status', '==', 'pending'),
-        orderBy('updatedAt', 'desc')
-      );
+      // Get token balance from admin SDK
+      const balanceRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES)).doc(userId);
+      const balanceDoc = await balanceRef.get();
+      const totalAvailable = balanceDoc.exists ? balanceDoc.data()?.totalTokens || 0 : 0;
 
-      const allocationsSnapshot = await getDocs(allocationsQuery);
-      const allocations: PendingTokenAllocation[] = allocationsSnapshot.docs.map(doc => 
-        doc.data() as PendingTokenAllocation
-      );
+      // Get pending allocations from admin SDK
+      const allocationsQuery = db.collection(getCollectionName(PAYMENT_COLLECTIONS.PENDING_TOKEN_ALLOCATIONS))
+        .where('userId', '==', userId)
+        .where('month', '==', currentMonth)
+        .where('status', '==', 'pending');
+
+      const allocationsSnapshot = await allocationsQuery.get();
+      const allocations: PendingTokenAllocation[] = [];
+
+      allocationsSnapshot.forEach(doc => {
+        allocations.push(doc.data() as PendingTokenAllocation);
+      });
 
       const totalAllocated = allocations.reduce((sum, allocation) => sum + allocation.tokens, 0);
       const timeUntilDeadline = getTimeUntilAllocationDeadline();
@@ -207,6 +230,62 @@ export class PendingTokenAllocationService {
   }
 
   /**
+   * Get pending allocations for a recipient (tokens allocated TO this user)
+   */
+  static async getRecipientPendingAllocations(recipientUserId: string): Promise<{
+    totalPendingTokens: number;
+    totalPendingUsdValue: number;
+    allocations: PendingTokenAllocation[];
+    timeUntilDeadline: {
+      days: number;
+      hours: number;
+      minutes: number;
+      hasExpired: boolean;
+    };
+  }> {
+    try {
+      if (!db) {
+        throw new Error('Firebase Admin not initialized');
+      }
+
+      const currentMonth = getCurrentMonth();
+
+      // Get pending allocations where this user is the recipient
+      const allocationsQuery = db.collection(getCollectionName(PAYMENT_COLLECTIONS.PENDING_TOKEN_ALLOCATIONS))
+        .where('recipientUserId', '==', recipientUserId)
+        .where('month', '==', currentMonth)
+        .where('status', '==', 'pending');
+
+      const allocationsSnapshot = await allocationsQuery.get();
+      const allocations: PendingTokenAllocation[] = [];
+
+      allocationsSnapshot.forEach(doc => {
+        allocations.push(doc.data() as PendingTokenAllocation);
+      });
+
+      const totalPendingTokens = allocations.reduce((sum, allocation) => sum + allocation.tokens, 0);
+      const totalPendingUsdValue = totalPendingTokens / TOKEN_ECONOMY.TOKENS_PER_DOLLAR;
+      const timeUntilDeadline = getTimeUntilAllocationDeadline();
+
+      return {
+        totalPendingTokens,
+        totalPendingUsdValue,
+        allocations,
+        timeUntilDeadline
+      };
+
+    } catch (error) {
+      console.error('Error getting recipient pending allocations:', error);
+      return {
+        totalPendingTokens: 0,
+        totalPendingUsdValue: 0,
+        allocations: [],
+        timeUntilDeadline: getTimeUntilAllocationDeadline()
+      };
+    }
+  }
+
+  /**
    * Finalize all pending allocations for a given month (called during monthly processing)
    */
   static async finalizeMonthlyAllocations(month: string): Promise<{
@@ -220,7 +299,7 @@ export class PendingTokenAllocationService {
 
       // Get all pending allocations for the month
       const allocationsQuery = query(
-        collection(db, 'pendingTokenAllocations'),
+        collection(db, getCollectionName(PAYMENT_COLLECTIONS.PENDING_TOKEN_ALLOCATIONS)),
         where('month', '==', month),
         where('status', '==', 'pending')
       );
@@ -275,8 +354,7 @@ export class PendingTokenAllocationService {
   private static async createWriterEarningsFromAllocation(allocation: PendingTokenAllocation): Promise<void> {
     // This will integrate with the existing TokenEarningsService
     // For now, we'll create a simple earnings record
-    const earningsId = `${allocation.recipientUserId}_${allocation.month}_${Date.now()}`;
-    const earningsRef = doc(db, 'writerTokenEarnings', earningsId);
+const earningsRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.WRITER_TOKEN_EARNINGS), earningsId);
 
     const usdValue = allocation.tokens / TOKEN_ECONOMY.TOKENS_PER_DOLLAR;
 

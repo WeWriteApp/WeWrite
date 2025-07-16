@@ -13,6 +13,7 @@ import {
   updateDoc
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { getCollectionName } from '../utils/environmentConfig';
 
 import { BotDetectionService, type VisitorFingerprint } from './BotDetectionService';
 
@@ -212,7 +213,7 @@ class VisitorTrackingService {
       };
 
       // Store session in Firestore (filter out undefined values)
-      const sessionRef = doc(db, 'siteVisitors', sessionId);
+const sessionRef = doc(db, getCollectionName("siteVisitors"), sessionId);
       const sessionData = {
         ...this.currentAccount,
         startTime: this.currentAccount.startTime,
@@ -257,7 +258,7 @@ class VisitorTrackingService {
       const now = new Date();
       const sessionTimeout = new Date(now.getTime() - VisitorTrackingService.SESSION_TIMEOUT);
 
-      const visitorsRef = collection(db, 'siteVisitors');
+      const visitorsRef = collection(db, getCollectionName('siteVisitors'));
       let q;
 
       if (userId) {
@@ -304,7 +305,7 @@ class VisitorTrackingService {
       this.currentAccount.userId = userId;
       this.currentAccount.isAuthenticated = isAuthenticated;
 
-      const sessionRef = doc(db, 'siteVisitors', this.currentAccount.id);
+const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccount.id);
       const updateData: any = {
         isAuthenticated,
         lastSeen: Timestamp.now()
@@ -410,7 +411,7 @@ class VisitorTrackingService {
     if (!this.currentAccount || Object.keys(this.pendingUpdates).length === 0) return;
 
     try {
-      const sessionRef = doc(db, 'siteVisitors', this.currentAccount.id);
+const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccount.id);
       await updateDoc(sessionRef, this.pendingUpdates);
 
       console.log(`[VisitorTracking] Batched ${this.updateCount} updates for session ${this.currentAccount.id}`);
@@ -438,7 +439,7 @@ class VisitorTrackingService {
     try {
       // Query active visitors from the last 10 minutes
       const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-      const visitorsRef = collection(db, 'siteVisitors');
+      const visitorsRef = collection(db, getCollectionName('siteVisitors'));
       const q = query(
         visitorsRef,
         where('lastSeen', '>=', Timestamp.fromDate(tenMinutesAgo))
@@ -506,7 +507,7 @@ class VisitorTrackingService {
       this.currentAccount.pageViews++;
 
       // Update page view count in Firestore
-      const sessionRef = doc(db, 'siteVisitors', this.currentAccount.id);
+const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccount.id);
       updateDoc(sessionRef, {
         pageViews: this.currentAccount.pageViews,
         lastSeen: Timestamp.now()
@@ -557,7 +558,7 @@ class VisitorTrackingService {
 
       // Mark session as ended instead of deleting (for analytics)
       if (this.currentAccount) {
-        const sessionRef = doc(db, 'siteVisitors', this.currentAccount.id);
+const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccount.id);
         await updateDoc(sessionRef, {
           endTime: Timestamp.now(),
           sessionDuration: Math.floor((Date.now() - this.sessionStartTime) / 1000),
@@ -589,7 +590,7 @@ class VisitorTrackingService {
   async cleanupStaleVisitors(): Promise<void> {
     try {
       const sessionTimeout = new Date(Date.now() - VisitorTrackingService.SESSION_TIMEOUT);
-      const visitorsRef = collection(db, 'siteVisitors');
+      const visitorsRef = collection(db, getCollectionName('siteVisitors'));
       const q = query(
         visitorsRef,
         where('lastSeen', '<', Timestamp.fromDate(sessionTimeout))
@@ -636,7 +637,7 @@ class VisitorTrackingService {
   }> {
     try {
       const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-      const visitorsRef = collection(db, 'siteVisitors');
+const visitorsRef = collection(db, 'siteVisitors');
       const q = query(
         visitorsRef,
         where('lastSeen', '>=', Timestamp.fromDate(tenMinutesAgo))

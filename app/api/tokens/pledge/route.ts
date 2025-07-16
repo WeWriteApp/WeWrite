@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { reducePledgeAmount } from '../../../services/pledgeBudgetService';
+import { getCollectionName } from "../../../utils/environmentConfig";
 
 /**
  * POST /api/tokens/pledge
@@ -115,8 +116,7 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Get the user's pledge for this page
-    const pledgeRef = doc(db, 'users', userId, 'pledges', pageId);
+const pledgeRef = doc(db, getCollectionName("users"), userId, 'pledges', pageId);
     const pledgeDoc = await getDoc(pledgeRef);
 
     if (!pledgeDoc.exists()) {

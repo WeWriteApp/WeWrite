@@ -261,6 +261,11 @@ input, textarea, select {
   font-size: max(16px, 1rem) !important;
 }
 
+/* Exception: Allow title textarea to use its specified font size */
+textarea.text-2xl {
+  font-size: 1.5rem !important; /* text-2xl equivalent */
+}
+
 /* Global pledge bar button interactivity (all screen sizes) */
 [data-pledge-bar] button,
 [data-pledge-bar] [role="button"],

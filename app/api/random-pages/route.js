@@ -15,23 +15,18 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const limitCount = parseInt(searchParams.get('limit') || '10', 10);
     const userId = searchParams.get('userId'); // For access control
-    const includePrivate = searchParams.get('includePrivate') === 'true'; // Privacy toggle
     const excludeOwnPages = searchParams.get('excludeOwnPages') === 'true'; // "Not mine" filter
 
-    console.log('Random pages API: Requested limit:', limitCount, 'User ID:', userId, 'Include private:', includePrivate, 'Exclude own pages:', excludeOwnPages);
+    console.log('Random pages API: Requested limit:', limitCount, 'User ID:', userId, 'Exclude own pages:', excludeOwnPages);
 
     // Import Firebase modules
-    const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
-    const { db } = await import('../../firebase/database.ts');
-    const { ref, get } = await import('firebase/database');
-    const { rtdb } = await import('../../firebase/rtdb.ts');
     const { initAdmin } = await import('../../firebase/admin');
     const { getEffectiveTier } = await import('../../utils/subscriptionTiers');
     const { executeDeduplicatedOperation } = await import('../../utils/serverRequestDeduplication');
 
     // Initialize Firebase Admin
     const adminApp = initAdmin();
-    const adminDb = adminApp.firestore();
+    const db = adminApp.firestore();
 
     if (!db) {
       console.log('Firebase database not available - returning empty array');
@@ -44,30 +39,35 @@ export async function GET(request) {
     // PERFORMANCE OPTIMIZATION: Use smaller pool size and add server-side filtering
     const poolSize = Math.max(limitCount * 2, 20); // Reduced pool size for better performance
 
-    // Query for public pages only with server-side filtering for deleted pages
-    const pagesQuery = query(
-      collection(db, 'pages'),
-      where('isPublic', '==', true),
-      where('deleted', '!=', true), // Server-side filtering to reduce data transfer
-      orderBy('deleted'), // Required for != queries
-      orderBy('lastModified', 'desc'), // Add ordering for better distribution
-      limit(poolSize)
-    );
+    // Import environment config
+    const { getCollectionName } = await import('../../utils/environmentConfig');
 
-    const pagesSnapshot = await getDocs(pagesQuery);
+    // Query for pages only with server-side filtering for deleted pages
+    // Use admin SDK query
+    // Note: All pages are now public, no need to filter by isPublic
+    let pagesQuery = db.collection(getCollectionName('pages'))
+      .orderBy('lastModified', 'desc')
+      .limit(poolSize);
+
+    const pagesSnapshot = await pagesQuery.get();
 
     if (pagesSnapshot.empty) {
-      console.log('No public pages found');
+      console.log('No pages found');
       return NextResponse.json({
         randomPages: [],
-        message: "No public pages available"
+        message: "No pages available"
       }, { headers });
     }
 
-    // Convert to array (deleted pages already filtered server-side)
+    // Convert to array and filter deleted pages client-side
     let pages = [];
     pagesSnapshot.forEach((doc) => {
       const pageData = doc.data();
+
+      // Filter out deleted pages client-side
+      if (pageData.deleted === true) {
+        return;
+      }
 
       pages.push({
         id: doc.id,
@@ -76,46 +76,12 @@ export async function GET(request) {
         username: pageData.username || 'Anonymous',
         lastModified: pageData.lastModified,
         createdAt: pageData.createdAt,
-        isPublic: pageData.isPublic,
+
         groupId: pageData.groupId || null
       });
     });
 
-    // If user is authenticated and privacy toggle is enabled, include their private pages
-    if (userId && includePrivate) {
-      try {
-        // TEMPORARY: Skip private pages to avoid indexing issues
-        // TODO: Re-enable once indexes are fixed
-        console.log('Skipping private pages due to indexing issues');
-        const userPagesQuery = null;
 
-        // Skip private pages for now
-        if (userPagesQuery) {
-          const userPagesSnapshot = await getDocs(userPagesQuery);
-          userPagesSnapshot.forEach((doc) => {
-            const pageData = doc.data();
-            pages.push({
-              id: doc.id,
-              title: pageData.title || 'Untitled',
-              userId: pageData.userId,
-              username: pageData.username || 'Anonymous',
-              lastModified: pageData.lastModified,
-              createdAt: pageData.createdAt,
-              isPublic: pageData.isPublic,
-              groupId: pageData.groupId || null
-            });
-          });
-        }
-
-        // TODO: Also fetch pages from private groups the user is a member of
-        // This would require querying the user's group memberships first
-        // For now, we only include the user's own private pages
-
-      } catch (userPagesError) {
-        console.error('Error fetching user private pages:', userPagesError);
-        // Continue without user pages
-      }
-    }
 
     // Fetch additional data (groups, usernames, and subscription info) for pages
     const pagesWithCompleteInfo = await Promise.all(
@@ -132,7 +98,7 @@ export async function GET(request) {
 
             if (userSnapshot.exists()) {
               const userData = userSnapshot.val();
-              updatedPage.username = userData.username || userData.displayName || 'Anonymous';
+              updatedPage.username = userData.username || 'Anonymous';
             }
           } catch (userError) {
             console.error(`Error fetching username for user ${page.userId}:`, userError);
@@ -141,7 +107,14 @@ export async function GET(request) {
 
         // Fetch subscription information using Firebase Admin from correct path
         try {
-          const subscriptionDoc = await adminDb.collection('users').doc(page.userId).collection('subscriptions').doc('current').get();
+          // Import environment config for subscription paths
+          const { getSubCollectionPath, PAYMENT_COLLECTIONS } = await import('../../utils/environmentConfig');
+          const { parentPath, subCollectionName } = getSubCollectionPath(
+            PAYMENT_COLLECTIONS.USERS,
+            page.userId,
+            PAYMENT_COLLECTIONS.SUBSCRIPTIONS
+          );
+          const subscriptionDoc = await db.doc(parentPath).collection(subCollectionName).doc('current').get();
           if (subscriptionDoc.exists) {
             const subscriptionData = subscriptionDoc.data();
             // Use centralized tier determination logic
@@ -158,47 +131,32 @@ export async function GET(request) {
       })
     );
 
-    // Apply strict access control filtering with detailed logging
-    let privatePageCount = 0;
-    let userPrivatePageCount = 0;
-    let publicPageCount = 0;
+    // Apply access control filtering
+    let pageCount = 0;
 
     const accessiblePages = pagesWithCompleteInfo.filter(page => {
-      // CRITICAL: Private pages should ONLY be visible to their owners and only when includePrivate is true
-      if (!page.isPublic) {
-        privatePageCount++;
-        const isOwner = userId && page.userId === userId;
-        if (isOwner) {
-          userPrivatePageCount++;
-        }
-        // Only include private pages if the user owns them AND has enabled the privacy toggle
-        return isOwner && includePrivate;
-      }
-
       // Apply "Not mine" filter - exclude pages authored by current user
       if (excludeOwnPages && userId && page.userId === userId) {
         return false;
       }
 
-      // For public pages, apply additional group-based filtering
+      // For pages, apply additional group-based filtering
       if (page.groupId) {
-        // Public pages in public groups are accessible
-        // Public pages in private groups are only accessible to group members (for now, exclude them)
+        // Pages in public groups are accessible
+        // Pages in private groups are only accessible to group members (for now, exclude them)
         const isAccessible = page.groupIsPublic;
-        if (isAccessible) publicPageCount++;
+        if (isAccessible) pageCount++;
         return isAccessible;
       }
 
-      // Public pages not in groups are always accessible
-      publicPageCount++;
+      // Pages not in groups are always accessible
+      pageCount++;
       return true;
     });
 
     console.log(`Random pages API: Access control summary:`, {
       totalPages: pagesWithCompleteInfo.length,
-      privatePages: privatePageCount,
-      userPrivatePages: userPrivatePageCount,
-      publicPages: publicPageCount,
+      pages: pageCount,
       accessiblePages: accessiblePages.length,
       userId: userId ? `${userId.substring(0, 8)}...` : 'null'
     });
@@ -222,7 +180,7 @@ export async function GET(request) {
         batchUserData = await executeDeduplicatedOperation(
           'getBatchUserData',
           { userIds: uniqueUserIds.sort() }, // Sort for consistent cache keys
-          () => getBatchUserDataOptimized(uniqueUserIds, adminDb, rtdb, getEffectiveTier),
+          () => getBatchUserDataOptimized(uniqueUserIds, db, rtdb, getEffectiveTier),
           { cacheTTL: 3 * 60 * 1000 } // 3 minutes cache for user data
         );
       } catch (error) {
@@ -272,7 +230,7 @@ export async function GET(request) {
  * Batch fetch user subscription data (server-side optimized version)
  * Uses the same logic as the batch user API to ensure consistency
  */
-async function getBatchUserDataOptimized(userIds, adminDb, rtdb, getEffectiveTier) {
+async function getBatchUserDataOptimized(userIds, db, rtdb, getEffectiveTier) {
   try {
     if (!userIds || userIds.length === 0) {
       return {};
@@ -289,7 +247,7 @@ async function getBatchUserDataOptimized(userIds, adminDb, rtdb, getEffectiveTie
 
       try {
         // Fetch user profiles from Firestore
-        const usersQuery = adminDb.collection('users').where('__name__', 'in', batch);
+        const usersQuery = db.collection(getCollectionName('users')).where('__name__', 'in', batch);
         const usersSnapshot = await usersQuery.get();
 
         // Fetch subscription data in parallel using environment-aware paths
@@ -301,7 +259,7 @@ async function getBatchUserDataOptimized(userIds, adminDb, rtdb, getEffectiveTie
               userId,
               PAYMENT_COLLECTIONS.SUBSCRIPTIONS
             );
-            const subDoc = await adminDb.doc(parentPath).collection(subCollectionName).doc('current').get();
+            const subDoc = await db.doc(parentPath).collection(subCollectionName).doc('current').get();
             return {
               userId,
               subscription: subDoc.exists ? subDoc.data() : null
@@ -333,7 +291,6 @@ async function getBatchUserDataOptimized(userIds, adminDb, rtdb, getEffectiveTie
           const user = {
             uid: doc.id,
             username: userData.username,
-            displayName: userData.displayName,
             email: userData.email,
             tier: String(effectiveTier), // Ensure tier is always a string
             subscriptionStatus: subscription?.status,
@@ -362,9 +319,8 @@ async function getBatchUserDataOptimized(userIds, adminDb, rtdb, getEffectiveTie
                 const userData = userSnapshot.val();
                 const user = {
                   uid: userId,
-                  username: userData.username || userData.displayName ||
+                  username: userData.username ||
                            (userData.email ? userData.email.split('@')[0] : undefined),
-                  displayName: userData.displayName,
                   email: userData.email,
                   tier: '0', // No subscription data in RTDB
                   subscriptionStatus: null,

@@ -6,7 +6,7 @@ import { app } from "../firebase/config";
 import { useCurrentAccount } from "../providers/CurrentAccountProvider";
 
 /**
- * Recent page data interface
+ * Recently viewed page data interface
  */
 export interface RecentPage {
   id: string;
@@ -17,7 +17,7 @@ export interface RecentPage {
 }
 
 /**
- * Page data interface for adding to recent pages
+ * Page data interface for adding to recently viewed pages
  */
 export interface PageData {
   id: string;
@@ -28,7 +28,7 @@ export interface PageData {
 }
 
 /**
- * Recent pages context interface
+ * Recently viewed pages context interface
  */
 interface RecentPagesContextType {
   recentPages: RecentPage[];
@@ -37,13 +37,13 @@ interface RecentPagesContextType {
 }
 
 /**
- * Recent pages provider props interface
+ * Recently viewed pages provider props interface
  */
 interface RecentPagesProviderProps {
   children: ReactNode;
 }
 
-// Maximum number of recent pages to track
+// Maximum number of recently viewed pages to track
 const MAX_RECENT_PAGES = 10;
 
 export const RecentPagesContext = createContext<RecentPagesContextType>({
@@ -53,7 +53,7 @@ export const RecentPagesContext = createContext<RecentPagesContextType>({
 });
 
 /**
- * RecentPagesProvider component that manages recent pages state
+ * RecentPagesProvider component that manages recently viewed pages state
  *
  * @param props - The component props
  * @param props.children - Child components to render
@@ -63,7 +63,7 @@ export function RecentPagesProvider({ children }: RecentPagesProviderProps) {
   const [loading, setLoading] = useState<boolean>(true);
   const { session } = useCurrentAccount();
 
-  // Load recent pages from Firebase when user changes
+  // Load recently viewed pages from Firebase when user changes
   useEffect(() => {
     if (!session) {
       setRecentPages([]);
@@ -113,7 +113,7 @@ export function RecentPagesProvider({ children }: RecentPagesProviderProps) {
         }
       };
     } catch (error) {
-      console.error("Error setting up recent pages listener:", error);
+      console.error("Error setting up recently viewed pages listener:", error);
       setRecentPages([]);
       setLoading(false);
     }

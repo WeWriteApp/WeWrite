@@ -28,7 +28,7 @@ import { DiffPreview as DiffPreviewType, calculateDiff } from '../../utils/diffS
  * 2. User Profile Pages (/user/[id]) - UserProfileTabs.js → RecentActivity.js → ActivityCard.js
  * 3. Home Page Activity Section - ActivitySection.js → RecentActivity.js → ActivityCard.js
  * 4. Landing Page Carousels - ActivityCarousel.tsx → ActivityCard.js
- * 5. Page History Views (/[id]/history) - history/page.js → ActivityCard.js
+ * 5. Page Activity Views (/[id]/activity) - activity/page.js → ActivityCard.js
  *
  * Benefits of Standardization:
  * - Consistency: All activity cards display diffs identically
@@ -85,11 +85,15 @@ export default function DiffPreview({
     );
   }
 
-  // If no diff data, show fallback message
+  // If no diff data, show fallback message (but avoid redundancy for new pages)
   if (!preview) {
     return (
-      <div className={`text-xs text-muted-foreground h-full flex items-center ${className}`}>
-        {isNewPage ? "New page created" : "Page edited"}
+      <div className={`text-xs text-muted-foreground h-full flex items-center justify-center ${className}`}>
+        {isNewPage ? (
+          <span className="italic">Content preview unavailable</span>
+        ) : (
+          "Page edited"
+        )}
       </div>
     );
   }

@@ -36,6 +36,48 @@ export async function GET(request: NextRequest) {
 
     if (!balance) {
       console.log(`🎯 Token Balance API: No balance found for user ${userId}`);
+
+      // CRITICAL FIX: Auto-initialize token balance if user has active subscription
+      try {
+        const { getUserSubscriptionServer } = await import('../../../firebase/subscription-server');
+        const subscription = await getUserSubscriptionServer(userId, { verbose: false });
+
+        if (subscription && subscription.status === 'active' && subscription.amount > 0) {
+          console.log(`🎯 Token Balance API: Found active subscription ($${subscription.amount}/mo), auto-initializing token balance`);
+
+          // Initialize token balance
+          await ServerTokenService.updateMonthlyTokenAllocation(userId, subscription.amount);
+
+          // Fetch the newly created balance
+          const newBalance = await ServerTokenService.getUserTokenBalance(userId);
+
+          if (newBalance) {
+            console.log(`🎯 Token Balance API: Successfully initialized token balance:`, {
+              totalTokens: newBalance.totalTokens,
+              allocatedTokens: newBalance.allocatedTokens,
+              availableTokens: newBalance.availableTokens
+            });
+
+            // Get allocations for the newly initialized balance
+            const allocations = await ServerTokenService.getUserTokenAllocations(userId);
+
+            return NextResponse.json({
+              balance: newBalance,
+              allocations,
+              summary: {
+                totalTokens: newBalance.totalTokens,
+                allocatedTokens: newBalance.allocatedTokens,
+                availableTokens: newBalance.availableTokens,
+                allocationCount: allocations.length
+              },
+              message: 'Token balance initialized successfully'
+            });
+          }
+        }
+      } catch (initError) {
+        console.error('🎯 Token Balance API: Failed to auto-initialize token balance:', initError);
+      }
+
       return NextResponse.json({
         balance: null,
         allocations: [],

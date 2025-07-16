@@ -83,6 +83,8 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     sponsorCount: number;
     totalPledgedTokens: number;
   } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Scroll detection effect
   useEffect(() => {
@@ -114,76 +116,80 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     if (!pageId) return;
 
     const loadTokenData = async () => {
+      setIsLoading(true);
       try {
         if (currentAccount && currentAccount.uid && isSubscriptionEnabled) {
-          // Logged in user with payments enabled - use API-first approach
-          const response = await fetch('/api/account-subscription');
-          if (response.ok) {
-            const data = await response.json();
-            setSubscription(data.hasSubscription ? data.fullData : null);
-          }
+          // Use fast optimized endpoint for immediate UI response
+          const pledgeBarResponse = await fetch(`/api/tokens/pledge-bar-data?pageId=${pageId}`);
 
-          // Load actual token allocations data
-          const allocationsResponse = await fetch('/api/tokens/allocations');
-          if (allocationsResponse.ok) {
-            const allocationsData = await allocationsResponse.json();
-            console.log('🎯 PledgeBar: Loaded allocations data', allocationsData);
+          if (pledgeBarResponse.ok) {
+            const pledgeData = await pledgeBarResponse.json();
 
-            if (allocationsData.success) {
-              // Set real token balance from API
-              const balance = allocationsData.summary.balance;
-              const actualAllocatedTokens = allocationsData.summary.totalTokensAllocated || 0;
+            if (pledgeData.success) {
+              // Set token balance immediately
+              setTokenBalance(pledgeData.data.tokenBalance);
+              setCurrentTokenAllocation(pledgeData.data.currentPageAllocation);
 
-              if (balance) {
-                setTokenBalance({
-                  totalTokens: balance.totalTokens,
-                  allocatedTokens: actualAllocatedTokens, // Use the calculated total from summary
-                  availableTokens: balance.totalTokens - actualAllocatedTokens,
-                  lastUpdated: new Date(balance.lastUpdated)
-                });
-              } else {
-                // No subscription - show 0 tokens per month, all allocations are unfunded
-                setTokenBalance({
-                  totalTokens: 0,
-                  allocatedTokens: actualAllocatedTokens,
-                  availableTokens: 0 - actualAllocatedTokens, // Always negative when no subscription
-                  lastUpdated: new Date()
-                });
-              }
+              // Set basic subscription status
+              setSubscription(pledgeData.data.hasSubscription ? { status: 'active' } : null);
 
-              // Set allocations data for modal
-              const mappedAllocations = allocationsData.allocations.map((allocation: any) => ({
-                pageId: allocation.pageId,
-                pageTitle: allocation.pageTitle,
-                authorUsername: allocation.authorUsername,
-                tokens: allocation.tokens
-              }));
-              console.log('🎯 PledgeBar: Setting allocations data for modal', {
-                originalAllocations: allocationsData.allocations,
-                mappedAllocations,
-                totalTokensAllocated: allocationsData.summary.totalTokensAllocated
+              // UI is now responsive - set loading to false
+              setIsLoading(false);
+
+              // Load additional data in background for modal and detailed info
+              Promise.all([
+                fetch('/api/account-subscription'),
+                fetch('/api/tokens/allocations')
+              ]).then(async ([subscriptionResponse, allocationsResponse]) => {
+                // Update subscription with full data
+                if (subscriptionResponse.ok) {
+                  const subscriptionData = await subscriptionResponse.json();
+                  setSubscription(subscriptionData.hasSubscription ? subscriptionData.fullData : null);
+                }
+
+                // Update allocations data for modal
+                if (allocationsResponse.ok) {
+                  const allocationsData = await allocationsResponse.json();
+                  if (allocationsData.success) {
+                    setAllocationsData(allocationsData.allocations.map((allocation: any) => ({
+                      pageId: allocation.pageId,
+                      pageTitle: allocation.pageTitle,
+                      authorUsername: allocation.authorUsername,
+                      tokens: allocation.tokens
+                    })));
+
+                    // Update token balance with more accurate data
+                    const balance = allocationsData.summary.balance;
+                    const actualAllocatedTokens = allocationsData.summary.totalTokensAllocated || 0;
+
+                    if (balance) {
+                      setTokenBalance({
+                        totalTokens: balance.totalTokens,
+                        allocatedTokens: actualAllocatedTokens,
+                        availableTokens: balance.totalTokens - actualAllocatedTokens,
+                        lastUpdated: new Date(balance.lastUpdated)
+                      });
+                    }
+                  }
+                }
+              }).catch(error => {
+                console.warn('Background data loading failed:', error);
               });
-              setAllocationsData(mappedAllocations);
-
-              // Find current page allocation
-              const currentPageAllocation = allocationsData.allocations.find(
-                (allocation: any) => allocation.pageId === pageId
-              );
-              setCurrentTokenAllocation(currentPageAllocation ? currentPageAllocation.tokens : 0);
             } else {
-              // No allocations yet - set default values
+              // Fast endpoint failed, fall back to old method
+              setIsLoading(false);
               setTokenBalance({
-                totalTokens: 100,
+                totalTokens: 0,
                 allocatedTokens: 0,
-                availableTokens: 100,
+                availableTokens: 0,
                 lastUpdated: new Date()
               });
               setCurrentTokenAllocation(0);
-              setAllocationsData([]);
             }
           } else {
-            console.log('🎯 PledgeBar: Allocations response not ok', allocationsResponse.status);
-            // Fallback to basic token balance
+            // Fast endpoint failed, fall back to old method
+            setIsLoading(false);
+            console.warn('Fast pledge bar endpoint failed, using fallback');
             setTokenBalance({
               totalTokens: 100,
               allocatedTokens: 0,
@@ -191,10 +197,9 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
               lastUpdated: new Date()
             });
             setCurrentTokenAllocation(0);
-            setAllocationsData([]);
           }
         } else {
-          // Logged out or no payments - use unfunded tokens
+          // Logged out or no payments - use unfunded tokens (fast, no API calls)
           const balance = getLoggedOutTokenBalance();
           const currentAllocation = getLoggedOutPageAllocation(pageId);
 
@@ -214,29 +219,31 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
             authorUsername: 'Unknown', // Unfunded tokens don't have author info
             tokens: allocation.tokens
           })));
+
+          setIsLoading(false); // Fast for logged-out users
         }
 
-        // Load page stats for page owners
+        // Load page stats for page owners (in background, non-blocking)
         if (isPageOwner) {
-          try {
-            const statsResponse = await fetch(`/api/tokens/page-stats?pageId=${pageId}`);
-            if (statsResponse.ok) {
-              const statsData = await statsResponse.json();
-              console.log('🎯 PledgeBar: Loaded page stats for owner', statsData);
-
-              if (statsData.success) {
-                setPageStats({
-                  sponsorCount: statsData.data.sponsorCount,
-                  totalPledgedTokens: statsData.data.totalPledgedTokens
-                });
+          fetch(`/api/tokens/page-stats?pageId=${pageId}`)
+            .then(async (statsResponse) => {
+              if (statsResponse.ok) {
+                const statsData = await statsResponse.json();
+                if (statsData.success) {
+                  setPageStats({
+                    sponsorCount: statsData.data.sponsorCount,
+                    totalPledgedTokens: statsData.data.totalPledgedTokens
+                  });
+                }
               }
-            }
-          } catch (error) {
-            console.error('Error loading page stats:', error);
-          }
+            })
+            .catch(error => {
+              console.error('Error loading page stats:', error);
+            });
         }
       } catch (error) {
         console.error('Error loading token data:', error);
+        setIsLoading(false); // Ensure loading state is cleared on error
       }
     };
 
@@ -246,6 +253,10 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   // Handle token allocation changes
   const handleTokenChange = async (change: number) => {
     if (!pageId || isPageOwner) return;
+
+    // Don't block on isRefreshing - allow rapid clicks for true optimistic updates
+    // Set refreshing for visual feedback but don't block subsequent clicks
+    setIsRefreshing(true);
 
     const newAllocation = Math.max(0, currentTokenAllocation + change);
     const actionTimestamp = Date.now();
@@ -299,43 +310,133 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
     try {
       if (currentAccount && currentAccount.uid && isSubscriptionEnabled) {
+        // Debug authentication state
+        console.log('[PledgeBar] Making API call with auth state:', {
+          hasCurrentAccount: !!currentAccount,
+          currentAccountUid: currentAccount?.uid,
+          isSubscriptionEnabled,
+          pageId,
+          tokenChange: change
+        });
+
         // Real token allocation - make API call to save to database
-        const response = await fetch('/api/tokens/page-allocation', {
+        // Use pending allocations system for proper earnings tracking
+        const response = await fetch('/api/tokens/pending-allocations', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            pageId: pageId,
-            tokenChange: change
+            recipientUserId: authorId, // The page owner who will receive the tokens
+            resourceType: 'page',
+            resourceId: pageId,
+            tokens: Math.max(0, currentTokenAllocation + change) // New total allocation
           })
         });
 
+        console.log('[PledgeBar] API response status:', response.status);
+
         if (!response.ok) {
           const errorData = await response.json();
+          console.error('[PledgeBar] API error:', errorData);
+
+          // If the error is about insufficient tokens but user has a subscription,
+          // try to initialize/sync the token balance
+          if (errorData.error?.includes('Insufficient tokens') && subscription && subscription.amount > 0) {
+            console.log('[PledgeBar] Attempting to initialize token balance for user with subscription');
+            try {
+              const initResponse = await fetch('/api/tokens/balance', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  action: 'initialize',
+                  subscriptionAmount: subscription.amount
+                })
+              });
+
+              if (initResponse.ok) {
+                console.log('[PledgeBar] Token balance initialized, retrying allocation');
+                // Retry the original allocation
+                const retryResponse = await fetch('/api/tokens/pending-allocations', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    recipientUserId: authorId,
+                    resourceType: 'page',
+                    resourceId: pageId,
+                    tokens: Math.max(0, currentTokenAllocation + change)
+                  })
+                });
+
+                if (retryResponse.ok) {
+                  const retryData = await retryResponse.json();
+                  console.log('[PledgeBar] Retry successful:', retryData);
+                  // Continue with success handling
+                  const allocationsData = retryData;
+
+                  if (allocationsData.success) {
+                    setCurrentTokenAllocation(Math.max(0, currentTokenAllocation + change));
+
+                    // Update allocations data for modal
+                    if (allocationsData.allocations) {
+                      setAllocationsData(allocationsData.allocations.map((allocation: any) => ({
+                        pageId: allocation.pageId,
+                        pageTitle: allocation.pageTitle,
+                        authorUsername: allocation.authorUsername,
+                        tokens: allocation.tokens
+                      })));
+                    }
+
+                    // Update token balance with the most current data
+                    const balance = allocationsData.summary.balance;
+                    const actualAllocatedTokens = allocationsData.summary.totalTokensAllocated || 0;
+
+                    if (balance) {
+                      setTokenBalance({
+                        totalTokens: balance.totalTokens,
+                        allocatedTokens: actualAllocatedTokens,
+                        availableTokens: balance.totalTokens - actualAllocatedTokens,
+                        lastUpdated: new Date(balance.lastUpdated)
+                      });
+                    }
+
+                    // Clear pending update for this page
+                    setPendingUpdates(prev => {
+                      const newSet = new Set(prev);
+                      newSet.delete(pageId);
+                      return newSet;
+                    });
+                    setIsRefreshing(false);
+                    return; // Exit successfully
+                  }
+                }
+              }
+            } catch (initError) {
+              console.error('[PledgeBar] Token balance initialization failed:', initError);
+            }
+          }
+
           throw new Error(errorData.error || 'Failed to allocate tokens');
         }
 
         const result = await response.json();
         console.log('✅ PledgeBar: Token allocation successful', result);
 
-        // Refresh allocations data to get accurate server state (but don't clear the UI)
+        // Handle successful allocation
+        setCurrentTokenAllocation(Math.max(0, currentTokenAllocation + change));
+
+        // Refresh allocations data to get accurate server state
         const allocationsResponse = await fetch('/api/tokens/allocations');
         if (allocationsResponse.ok) {
           const allocationsData = await allocationsResponse.json();
           console.log('🎯 PledgeBar: Refreshed allocations after change', allocationsData);
 
           if (allocationsData.success) {
-            // Check if this update is recent enough to respect user input
-            const timeSinceUserAction = Date.now() - actionTimestamp;
-            const shouldRespectUserInput = timeSinceUserAction < 2000; // 2 seconds
-
-            // Only update current allocation if user hasn't made recent changes
-            if (!shouldRespectUserInput) {
-              setCurrentTokenAllocation(result.currentAllocation || newAllocation);
-            }
-
-            // Update allocations data for modal (always safe to update)
+            // Update allocations data for modal
             setAllocationsData(allocationsData.allocations.map((allocation: any) => ({
               pageId: allocation.pageId,
               pageTitle: allocation.pageTitle,
@@ -362,6 +463,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
               newSet.delete(pageId);
               return newSet;
             });
+            setIsRefreshing(false);
           }
         }
       } else {
@@ -382,6 +484,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
             newSet.delete(pageId);
             return newSet;
           });
+          setIsRefreshing(false);
           return;
         }
 
@@ -408,6 +511,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
           newSet.delete(pageId);
           return newSet;
         });
+        setIsRefreshing(false);
       }
     } catch (error) {
       console.error('Error allocating tokens:', error);
@@ -424,6 +528,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
         newSet.delete(pageId);
         return newSet;
       });
+      setIsRefreshing(false);
     }
   };
 
@@ -446,6 +551,21 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   // Calculate available tokens: total minus all allocations (other + current)
   const totalUsedTokens = otherPagesTokens + currentTokenAllocation;
   const availableTokens = totalTokens - totalUsedTokens;
+
+  // Debug token calculations
+  console.log('[PledgeBar] Token calculations:', {
+    tokenBalance,
+    totalTokens,
+    allocatedTokens,
+    currentTokenAllocation,
+    otherPagesTokens,
+    totalUsedTokens,
+    availableTokens,
+    hasSubscription: subscription && isActiveSubscription(subscription.status),
+    subscription,
+    isSubscriptionEnabled,
+    buttonDisabled: availableTokens <= 0 || isRefreshing
+  });
 
   // Calculate percentages for composition bar (order: other, this, available)
   const otherPagesPercentage = totalTokens > 0 ? (otherPagesTokens / totalTokens) * 100 : 0;
@@ -516,18 +636,28 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
           {/* Token Controls */}
           {!isPageOwner && (
             <div className="flex items-center gap-3">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleTokenChange(-incrementAmount);
-                }}
-                disabled={currentTokenAllocation <= 0}
-                className="h-8 w-8 p-0"
-              >
-                <Minus className="h-4 w-4" />
-              </Button>
+              {isLoading ? (
+                <div className="flex items-center gap-3 w-full">
+                  <div className="h-8 w-8 bg-muted animate-pulse rounded-md"></div>
+                  <div className="flex-1 h-12 bg-muted animate-pulse rounded-lg"></div>
+                  <div className="h-8 w-8 bg-muted animate-pulse rounded-md"></div>
+                </div>
+              ) : (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Only allow minus if we have tokens to remove
+                      if (currentTokenAllocation > 0) {
+                        handleTokenChange(-incrementAmount);
+                      }
+                    }}
+                    className={`h-8 w-8 p-0 ${currentTokenAllocation <= 0 ? 'opacity-50' : ''} ${isRefreshing ? 'opacity-75' : ''}`}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
 
               {/* Composition Bar */}
               <div className="flex-1 bg-muted rounded-lg h-12 flex gap-1 p-1">
@@ -568,18 +698,20 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                 )}
               </div>
 
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleTokenChange(incrementAmount);
-                }}
-                disabled={availableTokens <= 0}
-                className="h-8 w-8 p-0"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Always allow plus button for optimistic updates (allow overspending)
+                      handleTokenChange(incrementAmount);
+                    }}
+                    className={`h-8 w-8 p-0 ${isRefreshing ? 'opacity-75' : ''}`}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
             </div>
           )}
 

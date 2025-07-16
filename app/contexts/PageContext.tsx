@@ -12,7 +12,6 @@ interface PageData {
   authorId?: string;
   createdAt?: any;
   updatedAt?: any;
-  isPrivate?: boolean;
   groupId?: string;
   [key: string]: any;
 }

@@ -133,6 +133,11 @@ export default function MobileBottomNav() {
       return true;
     }
 
+    // Hide on location picker pages
+    if (pathname.includes('/location')) {
+      return true;
+    }
+
     // Hide only on content pages at /id/ (single segment routes that aren't static)
     const segments = pathname.split('/').filter(Boolean);
     return segments.length === 1 && !staticRoutes.includes(`/${segments[0]}`);

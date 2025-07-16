@@ -2,8 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { getDatabase, ref, get, query, orderByChild, equalTo } from 'firebase/database';
-import { app } from '../../firebase/config';
+// Removed Firebase imports - now using API endpoints
 import { Loader } from '../../components/utils/Loader';
 import SingleProfileView from '../../components/pages/SingleProfileView';
 
@@ -67,24 +66,35 @@ export default function UserPage({ params }: UserPageProps) {
           timestamp: new Date().toISOString()
         });
 
-        const rtdb = getDatabase(app);
+        // Use API endpoint to get user profile (works in both dev and prod)
+        console.log('🔍 Fetching user profile via API for:', id);
+        const response = await fetch(`/api/users/profile?id=${encodeURIComponent(id)}`);
 
-        // First, try to get user by ID directly (for numeric IDs or known Firebase UIDs)
-        const userByIdRef = ref(rtdb, `users/${id}`);
-        const userByIdSnapshot = await get(userByIdRef);
+        let userData = null;
+        let userId = id;
 
-        if (userByIdSnapshot.exists()) {
-          // Found user by ID
-          const userData = userByIdSnapshot.val();
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            userData = result.data;
+            userId = userData.uid || userData.id;
+            console.log('✅ Found user via API:', userData.username);
+          } else {
+            console.warn('❌ API returned error:', result.error);
+          }
+        } else {
+          console.warn('❌ API request failed:', response.status, response.statusText);
+        }
 
+        if (userData) {
           // Get user's subscription to check for supporter tier (only if payments enabled)
           let subscription = null;
           console.warn('🔍 User page: About to check payments enabled', { isPaymentsEnabled });
           if (isPaymentsEnabled) {
-            console.warn('🔍 User page: Fetching subscription data for user', id);
-            subscription = await fetchUserSubscription(id);
+            console.warn('🔍 User page: Fetching subscription data for user', userId);
+            subscription = await fetchUserSubscription(userId);
             console.warn('🔍 User profile subscription data:', {
-              userId: id,
+              userId,
               subscription,
               tier: subscription?.tier,
               status: subscription?.status,
@@ -95,7 +105,7 @@ export default function UserPage({ params }: UserPageProps) {
           }
 
           setProfile({
-            uid: id,
+            uid: userId,
             ...userData,
             tier: subscription?.tier || null,
             subscriptionStatus: subscription?.status || null,
@@ -105,40 +115,7 @@ export default function UserPage({ params }: UserPageProps) {
           return;
         }
 
-        // If not found by ID, try to find by username
-        const usersRef = ref(rtdb, 'users');
-        const usernameQuery = query(usersRef, orderByChild('username'), equalTo(id));
-        const usernameSnapshot = await get(usernameQuery);
 
-        if (usernameSnapshot.exists()) {
-          // Found user by username
-          const userData = Object.entries(usernameSnapshot.val())[0];
-          const userId = userData[0];
-          const userProfile = userData[1];
-
-          // Get user's subscription to check for supporter tier (only if payments enabled)
-          let subscription = null;
-          if (isPaymentsEnabled) {
-            subscription = await fetchUserSubscription(userId);
-            console.log('🔍 User profile subscription data (username lookup):', {
-              userId,
-              subscription,
-              tier: subscription?.tier,
-              status: subscription?.status,
-              amount: subscription?.amount
-            });
-          }
-
-          setProfile({
-            uid: userId,
-            ...userProfile,
-            tier: subscription?.tier || null,
-            subscriptionStatus: subscription?.status || null,
-            subscriptionAmount: subscription?.amount || null
-          });
-          setIsLoading(false);
-          return;
-        }
 
         // User not found by either ID or username
         setError('User not found');
@@ -182,10 +159,28 @@ export default function UserPage({ params }: UserPageProps) {
   }
 
   if (error) {
+    const isUserNotFound = error === 'User not found';
+    const isConnectionError = error === 'Error loading user profile';
+
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
-        <h1 className="text-2xl font-bold mb-4">User Not Found</h1>
-        <p className="text-muted-foreground">The user you're looking for doesn't exist.</p>
+        <h1 className="text-2xl font-bold mb-4">
+          {isUserNotFound ? 'User Not Found' : 'Connection Error'}
+        </h1>
+        <p className="text-muted-foreground">
+          {isUserNotFound
+            ? "The user you're looking for doesn't exist."
+            : "Unable to load user profile. Please check your connection and try again."
+          }
+        </p>
+        {isConnectionError && (
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+          >
+            Retry
+          </button>
+        )}
       </div>
     );
   }

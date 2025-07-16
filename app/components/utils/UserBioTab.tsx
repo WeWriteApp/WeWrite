@@ -2,8 +2,7 @@
 import React, { useState, useEffect, useCallback, useContext, useRef } from "react";
 import { Button } from "../ui/button";
 import { Edit, Save, X, Loader, AlertTriangle } from "lucide-react";
-import { rtdb } from "../../firebase/rtdb";
-import { ref, update, get } from "firebase/database";
+import { getUserProfile } from "../../firebase/database/users";
 import { toast } from "../ui/use-toast";
 import { recordBioEditActivity } from "../../firebase/bioActivity";
 import dynamic from "next/dynamic";
@@ -17,17 +16,17 @@ import { UserBioSkeleton } from "../ui/page-skeleton";
 import TextView from "../editor/TextView";
 import HoverEditContent from './HoverEditContent';
 import type { UserBioTabProps } from "../../types/components";
-import type { SlateContent, User } from "../../types/database";
+import type { EditorContent, User } from "../../types/database";
 import { PageProvider } from "../../contexts/PageContext";
 
-// Import the unified PageEditor component
-const PageEditor = dynamic(() => import("../editor/PageEditor"), { ssr: false });
+// Import the unified Editor component
+const Editor = dynamic(() => import("../editor/Editor"), { ssr: false });
 
 const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   const { session } = useCurrentAccount();
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [bioContent, setBioContent] = useState<SlateContent | string>(profile.bio || "");
-  const [originalContent, setOriginalContent] = useState<SlateContent | string>(profile.bio || "");
+  const [bioContent, setBioContent] = useState<EditorContent | string>("");
+  const [originalContent, setOriginalContent] = useState<EditorContent | string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [lastEditor, setLastEditor] = useState<string | null>(null);
@@ -50,25 +49,48 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
     }
   };
 
-  // Load the bio content from the database
+  // Load the bio content from the database using API route
   useEffect(() => {
     const fetchBioContent = async () => {
       try {
         setIsLoading(true);
-        const userRef = ref(rtdb, `users/${profile.uid}`);
-        const snapshot = await get(userRef);
 
-        if (snapshot.exists()) {
-          const userData = snapshot.val();
-          if (userData.bio) {
-            setBioContent(userData.bio);
-            setOriginalContent(userData.bio);
+        // Use API route for bio loading to handle environment-aware operations
+        const response = await fetch(`/api/users/${profile.uid}/bio`);
+
+        if (response.ok) {
+          const bioResponse = await response.json();
+          const bioData = bioResponse.data; // Extract data from API response
+
+          if (bioData.bio) {
+            setBioContent(bioData.bio);
+            setOriginalContent(bioData.bio);
           }
-          if (userData.bioLastEditor) {
-            setLastEditor(userData.bioLastEditor);
+          if (bioData.bioLastEditor) {
+            setLastEditor(bioData.bioLastEditor);
           }
-          if (userData.bioLastEditTime) {
-            setLastEditTime(userData.bioLastEditTime);
+          if (bioData.bioLastEditTime) {
+            setLastEditTime(bioData.bioLastEditTime);
+          }
+        } else {
+          // Fallback to getUserProfile if API route fails
+          console.warn('API route failed, falling back to getUserProfile');
+          const userData = await getUserProfile(profile.uid);
+
+          if (userData) {
+            if (userData.bio) {
+              setBioContent(userData.bio);
+              setOriginalContent(userData.bio);
+            }
+            if (userData.bioLastEditor) {
+              setLastEditor(userData.bioLastEditor);
+            }
+            if (userData.bioLastEditTime) {
+              setLastEditTime(userData.bioLastEditTime);
+            }
+          } else {
+            console.warn(`No user data found for uid: ${profile.uid}`);
+            setError("User profile not found. This may be a development environment issue.");
           }
         }
       } catch (err) {
@@ -86,7 +108,6 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   const handleSave = async () => {
     try {
       setIsLoading(true);
-      const userRef = ref(rtdb, `users/${profile.uid}`);
 
       // Ensure we're saving the content in the correct format
       // The Editor returns an array of nodes, which we want to preserve
@@ -95,11 +116,24 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
 
       console.log("Saving bio content:", contentToSave);
 
-      await update(userRef, {
-        bio: contentToSave,
-        bioLastEditor: editorName,
-        bioLastEditTime: new Date().toISOString()
+      // Use API route for bio updates to handle environment-aware operations
+      const response = await fetch(`/api/users/${profile.uid}/bio`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bio: contentToSave,
+          editorName: editorName
+        })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save bio');
+      }
+
+      const result = await response.json();
 
       // Record the bio edit activity for the activity feed
       if (session) {
@@ -206,23 +240,15 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
         {isEditing ? (
           <div className="animate-in fade-in-0 duration-300">
             <PageProvider>
-              <PageEditor
-                  title="" // Bio doesn't have a title
-                  setTitle={() => {}} // Bio doesn't have a title
+              <Editor
                   initialContent={bioContent}
-                  onContentChange={handleContentChange}
-                  isPublic={true} // Bio is always public
-                  setIsPublic={() => {}} // Bio doesn't have privacy settings
-                  location={null} // Bio doesn't have location
-                  setLocation={() => {}} // Bio doesn't have location
+                  onChange={handleContentChange}
                   onSave={handleSave}
                   onCancel={handleCancel}
-                  onDelete={null} // Bio doesn't have delete functionality
                   isSaving={isLoading}
                   error={error || ""}
-                  isNewPage={false}
-                  clickPosition={clickPosition}
-                  page={null} // Bio is not a page
+                  placeholder="Write your bio..."
+                  showToolbar={true}
                 />
             </PageProvider>
           </div>

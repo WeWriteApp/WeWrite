@@ -10,6 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronRight, Database } from "lucide-react";
 // Removed direct Firebase imports - now using API endpoints
 import { useToast } from "../ui/use-toast";
+import { db } from "../../firebase/config";
+import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
+import { getCollectionName } from '../../utils/environmentConfig';
 import { FeatureFlag, isAdmin } from "../../utils/feature-flags";
 import { usePWA } from '../../providers/PWAProvider';
 import { getAnalyticsService } from "../../utils/analytics-service";
@@ -107,7 +110,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       setIsLoading(true);
 
       // Get admin users from Firestore
-      const adminUsersRef = doc(db, 'config', 'adminUsers');
+      const adminUsersRef = doc(db, getCollectionName('config'), 'adminUsers');
       const adminUsersDoc = await getDoc(adminUsersRef);
 
       if (adminUsersDoc.exists()) {
@@ -115,7 +118,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
 
         // Get user details for each admin user
         const adminUserPromises = adminUserIds.map(async (userId: string) => {
-          const userRef = doc(db, 'users', userId);
+          const userRef = doc(db, getCollectionName('users'), userId);
           const userDoc = await getDoc(userRef);
 
           if (userDoc.exists()) {
@@ -149,7 +152,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       setIsLoading(true);
 
       // Get feature flags from Firestore
-      const featureFlagsRef = doc(db, 'config', 'featureFlags');
+      const featureFlagsRef = doc(db, getCollectionName('config'), 'featureFlags');
       const featureFlagsDoc = await getDoc(featureFlagsRef);
 
       if (featureFlagsDoc.exists()) {
@@ -201,11 +204,11 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       setIsSearching(true);
 
       // Search by email
-      const emailQuery = query(collection(db, 'users'), where('email', '==', searchTerm));
+      const emailQuery = query(collection(db, getCollectionName('users')), where('email', '==', searchTerm));
       const emailSnapshot = await getDocs(emailQuery);
 
       // Search by username
-      const usernameQuery = query(collection(db, 'users'), where('username', '==', searchTerm));
+      const usernameQuery = query(collection(db, getCollectionName('users')), where('username', '==', searchTerm));
       const usernameSnapshot = await getDocs(usernameQuery);
 
       // Combine results
@@ -241,7 +244,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       setIsLoading(true);
 
       // Get current admin users
-      const adminUsersRef = doc(db, 'config', 'adminUsers');
+      const adminUsersRef = doc(db, getCollectionName('config'), 'adminUsers');
       const adminUsersDoc = await getDoc(adminUsersRef);
 
       let adminUserIds: string[] = [];
@@ -302,7 +305,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
       setIsLoading(true);
 
       // Get current feature flags from database first to avoid race conditions
-      const featureFlagsRef = doc(db, 'config', 'featureFlags');
+      const featureFlagsRef = doc(db, getCollectionName('config'), 'featureFlags');
       const featureFlagsDoc = await getDoc(featureFlagsRef);
 
       let flagsData = {};

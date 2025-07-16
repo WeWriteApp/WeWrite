@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Drawer } from 'vaul';
 import { UserCircle, CreditCard, Settings, Plus, Minus, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import CompositionBar from '../editor/CompositionBar';
+import TokenAllocationBar from '../editor/TokenAllocationBar';
 import { updateUsername } from "../../firebase/usernameHistory";
 import { useAlert } from '../../hooks/useAlert';
 import AlertModal from '../utils/AlertModal';
@@ -579,7 +579,7 @@ const AccountDrawer = ({
                           key={pledge.id}
                           className="bg-background/40 hover:bg-background/60 p-3 rounded-lg border-theme-light hover-border-medium transition-all"
                         >
-                          <CompositionBar
+                          <TokenAllocationBar
                             value={pledge.amount}
                             max={subscription?.amount || 0}
                             onChange={() => {}}

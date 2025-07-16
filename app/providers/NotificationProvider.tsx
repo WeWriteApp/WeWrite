@@ -2,16 +2,8 @@
 
 import { useEffect, useState, createContext, useContext, ReactNode } from "react";
 import { useCurrentAccount } from "./CurrentAccountProvider";
-// Import real notification service functions
-import {
-  getNotifications,
-  getUnreadNotificationsCount,
-  markNotificationAsRead,
-  markNotificationAsUnread,
-  markAllNotificationsAsRead,
-  fixUnreadNotificationsCount,
-  type Notification
-} from "../firebase/notifications";
+// Import notification types
+import { type Notification } from "../firebase/notifications";
 import { checkEmailVerificationPeriodically } from "../services/emailVerificationNotifications";
 
 /**
@@ -53,22 +45,29 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
 
   // Fetch notifications when session changes
   useEffect(() => {
+    console.log('🟣 NOTIFICATION_PROVIDER EFFECT: Effect triggered, session:', { uid: session?.uid, exists: !!session });
     if (!session) {
+      console.log('🟣 NOTIFICATION_PROVIDER EFFECT: No session, clearing notifications');
       setNotifications([]);
       setUnreadCount(0);
       setLastDoc(null);
       setHasMore(true);
       return;
     }
+    console.log('🟣 NOTIFICATION_PROVIDER EFFECT: Session exists, fetching notifications');
 
     const fetchNotifications = async () => {
       try {
         setLoading(true);
 
-        // Get notifications first
-        const result = await getNotifications(session.uid);
-        const notificationData = result?.notifications || [];
-        const lastVisible = result?.lastDoc || null;
+        // Get notifications via API
+        const response = await fetch('/api/notifications?action=list&limit=20');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch notifications: ${response.status}`);
+        }
+        const data = await response.json();
+        const notificationData = data.notifications || [];
+        const lastVisible = null; // API doesn't return lastVisible yet
 
         console.log('NotificationProvider - fetched notifications:', Array.isArray(notificationData) ? notificationData.map(n => ({ id: n.id, read: n.read, type: n.type })) : []);
 
@@ -104,18 +103,16 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         const actualUnreadCount = Array.isArray(notificationData) ? notificationData.filter(n => !n.read).length : 0;
         console.log('NotificationProvider - actual unread count from data:', actualUnreadCount);
 
-        // Get stored unread count
-        const storedCount = await getUnreadNotificationsCount(session.uid);
+        // Get stored unread count via API
+        const countResponse = await fetch('/api/notifications?action=count');
+        if (!countResponse.ok) {
+          throw new Error(`Failed to fetch notification count: ${countResponse.status}`);
+        }
+        const countData = await countResponse.json();
+        const storedCount = countData.count || 0;
         console.log('NotificationProvider - stored unread count:', storedCount);
 
-        // If there's a mismatch, fix it
-        if (actualUnreadCount !== storedCount) {
-          console.log('NotificationProvider - count mismatch detected, fixing...');
-          const fixedCount = await fixUnreadNotificationsCount(session.uid);
-          setUnreadCount(fixedCount);
-        } else {
-          setUnreadCount(storedCount);
-        }
+        setUnreadCount(storedCount);
 
         setNotifications(Array.isArray(notificationData) ? notificationData : []);
         setLastDoc(lastVisible);
@@ -142,11 +139,14 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     try {
       setLoading(true);
 
-      const { notifications: newNotifications, lastDoc: newLastDoc } = await getNotifications(
-        session.uid,
-        20,
-        lastDoc
-      );
+      // Load more notifications via API (pagination not fully implemented yet)
+      const response = await fetch('/api/notifications?action=list&limit=20');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch more notifications: ${response.status}`);
+      }
+      const data = await response.json();
+      const newNotifications = data.notifications || [];
+      const newLastDoc = null; // API doesn't support pagination yet
 
       // Extract unique user IDs from new notifications for batch fetching
       const userIds = new Set<string>();
@@ -192,8 +192,21 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       const notification = notifications.find(n => n.id === notificationId);
       const wasUnread = notification && !notification.read;
 
-      // Call the backend to mark as read
-      await markNotificationAsRead(session.uid, notificationId);
+      // Call the API to mark as read
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'markAsRead',
+          notificationId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to mark notification as read: ${response.status}`);
+      }
 
       // Update local state
       setNotifications(prev =>
@@ -228,8 +241,21 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       const notification = notifications.find(n => n.id === notificationId);
       const wasRead = notification && notification.read;
 
-      // Call the backend to mark as unread
-      await markNotificationAsUnread(session.uid, notificationId);
+      // Call the API to mark as unread
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'markAsUnread',
+          notificationId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to mark notification as unread: ${response.status}`);
+      }
 
       // Update local state
       setNotifications(prev =>
@@ -261,7 +287,20 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       console.log('markAllAsRead called - current unreadCount:', unreadCount);
       console.log('markAllAsRead called - current notifications:', notifications.map(n => ({ id: n.id, read: n.read })));
 
-      await markAllNotificationsAsRead(session.uid);
+      // Call the API to mark all as read
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'markAllAsRead'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to mark all notifications as read: ${response.status}`);
+      }
 
       // Update local state
       setNotifications(prev =>

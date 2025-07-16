@@ -153,6 +153,34 @@ export class ServerTokenService {
   }
 
   /**
+   * Get current page allocation for a user (fast lookup)
+   */
+  static async getCurrentPageAllocation(userId: string, pageId: string): Promise<number> {
+    if (!db) {
+      throw new Error('Firebase Admin not initialized');
+    }
+
+    try {
+      const currentMonth = getCurrentMonth();
+      const allocationRef = db
+        .collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS))
+        .doc(`${userId}_${pageId}_${currentMonth}`);
+
+      const allocationDoc = await allocationRef.get();
+
+      if (!allocationDoc.exists) {
+        return 0;
+      }
+
+      const data = allocationDoc.data();
+      return data?.tokens || 0;
+    } catch (error) {
+      console.error('Error getting current page allocation:', error);
+      return 0;
+    }
+  }
+
+  /**
    * Calculate actual allocated tokens by summing current active allocations
    */
   static async calculateActualAllocatedTokens(userId: string): Promise<number> {
@@ -231,16 +259,41 @@ export class ServerTokenService {
 
     try {
       const currentMonth = getCurrentMonth();
+      console.log(`[TOKEN ALLOCATION] Starting allocation for user ${userId}, page ${pageId}, change ${tokenChange}`);
 
       // Get current token balance
       const balanceRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES)).doc(userId);
       const balanceDoc = await balanceRef.get();
 
       if (!balanceDoc.exists) {
-        throw new Error('Token balance not found. Please initialize your subscription first.');
+        // Try to auto-initialize token balance if user has an active subscription
+        console.log(`[TOKEN ALLOCATION] Token balance not found for user ${userId}, attempting auto-initialization`);
+
+        try {
+          const { getUserSubscriptionServer } = await import('../firebase/subscription-server');
+          const subscriptionData = await getUserSubscriptionServer(userId, { verbose: false });
+
+          if (subscriptionData && subscriptionData.status === 'active' && subscriptionData.amount) {
+            console.log(`[TOKEN ALLOCATION] Found active subscription for user ${userId}, initializing token balance`);
+            await this.updateMonthlyTokenAllocation(userId, subscriptionData.amount);
+
+            // Re-fetch the balance after initialization
+            const newBalanceDoc = await balanceRef.get();
+            if (!newBalanceDoc.exists) {
+              throw new Error('Failed to initialize token balance automatically');
+            }
+          } else {
+            throw new Error('Token balance not found and no active subscription to initialize from');
+          }
+        } catch (initError) {
+          console.error(`[TOKEN ALLOCATION] Failed to auto-initialize token balance for user ${userId}:`, initError);
+          throw new Error('Token balance not initialized. Please check your subscription status.');
+        }
       }
 
-      const balanceData = balanceDoc.data();
+      // Re-fetch balance data to ensure we have the latest (in case we just initialized it)
+      const currentBalanceDoc = await balanceRef.get();
+      const balanceData = currentBalanceDoc.data();
 
       // Get current page allocation
       const currentPageAllocation = await this.getCurrentPageAllocation(userId, pageId);
@@ -254,7 +307,7 @@ export class ServerTokenService {
       let recipientUserId = '';
       if (newPageAllocation > 0) {
         try {
-          const pageRef = db.collection('pages').doc(pageId);
+          const pageRef = db.collection(getCollectionName('pages')).doc(pageId);
           const pageDoc = await pageRef.get();
 
           if (pageDoc.exists) {
@@ -569,6 +622,72 @@ export class ServerTokenService {
     } catch (error) {
       console.error('ServerTokenService: Error updating writer token balance:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get all allocations made to a specific user (from token allocations collection)
+   */
+  static async getAllocationsToUser(recipientUserId: string): Promise<{
+    totalTokens: number;
+    totalUsdValue: number;
+    allocations: Array<{
+      id: string;
+      userId: string;
+      tokens: number;
+      resourceId: string;
+      resourceType: string;
+      month: string;
+      createdAt: any;
+    }>;
+  }> {
+    try {
+      if (!db) {
+        throw new Error('Firebase Admin not initialized');
+      }
+
+      const currentMonth = getCurrentMonth();
+
+      // Query token allocations collection for allocations to this user
+      const allocationsRef = db.collection(getCollectionName(PAYMENT_COLLECTIONS.TOKEN_ALLOCATIONS));
+      const query = allocationsRef
+        .where('recipientUserId', '==', recipientUserId)
+        .where('month', '==', currentMonth)
+        .where('status', '==', 'active');
+
+      const querySnapshot = await query.get();
+      const allocations: any[] = [];
+      let totalTokens = 0;
+
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        allocations.push({
+          id: doc.id,
+          userId: data.userId,
+          tokens: data.tokens,
+          resourceId: data.resourceId,
+          resourceType: data.resourceType,
+          month: data.month,
+          createdAt: data.createdAt
+        });
+        totalTokens += data.tokens;
+      });
+
+      const totalUsdValue = totalTokens / 100; // TOKEN_ECONOMY.TOKENS_PER_DOLLAR
+
+      return {
+        totalTokens,
+        totalUsdValue,
+        allocations
+      };
+
+    } catch (error) {
+      console.error('ServerTokenService: Error getting allocations to user:', error);
+      return {
+        totalTokens: 0,
+        totalUsdValue: 0,
+        allocations: []
+      };
     }
   }
 }

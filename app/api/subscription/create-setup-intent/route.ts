@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getUsernameById } from '../../../utils/userUtils';
 import { initAdmin } from '../../../firebase/admin';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 // Initialize Firebase Admin
 const admin = initAdmin();
@@ -38,29 +39,37 @@ export async function POST(request: NextRequest) {
     // Get or create Stripe customer
     let customerId: string;
     
-    // Check if user already has a Stripe customer ID
-    const userDoc = await adminDb.collection('users').doc(userId).get();
+    // Check if user already has a Stripe customer ID using environment-aware collection
+    const userDoc = await adminDb.collection(getCollectionName('users')).doc(userId).get();
     const userData = userDoc.data();
     customerId = userData?.stripeCustomerId;
 
     if (!customerId) {
-      // Create new Stripe customer
-      const userRecord = await adminAuth.getUser(userId);
-      const username = await getUsernameById(userId) || userRecord.displayName || userRecord.email?.split('@')[0] || 'Unknown User';
+      // Get user data from Firestore (works for both real and development users)
+      if (!userData) {
+        return NextResponse.json({
+          error: 'User not found in database'
+        }, { status: 404 });
+      }
 
+      const username = userData.username || 'Unknown User';
+      const email = userData.email || `${userId}@wewrite.dev`;
+
+      // Create new Stripe customer
       const customer = await stripe.customers.create({
-        email: userRecord.email,
+        email: email,
         description: `WeWrite user ${username} (${userId})`,
         metadata: {
           firebaseUID: userId,
-          username: username
+          username: username,
+          environment: process.env.NODE_ENV || 'development'
         }
       });
 
       customerId = customer.id;
 
-      // Save customer ID to Firestore
-      await adminDb.collection('users').doc(userId).set({
+      // Save customer ID to Firestore using environment-aware collection
+      await adminDb.collection(getCollectionName('users')).doc(userId).set({
         stripeCustomerId: customerId
       }, { merge: true });
 

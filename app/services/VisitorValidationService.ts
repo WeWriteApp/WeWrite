@@ -5,6 +5,7 @@
 
 import { collection, query, where, getDocs, Timestamp, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { getCollectionName } from '../utils/environmentConfig';
 
 interface ValidationResult {
   isValid: boolean;
@@ -49,7 +50,7 @@ export class VisitorValidationService {
     try {
       // Get current active accounts
       const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-      const visitorsRef = collection(db, 'siteVisitors');
+      const visitorsRef = collection(db, getCollectionName('siteVisitors'));
       const q = query(
         visitorsRef,
         where('lastSeen', '>=', Timestamp.fromDate(tenMinutesAgo))
@@ -151,7 +152,7 @@ export class VisitorValidationService {
   }> {
     try {
       const hoursAgo = new Date(Date.now() - hours * 60 * 60 * 1000);
-      const visitorsRef = collection(db, 'siteVisitors');
+const visitorsRef = collection(db, 'siteVisitors');
       const q = query(
         visitorsRef,
         where('startTime', '>=', Timestamp.fromDate(hoursAgo)),

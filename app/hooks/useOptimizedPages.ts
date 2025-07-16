@@ -124,7 +124,7 @@ const useOptimizedPages = (
     }, 15000); // 15 second final timeout
     
     try {
-      // Fetch public pages only
+      // Fetch pages only
       const result = await fetchPages(
         userId,
         true, // isPublic = true

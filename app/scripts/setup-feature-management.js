@@ -3,6 +3,7 @@
 import { db } from "../firebase/database";
 import { doc, getDoc, setDoc, collection, getDocs, query, where, limit, writeBatch } from 'firebase/firestore';
 import { FeatureFlag } from "../utils/feature-flags";
+import { getCollectionName } from "../utils/environmentConfig";
 
 /**
  * Setup script for feature management
@@ -123,7 +124,7 @@ export async function setupFeatureManagement() {
 
     // Check if we have any feature overrides
     console.log('Checking feature overrides collection...');
-    const overridesRef = collection(db, 'featureOverrides');
+    const overridesRef = collection(db, getCollectionName('featureOverrides'));
     const overridesQuery = query(overridesRef, limit(1));
     const overridesSnapshot = await getDocs(overridesQuery);
 

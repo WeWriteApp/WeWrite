@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../utils/environmentConfig';
+
+// UPDATED: Now uses createdAt dates instead of customDate for Daily Notes
 
 /**
  * GET /api/daily-notes
- * 
- * Efficiently fetches pages with custom dates for daily notes carousel
- * Only returns pages that have customDate field set within the specified date range
- * 
+ *
+ * Efficiently fetches pages grouped by their creation date for daily notes carousel
+ * Returns pages organized by the date they were created (createdAt field)
+ * Updated to use creation dates instead of custom dates
+ *
  * Query parameters:
  * - userId: The user ID to fetch pages for (required)
  * - startDate: Start date in YYYY-MM-DD format (optional)
  * - endDate: End date in YYYY-MM-DD format (optional)
  */
 export async function GET(request: NextRequest) {
+  console.log('🔄 [daily-notes API] NEW VERSION - Using createdAt dates instead of customDate');
+
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -26,16 +32,16 @@ export async function GET(request: NextRequest) {
     const admin = getFirebaseAdmin();
     const adminDb = admin.firestore();
 
-    // Build query to get ALL pages for the user first, then filter for custom dates
-    // This ensures we catch pages that might have been migrated or have custom dates
+    // Build query to get ALL pages for the user first, then filter by creation date
+    // This ensures we get all pages and can group them by their creation date
     // OPTIMIZATION: Remove deleted filter from query to avoid index requirement, filter in code instead
-    let pagesQuery = adminDb.collection('pages')
+    let pagesQuery = adminDb.collection(getCollectionName('pages'))
       .where('userId', '==', userId);
 
     // If we have date range, we'll filter after getting the results
-    // This is more reliable than trying to query on customDate field directly
+    // This is more reliable than trying to query on createdAt field directly
 
-    console.log(`[daily-notes API] Querying all pages for user ${userId} (will filter deleted pages in code)`, {
+    console.log(`[daily-notes API] Querying all pages for user ${userId} (will group by creation date)`, {
       startDate,
       endDate
     });
@@ -71,12 +77,44 @@ export async function GET(request: NextRequest) {
           normalizedCreatedAt = new Date(data.createdAt.seconds * 1000).toISOString();
         }
 
+        // Extract date from createdAt for grouping
+        let createdDate = null;
+        if (normalizedCreatedAt) {
+          try {
+            const date = new Date(normalizedCreatedAt);
+            createdDate = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+            // Debug logging for first few pages
+            if (doc.id === '2FPdHEETzI9bQpQfUXos' || doc.id === 'A53fHCgw3Skn3tAhXkgP') {
+              console.log(`[daily-notes API] Processing page ${doc.id}:`, {
+                title: data.title,
+                rawCreatedAt: data.createdAt,
+                normalizedCreatedAt,
+                extractedDate: createdDate,
+                customDate: data.customDate
+              });
+            }
+          } catch (error) {
+            console.warn(`[daily-notes API] Invalid createdAt date for page ${doc.id}:`, normalizedCreatedAt);
+          }
+        } else {
+          // Debug: Log pages without createdAt
+          if (doc.id === '2FPdHEETzI9bQpQfUXos' || doc.id === 'A53fHCgw3Skn3tAhXkgP') {
+            console.log(`[daily-notes API] Page ${doc.id} has no createdAt:`, {
+              title: data.title,
+              rawCreatedAt: data.createdAt,
+              customDate: data.customDate
+            });
+          }
+        }
+
         return {
           id: doc.id,
           title: data.title || 'Untitled',
-          customDate: data.customDate,
+          customDate: data.customDate, // Keep for other uses
           lastModified: normalizedLastModified,
           createdAt: normalizedCreatedAt,
+          createdDate: createdDate, // YYYY-MM-DD format for grouping
           deleted: data.deleted || false
         };
       })
@@ -84,35 +122,46 @@ export async function GET(request: NextRequest) {
         // Filter out deleted pages
         if (page.deleted) return false;
 
-        // Include pages with customDate field
-        if (page.customDate) {
-          // Apply date range filter if specified
-          if (startDate && page.customDate < startDate) return false;
-          if (endDate && page.customDate > endDate) return false;
-          return true;
-        }
+        // Only include pages that have a valid creation date
+        if (!page.createdDate) return false;
 
-        // Include legacy pages with YYYY-MM-DD titles (for backward compatibility)
-        if (page.title && isDateFormat(page.title)) {
-          // Apply date range filter if specified
-          if (startDate && page.title < startDate) return false;
-          if (endDate && page.title > endDate) return false;
-          return true;
-        }
+        // Apply date range filter if specified
+        if (startDate && page.createdDate < startDate) return false;
+        if (endDate && page.createdDate > endDate) return false;
 
-        return false;
+        return true;
       });
 
-    console.log(`[daily-notes API] Found ${pages.length} pages with custom dates or legacy date titles`);
+    console.log(`[daily-notes API] Found ${pages.length} pages with valid creation dates`);
 
     // Debug: Show first few pages to understand what we're returning
     if (pages.length > 0) {
-      console.log('[daily-notes API] Sample pages:', pages.slice(0, 3).map(page => ({
+      console.log('[daily-notes API] Sample pages with creation dates:', pages.slice(0, 5).map(page => ({
         id: page.id,
         title: page.title,
-        customDate: page.customDate,
-        hasCustomDate: !!page.customDate
+        createdDate: page.createdDate,
+        createdAt: page.createdAt,
+        customDate: page.customDate // Show both for comparison
       })));
+    } else {
+      console.log('[daily-notes API] No pages found with valid creation dates');
+
+      // Debug: Show what we got from the raw query
+      const pagesSnapshot = await adminDb.collection(getCollectionName('pages'))
+        .where('userId', '==', userId)
+        .limit(5)
+        .get();
+
+      console.log('[daily-notes API] Raw sample pages from DB:', pagesSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          title: data.title,
+          createdAt: data.createdAt,
+          customDate: data.customDate,
+          deleted: data.deleted
+        };
+      }));
     }
 
     return NextResponse.json({

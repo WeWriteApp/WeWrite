@@ -16,6 +16,7 @@ import { extractLinksFromNodes } from "./links";
 // Notifications functionality removed
 import { recordUserActivity } from "../streaks";
 import { hasContentChangedSync } from "../../utils/diffService";
+import { getCollectionName } from "../../utils/environmentConfig";
 
 import type { PageVersion } from "../../types/database";
 
@@ -24,7 +25,7 @@ import type { PageVersion } from "../../types/database";
  */
 export const getVersionsByPageId = async (pageId: string): Promise<PageVersion[] | Error> => {
   try {
-    const pageRef = doc(db, "pages", pageId);
+const pageRef = doc(db, getCollectionName("pages"), pageId);
     const versionsRef = collection(pageRef, "versions");
     const versionsSnap = await getDocs(versionsRef);
 
@@ -52,7 +53,7 @@ export const getPageVersionById = async (pageId: string, versionId: string): Pro
       return null;
     }
 
-    const pageRef = doc(db, "pages", pageId);
+const pageRef = doc(db, getCollectionName("pages"), pageId);
     const versionRef = doc(collection(pageRef, "versions"), versionId);
     const versionSnap = await getDoc(versionRef);
 
@@ -120,7 +121,7 @@ export const getPageVersions = async (pageId: string, versionCount: number = 10)
       return [];
     }
 
-    const pageRef = doc(db, "pages", pageId);
+const pageRef = doc(db, getCollectionName("pages"), pageId);
     const versionsRef = collection(pageRef, "versions");
 
     // First try to get all versions without ordering (to avoid index requirements)
@@ -270,7 +271,7 @@ export const setCurrentVersion = async (pageId: string, versionId: string): Prom
     const { Timestamp } = await import('firebase/firestore');
 
     // Update the page document with the new current version and content
-    await setDoc(doc(db, "pages", pageId), {
+await setDoc(doc(db, getCollectionName("pages"), pageId), {
       currentVersion: versionId,
       content: versionData.content, // Restore the content from this version
       lastModified: Timestamp.now()
@@ -289,7 +290,9 @@ export const setCurrentVersion = async (pageId: string, versionId: string): Prom
  */
 export const saveNewVersion = async (pageId: string, data: any): Promise<any> => {
   try {
-    console.log('saveNewVersion called with pageId:', pageId);
+    console.log('🚨 ACTIVITY DEBUG: saveNewVersion called with pageId:', pageId);
+    console.log('🚨 ACTIVITY DEBUG: saveNewVersion data:', { ...data, content: '(content omitted)' });
+    console.log('🚨 ACTIVITY DEBUG: Starting version save process...');
 
     // Validate content to prevent saving empty versions
     if (!data.content) {
@@ -342,7 +345,7 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
     }
 
     // Get the current page to find the current version
-    const pageDoc = await getDoc(doc(db, "pages", pageId));
+const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
     if (!pageDoc.exists()) {
       console.error("Page not found:", pageId);
       return null;
@@ -350,6 +353,7 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
 
     const pageData = pageDoc.data();
     const currentVersionId = pageData.currentVersion;
+    const isNewPage = !currentVersionId; // True if this is the first version of the page
 
     // Enhanced no-op detection: Check if content has changed using centralized logic
     let isNoOpEdit = false;
@@ -387,92 +391,58 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
       isNoOp: isNoOpEdit // Flag to identify no-op edits for filtering
     };
 
+    // Calculate diff data BEFORE updating the page
+    let diffResult = null;
+    try {
+      const { calculateDiff } = await import('../../utils/diffService');
+      // Get current page content for diff calculation
+      const pageRef = doc(db, getCollectionName("pages"), pageId);
+      const pageSnap = await getDoc(pageRef);
+      const currentPageContent = pageSnap.exists() ? pageSnap.data().content || '' : '';
+
+      diffResult = await calculateDiff(contentString, currentPageContent);
+      console.log("Diff calculated before page update:", {
+        added: diffResult.added,
+        removed: diffResult.removed,
+        hasPreview: !!diffResult.preview
+      });
+    } catch (diffError) {
+      console.error("Error calculating diff (non-fatal):", diffError);
+    }
+
     // Create the new version document
-    const versionRef = await addDoc(collection(db, "pages", pageId, "versions"), versionData);
+const versionRef = await addDoc(collection(db, getCollectionName("pages"), pageId, "versions"), versionData);
     console.log("Created new version with ID:", versionRef.id);
 
     // Update the page document with the new current version and content
-    await setDoc(doc(db, "pages", pageId), {
+await setDoc(doc(db, getCollectionName("pages"), pageId), {
       currentVersion: versionRef.id,
       content: contentString, // Store content directly on page for faster access
-      lastModified: now
+      lastModified: now,
+      // Store diff information for recent activity display (with safety checks)
+      lastDiff: diffResult ? {
+        added: diffResult.added || 0,
+        removed: diffResult.removed || 0,
+        hasChanges: (diffResult.added > 0 || diffResult.removed > 0) || isNewPage,
+        preview: diffResult.preview || null
+      } : null
     }, { merge: true });
 
-    // Record user activity for streak tracking
-    try {
-      await recordUserActivity(data.userId);
-      console.log("Recorded user activity for streak tracking");
-    } catch (activityError) {
-      console.error("Error recording user activity (non-fatal):", activityError);
-      // Don't fail save operation if activity recording fails
-    }
+    // Note: User activity for streak tracking is handled on the client side
 
-    // Create activity record with pre-computed diff data
-    try {
-      // Get page data for activity creation
-      const pageRef = doc(db, "pages", pageId);
-      const pageSnap = await getDoc(pageRef);
-
-      if (pageSnap.exists()) {
-        const pageData = pageSnap.data();
-
-        // Calculate diff data using the centralized diff service
-        const { diff } = await import('../../utils/diffService');
-        const diffResult = await diff(contentString, pageData.content || '');
-
-        // Skip if no changes and this isn't a new page
-        const isNewPage = !currentVersionId;
-        console.log("Activity creation debug:", {
-          isNewPage,
-          diffAdded: diffResult.added,
-          diffRemoved: diffResult.removed,
-          hasChanges: diffResult.added > 0 || diffResult.removed > 0,
-          currentVersionId
-        });
-
-        if (!isNewPage && !diffResult.added && !diffResult.removed) {
-          console.log("Skipping activity creation - no meaningful changes detected");
-        } else {
-          // Create activity record directly in Firestore
-          const activityData = {
-            pageId,
-            pageName: pageData.title || 'Untitled',
-            userId: data.userId,
-            username: data.username || 'Anonymous',
-            timestamp: Timestamp.now(),
-            diff: {
-              added: diffResult.added,
-              removed: diffResult.removed,
-              hasChanges: diffResult.added > 0 || diffResult.removed > 0 || isNewPage
-            },
-            isPublic: pageData.isPublic || false,
-            isNewPage,
-            versionId: versionRef.id
-          };
-
-          // Store in activities collection
-          const activitiesRef = collection(db, 'activities');
-          const activityDocRef = await addDoc(activitiesRef, activityData);
-
-          console.log("Created activity record for version save", {
-            activityId: activityDocRef.id,
-            pageId,
-            added: diffResult.added,
-            removed: diffResult.removed,
-            hasChanges: activityData.diff.hasChanges
-          });
-        }
-      }
-    } catch (activityError) {
-      console.error("Error creating activity record (non-fatal):", activityError);
-      // Don't fail save operation if activity recording fails
-    }
+    // Activity creation removed - now using recent pages with diff data stored on pages
 
     console.log("Successfully saved new version and updated page");
-    return versionRef.id;
+    return {
+      success: true,
+      versionId: versionRef.id
+    };
 
   } catch (error) {
-    console.error("Error saving new version:", error);
-    return null;
+    console.error("🚨 ACTIVITY DEBUG: Error saving new version:", error);
+    return {
+      success: false,
+      error: error.message
+    };
   }
 };

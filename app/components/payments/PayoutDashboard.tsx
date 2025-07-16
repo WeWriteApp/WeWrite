@@ -512,7 +512,7 @@ export default function PayoutDashboard() {
               </div>
 
               <div className="space-y-3">
-                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border-theme-strong">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-green-800 dark:text-green-200">
                       Net Payout Amount
@@ -528,7 +528,7 @@ export default function PayoutDashboard() {
                 </div>
 
                 {!meetsMinimumThreshold(feeBreakdown.grossEarnings, 'usd', payoutMethod) && (
-                  <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-theme-strong">
                     <div className="text-sm text-yellow-800 dark:text-yellow-200">
                       <strong>Minimum not met:</strong> You need at least {formatCurrency(WEWRITE_FEE_STRUCTURE.minimumPayoutThreshold)} after fees to request a payout.
                     </div>
@@ -537,7 +537,7 @@ export default function PayoutDashboard() {
 
                 {/* Risk Assessment Warnings */}
                 {riskAssessment && !riskAssessment.canPayout && (
-                  <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-theme-strong">
                     <div className="text-sm text-red-800 dark:text-red-200">
                       <strong>Payout Blocked:</strong>
                       <ul className="mt-1 list-disc list-inside">
@@ -551,7 +551,7 @@ export default function PayoutDashboard() {
 
                 {/* Protection Warnings */}
                 {riskAssessment && riskAssessment.canPayout && riskAssessment.riskLevel !== 'low' && (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-theme-strong">
                     <div className="text-sm text-blue-800 dark:text-blue-200">
                       <strong>Security Notice:</strong> {riskAssessment.recommendedAction}
                     </div>
@@ -712,10 +712,10 @@ export default function PayoutDashboard() {
               <div className="font-medium text-sm">Payout Method</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                  className={`p-3 border-theme-strong rounded-lg cursor-pointer transition-colors ${
                     payoutMethod === 'standard'
                       ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/50'
+                      : 'hover:border-primary/50'
                   }`}
                   onClick={() => {
                     setPayoutMethod('standard');
@@ -734,10 +734,10 @@ export default function PayoutDashboard() {
                 </div>
 
                 <div
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                  className={`p-3 border-theme-strong rounded-lg cursor-pointer transition-colors ${
                     payoutMethod === 'instant'
                       ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/50'
+                      : 'hover:border-primary/50'
                   }`}
                   onClick={() => {
                     setPayoutMethod('instant');
@@ -782,7 +782,7 @@ export default function PayoutDashboard() {
               </div>
 
               {/* Additional Information */}
-              <div className="pt-3 border-t border-border/50">
+              <div className="pt-3 border-t border-theme-medium">
                 <div className="text-xs text-muted-foreground space-y-1">
                   <div>• Automatic payouts are processed on the 1st of each month if your balance meets the minimum threshold</div>
                   <div>• You can still request manual payouts at any time using the "Request Payout Now" button</div>
@@ -795,7 +795,7 @@ export default function PayoutDashboard() {
             </div>
 
             {/* Status Information */}
-            <div className="flex items-start gap-3 p-4 border rounded-lg">
+            <div className="flex items-start gap-3 p-4 border-theme-strong rounded-lg">
               {preferences.autoPayoutEnabled ? (
                 <>
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
@@ -842,7 +842,7 @@ export default function PayoutDashboard() {
           ) : (
             <div className="space-y-3">
               {earnings.map((earning) => (
-                <div key={earning.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={earning.id} className="flex items-center justify-between p-3 border-theme-strong rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium">

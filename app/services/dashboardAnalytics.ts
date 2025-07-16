@@ -12,6 +12,7 @@ import {
 import { db } from '../firebase/database/core';
 import { format, eachDayOfInterval, eachHourOfInterval, startOfDay, endOfDay, startOfHour } from 'date-fns';
 import { AnalyticsAggregationService } from './analyticsAggregation';
+import { getCollectionName } from "../utils/environmentConfig";
 
 // Cache configuration
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -219,8 +220,7 @@ export class DashboardAnalyticsService {
       const { startDate, endDate } = dateRange;
       const timeConfig = getTimeIntervals(dateRange, granularity);
 
-      // Query users collection for accounts created in date range
-      const usersRef = collection(db, 'users');
+const usersRef = collection(db, 'users');
 
       // Since we may not have the right indexes and createdAt can be stored as either
       // ISO string or Timestamp, let's use a simpler approach: get all users and filter in memory
@@ -448,8 +448,7 @@ export class DashboardAnalyticsService {
       const { startDate, endDate } = dateRange;
       const timeConfig = getTimeIntervals(dateRange, granularity);
 
-      // Query pages collection for pages created in date range
-      const pagesRef = collection(db, 'pages');
+const pagesRef = collection(db, 'pages');
 
       // Optimized query approach - avoid complex compound queries
       // Use simpler query without the deleted field to avoid index complexity
@@ -756,8 +755,7 @@ export class DashboardAnalyticsService {
       });
 
       // Use a simpler approach: query pages by lastModified date
-      // This avoids the need for complex subcollection queries
-      const pagesRef = collection(db, 'pages');
+const pagesRef = collection(db, 'pages');
 
       // Optimized query for edits analytics
       const q = query(

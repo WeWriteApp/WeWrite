@@ -5,10 +5,11 @@ import { PageActions } from "./PageActions";
 import WordCounter from "../editor/WordCounter";
 import PageStats from "./PageStats";
 import CustomDateField from "./CustomDateField";
+import LocationField from "./LocationField";
 import dynamic from "next/dynamic";
 import { Button } from "../ui/button";
 import { Reply } from "lucide-react";
-import EditorActionButtons from "../editor/EditorActionButtons";
+
 
 // Dynamically import AddToPageButton to avoid SSR issues
 const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
@@ -197,6 +198,40 @@ export default function PageFooter({
               console.log('Custom date updated successfully to:', newDate);
             } catch (error) {
               console.error('Error updating custom date:', error);
+              // TODO: Show user-friendly error message
+            }
+          }}
+        />
+      </div>
+
+      {/* Location Field - show in both edit and view modes for all pages */}
+      <div className="mb-6">
+        <LocationField
+          location={page.location}
+          canEdit={isOwner}
+          onLocationChange={async (newLocation) => {
+            try {
+              const response = await fetch(`/api/pages/${page.id}/location`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ location: newLocation }),
+              });
+
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update location');
+              }
+
+              // Update the page object to reflect the change
+              if (page) {
+                page.location = newLocation;
+              }
+
+              console.log('Location updated successfully');
+            } catch (error) {
+              console.error('Error updating location:', error);
               // TODO: Show user-friendly error message
             }
           }}

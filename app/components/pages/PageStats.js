@@ -51,8 +51,8 @@ export default function PageStats({
 
   const accentColorValue = getAccentColorValue();
 
-  const handleViewHistory = () => {
-    router.push(`/${pageId}/history`);
+  const handleViewActivity = () => {
+    router.push(`/${pageId}/activity`);
   };
 
 
@@ -94,11 +94,11 @@ export default function PageStats({
       {/* Recent Changes Card */}
       <div
         className="flex items-center justify-between p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm cursor-pointer hover:bg-muted/50 transition-colors"
-        onClick={handleViewHistory}
+        onClick={handleViewActivity}
       >
         <div className="flex items-center gap-2">
           <Clock className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm font-medium">Recent changes</span>
+          <span className="text-sm font-medium">Page activity</span>
         </div>
 
         <div className="flex items-center gap-2">

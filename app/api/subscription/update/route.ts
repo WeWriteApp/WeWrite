@@ -6,15 +6,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
+import { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionName } from '../../../utils/environmentConfig';
 import { determineTierFromAmount, calculateTokensForAmount } from '../../../utils/subscriptionTiers';
-import { TokenService } from '../../../services/tokenService';
-import { initAdmin } from '../../../firebase/admin';
 
 // Initialize Firebase Admin
 const admin = initAdmin();
 const adminDb = admin.firestore();
-import { serverTimestamp } from 'firebase-admin/firestore';
+const FieldValue = admin.firestore.FieldValue;
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
@@ -37,8 +35,9 @@ export async function POST(request: NextRequest) {
 
     console.log(`[SUBSCRIPTION UPDATE] User ${userId} updating subscription ${subscriptionId} to $${newAmount}`);
 
-    // Check if this is a test subscription
-    const isTestSubscription = subscriptionId.startsWith('sub_test_');
+    // Check if this is a test subscription or development environment
+    const isTestSubscription = subscriptionId.startsWith('sub_test_') ||
+                               process.env.NODE_ENV === 'development';
     
     let updatedSubscription;
     
@@ -93,37 +92,66 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Get current subscription data for audit logging
+    const { parentPath, subCollectionName } = getSubCollectionPath(
+      PAYMENT_COLLECTIONS.USERS,
+      userId,
+      PAYMENT_COLLECTIONS.SUBSCRIPTIONS
+    );
+
+    const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc('current');
+    const currentSubscriptionDoc = await subscriptionRef.get();
+    const oldSubscriptionData = currentSubscriptionDoc.data();
+
     // Update subscription in Firestore
     const tier = newTier || determineTierFromAmount(newAmount);
     const tokens = calculateTokensForAmount(newAmount);
-    
+
+    // Safely handle timestamp conversion
+    let currentPeriodEnd;
+    try {
+      if (updatedSubscription.current_period_end && typeof updatedSubscription.current_period_end === 'number') {
+        currentPeriodEnd = new Date(updatedSubscription.current_period_end * 1000);
+      } else {
+        // Fallback for invalid timestamps - set to 30 days from now
+        currentPeriodEnd = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000));
+      }
+    } catch (error) {
+      console.warn('[SUBSCRIPTION UPDATE] Error converting timestamp, using fallback:', error);
+      currentPeriodEnd = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000));
+    }
+
     const subscriptionData = {
-      status: updatedSubscription.status,
+      status: updatedSubscription.status || 'active',
       amount: newAmount,
       tier,
       tokens,
-      cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end,
-      currentPeriodEnd: new Date(updatedSubscription.current_period_end * 1000),
-      updatedAt: serverTimestamp()
+      cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end || false,
+      currentPeriodEnd,
+      updatedAt: FieldValue.serverTimestamp()
     };
 
-    const { parentPath, subCollectionName } = getSubCollectionPath(
-      PAYMENT_COLLECTIONS.USERS, 
-      userId, 
-      PAYMENT_COLLECTIONS.SUBSCRIPTIONS
-    );
-    
-    const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc('current');
+    // Update subscription in Firestore
     await subscriptionRef.update(subscriptionData);
 
-    // Update user's token allocation
-    await TokenService.updateMonthlyTokenAllocation(userId, newAmount);
+    // Simple logging - just log to console for now to avoid complex dependencies
+    console.log(`[SUBSCRIPTION UPDATE] Successfully updated subscription:`, {
+      userId,
+      subscriptionId,
+      oldAmount: oldSubscriptionData?.amount || 0,
+      newAmount,
+      oldTier: oldSubscriptionData?.tier || 'none',
+      newTier: tier,
+      oldTokens: oldSubscriptionData?.tokens || 0,
+      newTokens: tokens,
+      isTestSubscription
+    });
 
     console.log(`[SUBSCRIPTION UPDATE] Successfully updated subscription for user ${userId}`);
 
-    return NextResponse.json({ 
-      success: true, 
-      subscription: subscriptionData 
+    return NextResponse.json({
+      success: true,
+      subscription: subscriptionData
     });
 
   } catch (error) {

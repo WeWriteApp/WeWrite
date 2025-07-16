@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { getUserIdFromRequest } from '../../auth-helper';
+import { getCollectionName } from "../../../utils/environmentConfig";
 
 /**
  * GET /api/tokens/page-stats?pageId=xxx
@@ -30,14 +31,12 @@ export async function GET(request: NextRequest) {
     let totalPledgedTokens = 0;
 
     try {
-      // Query all token balances to find allocations to this page
-      const tokenBalancesSnapshot = await getDocs(collection(db, 'tokenBalances'));
+const tokenBalancesSnapshot = await getDocs(collection(db, getCollectionName('tokenBalances')));
 
       for (const userDoc of tokenBalancesSnapshot.docs) {
         const userId = userDoc.id;
 
-        // Check if this user has allocations to the page
-        const allocationsRef = collection(db, 'tokenBalances', userId, 'pageAllocations');
+const allocationsRef = collection(db, getCollectionName("tokenBalances"), userId, 'pageAllocations');
         const userAllocationsQuery = query(
           allocationsRef,
           where('pageId', '==', pageId),

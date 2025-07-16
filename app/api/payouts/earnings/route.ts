@@ -22,6 +22,9 @@ import {
 import { StripePayoutService } from '../../../services/stripePayoutService';
 import { TransactionTrackingService } from '../../../services/transactionTrackingService';
 import { FinancialUtils } from '../../../types/financial';
+import { getCollectionName } from "../../../utils/environmentConfig";
+import { getMinimumPayoutThreshold } from '../../../utils/feeCalculations';
+import { payoutRateLimiter } from '../../../utils/rateLimiter';
 
 // Fee calculation function (should match PayoutFeeBreakdown component)
 function calculatePayoutFees(grossAmount: number) {
@@ -110,12 +113,10 @@ export async function GET(request: NextRequest) {
 
     if (!type || type === 'payouts') {
       // Get recent payouts
-      const payoutsQuery = query(
-        collection(db, 'payouts'),
-        where('recipientId', '==', recipientId),
-        orderBy('scheduledAt', 'desc'),
-        limit(pageSize)
-      );
+      const payoutsQuery = db.collection(getCollectionName('payouts'))
+        .where('recipientId', '==', recipientId)
+        .orderBy('scheduledAt', 'desc')
+        .limit(pageSize);
 
       const payoutsSnapshot = await getDocs(payoutsQuery);
       payouts = payoutsSnapshot.docs.map(payoutDoc => {
@@ -168,6 +169,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Apply rate limiting for payout requests
+    const rateLimitResult = await payoutRateLimiter.checkLimit(userId);
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json({
+        error: 'Rate limit exceeded',
+        message: `Too many payout requests. You can make ${rateLimitResult.remaining} more requests. Try again after ${new Date(rateLimitResult.resetTime).toISOString()}`,
+        retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+      }, {
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': '5',
+          'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString(),
+          'Retry-After': Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000).toString()
+        }
+      });
+    }
+
     const body = await request.json();
     const { action, period } = body;
 
@@ -181,9 +200,14 @@ export async function POST(request: NextRequest) {
         }, { status: 404 });
       }
 
-      if (recipient.availableBalance < recipient.payoutPreferences.minimumThreshold) {
+      // Use the higher of system minimum or user preference
+      const systemMinimum = getMinimumPayoutThreshold();
+      const userMinimum = recipient.payoutPreferences.minimumThreshold;
+      const effectiveMinimum = Math.max(systemMinimum, userMinimum);
+
+      if (recipient.availableBalance < effectiveMinimum) {
         return NextResponse.json({
-          error: `Minimum payout threshold is $${recipient.payoutPreferences.minimumThreshold}`
+          error: `Minimum payout threshold is $${effectiveMinimum} (system minimum: $${systemMinimum}, your preference: $${userMinimum})`
         }, { status: 400 });
       }
 
@@ -210,8 +234,7 @@ export async function POST(request: NextRequest) {
         }
       };
 
-      // Save payout record
-      await setDoc(doc(db, 'payouts', payoutId), payout);
+await setDoc(doc(db, getCollectionName("payouts"), payoutId), payout);
 
       // Track the payout request
       const trackingResult = await TransactionTrackingService.trackPayoutRequest(

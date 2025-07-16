@@ -12,7 +12,7 @@ export async function getServerActivityData(limitCount = 30) {
     const { db, rtdb } = initServerAdmin();
     console.log('Server Admin initialized with Firestore and RTDB instances');
 
-    // Query to get recent pages (only public pages)
+    // Query to get recent pages (only pages)
     // TEMPORARY: Remove deleted filter to avoid failed-precondition errors
     const pagesQuery = db.collection("pages")
       .where("isPublic", "==", true)
@@ -107,11 +107,14 @@ async function getUsernameById(db, rtdb, userId) {
 
     let username = null;
 
+    // Import environment config
+    const { getCollectionName } = await import('../../utils/environmentConfig');
+
     // Try to get from Firestore first
-    const userDoc = await db.collection("users").doc(userId).get();
+    const userDoc = await db.collection(getCollectionName("users")).doc(userId).get();
     if (userDoc.exists) {
       const userData = userDoc.data();
-      username = userData.username || userData.displayName;
+      username = userData.username;
     }
 
     // Fallback to RTDB if Firestore doesn't have the username and RTDB is available
@@ -122,7 +125,7 @@ async function getUsernameById(db, rtdb, userId) {
 
         if (snapshot.exists()) {
           const userData = snapshot.val();
-          username = userData.username || userData.displayName || (userData.email ? userData.email.split('@')[0] : null);
+          username = userData.username || (userData.email ? userData.email.split('@')[0] : null);
         }
       } catch (error) {
         console.warn(`RTDB not available for user lookup: ${error.message}`);

@@ -12,6 +12,7 @@ import { getStripeSecretKey, getStripeWebhookSecret } from '../../../utils/strip
 import { db } from '../../../firebase/database/core';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { calculateTokensForAmount, determineTierFromAmount } from '../../../utils/subscriptionTiers';
+import { getCollectionName } from "../../../utils/environmentConfig";
 
 const stripe = new Stripe(getStripeSecretKey() || '', {
   apiVersion: '2024-12-18.acacia'
@@ -109,7 +110,7 @@ async function handleSubscriptionEvent(subscription: Stripe.Subscription) {
 
     // Update user's subscription
     await setDoc(
-      doc(db, 'users', userId, 'subscriptions', 'current'),
+      doc(db, getCollectionName("users"), userId, 'subscriptions', 'current'),
       subscriptionData,
       { merge: true }
     );
@@ -134,7 +135,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
     // Update subscription status to canceled
     await setDoc(
-      doc(db, 'users', userId, 'subscriptions', 'current'),
+      doc(db, getCollectionName("users"), userId, 'subscriptions', 'current'),
       {
         status: 'canceled',
         canceledAt: new Date(),
@@ -169,7 +170,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 
     // Update subscription with successful payment info
     await setDoc(
-      doc(db, 'users', userId, 'subscriptions', 'current'),
+      doc(db, getCollectionName("users"), userId, 'subscriptions', 'current'),
       {
         status: 'active',
         lastPaymentAt: new Date(invoice.created * 1000),
@@ -205,8 +206,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     }
 
     // Update subscription with failed payment info
-    await setDoc(
-      doc(db, 'users', userId, 'subscriptions', 'current'),
+doc(db, getCollectionName("users"), userId, 'subscriptions', 'current'),
       {
         lastFailedPaymentAt: new Date(invoice.created * 1000),
         failureCount: (invoice.attempt_count || 1),

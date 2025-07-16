@@ -25,14 +25,13 @@ import type { User } from "../../types/database";
  */
 export async function getUserPages(
   userId: string,
-  includePrivate: boolean = false,
   currentUserId: string | null = null,
   lastVisible: any = null,
   pageSize: number = 200
 ) {
   return await trackQueryPerformance('getUserPages', async () => {
     try {
-      // Check cache first (only for public pages)
+      // Check cache first (only for pages)
       if (!includePrivate && !lastVisible) {
         const cacheKey = generateCacheKey('userPages', userId, 'public');
         const cachedData = getCacheItem(cacheKey);
@@ -44,7 +43,7 @@ export async function getUserPages(
       }
 
       // Get user's own pages from Firestore with field selection
-      const pagesRef = collection(db, "pages");
+      const pagesRef = collection(db, getCollectionName("pages"));
       let pageQuery;
 
       // Define the fields we need to reduce data transfer
@@ -54,7 +53,7 @@ export async function getUserPages(
       // Define page metadata fields to reduce document size by 60-70%
       const pageMetadataFields = [
         'title', 'isPublic', 'userId', 'lastModified', 'createdAt',
-        'username', 'displayName', 'totalPledged', 'pledgeCount'
+        'username', 'totalPledged', 'pledgeCount'
       ];
 
       // Build the query with cursor-based pagination and field selection (exclude deleted pages)
@@ -138,23 +137,29 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
       return null;
     }
 
-    // Check cache first
-    const cacheKey = generateCacheKey('userProfile', userId);
-    const cachedData = getCacheItem(cacheKey);
+    // Check cache first (only on client side)
+    const isServer = typeof window === 'undefined';
+    if (!isServer) {
+      const cacheKey = generateCacheKey('userProfile', userId);
+      const cachedData = getCacheItem(cacheKey);
 
-    if (cachedData) {
-      console.log(`Using cached user profile for ${userId}`);
-      return cachedData;
+      if (cachedData) {
+        console.log(`Using cached user profile for ${userId}`);
+        return cachedData;
+      }
     }
 
     const userDoc = await getDoc(doc(db, getCollectionName("users"), userId));
     
     if (userDoc.exists()) {
       const userData = { id: userDoc.id, ...userDoc.data() } as User;
-      
-      // Cache the result with aggressive TTL
-      setCacheItem(cacheKey, userData, 3 * 60 * 60 * 1000); // Cache for 3 hours
-      
+
+      // Cache the result with aggressive TTL (only on client side)
+      if (!isServer) {
+        const cacheKey = generateCacheKey('userProfile', userId);
+        setCacheItem(cacheKey, userData, 3 * 60 * 60 * 1000); // Cache for 3 hours
+      }
+
       return userData;
     }
     
@@ -203,7 +208,7 @@ export const getUserProfiles = async (userIds: string[]): Promise<Record<string,
         const batch = uncachedIds.slice(i, i + batchSize);
 
         const batchQuery = query(
-          collection(db, 'users'),
+          collection(db, getCollectionName('users')),
           where('__name__', 'in', batch)
         );
         
@@ -237,15 +242,15 @@ export const getUserStats = async (userId: string) => {
     }
 
     // This could be expanded to include more detailed statistics
-    const userDoc = await getDoc(doc(db, "users", userId));
+    const userDoc = await getDoc(doc(db, getCollectionName("users"), userId));
     
     if (userDoc.exists()) {
       const userData = userDoc.data();
       
       return {
         totalPages: userData.totalPages || 0,
-        publicPages: userData.publicPages || 0,
-        privatePages: userData.privatePages || 0,
+        
+        
         totalPledgesReceived: userData.totalPledgesReceived || 0,
         totalEarnings: userData.totalEarnings || 0,
         joinedAt: userData.createdAt || userData.joinedAt,

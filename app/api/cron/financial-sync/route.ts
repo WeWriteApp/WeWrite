@@ -11,6 +11,7 @@ import { FinancialReconciliationService } from '../../../services/financialRecon
 import { FinancialUtils } from '../../../types/financial';
 import { db } from '../../../firebase/config';
 import { collection, query, limit, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { getCollectionName } from "../../../utils/environmentConfig";
 
 export async function POST(request: NextRequest) {
   const correlationId = FinancialUtils.generateCorrelationId();
@@ -228,10 +229,7 @@ async function processFullSynchronization(
 
   try {
     // Get all users with token balances (indicating financial activity)
-    const balancesQuery = query(
-      collection(db, 'writerTokenBalances'),
-      limit(batchSize)
-    );
+const balancesQuery = db.collection(getCollectionName('writerTokenBalances')).limit(batchSize);
     
     const balancesSnapshot = await getDocs(balancesQuery);
     
@@ -296,10 +294,7 @@ async function processIncrementalSynchronization(
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     // Query recent token allocations to find active users
-    const allocationsQuery = query(
-      collection(db, 'tokenAllocations'),
-      limit(batchSize)
-    );
+    const allocationsQuery = db.collection(getCollectionName('tokenAllocations')).limit(batchSize);
     
     const allocationsSnapshot = await getDocs(allocationsQuery);
     const activeUserIds = new Set<string>();

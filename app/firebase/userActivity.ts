@@ -16,6 +16,7 @@ import {
   type QueryDocumentSnapshot
 } from "firebase/firestore";
 import { getCacheItem, setCacheItem, generateCacheKey } from "../utils/cacheUtils";
+import { getCollectionName } from "../utils/environmentConfig";
 
 // Type definitions for user activity operations
 interface ActivityData {
@@ -72,7 +73,7 @@ export const getUserComprehensiveActivityLast24Hours = async (userId: string): P
     // 1. Get page creation/editing activity
     try {
       const pagesQuery = query(
-        collection(db, "pages"),
+        collection(db, getCollectionName("pages")),
         where("userId", "==", userId),
         where("lastModified", ">=", Timestamp.fromDate(twentyFourHoursAgo)),
         orderBy("lastModified", "desc")
@@ -95,7 +96,7 @@ export const getUserComprehensiveActivityLast24Hours = async (userId: string): P
             let isNoOpEdit = false;
             if (pageData.currentVersion) {
               try {
-                const versionDocRef = doc(db, "pages", pageId, "versions", pageData.currentVersion);
+const versionDocRef = doc(db, getCollectionName("pages"), pageId, "versions", pageData.currentVersion);
                 const versionDoc = await getDoc(versionDocRef);
                 if (versionDoc.exists()) {
                   const versionData = versionDoc.data();
@@ -128,7 +129,7 @@ export const getUserComprehensiveActivityLast24Hours = async (userId: string): P
     try {
       // First get all pages by this user
       const userPagesQuery = query(
-        collection(db, "pages"),
+        collection(db, getCollectionName("pages")),
         where("userId", "==", userId)
       );
       const userPagesSnapshot = await getDocs(userPagesQuery);
@@ -189,7 +190,7 @@ export const getUserComprehensiveActivityLast24Hours = async (userId: string): P
       // The follows collection has documents with followerId, followedId, and followedAt
       // Note: This requires a Firestore index on (followedId, followedAt)
       const followsQuery = query(
-        collection(db, "follows"),
+        collection(db, getCollectionName("follows")),
         where("followedId", "==", userId),
         where("followedAt", ">=", Timestamp.fromDate(twentyFourHoursAgo)),
         orderBy("followedAt", "desc")
@@ -264,7 +265,7 @@ export const getUserActivityLast24Hours = async (userId: string): Promise<Activi
 
     // Query for pages edited/created by this user in the last 24 hours
     const pagesQuery = query(
-      collection(db, "pages"),
+      collection(db, getCollectionName("pages")),
       where("userId", "==", userId),
       where("lastModified", ">=", twentyFourHoursAgo),
       orderBy("lastModified", "desc")
@@ -289,7 +290,7 @@ export const getUserActivityLast24Hours = async (userId: string): Promise<Activi
           let isNoOpEdit = false;
           if (pageData.currentVersion) {
             try {
-              const versionDocRef = doc(db, "pages", pageId, "versions", pageData.currentVersion);
+const versionDocRef = doc(db, getCollectionName("pages"), pageId, "versions", pageData.currentVersion);
               const versionDoc = await getDoc(versionDocRef);
               if (versionDoc.exists()) {
                 const versionData = versionDoc.data();
@@ -325,7 +326,7 @@ export const getUserActivityLast24Hours = async (userId: string): Promise<Activi
 
       // Query for versions created by this user in the last 24 hours
       const versionsQuery = query(
-        collection(db, "pages", pageId, "versions"),
+collection(db, getCollectionName("pages"), pageId, "versions"),
         where("userId", "==", userId)
       );
 
@@ -400,7 +401,7 @@ export const getGroupUserActivityLast24Hours = async (userId: string, groupId: s
 
     // Query for pages edited/created by this user in the last 24 hours that belong to the group
     const pagesQuery = query(
-      collection(db, "pages"),
+      collection(db, getCollectionName("pages")),
       where("userId", "==", userId),
       where("groupId", "==", groupId),
       where("lastModified", ">=", twentyFourHoursAgo),
@@ -505,7 +506,7 @@ export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promis
         const twentyFourHoursAgoTimestamp = Timestamp.fromDate(twentyFourHoursAgo);
 
         const pagesQuery = query(
-          collection(db, "pages"),
+          collection(db, getCollectionName("pages")),
           where("userId", "in", batchUserIds),
           where("lastModified", ">=", twentyFourHoursAgoTimestamp),
           orderBy("lastModified", "desc")
@@ -519,7 +520,7 @@ export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promis
         const twentyFourHoursAgoISO = twentyFourHoursAgo.toISOString();
 
         const pagesQueryISO = query(
-          collection(db, "pages"),
+          collection(db, getCollectionName("pages")),
           where("userId", "in", batchUserIds),
           where("lastModified", ">=", twentyFourHoursAgoISO),
           orderBy("lastModified", "desc")
@@ -573,7 +574,7 @@ export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promis
       try {
         // Query for pages by this user
         const userPagesQuery = query(
-          collection(db, "pages"),
+          collection(db, getCollectionName("pages")),
           where("userId", "==", userId),
           limit(20) // Limit to 20 most recent pages per user to avoid excessive queries
         );
@@ -590,14 +591,14 @@ export const getBatchUserActivityLast24Hours = async (userIds: string[]): Promis
           try {
             // First try with Firestore Timestamp
             versionsQuery = query(
-              collection(db, "pages", pageId, "versions"),
+collection(db, getCollectionName("pages"), pageId, "versions"),
               where("userId", "==", userId),
               where("createdAt", ">=", Timestamp.fromDate(twentyFourHoursAgo))
             );
           } catch (timestampError) {
             // Fallback to ISO string
             versionsQuery = query(
-              collection(db, "pages", pageId, "versions"),
+collection(db, getCollectionName("pages"), pageId, "versions"),
               where("userId", "==", userId),
               where("createdAt", ">=", twentyFourHoursAgo.toISOString())
             );

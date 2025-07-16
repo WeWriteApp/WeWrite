@@ -16,7 +16,7 @@ import { createReplyAttribution } from "../utils/linkUtils";
 import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 import { useDateFormat } from '../contexts/DateFormatContext';
 import PageHeader from "../components/pages/PageHeader";
-import PageEditor from "../components/editor/PageEditor";
+import Editor from "../components/editor/Editor";
 
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "../components/utils/UnsavedChangesDialog";
@@ -28,6 +28,7 @@ import SlideUpPage from "../components/ui/slide-up-page";
 import { NewPageSkeleton } from "../components/skeletons/PageEditorSkeleton";
 import { toast } from "../components/ui/use-toast";
 import CustomDateField from "../components/pages/CustomDateField";
+import LocationField from "../components/pages/LocationField";
 import { isExactDateFormat } from "../utils/dateUtils";
 
 /**
@@ -55,7 +56,7 @@ const isExactDateFormat = (title: string): boolean => {
  */
 interface PageData {
   title: string;
-  isPublic: boolean;
+
   location: any;
   content: string;
   userId: string;
@@ -89,7 +90,6 @@ function NewPageContent() {
   const [isEditing] = useState(true); // Always in editing mode for new pages
   const [editorState, setEditorState] = useState<EditorNode[]>([{ type: "paragraph", children: [{ text: "" }] }]);
   const [title, setTitle] = useState<string>("");
-  const [isPublic, setIsPublic] = useState<boolean>(true);
   const [location, setLocation] = useState<any>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
@@ -204,7 +204,7 @@ function NewPageContent() {
     const mockPage = {
       id: null,
       title: title,
-      isPublic: isPublic,
+
       location: location,
       userId: currentAccount?.uid || 'anonymous',
       username: currentAccount?.username || currentAccount?.displayName || 'Anonymous',
@@ -213,7 +213,7 @@ function NewPageContent() {
       isReply: isReply
     };
     setPage(mockPage);
-  }, [title, isPublic, location, currentAccount, editorState, isReply]);
+  }, [title, location, currentAccount, editorState, isReply]);
 
   // Initialize content based on page type
   useEffect(() => {
@@ -475,9 +475,11 @@ function NewPageContent() {
       let pageTitle = title || 'Untitled';
       let customDate = intendedCustomDate; // Use the date from daily notes carousel if set
 
+
+
       const data: PageData = {
         title: pageTitle,
-        isPublic,
+
         location,
         content: JSON.stringify(finalContent),
         userId,
@@ -542,10 +544,43 @@ function NewPageContent() {
 
         return true;
       } else {
-        // Normal page creation for verified users
-        console.log('🔵 DEBUG: About to call createPage with data:', { ...data, content: '(content omitted)' });
-        const res = await createPage(data);
-        console.log('🔵 DEBUG: createPage returned:', res);
+        // Normal page creation for verified users - use API route instead of direct Firestore
+        console.log('🔵 DEBUG: About to call API route with data:', { ...data, content: '(content omitted)' });
+
+        let res = null;
+        try {
+          const response = await fetch('/api/pages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+          });
+
+          if (!response.ok) {
+            throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+          }
+
+          const result = await response.json();
+          console.log('🔵 DEBUG: API response:', result);
+
+          res = result.success ? result.data.id : null;
+          console.log('🔵 DEBUG: Extracted pageId:', res);
+
+        } catch (apiError) {
+          console.error('🔴 DEBUG: API request failed:', apiError);
+          setIsSaving(false);
+          const errorMsg = "Failed to create page via API. Please try again.";
+          setError(errorMsg);
+
+          toast({
+            title: "Creation Failed",
+            description: errorMsg,
+            variant: "destructive"
+          });
+
+          return false;
+        }
 
         if (res) {
           // res is the page ID string returned by createPage
@@ -574,10 +609,13 @@ function NewPageContent() {
 
           // CRITICAL FIX: Immediate cache invalidation to ensure new page appears in profile
           // Clear caches immediately to prevent stale data from showing
+          console.log('🔵 DEBUG: Starting immediate cache invalidation...');
           try {
             const { invalidatePageCreationCaches } = await import('../utils/cacheInvalidation');
+            console.log('🔵 DEBUG: Cache invalidation module imported, calling function...');
             invalidatePageCreationCaches(userId);
             console.log('✅ Immediate cache invalidation triggered for user:', userId);
+            console.log('🔵 DEBUG: Immediate cache invalidation completed successfully');
           } catch (cacheError) {
             console.error('Error triggering immediate cache invalidation (non-fatal):', cacheError);
           }
@@ -596,7 +634,7 @@ function NewPageContent() {
               username: username,
               lastModified: new Date().toISOString(),
               createdAt: new Date().toISOString(),
-              isPublic: isPublic,
+
               deleted: false,
               customDate: eventCustomDate
             };
@@ -622,33 +660,31 @@ function NewPageContent() {
             }
           }, 3000); // 3s delay to handle Firestore indexing delays
 
-          // Track content changes for new page creation
-          try {
-            console.log('🔵 Tracking content changes with pageId:', pageId);
-            await ContentChangesTrackingService.trackContentChangeAdvanced(
-              pageId,
-              userId,
-              username,
-              null, // No previous content for new pages
-              finalContent
-            );
+          // Track content changes for new page creation (non-blocking)
+          console.log('🔵 Tracking content changes with pageId:', pageId);
+          ContentChangesTrackingService.trackContentChangeAdvanced(
+            pageId,
+            userId,
+            username,
+            null, // No previous content for new pages
+            finalContent
+          ).then(() => {
             console.log('🔵 Content tracking completed successfully');
-          } catch (trackingError) {
+          }).catch((trackingError) => {
             console.error('Error tracking content changes for new page (non-fatal):', trackingError);
-          }
+          });
 
-          // Add the new page to recent pages tracking
-          try {
-            await addRecentPage({
-              id: pageId,
-              title: title || 'Untitled',
-              userId: userId,
-              username: username
-            });
+          // Add the new page to recent pages tracking (non-blocking)
+          addRecentPage({
+            id: pageId,
+            title: title || 'Untitled',
+            userId: userId,
+            username: username
+          }).then(() => {
             console.log('Added new page to recent pages tracking');
-          } catch (recentPagesError) {
+          }).catch((recentPagesError) => {
             console.error('Error adding page to recent pages (non-fatal):', recentPagesError);
-          }
+          });
 
           // Cache invalidation has been triggered above
 
@@ -666,10 +702,12 @@ function NewPageContent() {
           //   console.error('Analytics tracking failed (non-fatal):', analyticsError);
           // }
 
+          console.log('🔵 DEBUG: About to reset state and complete save process...');
           setHasContentChanged(false);
           setHasTitleChanged(false);
           setHasUnsavedChanges(false);
 
+          console.log('🔵 DEBUG: Setting isSaving to false...');
           setIsSaving(false);
 
           // CRITICAL FIX: Longer delay to ensure database consistency before redirect
@@ -729,12 +767,36 @@ function NewPageContent() {
   // Memoized save function for unsaved changes hook
   const saveChanges = useCallback(async (): Promise<void> => {
     await handleSave(editorContent || editorState, 'button');
-  }, [editorContent, editorState, title, isPublic, location, currentAccount, isReply]);
+  }, [editorContent, editorState, title, location, currentAccount, isReply]);
 
   // Keyboard save handler
   const handleKeyboardSave = useCallback(() => {
     handleSave(editorContent || editorState, 'keyboard');
-  }, [editorContent, editorState, title, isPublic, location, currentAccount, isReply]);
+  }, [editorContent, editorState, title, location, currentAccount, isReply]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + S to save
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        if (hasUnsavedChanges) {
+          handleKeyboardSave();
+        }
+      }
+
+      // Cmd/Ctrl + Enter to save
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (hasUnsavedChanges) {
+          handleKeyboardSave();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hasUnsavedChanges, handleKeyboardSave]);
 
   // Use unsaved changes hook
   const {
@@ -819,18 +881,19 @@ function NewPageContent() {
           userId={currentAccount?.uid}
           isLoading={isLoading}
           scrollDirection="none"
-          isPrivate={!isPublic}
+
           isEditing={isEditing}
           setIsEditing={handleSetIsEditing}
           onTitleChange={handleTitleChange}
           titleError={titleError}
           canEdit={true} // User can always edit their new page
           isNewPage={true} // Enable auto-focus for new pages
+          isReply={isReply} // Pass reply status for contextual text
         />
         <div className="w-full max-w-none box-border">
-          {/* Unified container with consistent layout matching SinglePageView */}
+          {/* Direct container - no padding for clean editor layout */}
           <div
-            className="px-4 py-4 w-full max-w-none box-border"
+            className="w-full max-w-none box-border"
             style={{
               paddingTop: 'calc(var(--page-header-height, 140px) + 1rem)', // Add extra 1rem (16px) to prevent overlap
               transition: 'padding-top 300ms ease-in-out' // Smooth transition when header height changes
@@ -839,21 +902,19 @@ function NewPageContent() {
             {isEditing ? (
               <div className="animate-in fade-in-0 duration-300">
                 <PageProvider>
-                  <PageEditor
+                  <Editor
                     title={isReply ? "" : title}
                     setTitle={handleTitleChange}
                     initialContent={editorState}
-                    onContentChange={handleContentChange}
-                    isPublic={isPublic}
-                    setIsPublic={setIsPublic}
+                    onChange={handleContentChange}
+
                     location={location}
                     setLocation={setLocation}
                     isSaving={isSaving}
                     error={error || ""}
                     isNewPage={true}
-                    isReply={isReply}
-                    replyToId={searchParams?.get('replyTo') || ""}
-                    clickPosition={null}
+                    placeholder="Start typing..."
+                    showToolbar={true}
                     onSave={(capturedContent) => {
                       console.log('🔵 DEBUG: Save button clicked, calling handleSave');
                       console.log('🔵 DEBUG: Current state:', {
@@ -870,10 +931,7 @@ function NewPageContent() {
 
                       return handleSave(capturedContent || editorContent || editorState, 'button');
                     }}
-                    onKeyboardSave={(capturedContent) => handleSave(capturedContent || editorContent || editorState, 'keyboard')}
                     onCancel={handleBackWithCheck}
-
-                    page={null} // No existing page for new pages
                   />
 
                   {/* Custom Date Field */}
@@ -882,6 +940,15 @@ function NewPageContent() {
                       customDate={intendedCustomDate}
                       canEdit={true}
                       onCustomDateChange={handleCustomDateChange}
+                    />
+                  </div>
+
+                  {/* Location Field */}
+                  <div className="mt-6">
+                    <LocationField
+                      location={location}
+                      canEdit={true}
+                      onLocationChange={setLocation}
                     />
                   </div>
 

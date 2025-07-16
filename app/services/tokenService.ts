@@ -83,7 +83,7 @@ export class TokenService {
     callback: (balance: TokenBalance | null) => void
   ): Unsubscribe {
     const balanceRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES), userId);
-    const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
+const subscriptionRef = doc(db, getCollectionName("users"), userId, 'subscription', 'current');
 
     // Listen to both balance and subscription changes
     const unsubscribeBalance = onSnapshot(balanceRef, async (balanceDoc) => {

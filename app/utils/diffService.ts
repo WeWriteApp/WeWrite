@@ -69,16 +69,37 @@ export async function calculateDiff(currentContent: any, previousContent: any): 
   }
 
   try {
-    const response = await fetch('/api/diff', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        currentContent,
-        previousContent
-      })
-    });
+    // Check if we're running on the server side
+    const isServer = typeof window === 'undefined';
+
+    let response;
+    if (isServer) {
+      // For server-side calls, import and call the diff API directly
+      const { POST } = await import('../api/diff/route');
+      const request = new Request('http://localhost:3000/api/diff', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentContent,
+          previousContent
+        })
+      });
+      response = await POST(request);
+    } else {
+      // For client-side calls, use fetch as normal
+      response = await fetch('/api/diff', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentContent,
+          previousContent
+        })
+      });
+    }
 
     if (!response.ok) {
       throw new Error(`Diff API error: ${response.status}`);

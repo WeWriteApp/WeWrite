@@ -18,12 +18,25 @@ const User = ({ uid, showUsername = true, className = "" }) => {
     const fetchUserData = async () => {
       try {
         setIsLoading(true);
-        const userData = await getSingleUserData(uid);
 
-        if (userData && userData.username) {
-          setUsername(userData.username);
+        // Use the same API endpoint as UsernameBadge for consistency
+        const response = await fetch(`/api/users/profile?id=${encodeURIComponent(uid)}`);
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data?.username) {
+            setUsername(result.data.username);
+          } else {
+            setUsername("Missing username");
+          }
         } else {
-          setUsername("Missing username");
+          // Fallback to old method if API fails
+          const userData = await getSingleUserData(uid);
+          if (userData && userData.username) {
+            setUsername(userData.username);
+          } else {
+            setUsername("Missing username");
+          }
         }
       } catch (error) {
         console.error("Error fetching user data:", error);

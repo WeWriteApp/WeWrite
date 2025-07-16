@@ -10,7 +10,7 @@
  *   node app/scripts/run-page-tests.js [options]
  * 
  * Options:
- *   --public      Test only public pages
+ *   --public      Test only pages
  *   --auth        Test only authenticated pages  
  *   --admin       Test only admin pages
  *   --dynamic     Test only dynamic routes
@@ -130,20 +130,20 @@ class PageTestRunner {
     console.log('');
   }
 
-  async runPublicPageTests() {
-    console.log('🌐 Running public page tests...\n');
-    
-    const testCommand = `npx jest app/tests/page-route-testing.test.js --testNamePattern="Public Page" --verbose`;
-    
+  async runPageTests() {
+    console.log('🌐 Running page tests...\n');
+
+    const testCommand = `npx jest app/tests/page-route-testing.test.js --testNamePattern="Page" --verbose`;
+
     try {
-      const output = execSync(testCommand, { 
+      const output = execSync(testCommand, {
         encoding: 'utf8',
         stdio: this.options.verbose ? 'inherit' : 'pipe'
       });
-      
+
       this.parseJestOutput(output);
-      console.log('✅ Public page tests completed');
-      
+      console.log('✅ Page tests completed');
+
     } catch (error) {
       this.handleTestError(error);
     }

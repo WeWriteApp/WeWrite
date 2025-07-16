@@ -6,6 +6,9 @@ This directory contains all technical documentation for the WeWrite platform. Al
 
 ### System Architecture & Core Features
 
+- **[Environment-Aware Collections Guide](./ENVIRONMENT_AWARE_COLLECTIONS_GUIDE.md)** - **ESSENTIAL**: Complete guide for using environment-aware Firebase collections
+- **[Firebase Migration Architecture](./FIREBASE_MIGRATION_ARCHITECTURE.md)** - Environment separation architecture documentation
+- **[Environment Quick Reference](./ENVIRONMENT_QUICK_REFERENCE.md)** - Quick reference for environment configuration
 - **[Mock Earnings System](./Mock%20Earnings%20System.md)** - Complete documentation for the admin mock earnings testing system
 - **[Mock Earnings Test Checklist](./Mock%20Earnings%20Test%20Checklist.md)** - Step-by-step testing procedures for mock earnings
 - **[Token Writer Payout System](./Token%20Writer%20Payout%20System.md)** - Documentation for the token-based writer compensation system

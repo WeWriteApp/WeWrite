@@ -49,7 +49,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
 import { usePage } from "../../contexts/PageContext";
 import { useLineSettings } from "../../contexts/LineSettingsContext";
-import { nodeTypes } from "../../utils/constants";
+import { CONTENT_TYPES } from "../../utils/constants";
 import { PillLink } from "../utils/PillLink";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { getPageById } from "../../firebase/database";
@@ -66,7 +66,7 @@ import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
 import { useControlledAnimation } from "../../hooks/useControlledAnimation";
 import { truncateExternalLinkText } from "../../utils/textTruncation";
 import type { TextViewProps } from "../../types/components";
-import type { SlateContent, SlateNode, SlateChild, ViewMode } from "../../types/database";
+import type { EditorContent, EditorNode, EditorChild, ViewMode } from "../../types/database";
 import "../diff-styles.css";
 
 /**
@@ -141,6 +141,13 @@ const TextView: React.FC<TextViewProps> = ({
   showLineNumbers = true,
   isEditing = false
 }) => {
+  console.log('🔍 TextView: Component called with content:', {
+    content,
+    contentType: typeof content,
+    isArray: Array.isArray(content),
+    contentLength: content ? (Array.isArray(content) ? content.length : content.length) : 0
+  });
+
   const [parsedContents, setParsedContents] = useState<EditorContent | null>(null);
   const [language, setLanguage] = useState<string | null>(null);
 
@@ -189,7 +196,7 @@ const TextView: React.FC<TextViewProps> = ({
   useEffect(() => {
     // Force a re-render by updating the loaded paragraphs
     if (parsedContents && Array.isArray(parsedContents)) {
-      const paragraphCount = parsedContents.filter(node => node.type === nodeTypes.PARAGRAPH).length;
+      const paragraphCount = parsedContents.filter(node => node.type === CONTENT_TYPES.PARAGRAPH).length;
       setLoadedParagraphs(Array.from({ length: paragraphCount }, (_, i) => i));
     }
   }, [lineMode, parsedContents]);
@@ -219,7 +226,11 @@ const TextView: React.FC<TextViewProps> = ({
   useEffect(() => {
     // Skip processing if content is null or undefined
     if (!content) {
-      console.log("TextView: Content is null or undefined, using empty content");
+      console.log("🔍 TextView: Content is null or undefined, using empty content", {
+        content,
+        contentType: typeof content,
+        contentValue: content
+      });
       setParsedContents([]);
       setLoadedParagraphs([]);
       setIsInitialLoad(true);
@@ -228,7 +239,12 @@ const TextView: React.FC<TextViewProps> = ({
 
     let contents;
     try {
-      // Content parsing (logging disabled to prevent spam)
+      console.log("🔍 TextView: Starting content processing", {
+        content,
+        contentType: typeof content,
+        isArray: Array.isArray(content),
+        contentLength: content ? (Array.isArray(content) ? content.length : content.length) : 0
+      });
 
       // Handle different content types
       if (typeof content === "string") {
@@ -435,7 +451,7 @@ const TextView: React.FC<TextViewProps> = ({
     if (parsedContents && isInitialLoad) {
       // Count the number of paragraph nodes (WeWrite only supports paragraphs)
       const paragraphNodes = parsedContents.filter(node =>
-        node.type === nodeTypes.PARAGRAPH
+        node.type === CONTENT_TYPES.PARAGRAPH
       );
 
       // Get total number of nodes
@@ -709,7 +725,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
     if (Array.isArray(contents)) {
       // Dense mode: render as continuous text with inline paragraph numbers
       if (effectiveMode === LINE_MODES.DENSE) {
-        const paragraphNodes = contents.filter(node => node.type === nodeTypes.PARAGRAPH);
+        const paragraphNodes = contents.filter(node => node.type === CONTENT_TYPES.PARAGRAPH);
         const loadedNodes = paragraphNodes.filter((_, index) => loadedParagraphs.includes(index));
 
         // Helper function to render child nodes in dense mode
@@ -786,7 +802,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
         <>
           {contents.map((node, index) => {
             if (!loadedParagraphs.includes(index)) return null;
-            if (node.type !== nodeTypes.PARAGRAPH) return null;
+            if (node.type !== CONTENT_TYPES.PARAGRAPH) return null;
 
             return (
               <SimpleParagraphNode
@@ -1254,86 +1270,49 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
       const cleanUsername = validatedNode.authorUsername.replace(/^@/, '');
 
       // Ensure href is properly formatted for internal links
-      const formattedHref = href.startsWith('/') ? href : `/pages/${pageId}`;
+      // WeWrite uses /{pageId} format, not /pages/{pageId}
+      const formattedHref = href.startsWith('/') ? href : `/${pageId}`;
 
       // Use PillStyleContext for consistent styling between edit and view modes
       const { getPillStyleClasses } = usePillStyle();
       const pillStyles = getPillStyleClasses('paragraph');
 
-      // Handle edit mode vs view mode click behavior
-      if (canEdit && isEditing) {
-        // In edit mode, clicking should open the link editor
-        // Use the same pill styling as view mode for consistency
-        return (
-          <span
-            className="compound-link-container"
-            style={{
-              display: 'inline-block',
-              whiteSpace: 'nowrap',
-              verticalAlign: 'baseline'
-            }}
+      // TextView is now for viewing only - editing is handled by Editor component
+      // Always render in view mode
+      // In view mode, normal navigation behavior
+      return (
+        <span
+          className="compound-link-container"
+          style={{
+            display: 'inline-block',
+            whiteSpace: 'nowrap',
+            verticalAlign: 'baseline'
+          }}
+        >
+          <PillLink
+            href={formattedHref}
+            isPublic={true}
+            className="page-link page-portion"
+            data-page-id={pageId}
           >
-            <span
-              className={`${pillStyles} cursor-pointer page-link page-portion`}
-              data-page-id={pageId}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                // TODO: Open link editor for this link
-                console.log('Edit mode: Open link editor for compound link');
-              }}
-            >
-              <span className="pill-text">{pageTitleText}</span>
-            </span>
-            <span className="text-muted-foreground text-sm" style={{ margin: '0 0.25rem' }}>by</span>
-            <span
-              className={`${pillStyles} cursor-pointer user-link author-portion`}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                // TODO: Open link editor for this link
-                console.log('Edit mode: Open link editor for compound link');
-              }}
-            >
-              <span className="pill-text">{cleanUsername}</span>
-            </span>
-          </span>
-        );
-      } else {
-        // In view mode, normal navigation behavior
-        return (
-          <span
-            className="compound-link-container"
-            style={{
-              display: 'inline-block',
-              whiteSpace: 'nowrap',
-              verticalAlign: 'baseline'
-            }}
+            {pageTitleText}
+          </PillLink>
+          <span className="text-muted-foreground text-sm" style={{ margin: '0 0.25rem' }}>by</span>
+          <PillLink
+            href={`/user/${cleanUsername}`}
+            isPublic={true}
+            className="user-link author-portion"
           >
-            <PillLink
-              href={formattedHref}
-              isPublic={true}
-              className="page-link page-portion"
-              data-page-id={pageId}
-            >
-              {pageTitleText}
-            </PillLink>
-            <span className="text-muted-foreground text-sm" style={{ margin: '0 0.25rem' }}>by</span>
-            <PillLink
-              href={`/user/${cleanUsername}`}
-              isPublic={true}
-              className="user-link author-portion"
-            >
-              {cleanUsername}
-            </PillLink>
-          </span>
-        );
-      }
+            {cleanUsername}
+          </PillLink>
+        </span>
+      );
     }
 
     // Regular single page link (non-compound)
     // Ensure href is properly formatted for internal links
-    const formattedHref = href.startsWith('/') ? href : `/pages/${pageId}`;
+    // WeWrite uses /{pageId} format, not /pages/{pageId}
+    const formattedHref = href.startsWith('/') ? href : `/${pageId}`;
 
     // Ensure we have a valid display text for page links
     let finalDisplayText = displayText;
@@ -1375,58 +1354,36 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
     // Truncate the display text for better UI
     const truncatedDisplayText = truncateExternalLinkText(finalDisplayText, href, 50);
 
-    // Handle edit mode vs view mode click behavior
-    if (canEdit && isEditing) {
-      // In edit mode, clicking should open the link editor
-      return (
-        <span
-          className="inline-block cursor-pointer"
-          data-link-type="external"
-          data-url={href}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // The click will be handled by the Editor component's click handler
-            // which detects links with data-link-type attributes
-          }}
-        >
-          <span className="inline-flex items-center px-2 py-1 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/80 transition-colors">
+    // TextView is now for viewing only - editing is handled by Editor component
+    // Always render in view mode - normal external link behavior with modal
+    const handleExternalLinkClick = (e) => {
+      e.preventDefault();
+      e.stopPropagation(); // Prevent event bubbling to prevent edit mode activation
+      setShowExternalLinkModal(true);
+    };
+
+    return (
+      <>
+        <span className="inline-block">
+          <PillLink
+            href={href}
+            isPublic={true}
+            className="external-link"
+            onClick={handleExternalLinkClick}
+          >
             {truncatedDisplayText}
-            <ExternalLink className="ml-1 h-3 w-3" />
-          </span>
+            {/* Removed duplicate ExternalLink icon - PillLink already adds it */}
+          </PillLink>
         </span>
-      );
-    } else {
-      // In view mode, normal external link behavior with modal
-      const handleExternalLinkClick = (e) => {
-        e.preventDefault();
-        e.stopPropagation(); // Prevent event bubbling to prevent edit mode activation
-        setShowExternalLinkModal(true);
-      };
 
-      return (
-        <>
-          <span className="inline-block">
-            <PillLink
-              href={href}
-              isPublic={true}
-              className="external-link"
-              onClick={handleExternalLinkClick}
-            >
-              {truncatedDisplayText}
-              {/* Removed duplicate ExternalLink icon - PillLink already adds it */}
-            </PillLink>
-          </span>
-
-          <ExternalLinkPreviewModal
-            isOpen={showExternalLinkModal}
-            onClose={() => setShowExternalLinkModal(false)}
-            url={href}
-            displayText={finalDisplayText}
-          />
-        </>
-      );
-    }
+        <ExternalLinkPreviewModal
+          isOpen={showExternalLinkModal}
+          onClose={() => setShowExternalLinkModal(false)}
+          url={href}
+          displayText={finalDisplayText}
+        />
+      </>
+    );
   }
 
   // For other links (like special links), use the PillLink component
@@ -1450,42 +1407,19 @@ const LinkNode = ({ node, canEdit = false, isEditing = false }) => {
   const { getPillStyleClasses } = usePillStyle();
   const pillStyles = getPillStyleClasses('paragraph');
 
-  // Handle edit mode vs view mode click behavior for other links
-  if (canEdit && isEditing) {
-    // In edit mode, clicking should open the link editor
-    // Use the same pill styling as view mode for consistency
-    return (
-      <span className="inline-block">
-        <span
-          className={`${pillStyles} cursor-pointer special-link`}
-          data-link-type={validatedNode.userId ? "user" : "page"}
-          data-id={validatedNode.userId || validatedNode.pageId}
-          data-url={href}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // The click will be handled by the Editor component's click handler
-            // which detects links with data-link-type attributes
-          }}
-        >
-          <span className="pill-text">{displayText}</span>
-        </span>
-      </span>
-    );
-  } else {
-    // In view mode, normal navigation behavior
-    return (
-      <span className="inline-block">
-        <PillLink
-          href={href}
-          isPublic={true}
-          className="inline special-link"
-        >
-          {displayText}
-        </PillLink>
-      </span>
-    );
-  }
+  // TextView is now for viewing only - editing is handled by Editor component
+  // Always render in view mode - normal navigation behavior
+  return (
+    <span className="inline-block">
+      <PillLink
+        href={href}
+        isPublic={true}
+        className="inline special-link"
+      >
+        {displayText}
+      </PillLink>
+    </span>
+  );
 };
 
 // Component for internal links that fetches and displays page titles
@@ -1503,8 +1437,9 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle, s
   // Ensure href is properly formatted
   const formattedHref = useMemo(() => {
     // If we have a valid pageId, always use that to create a consistent href
+    // WeWrite uses /{pageId} format, not /pages/{pageId}
     if (pageId) {
-      return `/pages/${pageId}`;
+      return `/${pageId}`;
     }
 
     // Fallback handling if no valid pageId
@@ -1595,50 +1530,20 @@ const InternalLinkWithTitle = ({ pageId, href, displayText, originalPageTitle, s
   const { getPillStyleClasses } = usePillStyle();
   const pillStyles = getPillStyleClasses('paragraph');
 
-  // Handle edit mode vs view mode click behavior
-  if (canEdit && isEditing) {
-    // In edit mode, clicking should open the link editor
-    // Use the same pill styling as view mode for consistency
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="inline-block">
-              <span
-                className={`${pillStyles} cursor-pointer page-link`}
-                data-page-id={pageId}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  // TODO: Open link editor for this link
-                  console.log('Edit mode: Open link editor for single link');
-                }}
-              >
-                <span className="pill-text">{textToDisplay}</span>
-              </span>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Click to edit link: {currentTitle || originalPageTitle || displayText || 'Page Link'}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  } else {
-    // In view mode, normal navigation behavior - no tooltip
-    return (
-      <span className="inline-block">
-        <PillLink
-          href={formattedHref}
-          isPublic={true}
-          className="inline page-link"
-          data-page-id={pageId}
-        >
-          {textToDisplay}
-        </PillLink>
-      </span>
-    );
-  }
+  // TextView is now for viewing only - editing is handled by Editor component
+  // Always render in view mode - normal navigation behavior - no tooltip
+  return (
+    <span className="inline-block">
+      <PillLink
+        href={formattedHref}
+        isPublic={true}
+        className="inline page-link"
+        data-page-id={pageId}
+      >
+        {textToDisplay}
+      </PillLink>
+    </span>
+  );
 };
 
 export default TextView;

@@ -45,17 +45,32 @@ export default function PillStyleToggle() {
             )}
           </button>
 
-          {/* Radio button for Classic style */}
+          {/* Radio button for Text Only style */}
           <button
-            onClick={() => changePillStyle(PILL_STYLES.CLASSIC)}
+            onClick={() => changePillStyle(PILL_STYLES.TEXT_ONLY)}
             className={cn(
               "flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors",
               "hover:bg-muted",
-              pillStyle === PILL_STYLES.CLASSIC && "bg-muted"
+              pillStyle === PILL_STYLES.TEXT_ONLY && "bg-muted"
             )}
           >
-            <span>Classic</span>
-            {pillStyle === PILL_STYLES.CLASSIC && (
+            <span>Text only</span>
+            {pillStyle === PILL_STYLES.TEXT_ONLY && (
+              <Check className="h-4 w-4 text-primary" />
+            )}
+          </button>
+
+          {/* Radio button for Underlined style */}
+          <button
+            onClick={() => changePillStyle(PILL_STYLES.UNDERLINED)}
+            className={cn(
+              "flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors",
+              "hover:bg-muted",
+              pillStyle === PILL_STYLES.UNDERLINED && "bg-muted"
+            )}
+          >
+            <span>Underlined</span>
+            {pillStyle === PILL_STYLES.UNDERLINED && (
               <Check className="h-4 w-4 text-primary" />
             )}
           </button>

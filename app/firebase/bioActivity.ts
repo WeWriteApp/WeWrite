@@ -16,6 +16,7 @@ import {
 import { rtdb } from "./rtdb";
 import { ref, get } from "firebase/database";
 import { hasContentChanged } from "../utils/diffService";
+import { getCollectionName } from "../utils/environmentConfig";
 
 // Type definitions for bio activity operations
 interface BioActivityData {
@@ -81,7 +82,7 @@ export const recordBioEditActivity = async (
       isPublic: true // Bio edits are always public
     };
 
-    const activityRef = await addDoc(collection(db, "activities"), activityData);
+    const activityRef = await addDoc(collection(db, getCollectionName("activities")), activityData);
     console.log(`Bio edit activity recorded with ID: ${activityRef.id}`);
     return activityRef.id;
   } catch (error) {
@@ -163,7 +164,7 @@ export const getBioAndAboutActivities = async (
   try {
     // Query for public bio and about page edits
     const activitiesQuery = query(
-      collection(db, "activities"),
+      collection(db, getCollectionName("activities")),
       where("type", "in", ["bio_edit", "group_about_edit"]),
       where("isPublic", "==", true),
       orderBy("timestamp", "desc"),

@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { payoutService } from '../../../services/payoutService';
 import { stripePayoutService } from '../../../services/stripePayoutService';
 import { db } from '../../../firebase/config';
+import { getCollectionName } from "../../../utils/environmentConfig";
 import {
   collection,
   query,
@@ -81,10 +82,8 @@ async function processMonthlyPledges(period: string, dryRun: boolean) {
   console.log(`Processing pledges for period: ${period}`);
   
   // Get all active subscriptions
-  const subscriptionsQuery = query(
-    collection(db, 'subscriptions'),
-    where('status', '==', 'active')
-  );
+  const subscriptionsQuery = db.collection(getCollectionName('subscriptions'))
+    .where('status', '==', 'active');
   
   const subscriptionsSnapshot = await getDocs(subscriptionsQuery);
   let processedCount = 0;
@@ -94,9 +93,7 @@ async function processMonthlyPledges(period: string, dryRun: boolean) {
     const userId = subDoc.id;
     
     // Get user's pledges
-    const pledgesQuery = query(
-      collection(db, 'users', userId, 'pledges')
-    );
+    const pledgesQuery = db.collection(getCollectionName("users")).doc(userId).collection('pledges');
     
     const pledgesSnapshot = await getDocs(pledgesQuery);
     
@@ -216,8 +213,7 @@ async function createMonthlyPayouts(period: string, dryRun: boolean) {
           scheduledAt: serverTimestamp(),
           retryCount: 0
         };
-        
-        await setDoc(doc(db, 'payouts', payoutId), payout);
+await setDoc(doc(db, getCollectionName("payouts"), payoutId), payout);
       }
       
       payoutCount++;
@@ -280,10 +276,8 @@ export async function GET(request: NextRequest) {
     const period = searchParams.get('period') || getPreviousMonth();
     
     // Get processing status for the period
-    const payoutsQuery = query(
-      collection(db, 'payouts'),
-      where('period', '==', period)
-    );
+    const payoutsQuery = db.collection(getCollectionName('payouts'))
+      .where('period', '==', period);
     
     const payoutsSnapshot = await getDocs(payoutsQuery);
     const payouts = payoutsSnapshot.docs.map(doc => doc.data());

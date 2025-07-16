@@ -20,14 +20,33 @@ export async function POST(request: NextRequest) {
     
     // Clear authentication cookies
     const cookieStore = cookies();
-    
-    // Remove session cookies
-    cookieStore.delete('userSession');
-    cookieStore.delete('authToken');
-    
-    // Also clear any other auth-related cookies
-    cookieStore.delete('firebase-auth-token');
-    cookieStore.delete('__session');
+
+    console.log('🔴 LOGOUT API: Clearing all session cookies');
+
+    // List of all possible session cookies to clear
+    const sessionCookies = [
+      'userSession',
+      'authToken',
+      'firebase-auth-token',
+      '__session',
+      'session',
+      'authenticated',
+      'devUserSession',
+      'currentUser',
+      'previousUserSession',
+      'accountSwitchInProgress',
+      'switchToAccount'
+    ];
+
+    // Remove all session cookies
+    sessionCookies.forEach(cookieName => {
+      try {
+        cookieStore.delete(cookieName);
+        console.log(`🔴 LOGOUT API: Cleared cookie: ${cookieName}`);
+      } catch (error) {
+        console.warn(`🔴 LOGOUT API: Failed to clear cookie ${cookieName}:`, error);
+      }
+    });
 
     // If user was authenticated, update their last logout time
     if (currentUserId) {
@@ -59,10 +78,20 @@ export async function POST(request: NextRequest) {
     // Even if there's an error, we should still clear the cookies
     // and return success to ensure the client-side logout works
     const cookieStore = cookies();
-    cookieStore.delete('userSession');
-    cookieStore.delete('authToken');
-    cookieStore.delete('firebase-auth-token');
-    cookieStore.delete('__session');
+
+    const sessionCookies = [
+      'userSession', 'authToken', 'firebase-auth-token', '__session',
+      'session', 'authenticated', 'devUserSession', 'currentUser',
+      'previousUserSession', 'accountSwitchInProgress', 'switchToAccount'
+    ];
+
+    sessionCookies.forEach(cookieName => {
+      try {
+        cookieStore.delete(cookieName);
+      } catch (error) {
+        console.warn(`Failed to clear cookie ${cookieName}:`, error);
+      }
+    });
     
     return createApiResponse({
       message: 'Logged out (with errors)',
@@ -98,10 +127,20 @@ export async function DELETE(request: NextRequest) {
 
     // Clear authentication cookies for current session
     const cookieStore = cookies();
-    cookieStore.delete('userSession');
-    cookieStore.delete('authToken');
-    cookieStore.delete('firebase-auth-token');
-    cookieStore.delete('__session');
+
+    const sessionCookies = [
+      'userSession', 'authToken', 'firebase-auth-token', '__session',
+      'session', 'authenticated', 'devUserSession', 'currentUser',
+      'previousUserSession', 'accountSwitchInProgress', 'switchToAccount'
+    ];
+
+    sessionCookies.forEach(cookieName => {
+      try {
+        cookieStore.delete(cookieName);
+      } catch (error) {
+        console.warn(`Failed to clear cookie ${cookieName}:`, error);
+      }
+    });
 
     return createApiResponse({
       message: 'Signed out from all devices successfully',

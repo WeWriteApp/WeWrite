@@ -69,7 +69,7 @@ const FilteredSearchResults = forwardRef(({
   const lastRequestRef = useRef(null); // Track last request to prevent duplicates
 
   // Determine if we're in link editor mode
-  const isLinkEditor = !!setDisplayText;
+  const isLinkEditor = !!setDisplayText || preventRedirect;
 
   // Character count threshold for search
   const characterCount = isLinkEditor ? 0 : 2;
@@ -375,6 +375,14 @@ const FilteredSearchResults = forwardRef(({
 
   // Handle item selection
   const handleSelect = useCallback(async (item) => {
+    console.log('[FilteredSearchResults] handleSelect called:', {
+      itemId: item.id,
+      itemTitle: item.title,
+      preventRedirect,
+      isLinkEditor,
+      willNavigate: !preventRedirect && !isLinkEditor
+    });
+
     setSelectedId(item.id);
 
     if (onSelect) {
@@ -551,7 +559,7 @@ const FilteredSearchResults = forwardRef(({
                 <h3 className="text-xs font-medium text-muted-foreground mb-2 px-1">
                   {isLinkEditor && isSearchMode ? 'Pages' :
                    isSearchMode ? 'Search Results' :
-                   (activeFilter === 'recent' ? 'Recent Pages' : 'My Pages')}
+                   (activeFilter === 'recent' ? 'Recently Viewed' : 'My Pages')}
                 </h3>
                 <div className="space-y-1">
                   {pages.map((page) => (
@@ -562,16 +570,25 @@ const FilteredSearchResults = forwardRef(({
                         selectedId === page.id ? 'bg-muted' : ''
                       }`}
                     >
-                      <PillLink
-                        href={`/${page.id}`}
-                        isPublic={page.isPublic}
-                        isOwned={page.userId === session?.uid}
-                        className="pointer-events-none"
-                      >
-                        {page.title && isExactDateFormat(page.title)
-                          ? formatDateString(page.title)
-                          : page.title}
-                      </PillLink>
+                      <div className="flex items-start gap-2 min-w-0">
+                        <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-80px)]">
+                          <PillLink
+                            href={`/${page.id}`}
+                            isPublic={page.isPublic}
+                            isOwned={page.userId === session?.uid}
+                            clickable={false}
+                          >
+                            {page.title && isExactDateFormat(page.title)
+                              ? formatDateString(page.title)
+                              : page.title}
+                          </PillLink>
+                        </div>
+                        {page.username && (
+                          <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
+                            by {page.username}
+                          </span>
+                        )}
+                      </div>
                       {isLinkEditor && page.category && (
                         <div className="text-xs text-muted-foreground mt-1 px-2">
                           {page.category}

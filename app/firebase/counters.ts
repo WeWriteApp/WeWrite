@@ -6,6 +6,7 @@ import { ref, get, set, onValue } from 'firebase/database';
 import { getCacheItem, setCacheItem, generateCacheKey } from "../utils/cacheUtils";
 import type { Counter, MemoryCacheEntry } from '../types/database';
 import { AnalyticsAggregationService } from '../services/analyticsAggregation';
+import { getCollectionName } from '../utils/environmentConfig';
 
 // Cache TTL in milliseconds (5 minutes)
 const CACHE_TTL = (5 * 60 * 1000);
@@ -60,7 +61,7 @@ export const getUserPageCount = async (userId: string, viewerUserId: string | nu
       } else {
         // No counter document, count all pages manually
         const pagesQuery = query(
-          collection(db, 'pages'),
+          collection(db, getCollectionName('pages')),
           where('userId', '==', userId)
         );
 
@@ -83,17 +84,17 @@ export const getUserPageCount = async (userId: string, viewerUserId: string | nu
         // We have a public counter, use it
         count = publicCounterDoc.data().pageCount;
       } else {
-        // No public counter document, count public pages manually
-        const publicPagesQuery = query(
-          collection(db, 'pages'),
+        // No counter document, count pages manually
+        const pagesQuery = query(
+          collection(db, getCollectionName('pages')),
           where('userId', '==', userId),
           where('isPublic', '==', true)
         );
 
-        const publicPagesSnapshot = await getDocs(publicPagesQuery);
-        count = publicPagesSnapshot.size;
+        const pagesSnapshot = await getDocs(pagesQuery);
+        count = pagesSnapshot.size;
 
-        // Store the public count in a separate counter document
+        // Store the count in a separate counter document
         await setDoc(publicCounterDocRef, {
           pageCount: count,
           lastUpdated: new Date()
@@ -132,7 +133,7 @@ export const getUserFollowerCount = async (userId: string): Promise<number> => {
 
     // If not in cache, get from database
     // First check if we have a counter document
-    const counterDocRef = doc(db, 'counters', `user_${userId}`);
+    const counterDocRef = doc(db, getCollectionName('counters'), `user_${userId}`);
     const counterDoc = await getDoc(counterDocRef);
 
     if (counterDoc.exists() && counterDoc.data().followerCount !== undefined) {
@@ -145,7 +146,7 @@ export const getUserFollowerCount = async (userId: string): Promise<number> => {
     // No counter document, count followers manually
     // First get all pages created by this user
     const pagesQuery = query(
-      collection(db, 'pages'),
+      collection(db, getCollectionName('pages')),
       where('userId', '==', userId)
     );
 
@@ -163,7 +164,7 @@ export const getUserFollowerCount = async (userId: string): Promise<number> => {
     const uniqueFollowers = new Set();
 
     for (const pageId of pageIds) {
-      const followersRef = collection(db, 'pages', pageId, 'followers');
+      const followersRef = collection(db, getCollectionName('pages'), pageId, getCollectionName('followers'));
       const followersSnapshot = await getDocs(followersRef);
 
       followersSnapshot.forEach(doc => {
@@ -200,7 +201,7 @@ export const incrementUserPageCount = async (userId: string, isPublic: boolean =
 
   try {
     // Always increment the total counter
-    const counterDocRef = doc(db, 'counters', `user_${userId}`);
+    const counterDocRef = doc(db, getCollectionName('counters'), `user_${userId}`);
     await updateDoc(counterDocRef, {
       pageCount: increment(1),
       lastUpdated: new Date()
@@ -208,7 +209,7 @@ export const incrementUserPageCount = async (userId: string, isPublic: boolean =
 
     // If the page is public, also increment the public counter
     if (isPublic) {
-      const publicCounterDocRef = doc(db, 'counters', `user_${userId}_public`);
+      const publicCounterDocRef = doc(db, getCollectionName('counters'), `user_${userId}_public`);
       await updateDoc(publicCounterDocRef, {
         pageCount: increment(1),
         lastUpdated: new Date()
@@ -302,66 +303,7 @@ export const decrementUserPageCount = async (userId: string, wasPublic: boolean 
   }
 };
 
-/**
- * Update page count when a page's visibility changes
- *
- * @param userId - The user ID
- * @param wasPublic - Whether the page was previously public
- * @param isNowPublic - Whether the page is now public
- */
-export const updateUserPageCountForVisibilityChange = async (
-  userId: string,
-  wasPublic: boolean,
-  isNowPublic: boolean
-): Promise<void> => {
-  if (!userId || wasPublic === isNowPublic) return; // No change needed
 
-  try {
-    const publicCounterDocRef = doc(db, 'counters', `user_${userId}_public`);
-
-    if (wasPublic && !isNowPublic) {
-      // Page was made private - decrement public counter
-      await updateDoc(publicCounterDocRef, {
-        pageCount: increment(-1),
-        lastUpdated: new Date()
-      });
-    } else if (!wasPublic && isNowPublic) {
-      // Page was made public - increment public counter
-      await updateDoc(publicCounterDocRef, {
-        pageCount: increment(1),
-        lastUpdated: new Date()
-      });
-    }
-
-    // Invalidate both localStorage and memory caches
-    localStorage.removeItem(`user_page_count_${userId}_owner`);
-    localStorage.removeItem(`user_page_count_${userId}_public`);
-    pageCountMemoryCache.delete(`user_page_count_${userId}_owner`);
-    pageCountMemoryCache.delete(`user_page_count_${userId}_public`);
-
-  } catch (error: any) {
-    // If the document doesn't exist, create it with the appropriate count
-    if (error.code === 'not-found' && isNowPublic) {
-      // Count existing public pages and create the counter
-      const publicPagesQuery = query(
-        collection(db, 'pages'),
-        where('userId', '==', userId),
-        where('isPublic', '==', true)
-      );
-
-      const publicPagesSnapshot = await getDocs(publicPagesQuery);
-      const count = publicPagesSnapshot.size;
-
-      const publicCounterDocRef = doc(db, 'counters', `user_${userId}_public`);
-      await setDoc(publicCounterDocRef, {
-        pageCount: count,
-        lastUpdated: new Date()
-      });
-    } else {
-      console.error('Error updating user page count for visibility change:', error);
-    }
-  }
-};
 
 /**
  * Get the total view count for a user with caching
@@ -383,7 +325,7 @@ export const getUserTotalViewCount = async (userId: string): Promise<number> => 
 
     // If not in cache, get from database
     // First check if we have a counter document
-    const counterDocRef = doc(db, 'counters', `user_${userId}`);
+    const counterDocRef = doc(db, getCollectionName('counters'), `user_${userId}`);
     const counterDoc = await getDoc(counterDocRef);
 
     if (counterDoc.exists() && counterDoc.data().viewCount !== undefined) {
@@ -395,7 +337,7 @@ export const getUserTotalViewCount = async (userId: string): Promise<number> => 
 
     // No counter document, calculate total views manually
     const pagesQuery = query(
-      collection(db, 'pages'),
+      collection(db, getCollectionName('pages')),
       where('userId', '==', userId)
     );
 
@@ -463,7 +405,7 @@ export const getUserContributorCount = async (userId: string): Promise<number> =
     // No counter document, calculate contributors manually
     // Query pledges where this user is the recipient (page author)
     const pledgesQuery = query(
-      collection(db, 'pledges'),
+      collection(db, getCollectionName('pledges')),
       where('metadata.authorUserId', '==', userId),
       where('status', 'in', ['active', 'completed'])
     );
@@ -514,7 +456,7 @@ export const updateUserContributorCount = async (userId: string): Promise<void> 
   try {
     // Query pledges where this user is the recipient (page author)
     const pledgesQuery = query(
-      collection(db, 'pledges'),
+      collection(db, getCollectionName('pledges')),
       where('metadata.authorUserId', '==', userId),
       where('status', 'in', ['active', 'completed'])
     );

@@ -60,15 +60,19 @@ export async function PATCH(request, { params }) {
 
     console.log(`API: Updating custom date for page ${id} to ${customDate}`);
 
-    // Import Firebase modules
-    const { doc, getDoc, updateDoc } = await import('firebase/firestore');
-    const { db } = await import('../../../../firebase/database');
+    // Import Firebase Admin modules (server-side)
+    const { getFirebaseAdmin } = await import('../../../../firebase/firebaseAdmin');
+    const { getCollectionName } = await import('../../../../utils/environmentConfig');
+
+    // Get Firebase Admin instance
+    const admin = getFirebaseAdmin();
+    const db = admin.firestore();
 
     // Get the page document to check ownership
-    const pageRef = doc(db, 'pages', id);
-    const pageDoc = await getDoc(pageRef);
+    const pageRef = db.collection(getCollectionName('pages')).doc(id);
+    const pageDoc = await pageRef.get();
 
-    if (!pageDoc.exists()) {
+    if (!pageDoc.exists) {
       return NextResponse.json(
         { error: 'Page not found' },
         { status: 404 }
@@ -99,7 +103,7 @@ export async function PATCH(request, { params }) {
       lastModified: new Date().toISOString()
     };
 
-    await updateDoc(pageRef, updateData);
+    await pageRef.update(updateData);
 
     console.log(`API: Successfully updated custom date for page ${id}`);
 
@@ -144,15 +148,19 @@ export async function GET(request, { params }) {
 
     console.log(`API: Getting custom date for page ${id}`);
 
-    // Import Firebase modules
-    const { doc, getDoc } = await import('firebase/firestore');
-    const { db } = await import('../../../../firebase/database');
+    // Import Firebase Admin modules (server-side)
+    const { getFirebaseAdmin } = await import('../../../../firebase/firebaseAdmin');
+    const { getCollectionName } = await import('../../../../utils/environmentConfig');
+
+    // Get Firebase Admin instance
+    const admin = getFirebaseAdmin();
+    const db = admin.firestore();
 
     // Get the page document
-    const pageRef = doc(db, 'pages', id);
-    const pageDoc = await getDoc(pageRef);
+    const pageRef = db.collection(getCollectionName('pages')).doc(id);
+    const pageDoc = await pageRef.get();
 
-    if (!pageDoc.exists()) {
+    if (!pageDoc.exists) {
       return NextResponse.json(
         { error: 'Page not found' },
         { status: 404 }

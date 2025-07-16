@@ -3,6 +3,7 @@ import { getDatabase, ref, get } from 'firebase/database';
 import { app } from '../../firebase/config';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import { getCollectionName } from "../../utils/environmentConfig";
 
 /**
  * GET /api/recent-pages
@@ -55,9 +56,9 @@ export async function GET(request: NextRequest) {
     
     for (let i = 0; i < recentPageIds.length; i += batchSize) {
       const batch = recentPageIds.slice(i, i + batchSize);
-      
-      let pagesQuery = query(
-        collection(db, 'pages'),
+
+      const pagesQuery = query(
+        collection(db, getCollectionName('pages')),
         where('__name__', 'in', batch)
       );
 

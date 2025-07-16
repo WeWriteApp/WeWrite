@@ -29,15 +29,25 @@ export * from './database/analytics';
 // Import required functions for additional exports
 import { db, updateDoc, getDoc, doc } from './database/core';
 import { getPageById } from './database/pages';
+import { getCollectionName } from "../utils/environmentConfig";
 
 /**
  * Update a page with new data
  */
 export const updatePage = async (pageId: string, data: any): Promise<boolean> => {
   try {
+    // Get the current page data BEFORE updating to detect changes
+    let originalPageData = null;
+    try {
+      const originalData = await getPageById(pageId);
+      originalPageData = originalData?.pageData;
+    } catch (pageDataError) {
+      console.error('⚠️ Error getting original page data (non-fatal):', pageDataError);
+    }
+
     const result = await updateDoc('pages', pageId, data);
 
-    // Get the current page data for cache invalidation and backlinks
+    // Get the updated page data for cache invalidation and backlinks
     let pageData = null;
     try {
       pageData = await getPageById(pageId);
@@ -75,6 +85,53 @@ export const updatePage = async (pageId: string, data: any): Promise<boolean> =>
       }
     }
 
+    // Create activity record if title changed
+    if (result && originalPageData && pageData?.pageData && data.title && data.title !== originalPageData.title) {
+      try {
+        console.log('Title changed, creating activity record:', {
+          oldTitle: originalPageData.title,
+          newTitle: data.title,
+          pageId
+        });
+
+        // Import required functions
+        const { collection, addDoc, Timestamp } = await import('firebase/firestore');
+        const { db } = await import('./database/core');
+
+        // Create activity record for title change
+        const activityData = {
+          pageId,
+          pageName: data.title, // Use the new title
+          userId: pageData.pageData.userId,
+          username: pageData.pageData.username || 'Anonymous',
+          timestamp: Timestamp.now(),
+          diff: {
+            added: 0, // Title changes don't add/remove characters in content
+            removed: 0,
+            hasChanges: true // Always true for title changes
+          },
+          // No diff preview for title changes
+          diffPreview: null,
+          isPublic: pageData.pageData.isPublic || false,
+          isNewPage: false,
+          isTitleChange: true // Flag to identify title-only changes
+        };
+
+const activitiesRef = collection(db, getCollectionName('activities'));
+        const activityDocRef = await addDoc(activitiesRef, activityData);
+
+        console.log('Created activity record for title change', {
+          activityId: activityDocRef.id,
+          pageId,
+          oldTitle: originalPageData.title,
+          newTitle: data.title
+        });
+      } catch (activityError) {
+        console.error('Error creating activity record for title change (non-fatal):', activityError);
+        // Don't fail page update if activity recording fails
+      }
+    }
+
     // Trigger cache invalidation for page updates
     if (result && pageData?.pageData?.userId) {
       try {
@@ -102,7 +159,7 @@ export const deletePage = async (pageId: string): Promise<boolean> => {
     console.log(`Starting soft delete for page ${pageId}`);
 
     // Get the page data first to check if it exists
-    const pageRef = doc(db, 'pages', pageId);
+    const pageRef = doc(db, getCollectionName('pages'), pageId);
     const pageDoc = await getDoc(pageRef);
 
     if (!pageDoc.exists()) {
@@ -144,9 +201,19 @@ export const deletePage = async (pageId: string): Promise<boolean> => {
     }
 
     return false;
-  } catch (error) {
-    console.error('Error deleting page:', error);
-    return false;
+  } catch (error: any) {
+    // Handle specific Firebase offline errors gracefully
+    const isOfflineError = error?.code === 'unavailable' ||
+                          error?.message?.includes('client is offline') ||
+                          error?.message?.includes('Failed to get document because the client is offline');
+
+    if (isOfflineError) {
+      console.warn('Cannot delete page while offline. Please check your internet connection and try again.');
+      throw new Error('Cannot delete page while offline. Please check your internet connection and try again.');
+    } else {
+      console.error('Error deleting page:', error);
+      throw new Error('Failed to delete page. Please try again.');
+    }
   }
 };
 
@@ -155,7 +222,7 @@ export const deletePage = async (pageId: string): Promise<boolean> => {
  */
 export const getPageMetadata = async (pageId: string): Promise<any> => {
   try {
-    const pageRef = doc(db, "pages", pageId);
+    const pageRef = doc(db, getCollectionName("pages"), pageId);
     const docSnap = await getDoc(pageRef);
 
     if (docSnap.exists()) {
@@ -200,7 +267,7 @@ export const getCachedPageTitle = async (pageId: string): Promise<string> => {
  */
 export const getPageStats = async (pageId: string): Promise<any> => {
   try {
-    const pageRef = doc(db, "pages", pageId);
+    const pageRef = doc(db, getCollectionName("pages"), pageId);
     const docSnap = await getDoc(pageRef);
 
     if (docSnap.exists()) {
@@ -277,8 +344,12 @@ export const appendPageReference = async (
         { text: "Content from " },
         {
           type: "link",
-          href: `/pages/${sourcePageData.id}`,
-          displayText: sourcePageData.title,
+          url: `/pages/${sourcePageData.id}`,
+          pageId: sourcePageData.id,
+          pageTitle: sourcePageData.title,
+          originalPageTitle: sourcePageData.title,
+          isPageLink: true,
+          className: "page-link",
           children: [{ text: sourcePageData.title }]
         }
       ]

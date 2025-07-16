@@ -29,6 +29,7 @@ import {
   CorrelationId
 } from '../types/financial';
 
+import { getCollectionName } from "../utils/environmentConfig";
 import {
   FraudDetectionResult,
   FraudAction,
@@ -286,8 +287,7 @@ export class FraudResponseService {
     fraudResult: FraudDetectionResult,
     correlationId: CorrelationId
   ): Promise<boolean> {
-    try {
-      await updateDoc(doc(db, 'users', userId), {
+await updateDoc(doc(db, getCollectionName("users"), userId), {
         fraudFlags: increment(1),
         lastFraudFlagAt: serverTimestamp(),
         fraudFlagReason: `Risk score: ${fraudResult.riskScore}`,
@@ -439,8 +439,7 @@ export class FraudResponseService {
         appliedAt: serverTimestamp()
       });
 
-      // Also update user status
-      await updateDoc(doc(db, 'users', userId), {
+await updateDoc(doc(db, getCollectionName("users"), userId), {
         status: 'suspended',
         suspendedAt: serverTimestamp(),
         suspensionReason: restrictions.reason,
@@ -643,10 +642,8 @@ export class FraudResponseService {
         updatedAt: serverTimestamp()
       });
 
-      // Update user status if suspended
-      const userDoc = await getDoc(doc(db, 'users', userId));
-      if (userDoc.exists() && userDoc.data().status === 'suspended') {
-        await updateDoc(doc(db, 'users', userId), {
+const userDoc = await getDoc(doc(db, getCollectionName("users"), userId));
+await updateDoc(doc(db, getCollectionName("users"), userId), {
           status: 'active',
           suspendedAt: null,
           suspensionReason: null,

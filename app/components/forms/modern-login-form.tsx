@@ -38,13 +38,12 @@ import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { Label } from "../ui/label"
 import { useState, useEffect } from "react"
-import { signInWithCustomToken } from "firebase/auth"
-import { auth } from "../../firebase/config"
 import { Loader2, AlertCircle } from "lucide-react"
 import { Separator } from "../ui/separator"
 // reCAPTCHA functionality removed
 import { Alert, AlertDescription } from "../ui/alert"
 import { PageLoader } from "../ui/page-loader"
+import { validateLoginInput } from "../../utils/usernameValidation"
 
 export function ModernLoginForm({
   className,
@@ -54,6 +53,7 @@ export function ModernLoginForm({
   const [emailOrUsername, setEmailOrUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [inputValidationError, setInputValidationError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isFormValid, setIsFormValid] = useState(false)
   const [previousAccount, setPreviousAccount] = useState<{ email: string } | null>(null)
@@ -61,14 +61,25 @@ export function ModernLoginForm({
 
   // Validate form inputs
   useEffect(() => {
-    // Accept either email format or username (3+ chars, alphanumeric + underscore, no whitespace)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    const usernameRegex = /^[a-zA-Z0-9_]{3}$/
-    const hasWhitespace = /\s/.test(emailOrUsername)
-    const isEmailOrUsernameValid = !hasWhitespace && (emailRegex.test(emailOrUsername) || usernameRegex.test(emailOrUsername))
+    // Clear previous input validation error when user starts typing
+    if (inputValidationError && emailOrUsername.length > 0) {
+      setInputValidationError(null)
+    }
+
+    // Validate email or username input
+    const inputValidation = validateLoginInput(emailOrUsername)
     const isPasswordValid = password.length >= 6
-    setIsFormValid(isEmailOrUsernameValid && isPasswordValid)
-  }, [emailOrUsername, password])
+
+    // Only show input validation error if user has typed something and it's invalid
+    if (emailOrUsername.length > 0 && !inputValidation.isValid) {
+      setInputValidationError(inputValidation.message)
+    } else {
+      setInputValidationError(null)
+    }
+
+    // Form is valid if both input and password are valid
+    setIsFormValid(inputValidation.isValid && isPasswordValid)
+  }, [emailOrUsername, password, inputValidationError])
 
   // Check for previous account
   useEffect(() => {
@@ -88,6 +99,7 @@ export function ModernLoginForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setInputValidationError(null)
     setIsLoading(true)
 
     try {
@@ -106,32 +118,59 @@ export function ModernLoginForm({
       const result = await response.json()
 
       if (response.ok && result.success) {
-        // Successful login - now sign into Firebase with the custom token
+        // Successful login - handle through session management API
         console.log("Login successful:", result.data)
 
         try {
-          // Sign into Firebase with the custom token from the API
-          console.log("Signing into Firebase with custom token...")
-          localStorage.setItem('authRedirectPending', 'true')
+          // Check if this is development auth (mock token) or production auth (real token)
+          const isDevelopmentAuth = result.data.customToken?.startsWith('dev_token_');
 
-          const userCredential = await signInWithCustomToken(auth, result.data.customToken)
-          console.log("Firebase sign-in successful:", userCredential.user.uid)
+          if (isDevelopmentAuth) {
+            console.log("Development authentication - creating session directly")
 
-          // The Firebase auth state change will trigger the session management
-          // and handle the redirect automatically through SessionAuthInitializer
+            // For development auth, create session directly without Firebase
+            const sessionResponse = await fetch('/api/auth/session', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                user: result.data,
+                isDevelopment: true
+              })
+            });
 
-          // Add fallback redirect in case SessionAuthInitializer doesn't handle it
-          setTimeout(() => {
-            if (localStorage.getItem('authRedirectPending')) {
-              console.log("Fallback redirect triggered - SessionAuthInitializer didn't handle redirect")
-              localStorage.removeItem('authRedirectPending')
+            if (sessionResponse.ok) {
+              console.log("Development session created successfully")
               window.location.href = "/"
+            } else {
+              throw new Error('Failed to create development session')
             }
-          }, 2000) // Wait 2 seconds for SessionAuthInitializer to handle it first
 
-        } catch (firebaseError: any) {
-          console.error("Firebase sign-in error:", firebaseError)
-          localStorage.removeItem('authRedirectPending')
+          } else {
+            console.log("Production authentication - using Firebase custom token")
+
+            // For production auth, we need to use Firebase (but through API)
+            const firebaseResponse = await fetch('/api/auth/firebase-signin', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                customToken: result.data.customToken
+              })
+            });
+
+            if (firebaseResponse.ok) {
+              console.log("Production Firebase sign-in successful")
+              window.location.href = "/"
+            } else {
+              throw new Error('Failed to sign in with Firebase')
+            }
+          }
+
+        } catch (authError: any) {
+          console.error("Authentication error:", authError)
           setError("Authentication failed. Please try again.")
         }
       } else {
@@ -191,9 +230,18 @@ export function ModernLoginForm({
             value={emailOrUsername}
             onChange={(e) => setEmailOrUsername(e.target.value)}
             tabIndex={1}
-            className="h-10 bg-background"
+            className={cn(
+              "h-10 bg-background",
+              inputValidationError && "border-red-500 focus:border-red-500"
+            )}
             autoComplete="username"
           />
+          {inputValidationError && (
+            <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+              <AlertCircle className="h-4 w-4" />
+              <span>{inputValidationError}</span>
+            </div>
+          )}
         </div>
 
         <div className="grid gap-2">

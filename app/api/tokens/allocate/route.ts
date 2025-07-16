@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
-import { TokenService } from '../../../services/tokenService';
+import { ServerTokenService } from '../../../services/tokenService.server';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Allocate tokens
-    const result = await TokenService.allocateTokens(
+    const result = await ServerTokenService.allocateTokens(
       userId,
       recipientUserId,
       resourceType,
@@ -109,13 +109,13 @@ export async function POST(request: NextRequest) {
     );
 
     if (!result.success) {
-      return NextResponse.json({ 
-        error: result.error 
+      return NextResponse.json({
+        error: result.error
       }, { status: 400 });
     }
 
     // Get updated token balance
-    const updatedBalance = await TokenService.getUserTokenBalance(userId);
+    const updatedBalance = await ServerTokenService.getUserTokenBalance(userId);
 
     console.log(`Tokens allocated: ${tokens} from ${userId} to ${recipientUserId} for ${resourceType}:${resourceId}`);
 
@@ -166,20 +166,20 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Remove allocation
-    const result = await TokenService.removeTokenAllocation(
+    const result = await ServerTokenService.removeTokenAllocation(
       userId,
       resourceType as 'page' | 'group' | 'user_bio' | 'group_about',
       resourceId
     );
 
     if (!result.success) {
-      return NextResponse.json({ 
-        error: result.error 
+      return NextResponse.json({
+        error: result.error
       }, { status: 400 });
     }
 
     // Get updated token balance
-    const updatedBalance = await TokenService.getUserTokenBalance(userId);
+    const updatedBalance = await ServerTokenService.getUserTokenBalance(userId);
 
     console.log(`Token allocation removed: ${userId} for ${resourceType}:${resourceId}`);
 

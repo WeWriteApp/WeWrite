@@ -15,11 +15,11 @@ interface RandomPage {
   username: string;
   lastModified: string;
   createdAt: string;
-  isPublic: boolean;
   tier?: string;
   subscriptionStatus?: string;
   subscriptionAmount?: number;
   // Groups functionality removed
+  // Note: isPublic removed - all pages are now public
 }
 
 interface RandomPagesProps {
@@ -40,7 +40,7 @@ const RandomPages = React.memo(function RandomPages({
   const [loading, setLoading] = useState(true);
   const [shuffling, setShuffling] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [includePrivatePages, setIncludePrivatePages] = useState(false);
+
   const [denseMode, setDenseMode] = useState(false);
   const [excludeOwnPages, setExcludeOwnPages] = useState(false);
 
@@ -49,10 +49,7 @@ const RandomPages = React.memo(function RandomPages({
   // Load preferences from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedPrivacyPreference = localStorage.getItem('randomPages_includePrivate');
-      if (savedPrivacyPreference === 'true') {
-        setIncludePrivatePages(true);
-      }
+
 
       const savedDenseModePreference = localStorage.getItem('randomPages_denseMode');
       if (savedDenseModePreference === 'true') {
@@ -67,7 +64,7 @@ const RandomPages = React.memo(function RandomPages({
   }, []);
 
   // Fetch random pages from API with throttling
-  const fetchRandomPages = useCallback(async (isShuffling = false, includePrivate = includePrivatePages, excludeOwn = excludeOwnPages) => {
+  const fetchRandomPages = useCallback(async (isShuffling = false, excludeOwn = excludeOwnPages) => {
     try {
       // Prevent excessive API calls - throttle to max once per 2 seconds
       const now = Date.now();
@@ -97,11 +94,6 @@ const RandomPages = React.memo(function RandomPages({
       // Add user ID for access control if user is authenticated
       if (session?.uid) {
         params.append('userId', session.uid);
-      }
-
-      // Add privacy preference
-      if (includePrivate) {
-        params.append('includePrivate', 'true');
       }
 
       // Add "Not mine" filter preference
@@ -145,13 +137,13 @@ const RandomPages = React.memo(function RandomPages({
       setLoading(false);
       setShuffling(false);
     }
-  }, [limit, session?.uid, denseMode, includePrivatePages, excludeOwnPages]);
+  }, [limit, session?.uid, denseMode, excludeOwnPages]);
 
   // Handle shuffle button click
-  const handleShuffle = useCallback((includePrivate = includePrivatePages, excludeOwn = excludeOwnPages) => {
-    console.log('RandomPages: Shuffle button clicked', { includePrivate, excludeOwn });
-    fetchRandomPages(true, includePrivate, excludeOwn);
-  }, [fetchRandomPages, includePrivatePages, excludeOwnPages]);
+  const handleShuffle = useCallback((excludeOwn = excludeOwnPages) => {
+    console.log('RandomPages: Shuffle button clicked', { excludeOwn });
+    fetchRandomPages(true, excludeOwn);
+  }, [fetchRandomPages, excludeOwnPages]);
 
   // Initial fetch on component mount
   useEffect(() => {
@@ -161,26 +153,22 @@ const RandomPages = React.memo(function RandomPages({
   // Listen for shuffle events from sticky header
   useEffect(() => {
     const handleShuffleEvent = (event: CustomEvent) => {
-      const includePrivate = event.detail?.includePrivate ?? includePrivatePages;
       const excludeOwn = event.detail?.excludeOwnPages ?? excludeOwnPages;
-      console.log('RandomPages: Shuffle event received', { includePrivate, excludeOwn });
+      console.log('RandomPages: Shuffle event received', { excludeOwn });
 
       // Update local state if settings changed
-      if (includePrivate !== includePrivatePages) {
-        setIncludePrivatePages(includePrivate);
-      }
       if (excludeOwn !== excludeOwnPages) {
         setExcludeOwnPages(excludeOwn);
       }
 
-      handleShuffle(includePrivate, excludeOwn);
+      handleShuffle(excludeOwn);
     };
 
     window.addEventListener('shuffleRandomPages', handleShuffleEvent as EventListener);
     return () => {
       window.removeEventListener('shuffleRandomPages', handleShuffleEvent as EventListener);
     };
-  }, [handleShuffle, includePrivatePages, excludeOwnPages]);
+  }, [handleShuffle, excludeOwnPages]);
 
   // Listen for dense mode changes from header
   useEffect(() => {

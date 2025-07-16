@@ -20,7 +20,7 @@ Disallow: /private/
 Disallow: /user/*/private
 Disallow: /group/*/private
 
-# Allow crawling of public pages and user profiles
+# Allow crawling of pages and user profiles
 Allow: /page/
 Allow: /user/
 Allow: /group/

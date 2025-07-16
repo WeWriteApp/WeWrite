@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Editor from './Editor';
+import dynamic from 'next/dynamic';
 import { prepareReplyContent, validateReplyContent } from "../../utils/replyManager';
-// Note: We're using the centralized styles from editor-styles.css
-// which is imported by Editor
+
+// Import the unified editor
+const Editor = dynamic(() => import("./Editor"), { ssr: false });
 
 /**
  * ReplyContent Component

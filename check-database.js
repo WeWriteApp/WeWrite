@@ -33,14 +33,14 @@ async function checkDatabase() {
       console.log('👤 User:', doc.id.substring(0, 8) + '...', '- Email:', data.email, '- Username:', data.username);
     });
     
-    // Check recent public pages from all users
+    // Check recent pages from all users
     const pagesSnapshot = await db.collection('pages')
       .where('isPublic', '==', true)
       .orderBy('lastModified', 'desc')
       .limit(20)
       .get();
       
-    console.log('📄 Recent public pages found:', pagesSnapshot.size);
+    console.log('📄 Recent pages found:', pagesSnapshot.size);
     
     const userCounts = {};
     pagesSnapshot.docs.forEach(doc => {

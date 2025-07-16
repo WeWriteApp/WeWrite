@@ -47,40 +47,42 @@ export function extractTextContent(contentJsonString: string | object): string {
 
     // If it's an array (like Slate or Lexical might use)
     if (Array.isArray(content)) {
-      return extractTextFromNodes(content);
+      return cleanupText(extractTextFromNodes(content));
     }
 
     // For Lexical-like structure
     if (content.root && content.root.children) {
-      return extractTextFromLexicalNodes(content.root.children);
+      return cleanupText(extractTextFromLexicalNodes(content.root.children));
     }
 
     // If it has a blocks property (another common format)
     if (content.blocks) {
-      return content.blocks.map(block => block.text || '').join('\n');
+      const text = content.blocks.map(block => block.text || '').join(', ');
+      return cleanupText(text);
     }
 
     // If it has a content property
     if (content.content) {
-      if (typeof content.content === 'string') return content.content;
+      if (typeof content.content === 'string') return cleanupText(content.content);
       if (Array.isArray(content.content)) {
-        return content.content.map(item => {
+        const text = content.content.map(item => {
           if (typeof item === 'string') return item;
           return item.text || '';
-        }).join('\n');
+        }).join(', ');
+        return cleanupText(text);
       }
     }
 
     // If it has a text property
-    if (content.text) return content.text;
+    if (content.text) return cleanupText(content.text);
 
     // Plain text
     if (typeof content === 'string') {
-      return content;
+      return cleanupText(content);
     }
 
     // Last resort: stringify the object and return
-    return JSON.stringify(content);
+    return cleanupText(JSON.stringify(content));
   } catch (error) {
     console.error("Error extracting text content:", error);
     return '';
@@ -94,7 +96,7 @@ function extractTextFromNodes(nodes: any[]): string {
   let text = '';
   if (!nodes) return text;
 
-  nodes.forEach(node => {
+  nodes.forEach((node, index) => {
     if (typeof node === 'string') {
       text += node;
     } else if (node.text) {
@@ -110,6 +112,11 @@ function extractTextFromNodes(nodes: any[]): string {
         text += extractTextFromNodes(node.content);
       }
     }
+
+    // Add separator between block-level elements (paragraphs, headings, etc.)
+    if (node.type && ['paragraph', 'heading', 'blockquote', 'list-item'].includes(node.type) && index < nodes.length - 1) {
+      text += ', ';
+    }
   });
 
   return text;
@@ -122,13 +129,18 @@ function extractTextFromLexicalNodes(nodes: any[]): string {
   let text = '';
   if (!nodes) return text;
 
-  nodes.forEach(node => {
+  nodes.forEach((node, index) => {
     if (node.text) {
       text += node.text;
     } else if (node.type === 'link' || node.type === 'custom-link') {
       text += extractLexicalLinkText(node);
     } else if (node.children) {
       text += extractTextFromLexicalNodes(node.children);
+    }
+
+    // Add separator between block-level elements (paragraphs, headings, etc.)
+    if (node.type && ['paragraph', 'heading', 'blockquote', 'listitem'].includes(node.type) && index < nodes.length - 1) {
+      text += ', ';
     }
   });
 
@@ -229,6 +241,25 @@ function extractLexicalLinkText(node: any): string {
 
   // Add the link text with special markers to indicate it's a link
   return `[${linkText}]`;
+}
+
+/**
+ * Clean up extracted text by replacing newlines with commas for better readability in diffs
+ */
+function cleanupText(text: string): string {
+  if (!text) return '';
+
+  return text
+    // Replace newlines and carriage returns with commas
+    .replace(/[\r\n]+/g, ', ')
+    // Replace multiple spaces with single space
+    .replace(/\s+/g, ' ')
+    // Remove leading/trailing whitespace
+    .trim()
+    // Clean up multiple commas
+    .replace(/,\s*,+/g, ', ')
+    // Remove trailing comma
+    .replace(/,\s*$/, '');
 }
 
 // Compatibility exports for existing code

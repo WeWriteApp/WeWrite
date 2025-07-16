@@ -13,7 +13,7 @@ import { useAccentColor, ACCENT_COLOR_VALUES } from "../../contexts/AccentColorC
  * RecentPageChanges Component
  *
  * Displays a sparkline of recent changes to a page, the most recent activity,
- * and a button to view all page history.
+ * and a button to view all page activity.
  *
  * @param {Object} props
  * @param {string} props.pageId - The ID of the page
@@ -70,7 +70,7 @@ export default function RecentPageChanges({ pageId }) {
         setVersions(sortedVersions);
       } catch (err) {
         console.error('Error fetching page versions:', err);
-        setError('Failed to load page history');
+        setError('Failed to load page activity');
       } finally {
         setLoading(false);
       }
@@ -125,10 +125,10 @@ export default function RecentPageChanges({ pageId }) {
   const validVersions = versions.filter(v => isValidTimestamp(v.timestamp));
   const mostRecentVersion = validVersions.length > 0 ? validVersions[0] : null;
 
-  const handleViewAllHistory = () => {
-    console.log("RecentPageChanges: Navigating to page history:", `/${pageId}/history`);
+  const handleViewAllActivity = () => {
+    console.log("RecentPageChanges: Navigating to page activity:", `/${pageId}/activity`);
     // Use Next.js router for client-side navigation to prevent scroll issues
-    router.push(`/${pageId}/history`);
+    router.push(`/${pageId}/activity`);
   };
 
   if (loading) {
@@ -152,7 +152,7 @@ export default function RecentPageChanges({ pageId }) {
     <div className="mt-6 border-t-only pt-6">
       <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
         <Clock className="h-4 w-4" />
-        Recent Changes
+        Page Activity
       </h3>
 
       {/* Sparkline chart */}
@@ -199,14 +199,14 @@ export default function RecentPageChanges({ pageId }) {
         </div>
       )}
 
-      {/* View all history button */}
+      {/* View all activity button */}
       <Button
         variant="outline"
         size="lg"
         className="w-full flex items-center justify-center gap-2"
-        onClick={handleViewAllHistory}
+        onClick={handleViewAllActivity}
       >
-        View all page history
+        View all page activity
         <ChevronRight className="h-5 w-5" />
       </Button>
     </div>

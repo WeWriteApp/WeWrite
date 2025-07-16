@@ -9,6 +9,7 @@ import Stripe from 'stripe';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../utils/environmentConfig';
 import { getStripeSecretKey } from '../utils/stripeConfig';
 import { FinancialUtils, CorrelationId } from '../types/financial';
+import { getCollectionName } from "../utils/environmentConfig";
 
 const stripe = new Stripe(getStripeSecretKey() || '', {
   apiVersion: '2024-12-18.acacia'});
@@ -320,7 +321,7 @@ export class PaymentRecoveryService {
    */
   private async getCustomerEmail(userId: string): Promise<string | undefined> {
     try {
-      const userDoc = await getDoc(doc(db, 'users', userId));
+      const userDoc = await getDoc(doc(db, getCollectionName("users"), userId));
       return userDoc.data()?.email;
     } catch (error) {
       return undefined;
@@ -349,9 +350,9 @@ export class PaymentRecoveryService {
   /**
    * Clear subscription failure status on successful payment
    */
-  private async clearSubscriptionFailureStatus(userId: string): Promise<void> {
-    const subscriptionRef = doc(db, 'users', userId, 'subscription', 'current');
-    
+  async clearSubscriptionFailureStatus(userId: string): Promise<void> {
+    const subscriptionRef = doc(db, getCollectionName("users"), userId, 'subscription', 'current');
+
     await updateDoc(subscriptionRef, {
       status: 'active',
       failureCount: 0,

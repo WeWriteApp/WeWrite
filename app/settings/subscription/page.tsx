@@ -28,6 +28,7 @@ import SubscriptionTierSlider from '../../components/subscription/SubscriptionTi
 import { SubscriptionTierBadge } from '../../components/ui/SubscriptionTierBadge';
 import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 import { getEffectiveTier, SUBSCRIPTION_TIERS } from '../../utils/subscriptionTiers';
+import SubscriptionHistory from '../../components/subscription/SubscriptionHistory';
 // PaymentFeatureGuard removed
 // Define the Subscription interface
 interface Subscription {
@@ -289,7 +290,7 @@ export default function SubscriptionPage() {
         text: 'Upgrade Subscription',
         variant: 'default' as const,
         disabled: false,
-        className: 'bg-primary hover:bg-primary/90'
+        className: 'bg-green-600 hover:bg-green-700 text-white'
       };
     }
   };
@@ -334,41 +335,34 @@ export default function SubscriptionPage() {
     if (isActiveModification) {
       // Handle active subscription modification - use simple API
       try {
-        const user = auth.currentUser;
-        if (!user) {
-          throw new Error('User not authenticated');
-        }
-        const token = await user.getIdToken();
-
         // First, create a new price for the updated subscription
         const tierData = SUBSCRIPTION_TIERS.find(t => t.id === selectedTier);
         if (!tierData) {
           throw new Error('Invalid tier selected');
         }
 
-        // Navigate to checkout page for subscription upgrade
-        const checkoutUrl = new URL('/settings/subscription/checkout', window.location.origin);
-        checkoutUrl.searchParams.set('tier', selectedTier);
-        checkoutUrl.searchParams.set('amount', selectedAmount.toString());
-        checkoutUrl.searchParams.set('return_to', window.location.pathname);
-        checkoutUrl.searchParams.set('upgrade', 'true'); // Flag to indicate this is an upgrade
+        const response = await fetch('/api/subscription/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            subscriptionId: currentSubscription.stripeSubscriptionId,
+            newAmount: selectedAmount,
+            newTier: selectedTier
+          })
+        });
 
-        router.push(checkoutUrl.toString());
-        return;
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to update subscription');
+        }
 
-        // TODO: Implement subscription update with simple API
-        // This would require creating a new price and updating the subscription
-        // const response = await fetch('/api/subscription/simple', {
-        //   method: 'PATCH',
-        //   headers: {
-        //     'Content-Type': 'application/json',
-        //     'Authorization': `Bearer ${token}`
-        //   },
-        //   body: JSON.stringify({
-        //     subscriptionId: currentSubscription.stripeSubscriptionId,
-        //     newPriceId: newPriceId // Would need to create price first
-        //   })
-        // });
+        console.log('✅ Subscription updated successfully:', data);
+        setLoading(false);
+
+        // Refresh subscription data
+        window.location.reload();
 
       } catch (error) {
         console.error('Error updating subscription:', error);
@@ -384,11 +378,7 @@ export default function SubscriptionPage() {
     if (isReactivation) {
       // Handle reactivation
       try {
-        const user = auth.currentUser;
-        if (!user) {
-          throw new Error('User not authenticated');
-        }
-        const token = await user.getIdToken();
+        // No need for Firebase Auth in development - API handles authentication
 
         // Determine if this is a reactivation with amount change
         const currentTierAmount = currentSubscription.amount;
@@ -407,8 +397,7 @@ export default function SubscriptionPage() {
         const response = await fetch('/api/subscription/reactivate', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify(requestBody)
         });
@@ -748,6 +737,9 @@ export default function SubscriptionPage() {
               </div>
             )}
           </div>
+
+          {/* Subscription History */}
+          <SubscriptionHistory className="mt-6" />
         </div>
 
         {/* Cancel Subscription Confirmation Dialog */}

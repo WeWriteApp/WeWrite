@@ -446,10 +446,10 @@ export function PaymentStep({
                       {existingPaymentMethods.map((method) => (
                         <div
                           key={method.id}
-                          className={`p-3 border rounded-lg transition-colors ${
+                          className={`p-3 border-theme-strong rounded-lg transition-colors ${
                             selectedExistingMethod === method.id
                               ? 'border-primary bg-primary/5'
-                              : 'border-border hover:border-primary/50'
+                              : 'hover:border-primary/50'
                           }`}
                         >
                           <div className="flex items-center justify-between">

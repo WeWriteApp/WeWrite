@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore';
 
 import { AutomatedPayoutService } from './automatedPayoutService';
+import { payoutRetryService } from './payoutRetryService';
 import {
   FinancialOperationResult,
   FinancialError,
@@ -352,6 +353,65 @@ export class PayoutSchedulerService {
       }
 
       const financialError = FinancialUtils.createError(FinancialErrorCode.PROCESSING_ERROR, `Scheduled payout processing failed: ${error.message}`, corrId, true, {  originalError: error  });
+
+      FinancialLogger.logError(financialError, corrId);
+
+      return {
+        success: false,
+        error: financialError,
+        correlationId: corrId
+      };
+    }
+  }
+
+  /**
+   * Process payout retries
+   */
+  async processRetries(correlationId?: CorrelationId): Promise<FinancialOperationResult<{
+    processed: number;
+    successful: number;
+    failed: number;
+  }>> {
+    const corrId = correlationId || FinancialUtils.generateCorrelationId();
+
+    try {
+      FinancialLogger.logOperation('RETRY_PROCESSING_STARTED', {
+        correlationId: corrId,
+        timestamp: new Date().toISOString()
+      });
+
+      const result = await payoutRetryService.processRetries();
+
+      if (result.success) {
+        FinancialLogger.logOperation('RETRY_PROCESSING_COMPLETED', {
+          correlationId: corrId,
+          processed: result.processed,
+          successful: result.successful,
+          failed: result.failed,
+          errors: result.errors.length
+        });
+
+        return {
+          success: true,
+          data: {
+            processed: result.processed,
+            successful: result.successful,
+            failed: result.failed
+          },
+          correlationId: corrId
+        };
+      } else {
+        throw new Error('Retry processing failed');
+      }
+
+    } catch (error) {
+      const financialError = FinancialUtils.createError(
+        FinancialErrorCode.PROCESSING_ERROR,
+        `Retry processing failed: ${error.message}`,
+        corrId,
+        true,
+        { originalError: error }
+      );
 
       FinancialLogger.logError(financialError, corrId);
 

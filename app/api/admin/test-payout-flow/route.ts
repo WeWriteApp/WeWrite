@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TokenEarningsService } from '../../../services/tokenEarningsService';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName } from "../../../utils/environmentConfig";
 
 // Inline admin check to avoid module resolution issues
 const ADMIN_USER_IDS = [
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
 
     // Get user email to check admin status using admin SDK
     const admin = getFirebaseAdmin();
+    const db = admin.firestore();
     const userRecord = await admin.auth().getUser(userId);
     const userEmail = userRecord.email;
 
@@ -46,9 +48,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Find target user by email
-    const targetUserQuery = query(collection(db, 'users'), where('email', '==', targetUserEmail));
-    const targetUserSnapshot = await getDocs(targetUserQuery);
+    const targetUserQuery = db.collection(getCollectionName('users')).where('email', '==', targetUserEmail);
+    const targetUserSnapshot = await targetUserQuery.get();
     
     if (targetUserSnapshot.empty) {
       return NextResponse.json({

@@ -150,7 +150,7 @@ export const searchPages = async (
     try {
       const titleQuery = query(
         pagesRef,
-        where("isPublic", "==", true), // Only search public pages for now
+        where("isPublic", "==", true), // Only search pages for now
         where("title", ">=", searchQuery),
         where("title", "<=", searchQuery + "\uf8ff"),
         limit(limitCount)
@@ -241,7 +241,7 @@ export const getTrendingPages = async (limitCount: number = 10) => {
   try {
     const pagesRef = collection(db, getCollectionName("pages"));
     
-    // For now, just get recent public pages (exclude deleted)
+    // For now, just get recent pages (exclude deleted)
     // In the future, this could be based on view counts, pledge amounts, etc.
     const trendingQuery = query(
       pagesRef,

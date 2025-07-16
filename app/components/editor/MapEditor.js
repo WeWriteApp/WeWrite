@@ -4,25 +4,28 @@ import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { MapPin, X } from 'lucide-react';
+import { useFeatureFlag } from '../../utils/feature-flags';
 import MapView from './MapView';
 
 /**
- * MapEditor Component
+ * MapEditor Component - Feature Flagged
  *
  * Allows adding, editing, or removing a location on a map.
- *
- * @param {Object} props
- * @param {Object} props.location - The current location object with lat and lng properties
- * @param {Function} props.onChange - Callback when the location changes
+ * Only renders when the 'map' feature flag is enabled.
  */
 const MapEditor = ({ location, onChange, compact = false }) => {
+  const mapFeatureEnabled = useFeatureFlag('map');
   const [isOpen, setIsOpen] = useState(false);
   const [tempLocation, setTempLocation] = useState(location);
+
+  // Don't render if map feature is disabled
+  if (!mapFeatureEnabled) {
+    return null;
+  }
 
   const handleOpenChange = (open) => {
     setIsOpen(open);
     if (open) {
-      // Initialize temp location with current location when opening
       setTempLocation(location);
     }
   };
@@ -107,6 +110,7 @@ const MapEditor = ({ location, onChange, compact = false }) => {
                 <Button
                   onClick={handleSave}
                   disabled={!tempLocation}
+                  variant="success"
                   className="min-w-[80px]"
                 >
                   Save

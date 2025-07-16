@@ -8,8 +8,7 @@ export const checkPageAccess = async (pageData: PageData | null, userId: string 
     pageExists: !!pageData,
     pageId: pageData?.id,
     userId: userId || 'anonymous',
-    isDeleted: pageData?.deleted,
-    isPublic: pageData?.isPublic
+    isDeleted: pageData?.deleted
   });
 
   // If page doesn't exist, no one has access
@@ -55,10 +54,10 @@ export const checkPageAccess = async (pageData: PageData | null, userId: string 
   }
 
   // All pages are now public by default - simplified access model
-  console.log('🔍 checkPageAccess: Public page access granted');
+  console.log('🔍 checkPageAccess: Page access granted');
   return {
     hasAccess: true,
-    reason: "public page"
+    reason: "page"
   };
 };
 

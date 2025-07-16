@@ -12,7 +12,6 @@ interface UserData {
   uid: string;
   email: string;
   username?: string;
-  displayName?: string;
   emailVerified: boolean;
   createdAt: any;
   lastLogin?: any;
@@ -101,7 +100,6 @@ export async function GET(request: NextRequest) {
           uid: userDoc.id,
           email: data.email || 'No email',
           username: data.username,
-          displayName: data.displayName,
           emailVerified,
           createdAt: data.createdAt,
           lastLogin: data.lastLogin,
@@ -117,9 +115,8 @@ export async function GET(request: NextRequest) {
           const searchLower = searchTerm.toLowerCase();
           const emailMatch = user.email.toLowerCase().includes(searchLower);
           const usernameMatch = user.username?.toLowerCase().includes(searchLower);
-          const displayNameMatch = user.displayName?.toLowerCase().includes(searchLower);
-          
-          if (emailMatch || usernameMatch || displayNameMatch) {
+
+          if (emailMatch || usernameMatch) {
             userData.push(user);
           }
         } else {

@@ -9,9 +9,7 @@ import { ref, get } from "firebase/database";
 import { rtdb } from "../../firebase/rtdb";
 import dynamic from 'next/dynamic';
 
-import { getUsernameById, getUserSubscriptionTier } from "../../utils/userUtils";
-import { SubscriptionTierBadge } from "../ui/SubscriptionTierBadge";
-import { SubscriptionInfoModal } from "../payments/SubscriptionInfoModal";
+import { UsernameBadge } from "../ui/UsernameBadge";
 
 import ClickableByline from "../utils/ClickableByline";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
@@ -58,28 +56,19 @@ const isExactDateFormat = isDailyNoteFormat;
  *
  * Displays the header for individual pages, including:
  * - Page title (editable when user has permissions)
- * - Author username with subscription tier badge
+ * - Author username with subscription tier badge (via UsernameBadge component)
  * - Navigation and action buttons
  * - Privacy indicators
  *
- * SUBSCRIPTION BADGE FUNCTIONALITY:
- * The component automatically fetches and displays subscription tier badges next to usernames.
+ * USER DISPLAY FUNCTIONALITY:
+ * The component uses the UsernameBadge component to handle all user display logic,
+ * including username fetching, subscription data, and badge rendering.
  *
- * Data Flow:
- * 1. Component receives userId prop for the page author
- * 2. Fetches username and subscription data via getUsernameById() and getUserSubscriptionTier()
- * 3. Displays subscription badge if:
- *    - Subscription feature flag is enabled for current user
- *    - Valid subscription data exists (tier, status)
- *    - Data is not loading
- *
- * Feature Flag Behavior:
- * - When 'payments' feature flag is disabled: Badge still shows but modal functionality is disabled
- * - When feature flag is enabled: Full subscription modal with upgrade/downgrade options
- *
- * Fallback Values:
- * - Uses DEFAULT_SUBSCRIPTION constants when actual data is unavailable
- * - Shows inactive/null as fallback to avoid misleading subscription status
+ * UsernameBadge automatically:
+ * - Fetches username and subscription data based on userId
+ * - Handles feature flag checks for subscription display
+ * - Provides tooltips and click interactions
+ * - Manages loading states and error handling
  */
 export interface PageHeaderProps {
   /** The page title to display */
@@ -90,14 +79,13 @@ export interface PageHeaderProps {
   userId?: string;
   /** Whether the page is currently loading */
   isLoading?: boolean;
-  /** Whether the page is private */
-  isPrivate?: boolean;
+
   /** Current scroll direction for header behavior */
   scrollDirection?: string;
 
-  /** Subscription tier (deprecated - now fetched internally via userId) */
+  /** Subscription tier (deprecated - now handled by UsernameBadge) */
   tier?: string;
-  /** Subscription status (deprecated - now fetched internally via userId) */
+  /** Subscription status (deprecated - now handled by UsernameBadge) */
   subscriptionStatus?: string;
   /** Whether the page is currently being edited */
   isEditing?: boolean;
@@ -113,6 +101,8 @@ export interface PageHeaderProps {
   pageId?: string | null;
   /** Flag to indicate this is a new page */
   isNewPage?: boolean;
+  /** Flag to indicate this is a reply */
+  isReply?: boolean;
 
   /** Handler for delete page */
   onDelete?: () => void;
@@ -125,10 +115,10 @@ export default function PageHeader({
   username,
   userId,
   isLoading = false,
-  isPrivate = false,
+
   // scrollDirection is not used but kept for compatibility
-  tier: initialTier,
-  subscriptionStatus: initialStatus,
+  tier: initialTier, // deprecated - kept for compatibility
+  subscriptionStatus: initialStatus, // deprecated - kept for compatibility
   isEditing = false,
   setIsEditing,
   onTitleChange,
@@ -137,16 +127,16 @@ export default function PageHeader({
   pageId: propPageId = null,
   onOwnershipChange,
   isNewPage = false,
+  isReply = false,
   onDelete,
   onInsertLink}: PageHeaderProps) {
 
-  // Default subscription values for fallback display when data is loading or unavailable
-  // IMPORTANT: Default to inactive to avoid misleading users about subscription status
-  const DEFAULT_SUBSCRIPTION = {
-    tier: 'inactive' as const,
-    status: null as const,
-    amount: null as const,
-  };
+  // Fetch subscription data for the page author
+  const [authorSubscription, setAuthorSubscription] = React.useState<{
+    tier?: string | null;
+    status?: string | null;
+    amount?: number | null;
+  }>({});
 
   const router = useRouter();
   const { session } = useCurrentAccount();
@@ -158,65 +148,34 @@ export default function PageHeader({
   const { trackInteractionEvent, events } = useWeWriteAnalytics();
   const headerRef = React.useRef<HTMLDivElement>(null);
   const { lineMode, setLineMode } = useLineSettings();
-  // User display state
-  const [displayUsername, setDisplayUsername] = React.useState<string>(username || "Anonymous");
 
-  // Subscription data state - used for badge display
-  const [tier, setTier] = React.useState<string | null>(initialTier || null); // e.g., 'tier1', 'tier2', 'tier3'
-  const [subscriptionStatus, setSubscriptionStatus] = React.useState<string | null>(initialStatus || null); // e.g., 'active', 'inactive'
-  const [subscriptionAmount, setSubscriptionAmount] = React.useState<number | null>(null); // Monthly amount in dollars
-  const [isLoadingTier, setIsLoadingTier] = React.useState<boolean>(false);
-
-  // Feature flag check - determines if subscription badges should be shown
-  // Use current user's payments flag to determine if subscription system is visible
-  const subscriptionEnabled = useFeatureFlag('payments', session?.email, session?.uid);
-
-  /**
-   * Determines if subscription badge should be shown next to the username.
-   *
-   * The badge displays the user's subscription tier (tier1, tier2, tier3, inactive) with
-   * appropriate icons and tooltips. It's only shown when:
-   * - Subscription feature flag is enabled for the current user
-   * - Valid tier data has been fetched (including 'inactive')
-   * - Data is not currently loading
-   *
-   * Note: We show badges for all tiers including 'inactive' to indicate subscription status.
-   * The subscriptionStatus can be null for inactive users, so we don't require it.
-   */
-  const shouldShowSubscriptionBadge = React.useMemo(() => {
-    return subscriptionEnabled && (tier || isLoadingTier);
-  }, [subscriptionEnabled, tier, isLoadingTier]);
-
-  /**
-   * Fetch subscription data when subscriptions are enabled and userId changes.
-   * This provides subscription tier data for the badge display.
-   * Note: Main user data fetching (including subscription data) happens in the
-   * fetchUserData effect below, but this effect handles cases where subscription
-   * feature flag changes independently.
-   */
+  // Fetch subscription data for the page author
   React.useEffect(() => {
-    if (!subscriptionEnabled || !userId) {
-      return;
-    }
+    if (!userId) return;
 
-    setIsLoadingTier(true);
-
-    const fetchSubscriptionData = async () => {
+    const fetchAuthorSubscription = async () => {
       try {
-        const subscriptionData = await getUserSubscriptionTier(userId);
-        const { tier: fetchedTier, status, amount } = subscriptionData;
-        setTier(fetchedTier);
-        setSubscriptionStatus(status);
-        setSubscriptionAmount(amount);
+        const response = await fetch(`/api/account-subscription?userId=${userId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setAuthorSubscription({
+            tier: data.fullData?.tier || null,
+            status: data.fullData?.status || null,
+            amount: data.fullData?.amount || null
+          });
+        } else {
+          setAuthorSubscription({ tier: null, status: null, amount: null });
+        }
       } catch (error) {
-        console.error('Error fetching subscription data:', error);
-      } finally {
-        setIsLoadingTier(false);
+        console.error('Error fetching author subscription:', error);
+        setAuthorSubscription({ tier: null, status: null, amount: null });
       }
     };
 
-    fetchSubscriptionData();
-  }, [subscriptionEnabled, userId]);
+    fetchAuthorSubscription();
+  }, [userId]);
+
+  // UsernameBadge handles all subscription data fetching internally
 
   const [pageId, setPageId] = React.useState<string | null>(propPageId);
   const [isAddToPageOpen, setIsAddToPageOpen] = React.useState<boolean>(false);
@@ -457,56 +416,7 @@ export default function PageHeader({
     e.target.style.height = e.target.scrollHeight + 'px';
   };
 
-  /**
-   * Fetch username and subscription data when userId changes
-   *
-   * Data flow:
-   * 1. Set default username immediately to prevent flash
-   * 2. If userId exists, fetch username and subscription data in parallel
-   * 3. Update username if valid result received
-   * 4. Update subscription data (tier, status, amount) for badge display
-   * 5. Handle errors gracefully without showing to user
-   */
-  React.useEffect(() => {
-    const fetchUserData = async () => {
-      // Set default username immediately to prevent flash of "Missing username"
-      setDisplayUsername(username || "Anonymous");
-
-      // Only fetch additional data if we have a valid userId
-      if (!userId) {
-        return;
-      }
-
-      try {
-        setIsLoadingTier(true);
-
-        // Fetch username and subscription data in parallel for better performance
-        const [fetchedUsername, subscriptionData] = await Promise.all([
-          getUsernameById(userId),
-          getUserSubscriptionTier(userId)
-        ]);
-
-        // Update username if we got a valid result
-        if (fetchedUsername && fetchedUsername !== "Anonymous" && fetchedUsername !== "Missing username") {
-          setDisplayUsername(fetchedUsername);
-        }
-
-        // Update subscription data for badge display
-        const { tier: fetchedTier, status, amount } = subscriptionData;
-        setTier(fetchedTier);
-        setSubscriptionStatus(status);
-        setSubscriptionAmount(amount);
-
-      } catch (error) {
-        console.error("Error fetching user data for header:", error);
-        // Keep the default username on error - don't show error to user
-      } finally {
-        setIsLoadingTier(false);
-      }
-    };
-
-    fetchUserData();
-  }, [userId, username]); // Re-run when userId or username prop changes
+  // UsernameBadge handles all data fetching internally
 
   // Extract page ID from URL and determine if user can change ownership
   React.useEffect(() => {
@@ -685,9 +595,9 @@ export default function PageHeader({
       id: pageId,
       title: title || "Untitled",
       userId: userId,
-      username: displayUsername
+      username: username
     };
-  }, [pageId, title, session?.uid, displayUsername]);
+  }, [pageId, title, session?.uid, username]);
 
   // Handler functions using shared utilities
   const handleAddToPageClick = () => {
@@ -712,9 +622,9 @@ export default function PageHeader({
   const handleBackClick = (e: React.MouseEvent) => {
     e.preventDefault();
 
-    // Check if we're on a history page
+    // Check if we're on an activity page
     const pathname = window.location.pathname;
-    if (pathname.includes('/history')) {
+    if (pathname.includes('/activity')) {
       // Extract the page ID from the URL
       const pageId = pathname.split('/')[1];
       if (pageId) {
@@ -744,8 +654,8 @@ export default function PageHeader({
     <>
       <header
         ref={headerRef}
-        className={`fixed top-0 z-50 transition-all duration-300 ease-out will-change-transform header-border-transition ${
-          isScrolled
+        className={`${isEditing ? 'relative' : 'fixed top-0'} z-50 transition-all duration-300 ease-out will-change-transform header-border-transition ${
+          isScrolled && !isEditing
             ? "bg-background/80 backdrop-blur-sm shadow-sm"
             : "bg-background border-visible"
         }`}
@@ -799,34 +709,25 @@ export default function PageHeader({
                               : title
                               ? title
                               : isNewPage
-                              ? "Give your page a title..."
+                              ? (isReply ? "Give your reply a title..." : "Give your page a title...")
                               : "Untitled"
                             }
                           </span>
-                          {isPrivate && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+
                         </span>
                       )}
                     </h1>
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      by <span className={subscriptionStatus === 'active' ? 'text-accent-foreground' : 'text-muted-foreground'}>{displayUsername}</span>
-                      {shouldShowSubscriptionBadge && (
-                        <SubscriptionInfoModal
-                          currentTier={tier || DEFAULT_SUBSCRIPTION.tier}
-                          currentStatus={subscriptionStatus || DEFAULT_SUBSCRIPTION.status}
-                          userId={userId}
-                          username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}
-                        >
-                          <div className="cursor-pointer flex-shrink-0 flex items-center">
-                            <SubscriptionTierBadge
-                              tier={tier || DEFAULT_SUBSCRIPTION.tier}
-                              status={subscriptionStatus || DEFAULT_SUBSCRIPTION.status}
-                              amount={subscriptionAmount || DEFAULT_SUBSCRIPTION.amount}
-                              size="sm"
-                            />
-                          </div>
-                        </SubscriptionInfoModal>
-                      )}
-                    </span>
+                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                      by <UsernameBadge
+                        userId={userId}
+                        username={username}
+                        tier={authorSubscription.tier}
+                        subscriptionStatus={authorSubscription.status}
+                        subscriptionAmount={authorSubscription.amount}
+                        size="sm"
+                        className="text-xs"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1037,7 +938,7 @@ export default function PageHeader({
                                 minHeight: "2.5rem",
                                 lineHeight: "1.3"
                               }}
-                              placeholder={isNewPage ? "Give your page a title..." : "Add a title..."}
+                              placeholder={isNewPage ? (isReply ? "Give your reply a title..." : "Give your page a title...") : "Add a title..."}
                               rows={1}
                             />
                           ) : (
@@ -1075,19 +976,19 @@ export default function PageHeader({
                                   : (canEdit ? (isEditing ? "Click to edit title" : "Click to edit page") : undefined)
                               }
                             >
-                              <span className={!title && isNewPage ? "text-muted-foreground" : ""}>
+                              <span className={!title && (isNewPage || isReply) ? "text-muted-foreground" : ""}>
                                 {(isExactDateFormat(title || "") && title !== "Daily note") && title
                                   ? formatDate(title)
                                   : title
                                   ? title
                                   : isNewPage
-                                  ? "Give your page a title..."
+                                  ? (isReply ? "Give your reply a title..." : "Give your page a title...")
                                   : "Untitled"
                                 }
                               </span>
                             </span>
                           )}
-                          {isPrivate && <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+
                         </div>
                       )}
                     </h1>
@@ -1129,56 +1030,18 @@ export default function PageHeader({
                         Loading...
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1 justify-center">
+                      <div className="flex items-center gap-1 justify-center">
                         <span className="whitespace-nowrap flex-shrink-0">by</span>
-                        {isNewPage ? (
-                          <span className="overflow-hidden text-ellipsis">
-                            {isLoading || !displayUsername ? (
-                              <span className="inline-flex items-center text-muted-foreground">
-                                <Loader className="h-3 w-3 animate-spin mr-1" />
-                                Loading...
-                              </span>
-                            ) : (
-                              <span data-component-name="PageHeader" className={`overflow-hidden text-ellipsis ${subscriptionStatus === 'active' ? 'text-accent-foreground' : ''}`}>
-                                {displayUsername}
-                              </span>
-                            )}
-                          </span>
-                        ) : (
-                          <Link href={`/user/${userId}`} className="hover:underline overflow-hidden text-ellipsis">
-                            {isLoading || !displayUsername ? (
-                              <span className="inline-flex items-center text-muted-foreground">
-                                <Loader className="h-3 w-3 animate-spin mr-1" />
-                                Loading...
-                              </span>
-                            ) : (
-                              <span data-component-name="PageHeader" className={`overflow-hidden text-ellipsis ${subscriptionStatus === 'active' ? 'text-accent-foreground' : ''}`}>
-                                {displayUsername}
-                              </span>
-                            )}
-                          </Link>
-                        )}
-
-                        {/* Show subscription badge if user has active subscription */}
-                        {shouldShowSubscriptionBadge && (
-                          <SubscriptionInfoModal
-                            currentTier={tier || DEFAULT_SUBSCRIPTION.tier}
-                            currentStatus={subscriptionStatus || DEFAULT_SUBSCRIPTION.status}
-                            userId={userId}
-                            username={displayUsername && displayUsername !== 'Anonymous' ? displayUsername : undefined}
-                          >
-                            <div className="cursor-pointer flex-shrink-0 flex items-center">
-                              <SubscriptionTierBadge
-                                tier={tier || DEFAULT_SUBSCRIPTION.tier}
-                                status={subscriptionStatus || DEFAULT_SUBSCRIPTION.status}
-                                amount={subscriptionAmount || DEFAULT_SUBSCRIPTION.amount}
-                                size="sm"
-                                isLoading={isLoadingTier}
-                              />
-                            </div>
-                          </SubscriptionInfoModal>
-                        )}
-                      </span>
+                        <UsernameBadge
+                          userId={userId}
+                          username={username}
+                          tier={authorSubscription.tier}
+                          subscriptionStatus={authorSubscription.status}
+                          subscriptionAmount={authorSubscription.amount}
+                          size="sm"
+                          className="text-xs overflow-hidden text-ellipsis"
+                        />
+                      </div>
                     )}
                   </div>
                 </div>

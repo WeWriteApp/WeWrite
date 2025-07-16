@@ -92,6 +92,12 @@ export const LoggingProvider = ({ children }: LoggingProviderProps) => {
 
   // Global error handler
   useEffect(() => {
+    // Enable verbose logging globally for debugging
+    if (typeof window !== 'undefined') {
+      (window as any).enableVerboseLogging = true;
+      console.log('🔍 Verbose logging enabled for debugging page content issues');
+    }
+
     const handleGlobalError = (event: ErrorEvent) => {
       const error: LoggingError = event.error || {
         message: event.message || 'Unknown error',
@@ -150,10 +156,17 @@ export const LoggingProvider = ({ children }: LoggingProviderProps) => {
     // Function to send console messages to terminal
     const sendConsoleToTerminal = async (level: string, args: any[]) => {
       try {
-        // Convert args to a readable message
+        // Enhanced message conversion with more details for errors
         const message = args.map(arg => {
-          if (typeof arg === 'object') {
+          if (arg instanceof Error) {
+            return `${arg.name}: ${arg.message}\n${arg.stack || 'No stack trace'}`;
+          }
+          if (typeof arg === 'object' && arg !== null) {
             try {
+              // Special handling for Firebase errors and other complex objects
+              if (arg.code && arg.message) {
+                return `FirebaseError[${arg.code}]: ${arg.message}`;
+              }
               return JSON.stringify(arg, null, 2);
             } catch {
               return String(arg);
@@ -162,21 +175,18 @@ export const LoggingProvider = ({ children }: LoggingProviderProps) => {
           return String(arg);
         }).join(' ');
 
-        // Filter out noisy debug messages that aren't useful in terminal
-        // (unless verbose logging is enabled)
-        const isVerboseEnabled = typeof window !== 'undefined' && (window as any).enableVerboseLogging;
+        // Disable verbose logging - only show warnings and errors
+        const isVerboseEnabled = false; // Reduced logging for normal development
 
         if (!isVerboseEnabled) {
+          // Filter out noisy but non-critical patterns
           const noisyPatterns = [
             'PillStyleContext debug',
             'LineSettingsProvider - render',
-            'TextView - render',
             'PWA Debug Mode Enabled',
             'Logger initialized',
             '[FeatureFlags] User override found',
             'Firebase Auth state changed',
-            'Page data received',
-            'Setting title from page data',
             'Resolving params Promise',
             'Subscription warning calculation',
             'Subscription warning hook',
@@ -184,7 +194,24 @@ export const LoggingProvider = ({ children }: LoggingProviderProps) => {
             'MultiAuthProvider: Rendering',
             'CurrentAccountProvider: Rendering',
             'HomePage: Component rendering',
-            'HomePage Auth State'
+            'HomePage Auth State',
+            // Firebase connection errors (non-critical but noisy)
+            'Could not reach Cloud Firestore backend',
+            'WebChannelConnection RPC',
+            'Failed to fetch this Firebase app\'s measurement ID',
+            'GrpcConnection RPC',
+            'Firestore (11.10.0): WebChannelConnection',
+            'Firestore (11.10.0): GrpcConnection',
+            'The operation could not be completed',
+            'Connection failed 1 times',
+            'Disconnecting idle stream',
+            'Timed out waiting for new targets',
+            // Session errors (handled gracefully)
+            'SESSION_NOT_FOUND',
+            'SessionError',
+            // Fast Refresh warnings (development only)
+            'Fast Refresh had to perform a full reload',
+            'performing full reload'
           ];
 
           if (noisyPatterns.some(pattern => message.includes(pattern))) {
@@ -208,73 +235,30 @@ export const LoggingProvider = ({ children }: LoggingProviderProps) => {
       }
     };
 
-    // Override console methods to forward to terminal
+    // Override console methods to forward to terminal with enhanced logging
     const originalConsoleError = console.error;
     const originalConsoleLog = console.log;
     const originalConsoleWarn = console.warn;
     const originalConsoleInfo = console.info;
 
     console.error = (...args: any[]) => {
-      // Call original console.error first
       originalConsoleError.apply(console, args);
-
-      // Send to terminal
       sendConsoleToTerminal('error', args);
-
-      // Check if this looks like a Google API error
-      const errorMessage = args.join(' ');
-      if (isGoogleApiError(errorMessage)) {
-        const error: LoggingError = {
-          message: `Console Error: ${errorMessage}`,
-          stack: new Error().stack
-        };
-
-        const enhancedError = {
-          ...error,
-          url: window.location.href,
-          userAgent: navigator.userAgent,
-          timestamp: new Date().toISOString(),
-          type: 'console_error',
-          args: args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)),
-          stackAnalysis: analyzeStackTrace(error.stack),
-          isGoogleApiError: true
-        };
-
-        logError(enhancedError as LoggingError);
-      }
     };
 
     console.log = (...args: any[]) => {
-      // Call original console.log first
       originalConsoleLog.apply(console, args);
-
-      // Forward to terminal in development, but filter out spam
-      if (process.env.NODE_ENV === 'development') {
-        const message = args.join(' ');
-        // Only forward important logs, skip routine ones
-        if (!message.includes('🟠 MultiAuthProvider') &&
-            !message.includes('🟢 CurrentAccountProvider') &&
-            !message.includes('[AUTH DEBUG]') &&
-            !message.includes('Firebase Admin initialized') &&
-            !message.includes('Logger initialized')) {
-          sendConsoleToTerminal('log', args);
-        }
-      }
+      // Skip sending console.log to terminal to reduce noise
     };
 
     console.warn = (...args: any[]) => {
-      // Call original console.warn first
       originalConsoleWarn.apply(console, args);
-
-      // Skip forwarding warnings to terminal to reduce spam
+      sendConsoleToTerminal('warn', args);
     };
 
     console.info = (...args: any[]) => {
-      // Call original console.info first
       originalConsoleInfo.apply(console, args);
-
-      // Send to terminal
-      sendConsoleToTerminal('info', args);
+      // Skip sending console.info to terminal to reduce noise
     };
 
     // Attach the global error listeners

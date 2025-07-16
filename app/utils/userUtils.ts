@@ -21,8 +21,9 @@ export const getUsernameById = async (userId: string): Promise<string> => {
   if (!userId) return "Missing username";
 
   try {
-    // Try to get user from Firestore users collection first
-    const userDocRef = doc(db, "users", userId);
+    // Try to get user from Firestore users collection first using environment-aware collection name
+    const { getCollectionName } = await import('./environmentConfig');
+    const userDocRef = doc(db, getCollectionName("users"), userId);
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {
@@ -36,15 +37,7 @@ export const getUsernameById = async (userId: string): Promise<string> => {
         return userData.username.trim();
       }
 
-      // Fallback to displayName if username is invalid
-      if (userData.displayName &&
-          userData.displayName !== "Anonymous" &&
-          userData.displayName !== "Missing username" &&
-          userData.displayName.trim() !== "") {
-        return userData.displayName.trim();
-      }
-
-      // Fallback to email prefix if both username and displayName are invalid
+      // Fallback to email prefix if username is invalid
       if (userData.email && userData.email.includes('@')) {
         const emailPrefix = userData.email.split('@')[0];
         if (emailPrefix && emailPrefix.trim() !== "") {
@@ -70,14 +63,6 @@ export const getUsernameById = async (userId: string): Promise<string> => {
             rtdbData.username !== "Missing username" &&
             rtdbData.username.trim() !== "") {
           return rtdbData.username.trim();
-        }
-
-        // Fallback to displayName
-        if (rtdbData.displayName &&
-            rtdbData.displayName !== "Anonymous" &&
-            rtdbData.displayName !== "Missing username" &&
-            rtdbData.displayName.trim() !== "") {
-          return rtdbData.displayName.trim();
         }
 
         // Fallback to email prefix

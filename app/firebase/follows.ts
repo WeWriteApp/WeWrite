@@ -21,6 +21,7 @@ import {
   type QueryDocumentSnapshot
 } from 'firebase/firestore';
 import type { Page, User } from '../types/database';
+import { getCollectionName } from '../utils/environmentConfig';
 
 // Type definitions for follow operations
 interface UserFollowsData {
@@ -134,7 +135,7 @@ export const followPage = async (userId: string, pageId: string): Promise<boolea
     }
     // Step 1: Add the page to the user's followed pages
     try {
-      const userFollowsRef = doc(db, 'userFollows', userId);
+      const userFollowsRef = doc(db, getCollectionName('userFollows'), userId);
       console.warn('🔧 Follow Debug: About to read userFollows document', {
         collection: 'userFollows',
         documentId: userId,
@@ -176,7 +177,7 @@ export const followPage = async (userId: string, pageId: string): Promise<boolea
 
     // Step 2: Increment the follower count for the page
     try {
-      const pageRef = doc(db, 'pages', pageId);
+      const pageRef = doc(db, getCollectionName('pages'), pageId);
       const pageDoc = await getDoc(pageRef);
 
       if (pageDoc.exists()) {
@@ -206,7 +207,7 @@ export const followPage = async (userId: string, pageId: string): Promise<boolea
 
     // Step 3: Add a record to the pageFollowers collection
     try {
-      const pageFollowerRef = doc(db, 'pageFollowers', `${pageId}_${userId}`);
+      const pageFollowerRef = doc(db, getCollectionName('pageFollowers'), `${pageId}_${userId}`);
       const followData = {
         pageId,
         userId,
@@ -260,7 +261,7 @@ export const unfollowPage = async (userId: string, pageId: string): Promise<bool
   try {
     // Step 1: Remove the page from the user's followed pages
     try {
-      const userFollowsRef = doc(db, 'userFollows', userId);
+      const userFollowsRef = doc(db, getCollectionName('userFollows'), userId);
 
       // Check if the document exists first
       const userFollowsDoc = await getDoc(userFollowsRef);
@@ -288,7 +289,7 @@ export const unfollowPage = async (userId: string, pageId: string): Promise<bool
 
     // Step 2: Decrement the follower count for the page
     try {
-      const pageRef = doc(db, 'pages', pageId);
+      const pageRef = doc(db, getCollectionName('pages'), pageId);
       const pageDoc = await getDoc(pageRef);
 
       if (pageDoc.exists()) {
@@ -318,7 +319,7 @@ export const unfollowPage = async (userId: string, pageId: string): Promise<bool
 
     // Step 3: Remove the record from the pageFollowers collection
     try {
-      const pageFollowerRef = doc(db, 'pageFollowers', `${pageId}_${userId}`);
+      const pageFollowerRef = doc(db, getCollectionName('pageFollowers'), `${pageId}_${userId}`);
 
       // Check if the document exists first
       const pageFollowerDoc = await getDoc(pageFollowerRef);
@@ -372,7 +373,7 @@ export const isFollowingPage = async (userId: string, pageId: string): Promise<b
   }
 
   try {
-    const userFollowsRef = doc(db, 'userFollows', userId);
+    const userFollowsRef = doc(db, getCollectionName('userFollows'), userId);
     const userFollowsDoc = await getDoc(userFollowsRef);
 
     if (userFollowsDoc.exists()) {
@@ -399,7 +400,7 @@ export const getFollowedPages = async (userId: string): Promise<string[]> => {
   }
 
   try {
-    const userFollowsRef = doc(db, 'userFollows', userId);
+    const userFollowsRef = doc(db, getCollectionName('userFollows'), userId);
     const userFollowsDoc = await getDoc(userFollowsRef);
 
     if (userFollowsDoc.exists()) {
@@ -426,7 +427,7 @@ export const getPageFollowerCount = async (pageId: string): Promise<number> => {
   }
 
   try {
-    const pageRef = doc(db, 'pages', pageId);
+    const pageRef = doc(db, getCollectionName('pages'), pageId);
     const pageDoc = await getDoc(pageRef);
 
     if (pageDoc.exists()) {
@@ -453,7 +454,7 @@ export const getUserFollowingCount = async (userId: string): Promise<number> => 
   }
 
   try {
-    const userFollowsRef = doc(db, 'userFollows', userId);
+    const userFollowsRef = doc(db, getCollectionName('userFollows'), userId);
     const userFollowsDoc = await getDoc(userFollowsRef);
 
     if (userFollowsDoc.exists()) {
@@ -483,7 +484,7 @@ export const getUserFollowerCount = async (userId: string): Promise<number> => {
   try {
     // First get all pages created by this user
     const pagesQuery = query(
-      collection(db, 'pages'),
+      collection(db, getCollectionName('pages')),
       where('userId', '==', userId)
     );
 
@@ -511,7 +512,7 @@ export const getUserFollowerCount = async (userId: string): Promise<number> => {
       try {
         // First query without the deleted field filter
         const followersQuery = query(
-          collection(db, 'pageFollowers'),
+          collection(db, getCollectionName('pageFollowers')),
           where('pageId', 'in', batch)
         );
 
@@ -560,7 +561,7 @@ export const unfollowAllPagesByUser = async (userId: string): Promise<UnfollowRe
 
     // Get all pages created by this user
     const pagesQuery = query(
-      collection(db, 'pages'),
+      collection(db, getCollectionName('pages')),
       where('userId', '==', userId)
     );
 
@@ -603,7 +604,7 @@ export const followUser = async (followerId: string, followedId: string): Promis
 
   try {
     // Add the followed user to the follower's following list
-    const userFollowingRef = doc(db, 'userFollowing', followerId);
+    const userFollowingRef = doc(db, getCollectionName('userFollowing'), followerId);
     const userFollowingDoc = await getDoc(userFollowingRef);
 
     if (userFollowingDoc.exists()) {
@@ -623,7 +624,7 @@ export const followUser = async (followerId: string, followedId: string): Promis
     }
 
     // Add the follower to the followed user's followers list
-    const userFollowersRef = doc(db, 'userFollowers', followedId);
+    const userFollowersRef = doc(db, getCollectionName('userFollowers'), followedId);
     const userFollowersDoc = await getDoc(userFollowersRef);
 
     if (userFollowersDoc.exists()) {
@@ -643,7 +644,7 @@ export const followUser = async (followerId: string, followedId: string): Promis
     }
 
     // Increment follower count for the followed user
-    const followedUserRef = doc(db, 'users', followedId);
+    const followedUserRef = doc(db, getCollectionName('users'), followedId);
     const followedUserDoc = await getDoc(followedUserRef);
 
     if (followedUserDoc.exists()) {
@@ -664,7 +665,7 @@ export const followUser = async (followerId: string, followedId: string): Promis
     }
 
     // Create a follow record
-    const followRecordRef = doc(db, 'follows', `${followerId}_${followedId}`);
+    const followRecordRef = doc(db, getCollectionName('follows'), `${followerId}_${followedId}`);
     await setDoc(followRecordRef, {
       followerId,
       followedId,
@@ -692,7 +693,7 @@ export const unfollowUser = async (followerId: string, followedId: string): Prom
 
   try {
     // Remove the followed user from the follower's following list
-    const userFollowingRef = doc(db, 'userFollowing', followerId);
+    const userFollowingRef = doc(db, getCollectionName('userFollowing'), followerId);
     const userFollowingDoc = await getDoc(userFollowingRef);
 
     if (userFollowingDoc.exists()) {
@@ -703,7 +704,7 @@ export const unfollowUser = async (followerId: string, followedId: string): Prom
     }
 
     // Remove the follower from the followed user's followers list
-    const userFollowersRef = doc(db, 'userFollowers', followedId);
+    const userFollowersRef = doc(db, getCollectionName('userFollowers'), followedId);
     const userFollowersDoc = await getDoc(userFollowersRef);
 
     if (userFollowersDoc.exists()) {
@@ -714,7 +715,7 @@ export const unfollowUser = async (followerId: string, followedId: string): Prom
     }
 
     // Decrement follower count for the followed user
-    const followedUserRef = doc(db, 'users', followedId);
+    const followedUserRef = doc(db, getCollectionName('users'), followedId);
     const followedUserDoc = await getDoc(followedUserRef);
 
     if (followedUserDoc.exists()) {
@@ -735,7 +736,7 @@ export const unfollowUser = async (followerId: string, followedId: string): Prom
     }
 
     // Mark follow record as deleted
-    const followRecordRef = doc(db, 'follows', `${followerId}_${followedId}`);
+    const followRecordRef = doc(db, getCollectionName('follows'), `${followerId}_${followedId}`);
     const followRecordDoc = await getDoc(followRecordRef);
 
     if (followRecordDoc.exists()) {
@@ -764,7 +765,7 @@ export const getFollowedUsers = async (userId: string): Promise<string[]> => {
   }
 
   try {
-    const userFollowingRef = doc(db, 'userFollowing', userId);
+    const userFollowingRef = doc(db, getCollectionName('userFollowing'), userId);
     const userFollowingDoc = await getDoc(userFollowingRef);
 
     if (userFollowingDoc.exists()) {
@@ -791,7 +792,7 @@ export const getFollowers = async (userId: string): Promise<string[]> => {
   }
 
   try {
-    const userFollowersRef = doc(db, 'userFollowers', userId);
+    const userFollowersRef = doc(db, getCollectionName('userFollowers'), userId);
     const userFollowersDoc = await getDoc(userFollowersRef);
 
     if (userFollowersDoc.exists()) {
@@ -819,7 +820,7 @@ export const checkIfFollowing = async (followerId: string, followedId: string): 
   }
 
   try {
-    const userFollowingRef = doc(db, 'userFollowing', followerId);
+    const userFollowingRef = doc(db, getCollectionName('userFollowing'), followerId);
     const userFollowingDoc = await getDoc(userFollowingRef);
 
     if (userFollowingDoc.exists()) {

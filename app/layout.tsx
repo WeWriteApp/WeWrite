@@ -1,10 +1,11 @@
 import React from "react"
 import "./globals.css"
+import "leaflet/dist/leaflet.css" // Leaflet CSS for maps
 import "./utils/init-logger" // Initialize logging system early
 import ErrorBoundary from "./components/utils/ErrorBoundary"
 import NextJSErrorBoundary, { GlobalErrorHandler } from "./components/utils/NextJSErrorHandler"
 
-import SessionAuthInitializer from "./components/auth/SessionAuthInitializer"
+import ApiSessionInitializer from "./components/auth/ApiSessionInitializer"
 // SessionZustandBridge removed - functionality integrated into hybrid session system
 import { DataProvider } from "./providers/DataProvider"
 import { DateFormatProvider } from "./contexts/DateFormatContext"
@@ -50,12 +51,12 @@ export default function RootLayout({
                                     <RecentPagesProvider>
                                       <TokenIncrementProvider>
                                         <TokenBalanceProvider>
-                                          <SessionAuthInitializer>
+                                          <ApiSessionInitializer>
                                         <GlobalNavigation>
                                           {children}
                                         </GlobalNavigation>
                                         <AdminStateSimulatorGuard />
-                                          </SessionAuthInitializer>
+                                          </ApiSessionInitializer>
                                         </TokenBalanceProvider>
                                       </TokenIncrementProvider>
                                     </RecentPagesProvider>

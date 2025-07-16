@@ -28,7 +28,7 @@
       ".read": true,
 
       "$uid": {
-        // Allow everyone to read basic user profiles (needed for public pages)
+        // Allow everyone to read basic user profiles (needed for pages)
         ".read": true,
         // Allow users to write only to their own profile
         ".write": "auth !== null && auth.uid === $uid",

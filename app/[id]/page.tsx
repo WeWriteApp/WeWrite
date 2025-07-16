@@ -10,9 +10,11 @@ import PageView from '../components/pages/PageView';
 import { SmartLoader } from '../components/ui/smart-loader';
 import { ErrorDisplay } from '../components/ui/error-display';
 import { Button } from '../components/ui/button';
+import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 
-export default function GlobalIDPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
+export default function ContentPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
   const router = useRouter();
+  const { currentAccountUid, isLoading: authLoading } = useCurrentAccount();
   const [contentType, setContentType] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [id, setId] = useState('');
@@ -40,6 +42,7 @@ export default function GlobalIDPage({ params }: { params: Promise<{ id: string 
           extractedId = extractedId.split('/')[0];
         }
 
+        console.log('🔍 ContentPage: Extracted ID:', extractedId);
         setId(extractedId);
       } catch (error) {
         console.error('Error processing params:', error);
@@ -53,8 +56,14 @@ export default function GlobalIDPage({ params }: { params: Promise<{ id: string 
   useEffect(() => {
     if (!id) return;
 
+    // Don't wait for auth for public pages - they should be accessible regardless
+    // if (authLoading) return;
+
     async function determineContentType() {
       try {
+        console.log('🔍 ContentPage: Determining content type for ID:', id);
+        console.log('🔍 ContentPage: Auth loading:', authLoading, 'Current account:', currentAccountUid);
+
         // Validate the ID before making Firestore calls
         if (!id || typeof id !== 'string' || id.trim() === '') {
           console.error('Invalid ID provided:', id);
@@ -84,12 +93,22 @@ export default function GlobalIDPage({ params }: { params: Promise<{ id: string 
         }
 
         // First, check if it's a page using proper access control
-        const pageResult = await getPageById(cleanId, null);
-        if (pageResult.pageData && !pageResult.error) {
+        console.log('🔍 ContentPage: Checking if ID is a page:', cleanId);
+        const pageResult = await getPageById(cleanId, currentAccountUid);
+        console.log('🔍 ContentPage: Page result:', {
+          hasPageData: !!pageResult.pageData,
+          error: pageResult.error,
+          pageTitle: pageResult.pageData?.title,
+          fullPageResult: pageResult
+        });
+
+        if (pageResult.pageData) {
+          console.log('🔍 ContentPage: Found valid page, setting contentType to page');
           setContentType('page');
           setIsLoading(false);
           return;
         } else if (pageResult.error && pageResult.error !== "Page not found") {
+          console.log('🔍 ContentPage: Page error but not "not found", treating as page');
           setContentType('page');
           setIsLoading(false);
           return;
@@ -115,9 +134,18 @@ export default function GlobalIDPage({ params }: { params: Promise<{ id: string 
     }
 
     determineContentType();
-  }, [id, router]);
+  }, [id, router, authLoading, currentAccountUid]);
+
+  console.log('🔍 ContentPage: Render state check', {
+    isLoading,
+    contentType,
+    id,
+    authLoading,
+    currentAccountUid
+  });
 
   if (isLoading) {
+    console.log('🔍 ContentPage: Showing SmartLoader because isLoading is true');
     return (
       <SmartLoader
         isLoading={isLoading}
@@ -135,6 +163,7 @@ export default function GlobalIDPage({ params }: { params: Promise<{ id: string 
   }
 
   if (contentType === 'page') {
+    console.log('🔍 ContentPage: Rendering PageView for ID:', id);
     return <PageView params={{ id }} />;
   }
 

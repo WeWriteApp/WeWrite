@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../utils/environmentConfig';
 
 // Initialize Firebase Admin
 const admin = getFirebaseAdmin();
@@ -25,7 +26,7 @@ export async function POST(request) {
     
     try {
       // Fetch payout transactions for the user
-      const payoutsRef = db.collection('payouts')
+      const payoutsRef = db.collection(getCollectionName('payouts'))
         .where('userId', '==', userId)
         .orderBy('createdAt', 'desc')
         .limit(50);

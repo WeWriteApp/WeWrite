@@ -16,7 +16,8 @@ export async function isFeatureEnabled(flagName) {
     }
 
     const db = getFirestore();
-    const featureFlagsRef = db.collection('config').doc('featureFlags');
+    const { getCollectionName } = require('../utils/environmentConfig');
+    const featureFlagsRef = db.collection(getCollectionName('config')).doc('featureFlags');
     const featureFlagsDoc = await featureFlagsRef.get();
 
     if (featureFlagsDoc.exists) {
@@ -36,6 +37,9 @@ export async function isFeatureEnabled(flagName) {
   }
 }
 
+// Import the centralized test user utility
+const { isTestUser } = require('../utils/testUsers.js');
+
 /**
  * Check if a feature is enabled for a specific user (checks both global flags and user overrides)
  * @param {string} flagName - The name of the feature flag to check
@@ -44,6 +48,17 @@ export async function isFeatureEnabled(flagName) {
  */
 export async function isFeatureEnabledForUser(flagName, userId) {
   try {
+    // If no user ID provided, fall back to global setting
+    if (!userId) {
+      return await isFeatureEnabled(flagName);
+    }
+
+    // Check if the user is a test user - test users always have all features enabled
+    if (isTestUser(userId)) {
+      console.log(`[FeatureFlag] ${flagName} enabled for test user ${userId}: true (test user override)`);
+      return true;
+    }
+
     // Use Firebase Admin SDK for server-side operations
     const { initAdmin } = await import('../firebase/admin');
     const { getFirestore } = await import('firebase-admin/firestore');
@@ -57,7 +72,7 @@ export async function isFeatureEnabledForUser(flagName, userId) {
     const db = getFirestore();
 
     // First check global flag
-    const featureFlagsRef = db.collection('config').doc('featureFlags');
+    const featureFlagsRef = db.collection(getCollectionName('config')).doc('featureFlags');
     const featureFlagsDoc = await featureFlagsRef.get();
 
     let globalEnabled = false;
@@ -68,13 +83,9 @@ export async function isFeatureEnabledForUser(flagName, userId) {
 
     console.log(`[FeatureFlag] ${flagName} global: ${globalEnabled}`);
 
-    // If no user ID provided, return global setting
-    if (!userId) {
-      return globalEnabled;
-    }
-
     // Check for user-specific override
-    const featureOverrideRef = db.collection('featureOverrides').doc(`${userId}_${flagName}`);
+    const { getCollectionName } = require('../utils/environmentConfig');
+    const featureOverrideRef = db.collection(getCollectionName('featureOverrides')).doc(`${userId}_${flagName}`);
     const featureOverrideDoc = await featureOverrideRef.get();
 
     if (featureOverrideDoc.exists) {

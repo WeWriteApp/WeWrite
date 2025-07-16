@@ -4,10 +4,10 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { PillLink } from "../utils/PillLink";
 import { formatRelativeTime } from "../../utils/formatRelativeTime";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
-import { Lock } from 'lucide-react';
+
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import { useDateFormat } from '../../contexts/DateFormatContext';
@@ -21,13 +21,13 @@ interface RandomPage {
   username: string;
   lastModified: string;
   createdAt: string;
-  isPublic: boolean;
   groupId?: string;
   groupName?: string;
   groupIsPublic?: boolean;
   tier?: string;
   subscriptionStatus?: string;
   subscriptionAmount?: number;
+  // Note: isPublic removed - all pages are now public
 }
 
 interface RandomPagesTableProps {
@@ -90,15 +90,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
     );
   }
 
-  // Format the last modified date for tooltip
-  const formatTooltipDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return format(date, 'PPpp'); // e.g., "Jan 1, 2024 at 12:00:00 PM"
-    } catch (error) {
-      return dateString;
-    }
-  };
+
 
   // Render author information with group support
   const renderAuthor = (page: RandomPage) => {
@@ -133,7 +125,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
   };
 
   return (
-    <TooltipProvider>
+    <div>
       {/* Desktop Table Layout */}
       <div
         className="hidden md:block border border-theme-medium rounded-2xl overflow-hidden relative shadow-md dark:bg-card/90"
@@ -164,7 +156,6 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                   <div className="max-w-full flex items-center gap-2">
                     <PillLink
                       href={`/${page.id}`}
-                      isPublic={page.isPublic}
                       groupId={page.groupId}
                       className="text-sm hover:scale-105 transition-transform"
                     >
@@ -172,16 +163,6 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                         ? formatDateString(page.title)
                         : page.title}
                     </PillLink>
-                    {!page.isPublic && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Private page</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
                   </div>
                 </div>
 
@@ -194,16 +175,9 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
 
                 {/* Last Edited Column - Fixed width */}
                 <div className="min-w-0 overflow-hidden">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="text-sm text-muted-foreground cursor-help truncate block">
-                        {formatRelativeTime(page.lastModified || page.createdAt)}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{formatTooltipDate(page.lastModified || page.createdAt)}</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <span className="text-sm text-muted-foreground truncate block">
+                    {formatRelativeTime(page.lastModified || page.createdAt)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -237,7 +211,6 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
             <div className="flex items-center gap-2">
               <PillLink
                 href={`/${page.id}`}
-                isPublic={page.isPublic}
                 groupId={page.groupId}
                 className="text-base font-medium"
               >
@@ -245,16 +218,6 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                   ? formatDateString(page.title)
                   : page.title}
               </PillLink>
-              {!page.isPublic && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Private page</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
             </div>
 
             {/* Author and Last Edited */}
@@ -263,21 +226,14 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                 {renderAuthor(page)}
               </div>
               <div>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="text-sm text-muted-foreground cursor-help">
-                      Last edited {formatRelativeTime(page.lastModified || page.createdAt)}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{formatTooltipDate(page.lastModified || page.createdAt)}</p>
-                  </TooltipContent>
-                </Tooltip>
+                <span className="text-sm text-muted-foreground">
+                  Last edited {formatRelativeTime(page.lastModified || page.createdAt)}
+                </span>
               </div>
             </div>
           </div>
         ))}
       </div>
-    </TooltipProvider>
+    </div>
   );
 }

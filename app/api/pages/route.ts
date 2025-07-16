@@ -6,12 +6,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../auth-helper';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../utils/environmentConfig';
 
 interface PageData {
   id?: string;
   title: string;
   content?: any;
-  isPublic: boolean;
   userId: string;
   username?: string;
   groupId?: string;
@@ -54,40 +54,22 @@ export async function GET(request: NextRequest) {
       orderDirection: (searchParams.get('orderDirection') as any) || 'desc'
     };
 
-    // Build Firestore query
-    let firestoreQuery = db.collection('pages');
-
-    // Filter by user ID
-    if (query.userId) {
-      firestoreQuery = firestoreQuery.where('userId', '==', query.userId);
-    }
-
-    // Filter by public status
-    if (query.isPublic !== undefined) {
-      firestoreQuery = firestoreQuery.where('isPublic', '==', query.isPublic);
-    }
-
-    // Filter deleted pages (exclude by default)
-    if (!query.includeDeleted) {
-      firestoreQuery = firestoreQuery.where('deleted', '!=', true);
-    } else if (query.includeDeleted && query.userId === currentUserId) {
-      // Only allow viewing deleted pages for own pages
-      firestoreQuery = firestoreQuery.where('deleted', '==', true);
-    }
-
-    // Add ordering
-    firestoreQuery = firestoreQuery.orderBy(query.orderBy, query.orderDirection);
+    // Build simplified Firestore query to avoid composite index requirements
+    // We'll filter by userId and orderBy only, then filter other conditions client-side
+    let firestoreQuery = db.collection(getCollectionName('pages'))
+      .where('userId', '==', query.userId)
+      .orderBy(query.orderBy, query.orderDirection);
 
     // Add pagination
     if (query.startAfter) {
-      const startAfterDoc = await db.collection('pages').doc(query.startAfter).get();
+      const startAfterDoc = await db.collection(getCollectionName('pages')).doc(query.startAfter).get();
       if (startAfterDoc.exists) {
         firestoreQuery = firestoreQuery.startAfter(startAfterDoc);
       }
     }
 
-    // Apply limit
-    firestoreQuery = firestoreQuery.limit(query.limit);
+    // Apply limit (get extra to account for client-side filtering)
+    firestoreQuery = firestoreQuery.limit((query.limit || 20) + 10);
 
     // Execute query
     const snapshot = await firestoreQuery.get();
@@ -97,33 +79,51 @@ export async function GET(request: NextRequest) {
       const data = doc.data();
       
       // Access control: only return pages user can access
-      const canAccess = 
-        data.isPublic || 
+      const canAccess =
         data.userId === currentUserId ||
-        (query.includeDeleted && data.userId === currentUserId);
+        data.userId === currentUserId;
 
-      if (canAccess) {
-        pages.push({
-          id: doc.id,
-          title: data.title || 'Untitled',
-          isPublic: data.isPublic || false,
-          userId: data.userId,
-          username: data.username,
-          groupId: data.groupId,
-          lastModified: data.lastModified,
-          createdAt: data.createdAt,
-          deleted: data.deleted || false,
-          deletedAt: data.deletedAt
-        });
+      if (!canAccess) {
+        return; // Skip pages user can't access
       }
+
+      // Apply additional filters
+
+      // Filter deleted pages (exclude by default unless specifically requested)
+      if (!query.includeDeleted && data.deleted === true) {
+        return; // Skip deleted pages
+      }
+
+      // If specifically requesting deleted pages, only show deleted ones
+      if (query.includeDeleted && query.userId === currentUserId && data.deleted !== true) {
+        return; // Skip non-deleted pages when requesting deleted ones
+      }
+
+
+
+      // Page passes all filters, add it to results
+      pages.push({
+        id: doc.id,
+        title: data.title || 'Untitled',
+        userId: data.userId,
+        username: data.username,
+        groupId: data.groupId,
+        lastModified: data.lastModified,
+        createdAt: data.createdAt,
+        deleted: data.deleted || false,
+        deletedAt: data.deletedAt
+      });
     });
 
-    // Check if there are more pages
-    const hasMore = pages.length === query.limit;
-    const lastPageId = pages.length > 0 ? pages[pages.length - 1].id : null;
+    // Trim results to requested limit (since we fetched extra for filtering)
+    const limitedPages = pages.slice(0, query.limit);
+
+    // Check if there are more pages (if we got more results than the limit, there are more)
+    const hasMore = pages.length > query.limit;
+    const lastPageId = limitedPages.length > 0 ? limitedPages[limitedPages.length - 1].id : null;
 
     return createApiResponse({
-      pages,
+      pages: limitedPages,
       pagination: {
         hasMore,
         lastPageId,
@@ -149,7 +149,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, isPublic = false, groupId, customDate } = body;
+    const { title, content, groupId, customDate } = body;
+
+
 
     if (!title || title.trim() === '') {
       return createErrorResponse('BAD_REQUEST', 'Page title is required');
@@ -157,13 +159,12 @@ export async function POST(request: NextRequest) {
 
     // Get user information
     const userRecord = await admin.auth().getUser(currentUserId);
-    const username = userRecord.displayName || userRecord.email?.split('@')[0] || 'Anonymous';
+    const username = userRecord.email?.split('@')[0] || 'Anonymous';
 
     // Create page data
     const pageData: PageData = {
       title: title.trim(),
       content: content || null,
-      isPublic: Boolean(isPublic),
       userId: currentUserId,
       username,
       groupId: groupId || null,
@@ -173,17 +174,65 @@ export async function POST(request: NextRequest) {
       customDate: customDate || null
     };
 
+
+
     // Create the page
-    const pageRef = await db.collection('pages').add(pageData);
+    const collectionName = getCollectionName('pages');
+
+    const pageRef = await db.collection(collectionName).add(pageData);
 
     // Create activity record with pre-computed diff data for new page
     try {
       // Import the diff service
-      const { diff } = await import('../../utils/diffService');
+      const { calculateDiff } = await import('../../utils/diffService');
 
       // For new pages, there's no previous content, so diff against empty string
       const currentContent = content || '';
-      const diffResult = await diff(currentContent, '');
+      let diffResult = await calculateDiff(currentContent, '');
+
+      // If the diff API didn't generate a good preview, create one manually for new pages
+      if (!diffResult.preview && (currentContent || pageData.title)) {
+        // Extract text content for preview
+        let textContent = '';
+
+        // Try to extract text from content
+        if (currentContent) {
+          try {
+            const parsed = JSON.parse(currentContent);
+            if (Array.isArray(parsed)) {
+              textContent = parsed.map(node => {
+                if (node.children) {
+                  return node.children.map(child => child.text || '').join('');
+                }
+                return node.text || '';
+              }).join(' ').trim();
+            }
+          } catch {
+            textContent = currentContent;
+          }
+        }
+
+        // If no meaningful content, use the title
+        if (!textContent || textContent.length === 0) {
+          textContent = pageData.title || 'Untitled';
+        }
+
+        // Create a manual preview showing the added content
+        if (textContent) {
+          const truncatedText = textContent.length > 150 ? textContent.substring(0, 150) + '...' : textContent;
+          diffResult = {
+            ...diffResult,
+            preview: {
+              beforeContext: '',
+              addedText: truncatedText,
+              removedText: '',
+              afterContext: '',
+              hasAdditions: true,
+              hasRemovals: false
+            }
+          };
+        }
+      }
 
       // Create activity record directly in Firestore
       const activityData = {
@@ -197,14 +246,17 @@ export async function POST(request: NextRequest) {
           removed: diffResult.removed,
           hasChanges: diffResult.added > 0 || diffResult.removed > 0 || true // Always true for new pages
         },
-        isPublic: pageData.isPublic || false,
+        // Store the diff preview for rich activity display
+        diffPreview: diffResult.preview,
         isNewPage: true
       };
 
       // Store in activities collection
-      await db.collection('activities').add(activityData);
+      const activitiesCollectionName = getCollectionName('activities');
+      const activityRef = await db.collection(activitiesCollectionName).add(activityData);
 
       console.log("Created activity record for new page via API", {
+        activityId: activityRef.id,
         pageId: pageRef.id,
         added: diffResult.added,
         removed: diffResult.removed,
@@ -239,14 +291,14 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, title, content, groupId } = body;
+    const { id, title, content, location, groupId, customDate } = body;
 
     if (!id) {
       return createErrorResponse('BAD_REQUEST', 'Page ID is required');
     }
 
     // Get the existing page
-    const pageRef = db.collection('pages').doc(id);
+    const pageRef = db.collection(getCollectionName('pages')).doc(id);
     const pageDoc = await pageRef.get();
 
     if (!pageDoc.exists) {
@@ -281,16 +333,83 @@ export async function PUT(request: NextRequest) {
       updateData.content = content;
     }
 
-    if (isPublic !== undefined) {
-      updateData.isPublic = Boolean(isPublic);
-    }
-
     if (groupId !== undefined) {
       updateData.groupId = groupId;
     }
 
-    // Update the page
-    await pageRef.update(updateData);
+    if (location !== undefined) {
+      updateData.location = location;
+    }
+
+    if (customDate !== undefined) {
+      updateData.customDate = customDate;
+    }
+
+    // If content is being updated, use the version saving system to create activity records
+    if (content !== undefined) {
+      console.log('🔍 Content update detected, using version saving system for activity tracking');
+
+      // Get current user data for version saving
+      const { getUserProfile } = await import('../../firebase/database/users');
+      const currentUser = await getUserProfile(currentUserId);
+
+      // Import the saveNewVersion function
+      const { saveNewVersion } = await import('../../firebase/database/versions');
+
+      // Prepare data for version saving
+      const versionData = {
+        content,
+        userId: currentUserId,
+        username: currentUser?.username || 'Anonymous',
+        groupId: groupId
+      };
+
+      // Save new version (this creates activity records and updates lastDiff)
+      const versionResult = await saveNewVersion(id, versionData);
+
+      if (!versionResult || !versionResult.success) {
+        console.error('Failed to save version:', versionResult?.error || 'Version save returned null');
+        return createErrorResponse('INTERNAL_ERROR', 'Failed to save page version');
+      }
+
+      // Update any additional metadata (title, location) that wasn't handled by saveNewVersion
+      const metadataUpdate: any = {};
+      if (title !== undefined) {
+        metadataUpdate.title = title.trim();
+      }
+      if (location !== undefined) {
+        metadataUpdate.location = location;
+      }
+
+      if (Object.keys(metadataUpdate).length > 0) {
+        await pageRef.update(metadataUpdate);
+      }
+
+      console.log('✅ Successfully saved version and updated metadata');
+    } else {
+      // For non-content updates (title, location, etc.), just update the page directly
+      await pageRef.update(updateData);
+    }
+
+    // CRITICAL FIX: Propagate title changes to all linked pages
+    if (title !== undefined && title.trim() !== pageData.title) {
+      try {
+        console.log('🔄 Title changed, propagating to linked pages:', {
+          pageId: id,
+          oldTitle: pageData.title,
+          newTitle: title.trim()
+        });
+
+        // Import and call the link propagation function
+        const { propagatePageTitleUpdate } = await import('../../firebase/database/linkPropagation');
+        await propagatePageTitleUpdate(id, title.trim(), pageData.title);
+
+        console.log('✅ Successfully propagated title update to linked pages');
+      } catch (propagationError) {
+        console.error('⚠️ Error propagating title update (non-fatal):', propagationError);
+        // Don't fail the page update if propagation fails
+      }
+    }
 
     return createApiResponse({
       id,
@@ -324,7 +443,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Get the existing page
-    const pageRef = db.collection('pages').doc(pageId);
+    const pageRef = db.collection(getCollectionName('pages')).doc(pageId);
     const pageDoc = await pageRef.get();
 
     if (!pageDoc.exists) {

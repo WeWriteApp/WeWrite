@@ -3,41 +3,25 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserIdFromRequest } from '../../auth-helper';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-
-// Inline admin check to avoid module resolution issues
-const ADMIN_USER_IDS = [
-  'jamiegray2234@gmail.com',
-  'patrick@mailfischer.com',
-  'skyler99ireland@gmail.com',
-  'diamatryistmatov@gmail.com',
-  'josiahsparrow@gmail.com'
-];
-
-const isAdminServer = (userEmail?: string | null): boolean => {
-  if (!userEmail) return false;
-  return ADMIN_USER_IDS.includes(userEmail);
-};
+import { getCollectionName } from "../../../utils/environmentConfig";
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin access
-    const userId = await getUserIdFromRequest(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user email to check admin status using admin SDK
-    const admin = getFirebaseAdmin();
-    const userRecord = await admin.auth().getUser(userId);
-    const userEmail = userRecord.email;
-
-    if (!userEmail || !isAdminServer(userEmail)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // Verify admin access using centralized helper
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return NextResponse.json({
+        error: adminCheck.error || 'Admin access required'
+      }, { status: adminCheck.error?.includes('Unauthorized') ? 401 : 403 });
     }
 
     // Use admin SDK for Firestore operations
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 500 });
+    }
     const db = admin.firestore();
 
     const statusData = {
@@ -48,8 +32,7 @@ export async function GET(request: NextRequest) {
 
     // Check WriterTokenBalances collection
     try {
-      const balancesQuery = query(collection(db, 'writerTokenBalances'), limit(100));
-      const balancesSnapshot = await getDocs(balancesQuery);
+      const balancesSnapshot = await db.collection(getCollectionName('writerTokenBalances')).limit(100).get();
       
       let totalWriters = 0;
       let totalAvailableUsd = 0;
@@ -78,12 +61,10 @@ export async function GET(request: NextRequest) {
 
     // Check WriterTokenEarnings collection
     try {
-      const earningsQuery = query(
-        collection(db, 'writerTokenEarnings'), 
-        orderBy('createdAt', 'desc'),
-        limit(50)
-      );
-      const earningsSnapshot = await getDocs(earningsQuery);
+      const earningsSnapshot = await db.collection(getCollectionName('writerTokenEarnings'))
+        .orderBy('createdAt', 'desc')
+        .limit(50)
+        .get();
       
       let pendingEarnings = 0;
       let availableEarnings = 0;
@@ -111,12 +92,10 @@ export async function GET(request: NextRequest) {
 
     // Check TokenPayouts collection
     try {
-      const payoutsQuery = query(
-        collection(db, 'tokenPayouts'), 
-        orderBy('requestedAt', 'desc'),
-        limit(50)
-      );
-      const payoutsSnapshot = await getDocs(payoutsQuery);
+      const payoutsSnapshot = await db.collection(getCollectionName('tokenPayouts'))
+        .orderBy('requestedAt', 'desc')
+        .limit(50)
+        .get();
       
       let pendingPayouts = 0;
       let completedPayouts = 0;

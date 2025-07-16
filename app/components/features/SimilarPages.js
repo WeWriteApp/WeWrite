@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, limit, getDocs, orderBy } from 'firebase/firestore';
 import { db } from "../../firebase/config';
+import { getCollectionName } from '../../utils/environmentConfig';
 import { PillLink } from "../utils/PillLink";
 import { Loader } from './Loader';
 
@@ -44,7 +45,7 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
         if (titleWords.length === 0) {
           // If no significant words, use a generic query
           const genericQuery = query(
-            collection(db, 'pages'),
+            collection(db, getCollectionName('pages')),
             where('isPublic', '==', true),
             where('deleted', '!=', true),
             orderBy('lastModified', 'desc'),
@@ -71,7 +72,7 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
 
           // Create a query for titles containing this word
           const titleQuery = query(
-            collection(db, 'pages'),
+            collection(db, getCollectionName('pages')),
             where('isPublic', '==', true),
             where('deleted', '!=', true),
             orderBy('title'),

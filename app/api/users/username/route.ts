@@ -183,9 +183,40 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if RTDB update fails
     }
 
+    // CRITICAL: Invalidate all username-related caches
+    console.log('🔄 Username updated, invalidating caches for user:', currentUserId);
+
+    // Trigger cache invalidation for all components that might display this username
+    try {
+      // Import cache invalidation utilities
+      const { invalidateUserPages, invalidateRecentActivity } = await import('../../../utils/globalCacheInvalidation');
+      const { invalidatePageCreationCaches } = await import('../../../utils/cacheInvalidation');
+
+      // Invalidate user-specific caches
+      invalidateUserPages(currentUserId);
+
+      // Invalidate activity caches (since activities show usernames)
+      invalidateRecentActivity();
+
+      // Invalidate all page-related caches for this user
+      invalidatePageCreationCaches(currentUserId);
+
+      console.log('✅ Cache invalidation completed for username update');
+    } catch (cacheError) {
+      console.error('❌ Error invalidating caches after username update:', cacheError);
+      // Don't fail the request if cache invalidation fails
+    }
+
     return createApiResponse({
       username,
-      message: oldUsername ? 'Username updated successfully' : 'Username set successfully'
+      message: oldUsername ? 'Username updated successfully' : 'Username set successfully',
+      // Include metadata to help client-side components refresh
+      metadata: {
+        userId: currentUserId,
+        oldUsername,
+        newUsername: username,
+        cacheInvalidated: true
+      }
     });
 
   } catch (error) {

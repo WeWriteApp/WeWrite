@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../auth-helper';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../utils/environmentConfig';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,7 @@ export async function GET(request) {
 
     // Simple trending algorithm: get pages with most views
     // Simplified to avoid complex index requirements
-    const pagesQuery = db.collection('pages')
+    const pagesQuery = db.collection(getCollectionName('pages'))
       .orderBy('views', 'desc')
       .limit(limitCount * 3); // Get more to filter out private/deleted pages
 

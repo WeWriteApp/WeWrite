@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Download
 } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useToast } from '../ui/use-toast';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { TokenEarningsService } from '../../services/tokenEarningsService';
@@ -25,6 +26,7 @@ import EarningsChart from './EarningsChart';
 import { CompactAllocationTimer } from '../AllocationCountdownTimer';
 import { getLoggedOutTokenBalance } from '../../utils/simulatedTokens';
 import { useSimulatedState } from '../../providers/AdminStateSimulatorProvider';
+import PillLink from '../utils/PillLink';
 
 interface WriterTokenDashboardProps {
   className?: string;
@@ -37,13 +39,47 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
 
   const [balance, setBalance] = useState<WriterTokenBalance | null>(null);
   const [earnings, setEarnings] = useState<WriterTokenEarnings[]>([]);
+  const [pendingAllocations, setPendingAllocations] = useState<{
+    totalPendingTokens: number;
+    totalPendingUsdValue: number;
+    allocations: any[];
+    timeUntilDeadline: any;
+  } | null>(null);
+  const [viewMode, setViewMode] = useState<'current' | 'historical'>('current');
+  const [unfundedEarnings, setUnfundedEarnings] = useState<{
+    totalUnfundedTokens: number;
+    totalUnfundedUsdValue: number;
+    loggedOutTokens: number;
+    loggedOutUsdValue: number;
+    noSubscriptionTokens: number;
+    noSubscriptionUsdValue: number;
+    allocations: any[];
+    message: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
+
+  // Prepare data for historical stacked area chart - moved to top to fix hook order
+  const historicalChartData = useMemo(() => {
+    if (!earnings || earnings.length === 0) return [];
+
+    return earnings.map(earning => ({
+      month: earning.month,
+      // Available: earnings that were available for payout in that month
+      available: earning.status === 'available' ? earning.totalUsdValue : 0,
+      // Locked: earnings that were locked (finalized but not yet payable)
+      locked: earning.status === 'pending' ? earning.totalUsdValue : 0,
+      // Paid: earnings that were paid out in that month
+      paid: earning.status === 'paid' ? earning.totalUsdValue : 0,
+      // Note: Unfunded and pending allocations don't appear in historical data
+      // as they only exist in the current month
+    })).reverse(); // Show oldest to newest
+  }, [earnings]);
   const [unfundedMessage, setUnfundedMessage] = useState<string | null>(null);
 
   // Generate simulated token data based on admin state simulator
   const getSimulatedTokenData = () => {
-    const { tokenEarnings } = simulatedState;
+    const tokenEarnings = memoizedTokenEarnings;
 
     // Check if any non-none states are active first
     const hasActiveStates = tokenEarnings.unfundedLoggedOut ||
@@ -177,24 +213,41 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
     return null;
   };
 
+  // Memoize the tokenEarnings to prevent infinite re-renders
+  const memoizedTokenEarnings = useMemo(() => simulatedState.tokenEarnings, [
+    simulatedState.tokenEarnings.none,
+    simulatedState.tokenEarnings.unfundedLoggedOut,
+    simulatedState.tokenEarnings.unfundedNoSubscription,
+    simulatedState.tokenEarnings.fundedPending,
+    simulatedState.tokenEarnings.lockedAvailable
+  ]);
+
   useEffect(() => {
-    console.log('🎭 WriterTokenDashboard useEffect triggered, simulatedState.tokenEarnings:', simulatedState.tokenEarnings);
+    console.log('🎭 WriterTokenDashboard useEffect triggered, tokenEarnings:', memoizedTokenEarnings);
 
     // Check if we should use simulated data from admin state simulator
-    const simulatedData = getSimulatedTokenData();
-    console.log('🎭 getSimulatedTokenData returned:', simulatedData);
+    // Only use simulated data if we have active states (not just the default "none" state)
+    const hasActiveSimulationStates = memoizedTokenEarnings.unfundedLoggedOut ||
+                                     memoizedTokenEarnings.unfundedNoSubscription ||
+                                     memoizedTokenEarnings.fundedPending ||
+                                     memoizedTokenEarnings.lockedAvailable;
 
-    if (simulatedData) {
-      // Use simulated data
-      setBalance(simulatedData.balance);
-      setEarnings(simulatedData.earnings);
-      setUnfundedMessage((simulatedData as any).unfundedMessage || null);
-      setLoading(false);
-      console.log('🎭 Using simulated token earnings data:', simulatedData);
-      return;
+    if (hasActiveSimulationStates) {
+      const simulatedData = getSimulatedTokenData();
+      console.log('🎭 getSimulatedTokenData returned:', simulatedData);
+
+      if (simulatedData) {
+        // Use simulated data
+        setBalance(simulatedData.balance);
+        setEarnings(simulatedData.earnings);
+        setUnfundedMessage((simulatedData as any).unfundedMessage || null);
+        setLoading(false);
+        console.log('🎭 Using simulated token earnings data:', simulatedData);
+        return;
+      }
     }
 
-    console.log('🎭 No simulated data, using real data');
+    console.log('🎭 No active simulation states, using real data');
     // Use real data
     if (session?.uid) {
       setUnfundedMessage(null);
@@ -206,7 +259,7 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
       setUnfundedMessage(null);
       setLoading(false);
     }
-  }, [session?.uid, simulatedState.tokenEarnings]);
+  }, [session?.uid, memoizedTokenEarnings]);
 
 
 
@@ -216,13 +269,56 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
     try {
       setLoading(true);
 
-      const [balanceData, earningsData] = await Promise.all([
-        TokenEarningsService.getWriterTokenBalance(session.uid),
-        TokenEarningsService.getWriterEarningsHistory(session.uid, 6)
-      ]);
+      // Use the API endpoint instead of direct service call
+      const response = await fetch('/api/earnings/user');
 
-      setBalance(balanceData);
-      setEarnings(earningsData);
+      if (!response.ok) {
+        if (response.status === 404) {
+          // No earnings data found
+          setBalance(null);
+          setEarnings([]);
+          setPendingAllocations(null);
+          setUnfundedEarnings(null);
+        } else {
+          throw new Error('Failed to fetch earnings data');
+        }
+      } else {
+        const data = await response.json();
+
+        if (data.success && data.earnings) {
+          console.log('[WriterTokenDashboard] API data received:', data.earnings);
+
+          // Convert the API response to the expected format
+          const realBalance = {
+            userId: session.uid,
+            totalUsdEarned: data.earnings.totalEarnings,
+            availableUsdValue: data.earnings.availableBalance,
+            pendingUsdValue: data.earnings.pendingBalance,
+            totalTokensReceived: Math.round(data.earnings.totalEarnings * 10), // Approximate tokens
+            availableTokens: Math.round(data.earnings.availableBalance * 10),
+            pendingTokens: Math.round(data.earnings.pendingBalance * 10)
+          };
+
+          setBalance(realBalance);
+          setEarnings([]); // No historical earnings in this API yet
+          setPendingAllocations({
+            totalPendingTokens: Math.round(data.earnings.pendingBalance * 10),
+            totalPendingUsdValue: data.earnings.pendingBalance,
+            allocations: data.earnings.pendingAllocations || [],
+            timeUntilDeadline: data.earnings.timeUntilDeadline
+          });
+          setUnfundedEarnings(null); // No unfunded data in this API yet
+        } else {
+          // No earnings data
+          setBalance(null);
+          setEarnings([]);
+          setPendingAllocations(null);
+          setUnfundedEarnings(null);
+        }
+      }
+
+      // No unfunded message for now since the API doesn't provide this data yet
+      setUnfundedMessage(null);
 
     } catch (error) {
       console.error('[WriterTokenDashboard] Error loading writer data:', error);
@@ -271,16 +367,53 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { label: 'Pending', variant: 'secondary' as const },
-      available: { label: 'Available', variant: 'default' as const },
-      paid_out: { label: 'Paid Out', variant: 'outline' as const },
-      processing: { label: 'Processing', variant: 'secondary' as const },
-      completed: { label: 'Completed', variant: 'default' as const },
-      failed: { label: 'Failed', variant: 'destructive' as const }
+      pending: {
+        label: 'Pending',
+        variant: 'secondary' as const,
+        icon: Clock,
+        description: 'Will be available next month'
+      },
+      available: {
+        label: 'Available',
+        variant: 'default' as const,
+        icon: CheckCircle,
+        description: 'Ready for payout'
+      },
+      paid_out: {
+        label: 'Paid Out',
+        variant: 'outline' as const,
+        icon: Download,
+        description: 'Already paid'
+      },
+      processing: {
+        label: 'Processing',
+        variant: 'secondary' as const,
+        icon: RefreshCw,
+        description: 'Being processed'
+      },
+      completed: {
+        label: 'Completed',
+        variant: 'default' as const,
+        icon: CheckCircle,
+        description: 'Completed'
+      },
+      failed: {
+        label: 'Failed',
+        variant: 'destructive' as const,
+        icon: AlertCircle,
+        description: 'Failed to process'
+      }
     };
-    
+
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    const IconComponent = config.icon;
+
+    return (
+      <Badge variant={config.variant} className="flex items-center gap-1">
+        <IconComponent className="h-3 w-3" />
+        {config.label}
+      </Badge>
+    );
   };
 
   if (loading) {
@@ -294,7 +427,13 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
     );
   }
 
-  if (!balance) {
+  // Show empty state only if there's no balance AND no pending allocations AND no unfunded earnings
+  const hasAnyData = balance ||
+                     (pendingAllocations && pendingAllocations.totalPendingTokens > 0) ||
+                     (unfundedEarnings && unfundedEarnings.totalUnfundedTokens > 0) ||
+                     earnings.length > 0;
+
+  if (!hasAnyData) {
     return (
       <Card className={className}>
         <CardHeader className="text-center">
@@ -308,7 +447,7 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
         </CardHeader>
         <CardContent className="text-center">
           {unfundedMessage ? (
-            <div className="p-4 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg">
+            <div className="p-4 bg-orange-50 dark:bg-orange-950/30 border-theme-strong rounded-lg">
               <p className="text-orange-800 dark:text-orange-200 text-sm">
                 {unfundedMessage}
               </p>
@@ -325,181 +464,336 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
   }
 
   const minimumThreshold = 25;
-  const canRequestPayout = balance.availableUsdValue >= minimumThreshold;
+  const canRequestPayout = balance && balance.availableUsdValue >= minimumThreshold;
+
+  // Simplified color scheme using accent colors and variants
+  const COLORS = {
+    available: 'hsl(var(--primary))',      // Primary accent - ready for payout
+    pending: 'hsl(var(--primary) / 0.7)',  // Lighter accent - pending this month
+    locked: 'hsl(var(--primary) / 0.5)',   // Even lighter - locked from last month
+    unfunded: 'hsl(var(--muted-foreground) / 0.6)' // Muted - unfunded
+  };
+
+  // Prepare data for current month pie chart
+  const currentChartData = [];
+
+  // Available for payout (from previous months, finalized)
+  if (balance?.availableUsdValue > 0) {
+    currentChartData.push({
+      name: 'Available for Payout',
+      value: balance.availableUsdValue,
+      color: COLORS.available,
+      description: 'Ready to withdraw'
+    });
+  }
+
+  // Pending allocations (current month, can still be changed)
+  if (pendingAllocations?.totalPendingUsdValue > 0) {
+    currentChartData.push({
+      name: 'Pending Allocations',
+      value: pendingAllocations.totalPendingUsdValue,
+      color: COLORS.pending,
+      description: 'Current month - can still be changed'
+    });
+  }
+
+  // Locked earnings (from last month, finalized but not yet available)
+  if (balance?.pendingUsdValue > 0) {
+    currentChartData.push({
+      name: 'Locked Earnings',
+      value: balance.pendingUsdValue,
+      color: COLORS.locked,
+      description: 'From last month - available next payout'
+    });
+  }
+
+  // Unfunded allocations (from users without subscriptions)
+  if (unfundedEarnings?.totalUnfundedUsdValue > 0) {
+    currentChartData.push({
+      name: 'Unfunded Allocations',
+      value: unfundedEarnings.totalUnfundedUsdValue,
+      color: COLORS.unfunded,
+      description: 'From users without active subscriptions'
+    });
+  }
+
+
+
+  const totalEarnings = currentChartData.reduce((sum, item) => sum + item.value, 0);
+
+
 
   return (
-    <div className={`space-y-4 sm:space-y-6 ${className}`}>
-      {/* Earnings Chart */}
-      <EarningsChart earnings={earnings} />
-
-      {/* Balance Overview */}
+    <div className={`space-y-6 ${className}`}>
+      {/* Main Earnings Overview */}
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex-1">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <Wallet className="h-4 w-4 sm:h-5 sm:w-5" />
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <DollarSign className="h-5 w-5" />
                 Token Earnings
-                <Badge variant="secondary" className="ml-2 text-xs">
-                  <Clock className="h-3 w-3 mr-1" />
-                  Estimated
-                </Badge>
               </CardTitle>
-              <CardDescription className="text-sm">
-                Estimated earnings from token allocations
+              <CardDescription>
+                Your earnings from token allocations
               </CardDescription>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadWriterData}
-                disabled={loading}
-                className="w-full sm:w-auto"
-              >
-                <RefreshCw className="h-4 w-4 mr-1" />
-                <span className="hidden xs:inline">Refresh</span>
-                <span className="xs:hidden">↻</span>
-              </Button>
-              <Button
-                onClick={handleRequestPayout}
-                disabled={requesting || !canRequestPayout}
-                size="sm"
-                className="w-full sm:w-auto"
-              >
-                {requesting ? 'Processing...' : (
-                  <>
-                    <DollarSign className="h-4 w-4 mr-1" />
-                    <span className="hidden xs:inline">Request Payout</span>
-                    <span className="xs:hidden">Payout</span>
-                  </>
+            <div className="flex flex-col sm:flex-row gap-2">
+              {/* View Mode Toggle */}
+              <div className="flex rounded-lg border-theme-strong p-1">
+                <Button
+                  variant={viewMode === 'current' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('current')}
+                  className="h-8 px-3"
+                >
+                  This Month
+                </Button>
+                <Button
+                  variant={viewMode === 'historical' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('historical')}
+                  className="h-8 px-3"
+                >
+                  History
+                </Button>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadWriterData}
+                  disabled={loading}
+                >
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Refresh
+                </Button>
+                {canRequestPayout && (
+                  <Button
+                    onClick={handleRequestPayout}
+                    disabled={requesting}
+                    size="sm"
+                  >
+                    {requesting ? 'Processing...' : (
+                      <>
+                        <Download className="h-4 w-4 mr-1" />
+                        Request Payout
+                      </>
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {/* Show unfunded message if present */}
-          {unfundedMessage && (
-            <div className="mb-4 p-4 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg">
-              <p className="text-orange-800 dark:text-orange-200 text-sm">
-                {unfundedMessage}
-              </p>
-            </div>
-          )}
+          {viewMode === 'current' ? (
+            // Current Month Pie Chart View
+            totalEarnings > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Pie Chart */}
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={currentChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={120}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {currentChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value) => [formatCurrency(value), '']}
+                        labelFormatter={(label) => label}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <div className="text-center p-3 sm:p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-              <div className="text-lg sm:text-2xl font-bold text-green-600">
-                {formatCurrency(balance.availableUsdValue)}
-              </div>
-              <div className="text-xs sm:text-sm text-muted-foreground flex items-center justify-center gap-1 mt-1">
-                <CheckCircle className="h-3 w-3" />
-                <span className="hidden xs:inline">Available</span>
-                <span className="xs:hidden">Ready</span>
-              </div>
-            </div>
-            <div className="text-center p-3 sm:p-4 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border-2 border-dashed border-yellow-300 dark:border-yellow-700">
-              <div className="text-lg sm:text-2xl font-bold text-yellow-600">
-                {formatCurrency(balance.pendingUsdValue)}
-              </div>
-              <div className="text-xs sm:text-sm text-muted-foreground flex items-center justify-center gap-1 mt-1">
-                <Clock className="h-3 w-3" />
-                <span className="hidden xs:inline">Pending</span>
-                <span className="xs:hidden">Wait</span>
-              </div>
-            </div>
-            <div className="text-center p-3 sm:p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <div className="text-lg sm:text-2xl font-bold text-blue-600">
-                {formatCurrency(balance.totalUsdEarned)}
-              </div>
-              <div className="text-xs sm:text-sm text-muted-foreground flex items-center justify-center gap-1 mt-1">
-                <TrendingUp className="h-3 w-3" />
-                <span className="hidden xs:inline">Total Earned</span>
-                <span className="xs:hidden">Total</span>
-              </div>
-            </div>
-            <div className="text-center p-3 sm:p-4 bg-gray-50 dark:bg-gray-950/20 rounded-lg border border-gray-200 dark:border-gray-800">
-              <div className="text-lg sm:text-2xl font-bold text-gray-600">
-                {formatCurrency(balance.paidOutUsdValue)}
-              </div>
-              <div className="text-xs sm:text-sm text-muted-foreground flex items-center justify-center gap-1 mt-1">
-                <Download className="h-3 w-3" />
-                <span className="hidden xs:inline">Paid Out</span>
-                <span className="xs:hidden">Paid</span>
-              </div>
-            </div>
-          </div>
+                {/* Summary Stats */}
+                <div className="space-y-4">
+                  <div className="text-center lg:text-left">
+                    <div className="text-3xl font-bold text-primary">
+                      {formatCurrency(totalEarnings)}
+                    </div>
+                    <div className="text-muted-foreground">This Month's Earnings</div>
+                  </div>
 
-          {/* Pending Earnings Disclaimer */}
-          {balance.pendingUsdValue > 0 && (
-            <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
-                    Pending earnings may change until <CompactAllocationTimer className="inline" />
-                  </p>
+                  <div className="space-y-3">
+                    {currentChartData.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 rounded-lg border-theme-strong bg-card">
+                        <div className="flex items-center gap-3">
+                          <div>
+                            <div className="font-medium">{item.name}</div>
+                            <div className="text-sm text-muted-foreground">{item.description}</div>
+                          </div>
+                        </div>
+                        <div className="font-semibold">{formatCurrency(item.value)}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-muted-foreground mb-4">
+                  No earnings this month yet. When users allocate tokens to your pages, they'll appear here.
+                </div>
+              </div>
+            )
+          ) : (
+            // Historical Stacked Area Chart View
+            historicalChartData.length > 0 ? (
+              <div className="space-y-6">
+                {/* Stacked Area Chart */}
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={historicalChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis tickFormatter={(value) => formatCurrency(value)} />
+                      <Tooltip
+                        formatter={(value, name) => [formatCurrency(value), name]}
+                        labelFormatter={(label) => `Month: ${label}`}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="paid"
+                        stackId="1"
+                        stroke={COLORS.available}
+                        fill={COLORS.available}
+                        name="Paid Out"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="available"
+                        stackId="1"
+                        stroke={COLORS.pending}
+                        fill={COLORS.pending}
+                        name="Available"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="locked"
+                        stackId="1"
+                        stroke={COLORS.locked}
+                        fill={COLORS.locked}
+                        name="Locked"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Historical Summary */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="text-center p-4 rounded-lg border-theme-strong bg-card">
+                    <div className="text-2xl font-bold">
+                      {formatCurrency(balance?.totalUsdEarned || 0)}
+                    </div>
+                    <div className="text-sm text-muted-foreground">All-time Earnings</div>
+                  </div>
+                  <div className="text-center p-4 rounded-lg border-theme-strong bg-card">
+                    <div className="text-2xl font-bold">
+                      {formatCurrency(balance?.paidOutUsdValue || 0)}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Total Paid Out</div>
+                  </div>
+                  <div className="text-center p-4 rounded-lg border-theme-strong bg-card">
+                    <div className="text-2xl font-bold">
+                      {earnings.length}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Months Active</div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-muted-foreground mb-4">
+                  No historical earnings data available yet.
+                </div>
+              </div>
+            )
           )}
 
-          {!canRequestPayout && (
-            <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-              <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
-                <AlertCircle className="h-4 w-4" />
-                <span className="text-sm">
-                  Minimum payout amount is {formatCurrency(minimumThreshold)}. 
-                  You need {formatCurrency(minimumThreshold - balance.availableUsdValue)} more to request a payout.
-                </span>
-              </div>
+          {/* Key Info for Current Month View */}
+          {viewMode === 'current' && (
+            <div className="mt-6 space-y-3">
+              {!canRequestPayout && balance && (
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <div className="text-sm text-muted-foreground">
+                    Minimum payout: {formatCurrency(minimumThreshold)}
+                  </div>
+                </div>
+              )}
+
+              {pendingAllocations && pendingAllocations.totalPendingUsdValue > 0 && (
+                <div className="p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border-theme-strong">
+                  <div className="text-sm text-purple-800 dark:text-purple-200">
+                    Pending allocations can be changed until <CompactAllocationTimer className="inline font-medium" />
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Fake Token Categories */}
-
-
-      {/* Monthly Earnings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Monthly Earnings</CardTitle>
-          <CardDescription>
-            Monthly token earnings
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {earnings.length === 0 ? (
-            <div className="text-center py-6 text-muted-foreground">
-              No earnings yet
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {earnings.map((earning) => (
-                <div key={earning.id} className="flex items-center justify-between p-3 border rounded-lg">
+      {/* Recent Allocations */}
+      {pendingAllocations && pendingAllocations.allocations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Recent Allocations
+            </CardTitle>
+            <CardDescription>
+              Latest token allocations from supporters
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {pendingAllocations.allocations.slice(0, 5).map((allocation, index) => (
+                <div key={index} className="flex items-center justify-between p-3 rounded-lg border-theme-strong">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium">{earning.month}</span>
-                      {getStatusBadge(earning.status)}
+                      {allocation.resourceType === 'page' ? (
+                        <PillLink
+                          href={`/${allocation.resourceId}`}
+                          className="text-sm"
+                        >
+                          {allocation.resourceTitle || allocation.resourceId}
+                        </PillLink>
+                      ) : (
+                        <span className="font-medium text-sm">
+                          {allocation.resourceType}: {allocation.resourceId}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {earning.totalTokensReceived} tokens from {earning.allocations.length} allocation(s)
-                    </p>
+                    <div className="text-sm text-muted-foreground">
+                      {allocation.tokens} tokens
+                    </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-semibold">{formatCurrency(earning.totalUsdValue)}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {earning.totalTokensReceived} tokens
-                    </div>
+                    <div className="font-semibold">{formatCurrency(allocation.usdValue || (allocation.tokens * 0.1))}</div>
                   </div>
                 </div>
               ))}
+              {pendingAllocations.allocations.length > 5 && (
+                <div className="text-center text-sm text-muted-foreground py-2">
+                  +{pendingAllocations.allocations.length - 5} more allocations
+                </div>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

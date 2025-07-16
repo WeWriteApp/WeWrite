@@ -15,6 +15,7 @@ const getRelatedPagesAsync = async (pageId: string, pageTitle: string, pageConte
   try {
     const { collection, query, where, getDocs, limit: firestoreLimit } = await import('firebase/firestore');
     const { db } = await import("../../firebase/config");
+    const { getCollectionName } = await import('../../utils/environmentConfig');
 
     // Extract meaningful words from title and content
     const extractMeaningfulWords = (text: string): string[] => {
@@ -40,9 +41,9 @@ const getRelatedPagesAsync = async (pageId: string, pageTitle: string, pageConte
       return [];
     }
 
-    // Query for public pages
+    // Query for pages
     const pagesQuery = query(
-      collection(db, 'pages'),
+      collection(db, getCollectionName('pages')),
       where('isPublic', '==', true),
       firestoreLimit(200)
     );

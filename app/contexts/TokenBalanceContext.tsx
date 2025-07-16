@@ -28,46 +28,79 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
 
   const fetchTokenBalance = useCallback(async () => {
     if (!currentAccount?.uid || !paymentsEnabled) {
+      console.log('[TokenBalanceContext] Skipping token balance fetch:', {
+        hasAccount: !!currentAccount?.uid,
+        paymentsEnabled
+      });
       setTokenBalance(null);
       setLastUpdated(null);
       return;
     }
 
+    // Prevent excessive API calls - only fetch if it's been more than 10 seconds
+    const now = Date.now();
+    const lastFetchTime = lastUpdated?.getTime() || 0;
+    const timeSinceLastFetch = now - lastFetchTime;
+
+    if (timeSinceLastFetch < 10000 && tokenBalance) {
+      console.log('[TokenBalanceContext] Skipping fetch - too recent:', timeSinceLastFetch + 'ms ago');
+      return;
+    }
+
+    console.log('[TokenBalanceContext] Fetching token balance for user:', currentAccount.uid);
     setIsLoading(true);
     try {
       const response = await fetch('/api/tokens/balance');
+      console.log('[TokenBalanceContext] Token balance API response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('[TokenBalanceContext] Token balance data received:', {
+          hasBalance: !!data.balance,
+          hasSummary: !!data.summary,
+          totalTokens: data.balance?.totalTokens || data.summary?.totalTokens,
+          allocatedTokens: data.balance?.allocatedTokens || data.summary?.allocatedTokens,
+          availableTokens: data.balance?.availableTokens || data.summary?.availableTokens
+        });
 
         if (data.summary) {
-          // Ensure consistent calculation of available tokens
+          // Prefer summary data as it's more accurate
           const availableTokens = data.summary.totalTokens - data.summary.allocatedTokens;
-          setTokenBalance({
+          const balance = {
             totalTokens: data.summary.totalTokens,
             allocatedTokens: data.summary.allocatedTokens,
             availableTokens: availableTokens
-          });
+          };
+          console.log('[TokenBalanceContext] Setting token balance from summary:', balance);
+          setTokenBalance(balance);
           setLastUpdated(new Date());
         } else if (data.balance) {
-          // Ensure consistent calculation of available tokens
+          // Fall back to balance data
           const availableTokens = data.balance.totalTokens - data.balance.allocatedTokens;
-          setTokenBalance({
+          const balance = {
             totalTokens: data.balance.totalTokens,
             allocatedTokens: data.balance.allocatedTokens,
             availableTokens: availableTokens
-          });
+          };
+          console.log('[TokenBalanceContext] Setting token balance from balance:', balance);
+          setTokenBalance(balance);
           setLastUpdated(new Date());
         } else {
+          console.log('[TokenBalanceContext] No balance or summary data found');
           setTokenBalance(null);
           setLastUpdated(null);
         }
       } else {
-        console.error('Failed to fetch token balance:', response.status);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[TokenBalanceContext] Failed to fetch token balance:', {
+          status: response.status,
+          error: errorData
+        });
         setTokenBalance(null);
         setLastUpdated(null);
       }
     } catch (error) {
-      console.error('Error fetching token balance:', error);
+      console.error('[TokenBalanceContext] Error fetching token balance:', error);
       setTokenBalance(null);
       setLastUpdated(null);
     } finally {

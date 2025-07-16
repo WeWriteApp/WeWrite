@@ -42,7 +42,7 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
   const getCardStyles = () => {
     if (hasNote) {
       // For cards with notes, respect the pill style setting
-      if (pillStyle === PILL_STYLES.CLASSIC || pillStyle === PILL_STYLES.OUTLINE) {
+      if (pillStyle === PILL_STYLES.TEXT_ONLY || pillStyle === PILL_STYLES.UNDERLINED || pillStyle === PILL_STYLES.OUTLINE) {
         // Classic/Outline mode - outlined style
         return {
           backgroundColor: 'transparent',
@@ -107,7 +107,7 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
           <Check
             className="h-3 w-3 drop-shadow-sm"
             style={{
-              color: (pillStyle === PILL_STYLES.CLASSIC || pillStyle === PILL_STYLES.OUTLINE)
+              color: (pillStyle === PILL_STYLES.TEXT_ONLY || pillStyle === PILL_STYLES.UNDERLINED || pillStyle === PILL_STYLES.OUTLINE)
                 ? accentColor
                 : '#ffffff'
             }}
@@ -121,10 +121,10 @@ const DayCard = React.memo(function DayCard({ date, hasNote, onClick, accentColo
           <div
             className="h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold drop-shadow-sm"
             style={{
-              backgroundColor: (pillStyle === PILL_STYLES.CLASSIC || pillStyle === PILL_STYLES.OUTLINE)
+              backgroundColor: (pillStyle === PILL_STYLES.TEXT_ONLY || pillStyle === PILL_STYLES.UNDERLINED || pillStyle === PILL_STYLES.OUTLINE)
                 ? accentColor
                 : '#ffffff',
-              color: (pillStyle === PILL_STYLES.CLASSIC || pillStyle === PILL_STYLES.OUTLINE)
+              color: (pillStyle === PILL_STYLES.TEXT_ONLY || pillStyle === PILL_STYLES.UNDERLINED || pillStyle === PILL_STYLES.OUTLINE)
                 ? '#ffffff'
                 : accentColor
             }}

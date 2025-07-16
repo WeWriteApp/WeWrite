@@ -86,7 +86,7 @@ export default function PayoutFeeBreakdown({
         </div>
 
         {/* Fees Section */}
-        <div className="border-t border-gray-200 pt-2">
+        <div className="border-t border-theme-medium pt-2">
           <div className="text-xs text-gray-500 mb-1">Fees deducted:</div>
           
           {/* Stripe Processing Fee */}
@@ -203,7 +203,7 @@ export function PayoutSummary({
   };
 
   return (
-    <div className={`bg-green-50 border border-green-200 rounded-lg p-3 ${className}`}>
+    <div className={`bg-green-50 border-theme-strong rounded-lg p-3 ${className}`}>
       <div className="text-center">
         <div className="text-sm text-green-700 mb-1">You will receive</div>
         <div className="text-2xl font-bold text-green-800">{formatCurrency(netAmount)}</div>

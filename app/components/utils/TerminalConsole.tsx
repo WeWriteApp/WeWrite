@@ -54,10 +54,10 @@ export default function TerminalConsole() {
       }).join(' ');
     }
 
-    // Override console methods
+    // Override console methods - only send warnings and errors to terminal
     console.log = function(...args) {
       originalConsole.log.apply(console, args);
-      sendToTerminal('log', formatArgs(args));
+      // Skip sending to terminal to reduce noise
     };
 
     console.error = function(...args) {
@@ -72,12 +72,12 @@ export default function TerminalConsole() {
 
     console.info = function(...args) {
       originalConsole.info.apply(console, args);
-      sendToTerminal('info', formatArgs(args));
+      // Skip sending to terminal to reduce noise
     };
 
     console.debug = function(...args) {
       originalConsole.debug.apply(console, args);
-      sendToTerminal('debug', formatArgs(args));
+      // Skip sending to terminal to reduce noise
     };
 
     // DEPRECATED: WebSocket console streaming - replaced with HTTP-based ConsoleErrorLogger
@@ -85,7 +85,6 @@ export default function TerminalConsole() {
       // COMPLETELY DISABLED: This WebSocket implementation is deprecated
       // We now use the HTTP-based ConsoleErrorLogger.tsx for terminal logging
       // which is more reliable and doesn't cause connection errors
-      console.log('TerminalConsole: WebSocket streaming disabled - using HTTP-based logging instead');
       return;
     }
 

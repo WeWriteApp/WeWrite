@@ -13,6 +13,7 @@ import { SubscriptionTierBadge } from "../components/ui/SubscriptionTierBadge";
 import { UsernameBadge } from "../components/ui/UsernameBadge";
 import { collection, getDocs, query, orderBy, limit as firestoreLimit, getDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { getCollectionName } from "../utils/environmentConfig";
 import SimpleSparkline from "../components/utils/SimpleSparkline";
 import { getBatchUserActivityLast24Hours } from "../firebase/userActivity";
 
@@ -53,7 +54,7 @@ export default function UsersPageClient() {
   useEffect(() => {
     const checkSubscriptionFeature = async () => {
       try {
-        const featureFlagsRef = doc(db, 'config', 'featureFlags');
+        const featureFlagsRef = doc(db, getCollectionName('config'), 'featureFlags');
         const featureFlagsDoc = await getDoc(featureFlagsRef);
 
         if (featureFlagsDoc.exists()) {
@@ -77,8 +78,8 @@ export default function UsersPageClient() {
         setError(null);
         setErrorDetails("");
 
-        // Get all users from Firestore
-        const usersRef = collection(db, 'users');
+        // Get all users from Firestore using environment-aware collection name
+        const usersRef = collection(db, getCollectionName('users'));
         const usersSnapshot = await getDocs(usersRef);
 
         if (usersSnapshot.empty) {
@@ -94,7 +95,7 @@ export default function UsersPageClient() {
         const pageCountsByUser = {};
 
         // Get pages from Firestore to count pages per user
-        const pagesRef = collection(db, 'pages');
+        const pagesRef = collection(db, getCollectionName('pages'));
         const pagesSnapshot = await getDocs(pagesRef);
 
         console.log(`UsersPage: Retrieved ${pagesSnapshot.size} pages from Firestore`);
@@ -120,7 +121,7 @@ export default function UsersPageClient() {
           const userId = userDoc.id;
 
           // Get the username and remove @ symbol if present
-          let username = userData.username || userData.displayName || "Unknown User";
+          let username = userData.username || "Unknown User";
           if (username.startsWith('@')) {
             username = username.substring(1);
           }

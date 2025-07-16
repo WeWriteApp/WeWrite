@@ -16,6 +16,7 @@ import {
   type DocumentReference
 } from 'firebase/firestore';
 import { getDatabase, ref, get, update, type Database, type DatabaseReference } from 'firebase/database';
+import { getCollectionName } from '../utils/environmentConfig';
 
 // Type definitions for username history operations
 interface UsernameHistoryRecord {
@@ -55,8 +56,8 @@ if (typeof window === 'undefined') {
  */
 export const recordUsernameChange = async (userId: string, oldUsername: string, newUsername: string): Promise<string> => {
   try {
-    // Add record to Firestore
-    const historyRef = collection(db, 'usernameHistory');
+    // Add record to Firestore using environment-aware collection name
+    const historyRef = collection(db, getCollectionName('usernameHistory'));
     const docRef = await addDoc(historyRef, {
       userId,
       oldUsername,
@@ -115,7 +116,7 @@ export const updateUsername = async (userId: string, newUsername: string): Promi
 
     // Check if the new username is already taken
     const usernamesQuery = query(
-      collection(db, "usernames"),
+      collection(db, getCollectionName("usernames")),
       where("username", "==", newUsername.toLowerCase())
     );
 
@@ -132,24 +133,13 @@ export const updateUsername = async (userId: string, newUsername: string): Promi
     await update(userRef, { username: newUsername });
     console.log("Username updated in RTDB");
 
-    // Update displayName in Firebase Auth (server-side only)
-    if (typeof window === 'undefined' && admin && admin.apps && admin.apps.length > 0) {
-      try {
-        await admin.auth().updateUser(userId, {
-          displayName: newUsername
-        });
-        console.log("DisplayName updated in Firebase Auth");
-      } catch (authError) {
-        console.error("Error updating displayName in Auth:", authError);
-        // Don't throw here, as RTDB update already succeeded
-      }
-    }
+    // Firebase Auth doesn't need displayName updates - WeWrite only uses usernames
 
     // Update username in Firestore usernames collection
     try {
       // Remove old username entry
       const oldUsernameQuery = query(
-        collection(db, "usernames"),
+        collection(db, getCollectionName("usernames")),
         where("userId", "==", userId)
       );
 
@@ -158,12 +148,12 @@ export const updateUsername = async (userId: string, newUsername: string): Promi
       if (!oldUsernameSnapshot.empty) {
         // Delete old username entries
         for (const docSnapshot of oldUsernameSnapshot.docs) {
-          await deleteDoc(doc(db, "usernames", docSnapshot.id));
+          await deleteDoc(doc(db, getCollectionName("usernames"), docSnapshot.id));
         }
       }
 
       // Add new username entry
-      await setDoc(doc(db, "usernames", newUsername.toLowerCase()), {
+      await setDoc(doc(db, getCollectionName("usernames"), newUsername.toLowerCase()), {
         userId,
         username: newUsername,
         createdAt: serverTimestamp()

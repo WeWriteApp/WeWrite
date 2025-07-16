@@ -71,11 +71,8 @@ class ErrorLogger {
       originalConsole.warn(...args);
     };
 
-    if (process.env.ENABLE_VERBOSE_LOGGING === 'true') {
-      console.log = (...args) => {
-        originalConsole.log('🔍 [VERBOSE]', ...args);
-      };
-    }
+    // Verbose logging disabled to reduce noise
+    // Only warnings and errors will be enhanced
   }
 
   logError(type, details) {

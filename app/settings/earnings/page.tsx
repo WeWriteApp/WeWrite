@@ -32,13 +32,11 @@ export default function EarningsPage() {
               <TabsList className="grid w-full grid-cols-2 h-auto">
                 <TabsTrigger value="earnings" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 sm:py-1.5 text-xs sm:text-sm">
                   <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden xs:inline">Earnings</span>
-                  <span className="xs:hidden">$</span>
+                  <span>Earnings</span>
                 </TabsTrigger>
                 <TabsTrigger value="payouts" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 sm:py-1.5 text-xs sm:text-sm">
                   <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden xs:inline">Payouts</span>
-                  <span className="xs:hidden">💳</span>
+                  <span>Payouts</span>
                 </TabsTrigger>
               </TabsList>
 

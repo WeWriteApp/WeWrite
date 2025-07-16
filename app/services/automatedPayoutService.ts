@@ -34,6 +34,7 @@ import {
   CorrelationId
 } from '../types/financial';
 
+import { getCollectionName } from "../utils/environmentConfig";
 import type {
   Payout,
   PayoutRecipient,
@@ -281,7 +282,7 @@ export class AutomatedPayoutService {
     // Convert queue items to payout objects
     const payouts: Payout[] = [];
     for (const item of queuedPayouts) {
-      const payoutDoc = await getDoc(doc(db, 'payouts', item.payoutId));
+      const payoutDoc = await getDoc(doc(db, getCollectionName("payouts"), item.payoutId));
       if (payoutDoc.exists()) {
         payouts.push({ id: payoutDoc.id, ...payoutDoc.data() } as Payout);
       }
@@ -508,8 +509,7 @@ export class AutomatedPayoutService {
     correlationId: CorrelationId
   ): Promise<FinancialOperationResult<void>> {
     try {
-      // Update payout status to processing
-      await updateDoc(doc(db, 'payouts', payout.id), {
+await updateDoc(doc(db, getCollectionName("payouts"), payout.id), {
         status: 'processing',
         processingStartedAt: serverTimestamp(),
         updatedAt: serverTimestamp()
@@ -537,8 +537,7 @@ export class AutomatedPayoutService {
         // Handle retry logic
         const retryCount = (payout.retryCount || 0) + 1;
         const shouldRetry = retryCount < this.config.maxRetries;
-
-        await updateDoc(doc(db, 'payouts', payout.id), {
+await updateDoc(doc(db, getCollectionName("payouts"), payout.id), {
           status: shouldRetry ? 'pending' : 'failed',
           retryCount: increment(1),
           lastFailureReason: stripeResult.error,
@@ -601,8 +600,7 @@ export class AutomatedPayoutService {
     } catch (error: any) {
       this.processingStatus.totalProcessing--;
 
-      // Update payout status to failed
-      await updateDoc(doc(db, 'payouts', payout.id), {
+await updateDoc(doc(db, getCollectionName("payouts"), payout.id), {
         status: 'failed',
         retryCount: increment(1),
         lastFailureReason: error.message,

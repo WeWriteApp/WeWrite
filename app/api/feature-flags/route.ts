@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse, ApiErrors } from '../auth-helper';
 import { checkAdminPermissions } from '../admin-auth-helper';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../utils/environmentConfig';
+import { isTestUser } from '../../utils/testUsers';
 
 interface FeatureFlag {
   id: string;
@@ -22,7 +24,9 @@ interface FeatureFlagUpdate {
   description?: string;
 }
 
-// GET endpoint - Get all feature flags or a specific flag
+// isTestUser is now imported from testUsers.ts
+
+// GET endpoint - Get all feature flags or a specific flag, or check user-specific flag
 export async function GET(request: NextRequest) {
   try {
     // Initialize Firebase Admin
@@ -33,10 +37,58 @@ export async function GET(request: NextRequest) {
     const flagId = searchParams.get('id');
     const includeHistory = searchParams.get('includeHistory') === 'true';
 
+    // New parameters for user-specific feature flag checks
+    const flag = searchParams.get('flag');
+    const targetUserId = searchParams.get('userId');
+
     // Get user ID for access control
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
       return createErrorResponse('UNAUTHORIZED');
+    }
+
+    // Handle user-specific feature flag check
+    if (flag && targetUserId) {
+      // Check if the target user is a test user
+      if (isTestUser(targetUserId)) {
+        // Test users always have all feature flags enabled
+        return createApiResponse({
+          success: true,
+          enabled: true,
+          source: 'test_user_override',
+          message: 'Test users have all feature flags enabled by default'
+        });
+      }
+
+      // For non-test users, check global flag and user overrides
+      const flagDoc = await db.collection('config').doc('featureFlags').get();
+
+      let globalEnabled = false;
+      if (flagDoc.exists) {
+        const flagsData = flagDoc.data();
+        globalEnabled = flagsData[flag] === true;
+      }
+
+      // Check for user-specific override
+      const featureOverrideRef = db.collection(getCollectionName('featureOverrides')).doc(`${targetUserId}_${flag}`);
+      const featureOverrideDoc = await featureOverrideRef.get();
+
+      if (featureOverrideDoc.exists) {
+        const data = featureOverrideDoc.data();
+        return createApiResponse({
+          success: true,
+          enabled: data.enabled,
+          source: 'user_override',
+          lastModified: data.lastModified
+        });
+      } else {
+        // No override, use global setting
+        return createApiResponse({
+          success: true,
+          enabled: globalEnabled,
+          source: 'global_setting'
+        });
+      }
     }
 
     if (flagId) {
@@ -62,7 +114,7 @@ export async function GET(request: NextRequest) {
       if (includeHistory) {
         const adminCheck = await checkAdminPermissions(request);
         if (adminCheck.success) {
-          const historySnapshot = await db.collection('featureHistory')
+          const historySnapshot = await db.collection(getCollectionName('featureHistory'))
             .where('featureId', '==', flagId)
             .orderBy('timestamp', 'desc')
             .limit(50)
@@ -127,7 +179,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Record history
-    await db.collection('featureHistory').add({
+    await db.collection(getCollectionName('featureHistory')).add({
       featureId: flagId,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
       adminEmail: adminCheck.userEmail,
@@ -182,7 +234,7 @@ export async function PUT(request: NextRequest) {
     await flagRef.set(updatedFlags);
 
     // Record sync action
-    await db.collection('featureHistory').add({
+    await db.collection(getCollectionName('featureHistory')).add({
       featureId: 'system',
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
       adminEmail: adminCheck.userEmail,

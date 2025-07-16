@@ -69,13 +69,13 @@ class TestDataGenerator {
     };
 
     this.testPages = {
-      publicPage: {
-        id: 'public-page-123',
-        title: 'Test Public Page',
+      page: {
+        id: 'page-123',
+        title: 'Test Page',
         content: JSON.stringify([
           {
             type: 'paragraph',
-            children: [{ text: 'This is a test public page content.' }]
+            children: [{ text: 'This is a test page content.' }]
           }
         ]),
         isPublic: true,

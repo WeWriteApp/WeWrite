@@ -64,7 +64,7 @@ export default function UnsavedChangesDialog({
             Leave without Saving
           </Button>
           <Button
-            variant="default"
+            variant="success"
             onClick={onStayAndSave}
             disabled={isSaving}
             className="flex-1 gap-2"

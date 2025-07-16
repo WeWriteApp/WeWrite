@@ -79,7 +79,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
   // Groups functionality removed
 
   // Check if map feature is enabled
-  const mapFeatureEnabled = useFeatureFlag('map_view', session?.email);
+  const mapFeatureEnabled = useFeatureFlag('map_view', session?.email, session?.uid);
 
   // Determine if we're in edit mode
   const isEditMode = !!(editorProps?.onSave && editorProps?.onCancel);
@@ -128,7 +128,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
                 className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
               >
                 <Clock className="h-5 w-5 mr-2" />
-                <span>Recents</span>
+                <span>Recently viewed</span>
               </button>
 
               <div className="relative group">
@@ -252,7 +252,8 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
                     <Button
                       onClick={editorProps?.onSave}
                       disabled={editorProps?.isSaving}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                      variant="success"
+                      className="flex-1"
                     >
                       {editorProps?.isSaving ? (
                         <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent mr-2" />
@@ -319,7 +320,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
               {/* User Information */}
               <div className="mb-3 px-3 py-2">
                 <div className="text-sm font-medium text-foreground truncate">
-                  {session.displayName || session.username || 'User'}
+                  {session.username || 'User'}
                 </div>
                 <div className="text-xs text-muted-foreground truncate">
                   {session.email}

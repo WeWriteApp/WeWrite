@@ -7,7 +7,7 @@ import { Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X } from
 import dynamic from 'next/dynamic';
 import { useRouter } from "next/navigation";
 import { useToast } from "../ui/use-toast";
-import { deletePage } from "../../firebase/database";
+// deletePage now uses API instead of direct Firebase calls
 import { getUserProfile } from "../../firebase/auth";
 import { auth } from "../../firebase/auth";
 
@@ -143,8 +143,18 @@ export function PageActions({
         // Use graceful navigation with proper browser history handling
         await navigateAfterPageDeletion(page, session, router);
 
-        // Delete the page after navigation has started
-        await deletePage(page.id);
+        // Delete the page after navigation has started - use API instead of direct Firebase
+        const response = await fetch(`/api/pages?id=${page.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete page');
+        }
 
         // Trigger success event
         if (typeof window !== 'undefined') {
@@ -251,8 +261,8 @@ export function PageActions({
             const accounts = JSON.parse(wewriteAccounts);
             const currentAccount = accounts.find(acc => acc.isCurrent);
 
-            if (currentAccount && (currentAccount.username || currentAccount.displayName)) {
-              username = currentAccount.username || currentAccount.displayName;
+            if (currentAccount && currentAccount.username) {
+              username = currentAccount.username;
               console.log("Found username in wewrite_accounts:", username);
             }
           }

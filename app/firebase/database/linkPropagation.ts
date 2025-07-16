@@ -7,6 +7,7 @@
 
 import { db } from './core';
 import { collection, query, where, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { getCollectionName } from '../../utils/environmentConfig';
 
 interface LinkReference {
   pageId: string;
@@ -50,7 +51,7 @@ export const propagatePageTitleUpdate = async (
         if (ref.needsUpdate) {
           const updatedContent = updateLinksInContent(ref.linkData, targetPageId, newTitle, oldTitle);
           if (updatedContent) {
-            const pageRef = doc(db, 'pages', ref.pageId);
+const pageRef = doc(db, getCollectionName("pages"), ref.pageId);
             batch.update(pageRef, { 
               content: JSON.stringify(updatedContent),
               lastModified: new Date().toISOString()
@@ -90,7 +91,7 @@ const findAllLinksToPage = async (targetPageId: string): Promise<LinkReference[]
     // Query all pages (we'll need to search their content for links)
     // Note: We can't use where('deleted', '!=', true) because it requires an index
     // Instead, we'll filter out deleted pages in the processing loop
-    const pagesQuery = query(collection(db, 'pages'));
+    const pagesQuery = query(collection(db, getCollectionName('pages')));
 
     const querySnapshot = await getDocs(pagesQuery);
     

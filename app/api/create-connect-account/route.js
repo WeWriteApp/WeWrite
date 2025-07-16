@@ -3,6 +3,7 @@ import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../utils/stripeConfig';
 import { getUserIdFromRequest } from '../auth-helper';
+import { getCollectionName, COLLECTIONS } from '../../utils/environmentConfig';
 
 // Initialize Firebase Admin
 const admin = getFirebaseAdmin();
@@ -44,7 +45,7 @@ export async function POST(request) {
 
     // Get the user's data from Firestore
     const db = admin.firestore();
-    const userDocRef = db.collection('users').doc(userId);
+    const userDocRef = db.collection(getCollectionName(COLLECTIONS.USERS)).doc(userId);
     const userDoc = await userDocRef.get();
     
     let userData = {};
@@ -52,11 +53,46 @@ export async function POST(request) {
       userData = userDoc.data();
     }
 
-    // Get user email from Firebase Auth
-    console.log('Getting user record for userId:', userId);
-    const userRecord = await admin.auth().getUser(userId);
-    const userEmail = userRecord.email;
-    console.log('User email:', userEmail);
+    // Get user email from cookie or Firestore (for development mode compatibility)
+    console.log('Getting user email for userId:', userId);
+    let userEmail;
+
+    // Try to get email from userSession cookie first (development mode)
+    const userSessionCookie = request.cookies.get('userSession')?.value;
+    if (userSessionCookie) {
+      try {
+        const userSession = JSON.parse(userSessionCookie);
+        if (userSession.email) {
+          userEmail = userSession.email;
+          console.log('User email from cookie:', userEmail);
+        }
+      } catch (error) {
+        console.log('Could not parse userSession cookie for email');
+      }
+    }
+
+    // Fallback to Firebase Auth if no email from cookie
+    if (!userEmail) {
+      try {
+        const userRecord = await admin.auth().getUser(userId);
+        userEmail = userRecord.email;
+        console.log('User email from Firebase Auth:', userEmail);
+      } catch (error) {
+        console.log('Could not get user from Firebase Auth, trying Firestore...');
+
+        // Final fallback: get email from Firestore user document
+        const userDoc = await userDocRef.get();
+        const userData = userDoc.data();
+        userEmail = userData?.email;
+        console.log('User email from Firestore:', userEmail);
+      }
+    }
+
+    if (!userEmail) {
+      return NextResponse.json({
+        error: 'Could not determine user email for Stripe account creation'
+      }, { status: 400 });
+    }
 
     let accountId = userData.stripeConnectedAccountId;
 

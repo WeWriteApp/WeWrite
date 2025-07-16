@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 // POST endpoint - Restore a soft-deleted page
 export async function POST(request: NextRequest) {
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the existing page
-    const pageRef = db.collection('pages').doc(pageId);
+    const pageRef = db.collection(getCollectionName('pages')).doc(pageId);
     const pageDoc = await pageRef.get();
 
     if (!pageDoc.exists) {

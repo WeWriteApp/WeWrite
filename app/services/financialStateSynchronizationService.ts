@@ -234,7 +234,7 @@ export class FinancialStateSynchronizationService {
   ): Promise<FinancialStateSnapshot> {
     try {
       // Get token balance
-      const balanceDoc = await getDoc(doc(db, 'writerTokenBalances', userId));
+const balanceDoc = await getDoc(doc(db, getCollectionName("writerTokenBalances"), userId));
       const tokenBalance = balanceDoc.exists() ? balanceDoc.data() as WriterTokenBalance : null;
 
       // Get Stripe balance (if user has connected account)
@@ -768,7 +768,7 @@ export class FinancialStateSynchronizationService {
             .reduce((sum, p) => sum + (p.tokensUsed || 0), 0);
 
         // Update the balance record
-        await updateDoc(doc(db, 'writerTokenBalances', snapshot.userId), {
+await updateDoc(doc(db, getCollectionName("writerTokenBalances"), snapshot.userId), {
           availableUsdValue: correctedAvailableBalance,
           availableTokens: correctedAvailableTokens,
           lastSynchronizedAt: serverTimestamp(),
@@ -837,7 +837,7 @@ export class FinancialStateSynchronizationService {
           syncCorrelationId: correlationId
         };
 
-        await setDoc(doc(db, 'writerTokenEarnings', earningsId), earningsData);
+await setDoc(doc(db, getCollectionName("writerTokenEarnings"), earningsId), earningsData);
 
         FinancialLogger.logOperation('MISSING_RECORD_CREATED', {
           correlationId,

@@ -151,6 +151,11 @@ export const createThrottledDebounce = <T extends (...args: any[]) => any>(
 export const monitorRequestPatterns = () => {
   if (typeof window === 'undefined') return;
 
+  // Disable request monitoring in development to prevent feedback loops
+  if (process.env.NODE_ENV === 'development') {
+    return;
+  }
+
   // Monitor fetch requests
   const originalFetch = window.fetch;
   let requestCount = 0;

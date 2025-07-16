@@ -6,6 +6,7 @@
  */
 
 import { db } from '../firebase/config';
+import { getCollectionName } from '../utils/environmentConfig';
 import {
   doc,
   getDoc,
@@ -26,6 +27,7 @@ import Stripe from 'stripe';
 import { getStripeSecretKey } from '../utils/stripeConfig';
 import { TransactionTrackingService } from './transactionTrackingService';
 import {
+import { getCollectionName } from "../utils/environmentConfig";
   FinancialOperationResult,
   FinancialError,
   FinancialErrorCode,
@@ -756,7 +758,7 @@ export class TaxReportingService {
     try {
       // Get earnings from token allocations
       const earningsQuery = query(
-        collection(db, 'writerTokenEarnings'),
+        collection(db, getCollectionName('writerTokenEarnings')),
         where('userId', '==', userId),
         where('createdAt', '>=', startDate),
         where('createdAt', '<=', endDate)

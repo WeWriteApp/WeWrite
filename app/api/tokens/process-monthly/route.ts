@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { TokenService } from '../../../services/tokenService';
+import { ServerTokenService } from '../../../services/tokenService.server';
 import { PendingTokenAllocationService } from '../../../services/pendingTokenAllocationService';
 import { getCurrentMonth, getPreviousMonth } from '../../../utils/subscriptionTiers';
 

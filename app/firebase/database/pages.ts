@@ -17,6 +17,7 @@ import {
 
 import { get, ref } from "firebase/database";
 import { rtdb } from "../rtdb";
+import { getCollectionName } from "../../utils/environmentConfig";
 
 import {
   db,
@@ -71,7 +72,7 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
         // If still no username, fetch from Firestore
         if (!username) {
           try {
-            const userDoc = await getDoc(doc(db, "users", data.userId));
+            const userDoc = await getDoc(doc(db, getCollectionName("users"), data.userId));
             if (userDoc.exists()) {
               const userData = userDoc.data() as User;
               username = userData.username;
@@ -97,7 +98,7 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
 
     const pageData = {
       title: data.title || "Untitled",
-      isPublic: true, // All pages are now public
+      isPublic: true, // All pages are public
       userId: data.userId,
       username: username || "Anonymous", // Ensure username is saved with the page
       createdAt: now,
@@ -124,7 +125,18 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
     console.log("🔍 DEBUG: Page data being saved:", { ...pageData, content: '(omitted)' });
 
     try {
-      const pageRef = await addDoc(collection(db, "pages"), pageData);
+      const collectionName = getCollectionName("pages");
+      console.log("🔍 DEBUG: Writing page to collection:", collectionName);
+
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Firestore write timeout after 10 seconds')), 10000);
+      });
+
+      const writePromise = addDoc(collection(db, collectionName), pageData);
+
+      console.log("🔍 DEBUG: Starting Firestore write operation...");
+      const pageRef = await Promise.race([writePromise, timeoutPromise]) as any;
       console.log("Created page with ID:", pageRef.id);
       console.log("🔍 DEBUG: Page created successfully with customDate:", pageData.customDate);
 
@@ -137,12 +149,24 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
       };
 
       try {
-        // create a subcollection for versions
-        const version = await addDoc(collection(db, "pages", pageRef.id, "versions"), versionData);
+        // create a subcollection for versions with timeout
+        console.log("🔍 DEBUG: Creating version document...");
+        const versionTimeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Version creation timeout after 10 seconds')), 10000);
+        });
+
+        const versionWritePromise = addDoc(collection(db, getCollectionName("pages"), pageRef.id, "versions"), versionData);
+        const version = await Promise.race([versionWritePromise, versionTimeoutPromise]) as any;
         console.log("Created version with ID:", version.id);
 
-        // take the version id and add it as the currentVersion on the page
-        await setDoc(doc(db, "pages", pageRef.id), { currentVersion: version.id }, { merge: true });
+        // take the version id and add it as the currentVersion on the page with timeout
+        console.log("🔍 DEBUG: Updating page with current version ID...");
+        const updateTimeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Page update timeout after 10 seconds')), 10000);
+        });
+
+        const updatePromise = setDoc(doc(db, getCollectionName("pages"), pageRef.id), { currentVersion: version.id }, { merge: true });
+        await Promise.race([updatePromise, updateTimeoutPromise]);
         console.log("Updated page with current version ID");
 
         // Record user activity for streak tracking
@@ -154,48 +178,7 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
           // Don't fail page creation if activity recording fails
         }
 
-        // Create activity record with pre-computed diff data for new page
-        try {
-          // Import the diff service and Firestore functions
-          const { diff } = await import('../../utils/diffService');
-          const { collection, addDoc, Timestamp } = await import('firebase/firestore');
-
-          // For new pages, there's no previous content, so diff against empty string
-          const currentContent = data.content || '';
-          const diffResult = await diff(currentContent, '');
-
-          // Create activity record directly in Firestore
-          const activityData = {
-            pageId: pageRef.id,
-            pageName: pageData.title || 'Untitled',
-            userId: data.userId,
-            username: username || 'Anonymous',
-            timestamp: Timestamp.now(),
-            diff: {
-              added: diffResult.added,
-              removed: diffResult.removed,
-              hasChanges: diffResult.added > 0 || diffResult.removed > 0 || true // Always true for new pages
-            },
-            isPublic: pageData.isPublic || false,
-            isNewPage: true,
-            versionId: version.id
-          };
-
-          // Store in activities collection
-          const activitiesRef = collection(db, 'activities');
-          const activityDocRef = await addDoc(activitiesRef, activityData);
-
-          console.log("Created activity record for new page", {
-            activityId: activityDocRef.id,
-            pageId: pageRef.id,
-            added: diffResult.added,
-            removed: diffResult.removed,
-            hasChanges: activityData.diff.hasChanges
-          });
-        } catch (activityError) {
-          console.error("Error creating activity record (non-fatal):", activityError);
-          // Don't fail page creation if activity recording fails
-        }
+        // Activity creation removed - now using recent pages with diff data stored on pages
 
         // Update user page count
         try {
@@ -248,7 +231,7 @@ export const createPage = async (data: CreatePageData): Promise<string | null> =
         // This prevents orphaned pages without currentVersion
         try {
           console.log(`Deleting orphaned page ${pageRef.id} due to version creation failure`);
-          await deleteDoc(doc(db, "pages", pageRef.id));
+          await deleteDoc(doc(db, getCollectionName("pages"), pageRef.id));
           console.log(`Successfully deleted orphaned page ${pageRef.id}`);
         } catch (deleteError) {
           console.error(`Failed to delete orphaned page ${pageRef.id}:`, deleteError);
@@ -283,7 +266,7 @@ export const getPageById = async (pageId: string, userId: string | null = null):
           return { pageData: null, error: "Invalid page ID" };
         }
 
-      // Check cache first (only for public pages or if user is the owner)
+      // Check cache first (only for pages or if user is the owner)
       // Skip caching on server-side (e.g., during generateMetadata)
       if (typeof window !== 'undefined') {
         const cacheKey = generateCacheKey('page', pageId, userId || 'public');
@@ -295,9 +278,46 @@ export const getPageById = async (pageId: string, userId: string | null = null):
         }
       }
 
+      // Use API route for client-side requests to avoid Firebase connectivity issues
+      if (typeof window !== 'undefined') {
+        try {
+          console.log(`getPageById: Using API route for client-side request: ${pageId}`);
+          const response = await fetch(`/api/pages/${pageId}${userId ? `?userId=${userId}` : ''}`);
+
+          if (response.ok) {
+            const pageData = await response.json();
+
+            // Transform API response to match expected format
+            const result = {
+              pageData: pageData,
+              versionData: null, // API doesn't return version data yet
+              links: [] // API doesn't return links yet
+            };
+
+            // Cache the result
+            if (pageData && true) {
+              const cacheKey = generateCacheKey('page', pageId, userId || 'public');
+              setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
+            }
+
+            console.log("getPageById: Successfully used API route for client-side request");
+            return result;
+          } else if (response.status === 404) {
+            return { pageData: null, error: "Page not found" };
+          } else {
+            console.warn(`API route failed with status ${response.status}, falling back to direct Firestore`);
+          }
+        } catch (apiError) {
+          console.warn('API route failed, falling back to direct Firestore:', apiError);
+        }
+      }
+
+      // Fallback to direct Firestore access (for server-side or when API fails)
+      console.log(`getPageById: Using direct Firestore access for: ${pageId}`);
+
       // Get the page document with only the fields we need
       // Use field selection to reduce data transfer
-      const pageRef = doc(db, "pages", pageId);
+      const pageRef = doc(db, getCollectionName("pages"), pageId);
       // Only select the fields we actually need, excluding large content fields
       const docSnap = await getDoc(pageRef);
 
@@ -349,7 +369,7 @@ export const getPageById = async (pageId: string, userId: string | null = null):
 
             const result = { pageData, versionData, links };
 
-            // Cache the result (only for public pages or if user is the owner)
+            // Cache the result (only for pages or if user is the owner)
             // Skip caching on server-side
             if (typeof window !== 'undefined' && (pageData.isPublic || (userId && pageData.userId === userId))) {
               const cacheKey = generateCacheKey('page', pageId, userId || 'public');
@@ -385,12 +405,12 @@ export const getPageById = async (pageId: string, userId: string | null = null):
               };
 
               // Create the version document
-              const versionCollectionRef = collection(db, "pages", pageId, "versions");
+              const versionCollectionRef = collection(db, getCollectionName("pages"), pageId, "versions");
               const versionRef = await addDoc(versionCollectionRef, versionData);
               console.log(`Created recovery version ${versionRef.id} for page ${pageId}`);
 
               // Update the page with the new currentVersion
-              await setDoc(doc(db, "pages", pageId), {
+              await setDoc(doc(db, getCollectionName("pages"), pageId), {
                 currentVersion: versionRef.id
               }, { merge: true });
 
@@ -408,7 +428,7 @@ export const getPageById = async (pageId: string, userId: string | null = null):
         }
 
         // Get the version document
-        const versionCollectionRef = collection(db, "pages", pageId, "versions");
+        const versionCollectionRef = collection(db, getCollectionName("pages"), pageId, "versions");
         const versionRef = doc(versionCollectionRef, currentVersionId);
         const versionSnap = await getDoc(versionRef);
 
@@ -420,7 +440,7 @@ export const getPageById = async (pageId: string, userId: string | null = null):
 
           const result = { pageData, versionData, links };
 
-          // Cache the result (only for public pages or if user is the owner)
+          // Cache the result (only for pages or if user is the owner)
           // Skip caching on server-side
           if (typeof window !== 'undefined' && (pageData.isPublic || (userId && pageData.userId === userId))) {
             const cacheKey = generateCacheKey('page', pageId, userId || 'public');
@@ -494,7 +514,7 @@ export const listenToPageById = (
   let cachedLinks: any[] | null = null;
 
   // Get reference to the page document - only select fields we need
-  const pageRef = doc(db, "pages", pageId);
+  const pageRef = doc(db, getCollectionName("pages"), pageId);
 
   // Variables to store unsubscribe functions
   let unsubscribeVersion: Unsubscribe | null = null;
@@ -553,12 +573,12 @@ export const listenToPageById = (
               };
 
               // Create the version document
-              const versionCollectionRef = collection(db, "pages", pageId, "versions");
+              const versionCollectionRef = collection(db, getCollectionName("pages"), pageId, "versions");
               const versionRef = await addDoc(versionCollectionRef, versionData);
               console.log(`Created recovery version ${versionRef.id} for page ${pageId}`);
 
               // Update the page with the new currentVersion
-              await setDoc(doc(db, "pages", pageId), {
+              await setDoc(doc(db, getCollectionName("pages"), pageId), {
                 currentVersion: versionRef.id
               }, { merge: true });
 
@@ -645,7 +665,7 @@ export const listenToPageById = (
         }
 
         // If we don't have content in the page document or parsing failed, get it from the version
-        const versionCollectionRef = collection(db, "pages", pageId, "versions");
+        const versionCollectionRef = collection(db, getCollectionName("pages"), pageId, "versions");
         const versionRef = doc(versionCollectionRef, currentVersionId);
 
         // If there's an existing unsubscribeVersion listener, remove it before setting a new one
@@ -766,7 +786,7 @@ export const getEditablePagesByUser = async (userId: string): Promise<any[]> => 
 
     // Query for user's pages with field selection (exclude deleted pages)
     const pagesQuery = query(
-      collection(db, 'pages'),
+      collection(db, getCollectionName('pages')),
       where('userId', '==', userId),
       where('deleted', '!=', true),
       orderBy('lastModified', 'desc')
@@ -782,7 +802,7 @@ export const getEditablePagesByUser = async (userId: string): Promise<any[]> => 
         title: data.title || 'Untitled',
         isPublic: data.isPublic || false,
         userId: data.userId,
-        authorName: data.authorName || data.displayName,
+        authorName: data.authorName || data.username,
         lastModified: data.lastModified,
         createdAt: data.createdAt
       });

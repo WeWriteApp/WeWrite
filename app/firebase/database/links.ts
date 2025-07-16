@@ -189,12 +189,13 @@ export const findBacklinks = async (pageId: string, limitCount: number = 10): Pr
 
     const { db } = await import('../config');
     const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
+    const { getCollectionName } = await import('../../utils/environmentConfig');
 
-    // Query for public pages that might contain links to our target page
+    // Query for pages that might contain links to our target page
     // Note: We filter out deleted pages in the loop instead of using where('deleted', '!=', true)
     // because that requires all documents to have the 'deleted' field
     const pagesQuery = query(
-      collection(db, 'pages'),
+      collection(db, getCollectionName('pages')),
       where('isPublic', '==', true),
       orderBy('lastModified', 'desc'),
       limit(100) // Get more pages to search through
@@ -415,11 +416,11 @@ export const findPagesLinkingToExternalUrl = async (
     const { db } = await import('../config');
     const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
 
-    // Query for public pages that might contain the external URL
+    // Query for pages that might contain the external URL
     // Note: This is a simplified approach. For better performance, you might want to
     // index external links separately or use full-text search
     const pagesQuery = query(
-      collection(db, 'pages'),
+      collection(db, getCollectionName('pages')),
       where('isPublic', '==', true),
       where('deleted', '!=', true),
       orderBy('lastModified', 'desc'),
@@ -618,7 +619,7 @@ export const getUserExternalLinks = async (
       if (!page.content) continue;
 
       try {
-        let content: SlateContent[] = [];
+        let content: EditorContent = [];
 
         // Parse content if it's a string
         if (typeof page.content === 'string') {
@@ -806,16 +807,19 @@ export const getUserExternalLinksAggregated = async (
 };
 
 /**
- * Get the global count of how many times an external URL is linked across all public pages
+ * Get the global count of how many times an external URL is linked across all pages
  */
 export const getGlobalExternalLinkCount = async (externalUrl: string): Promise<number> => {
   try {
     const { db } = await import('../config');
     const { collection, query, where, getDocs } = await import('firebase/firestore');
 
-    // Query public pages only
+    // Import environment config
+    const { getCollectionName } = await import('../../utils/environmentConfig');
+
+    // Query pages only
     const pagesQuery = query(
-      collection(db, 'pages'),
+      collection(db, getCollectionName('pages')),
       where('isPublic', '==', true),
       where('deleted', '!=', true)
     );
@@ -865,10 +869,11 @@ export const getGlobalExternalLinkCounts = async (urls: string[]): Promise<Map<s
   try {
     const { db } = await import('../config');
     const { collection, query, where, getDocs } = await import('firebase/firestore');
+    const { getCollectionName } = await import('../../utils/environmentConfig');
 
-    // Query public pages only
+    // Query pages only
     const pagesQuery = query(
-      collection(db, 'pages'),
+      collection(db, getCollectionName('pages')),
       where('isPublic', '==', true),
       where('deleted', '!=', true)
     );

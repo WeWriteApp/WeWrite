@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 // Firebase imports removed - using Firestore instead of Realtime Database
-import { listenToPageById, getPageVersions } from "../../firebase/database";
+import { listenToPageById, getPageVersions, getPageById } from "../../firebase/database";
 import { recordPageView } from "../../firebase/pageViews";
 import { trackPageViewWhenReady } from "../../utils/analytics-page-titles";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
@@ -30,9 +30,10 @@ import { Button } from "../ui/button";
 import { LineSettingsMenu } from "../utils/LineSettingsMenu";
 
 // Editor Components
-import Editor from "../editor/Editor";
 import TextView from "../editor/TextView";
-import PageEditor from "../editor/PageEditor";
+import Editor from "../editor/Editor";
+import EmptyLinesAlert from "../editor/EmptyLinesAlert";
+// CustomDateField and LocationField are now handled by PageFooter
 
 // Types
 interface PageViewProps {
@@ -44,13 +45,18 @@ interface PageViewProps {
   compareVersionId?: string; // For diff comparison between two versions
 }
 
+interface Location {
+  lat: number;
+  lng: number;
+}
+
 interface Page {
   id: string;
   title: string;
   content: any;
   userId: string;
-  isPublic: boolean;
-  location?: string;
+
+  location?: Location | null;
   createdAt: any;
   updatedAt: any;
   isDeleted?: boolean;
@@ -107,14 +113,17 @@ export default function PageView({
   const [titleError, setTitleError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [title, setTitle] = useState('');
-  const [isPublic, setIsPublic] = useState(true);
-  const [location, setLocation] = useState('');
+  const [customDate, setCustomDate] = useState<string | null>(null);
+  const [location, setLocation] = useState<Location | null>(null);
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
   const [versionData, setVersionData] = useState<any>(null);
   const [compareVersionData, setCompareVersionData] = useState<any>(null);
   const [diffContent, setDiffContent] = useState<any>(null);
+
+  // Empty lines tracking for alert banner
+  const [emptyLinesCount, setEmptyLinesCount] = useState(0);
 
   // Refs
   const editorRef = useRef<any>(null);
@@ -134,6 +143,73 @@ export default function PageView({
   // Constants
   const maxLoadAttempts = 3;
   const isPreviewingDeleted = searchParams?.get('preview') === 'deleted';
+
+  // API fallback function
+  const tryApiFallback = useCallback(async () => {
+    try {
+      logger.debug('Trying API fallback for page load', { pageId });
+      const result = await getPageById(pageId, currentAccount?.uid);
+
+      if (result.error) {
+        logger.warn('API fallback failed', { error: result.error, pageId });
+        setError(result.error);
+        setIsLoading(false);
+      } else if (result.pageData) {
+        logger.debug('API fallback successful', { pageId });
+        const pageData = result.pageData;
+        const versionData = result.versionData;
+
+        setPage(pageData);
+        setTitle(pageData.title || '');
+        setCustomDate(pageData.customDate || null);
+        setLocation(pageData.location || null);
+
+        // Parse content - try page content first, then version content
+        let contentToUse = pageData.content;
+        let contentSource = 'page';
+
+        if (!contentToUse && versionData?.content) {
+          contentToUse = versionData.content;
+          contentSource = 'version';
+        }
+
+        if (contentToUse) {
+          try {
+            const parsedContent = typeof contentToUse === 'string'
+              ? JSON.parse(contentToUse)
+              : contentToUse;
+
+            setEditorState(parsedContent);
+            setVersionData(versionData);
+            setIsLoading(false);
+
+            // Record page view
+            if (!viewRecorded.current && pageData.id) {
+              recordPageView(pageData.id, currentAccount?.uid || null);
+              viewRecorded.current = true;
+            }
+          } catch (parseError) {
+            logger.error('Failed to parse content from API fallback', { parseError });
+            setError('Failed to parse page content');
+            setIsLoading(false);
+          }
+        } else {
+          // No content, but page exists
+          setEditorState([]);
+          setVersionData(versionData);
+          setIsLoading(false);
+        }
+      } else {
+        logger.warn('API fallback returned no data', { pageId });
+        setError('Page not found');
+        setIsLoading(false);
+      }
+    } catch (error) {
+      logger.error('API fallback error', { error, pageId });
+      setError('Failed to load page');
+      setIsLoading(false);
+    }
+  }, [pageId, currentAccount?.uid, logger]);
 
   // Handle params Promise
   useEffect(() => {
@@ -168,22 +244,46 @@ export default function PageView({
       logger.debug('Loading diff data', { versionId });
       loadDiffData();
     } else {
-      logger.debug('Setting up Firebase listener', { pageId });
+      logger.debug('Setting up page loading with API fallback', { pageId });
+
+      // In development, use API fallback immediately due to Firestore connectivity issues
+      if (process.env.NODE_ENV === 'development') {
+        logger.debug('Development mode detected, using API fallback immediately', { pageId });
+        tryApiFallback();
+        return;
+      }
+
+      // Try Firebase listener first, with aggressive fallback to API
+      let hasReceivedData = false;
+      let fallbackTimeout: NodeJS.Timeout;
+
       // Set up Firebase listener for live page
       const unsubscribe = listenToPageById(pageId, (data) => {
         if (data.error) {
           logger.warn('Page load error', { error: data.error, pageId });
         } else {
-          logger.debug('Page data received', {
+          console.log('🔍 PageView: Firebase listener - Page data received', {
             hasPageData: !!(data.pageData || data),
-            hasVersionData: !!data.versionData
+            hasVersionData: !!data.versionData,
+            pageData: data.pageData || data,
+            content: (data.pageData || data)?.content,
+            contentType: typeof (data.pageData || data)?.content,
+            contentLength: (data.pageData || data)?.content?.length || 0
           });
         }
 
         if (data.error) {
-          setError(data.error);
-          setIsLoading(false);
+          // If Firebase listener fails, try API fallback
+          if (!hasReceivedData) {
+            logger.debug('Firebase listener failed, trying API fallback', { pageId });
+            tryApiFallback();
+          } else {
+            setError(data.error);
+            setIsLoading(false);
+          }
         } else {
+          hasReceivedData = true;
+          clearTimeout(fallbackTimeout);
           const pageData = data.pageData || data;
           const versionData = data.versionData;
 
@@ -195,8 +295,8 @@ export default function PageView({
             });
           }
           setTitle(pageData.title || '');
-          setIsPublic(pageData.isPublic !== false);
-          setLocation(pageData.location || '');
+          setCustomDate(pageData.customDate || null);
+          setLocation(pageData.location || null);
 
           // Parse content - try page content first, then version content
           let contentToUse = pageData.content;
@@ -220,6 +320,11 @@ export default function PageView({
                 firstElement: Array.isArray(parsedContent) && parsedContent.length > 0 ? parsedContent[0] : null
               });
 
+              console.log('🔍 PageView: Setting editorState with parsed content:', {
+                parsedContent,
+                isArray: Array.isArray(parsedContent),
+                length: Array.isArray(parsedContent) ? parsedContent.length : 'not array'
+              });
               setEditorState(parsedContent);
             } catch (error) {
               console.error("Error parsing content:", error);
@@ -235,18 +340,27 @@ export default function PageView({
       }, currentAccount?.uid || null);
 
       unsubscribeRef.current = unsubscribe;
+
+      // Set up fallback timeout in case Firebase listener doesn't respond
+      fallbackTimeout = setTimeout(() => {
+        if (!hasReceivedData) {
+          logger.debug('Firebase listener timeout, trying API fallback', { pageId });
+          tryApiFallback();
+        }
+      }, 3000); // 3 second timeout
     }
 
     return () => {
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
       }
+      clearTimeout(fallbackTimeout);
     };
   }, [pageId, currentAccount?.uid, showVersion, versionId, showDiff, compareVersionId]);
 
   // Record page view and add to recent pages
   useEffect(() => {
-    if (!viewRecorded.current && !isLoading && page && isPublic && pageId) {
+    if (!viewRecorded.current && !isLoading && page && pageId) {
       viewRecorded.current = true;
       recordPageView(pageId, currentAccount?.uid);
 
@@ -275,7 +389,7 @@ export default function PageView({
 
             if (userSnapshot.exists()) {
               const userData = userSnapshot.val();
-              return userData.username || userData.displayName || 'Anonymous';
+              return userData.username || 'Anonymous';
             }
           } catch (error) {
             console.error('Error fetching username for recent page:', error);
@@ -296,36 +410,9 @@ export default function PageView({
         });
       }
     }
-  }, [isLoading, page, isPublic, pageId, currentAccount?.uid, currentAccount, addRecentPage]);
+  }, [isLoading, page, pageId, currentAccount?.uid, currentAccount, addRecentPage]);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + E to toggle edit mode
-      if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
-        e.preventDefault();
-        if (canEdit) {
-          setIsEditing(!isEditing);
-        }
-      }
-      
-      // Cmd/Ctrl + S to save
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        e.preventDefault();
-        if (isEditing && hasUnsavedChanges) {
-          handleSave();
-        }
-      }
-      
-      // Escape to cancel editing
-      if (e.key === 'Escape' && isEditing) {
-        handleCancel();
-      }
-    };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isEditing, hasUnsavedChanges]);
 
   // Version loading functions
   const loadVersionData = async () => {
@@ -339,7 +426,7 @@ export default function PageView({
           id: pageId,
           title: version.title || 'Untitled',
           userId: version.userId,
-          isPublic: true // Versions are always viewable if you have the link
+
         });
         setTitle(version.title || 'Untitled');
 
@@ -395,7 +482,7 @@ export default function PageView({
           id: pageId,
           title: `Diff: ${currentVersion.title || 'Untitled'}`,
           userId: currentVersion.userId,
-          isPublic: true
+
         });
         setTitle(`Diff: ${currentVersion.title || 'Untitled'}`);
       } else {
@@ -430,14 +517,28 @@ export default function PageView({
     setTitleError(null);
   }, [title]);
 
-  const handleVisibilityChange = useCallback((newIsPublic: boolean) => {
-    setIsPublic(newIsPublic);
+
+
+  const handleLocationChange = useCallback((newLocation: Location | null) => {
+    setLocation(newLocation);
     setHasUnsavedChanges(true);
   }, []);
 
-  const handleLocationChange = useCallback((newLocation: string) => {
-    setLocation(newLocation);
+  const handleCustomDateChange = useCallback((newCustomDate: string | null) => {
+    setCustomDate(newCustomDate);
     setHasUnsavedChanges(true);
+  }, []);
+
+  // Handle empty lines count changes
+  const handleEmptyLinesChange = useCallback((count: number) => {
+    setEmptyLinesCount(count);
+  }, []);
+
+  // Handle delete all empty lines
+  const handleDeleteAllEmptyLines = useCallback(() => {
+    if (editorRef.current && editorRef.current.deleteAllEmptyLines) {
+      editorRef.current.deleteAllEmptyLines();
+    }
   }, []);
 
   const handleSetIsEditing = useCallback((editing: boolean, position?: { x: number; y: number }) => {
@@ -448,73 +549,62 @@ export default function PageView({
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!page || !pageId) return;
+    console.log('🚨 SAVE DEBUG: handleSave called', { pageId, hasPage: !!page, title });
+
+    if (!page || !pageId) {
+      console.log('🚨 SAVE DEBUG: Early return - no page or pageId');
+      return;
+    }
 
     // Validate title is not empty
     if (!title || title.trim() === '') {
+      console.log('🚨 SAVE DEBUG: Early return - no title');
       setTitleError("Title is required");
       setError("Please add a title before saving");
       return;
     }
 
+    console.log('🚨 SAVE DEBUG: Starting save process...');
     setIsSaving(true);
     setError(null);
     setTitleError(null);
 
     try {
-      // Wrap the entire save operation to prevent any errors from causing full page errors
+      // Use API route instead of direct Firebase calls
       const contentToSave = editorState;
       const editorStateJSON = JSON.stringify(contentToSave);
 
-      // Use saveNewVersion with no-op detection instead of direct updatePage
-      const { saveNewVersion } = await import('../../firebase/database/versions');
-      const { getUsernameById } = await import('../../utils/userUtils');
-
-      // Get current user's username
-      const username = await getUsernameById(currentAccount?.uid || '');
-
-      const versionData = {
-        content: editorStateJSON,
-        userId: currentAccount?.uid || '',
-        username: username || 'Anonymous',
-        skipIfUnchanged: true // Enable no-op detection
-      };
-
-      logger.debug('Saving page with version creation', { pageId });
-      const versionResult = await saveNewVersion(pageId, versionData);
-
-      // Check if the save was skipped due to no changes
-      let contentWasSkipped = false;
-      if (versionResult && !versionResult.success && versionResult.message === 'Content unchanged') {
-        logger.debug('Content unchanged, skipping version creation');
-        contentWasSkipped = true;
-      } else if (!versionResult) {
-        throw new Error('Failed to create new version');
-      }
-
-      // Update page metadata (title, isPublic, location) - this should happen even if content didn't change
-      const { updatePage } = await import('../../firebase/database');
       const updateData = {
+        id: pageId,
         title: title.trim(),
-        isPublic,
-        location: location.trim(),
-        lastModified: new Date().toISOString()
+        content: editorStateJSON,
+        location: location,
+        customDate: customDate
       };
 
-      logger.debug('Updating page metadata', {
-        pageId,
-        titleChanged: page?.title !== title.trim()
-      });
-      const metadataSuccess = await updatePage(pageId, updateData);
+      console.log('🚨 SAVE DEBUG: Calling API route with data:', { ...updateData, content: '(content omitted)' });
 
-      if (!metadataSuccess) {
-        throw new Error('Failed to update page metadata');
+      const response = await fetch('/api/pages', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `API request failed: ${response.status} ${response.statusText}`);
       }
 
-      logger.info('Page saved successfully', {
-        contentUpdated: !contentWasSkipped,
-        metadataUpdated: true
-      });
+      const result = await response.json();
+      console.log('🚨 SAVE DEBUG: API response:', result);
+
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to update page');
+      }
+
+      logger.info('Page saved successfully via API', { pageId });
 
       // Trigger cache invalidation to refresh daily notes and other components
       try {
@@ -556,7 +646,7 @@ export default function PageView({
     } finally {
       setIsSaving(false);
     }
-  }, [page, pageId, editorState, title, isPublic, location]);
+  }, [page, pageId, editorState, title, location]);
 
   const handleCancel = useCallback(() => {
     if (hasUnsavedChanges) {
@@ -566,13 +656,49 @@ export default function PageView({
     
     // Reset to original values
     setTitle(page?.title || '');
-    setIsPublic(page?.isPublic !== false);
     setLocation(page?.location || '');
     setEditorState(page?.content ? JSON.parse(page.content) : [{ type: "paragraph", children: [{ text: "" }] }]);
     setHasUnsavedChanges(false);
     setIsEditing(false);
     setClickPosition(null);
   }, [hasUnsavedChanges, page]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + E to toggle edit mode
+      if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
+        e.preventDefault();
+        if (canEdit) {
+          setIsEditing(!isEditing);
+        }
+      }
+
+      // Cmd/Ctrl + S to save
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        if (isEditing && hasUnsavedChanges) {
+          handleSave();
+        }
+      }
+
+      // Cmd/Ctrl + Enter to save
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (isEditing && hasUnsavedChanges) {
+          handleSave();
+        }
+      }
+
+      // Escape to cancel editing
+      if (e.key === 'Escape' && isEditing) {
+        handleCancel();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isEditing, hasUnsavedChanges, handleSave, canEdit, handleCancel]);
 
   const handleDelete = useCallback(async () => {
     if (!page || !pageId) return;
@@ -583,16 +709,20 @@ export default function PageView({
     if (!confirmDelete) return;
 
     try {
-      // Use the proper soft delete function from Firestore
-      const { deletePage } = await import('../../firebase/database');
+      // Use API instead of direct Firebase calls
+      const response = await fetch(`/api/pages?id=${pageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      const success = await deletePage(pageId);
-
-      if (success) {
+      if (response.ok) {
         console.log(`Successfully soft deleted page ${pageId}`);
         router.push('/');
       } else {
-        setError("Failed to delete page. Please try again.");
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to delete page. Please try again.");
       }
     } catch (error) {
       console.error("Error deleting page:", error);
@@ -658,7 +788,6 @@ export default function PageView({
             username={page?.username}
             userId={page?.userId}
             isLoading={isLoading}
-            isPrivate={!isPublic}
             isEditing={isEditing}
             setIsEditing={setIsEditing}
             onTitleChange={handleTitleChange}
@@ -675,9 +804,9 @@ export default function PageView({
           )}
 
           <div
-            className="animate-in fade-in-0 duration-300 w-full pb-32 max-w-none box-border px-4 sm:px-6 md:px-8"
+            className="animate-in fade-in-0 duration-300 w-full pb-32 max-w-none box-border"
             style={{
-              paddingTop: 'calc(var(--page-header-height, 140px) + 0.5rem)', // Extra padding to prevent clipping
+              paddingTop: isEditing ? '1rem' : 'calc(var(--page-header-height, 140px) + 0.5rem)', // No extra padding in edit mode since header is not fixed
               transition: 'padding-top 300ms ease-in-out'
             }}
           >
@@ -686,7 +815,7 @@ export default function PageView({
               enableCopy={true}
               enableShare={true}
               enableAddToPage={true}
-              username={currentAccount?.displayName || currentAccount?.username}
+              username={currentAccount?.username}
             >
               <div ref={contentRef}>
                 <TextViewErrorBoundary fallbackContent={
@@ -695,14 +824,16 @@ export default function PageView({
                     <p className="text-sm mt-2">Page ID: {page.id}</p>
                   </div>
                 }>
+                  {console.log('🔍 PageView: Rendering decision - isEditing:', isEditing, 'showVersion:', showVersion, 'showDiff:', showDiff)}
                   {isEditing ? (
-                    <PageEditor
+                    <Editor
+                      ref={editorRef}
                       title={title}
                       setTitle={handleTitleChange}
                       initialContent={editorState}
-                      onContentChange={handleContentChange}
-                      isPublic={isPublic}
-                      setIsPublic={handleVisibilityChange}
+                      onChange={handleContentChange}
+                      onEmptyLinesChange={handleEmptyLinesChange}
+
                       location={location}
                       setLocation={handleLocationChange}
                       onSave={handleSave}
@@ -711,23 +842,37 @@ export default function PageView({
                       isSaving={isSaving}
                       error={error || ""}
                       isNewPage={false}
-                      page={page}
+                      placeholder="Start typing..."
+                      showToolbar={true}
                     />
                   ) : (
-                    <TextView
-                      key={`textview-${page.id}-${showVersion ? 'version' : showDiff ? 'diff' : 'normal'}`}
-                      content={editorState}
-                      page={page}
-                      canEdit={canEdit}
-                      setIsEditing={handleSetIsEditing}
-                      user={currentAccount}
-                      contentType="wiki"
-                      isEditing={false}
-                      showDiff={showDiff}
-                      viewMode={showDiff ? "diff" : "normal"}
-                    />
+                    <>
+                      {console.log('🔍 PageView: NOT in editing mode, about to render TextView')}
+                      {console.log('🔍 PageView: About to render TextView with editorState:', {
+                        editorState,
+                        editorStateType: typeof editorState,
+                        isArray: Array.isArray(editorState),
+                        length: Array.isArray(editorState) ? editorState.length : editorState?.length || 0,
+                        pageId: page.id,
+                        hasContent: !!editorState
+                      })}
+                      <TextView
+                        key={`textview-${page.id}-${showVersion ? 'version' : showDiff ? 'diff' : 'normal'}`}
+                        content={editorState?.content || editorState}
+                        page={page}
+                        canEdit={canEdit}
+                        setIsEditing={handleSetIsEditing}
+                        user={currentAccount}
+                        contentType="wiki"
+                        isEditing={false}
+                        showDiff={showDiff}
+                        viewMode={showDiff ? "diff" : "normal"}
+                      />
+                    </>
                   )}
                 </TextViewErrorBoundary>
+
+                {/* Custom Date Field and Location Field are now handled by PageFooter */}
 
                 <UnifiedTextHighlighter
                   contentRef={contentRef}
@@ -745,10 +890,9 @@ export default function PageView({
               canEdit={canEdit}
               isOwner={canEdit} // Add isOwner prop - same logic as canEdit for ownership
               title={title}
-              isPublic={isPublic}
+
               location={location}
               onTitleChange={handleTitleChange}
-              onVisibilityChange={handleVisibilityChange}
               onLocationChange={handleLocationChange}
               onSave={handleSave}
               onCancel={handleCancel}
@@ -779,6 +923,14 @@ export default function PageView({
               pageTitle={page.title}
               authorId={page.userId}
               visible={true}
+            />
+          )}
+
+          {/* Empty Lines Alert - Shows when editing and there are empty lines */}
+          {isEditing && (
+            <EmptyLinesAlert
+              emptyLinesCount={emptyLinesCount}
+              onDeleteAllEmptyLines={handleDeleteAllEmptyLines}
             />
           )}
         </div>

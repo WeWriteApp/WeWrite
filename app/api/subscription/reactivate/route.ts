@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { determineTierFromAmount, calculateTokensForAmount } from '../../../utils/subscriptionTiers';
-import { TokenService } from '../../../services/tokenService';
+import { ServerTokenService } from '../../../services/tokenService.server';
 import { initAdmin } from '../../../firebase/admin';
 
 // Initialize Firebase Admin
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
     await subscriptionRef.update(subscriptionData);
 
     // Update user's token allocation
-    await TokenService.updateMonthlyTokenAllocation(userId, amount);
+    await ServerTokenService.updateMonthlyTokenAllocation(userId, amount);
 
     console.log(`[SUBSCRIPTION REACTIVATE] Successfully reactivated subscription for user ${userId}`);
 

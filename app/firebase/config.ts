@@ -63,17 +63,24 @@ const newConfig: FirebaseConfig = {
   // Use the GA measurement ID for Firebase Analytics to ensure events go to the same property
   measurementId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID};
 
-// Initialize Firebase
-export const app: FirebaseApp = initializeApp(newConfig);
+// Initialize Firebase using environment-aware configuration
+// This maintains backward compatibility while supporting future multi-project architecture
+import {
+  getEnvironmentAwareFirebase,
+  getDefaultFirebaseApp,
+  getEnvironmentAwareFirestore,
+  getEnvironmentAwareAuth,
+  getEnvironmentAwareRTDB
+} from './environmentAwareConfig';
 
-// Initialize Firebase Auth
-export const auth: Auth = getAuth(app);
+// Get environment-aware Firebase services
+const firebaseServices = getEnvironmentAwareFirebase();
 
-// Initialize Firestore
-export const db: Firestore = getFirestore(app);
-
-// Initialize Realtime Database
-export const rtdb: Database = getDatabase(app);
+// Export services for backward compatibility
+export const app: FirebaseApp = firebaseServices.app;
+export const auth: Auth = firebaseServices.auth;
+export const db: Firestore = firebaseServices.db;
+export const rtdb: Database = firebaseServices.rtdb;
 
 /**
  * Initialize Firebase Analytics

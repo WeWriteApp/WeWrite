@@ -11,6 +11,7 @@ import {
   increment
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { getCollectionName } from "../utils/environmentConfig";
 import {
   AnalyticsDataLayer,
   type GlobalCounters,
@@ -107,8 +108,7 @@ export class AnalyticsAggregationService {
    */
   static async incrementPageCreated(isPublic: boolean): Promise<void> {
     try {
-      const batch = writeBatch(db);
-      const globalRef = doc(db, 'analytics_counters', 'global');
+const globalRef = doc(db, getCollectionName("analytics_counters"), 'global');
       
       // Update global counters
       batch.update(globalRef, {
@@ -119,8 +119,7 @@ export class AnalyticsAggregationService {
       });
 
       // Update daily aggregation
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      const dailyRef = doc(db, 'analytics_daily', today);
+const dailyRef = doc(db, getCollectionName("analytics_daily"), today);
       batch.set(dailyRef, {
         date: today,
         pagesCreated: increment(1),
@@ -159,8 +158,7 @@ export class AnalyticsAggregationService {
    */
   static async incrementPageDeleted(wasPublic: boolean): Promise<void> {
     try {
-      const batch = writeBatch(db);
-      const globalRef = doc(db, 'analytics_counters', 'global');
+const globalRef = doc(db, getCollectionName("analytics_counters"), 'global');
       
       // Update global counters
       batch.update(globalRef, {
@@ -171,8 +169,7 @@ export class AnalyticsAggregationService {
       });
 
       // Update daily aggregation
-      const today = new Date().toISOString().split('T')[0];
-      const dailyRef = doc(db, 'analytics_daily', today);
+const dailyRef = doc(db, getCollectionName("analytics_daily"), today);
       batch.set(dailyRef, {
         date: today,
         pagesDeleted: increment(1),
@@ -286,8 +283,7 @@ export class AnalyticsAggregationService {
       for (let i = dailyAggregations.length - 1; i >= 0; i--) {
         const day = dailyAggregations[i];
 
-        // Update the document with cumulative totals
-        await updateDoc(doc(db, 'analytics_daily', day.date), {
+await updateDoc(doc(db, getCollectionName("analytics_daily"), day.date), {
           cumulativeActive: runningActive,
           cumulativeTotal: runningTotal,
           lastUpdated: Timestamp.now()

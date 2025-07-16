@@ -2,6 +2,7 @@
 
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { getCollectionName } from "../utils/environmentConfig";
 
 /**
  * Test mode status information
@@ -114,7 +115,7 @@ export class TestModeDetectionService {
   }> {
     try {
       const earningsQuery = query(
-        collection(db, 'writerTokenEarnings'),
+        collection(db, getCollectionName('writerTokenEarnings')),
         where('userId', '==', userId)
       );
 

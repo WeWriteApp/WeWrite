@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, startAfter } from 'firebase/firestore';
 import { db } from '../../firebase/database';
+import { getCollectionName } from '../../utils/environmentConfig';
 
 // Add export for dynamic route handling
 export const dynamic = 'force-dynamic';
@@ -169,7 +170,7 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
       
       while (hasMore && allResults.length < finalMaxResults) {
         let userQuery = query(
-          collection(db, 'pages'),
+          collection(db, getCollectionName('pages')),
           where('userId', '==', targetUserId),
           where('deleted', '!=', true),
           orderBy('deleted'),
@@ -179,7 +180,7 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
         
         if (lastDoc) {
           userQuery = query(
-            collection(db, 'pages'),
+            collection(db, getCollectionName('pages')),
             where('userId', '==', targetUserId),
             where('deleted', '!=', true),
             orderBy('deleted'),
@@ -258,18 +259,18 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
       let hasMore = true;
       
       while (hasMore && allResults.length < finalMaxResults) {
-        let publicQuery = query(
-          collection(db, 'pages'),
+        let pagesQuery = query(
+          collection(db, getCollectionName('pages')),
           where('isPublic', '==', true),
           where('deleted', '!=', true),
           orderBy('deleted'),
           orderBy('lastModified', 'desc'),
           limit(batchSize)
         );
-        
+
         if (lastDoc) {
-          publicQuery = query(
-            collection(db, 'pages'),
+          pagesQuery = query(
+            collection(db, getCollectionName('pages')),
             where('isPublic', '==', true),
             where('deleted', '!=', true),
             orderBy('deleted'),
@@ -278,42 +279,42 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
             limit(batchSize)
           );
         }
-        
-        const publicPagesSnapshot = await getDocs(publicQuery);
-        
-        if (publicPagesSnapshot.empty) {
+
+        const pagesSnapshot = await getDocs(pagesQuery);
+
+        if (pagesSnapshot.empty) {
           hasMore = false;
           break;
         }
         
-        publicPagesSnapshot.forEach(doc => {
+        pagesSnapshot.forEach(doc => {
           if (processedIds.has(doc.id) || doc.id === currentPageId) return;
-          
+
           const data = doc.data();
-          
+
           // Skip user's own pages (already processed)
           if (data.userId === userId) return;
-          
+
           const pageTitle = data.title || 'Untitled';
-          
+
           let isMatch = false;
           let matchScore = 0;
           let isContentMatch = false;
-          
+
           if (isEmptySearch) {
             isMatch = true;
             matchScore = 40; // Slightly lower base score for public pages
           } else {
             // Title matching
             const titleScore = calculateSearchScore(pageTitle, searchTerm, true, false);
-            
+
             // Content matching (if enabled)
             let contentScore = 0;
             if (!finalTitleOnly && finalIncludeContent && data.content) {
               contentScore = calculateSearchScore(data.content, searchTerm, false, true);
               isContentMatch = contentScore > titleScore;
             }
-            
+
             matchScore = Math.max(titleScore, contentScore);
             isMatch = matchScore > 0;
           }
@@ -323,7 +324,7 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
             allResults.push({
               id: doc.id,
               title: pageTitle,
-              type: 'public',
+              type: 'page',
               isOwned: false,
               isEditable: false,
               userId: data.userId,
@@ -338,8 +339,8 @@ async function searchPagesComprehensive(userId, searchTerm, options = {}) {
           }
         });
         
-        lastDoc = publicPagesSnapshot.docs[publicPagesSnapshot.docs.length - 1];
-        hasMore = publicPagesSnapshot.docs.length === batchSize && allResults.length < finalMaxResults;
+        lastDoc = pagesSnapshot.docs[pagesSnapshot.docs.length - 1];
+        hasMore = pagesSnapshot.docs.length === batchSize && allResults.length < finalMaxResults;
       }
     }
     
@@ -388,7 +389,7 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
     // Search by username (case insensitive)
     try {
       const usernameQuery = query(
-        collection(db, 'users'),
+        collection(db, getCollectionName('users')),
         where('usernameLower', '>=', searchLower),
         where('usernameLower', '<=', searchLower + '\uf8ff'),
         limit(maxResults * 2)
@@ -417,7 +418,7 @@ async function searchUsersComprehensive(searchTerm, maxResults = 20) {
     if (results.size < maxResults / 2) {
       try {
         const broadQuery = query(
-          collection(db, 'users'),
+          collection(db, getCollectionName('users')),
           limit(200)
         );
         const broadResults = await getDocs(broadQuery);
@@ -559,7 +560,7 @@ export async function GET(request) {
           const userDoc = await getDoc(doc(db, 'users', page.userId));
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            page.username = userData.username || userData.displayName || 'Anonymous';
+            page.username = userData.username || 'Anonymous';
           } else {
             page.username = 'Anonymous';
           }

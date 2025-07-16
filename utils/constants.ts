@@ -1,7 +1,7 @@
-export const nodeTypes = {
+// Simplified content types - only text and links
+export const CONTENT_TYPES = {
   PARAGRAPH: 'paragraph',
-  HEADING: 'heading',
-  CODE_BLOCK: 'code-block',
-  LIST: 'list',
-  LIST_ITEM: 'list-item',
-};
+  LINK: 'link'
+} as const;
+
+export type ContentType = typeof CONTENT_TYPES[keyof typeof CONTENT_TYPES];

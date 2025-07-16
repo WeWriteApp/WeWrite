@@ -3,7 +3,8 @@ import { getUserIdFromRequest } from '../../auth-helper';
 
 export async function GET(request, { params }) {
   try {
-    const { id } = params;
+    // Await params for Next.js 15 compatibility
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -17,17 +18,19 @@ export async function GET(request, { params }) {
     // Get the current user ID for access control
     const userId = await getUserIdFromRequest(request);
 
-    // Import Firebase modules
-    const { doc, getDoc } = await import('firebase/firestore');
-    const { db } = await import('../../../firebase/database');
-    const { ref, get } = await import('firebase/database');
-    const { rtdb } = await import('../../../firebase/rtdb');
+    // Import Firebase Admin modules (server-side)
+    const { getFirebaseAdmin } = await import('../../../firebase/firebaseAdmin');
+    const { getCollectionName } = await import('../../../utils/environmentConfig');
 
-    // Get the page document from Firestore
-    const pageRef = doc(db, 'pages', id);
-    const pageDoc = await getDoc(pageRef);
+    // Get Firebase Admin instance
+    const admin = getFirebaseAdmin();
+    const db = admin.firestore();
 
-    if (!pageDoc.exists()) {
+    // Get the page document from Firestore using Admin SDK
+    const pageRef = db.collection(getCollectionName('pages')).doc(id);
+    const pageDoc = await pageRef.get();
+
+    if (!pageDoc.exists) {
       return NextResponse.json(
         { error: 'Page not found' },
         { status: 404 }
@@ -53,16 +56,17 @@ export async function GET(request, { params }) {
       }
     }
 
-    // Get author information from Realtime Database
+    // Get author information from Realtime Database using Admin SDK
     let authorUsername = null;
     if (pageData.userId) {
       try {
-        const userRef = ref(rtdb, `users/${pageData.userId}`);
-        const userSnapshot = await get(userRef);
+        const rtdb = admin.database();
+        const userRef = rtdb.ref(`users/${pageData.userId}`);
+        const userSnapshot = await userRef.once('value');
 
         if (userSnapshot.exists()) {
           const userData = userSnapshot.val();
-          authorUsername = userData.username || userData.displayName || null;
+          authorUsername = userData.username || null;
         }
       } catch (userError) {
         console.error(`Error fetching user data for ${pageData.userId}:`, userError);
@@ -75,6 +79,7 @@ export async function GET(request, { params }) {
     const response = {
       id: id,
       title: pageData.title || 'Untitled',
+      content: pageData.content || null,
       userId: pageData.userId,
       username: pageData.username || 'Anonymous',
       authorUsername: authorUsername || pageData.username || 'Anonymous',
@@ -82,6 +87,8 @@ export async function GET(request, { params }) {
       lastModified: pageData.lastModified,
       createdAt: pageData.createdAt,
       groupId: pageData.groupId || null,
+      // Include custom date for daily notes
+      customDate: pageData.customDate || null,
       // Include deleted status for owner context
       deleted: pageData.deleted || false
     };

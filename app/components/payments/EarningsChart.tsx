@@ -187,7 +187,7 @@ export default function EarningsChart({ earnings, className }: EarningsChartProp
                     if (active && payload && payload.length) {
                       const data = payload[0].payload as ChartDataPoint;
                       return (
-                        <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+                        <div className="bg-background border-theme-strong rounded-lg p-3 shadow-lg">
                           <p className="font-medium">{data.month}</p>
                           <p className="text-sm text-muted-foreground">
                             {formatCurrency(data.earnings)} ({data.tokens} tokens)

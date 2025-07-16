@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
         const userDoc = await db.collection('users').doc(userId).get();
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          username = userData?.username || userData?.displayName || userRecord.email?.split('@')[0] || 'Unknown User';
+          username = userData?.username || userRecord.email?.split('@')[0] || 'Unknown User';
         }
       } catch (error) {
         console.warn('Could not fetch username for Stripe customer:', error);

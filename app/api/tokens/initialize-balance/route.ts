@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get subscription details to determine token allocation
-    const userDoc = await getDoc(doc(db, 'users', userId));
+const userDoc = await getDoc(doc(db, getCollectionName("users"), userId));
     if (!userDoc.exists()) {
       return NextResponse.json(
         { error: 'User not found' },

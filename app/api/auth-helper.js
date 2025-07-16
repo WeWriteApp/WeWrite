@@ -141,14 +141,21 @@ export async function getUserIdFromRequest(request) {
   if (userSessionCookie) {
     console.log('[AUTH DEBUG] Found userSession cookie, length:', userSessionCookie.length);
     try {
+      // Try parsing as JSON first (new format)
       const userSession = JSON.parse(userSessionCookie);
       if (userSession && userSession.uid) {
-        console.log('[AUTH DEBUG] Using userId from userSession cookie:', userSession.uid);
+        console.log('[AUTH DEBUG] Using userId from userSession cookie (JSON format):', userSession.uid);
         return userSession.uid;
       } else {
         console.log('[AUTH DEBUG] userSession cookie missing uid:', userSession);
       }
     } catch (error) {
+      // If JSON parsing fails, treat as plain string (legacy format)
+      console.log('[AUTH DEBUG] JSON parsing failed, treating as plain string:', userSessionCookie);
+      if (userSessionCookie && typeof userSessionCookie === 'string' && userSessionCookie.trim()) {
+        console.log('[AUTH DEBUG] Using userId from userSession cookie (string format):', userSessionCookie);
+        return userSessionCookie.trim();
+      }
       console.error('[AUTH DEBUG] Error parsing userSession cookie:', error);
     }
   } else {

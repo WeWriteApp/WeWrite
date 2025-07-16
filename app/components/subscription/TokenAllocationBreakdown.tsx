@@ -800,8 +800,8 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                           </p>
                         </div>
 
-                      <div className="flex items-center gap-3 sm:ml-4">
-                        <div className="text-right">
+                      <div className="flex items-center justify-between gap-4 sm:gap-6">
+                        <div className="flex-1 text-right min-w-0">
                           {isEditing ? (
                             <div className="flex flex-col items-end gap-1">
                               <Input
@@ -824,16 +824,13 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                             </div>
                           ) : (
                             <div
-                              className="cursor-pointer hover:bg-accent rounded px-2 py-1 transition-colors"
+                              className="cursor-pointer hover:bg-accent rounded px-2 py-1 transition-colors inline-block"
                               onClick={() => handleTokenClick(allocation.pageId, allocation.tokens)}
                             >
                               <div className="font-medium">
-                                {allocation.tokens} tokens
-                                {pendingChanges[allocation.pageId] && (
-                                  <span className="ml-1 text-xs text-blue-500">
-                                    (saving...)
-                                  </span>
-                                )}
+                                <span className={pendingChanges[allocation.pageId] ? 'opacity-60' : ''}>
+                                  {allocation.tokens} tokens
+                                </span>
                                 {unfundedTokensData.unfundedByPage[allocation.pageId] && (
                                   <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">
                                     {unfundedTokensData.unfundedByPage[allocation.pageId]} unfunded
@@ -845,7 +842,7 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                           )}
                         </div>
 
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-shrink-0">
                           {/* Always show three buttons */}
 
                           {/* Minus Button - Allow reducing even when overspending */}
@@ -853,8 +850,8 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                             size="sm"
                             variant="outline"
                             onClick={() => handleTokenAllocation(allocation.pageId, -incrementAmount)}
-                            disabled={allocation.tokens <= 0}
-                            className="h-8 w-8 p-0"
+                            disabled={allocation.tokens <= 0 || pendingChanges[allocation.pageId]}
+                            className={`h-8 w-8 p-0 ${pendingChanges[allocation.pageId] ? 'opacity-50' : ''}`}
                             title={allocation.tokens <= 0 ? "Cannot go below zero" : `Remove ${incrementAmount} tokens`}
                           >
                             <Minus className="h-3 w-3" />
@@ -864,7 +861,8 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                           <Button
                             size="sm"
                             onClick={() => handleTokenAllocation(allocation.pageId, incrementAmount)}
-                            className="h-8 w-8 p-0"
+                            disabled={pendingChanges[allocation.pageId]}
+                            className={`h-8 w-8 p-0 ${pendingChanges[allocation.pageId] ? 'opacity-50' : ''}`}
                             title={`Add ${incrementAmount} tokens`}
                           >
                             <Plus className="h-3 w-3" />
@@ -876,7 +874,8 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                               size="sm"
                               variant="outline"
                               onClick={() => handleDeleteAllocation(allocation.pageId)}
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                              disabled={pendingChanges[allocation.pageId]}
+                              className={`h-8 w-8 p-0 text-destructive hover:text-destructive ${pendingChanges[allocation.pageId] ? 'opacity-50' : ''}`}
                               title="Remove from list"
                             >
                               <Trash2 className="h-3 w-3" />
@@ -886,7 +885,8 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
                               size="sm"
                               variant="outline"
                               onClick={() => handleZeroAllocation(allocation.pageId)}
-                              className="h-8 w-8 p-0"
+                              disabled={pendingChanges[allocation.pageId]}
+                              className={`h-8 w-8 p-0 ${pendingChanges[allocation.pageId] ? 'opacity-50' : ''}`}
                               title="Zero out allocation"
                             >
                               <ZeroWithCross className="h-3 w-3" />

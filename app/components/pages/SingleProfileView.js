@@ -9,166 +9,20 @@ import {
   ProfilePagesProvider,
   ProfilePagesContext} from "../../providers/ProfilePageProvider";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
-import { Loader, Settings, ChevronLeft, Share2 } from "lucide-react";
-import SupporterBadge from "../payments/SupporterBadge";
-import { SubscriptionTierBadge } from "../ui/SubscriptionTierBadge";
-import { SubscriptionInfoModal } from "../payments/SubscriptionInfoModal";
+import { ChevronLeft, Share2 } from "lucide-react";
+import { UsernameBadge } from "../ui/UsernameBadge";
 import { Button } from "../ui/button";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../firebase/database";
-import SidebarLayout from "../layout/SidebarLayout";
 
 import UserProfileTabs from '../utils/UserProfileTabs';
-import { useFeatureFlag } from "../../utils/feature-flags";
-import { getEffectiveTier } from '../../utils/subscriptionTiers';
 
 const SingleProfileView = ({ profile }) => {
-  const { currentAccount } = useCurrentAccount(); // Fixed destructuring issues
+  const { currentAccount } = useCurrentAccount();
   const router = useRouter();
-
-  const [username, setUsername] = useState(profile.username || 'Anonymous');
-  const [supporterTier, setSupporterTier] = useState(profile.tier || null);
-  const [subscriptionStatus, setSubscriptionStatus] = useState(profile.subscriptionStatus || null);
-  const [subscriptionAmount, setSubscriptionAmount] = useState(profile.subscriptionAmount || null);
-  const [isLoadingTier, setIsLoadingTier] = useState(false);
-  const [subscriptionEnabled, setSubscriptionEnabled] = useState(false);
-
-  // Track if subscription data was provided by parent (user page)
-  const hasProvidedSubscriptionData = Boolean(
-    profile.tier || profile.subscriptionStatus || profile.subscriptionAmount
-  );
-
-  // Check if payments feature is enabled
-  const paymentsEnabled = useFeatureFlag('payments', currentAccount?.email);
-
-  // Check if subscription feature is enabled
-  useEffect(() => {
-    const checkSubscriptionFeature = async () => {
-      try {
-        const featureFlagsRef = doc(db, 'config', 'featureFlags');
-        const featureFlagsDoc = await getDoc(featureFlagsRef);
-
-        if (featureFlagsDoc.exists()) {
-          const flagsData = featureFlagsDoc.data();
-          setSubscriptionEnabled(flagsData.subscription_management === true);
-        }
-      } catch (error) {
-        console.error('Error checking subscription feature flag:', error);
-      }
-    };
-
-    checkSubscriptionFeature();
-  }, []);
 
   // Check if this profile belongs to the current user
   const isCurrentUser = currentAccount && currentAccount.uid === profile.uid;
 
-  // Fetch username if not provided
-  useEffect(() => {
-    const fetchUsername = async () => {
-      if (profile.uid && (!profile.username || profile.username === 'Anonymous' || profile.username === 'Missing username')) {
-        try {
-          const { getUsernameById } = await import('../../utils/userUtils');
-          const fetchedUsername = await getUsernameById(profile.uid);
-          if (fetchedUsername && fetchedUsername !== 'Anonymous' && fetchedUsername !== 'Missing username') {
-            setUsername(fetchedUsername);
-            console.log(`Fetched username for profile: ${fetchedUsername}`);
-          }
-        } catch (error) {
-          console.error('Error fetching username for profile:', error);
-        }
-      }
-    };
-
-    fetchUsername();
-  }, [profile.uid, profile.username]);
-
-
-
-  // Fetch user's subscription tier only if not provided by parent
-  useEffect(() => {
-    let unsubscribe = null;
-
-    const setupSubscriptionListener = async () => {
-      // If subscription data was already provided by the user page, use it and skip fetching
-      if (hasProvidedSubscriptionData) {
-        console.log(`🔍 SingleProfileView: Using subscription data from user page for ${profile.uid}:`, {
-          tier: profile.tier,
-          status: profile.subscriptionStatus,
-          amount: profile.subscriptionAmount
-        });
-
-        // Use the data provided by the user page
-        const effectiveTier = getEffectiveTier(
-          profile.subscriptionAmount,
-          profile.tier,
-          profile.subscriptionStatus
-        );
-
-        setSupporterTier(effectiveTier === 'inactive' ? null : effectiveTier);
-        setSubscriptionStatus(profile.subscriptionStatus);
-        setSubscriptionAmount(profile.subscriptionAmount);
-        setIsLoadingTier(false);
-        return;
-      }
-
-      // Only fetch subscription data if not provided by parent
-      if (profile.uid && subscriptionEnabled) {
-        try {
-          setIsLoadingTier(true);
-
-          // Use API-first approach for subscription data
-          const fetchSubscription = async () => {
-            try {
-              const response = await fetch(`/api/account-subscription?userId=${profile.uid}`);
-              if (response.ok) {
-                const data = await response.json();
-                const subscription = data.hasSubscription ? data.fullData : null;
-                console.log(`🔍 SingleProfileView: Fetched subscription data for user ${profile.uid}:`, subscription);
-
-                // Always set the subscription status if available
-                if (subscription) {
-                  setSubscriptionStatus(subscription.status);
-                  setSubscriptionAmount(subscription.amount);
-
-                  // Use centralized tier determination logic
-                  const effectiveTier = getEffectiveTier(
-                    subscription.amount,
-                    subscription.tier,
-                    subscription.status
-                  );
-
-                  setSupporterTier(effectiveTier === 'inactive' ? null : effectiveTier);
-                } else {
-                  // No subscription data
-                  setSubscriptionStatus(null);
-                  setSubscriptionAmount(null);
-                  setSupporterTier(null);
-                }
-
-                setIsLoadingTier(false);
-              }
-            } catch (error) {
-              console.error('Error fetching subscription data:', error);
-              setSupporterTier(null);
-              setIsLoadingTier(false);
-            }
-          };
-
-          fetchSubscription();
-        } catch (error) {
-          console.error('Error setting up subscription listener:', error);
-          setSupporterTier(null);
-          setIsLoadingTier(false);
-        }
-      }
-    };
-
-    setupSubscriptionListener();
-
-    // No cleanup needed since we're not using real-time listeners
-    return () => {};
-  }, [profile.uid, hasProvidedSubscriptionData, subscriptionEnabled]);
+  // UsernameBadge handles all data fetching automatically
 
   return (
     <ProfilePagesProvider userId={profile.uid}>
@@ -195,12 +49,12 @@ const SingleProfileView = ({ profile }) => {
               onClick={() => {
                 // Create share text in the format: "[, sessionname]'s profile on @WeWriteApp [URL]"
                 const profileUrl = window.location.href;
-                const shareText = `${username}'s profile on @WeWriteApp ${profileUrl}`;
+                const shareText = `${profile.username || 'User'}'s profile on @WeWriteApp ${profileUrl}`;
 
                 // Check if the Web Share API is available
                 if (navigator.share) {
                   navigator.share({
-                    title: `${username} on WeWrite`,
+                    title: `${profile.username || 'User'} on WeWrite`,
                     text: shareText,
                     url: profileUrl}).catch((error) => {
                     // Silent error handling - no toast
@@ -238,50 +92,18 @@ const SingleProfileView = ({ profile }) => {
         {/* Username row */}
         <div className="flex flex-col items-center mb-6">
           <div className="flex items-center justify-center gap-2 mb-3">
-            <Link href={`/user/${profile.uid}`} className="hover:underline">
-              <h1 className="text-3xl font-semibold">{username}</h1>
-            </Link>
-            <SubscriptionTierBadge
-              tier={supporterTier}
-              status={subscriptionStatus}
-              amount={subscriptionAmount}
+            <UsernameBadge
+              userId={profile.uid}
+              username={profile.username}
+              tier={profile.tier}
+              subscriptionStatus={profile.subscriptionStatus}
+              subscriptionAmount={profile.subscriptionAmount}
               size="lg"
-              isLoading={isLoadingTier}
+              className="text-3xl font-semibold"
             />
           </div>
 
-          {/* Tier badge as a chip below username - completely hidden when payments feature is disabled */}
-          {false && subscriptionEnabled && (
-            <SubscriptionInfoModal
-              currentTier={supporterTier}
-              currentStatus={subscriptionStatus}
-              userId={profile.uid}
-              username={!isCurrentUser ? username : undefined}
-            >
-              <div className="cursor-pointer">
-                {isLoadingTier ? (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700">
-                    <Loader className="h-4 w-4 animate-spin" />
-                    <span className="text-sm">Loading...</span>
-                  </div>
-                ) : (
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700">
-                    <SubscriptionTierBadge
-                      tier={supporterTier}
-                      status={subscriptionStatus}
-                      size="md"
-                    />
-                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                      {supporterTier === 'tier1' ? 'Tier 1 Subscription' :
-                       supporterTier === 'tier2' ? 'Tier 2 Subscription' :
-                       supporterTier === 'tier3' ? 'Tier 3 Subscription' :
-                       'No Subscription'}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </SubscriptionInfoModal>
-          )}
+          {/* UsernameBadge handles all subscription display automatically */}
         </div>
 
 

@@ -35,6 +35,7 @@ import type {
   PayoutApiResponse
 } from '../types/payout';
 import { getCurrentFeeStructure } from '../utils/feeCalculations';
+import { getCollectionName } from "../utils/environmentConfig";
 
 class PayoutService {
   private static instance: PayoutService;
@@ -53,13 +54,13 @@ class PayoutService {
   async getPayoutConfig(): Promise<PayoutConfig> {
     if (!this.config) {
       try {
-        const configDoc = await getDoc(doc(db, 'config', 'payouts'));
+        const configDoc = await getDoc(doc(db, getCollectionName("config"), 'payouts'));
         if (configDoc.exists()) {
           this.config = configDoc.data() as PayoutConfig;
         } else {
           // Create default configuration
           this.config = this.getDefaultConfig();
-          await setDoc(doc(db, 'config', 'payouts'), this.config);
+          await setDoc(doc(db, getCollectionName("config"), 'payouts'), this.config);
         }
       } catch (error) {
         console.error('Error loading payout config:', error);

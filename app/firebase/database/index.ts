@@ -43,6 +43,7 @@ export * from './analytics';
 import { db, updateDoc, getDoc, doc } from './core';
 import { getPageById } from './pages';
 import { createLogger } from '../utils/logger';
+import { getCollectionName } from "../../utils/environmentConfig";
 
 const logger = createLogger('Database');
 
@@ -135,8 +136,12 @@ export const appendPageReference = async (
         { text: "Content from " },
         {
           type: "link",
-          href: `/pages/${sourcePageData.id}`,
-          displayText: sourcePageData.title,
+          url: `/pages/${sourcePageData.id}`,
+          pageId: sourcePageData.id,
+          pageTitle: sourcePageData.title,
+          originalPageTitle: sourcePageData.title,
+          isPageLink: true,
+          className: "page-link",
           children: [{ text: sourcePageData.title }]
         }
       ]
@@ -168,10 +173,11 @@ export const appendPageReference = async (
 
 /**
  * Get page metadata for SEO and analytics
+ * Uses environment-aware collection naming
  */
 export const getPageMetadata = async (pageId: string): Promise<any> => {
   try {
-    const pageRef = doc(db, "pages", pageId);
+    const pageRef = doc(db, getCollectionName("pages"), pageId);
     const docSnap = await getDoc(pageRef);
 
     if (docSnap.exists()) {
@@ -215,8 +221,7 @@ export const getCachedPageTitle = async (pageId: string): Promise<string> => {
  * Get page statistics for pledge system
  */
 export const getPageStats = async (pageId: string): Promise<any> => {
-  try {
-    const pageRef = doc(db, "pages", pageId);
+const pageRef = doc(db, getCollectionName("pages"), pageId);
     const docSnap = await getDoc(pageRef);
 
     if (docSnap.exists()) {

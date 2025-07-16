@@ -22,6 +22,7 @@ import {
   type QuerySnapshot
 } from "firebase/firestore";
 import { app } from "./config";
+import { getCollectionName } from '../utils/environmentConfig';
 
 const db: Firestore = getFirestore(app);
 
@@ -141,7 +142,7 @@ class PageViewBatcher {
 
     const firstView = views[0];
     const viewsDocId = `${firstView.pageId}_${firstView.date}`;
-    const viewsDocRef = doc(db, "pageViews", viewsDocId);
+    const viewsDocRef = doc(db, getCollectionName("pageViews"), viewsDocId);
 
     // Aggregate views by hour
     const hourlyAggregation: Record<number, number> = {};
@@ -182,7 +183,7 @@ class PageViewBatcher {
 
     // Update page document with total view count (less frequently)
     if (Math.random() < 0.1) { // Only 10% of the time to reduce writes
-      const pageDocRef = doc(db, "pages", firstView.pageId);
+const pageDocRef = doc(db, getCollectionName("pages"), firstView.pageId);
       await updateDoc(pageDocRef, {
         views: increment(views.length)
       });
@@ -225,7 +226,7 @@ export const recordPageView = async (pageId: string, userId: string | null = nul
 
     // Don't count views from the page owner to avoid inflating counts
     if (userId) {
-      const pageDoc = await getDoc(doc(db, "pages", pageId));
+const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
       if (pageDoc.exists() && pageDoc.data()?.userId === userId) {
         console.log("Page owner view, not counting");
         return;
@@ -267,10 +268,10 @@ export const getPageViewsLast24Hours = async (pageId: string): Promise<ViewsLast
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
     // Get today's views
-    const todayViewsDoc = await getDoc(doc(db, "pageViews", `${pageId}_${todayStr}`));
+    const todayViewsDoc = await getDoc(doc(db, getCollectionName("pageViews"), `${pageId}_${todayStr}`));
 
     // Get yesterday's views
-    const yesterdayViewsDoc = await getDoc(doc(db, "pageViews", `${pageId}_${yesterdayStr}`));
+    const yesterdayViewsDoc = await getDoc(doc(db, getCollectionName("pageViews"), `${pageId}_${yesterdayStr}`));
 
     // Initialize hourly data array (24 hours)
     const hourlyData = Array(24).fill(0);
@@ -301,7 +302,7 @@ export const getPageViewsLast24Hours = async (pageId: string): Promise<ViewsLast
     }
 
     // Get the page document to check if we need to update the 24-hour view count
-    const pageDoc = await getDoc(doc(db, "pages", pageId));
+const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
 
     if (pageDoc.exists()) {
       const pageData = pageDoc.data();
@@ -309,7 +310,7 @@ export const getPageViewsLast24Hours = async (pageId: string): Promise<ViewsLast
       // If the page doesn't have a 24-hour view count field or it's significantly different
       // from our calculated total, update it
       if (pageData?.views24h === undefined || Math.abs((pageData?.views24h || 0) - total) > 5) {
-        await updateDoc(doc(db, "pages", pageId), {
+await updateDoc(doc(db, getCollectionName("pages"), pageId), {
           views24h: total
         });
       }
@@ -340,7 +341,7 @@ export const getPageTotalViews = async (pageId: string): Promise<number> => {
   try {
     if (!pageId) return 0;
 
-    const pageDoc = await getDoc(doc(db, "pages", pageId));
+const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
 
     if (pageDoc.exists()) {
       return pageDoc.data()?.views || 0;
@@ -387,7 +388,7 @@ export const getTrendingPages = async (limitCount: number = 5): Promise<Trending
     try {
       // Query for today's page views
       const todayViewsQuery = query(
-        collection(db, "pageViews"),
+        collection(db, getCollectionName("pageViews")),
         where("date", "==", todayStr),
         orderBy("totalViews", "desc"),
         limit(limitCount * 3) // Get more than we need to account for filtering
@@ -395,7 +396,7 @@ export const getTrendingPages = async (limitCount: number = 5): Promise<Trending
 
       // Query for yesterday's page views
       const yesterdayViewsQuery = query(
-        collection(db, "pageViews"),
+        collection(db, getCollectionName("pageViews")),
         where("date", "==", yesterdayStr),
         orderBy("totalViews", "desc"),
         limit(limitCount * 3) // Get more than we need to account for filtering
@@ -472,11 +473,12 @@ export const getTrendingPages = async (limitCount: number = 5): Promise<Trending
       try {
         console.log(`Not enough trending pages (${trendingPages.length}), fetching additional pages`);
 
-        // Query for pages with the most 24-hour views (only public, non-deleted pages)
+        // Query for pages with the most 24-hour views (only non-deleted pages)
         // First try to query using views24h field
+        const { getCollectionName } = await import('../utils/environmentConfig');
         const pagesQuery = query(
-          collection(db, "pages"),
-          where("isPublic", "==", true), // Only get public pages
+          collection(db, getCollectionName("pages")),
+          where("isPublic", "==", true), // Only get pages
           where("deleted", "!=", true), // Exclude soft-deleted pages
           where("views24h", ">", 0), // Only get pages with 24h views > 0
           orderBy("views24h", "desc"),
@@ -524,23 +526,20 @@ export const getTrendingPages = async (limitCount: number = 5): Promise<Trending
     const pagesWithTitles = await Promise.all(
       trendingPages.map(async (page) => {
         try {
-          const pageDoc = await getDoc(doc(db, "pages", page.id));
+const pageDoc = await getDoc(doc(db, getCollectionName("pages"), page.id));
           if (pageDoc.exists()) {
             const pageData = pageDoc.data();
 
-            // Only include public pages
-            if (pageData.isPublic === false) {
-              console.log(`Skipping private page ${page.id}`);
-              return null;
-            }
+            // All pages are now accessible
 
             // Get username from userId
             let username = "Missing username";
             try {
               if (pageData.userId) {
-                const userDoc = await getDoc(doc(db, "users", pageData.userId));
+                const { getCollectionName } = await import('../utils/environmentConfig');
+                const userDoc = await getDoc(doc(db, getCollectionName("users"), pageData.userId));
                 if (userDoc.exists()) {
-                  username = userDoc.data().username || userDoc.data().displayName || "Missing username";
+                  username = userDoc.data().username || "Missing username";
                 }
               }
             } catch (userErr) {
@@ -564,11 +563,11 @@ export const getTrendingPages = async (limitCount: number = 5): Promise<Trending
     );
 
     // Filter out null entries (private pages)
-    const publicPages = pagesWithTitles.filter(page => page !== null);
+    const pages = pagesWithTitles.filter(page => page !== null);
 
     // Add hourly views data for each page
     const pagesWithHourlyData = await Promise.all(
-      publicPages.map(async (page) => {
+      pages.map(async (page) => {
         try {
           const { hourly } = await getPageViewsLast24Hours(page.id);
           return {
@@ -606,10 +605,11 @@ async function getFallbackTrendingPages(limitCount: number = 5): Promise<Trendin
   try {
     console.log('Using fallback method to get trending pages');
 
-    // Query for pages with the most views (only public, non-deleted pages)
+    // Query for pages with the most views (only non-deleted pages)
+    const { getCollectionName } = await import('../utils/environmentConfig');
     const pagesQuery = query(
-      collection(db, "pages"),
-      where("isPublic", "==", true), // Only get public pages
+      collection(db, getCollectionName("pages")),
+      where("isPublic", "==", true), // Only get pages
       where("deleted", "!=", true), // Exclude soft-deleted pages
       orderBy("views", "desc"),
       limit(limitCount)

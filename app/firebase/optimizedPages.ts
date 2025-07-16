@@ -159,7 +159,8 @@ export const getOptimizedPageMetadata = async (
       // TEMPORARY: Use dynamic import like the working API
       const { db } = await import('./database');
 
-      const pageRef = doc(db, "pages", pageId);
+      const { getCollectionName } = await import('../utils/environmentConfig');
+      const pageRef = doc(db, getCollectionName("pages"), pageId);
       const docSnap = await getDoc(pageRef);
       
       logPageRead('getPageMetadata', false, pageId);
@@ -241,7 +242,7 @@ export const getOptimizedPageContent = async (
 
       if (versionId) {
         // Get specific version content
-        const versionRef = doc(db, "pages", pageId, "versions", versionId);
+const versionRef = doc(db, getCollectionName("pages"), pageId, "versions", versionId);
         const versionSnap = await getDoc(versionRef);
         logPageRead('getPageContent-version', false, pageId);
         
@@ -250,7 +251,7 @@ export const getOptimizedPageContent = async (
         }
       } else {
         // Get current version content
-        const pageRef = doc(db, "pages", pageId);
+const pageRef = doc(db, getCollectionName("pages"), pageId);
         const pageSnap = await getDoc(pageRef);
         logPageRead('getPageContent-current', false, pageId);
         
@@ -258,7 +259,7 @@ export const getOptimizedPageContent = async (
           const pageData = pageSnap.data();
           if (pageData.currentVersion) {
             // Fetch from version document
-            const versionRef = doc(db, "pages", pageId, "versions", pageData.currentVersion);
+const versionRef = doc(db, getCollectionName("pages"), pageId, "versions", pageData.currentVersion);
             const versionSnap = await getDoc(versionRef);
             logPageRead('getPageContent-currentVersion', false, pageId);
             
@@ -325,9 +326,11 @@ export const getOptimizedPageList = async (
         'lastModified', 'createdAt', 'totalPledged', 'pledgeCount', 'currentVersion'
       ];
 
+      const { getCollectionName } = await import('../utils/environmentConfig');
+
       // Build optimized query with field selection (exclude deleted pages)
       let pageQuery = query(
-        collection(db, "pages"),
+        collection(db, getCollectionName("pages")),
         where("userId", "==", userId),
         where("deleted", "!=", true),
         orderBy("lastModified", "desc"),
@@ -337,7 +340,7 @@ export const getOptimizedPageList = async (
       // Add pagination if lastDoc is provided (exclude deleted pages)
       if (lastDoc) {
         pageQuery = query(
-          collection(db, "pages"),
+          collection(db, getCollectionName("pages")),
           where("userId", "==", userId),
           where("deleted", "!=", true),
           orderBy("lastModified", "desc"),
@@ -508,8 +511,9 @@ export const createOptimizedPageListener = (
   // Use deduplication system to prevent multiple listeners for the same page
   const listenerKey = `page:${pageId}`;
 
-  const createListener = () => {
-    const pageRef = doc(db, "pages", pageId);
+  const createListener = async () => {
+    const { getCollectionName } = await import('../utils/environmentConfig');
+    const pageRef = doc(db, getCollectionName("pages"), pageId);
 
     return onSnapshot(pageRef, (doc) => {
       const now = Date.now();

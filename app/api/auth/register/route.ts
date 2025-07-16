@@ -11,7 +11,6 @@ interface RegisterRequest {
   email: string;
   password: string;
   username: string;
-  displayName?: string;
 }
 
 // POST endpoint - Register new user
@@ -22,7 +21,7 @@ export async function POST(request: NextRequest) {
     const db = admin.firestore();
 
     const body = await request.json();
-    const { email, password, username, displayName } = body as RegisterRequest;
+    const { email, password, username } = body as RegisterRequest;
 
     // Validate required fields
     if (!email || !password || !username) {
@@ -71,7 +70,6 @@ export async function POST(request: NextRequest) {
     const userRecord = await auth.createUser({
       email,
       password,
-      displayName: displayName || username,
       emailVerified: false
     });
 
@@ -79,7 +77,6 @@ export async function POST(request: NextRequest) {
     const userData = {
       email,
       username,
-      displayName: displayName || username,
       emailVerified: false,
       isAnonymous: false,
       createdAt: new Date().toISOString(),
@@ -119,7 +116,6 @@ export async function POST(request: NextRequest) {
       uid: userRecord.uid,
       email,
       username,
-      displayName: userData.displayName,
       emailVerified: false,
       message: 'Account created successfully. Please check your email for verification instructions.'
     }, null, 201);

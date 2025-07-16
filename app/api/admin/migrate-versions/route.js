@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../firebase/database/core';
 import { collection, doc, addDoc, updateDoc, getDocs, query, where, limit } from 'firebase/firestore';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 export async function POST(request) {
   try {
@@ -14,7 +15,7 @@ export async function POST(request) {
     
     // Get all pages (excluding deleted ones)
     const pagesQuery = query(
-      collection(db, 'pages'),
+      collection(db, getCollectionName('pages')),
       where('deleted', '!=', true)
     );
     
@@ -93,10 +94,10 @@ export async function POST(request) {
         };
         
         // Create the version
-        const versionRef = await addDoc(collection(db, 'pages', page.id, 'versions'), versionData);
-        
+        const versionRef = await addDoc(collection(db, getCollectionName('pages'), page.id, 'versions'), versionData);
+
         // Update the page with currentVersion reference
-        await updateDoc(doc(db, 'pages', page.id), {
+        await updateDoc(doc(db, getCollectionName('pages'), page.id), {
           currentVersion: versionRef.id
         });
         

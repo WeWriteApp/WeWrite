@@ -9,7 +9,7 @@ import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProfilePagesContext } from "../../providers/ProfilePageProvider";
-import RecentActivity from "../features/RecentActivity";
+import RecentPagesActivity from "../features/RecentPagesActivity";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import useSimplePages from "../../hooks/useSimplePages";
 import UsernameHistory from "../auth/UsernameHistory";
@@ -567,7 +567,7 @@ export default function UserProfileTabs({ profile }) {
                 : "hidden"
             }`}
           >
-            <RecentActivity limit={10} showViewAll={false} userId={profile?.uid} />
+            <RecentPagesActivity limit={10} isCarousel={false} />
           </TabsContent>
 
           <TabsContent
@@ -654,7 +654,7 @@ export default function UserProfileTabs({ profile }) {
               </div>
             ) : (
               <>
-                <PageList pageList={sortedPages} emptyMessage="No public pages yet" isCurrentUserList={isCurrentUser} />
+                <PageList pageList={sortedPages} emptyMessage="No pages yet" isCurrentUserList={isCurrentUser} />
                 {loadingError && (
                   <div className="mt-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
                     {loadingError}

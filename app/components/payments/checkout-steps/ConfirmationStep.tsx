@@ -169,7 +169,7 @@ export function ConfirmationStep({
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Success Header */}
-      <Card className="border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800">
+      <Card className="border-theme-strong bg-green-50 dark:bg-green-950/20">
         <CardContent className="p-8 text-center">
           <div className="flex justify-center mb-4">
             <StatusIcon status="success" size="lg" position="static" className="w-16 h-16" />
@@ -233,7 +233,7 @@ export function ConfirmationStep({
       </Card>
 
       {/* Token Information */}
-      <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+      <Card className="bg-blue-50 dark:bg-blue-950/20 border-theme-strong">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
             <Zap className="w-5 h-5" />

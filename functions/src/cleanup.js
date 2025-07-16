@@ -85,11 +85,11 @@ exports.computeDailyStats = functions.pubsub
       const pagesSnapshot = await db.collection('pages').get();
       const pageCount = pagesSnapshot.size;
 
-      // Get total public page count
-      const publicPagesSnapshot = await db.collection('pages')
+      // Get total page count
+      const pagesSnapshot = await db.collection('pages')
         .where('isPublic', '==', true)
         .get();
-      const publicPageCount = publicPagesSnapshot.size;
+      const pageCount = pagesSnapshot.size;
 
       // Calculate average pages per user
       const avgPagesPerUser = userCount > 0 ? pageCount / userCount : 0;

@@ -1,6 +1,7 @@
 import { db } from "../firebase/config";
 import { collection, query, where, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { updateUserContributorCount } from '../firebase/counters';
+import { getCollectionName } from "../utils/environmentConfig";
 
 // Types
 interface ContributorStats {
@@ -27,8 +28,7 @@ class ContributorsService {
 
     try {
       // Query pledges where this user is the recipient (page author)
-      const pledgesQuery = query(
-        collection(db, 'pledges'),
+collection(db, 'pledges'),
         where('metadata.authorUserId', '==', userId),
         where('status', 'in', ['active', 'completed'])
       );
@@ -72,8 +72,7 @@ class ContributorsService {
 
     try {
       // Query pledges where this user is the recipient (page author)
-      const pledgesQuery = query(
-        collection(db, 'pledges'),
+collection(db, 'pledges'),
         where('metadata.authorUserId', '==', userId),
         where('status', 'in', ['active', 'completed'])
       );

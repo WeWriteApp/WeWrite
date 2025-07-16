@@ -25,6 +25,7 @@ import {
 } from '../types/database';
 import { DateRange } from './dashboardAnalytics';
 import { format, eachDayOfInterval, eachHourOfInterval, startOfDay, endOfDay, startOfHour } from 'date-fns';
+import { getCollectionName } from "../utils/environmentConfig";
 
 // Cache configuration
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -396,13 +397,13 @@ export class PaymentAnalyticsService {
 
       // Query token balances and allocations
       const tokenBalancesQuery = query(
-        collection(db, 'tokenBalances'),
+        collection(db, getCollectionName('tokenBalances')),
         where('lastAllocationDate', '>=', dateRange.startDate.toISOString()),
         where('lastAllocationDate', '<=', dateRange.endDate.toISOString())
       );
 
       const tokenAllocationsQuery = query(
-        collection(db, 'tokenAllocations'),
+        collection(db, getCollectionName('tokenAllocations')),
         where('createdAt', '>=', Timestamp.fromDate(dateRange.startDate)),
         where('createdAt', '<=', Timestamp.fromDate(dateRange.endDate)),
         orderBy('createdAt', 'asc')

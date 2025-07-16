@@ -9,7 +9,6 @@ export interface User {
   uid: string;
   email: string;
   username?: string;
-  displayName?: string;
   photoURL?: string;
   bio?: string | EditorContent;
   bioLastEditor?: string;
@@ -69,24 +68,23 @@ export interface PageVersion {
   previousVersionId?: string;
 }
 
-// Editor content types (simplified from Slate)
+// Simplified editor content types - only text and links
 export interface EditorNode {
-  type: string;
+  type: 'paragraph';
   children: EditorChild[];
 }
 
 export interface EditorChild {
+  // Text content
   text?: string;
-  type?: string;
+
+  // Link content
+  type?: 'link';
   url?: string;
-  isExternal?: boolean;
   pageId?: string;
-  showAuthor?: boolean;
-  children?: EditorChild[];
-  bold?: boolean;
-  italic?: boolean;
-  underline?: boolean;
-  code?: boolean;
+  pageTitle?: string;
+  isExternal?: boolean;
+  children?: { text: string }[];
 }
 
 export type EditorContent = EditorNode[];

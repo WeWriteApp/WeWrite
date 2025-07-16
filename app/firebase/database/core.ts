@@ -38,7 +38,7 @@ import { trackQueryPerformance } from "../../utils/queryMonitor";
 import type {
   Page,
   User,
-  SlateContent,
+  EditorContent,
   PageVersion,
   LinkData
 } from "../../types/database";
@@ -77,7 +77,7 @@ export const createUserPageQuery = (userId: string, includeDeleted: boolean = fa
 };
 
 /**
- * Helper function to create public page queries with soft delete filtering
+ * Helper function to create page queries with soft delete filtering
  */
 export const createPublicPageQuery = (includeDeleted: boolean = false, additionalFilters: any[] = []) => {
   const baseQuery = [
@@ -135,10 +135,13 @@ export interface PageWithLinks {
 
 /**
  * Generic function to create a document in any collection
+ * Uses environment-aware collection naming
  */
 export const createDoc = async (collectionName: string, data: any): Promise<string | Error> => {
   try {
-    const docRef = await addDoc(collection(db, collectionName), data);
+    // Use environment-aware collection name
+    const envCollectionName = getCollectionName(collectionName);
+    const docRef = await addDoc(collection(db, envCollectionName), data);
     return docRef.id;
   } catch (e) {
     return e as Error;
@@ -147,33 +150,39 @@ export const createDoc = async (collectionName: string, data: any): Promise<stri
 
 /**
  * Generic function to get a document by ID
+ * Uses environment-aware collection naming
  */
 export const getDocById = async (collectionName: string, docId: string): Promise<any | null> => {
   try {
-    const docRef = doc(db, collectionName, docId);
+    // Use environment-aware collection name
+    const envCollectionName = getCollectionName(collectionName);
+    const docRef = doc(db, envCollectionName, docId);
     const docSnap = await getDoc(docRef);
-    
+
     if (docSnap.exists()) {
       return { id: docSnap.id, ...docSnap.data() };
     } else {
       return null;
     }
   } catch (error) {
-    console.error(`Error fetching document from ${collectionName}:`, error);
+    console.error(`Error fetching document from ${envCollectionName}:`, error);
     return null;
   }
 };
 
 /**
  * Generic function to update a document
+ * Uses environment-aware collection naming
  */
 export const updateDoc = async (collectionName: string, docId: string, data: any): Promise<boolean> => {
   try {
-    const docRef = doc(db, collectionName, docId);
+    // Use environment-aware collection name
+    const envCollectionName = getCollectionName(collectionName);
+    const docRef = doc(db, envCollectionName, docId);
     await setDoc(docRef, data, { merge: true });
     return true;
   } catch (error) {
-    console.error(`Error updating ${collectionName} document:`, error);
+    console.error(`Error updating ${envCollectionName} document:`, error);
     return false;
   }
 };

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { BigQuery } from "@google-cloud/bigquery";
 import { searchUsers, getUserGroupMemberships, getGroupsData } from "../../firebase/database";
+import { getCollectionName, COLLECTIONS } from "../../utils/environmentConfig";
 
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
@@ -268,7 +269,7 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
     if (userId) {
       // MAJOR OPTIMIZATION: Reduced limit and server-side filtering
       const userQuery = query(
-        collection(db, 'pages'),
+        collection(db, getCollectionName(COLLECTIONS.PAGES)),
         where('userId', '==', filterByUserId || userId),
         where('deleted', '!=', true), // Server-side filtering - MAJOR PERFORMANCE BOOST
         orderBy('deleted'), // Required for != queries
@@ -331,13 +332,13 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
       console.log(`📄 Total unique user pages found: ${allUserPages.size}`);
     }
 
-    // STEP 2: Search public pages (if not filtering by specific user and haven't reached limit)
+    // STEP 2: Search pages (if not filtering by specific user and haven't reached limit)
     if (!filterByUserId && allResults.length < (isEmptySearch ? 100 : 150)) {
       const remainingSlots = (isEmptySearch ? 100 : 150) - allResults.length;
 
       // MAJOR OPTIMIZATION: Server-side filtering and reduced limits
-      const publicQuery = query(
-        collection(db, 'pages'),
+      const pagesQuery = query(
+        collection(db, getCollectionName(COLLECTIONS.PAGES)),
         where('isPublic', '==', true),
         where('deleted', '!=', true), // Server-side filtering - MAJOR PERFORMANCE BOOST
         orderBy('deleted'), // Required for != queries
@@ -345,7 +346,7 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
         limit(Math.min(remainingSlots * 2, isEmptySearch ? 100 : 200)) // Reasonable limits - MAJOR OPTIMIZATION
       );
 
-      const allPublicPages = new Map(); // Use Map to deduplicate
+      const allPages = new Map(); // Use Map to deduplicate
 
       try {
         const publicPagesSnapshot = await getDocs(publicQuery);
@@ -379,11 +380,11 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
             isMatch = titleMatch || contentMatch;
           }
 
-          if (isMatch && allResults.length + allPublicPages.size < (isEmptySearch ? 100 : 150)) {
-            allPublicPages.set(doc.id, {
+          if (isMatch && allResults.length + allPages.size < (isEmptySearch ? 100 : 150)) {
+            allPages.set(doc.id, {
               id: doc.id,
               title: pageTitle,
-              type: 'public',
+              type: 'page',
               isOwned: false,
               isEditable: false,
               userId: data.userId,
@@ -396,12 +397,12 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
           }
         });
       } catch (queryError) {
-        console.warn('Error in public pages query:', queryError);
+        console.warn('Error in pages query:', queryError);
       }
 
-      // Add all public pages to results
-      allResults.push(...Array.from(allPublicPages.values()));
-      console.log(`🌐 Total unique public pages found: ${allPublicPages.size}`);
+      // Add all pages to results
+      allResults.push(...Array.from(allPages.values()));
+      console.log(`🌐 Total unique pages found: ${allPages.size}`);
     }
 
     const searchTime = Date.now() - startTime;
@@ -431,7 +432,7 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
 
           // Import Firestore modules
           const { doc, getDoc } = await import('firebase/firestore');
-          const userDocRef = doc(db, 'users', result.userId);
+          const userDocRef = doc(db, getCollectionName(COLLECTIONS.USERS), result.userId);
           const userDoc = await getDoc(userDocRef);
 
           if (userDoc.exists()) {
@@ -507,17 +508,17 @@ export async function GET(request) {
     if (!searchTerm || searchTerm.trim().length === 0) {
       console.log('Empty search term provided, returning all available pages for browsing');
 
-      // For unauthenticated users with empty search, return recent public pages
+      // For unauthenticated users with empty search, return recent pages
       if (!userId) {
         try {
-          const publicPages = await searchPagesInFirestore(null, '', [], null);
+          const pages = await searchPagesInFirestore(null, '', [], null);
           return NextResponse.json({
-            pages: publicPages || [],
+            pages: pages || [],
             users: [],
-            source: "empty_search_public_pages"
+            source: "empty_search_pages"
           }, { status: 200 });
         } catch (error) {
-          console.error('Error fetching public pages for empty search:', error);
+          console.error('Error fetching pages for empty search:', error);
           return NextResponse.json({
             pages: [],
             users: [],
@@ -553,8 +554,8 @@ export async function GET(request) {
       console.log('No userId provided, returning only public content');
 
       try {
-        // Search for public pages in Firestore
-        const publicPages = await searchPagesInFirestore(null, searchTerm, [], null);
+        // Search for pages in Firestore
+        const pages = await searchPagesInFirestore(null, searchTerm, [], null);
 
         // Search for users if we have a search term
         let users = [];
@@ -578,7 +579,7 @@ export async function GET(request) {
         }
 
         return NextResponse.json({
-          pages: publicPages || [],
+          pages: pages || [],
           users: users || [],
           source: "unauthenticated_search"
         }, { status: 200 });

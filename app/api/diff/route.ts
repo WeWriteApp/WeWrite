@@ -251,6 +251,16 @@ export async function POST(request: NextRequest) {
     const currentText = extractTextContent(currentContent || '');
     const previousText = extractTextContent(previousContent || '');
 
+    console.log('🔍 DIFF API DEBUG:', {
+      currentContentType: typeof currentContent,
+      previousContentType: typeof previousContent,
+      currentTextLength: currentText.length,
+      previousTextLength: previousText.length,
+      currentTextPreview: currentText.slice(0, 100),
+      previousTextPreview: previousText.slice(0, 100),
+      textsEqual: currentText === previousText
+    });
+
     // Calculate character-level diff
     const diffResult = calculateCharacterDiff(previousText, currentText);
     

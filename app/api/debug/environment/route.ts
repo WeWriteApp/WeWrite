@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  getEnvironmentType, 
-  getEnvironmentPrefix, 
+import {
+  getEnvironmentType,
+  getEnvironmentPrefix,
   getCollectionName,
   getSubCollectionPath,
-  PAYMENT_COLLECTIONS 
+  COLLECTIONS,
+  PAYMENT_COLLECTIONS,
+  getPaymentCollectionNames
 } from '../../../utils/environmentConfig';
 
 /**
@@ -22,24 +24,44 @@ export async function GET(request: NextRequest) {
     
     // Get environment-specific collection names
     const collections = {
+      // Core collections
       users: getCollectionName('users'),
+      pages: getCollectionName('pages'),
+      activities: getCollectionName('activities'),
+      config: getCollectionName('config'),
+
+      // Payment collections
       subscriptions: getCollectionName('subscriptions'),
       tokenBalances: getCollectionName('tokenBalances'),
       tokenAllocations: getCollectionName('tokenAllocations'),
       writerTokenBalances: getCollectionName('writerTokenBalances'),
       writerTokenEarnings: getCollectionName('writerTokenEarnings'),
       tokenPayouts: getCollectionName('tokenPayouts'),
-      pages: getCollectionName('pages'),
       payouts: getCollectionName('payouts'),
-      transactions: getCollectionName('transactions')
+      transactions: getCollectionName('transactions'),
+
+      // Analytics collections
+      analytics_counters: getCollectionName('analytics_counters'),
+      analytics_daily: getCollectionName('analytics_daily'),
+
+      // User feature collections
+      readingHistory: getCollectionName('readingHistory'),
+      sessions: getCollectionName('sessions'),
+      usernames: getCollectionName('usernames'),
+
+      // Additional collections
+      pledges: getCollectionName('pledges'),
+      backlinks: getCollectionName('backlinks'),
+      siteVisitors: getCollectionName('siteVisitors'),
+      featureOverrides: getCollectionName('featureOverrides')
     };
     
     // Test subscription path
     const testUserId = 'test-user-123';
     const { parentPath, subCollectionName } = getSubCollectionPath(
-      PAYMENT_COLLECTIONS.USERS, 
-      testUserId, 
-      PAYMENT_COLLECTIONS.SUBSCRIPTIONS
+      COLLECTIONS.USERS,
+      testUserId,
+      COLLECTIONS.SUBSCRIPTIONS
     );
     
     const environmentInfo = {
@@ -55,7 +77,7 @@ export async function GET(request: NextRequest) {
         subCollectionName,
         fullPath: `${parentPath}/${subCollectionName}/current`
       },
-      paymentCollections: PAYMENT_COLLECTIONS,
+      paymentCollections: getPaymentCollectionNames(),
       timestamp: new Date().toISOString()
     };
 

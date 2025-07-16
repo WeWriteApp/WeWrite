@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { determineTierFromAmount, calculateTokensForAmount } from '../../../utils/subscriptionTiers';
 import { initAdmin } from '../../../firebase/admin';
+import { getCollectionName } from '../../../utils/environmentConfig';
+import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
 
 // Initialize Firebase Admin
 const admin = initAdmin();
@@ -37,8 +39,8 @@ export async function POST(request: NextRequest) {
 
     // Force recompilation after serverTimestamp fix
 
-    // Get user's Stripe customer ID
-    const userDoc = await adminDb.collection('users').doc(userId).get();
+    // Get user's Stripe customer ID using environment-aware collection
+    const userDoc = await adminDb.collection(getCollectionName('users')).doc(userId).get();
     const userData = userDoc.data();
     const customerId = userData?.stripeCustomerId;
 
@@ -205,6 +207,24 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[CREATE SUBSCRIPTION] Successfully created subscription for user ${userId}, status: ${subscription.status}`);
+
+    // Log subscription creation for audit trail
+    try {
+      await subscriptionAuditService.logSubscriptionCreated(userId, subscriptionData, {
+        source: 'user',
+        correlationId: `create_${subscription.id}`,
+        metadata: {
+          tier,
+          tierName,
+          tokens: finalTokens,
+          stripeSubscriptionId: subscription.id,
+          paymentMethodId
+        }
+      });
+    } catch (auditError) {
+      console.warn('[CREATE SUBSCRIPTION] Failed to log audit event:', auditError);
+      // Don't fail the request if audit logging fails
+    }
 
     return NextResponse.json({
       success: true,

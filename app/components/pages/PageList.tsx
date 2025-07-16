@@ -20,7 +20,6 @@ import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 export interface Page {
   id: string;
   title: string;
-  isPublic: boolean;
   userId: string;
   authorName?: string;
   lastModified?: string;
@@ -176,7 +175,6 @@ export default function PageList({
                   href={`/${page.id}`}
                   isPublic={page.isPublic}
                   byline={page.authorName}
-                  className="hover:scale-105 transition-transform"
                   isOwned={page.userId === session?.uid}
                   isLoading={false}
                   label=""

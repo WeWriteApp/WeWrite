@@ -150,6 +150,7 @@ export default function FeeManagementSection() {
           <Button
             onClick={handleSave}
             disabled={isSaving || !hasChanges}
+            variant="success"
             className="flex-1"
           >
             {isSaving ? (

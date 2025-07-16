@@ -16,6 +16,7 @@ import {
   CorrelationId
 } from '../types/financial';
 import { WriterTokenEarnings, WriterTokenBalance, TokenAllocation } from '../types/database';
+import { getCollectionName } from "../utils/environmentConfig";
 
 /**
  * Rollback operation types
@@ -102,9 +103,8 @@ export class FinancialRollbackService {
       });
       
       await runTransaction(db, async (transaction) => {
-        const earningsId = `${allocation.recipientUserId}_${allocation.month}`;
-        const earningsRef = doc(db, 'writerTokenEarnings', earningsId);
-        const balanceRef = doc(db, 'writerTokenBalances', allocation.recipientUserId);
+const earningsRef = doc(db, getCollectionName("writerTokenEarnings"), earningsId);
+const balanceRef = doc(db, getCollectionName("writerTokenBalances"), allocation.recipientUserId);
         
         // Read current state
         const earningsDoc = await transaction.get(earningsRef);
@@ -218,8 +218,7 @@ export class FinancialRollbackService {
     try {
       FinancialLogger.logOperationStart(operation, context.correlationId, { payoutId });
       
-      // Simply delete the payout document since it was just created
-      const payoutRef = doc(db, 'tokenPayouts', payoutId);
+const payoutRef = doc(db, getCollectionName("tokenPayouts"), payoutId);
       const payoutDoc = await getDoc(payoutRef);
       
       if (payoutDoc.exists()) {
@@ -273,8 +272,7 @@ export class FinancialRollbackService {
       
       // Revert earnings status back to pending
       for (const userId of affectedUserIds) {
-        const earningsId = `${userId}_${month}`;
-        const earningsRef = doc(db, 'writerTokenEarnings', earningsId);
+const earningsRef = doc(db, getCollectionName("writerTokenEarnings"), earningsId);
         
         batch.update(earningsRef, {
           status: 'pending',

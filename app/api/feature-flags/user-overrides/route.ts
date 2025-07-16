@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../../auth-helper';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 interface UserOverride {
   userId: string;
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build query
-    let query = db.collection('featureOverrides').where('userId', '==', userIdToFetch);
+    let query = db.collection(getCollectionName('featureOverrides')).where('userId', '==', userIdToFetch);
     
     if (featureId) {
       query = query.where('featureId', '==', featureId);
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create or update the override
-    const overrideRef = db.collection('featureOverrides').doc(`${targetUserId}_${featureId}`);
+    const overrideRef = db.collection(getCollectionName('featureOverrides')).doc(`${targetUserId}_${featureId}`);
     
     const overrideData = {
       userId: targetUserId,
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
     await overrideRef.set(overrideData);
 
     // Record history
-    await db.collection('featureHistory').add({
+    await db.collection(getCollectionName('featureHistory')).add({
       featureId,
       userId: targetUserId,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
@@ -189,11 +190,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete the override
-    const overrideRef = db.collection('featureOverrides').doc(`${targetUserId}_${featureId}`);
+    const overrideRef = db.collection(getCollectionName('featureOverrides')).doc(`${targetUserId}_${featureId}`);
     await overrideRef.delete();
 
     // Record history
-    await db.collection('featureHistory').add({
+    await db.collection(getCollectionName('featureHistory')).add({
       featureId,
       userId: targetUserId,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),

@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 // Removed direct Firebase imports - now using API endpoints
+import { db } from '../firebase/config';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { getCollectionName } from '../utils/environmentConfig';
 
 export interface FeatureFlag {
   id: string;
@@ -189,7 +192,7 @@ export function useFeatureFlags() {
       }
 
       // Update metadata
-      const featureMetaRef = doc(db, 'config', 'featureMetadata');
+      const featureMetaRef = doc(db, getCollectionName('config'), 'featureMetadata');
       const timestamp = new Date().toISOString();
 
       try {
@@ -251,7 +254,7 @@ export function useFeatureFlags() {
       );
 
       // Update database
-      const featureFlagsRef = doc(db, 'config', 'featureFlags');
+      const featureFlagsRef = doc(db, getCollectionName('config'), 'featureFlags');
       const featureFlagsDoc = await getDoc(featureFlagsRef);
 
       let currentData = {};
@@ -289,7 +292,7 @@ export function useFeatureFlags() {
   // Validate current state against database
   const validateState = useCallback(async (): Promise<boolean> => {
     try {
-      const featureFlagsRef = doc(db, 'config', 'featureFlags');
+      const featureFlagsRef = doc(db, getCollectionName('config'), 'featureFlags');
       const featureFlagsDoc = await getDoc(featureFlagsRef);
 
       if (!featureFlagsDoc.exists()) {

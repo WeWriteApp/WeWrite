@@ -6,6 +6,7 @@
  */
 
 import { db } from '../firebase/config';
+import { getCollectionName } from '../utils/environmentConfig';
 import {
   doc,
   getDoc,
@@ -22,6 +23,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 
+import { getCollectionName } from "../utils/environmentConfig";
 import {
   FinancialOperationResult,
   FinancialError,
@@ -523,8 +525,7 @@ export class FraudDetectionEngine {
     context: TransactionContext,
     correlationId: CorrelationId
   ): Promise<{ triggered: boolean; details: any }> {
-    // Get user's token balance history
-    const balanceDoc = await getDoc(doc(db, 'writerTokenBalances', context.userId));
+const balanceDoc = await getDoc(doc(db, getCollectionName("writerTokenBalances"), context.userId));
 
     if (!balanceDoc.exists()) {
       return { triggered: false, details: { reason: 'No token balance found' } };
@@ -536,7 +537,7 @@ export class FraudDetectionEngine {
 
     // Check for unexpected token increases
     const earningsQuery = query(
-      collection(db, 'writerTokenEarnings'),
+      collection(db, getCollectionName('writerTokenEarnings')),
       where('userId', '==', context.userId),
       where('createdAt', '>=', cutoffTime),
       orderBy('createdAt', 'desc')
@@ -735,8 +736,7 @@ export class FraudDetectionEngine {
     correlationId: CorrelationId
   ): Promise<void> {
     try {
-      // Get user account information
-      const userDoc = await getDoc(doc(db, 'users', profile.userId));
+const userDoc = await getDoc(doc(db, getCollectionName("users"), profile.userId));
       if (userDoc.exists()) {
         const userData = userDoc.data();
         const accountAge = Date.now() - new Date(userData.createdAt).getTime();
