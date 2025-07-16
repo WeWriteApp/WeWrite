@@ -21,6 +21,7 @@ import PageFooter from "./PageFooter";
 import PledgeBar from "../payments/PledgeBar";
 import BacklinksSection from "../features/BacklinksSection";
 import RelatedPagesSection from "../features/RelatedPagesSection";
+import PageGraphView from "./PageGraphView";
 import DeletedPageBanner from "../utils/DeletedPageBanner";
 import UnifiedTextHighlighter from "../text-highlighting/UnifiedTextHighlighter";
 import TextViewErrorBoundary from "../editor/TextViewErrorBoundary";
@@ -912,6 +913,15 @@ export default function PageView({
                   page={page}
                   linkedPageIds={memoizedLinkedPageIds}
                 />
+
+                {/* Page Graph View */}
+                <div className="mt-8 mb-8">
+                  <PageGraphView
+                    pageId={page.id}
+                    pageTitle={page.title}
+                    className="max-w-4xl mx-auto"
+                  />
+                </div>
               </>
             )}
           </div>
