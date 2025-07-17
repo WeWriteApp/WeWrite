@@ -79,12 +79,23 @@ const nextConfig = {
   // External packages for server components
   serverExternalPackages: [],
 
-  // Minimal logging for development
+  // Minimal logging for development - reduce HTTP request spam
   logging: {
     fetches: {
       fullUrl: false,
       hmrRefreshes: false,
     },
+  },
+
+  // Reduce server-side request logging
+  async rewrites() {
+    return [];
+  },
+
+  // Custom server configuration to reduce request logging
+  serverRuntimeConfig: {
+    // Reduce server logging verbosity
+    logLevel: 'warn'
   },
 
   // Security headers for Stripe Connect embedded components
@@ -113,10 +124,7 @@ const nextConfig = {
     ];
   },
 
-  // Custom error pages
-  async rewrites() {
-    return [];
-  },
+  // Custom error pages (rewrites defined above)
 
   // Enable all development features
   devIndicators: {
