@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Plus, X, Quote } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '../ui/dialog';
@@ -392,6 +392,8 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
 const AddToPageSearch = ({ onSelect }: { onSelect: (page: any) => void }) => {
   const { session } = useCurrentAccount();
   const userId = session?.uid;
+  const [recentPages, setRecentPages] = useState<any[]>([]);
+  const [recentPagesLoading, setRecentPagesLoading] = useState<boolean>(true);
 
   const { currentQuery, results, isLoading, performSearch } = useUnifiedSearch(userId, {
     context: SEARCH_CONTEXTS.ADD_TO_PAGE,
@@ -400,14 +402,54 @@ const AddToPageSearch = ({ onSelect }: { onSelect: (page: any) => void }) => {
     maxResults: 50
   });
 
-  // Filter results to only show editable pages
-  const editablePages = results.pages?.filter(page =>
+  // Fetch recent pages on component mount
+  useEffect(() => {
+    const fetchRecentPages = async () => {
+      if (!userId) {
+        setRecentPagesLoading(false);
+        return;
+      }
+
+      try {
+        setRecentPagesLoading(true);
+        const response = await fetch(`/api/recent-pages?userId=${userId}&limit=10`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch recent pages: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Filter to only show editable pages (user's own pages)
+        const editableRecentPages = (data.pages || []).filter((page: any) =>
+          page.userId === userId || page.isEditable
+        );
+
+        setRecentPages(editableRecentPages);
+      } catch (error) {
+        console.error('Error fetching recent pages:', error);
+        setRecentPages([]);
+      } finally {
+        setRecentPagesLoading(false);
+      }
+    };
+
+    fetchRecentPages();
+  }, [userId]);
+
+  // Filter search results to only show editable pages
+  const editableSearchPages = results.pages?.filter(page =>
     page.userId === userId || page.isEditable
   ) || [];
 
   const handlePageSelect = (page: any) => {
     onSelect(page);
   };
+
+  // Determine what to show: search results if there's a query, otherwise recent pages
+  const showSearchResults = currentQuery && currentQuery.trim().length > 0;
+  const pagesToShow = showSearchResults ? editableSearchPages : recentPages;
+  const isLoadingPages = showSearchResults ? isLoading : recentPagesLoading;
 
   return (
     <div className="space-y-4">
@@ -419,15 +461,22 @@ const AddToPageSearch = ({ onSelect }: { onSelect: (page: any) => void }) => {
         aria-label="Search for pages to add content to"
       />
 
-      {isLoading && (
+      {/* Show section header */}
+      {!isLoadingPages && (
+        <div className="text-sm font-medium text-muted-foreground">
+          {showSearchResults ? 'Search Results' : 'Recently Visited Pages'}
+        </div>
+      )}
+
+      {isLoadingPages && (
         <div className="text-center py-4">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
         </div>
       )}
 
-      {editablePages.length > 0 && (
+      {pagesToShow.length > 0 && (
         <div className="max-h-60 overflow-y-auto space-y-2">
-          {editablePages.map((page) => (
+          {pagesToShow.map((page) => (
             <button
               key={page.id}
               onClick={() => handlePageSelect(page)}
@@ -442,9 +491,15 @@ const AddToPageSearch = ({ onSelect }: { onSelect: (page: any) => void }) => {
         </div>
       )}
 
-      {currentQuery && !isLoading && editablePages.length === 0 && (
+      {showSearchResults && !isLoading && editableSearchPages.length === 0 && (
         <div className="text-center py-4 text-muted-foreground">
           No editable pages found
+        </div>
+      )}
+
+      {!showSearchResults && !recentPagesLoading && recentPages.length === 0 && (
+        <div className="text-center py-4 text-muted-foreground">
+          No recent pages found. Start typing to search your pages.
         </div>
       )}
     </div>

@@ -44,11 +44,10 @@ const nextConfig = {
       };
     }
 
-    // Force error emission
+    // Force error emission (updated for Next.js 15.4.1)
     config.optimization = {
       ...config.optimization,
       emitOnErrors: true,
-      noEmitOnErrors: false,
     };
 
     // Add error handling plugin

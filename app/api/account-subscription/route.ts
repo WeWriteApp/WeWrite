@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       hasSubscription: !!subscription,
       status: subscription?.status,
       amount: subscription?.amount,
-      tokens: subscription?.tokens,
+      tokens: (subscription as any)?.tokens,
       cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd,
       fullData: subscription
     });
@@ -57,14 +57,14 @@ export async function GET(request: NextRequest) {
       hasSubscription: true,
       status: subscription.status,
       amount: subscription.amount,
-      tokens: subscription.tokens,
+      tokens: (subscription as any).tokens,
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
       fullData: subscription
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching user subscription data:', error);
     return NextResponse.json(
-      { error: error.message || 'An error occurred while fetching subscription data' },
+      { error: error instanceof Error ? error.message : 'An error occurred while fetching subscription data' },
       { status: 500 }
     );
   }

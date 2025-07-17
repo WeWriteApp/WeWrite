@@ -200,7 +200,7 @@ async function handleSyncUser(
       totalConflicts: result.data!.conflicts.length,
       resolvedConflicts: result.data!.resolvedConflicts.length,
       unresolvedConflicts: result.data!.unresolvedConflicts.length,
-      stateUpdates: result.data!.stateUpdates.length,
+      stateUpdatesCount: result.data!.stateUpdates.length,
       checksumBefore: result.data!.checksumBefore,
       checksumAfter: result.data!.checksumAfter,
       conflicts: result.data!.conflicts,

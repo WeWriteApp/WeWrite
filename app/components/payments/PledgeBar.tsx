@@ -739,7 +739,10 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
         {/* Warning Banners - MOVED TO BOTTOM */}
         {/* Login Notice */}
         {showLoginNotice && (
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 rounded-b-2xl">
+          <div
+            className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 rounded-b-2xl cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-all duration-200"
+            onClick={handlePledgeBarClick}
+          >
             <p className="text-sm font-medium text-center">
               Log in to begin allocating tokens
             </p>

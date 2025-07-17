@@ -299,7 +299,7 @@ export class AutomatedPayoutService {
   ): Promise<FinancialOperationResult<Payout[]>> {
     try {
       const payoutsQuery = query(
-        collection(db, 'payouts'),
+        collection(db, getCollectionName('payouts')),
         where('status', '==', 'pending'),
         where('amount', '>=', this.config.minimumThreshold),
         orderBy('scheduledAt', 'asc'),

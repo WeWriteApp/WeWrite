@@ -2,6 +2,8 @@ import React from "react"
 import "./globals.css"
 import "leaflet/dist/leaflet.css" // Leaflet CSS for maps
 import "./utils/init-logger" // Initialize logging system early
+import "./utils/errorSuppression" // Initialize error suppression early
+import Script from 'next/script'
 import ErrorBoundary from "./components/utils/ErrorBoundary"
 import NextJSErrorBoundary, { GlobalErrorHandler } from "./components/utils/NextJSErrorHandler"
 
@@ -34,6 +36,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
+        {/* Early Firebase error suppression - must run before any other scripts */}
+        <Script
+          src="/firebase-error-suppression.js"
+          strategy="beforeInteractive"
+          priority
+        />
         <NextJSErrorBoundary>
           <ErrorBoundary name="root">
             <GlobalErrorHandler />

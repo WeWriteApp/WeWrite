@@ -114,6 +114,10 @@ export default function LinkEditorModal({
       return;
     }
 
+    console.log('handleCreatePageLink called');
+    console.log('onInsertLink type:', typeof onInsertLink);
+    console.log('onInsertLink:', onInsertLink);
+
     const linkData = {
       type: showAuthor ? 'compound' : 'page',
       pageId: selectedPage.id,
@@ -126,7 +130,11 @@ export default function LinkEditorModal({
       isNew: selectedPage.isNew // For creating new pages
     };
 
-    onInsertLink(linkData);
+    if (typeof onInsertLink === 'function') {
+      onInsertLink(linkData);
+    } else {
+      console.error('onInsertLink is not a function:', onInsertLink);
+    }
     onClose();
   };
 

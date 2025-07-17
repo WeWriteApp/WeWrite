@@ -1,7 +1,7 @@
 "use client";
 import React, { useContext, useEffect, useState } from "react";
 import { PortfolioContext } from "../../providers/PortfolioProvider";
-import { getPageById } from "../../firebase/database";
+// Using API endpoints instead of direct Firebase calls
 import {PillLink} from "../utils/PillLink";
 import { useFeatureFlag } from "../../utils/feature-flags";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
@@ -83,9 +83,20 @@ const SubscriptionItem = ({
   useEffect(() => {
     if (!id) return;
     if (!page) {
-      getPageById(id).then((data) => {
-        setPage(data.pageData);
-      });
+      // Use API endpoint to get page data
+      fetch(`/api/pages/${id}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Failed to fetch page: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((data) => {
+          setPage(data);
+        })
+        .catch(error => {
+          console.error('Error fetching page:', error);
+        });
     }
   }, [id, page]);
 

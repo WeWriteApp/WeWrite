@@ -14,8 +14,9 @@ import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 
 export default function ContentPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
   const router = useRouter();
-  const { currentAccountUid, isLoading: authLoading } = useCurrentAccount();
-  const [contentType, setContentType] = useState(null);
+  const { currentAccount, isLoading: authLoading } = useCurrentAccount();
+  const currentAccountUid = currentAccount?.uid;
+  const [contentType, setContentType] = useState<'page' | 'not-found' | 'error' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [id, setId] = useState('');
 

@@ -89,7 +89,7 @@ export interface PageHeaderProps {
   subscriptionStatus?: string;
   /** Whether the page is currently being edited */
   isEditing?: boolean;
-  /** Callback to toggle edit mode */
+  /** Callback to toggle edit mode - deprecated, always in edit mode */
   setIsEditing?: (value: boolean) => void;
   /** Callback when title changes during editing */
   onTitleChange?: (newTitle: string) => void;
@@ -119,7 +119,7 @@ export default function PageHeader({
   // scrollDirection is not used but kept for compatibility
   tier: initialTier, // deprecated - kept for compatibility
   subscriptionStatus: initialStatus, // deprecated - kept for compatibility
-  isEditing = false,
+  isEditing = true, // ALWAYS edit mode
   setIsEditing,
   onTitleChange,
   canEdit: propCanEdit = false,
@@ -141,10 +141,12 @@ export default function PageHeader({
   const router = useRouter();
   const { session } = useCurrentAccount();
   const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
+
+  // State for scroll behavior - only used in view mode
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [scrollProgress, setScrollProgress] = React.useState(0);
-  const [headerHeight, setHeaderHeight] = React.useState(0);
-  const [headerPadding, setHeaderPadding] = React.useState(8); // Start at 8px (py-2)
+  const [headerPadding, setHeaderPadding] = React.useState(8);
+
   const { trackInteractionEvent, events } = useWeWriteAnalytics();
   const headerRef = React.useRef<HTMLDivElement>(null);
   const { lineMode, setLineMode } = useLineSettings();
@@ -310,18 +312,12 @@ export default function PageHeader({
     }
 
     if (canEdit) {
-      if (!isEditing && setIsEditing) {
-        // If not in edit mode, trigger edit mode first
-        setIsEditing(true);
-      } else if (isEditing) {
-        // If already in edit mode, start editing the title
-        setIsEditingTitle(true);
-        // Focus the input after state update
-        setTimeout(() => {
-          titleInputRef.current?.focus();
-          titleInputRef.current?.select();
-        }, 0);
-      }
+      // Always in edit mode, just start editing the title
+      setIsEditingTitle(true);
+      setTimeout(() => {
+        titleInputRef.current?.focus();
+        titleInputRef.current?.select();
+      }, 0);
     }
   };
 
@@ -439,117 +435,51 @@ export default function PageHeader({
 
   // Groups functionality removed
 
-  // Calculate and update header height when component mounts or when title/isScrolled changes
+  // No height calculation needed - header is static block element
+
+  // No resize handling needed - header is static
+
+  // No dynamic padding needed - always static
+
   React.useEffect(() => {
-    const updateHeaderHeight = () => {
-      if (headerRef.current) {
-        // Use actual measured height instead of calculated height
-        // This accounts for dynamic title wrapping and content changes
-        const actualHeight = headerRef.current.offsetHeight;
-        const clientHeight = headerRef.current.clientHeight;
-        const scrollHeight = headerRef.current.scrollHeight;
-        const computedStyle = window.getComputedStyle(headerRef.current);
-        const borderTop = parseFloat(computedStyle.borderTopWidth) || 0;
-        const borderBottom = parseFloat(computedStyle.borderBottomWidth) || 0;
-
-        // Calculate the content height without borders
-        const contentHeight = actualHeight - borderTop - borderBottom;
-
-        setHeaderHeight(actualHeight);
-
-        // Debug logging to track height calculations (can be removed in production)
-        if (process.env.NODE_ENV === 'development') {
-          console.log('PageHeader height update:', {
-            actualHeight,
-            contentHeight,
-            adjustedHeight: Math.max(contentHeight - 4, actualHeight * 0.95),
-            isScrolled,
-            headerPadding,
-            title: title?.substring(0, 30) + (title && title.length > 30 ? '...' : '')
-          });
-        }
-
-        // Use a slightly reduced height to account for any extra spacing
-        // This prevents excessive padding while still providing enough clearance
-        const adjustedHeight = Math.max(contentHeight - 4, actualHeight * 0.95);
-        document.documentElement.style.setProperty('--page-header-height', `${adjustedHeight}px`);
-      }
-    };
-
-    // Set initial conservative height immediately to prevent clipping
-    document.documentElement.style.setProperty('--page-header-height', '140px');
-
-    // Try immediate update first (may not work if DOM not ready)
-    updateHeaderHeight();
-
-    // Initial update with a small delay to ensure rendering is complete
-    const timeoutId = setTimeout(updateHeaderHeight, 50);
-
-    // Add resize listener to recalculate on window resize
-    window.addEventListener('resize', updateHeaderHeight);
-
-    // Use ResizeObserver for more accurate height tracking with debouncing
-    let resizeObserver: ResizeObserver | null = null;
-    let resizeTimeout: NodeJS.Timeout | null = null;
-
-    if (headerRef.current && 'ResizeObserver' in window) {
-      resizeObserver = new ResizeObserver(() => {
-        // Debounce the resize updates to prevent excessive recalculations
-        if (resizeTimeout) clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(updateHeaderHeight, 16); // ~60fps
-      });
-      resizeObserver.observe(headerRef.current);
+    // In edit mode, disable scroll handling completely
+    if (isEditing) {
+      setIsScrolled(false);
+      setScrollProgress(0);
+      setHeaderPadding(8);
+      return; // No scroll listener needed
     }
 
-    return () => {
-      clearTimeout(timeoutId);
-      if (resizeTimeout) clearTimeout(resizeTimeout);
-      window.removeEventListener('resize', updateHeaderHeight);
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
-    };
-  }, [title, isScrolled, headerPadding, isEditingTitle]);
-
-  React.useEffect(() => {
-    // Use a throttled scroll handler for better performance
+    // View mode only: Use scroll handler for collapse behavior
     let lastScrollY = 0;
     let ticking = false;
 
     const handleScroll = () => {
       lastScrollY = window.scrollY;
 
-      // Use requestAnimationFrame for smoother performance
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          // Update scroll state - only change if needed
           const shouldBeScrolled = lastScrollY > 0;
           if (shouldBeScrolled !== isScrolled) {
             setIsScrolled(shouldBeScrolled);
           }
 
-          // Calculate smooth header padding transition
-          // Transition from 8px to 4px over 50px of scroll
+          // Transition padding based on scroll
           const paddingTransitionDistance = 50;
-          const minPadding = 4; // py-1
-          const maxPadding = 8; // py-2
+          const minPadding = 4;
+          const maxPadding = 8;
           const scrollRatio = Math.min(lastScrollY / paddingTransitionDistance, 1);
           const newPadding = maxPadding - (maxPadding - minPadding) * scrollRatio;
           setHeaderPadding(newPadding);
 
-          // Calculate scroll progress based on main content area only
+          // Calculate scroll progress
           const windowHeight = window.innerHeight;
-
-          // Find the main content area (exclude footer sections)
           const mainContentElement = document.querySelector('[data-page-content]');
           let maxScroll = document.documentElement.scrollHeight - windowHeight;
 
           if (mainContentElement) {
-            // Calculate the height up to the end of main content
             const mainContentRect = mainContentElement.getBoundingClientRect();
             const mainContentBottom = mainContentRect.bottom + window.scrollY;
-
-            // Use the main content bottom as the effective scroll height
             maxScroll = Math.max(0, mainContentBottom - windowHeight);
           }
 
@@ -558,34 +488,17 @@ export default function PageHeader({
 
           ticking = false;
         });
-
         ticking = true;
       }
     };
 
-    // Use passive event listener for better performance
     window.addEventListener("scroll", handleScroll, { passive: true });
-
-    // Also add scrollend event listener for modern browsers
-    const handleScrollEnd = () => {
-      // When scrolling stops, check if we're at the top
-      if (window.scrollY < 5) {
-        // Force scroll to absolute top to avoid partial header overlay
-        window.scrollTo({top: 0, behavior: 'instant'});
-      }
-    };
-
-    if ('onscrollend' in window) {
-      window.addEventListener('scrollend', handleScrollEnd);
-    }
+    handleScroll(); // Set initial state
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      if ('onscrollend' in window) {
-        window.removeEventListener('scrollend', handleScrollEnd);
-      }
     };
-  }, [isScrolled]);
+  }, [isEditing, isScrolled]);
 
   // Create page object for handlers
   const pageObject = React.useMemo(() => {
@@ -654,17 +567,13 @@ export default function PageHeader({
     <>
       <header
         ref={headerRef}
-        className={`${isEditing ? 'relative' : 'fixed top-0'} z-50 transition-all duration-300 ease-out will-change-transform header-border-transition ${
-          isScrolled && !isEditing
-            ? "bg-background/80 backdrop-blur-sm shadow-sm"
-            : "bg-background border-visible"
-        }`}
-        style={{
-          transform: 'translateZ(0)', // Force GPU acceleration
-          left: '0px',
-          right: '0px',
-          width: '100%'
-        }}
+        className={`
+          ${isEditing ? 'block' : 'fixed top-0 left-0 right-0 w-full'}
+          z-50 bg-background border-visible
+          ${!isEditing ? 'transition-all duration-300 ease-out will-change-transform' : ''}
+          ${isScrolled && !isEditing ? 'bg-background/80 backdrop-blur-sm shadow-sm' : ''}
+        `}
+        style={!isEditing ? { transform: 'translateZ(0)' } : {}}
       >
         {/* Use the same layout approach as Header.tsx for consistent spacing */}
         <div className="flex w-full h-full">
@@ -677,7 +586,7 @@ export default function PageHeader({
           {/* Header content area - matches main header content area */}
           <div className="flex-1 min-w-0 relative px-4 header-padding-mobile">
             {/* Collapsed Header Layout - Single Row */}
-            {isScrolled && (
+            {isScrolled && !isEditing && (
               <div
                 className="flex items-center justify-center min-h-0 transition-all duration-300 ease-out relative"
                 style={{
@@ -733,8 +642,8 @@ export default function PageHeader({
               </div>
             )}
 
-            {/* Expanded Header Layout - Three Rows */}
-            {!isScrolled && (
+            {/* Expanded Header Layout - Always show when editing, or when not scrolled in view mode */}
+            {(!isScrolled || isEditing) && (
               <div
                 className="space-y-2 transition-all duration-300 ease-out"
                 style={{
@@ -782,23 +691,12 @@ export default function PageHeader({
                         {/* Menu items for existing pages */}
                         {!isNewPage && (
                           <>
-                            {/* Edit option - only visible if user can edit */}
-                            {canEdit && setIsEditing && (
-                              <DropdownMenuItem
-                                className="gap-2"
-                                onClick={() => {
-                                  setIsEditing(!isEditing);
-                                }}
-                              >
-                                <Edit2 className="h-4 w-4" />
-                                <span>{isEditing ? "Cancel" : "Edit"}</span>
-                              </DropdownMenuItem>
-                            )}
+                            {/* Edit option removed - pages are now always editable */}
 
-                            {/* Edit mode specific options */}
-                            {isEditing ? (
+                            {/* Owner options - always available for editable pages */}
+                            {canEdit && (
                               <>
-                                {/* Insert Link option - only in edit mode */}
+                                {/* Insert Link option - available for page owners */}
                                 {onInsertLink && (
                                   <DropdownMenuItem
                                     className="gap-2"
@@ -808,36 +706,24 @@ export default function PageHeader({
                                     <span>Insert link</span>
                                   </DropdownMenuItem>
                                 )}
-
-                                {/* Delete page option - only in edit mode and if user can edit */}
-                                {canEdit && onDelete && (
-                                  <DropdownMenuItem
-                                    className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    onClick={onDelete}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                    <span>Delete page</span>
-                                  </DropdownMenuItem>
-                                )}
                               </>
-                            ) : (
-                              <>
-                                {/* Share option - only visible when not in edit mode */}
-                                <DropdownMenuItem
-                                  className="gap-2"
-                                  onClick={handleShareClick}
-                                >
-                                  <Share2 className="h-4 w-4" />
-                                  <span>Share</span>
-                                </DropdownMenuItem>
+                            )}
 
-                                {/* Add to Page option - only visible when not in edit mode */}
-                                <DropdownMenuItem
-                                  className="gap-2"
-                                  onClick={handleAddToPageClick}
-                                >
-                                  <Plus className="h-4 w-4" />
-                                  <span>Add to Page</span>
+                            {/* General options - available to all users */}
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onClick={handleShareClick}
+                            >
+                              <Share2 className="h-4 w-4" />
+                              <span>Share</span>
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onClick={handleAddToPageClick}
+                            >
+                              <Plus className="h-4 w-4" />
+                              <span>Add to Page</span>
                                 </DropdownMenuItem>
 
                                 {/* Reply option - only visible when not in edit mode */}
@@ -849,39 +735,56 @@ export default function PageHeader({
                                   <span>Reply</span>
                                 </DropdownMenuItem>
 
-                                <DropdownMenuSeparator />
+                                {/* Only show separator and paragraph mode for read-only pages */}
+                                {!canEdit && (
+                                  <>
+                                    <DropdownMenuSeparator />
 
-                                {/* Paragraph Mode submenu - only visible when not in edit mode */}
-                                <DropdownMenuSub>
-                                  <DropdownMenuSubTrigger className="gap-2">
-                                    {lineMode === LINE_MODES.DENSE ? (
-                                      <AlignJustify className="h-4 w-4" />
-                                    ) : (
-                                      <AlignLeft className="h-4 w-4" />
-                                    )}
-                                    <span>Paragraph Mode</span>
-                                  </DropdownMenuSubTrigger>
-                                  <DropdownMenuPortal>
-                                    <DropdownMenuSubContent>
-                                      <DropdownMenuItem
-                                        className={`gap-2 ${lineMode === LINE_MODES.NORMAL ? 'bg-accent/50' : ''}`}
-                                        onClick={() => setLineMode(LINE_MODES.NORMAL)}
-                                      >
-                                        <AlignLeft className="h-4 w-4" />
-                                        <span>Normal</span>
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        className={`gap-2 ${lineMode === LINE_MODES.DENSE ? 'bg-accent/50' : ''}`}
-                                        onClick={() => setLineMode(LINE_MODES.DENSE)}
-                                      >
-                                        <AlignJustify className="h-4 w-4" />
-                                        <span>Dense</span>
-                                      </DropdownMenuItem>
-                                    </DropdownMenuSubContent>
-                                  </DropdownMenuPortal>
-                                </DropdownMenuSub>
-                              </>
-                            )}
+                                    {/* Paragraph Mode submenu - only visible when user can't edit (read-only mode) */}
+                                    <DropdownMenuSub>
+                                      <DropdownMenuSubTrigger className="gap-2">
+                                        {lineMode === LINE_MODES.DENSE ? (
+                                          <AlignJustify className="h-4 w-4" />
+                                        ) : (
+                                          <AlignLeft className="h-4 w-4" />
+                                        )}
+                                        <span>Paragraph Mode</span>
+                                      </DropdownMenuSubTrigger>
+                                      <DropdownMenuPortal>
+                                        <DropdownMenuSubContent>
+                                          <DropdownMenuItem
+                                            className={`gap-2 ${lineMode === LINE_MODES.NORMAL ? 'bg-accent/50' : ''}`}
+                                            onClick={() => setLineMode(LINE_MODES.NORMAL)}
+                                          >
+                                            <AlignLeft className="h-4 w-4" />
+                                            <span>Normal</span>
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            className={`gap-2 ${lineMode === LINE_MODES.DENSE ? 'bg-accent/50' : ''}`}
+                                            onClick={() => setLineMode(LINE_MODES.DENSE)}
+                                          >
+                                            <AlignJustify className="h-4 w-4" />
+                                            <span>Dense</span>
+                                          </DropdownMenuItem>
+                                        </DropdownMenuSubContent>
+                                      </DropdownMenuPortal>
+                                    </DropdownMenuSub>
+                                  </>
+                                )}
+
+                                {/* Delete button - moved to bottom for edit mode */}
+                                {canEdit && onDelete && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      onClick={onDelete}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      <span>Delete page</span>
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                           </>
                         )}
                       </DropdownMenuContent>
@@ -926,7 +829,7 @@ export default function PageHeader({
                               onBlur={handleTitleBlur}
                               onFocus={handleTitleFocus}
                               tabIndex={isNewPage ? 1 : undefined}
-                              className={`bg-background/80 border rounded-lg px-2 py-1 outline-none font-semibold text-center transition-all duration-200 resize-none overflow-hidden ${
+                              className={`bg-background/80 border rounded-lg px-1 py-0.5 outline-none font-semibold text-center transition-all duration-200 resize-none overflow-hidden ${
                                 titleError
                                   ? "border-destructive focus:ring-2 focus:ring-destructive/20 focus:border-destructive"
                                   : isTitleFocused

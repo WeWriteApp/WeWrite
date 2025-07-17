@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { getPageVersions, getPageById } from '../../firebase/database';
+import { getPageById } from '../../firebase/database';
+import { getPageVersions } from '../../services/versionService';
 import { Button } from '../../components/ui/button';
 import { ChevronLeft, Clock } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';

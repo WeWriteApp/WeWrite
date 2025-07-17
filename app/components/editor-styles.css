@@ -413,6 +413,32 @@ div.unified-paragraph {
   flex-wrap: nowrap !important;
 }
 
+/* Ensure consistent spacing between pill links and other content */
+[contenteditable] a.page-link,
+[contenteditable] a.user-link,
+[contenteditable] a.external-link,
+[contenteditable] .compound-link-container {
+  /* Ensure exactly one space around pill links */
+  margin-left: 0.25rem !important;
+  margin-right: 0.25rem !important;
+}
+
+/* Remove extra spacing when pill links are at the start of a line */
+[contenteditable] a.page-link:first-child,
+[contenteditable] a.user-link:first-child,
+[contenteditable] a.external-link:first-child,
+[contenteditable] .compound-link-container:first-child {
+  margin-left: 0 !important;
+}
+
+/* Remove extra spacing when pill links are at the end of a line */
+[contenteditable] a.page-link:last-child,
+[contenteditable] a.user-link:last-child,
+[contenteditable] a.external-link:last-child,
+[contenteditable] .compound-link-container:last-child {
+  margin-right: 0 !important;
+}
+
 /* Ensure text nodes after link pills flow horizontally */
 [contenteditable] a.page-link + *,
 [contenteditable] a.user-link + *,
@@ -420,7 +446,6 @@ div.unified-paragraph {
 [contenteditable] .compound-link-container + * {
   display: inline !important;
   vertical-align: baseline !important;
-  margin-left: 0.25rem !important; /* Small space after link */
 }
 
 /* CRITICAL: Force horizontal layout when paragraph starts with link pills */
@@ -730,8 +755,8 @@ div.unified-paragraph {
     padding: 0.25rem 0.25rem;
     margin-bottom: 0.375rem;
     /* MOBILE: Proper left margin for edit mode on mobile to prevent overlap */
-    margin-left: 2rem !important; /* Increased from 1.25rem to 2rem on mobile for paragraph numbers */
-    width: calc(100% - 2rem) !important; /* Account for increased left margin */
+    margin-left: 1.25rem !important; /* Reduced margin for cleaner layout */
+    width: calc(100% - 1.25rem) !important; /* Account for reduced left margin */
   }
 
   /* MOBILE: Ensure page content containers don't add extra padding */
@@ -753,9 +778,9 @@ div.unified-paragraph {
 .unified-editor[data-readonly="false"] .editor-content.normal-mode[contenteditable="true"] > div,
 .page-content.unified-editor .editor-content.normal-mode[contenteditable="true"] > div,
 div.page-content.unified-editor div.editor-content.normal-mode[contenteditable="true"] > div {
-  margin-left: 2.25rem !important;
-  width: calc(100% - 2.25rem) !important;
-  padding-left: 0.5rem !important;
+  margin-left: 1.5rem !important;
+  width: calc(100% - 1.5rem) !important;
+  padding-left: 0.25rem !important;
   box-sizing: border-box !important;
 }
 
@@ -764,17 +789,17 @@ div.page-content.unified-editor div.editor-content.normal-mode[contenteditable="
   .unified-editor[data-readonly="false"] .editor-content.normal-mode[contenteditable="true"] > div,
   .page-content.unified-editor .editor-content.normal-mode[contenteditable="true"] > div,
   div.page-content.unified-editor div.editor-content.normal-mode[contenteditable="true"] > div {
-    margin-left: 2rem !important;
-    width: calc(100% - 2rem) !important;
+    margin-left: 1.25rem !important;
+    width: calc(100% - 1.25rem) !important;
   }
 }
 
 /* Simplified edit mode styling */
 [contenteditable="true"].editor-content > div {
-  margin-left: 2.25rem !important;
-  width: calc(100% - 2.25rem) !important;
-  padding-left: 0.5rem !important;
-  padding-right: 0.5rem !important;
+  margin-left: 1.5rem !important;
+  width: calc(100% - 1.5rem) !important;
+  padding-left: 0.25rem !important;
+  padding-right: 0.25rem !important;
   box-sizing: border-box !important;
   position: relative !important;
 }

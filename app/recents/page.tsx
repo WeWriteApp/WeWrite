@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '../components/layout/Header';
 import { RecentPagesContext } from '../contexts/RecentPagesContext';
+import { formatRelativeTime } from '../utils/formatRelativeTime';
 
 /**
  * Recently Viewed Page Component
@@ -33,24 +34,6 @@ export default function RecentsPage() {
   }, [currentAccount, router]);
 
   // No search functionality needed
-
-  // Format timestamp for display
-  const formatTimestamp = (timestamp: number) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) {
-      return 'Just now';
-    } else if (diffInHours < 24) {
-      return `${diffInHours}h ago`;
-    } else if (diffInHours < 168) { // 7 days
-      const days = Math.floor(diffInHours / 24);
-      return `${days}d ago`;
-    } else {
-      return date.toLocaleDateString();
-    }
-  };
 
   if (!currentAccount) {
     return null; // Will redirect to login
@@ -150,7 +133,7 @@ export default function RecentsPage() {
                   
                   <div className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
                     <Calendar className="h-3 w-3" />
-                    <span>{formatTimestamp(page.timestamp)}</span>
+                    <span>{formatRelativeTime(new Date(page.timestamp))}</span>
                   </div>
                 </div>
               ))}

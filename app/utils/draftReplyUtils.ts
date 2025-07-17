@@ -1,28 +1,35 @@
 /**
  * Draft Reply Utilities
- * 
+ *
  * This module provides utilities for handling draft replies from non-authenticated users.
  * It manages storing and retrieving draft replies in local storage, and handles the
  * workflow for posting replies after authentication.
  */
 
+// Type definitions
+interface DraftReply {
+  pageId: string;
+  pageTitle: string;
+  content: any[]; // Slate format content
+  returnUrl: string;
+  timestamp?: number;
+}
+
+interface PendingReplyAction {
+  pageId: string;
+  returnUrl: string;
+}
+
 // Storage keys
 const STORAGE_KEYS = {
   DRAFT_REPLY: 'wewrite_draft_reply',
   PENDING_REPLY_ACTION: 'wewrite_pending_reply_action'
-};
+} as const;
 
 /**
  * Save a draft reply to local storage
- * 
- * @param {Object} draftReply - The draft reply data
- * @param {string} draftReply.pageId - ID of the page being replied to
- * @param {string} draftReply.pageTitle - Title of the page being replied to
- * @param {Array} draftReply.content - Content of the reply in Slate format
- * @param {string} draftReply.returnUrl - URL to return to after authentication
- * @returns {boolean} - Whether the draft was successfully saved
  */
-export const saveDraftReply = (draftReply) => {
+export const saveDraftReply = (draftReply: Omit<DraftReply, 'timestamp'>): boolean => {
   try {
     if (!draftReply || !draftReply.pageId || !draftReply.content) {
       console.error('Invalid draft reply data:', draftReply);
@@ -30,7 +37,7 @@ export const saveDraftReply = (draftReply) => {
     }
 
     // Add timestamp to track when the draft was created
-    const draftWithTimestamp = {
+    const draftWithTimestamp: DraftReply = {
       ...draftReply,
       timestamp: Date.now()
     };
@@ -45,27 +52,25 @@ export const saveDraftReply = (draftReply) => {
 
 /**
  * Get the current draft reply from local storage
- * 
- * @returns {Object|null} - The draft reply data or null if none exists
  */
-export const getDraftReply = () => {
+export const getDraftReply = (): DraftReply | null => {
   try {
     const draftReplyJson = localStorage.getItem(STORAGE_KEYS.DRAFT_REPLY);
     if (!draftReplyJson) return null;
 
-    const draftReply = JSON.parse(draftReplyJson);
-    
+    const draftReply: DraftReply = JSON.parse(draftReplyJson);
+
     // Check if the draft is still valid (less than 24 hours old)
     const now = Date.now();
     const draftAge = now - (draftReply.timestamp || 0);
     const MAX_DRAFT_AGE = 24 * 60 * 60 * 1000; // 24 hours
-    
+
     if (draftAge > MAX_DRAFT_AGE) {
       // Draft is too old, clear it
       clearDraftReply();
       return null;
     }
-    
+
     return draftReply;
   } catch (error) {
     console.error('Error getting draft reply:', error);
@@ -76,7 +81,7 @@ export const getDraftReply = () => {
 /**
  * Clear the draft reply from local storage
  */
-export const clearDraftReply = () => {
+export const clearDraftReply = (): void => {
   try {
     localStorage.removeItem(STORAGE_KEYS.DRAFT_REPLY);
   } catch (error) {
@@ -86,12 +91,8 @@ export const clearDraftReply = () => {
 
 /**
  * Set a pending reply action to indicate we're in the middle of posting a reply
- * 
- * @param {Object} actionData - Data about the pending action
- * @param {string} actionData.pageId - ID of the page being replied to
- * @param {string} actionData.returnUrl - URL to return to after authentication
  */
-export const setPendingReplyAction = (actionData) => {
+export const setPendingReplyAction = (actionData: PendingReplyAction): boolean => {
   try {
     if (!actionData || !actionData.pageId) {
       console.error('Invalid pending reply action data:', actionData);
@@ -108,14 +109,12 @@ export const setPendingReplyAction = (actionData) => {
 
 /**
  * Get the current pending reply action
- * 
- * @returns {Object|null} - The pending reply action data or null if none exists
  */
-export const getPendingReplyAction = () => {
+export const getPendingReplyAction = (): PendingReplyAction | null => {
   try {
     const actionJson = localStorage.getItem(STORAGE_KEYS.PENDING_REPLY_ACTION);
     if (!actionJson) return null;
-    
+
     return JSON.parse(actionJson);
   } catch (error) {
     console.error('Error getting pending reply action:', error);
@@ -126,7 +125,7 @@ export const getPendingReplyAction = () => {
 /**
  * Clear the pending reply action
  */
-export const clearPendingReplyAction = () => {
+export const clearPendingReplyAction = (): void => {
   try {
     localStorage.removeItem(STORAGE_KEYS.PENDING_REPLY_ACTION);
   } catch (error) {
@@ -136,9 +135,7 @@ export const clearPendingReplyAction = () => {
 
 /**
  * Check if there's a pending reply that needs to be posted after authentication
- * 
- * @returns {boolean} - Whether there's a pending reply
  */
-export const hasPendingReply = () => {
+export const hasPendingReply = (): boolean => {
   return !!getDraftReply() && !!getPendingReplyAction();
 };

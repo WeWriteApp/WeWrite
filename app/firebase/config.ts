@@ -4,6 +4,7 @@ import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { getAnalytics, isSupported, logEvent, type Analytics } from "firebase/analytics";
 import { getDatabase, type Database } from "firebase/database";
+import { initializeErrorSuppression } from '../utils/errorSuppression';
 
 /**
  * Firebase Configuration & Initialization
@@ -73,8 +74,13 @@ import {
   getEnvironmentAwareRTDB
 } from './environmentAwareConfig';
 
+// Initialize error suppression early
+initializeErrorSuppression();
+
 // Get environment-aware Firebase services
 const firebaseServices = getEnvironmentAwareFirebase();
+
+
 
 // Export services for backward compatibility
 export const app: FirebaseApp = firebaseServices.app;
@@ -88,6 +94,7 @@ export const rtdb: Database = firebaseServices.rtdb;
  * This function handles:
  * 1. Checking if analytics is supported in the current environment
  * 2. Initializing analytics if supported
+ * 3. Suppressing Firebase installations errors
  *
  * @returns Firebase Analytics instance or null if not supported/initialization failed
  */

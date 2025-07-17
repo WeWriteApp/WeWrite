@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getPageVersions } from "../../firebase/database";
+import { getPageVersions } from "../../services/versionService";
 import { Button } from "../ui/button";
 import { Clock, ChevronRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import SimpleSparkline from "../utils/SimpleSparkline";
-import { useAccentColor, ACCENT_COLOR_VALUES } from "../../contexts/AccentColorContext';
+import { useAccentColor, ACCENT_COLOR_VALUES } from "../../contexts/AccentColorContext";
 
 /**
  * RecentPageChanges Component

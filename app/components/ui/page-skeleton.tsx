@@ -3,18 +3,39 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 
+// Type definitions
+interface PageSkeletonProps {
+  className?: string;
+  count?: number;
+  showHeader?: boolean;
+}
+
+interface UserBioSkeletonProps {
+  className?: string;
+}
+
+interface GroupAboutSkeletonProps {
+  className?: string;
+}
+
+interface PageContentSkeletonProps {
+  className?: string;
+  paragraphCount?: number;
+}
+
+interface TableSkeletonProps {
+  className?: string;
+  rowCount?: number;
+  columnCount?: number;
+}
+
 /**
  * PageSkeleton - A skeleton loader for pages
- * 
+ *
  * This component shows a placeholder UI while content is loading,
  * providing a better user experience than a spinner.
- * 
- * @param {Object} props
- * @param {string} props.className - Additional CSS classes
- * @param {number} props.count - Number of skeleton items to show
- * @param {boolean} props.showHeader - Whether to show a header skeleton
  */
-export function PageSkeleton({ className, count = 3, showHeader = true }) {
+export function PageSkeleton({ className, count = 3, showHeader = true }: PageSkeletonProps) {
   return (
     <div className={cn("animate-pulse space-y-6", className)}>
       {showHeader && (
@@ -47,7 +68,7 @@ export function PageSkeleton({ className, count = 3, showHeader = true }) {
 /**
  * UserBioSkeleton - A skeleton loader specifically for user bio
  */
-export function UserBioSkeleton({ className }) {
+export function UserBioSkeleton({ className }: UserBioSkeletonProps) {
   return (
     <div className={cn("animate-pulse space-y-4", className)}>
       <div className="h-6 bg-muted rounded-md w-1/3"></div>
@@ -63,7 +84,7 @@ export function UserBioSkeleton({ className }) {
 /**
  * GroupAboutSkeleton - A skeleton loader specifically for group about
  */
-export function GroupAboutSkeleton({ className }) {
+export function GroupAboutSkeleton({ className }: GroupAboutSkeletonProps) {
   return (
     <div className={cn("animate-pulse space-y-4", className)}>
       <div className="h-6 bg-muted rounded-md w-1/3"></div>
@@ -80,7 +101,7 @@ export function GroupAboutSkeleton({ className }) {
 /**
  * PageContentSkeleton - A skeleton loader for page content
  */
-export function PageContentSkeleton({ className, paragraphCount = 5 }) {
+export function PageContentSkeleton({ className, paragraphCount = 5 }: PageContentSkeletonProps) {
   return (
     <div className={cn("animate-pulse space-y-6", className)}>
       <div className="h-8 bg-muted rounded-md w-3/4"></div>
@@ -102,7 +123,7 @@ export function PageContentSkeleton({ className, paragraphCount = 5 }) {
 /**
  * TableSkeleton - A skeleton loader for tables
  */
-export function TableSkeleton({ className, rowCount = 5, columnCount = 4 }) {
+export function TableSkeleton({ className, rowCount = 5, columnCount = 4 }: TableSkeletonProps) {
   return (
     <div className={cn("animate-pulse", className)}>
       {/* Header */}

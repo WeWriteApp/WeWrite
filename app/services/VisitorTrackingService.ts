@@ -637,7 +637,7 @@ const sessionRef = doc(db, getCollectionName("siteVisitors"), this.currentAccoun
   }> {
     try {
       const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-const visitorsRef = collection(db, 'siteVisitors');
+      const visitorsRef = collection(db, getCollectionName('siteVisitors'));
       const q = query(
         visitorsRef,
         where('lastSeen', '>=', Timestamp.fromDate(tenMinutesAgo))

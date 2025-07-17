@@ -22,7 +22,7 @@ export async function generatePagesSitemap(options: SitemapOptions = {}): Promis
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
   
   try {
-const pagesRef = collection(db, 'pages')
+    const pagesRef = collection(db, getCollectionName('pages'))
     let pagesQuery = query(
       pagesRef,
       where('isPublic', '==', true),
@@ -99,7 +99,7 @@ export async function generateUsersSitemap(options: SitemapOptions = {}): Promis
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
   
   try {
-const usersRef = collection(db, 'users')
+    const usersRef = collection(db, getCollectionName('users'))
     const usersQuery = query(
       usersRef,
       orderBy('lastActive', 'desc'),
@@ -218,7 +218,7 @@ export async function generateNewsSitemap(options: SitemapOptions = {}): Promise
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'
 
   try {
-const pagesRef = collection(db, 'pages')
+    const pagesRef = collection(db, getCollectionName('pages'))
     const recentDate = new Date()
     recentDate.setDate(recentDate.getDate() - 2) // Last 2 days for news
 

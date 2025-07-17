@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   try {
     // Initialize Firebase Admin
     const admin = getFirebaseAdmin();
-    const db = admin.firestore();
+    const db = admin!.firestore();
 
     // Verify admin access
     const userId = await getUserIdFromRequest(request);
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user email to check admin status
-    const userRecord = await admin.auth().getUser(userId);
+    const userRecord = await admin!.auth().getUser(userId);
     const userEmail = userRecord.email;
 
     if (!userEmail || !isAdminServer(userEmail)) {
@@ -93,12 +93,12 @@ export async function GET(request: NextRequest) {
       total: adminUsers.length
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error loading admin users:', error);
     return NextResponse.json({
       success: false,
       error: 'Failed to load admin users',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
   try {
     // Initialize Firebase Admin
     const admin = getFirebaseAdmin();
-    const db = admin.firestore();
+    const db = admin!.firestore();
 
     // Verify admin access
     const userId = await getUserIdFromRequest(request);
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user email to check admin status
-    const userRecord = await admin.auth().getUser(userId);
+    const userRecord = await admin!.auth().getUser(userId);
     const userEmail = userRecord.email;
 
     if (!userEmail || !isAdminServer(userEmail)) {
@@ -181,12 +181,12 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error managing admin users:', error);
     return NextResponse.json({
       success: false,
       error: 'Failed to manage admin users',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

@@ -1,7 +1,55 @@
 import { getPageMetadata } from "../firebase/database";
 import Script from 'next/script';
+import type { Metadata } from 'next';
 
-export async function generateMetadata({ params }) {
+// Type definitions
+interface PageParams {
+  id: string;
+}
+
+interface GenerateMetadataProps {
+  params: Promise<PageParams>;
+}
+
+interface LayoutProps {
+  children: React.ReactNode;
+  params: Promise<PageParams>;
+}
+
+interface SchemaMarkup {
+  '@context': string;
+  '@type': string;
+  headline: string;
+  description: string;
+  datePublished: string;
+  dateModified: string;
+  publisher: {
+    '@type': string;
+    name: string;
+    logo?: {
+      '@type': string;
+      url: string;
+    };
+    parentOrganization?: {
+      '@type': string;
+      name: string;
+      logo: {
+        '@type': string;
+        url: string;
+      };
+    };
+  };
+  mainEntityOfPage: {
+    '@type': string;
+    '@id': string;
+  };
+  author?: {
+    '@type': string;
+    name: string;
+  };
+}
+
+export async function generateMetadata({ params }: GenerateMetadataProps): Promise<Metadata> {
   try {
     // Properly extract id from params - ensure params is awaited
     const unwrappedParams = await params;
@@ -11,7 +59,7 @@ export async function generateMetadata({ params }) {
     if (metadata) {
       // Get page title
       const pageTitle = metadata.title || 'Untitled';
-      let formattedTitle;
+      let formattedTitle: string;
 
       // Format title based on whether the page belongs to a group
       if (metadata.groupId && metadata.groupName) {
@@ -38,7 +86,8 @@ export async function generateMetadata({ params }) {
         creator: metadata.username || 'Anonymous',
         publisher: 'WeWrite',
         alternates: {
-          canonical: canonicalUrl},
+          canonical: canonicalUrl
+        },
         robots: {
           index: metadata.isPublic !== false,
           follow: true,
@@ -47,7 +96,9 @@ export async function generateMetadata({ params }) {
             follow: true,
             'max-video-preview': -1,
             'max-image-preview': 'large',
-            'max-snippet': -1}},
+            'max-snippet': -1
+          }
+        },
         openGraph: {
           title: formattedTitle,
           description: description,
@@ -62,14 +113,17 @@ export async function generateMetadata({ params }) {
               url: imageUrl,
               width: 1200,
               height: 630,
-              alt: formattedTitle}
-          ]},
+              alt: formattedTitle
+            }
+          ]
+        },
         twitter: {
           card: 'summary_large_image',
           title: formattedTitle,
           description: description,
           images: [imageUrl],
-          creator: metadata.username ? `@${metadata.username}` : undefined}
+          creator: metadata.username ? `@${metadata.username}` : undefined
+        }
       };
     }
   } catch (error) {
@@ -78,12 +132,13 @@ export async function generateMetadata({ params }) {
 
   return {
     title: 'WeWrite - The social wiki where every page is a fundraiser',
-    description: 'Create, collaborate, and share your writing with others on WeWrite - the social wiki where every page is a fundraiser.'};
+    description: 'Create, collaborate, and share your writing with others on WeWrite - the social wiki where every page is a fundraiser.'
+  };
 }
 
-export default async function GlobalIDLayout({ children, params }) {
+export default async function GlobalIDLayout({ children, params }: LayoutProps) {
   // Get the page metadata for schema markup
-  let schemaMarkup = null;
+  let schemaMarkup: SchemaMarkup | null = null;
 
   try {
     // Properly extract id from params - ensure params is awaited

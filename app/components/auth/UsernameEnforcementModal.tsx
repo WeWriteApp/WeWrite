@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Loader, Check, X } from 'lucide-react';
-import { checkUsernameAvailability, addUsername } from '../../firebase/auth';
+// Using API endpoints instead of direct Firebase calls
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { cn } from '../../lib/utils';
 import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername, userNeedsUsername } from '../../utils/usernameValidation';
@@ -63,28 +63,33 @@ export default function UsernameEnforcementModal() {
     const timer = setTimeout(async () => {
       setIsChecking(true);
       try {
-        const result = await checkUsernameAvailability(username);
+        // Call API endpoint to check username availability
+        const response = await fetch(`/api/users/username?username=${encodeURIComponent(username)}`);
 
-        if (typeof result === 'boolean') {
-          // Handle legacy boolean response
-          setIsAvailable(result);
-          if (!result) {
-            setValidationError("USERNAME_TAKEN");
-            setValidationMessage("Username already taken");
-          } else {
-            setValidationError(null);
-            setValidationMessage("");
-          }
+        if (!response.ok) {
+          throw new Error(`Failed to check username: ${response.status}`);
+        }
+
+        const apiResult = await response.json();
+
+        if (!apiResult.success) {
+          throw new Error(apiResult.error || 'Failed to check username availability');
+        }
+
+        const result = apiResult.data;
+        setIsAvailable(result.available);
+
+        if (result.available) {
+          setValidationError(null);
+          setValidationMessage("Username is available");
           setUsernameSuggestions([]);
         } else {
-          // Handle new object response
-          setIsAvailable(result.isAvailable);
-          setValidationMessage(result.message || "");
-          setValidationError(result.error || null);
+          setValidationError("USERNAME_TAKEN");
+          setValidationMessage(result.error || "Username already taken");
 
-          // Set username suggestions if available
-          if (result.suggestions && Array.isArray(result.suggestions)) {
-            setUsernameSuggestions(result.suggestions);
+          // Set username suggestion if available
+          if (result.suggestion) {
+            setUsernameSuggestions([result.suggestion]);
           } else {
             setUsernameSuggestions([]);
           }
@@ -116,14 +121,27 @@ export default function UsernameEnforcementModal() {
     setError(null);
 
     try {
-      const result = await addUsername(session.uid, username);
+      // Call API endpoint to set username
+      const response = await fetch('/api/users/username', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to save username: ${response.status}`);
+      }
+
+      const result = await response.json();
 
       if (result.success) {
         // Success - close modal and let the auth system refresh the session
         setOpen(false);
         // The session will be updated automatically by the auth system
       } else {
-        setError('Failed to save username. Please try again.');
+        setError(result.error || 'Failed to save username. Please try again.');
       }
     } catch (error) {
       console.error('Error saving username:', error);

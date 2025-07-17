@@ -412,7 +412,7 @@ export default function AdminPage() {
 
       // Multiple retry strategies to handle "blocked by client" errors
       let updateSuccess = false;
-      let lastError = null;
+      let lastError: unknown = null;
 
       // Strategy 1: Try updateDoc
       if (!updateSuccess) {
@@ -480,25 +480,28 @@ export default function AdminPage() {
         variant: 'default'
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error toggling feature flag:', error);
 
       // Enhanced error handling with specific solutions
       let errorMessage = 'Failed to update feature flag';
       let showConsoleHelp = false;
 
-      if (error.code === 'permission-denied') {
-        errorMessage = 'Permission denied. You may not have admin access.';
-      } else if (error.code === 'unavailable') {
-        errorMessage = 'Database is temporarily unavailable. Please try again.';
-      } else if (error.message?.includes('blocked') || error.message?.includes('client')) {
-        errorMessage = 'Request blocked by browser security or ad blocker. Try disabling ad blockers or use browser console.';
-        showConsoleHelp = true;
-      } else if (error.message?.includes('network')) {
-        errorMessage = 'Network error occurred. Check your internet connection.';
-      } else if (error.message) {
-        errorMessage = `Error: ${error.message}`;
-        showConsoleHelp = true;
+      if (error && typeof error === 'object' && 'code' in error) {
+        const firebaseError = error as { code: string; message?: string };
+        if (firebaseError.code === 'permission-denied') {
+          errorMessage = 'Permission denied. You may not have admin access.';
+        } else if (firebaseError.code === 'unavailable') {
+          errorMessage = 'Database is temporarily unavailable. Please try again.';
+        } else if (firebaseError.message?.includes('blocked') || firebaseError.message?.includes('client')) {
+          errorMessage = 'Request blocked by browser security or ad blocker. Try disabling ad blockers or use browser console.';
+          showConsoleHelp = true;
+        } else if (firebaseError.message?.includes('network')) {
+          errorMessage = 'Network error occurred. Check your internet connection.';
+        } else if (firebaseError.message) {
+          errorMessage = `Error: ${firebaseError.message}`;
+          showConsoleHelp = true;
+        }
       }
 
       // Show enhanced error message

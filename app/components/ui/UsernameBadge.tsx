@@ -7,6 +7,10 @@ import { PillLink } from '../utils/PillLink';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
 import { cn } from '../../lib/utils';
 
+// Simple in-memory cache to prevent duplicate API calls
+const usernameCache = new Map<string, { username: string; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 interface UsernameBadgeProps {
   userId: string;
   username: string;
@@ -43,6 +47,13 @@ export function UsernameBadge({
     const fetchFreshUsername = async () => {
       if (!userId) return;
 
+      // Check in-memory cache first
+      const cached = usernameCache.get(userId);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        setFreshUsername(cached.username);
+        return;
+      }
+
       // Only fetch if we don't have a username or it looks stale
       const needsFreshFetch = !username ||
         username === 'Missing username' ||
@@ -57,7 +68,10 @@ export function UsernameBadge({
             const result = await response.json();
             if (result.success && result.data?.username && result.data.username !== username) {
               // Username has changed, update it
-              setFreshUsername(result.data.username);
+              const newUsername = result.data.username;
+              setFreshUsername(newUsername);
+              // Update cache
+              usernameCache.set(userId, { username: newUsername, timestamp: Date.now() });
             }
           }
         } catch (error) {
@@ -73,7 +87,10 @@ export function UsernameBadge({
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data?.username) {
-            setFreshUsername(result.data.username);
+            const newUsername = result.data.username;
+            setFreshUsername(newUsername);
+            // Update cache
+            usernameCache.set(userId, { username: newUsername, timestamp: Date.now() });
           }
         }
       } catch (error) {

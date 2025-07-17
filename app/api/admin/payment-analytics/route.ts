@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { isAdmin } from '../../../utils/isAdmin';
-import { 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
-  getDocs, 
-  Timestamp 
+import {
+  Timestamp
 } from 'firebase-admin/firestore';
 import { format, eachDayOfInterval, eachHourOfInterval, startOfDay, endOfDay, startOfHour } from 'date-fns';
 
@@ -153,7 +148,7 @@ export async function GET(request: NextRequest) {
 
         transactionsSnapshot = await transactionsQuery.get();
       } catch (indexError) {
-        console.warn('[Payment Analytics] Composite index not available, using fallback query:', indexError.message);
+        console.warn('[Payment Analytics] Composite index not available, using fallback query:', indexError instanceof Error ? indexError.message : 'Unknown error');
 
         // Fallback: Query by type only, then filter in memory
         const fallbackQuery = db.collection('financial_transactions')
@@ -258,7 +253,7 @@ export async function GET(request: NextRequest) {
 
         subscriptionsSnapshot = await subscriptionsQuery.get();
       } catch (indexError) {
-        console.warn('[Payment Analytics] Subscriptions index not available, using fallback query:', indexError.message);
+        console.warn('[Payment Analytics] Subscriptions index not available, using fallback query:', indexError instanceof Error ? indexError.message : 'Unknown error');
 
         // Fallback: Get all subscriptions and filter in memory
         const allSubscriptions = await db.collection('subscriptions').get();

@@ -83,11 +83,11 @@ export async function GET(request: NextRequest) {
       correlationId
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error getting monitoring data:', error);
     return NextResponse.json({
       error: 'Internal server error',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
@@ -204,7 +204,7 @@ async function getProcessingDelays() {
     );
 
     const completedSnapshot = await getDocs(completedQuery);
-    const delays = [];
+    const delays: number[] = [];
 
     completedSnapshot.docs.forEach(doc => {
       const data = doc.data();
@@ -275,7 +275,7 @@ async function getVolumeTrends() {
 
     // Convert to array and sort by date
     const trends = Object.entries(dailyVolume)
-      .map(([date, data]) => ({ date, ...data }))
+      .map(([date, data]) => ({ date, ...(typeof data === 'object' && data !== null ? data : {}) }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
     return trends;
@@ -305,10 +305,12 @@ export async function POST(request: NextRequest) {
 
     const correlationId = FinancialUtils.generateCorrelationId();
 
+    const monitoringService = PayoutMonitoringService.getInstance();
+    let metricsResult: any = null;
+
     switch (action) {
       case 'refresh_metrics':
-        const monitoringService = PayoutMonitoringService.getInstance();
-        const metricsResult = await monitoringService.calculateMetrics(correlationId);
+        metricsResult = await monitoringService.calculateMetrics(correlationId);
         
         if (metricsResult.success) {
           return NextResponse.json({
@@ -352,11 +354,11 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
     }
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error processing monitoring action:', error);
     return NextResponse.json({
       error: 'Internal server error',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

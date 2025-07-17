@@ -50,36 +50,6 @@ export default function FixFeatureFlagsButton() {
         description: result.data.message || 'Feature flags have been fixed successfully',
         variant: 'default'
       });
-          } else {
-            console.log('[DEBUG] ERROR: Feature flags were not fixed correctly');
-            toast({
-              title: 'Error',
-              description: 'Feature flags were not fixed correctly',
-              variant: 'destructive'
-            });
-          }
-        }
-      } else {
-        console.log('[DEBUG] No feature flags document found in database, creating it');
-
-        // Create a new document with all valid flags disabled
-        const initialFlags: Record<string, boolean> = {};
-        validFeatureFlags.forEach(flag => {
-          initialFlags[flag] = false;
-        });
-
-        await setDoc(featureFlagsRef, initialFlags);
-
-        // Verify the creation
-        const createdDoc = await getDoc(featureFlagsRef);
-        if (createdDoc.exists()) {
-          toast({
-            title: 'Success',
-            description: 'Feature flags have been created successfully',
-            variant: 'default'
-          });
-        }
-      }
     } catch (error) {
       console.error('Error fixing feature flags:', error);
       toast({

@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     // Get user email to check admin status using admin SDK
     const admin = getFirebaseAdmin();
-    const userRecord = await admin.auth().getUser(userId);
+    const userRecord = await admin!.auth().getUser(userId);
     const userEmail = userRecord.email;
 
     if (!userEmail || !isAdminServer(userEmail)) {

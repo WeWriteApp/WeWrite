@@ -1,14 +1,27 @@
+import { NextResponse } from 'next/server';
+import { initAdmin } from '../firebase/admin';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getCollectionName } from '../utils/environmentConfig';
+import { isTestUser } from '../utils/testUsers';
+
+// Type definitions
+interface FeatureFlagData {
+  [flagName: string]: boolean;
+}
+
+interface FeatureOverrideData {
+  enabled: boolean;
+  userId?: string;
+  flagName?: string;
+}
+
 /**
  * Check if a feature flag is enabled using Firebase Admin SDK
- * @param {string} flagName - The name of the feature flag to check
- * @returns {Promise<boolean>} - Whether the feature flag is enabled
+ * @param flagName - The name of the feature flag to check
+ * @returns Whether the feature flag is enabled
  */
-export async function isFeatureEnabled(flagName) {
+export async function isFeatureEnabled(flagName: string): Promise<boolean> {
   try {
-    // Use Firebase Admin SDK for server-side operations
-    const { initAdmin } = await import('../firebase/admin');
-    const { getFirestore } = await import('firebase-admin/firestore');
-
     const app = initAdmin();
     if (!app) {
       console.warn('Firebase Admin not initialized, defaulting feature flag to false');
@@ -16,12 +29,11 @@ export async function isFeatureEnabled(flagName) {
     }
 
     const db = getFirestore();
-    const { getCollectionName } = require('../utils/environmentConfig');
     const featureFlagsRef = db.collection(getCollectionName('config')).doc('featureFlags');
     const featureFlagsDoc = await featureFlagsRef.get();
 
     if (featureFlagsDoc.exists) {
-      const flagsData = featureFlagsDoc.data();
+      const flagsData = featureFlagsDoc.data() as FeatureFlagData;
       const isEnabled = flagsData[flagName] === true;
       console.log(`[FeatureFlag] ${flagName}: ${isEnabled}`);
       return isEnabled;
@@ -37,16 +49,13 @@ export async function isFeatureEnabled(flagName) {
   }
 }
 
-// Import the centralized test user utility
-const { isTestUser } = require('../utils/testUsers.js');
-
 /**
  * Check if a feature is enabled for a specific user (checks both global flags and user overrides)
- * @param {string} flagName - The name of the feature flag to check
- * @param {string} userId - The user ID to check overrides for
- * @returns {Promise<boolean>} - Whether the feature flag is enabled for this user
+ * @param flagName - The name of the feature flag to check
+ * @param userId - The user ID to check overrides for
+ * @returns Whether the feature flag is enabled for this user
  */
-export async function isFeatureEnabledForUser(flagName, userId) {
+export async function isFeatureEnabledForUser(flagName: string, userId: string | null): Promise<boolean> {
   try {
     // If no user ID provided, fall back to global setting
     if (!userId) {
@@ -58,10 +67,6 @@ export async function isFeatureEnabledForUser(flagName, userId) {
       console.log(`[FeatureFlag] ${flagName} enabled for test user ${userId}: true (test user override)`);
       return true;
     }
-
-    // Use Firebase Admin SDK for server-side operations
-    const { initAdmin } = await import('../firebase/admin');
-    const { getFirestore } = await import('firebase-admin/firestore');
 
     const app = initAdmin();
     if (!app) {
@@ -77,19 +82,18 @@ export async function isFeatureEnabledForUser(flagName, userId) {
 
     let globalEnabled = false;
     if (featureFlagsDoc.exists) {
-      const flagsData = featureFlagsDoc.data();
+      const flagsData = featureFlagsDoc.data() as FeatureFlagData;
       globalEnabled = flagsData[flagName] === true;
     }
 
     console.log(`[FeatureFlag] ${flagName} global: ${globalEnabled}`);
 
     // Check for user-specific override
-    const { getCollectionName } = require('../utils/environmentConfig');
     const featureOverrideRef = db.collection(getCollectionName('featureOverrides')).doc(`${userId}_${flagName}`);
     const featureOverrideDoc = await featureOverrideRef.get();
 
     if (featureOverrideDoc.exists) {
-      const data = featureOverrideDoc.data();
+      const data = featureOverrideDoc.data() as FeatureOverrideData;
       const userOverride = data.enabled;
       console.log(`[FeatureFlag] ${flagName} user override for ${userId}: ${userOverride}`);
       return userOverride;
@@ -108,10 +112,10 @@ export async function isFeatureEnabledForUser(flagName, userId) {
 /**
  * Middleware to check if payments feature is enabled for a specific user
  * Returns a NextResponse object if the feature is disabled, null if enabled
- * @param {string} userId - Optional user ID to check user-specific overrides
- * @returns {Promise<NextResponse|null>} - NextResponse object if feature is disabled, null if enabled
+ * @param userId - Optional user ID to check user-specific overrides
+ * @returns NextResponse object if feature is disabled, null if enabled
  */
-export async function checkPaymentsFeatureFlag(userId = null) {
+export async function checkPaymentsFeatureFlag(userId: string | null = null): Promise<NextResponse | null> {
   try {
     const isEnabled = userId
       ? await isFeatureEnabledForUser('payments', userId)
@@ -120,7 +124,6 @@ export async function checkPaymentsFeatureFlag(userId = null) {
     console.log(`[FeatureFlag] checkPaymentsFeatureFlag: payments=${isEnabled}${userId ? ` (user: ${userId})` : ' (global)'}`);
 
     if (!isEnabled) {
-      const { NextResponse } = await import('next/server');
       return NextResponse.json({
         error: 'Feature not available',
         message: 'Payment functionality is currently disabled'
@@ -130,7 +133,6 @@ export async function checkPaymentsFeatureFlag(userId = null) {
     return null;
   } catch (error) {
     console.error('Error checking payments feature flag:', error);
-    const { NextResponse } = await import('next/server');
     return NextResponse.json({
       error: 'Feature not available',
       message: 'Error checking feature availability'

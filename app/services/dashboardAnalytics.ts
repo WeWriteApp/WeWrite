@@ -220,7 +220,7 @@ export class DashboardAnalyticsService {
       const { startDate, endDate } = dateRange;
       const timeConfig = getTimeIntervals(dateRange, granularity);
 
-const usersRef = collection(db, 'users');
+      const usersRef = collection(db, getCollectionName('users'));
 
       // Since we may not have the right indexes and createdAt can be stored as either
       // ISO string or Timestamp, let's use a simpler approach: get all users and filter in memory
@@ -448,7 +448,7 @@ const usersRef = collection(db, 'users');
       const { startDate, endDate } = dateRange;
       const timeConfig = getTimeIntervals(dateRange, granularity);
 
-const pagesRef = collection(db, 'pages');
+      const pagesRef = collection(db, getCollectionName('pages'));
 
       // Optimized query approach - avoid complex compound queries
       // Use simpler query without the deleted field to avoid index complexity
@@ -755,7 +755,7 @@ const pagesRef = collection(db, 'pages');
       });
 
       // Use a simpler approach: query pages by lastModified date
-const pagesRef = collection(db, 'pages');
+      const pagesRef = collection(db, getCollectionName('pages'));
 
       // Optimized query for edits analytics
       const q = query(

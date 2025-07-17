@@ -264,16 +264,11 @@ export async function calculateMinimumGrossEarningsAsync(
   return (threshold + fixedFee) / (1 - percentageFee);
 }
 
-/**
- * Format currency amount for display
- */
-export function formatCurrency(amount: number, currency: string = 'USD'): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2}).format(amount);
-}
+// Import centralized currency formatting
+import { formatCurrency } from './formatCurrency';
+
+// Re-export for backward compatibility
+export { formatCurrency };
 
 /**
  * Get fee explanation text for users

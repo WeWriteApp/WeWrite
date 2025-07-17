@@ -162,14 +162,6 @@ function CombinedSubscriptionSectionInner() {
     }
   }
 
-      return () => unsubscribe();
-    } catch (error) {
-      console.error('Error setting up pledges listener:', error);
-      setPledgesError('Failed to load pledges');
-      setPledgesLoading(false);
-    }
-  }
-
   // CRITICAL: All hooks must be called before any early returns
   useEffect(() => {
     return trackEffect('subscriptionAndPaymentSetup', () => {

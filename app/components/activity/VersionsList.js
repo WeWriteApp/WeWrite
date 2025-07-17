@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { getVersionsByPageId, setCurrentVersion } from "../../firebase/database";
+import { setCurrentVersion } from "../../firebase/database";
+import { getPageVersions } from "../../services/versionService";
 import { useConfirmation } from "../../hooks/useConfirmation";
 import ConfirmationModal from "../utils/ConfirmationModal";
 
@@ -11,11 +12,8 @@ const VersionsList = ({ pageId, currentVersion }) => {
   const { confirmationState, confirm, closeConfirmation } = useConfirmation();
 
   useEffect(() => {
-    getVersionsByPageId(pageId).then((versions) => {
-      // sorts versions by createdAt
-      versions.sort((a, b) => {
-        return new Date(b.createdAt) - new Date(a.createdAt);
-      });
+    getPageVersions(pageId).then((versions) => {
+      // Versions are already sorted by the unified service
       setVersions(versions);
     });
   }, [pageId]);

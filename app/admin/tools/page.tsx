@@ -35,15 +35,15 @@ export default function AdminToolsPage() {
 
   // State for streak calculation
   const [streakCalculationRunning, setStreakCalculationRunning] = useState(false);
-  const [streakCalculationResult, setstreakCalculationResult] = useState<any>(null);
+  const [streakCalculationResult, setStreakCalculationResult] = useState<any>(null);
 
   // State for notification backfill
   const [notificationBackfillRunning, setNotificationBackfillRunning] = useState(false);
-  const [notificationBackfillResult, setnotificationBackfillResult] = useState<any>(null);
+  const [notificationBackfillResult, setNotificationBackfillResult] = useState<any>(null);
 
   // State for activity calendar backfill
   const [activityBackfillRunning, setActivityBackfillRunning] = useState(false);
-  const [activityBackfillResult, setactivityBackfillResult] = useState<any>(null);
+  const [activityBackfillResult, setActivityBackfillResult] = useState<any>(null);
 
   // State for state simulator
   const [simulatorVisible, setSimulatorVisible] = useState(true);
@@ -125,11 +125,11 @@ export default function AdminToolsPage() {
 
       const result = await calculatePastStreaks();
       setStreakCalculationResult(result);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error calculating streaks:', error);
       setStreakCalculationResult({
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       });
     } finally {
       setStreakCalculationRunning(false);
@@ -144,11 +144,11 @@ export default function AdminToolsPage() {
 
       const result = await backfillNotifications();
       setNotificationBackfillResult(result);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error backfilling notifications:', error);
       setNotificationBackfillResult({
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       });
     } finally {
       setNotificationBackfillRunning(false);
@@ -178,11 +178,11 @@ export default function AdminToolsPage() {
 
       const result = await backfillActivityCalendar();
       setActivityBackfillResult(result);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error backfilling activity calendar:', error);
       setActivityBackfillResult({
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       });
     } finally {
       setActivityBackfillRunning(false);

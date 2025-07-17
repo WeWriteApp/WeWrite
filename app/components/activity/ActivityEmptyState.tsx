@@ -6,18 +6,20 @@ import { Button } from '../ui/button';
 import { Search } from 'lucide-react';
 import { wewriteCard } from '../../lib/utils';
 
+// Type definitions
+interface ActivityEmptyStateProps {
+  mode?: 'all' | 'following';
+}
+
 /**
  * ActivityEmptyState Component
  *
  * Displays an empty state for the activity feed
- *
- * @param {Object} props
- * @param {string} props.mode - The current view mode ('all' or 'following')
  */
-export default function ActivityEmptyState({ mode = 'all' }) {
+export default function ActivityEmptyState({ mode = 'all' }: ActivityEmptyStateProps) {
   const router = useRouter();
 
-  const handleSearchClick = () => {
+  const handleSearchClick = (): void => {
     router.push('/search');
   };
 

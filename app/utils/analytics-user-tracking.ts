@@ -2,19 +2,48 @@
 
 /**
  * Analytics User Tracking
- * 
+ *
  * This utility enhances Google Analytics tracking by adding username information
  * to user-related events and page views. This allows for better user identification
  * in analytics reports.
  */
 
+// Type definitions
+interface UserSession {
+  uid: string;
+  username?: string;
+  email?: string;
+}
+
+interface EventParams {
+  [key: string]: any;
+  username?: string;
+  user_id?: string;
+}
+
+interface UserProperties {
+  username: string;
+  user_id: string;
+  email_domain: string | null;
+  has_username: boolean;
+}
+
+// Extend Window interface for gtag
+declare global {
+  interface Window {
+    gtag?: (
+      command: 'config' | 'set' | 'event',
+      targetIdOrParams: string | object,
+      params?: object
+    ) => void;
+  }
+}
+
 /**
  * Set user information in Google Analytics
  * This should be called when a user logs in or when their profile information changes
- *
- * @param {Object} user - The user object containing uid, username, etc.
  */
-export const setAnalyticsUserInfo = (session) => {
+export const setAnalyticsUserInfo = (session: UserSession | null): void => {
   if (!session || typeof window === 'undefined') return;
 
   // Skip gtag calls in development to prevent authentication errors
@@ -35,12 +64,14 @@ export const setAnalyticsUserInfo = (session) => {
     });
 
     // Set user properties for better segmentation
-    window.gtag('set', 'user_properties', {
+    const userProperties: UserProperties = {
       username: session.username || 'Anonymous',
       user_id: session.uid,
       email_domain: session.email ? session.email.split('@')[1] : null,
       has_username: !!session.username
-    });
+    };
+
+    window.gtag('set', 'user_properties', userProperties);
 
   } catch (error) {
     console.error('Error setting analytics user info (non-fatal):', error);
@@ -49,17 +80,17 @@ export const setAnalyticsUserInfo = (session) => {
 
 /**
  * Track a user-related event with enhanced user information
- * 
- * @param {string} eventName - The name of the event to track
- * @param {Object} user - The user object
- * @param {Object} additionalParams - Additional parameters to include with the event
  */
-export const trackUserEvent = (eventName, session, additionalParams = {}) => {
+export const trackUserEvent = (
+  eventName: string,
+  session: UserSession | null,
+  additionalParams: EventParams = {}
+): void => {
   if (!eventName || !session || typeof window === 'undefined' || !window.gtag) return;
 
   try {
     // Ensure we have the username in the event parameters
-    const eventParams = {
+    const eventParams: EventParams = {
       ...additionalParams,
       username: session.username || 'Anonymous',
       user_id: session.uid
@@ -75,17 +106,23 @@ export const trackUserEvent = (eventName, session, additionalParams = {}) => {
 
 /**
  * Track a page view with enhanced user information
- * 
- * @param {string} pagePath - The path of the page being viewed
- * @param {string} pageTitle - The title of the page
- * @param {Object} user - The user object
  */
-export const trackPageViewWithUser = (pagePath, pageTitle, session) => {
+export const trackPageViewWithUser = (
+  pagePath: string,
+  pageTitle: string | null,
+  session: UserSession | null
+): void => {
   if (!pagePath || !session || typeof window === 'undefined' || !window.gtag) return;
 
   try {
+    const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+    if (!measurementId) {
+      console.warn('GA_MEASUREMENT_ID not configured');
+      return;
+    }
+
     // Track the page view with user information
-    window.gtag('config', process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID, {
+    window.gtag('config', measurementId, {
       page_path: pagePath,
       page_title: pageTitle || document.title,
       page_location: window.location.href,

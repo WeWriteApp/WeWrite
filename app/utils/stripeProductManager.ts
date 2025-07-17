@@ -17,7 +17,7 @@ import { getStripeSecretKey } from './stripeConfig';
 import { SUBSCRIPTION_TIERS, SubscriptionTier } from './subscriptionTiers';
 
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia'});
+  apiVersion: '2025-06-30.basil'});
 
 // WeWrite main product configuration
 export const WEWRITE_PRODUCT_CONFIG = {

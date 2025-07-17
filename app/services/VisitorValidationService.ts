@@ -152,7 +152,7 @@ export class VisitorValidationService {
   }> {
     try {
       const hoursAgo = new Date(Date.now() - hours * 60 * 60 * 1000);
-const visitorsRef = collection(db, 'siteVisitors');
+      const visitorsRef = collection(db, getCollectionName('siteVisitors'));
       const q = query(
         visitorsRef,
         where('startTime', '>=', Timestamp.fromDate(hoursAgo)),

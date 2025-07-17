@@ -11,6 +11,7 @@ import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
 import { Button } from "../ui/button";
 import { usePillStyle } from "../../contexts/PillStyleContext";
 import { navigateToPage, canUserEditPage } from "../../utils/pagePermissions";
+import PillLinkContextMenu from "./PillLinkContextMenu";
 import { getCachedPageById } from "../../utils/requestCache";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 
@@ -21,7 +22,29 @@ const PillLinkSkeleton = () => (
   </div>
 );
 
-export const PillLink = forwardRef(({
+// PillLink component props interface
+interface PillLinkProps {
+  children: React.ReactNode;
+  href: string;
+  isPublic?: boolean;
+  groupId?: string;
+  className?: string;
+  isOwned?: boolean;
+  byline?: string;
+  isLoading?: boolean;
+  deleted?: boolean;
+  isFallback?: boolean;
+  clickable?: boolean;
+  isEditing?: boolean; // New prop to indicate if we're in edit mode
+  onClick?: (e: React.MouseEvent) => void;
+  onEditLink?: () => void;
+  draggable?: boolean; // New prop to enable dragging
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
+  [key: string]: any; // For other props passed through
+}
+
+export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   children,
   href,
   isPublic,
@@ -33,17 +56,70 @@ export const PillLink = forwardRef(({
   deleted = false,
   isFallback = false,
   clickable = true,
+  isEditing = false, // Default to false (view mode)
   onClick: customOnClick,
+  onEditLink,
   ...otherProps
 }, ref) => {
   // Hooks
   const { session } = useCurrentAccount();
   const { getPillStyleClasses, pillStyle } = usePillStyle();
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [pageData, setPageData] = useState(null);
   const [displayTitle, setDisplayTitle] = useState(children);
   const router = useRouter();
   const { trackInteractionEvent, events } = useWeWriteAnalytics();
+
+  // Handle showing context menu
+  const handleShowContextMenu = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    setContextMenuPosition({ x: event.clientX, y: event.clientY });
+    setShowContextMenu(true);
+  };
+
+  // Handle going to link (navigation)
+  const handleGoToLink = () => {
+    if (isExternalLinkType) {
+      setShowExternalLinkModal(true);
+    } else if (href && href !== '#') {
+      // Track link click
+      trackInteractionEvent(events.INTERNAL_LINK_CLICKED, {
+        link_type: isPageLinkType ? 'page' : isUserLinkType ? 'user' : isGroupLinkType ? 'group' : 'unknown',
+        target_id: pageId,
+        target_title: children,
+        is_public: isPublic,
+        has_byline: !!byline,
+        source: 'pill_link_context_menu'
+      });
+
+      // Handle page links with click-to-edit functionality
+      if (isPageLinkType && pageId) {
+        navigateToPage(pageId, session, pageData, session?.groups, router);
+        return;
+      }
+
+      // Use Next.js router for navigation when possible (for non-page links)
+      if (typeof window !== 'undefined') {
+        router.push(href);
+      } else {
+        window.location.href = href;
+      }
+    }
+  };
+
+  // Handle editing link
+  const handleEditLink = () => {
+    if (onEditLink) {
+      onEditLink();
+    }
+  };
+
+  // Determine if user can edit this link
+  const canEdit = !!onEditLink;
 
   // Determine link properties early (before useEffect hooks)
   const isUserLinkType = isUserLink(href);
@@ -189,9 +265,6 @@ export const PillLink = forwardRef(({
               }
             }
 
-            e.preventDefault();
-            e.stopPropagation(); // Prevent event bubbling to parent containers
-
             // Don't handle click if component is not clickable
             if (!clickable) {
               return;
@@ -202,7 +275,13 @@ export const PillLink = forwardRef(({
               e.target.blur();
             }
 
-            setShowExternalLinkModal(true);
+            // In edit mode: show context menu for editing options
+            // In view mode: open external link modal directly
+            if (isEditing) {
+              handleShowContextMenu(e);
+            } else {
+              setShowExternalLinkModal(true);
+            }
           }}
           className={baseStyles}
           data-pill-style={pillStyle}
@@ -219,106 +298,77 @@ export const PillLink = forwardRef(({
           url={href}
           displayText={formattedDisplayTitle}
         />
+
+        <PillLinkContextMenu
+          isOpen={showContextMenu}
+          onClose={() => setShowContextMenu(false)}
+          position={contextMenuPosition}
+          onGoToLink={handleGoToLink}
+          onEditLink={handleEditLink}
+          canEdit={canEdit}
+        />
       </>
     );
   }
 
   // Internal link (user, group, or page)
   return (
-    <a
-      ref={ref}
-      href={safeHref}
-      className={baseStyles}
-      tabIndex={0}
-      data-pill-style={pillStyle}
-      data-page-id={isPageLinkType ? pageId : undefined}
-      data-user-id={isUserLinkType ? pageId : undefined}
-      data-group-id={isGroupLinkType ? pageId : undefined}
-      {...otherProps}
-      onClick={(e) => {
-        // Call custom onClick first if provided
-        if (customOnClick) {
-          customOnClick(e);
-          // If custom handler prevented default, don't continue
-          if (e.defaultPrevented) {
+    <>
+      <a
+        ref={ref}
+        href={safeHref}
+        className={baseStyles}
+        tabIndex={0}
+        data-pill-style={pillStyle}
+        data-page-id={isPageLinkType ? pageId : undefined}
+        data-user-id={isUserLinkType ? pageId : undefined}
+        data-group-id={isGroupLinkType ? pageId : undefined}
+        {...otherProps}
+        onClick={(e) => {
+          // Call custom onClick first if provided
+          if (customOnClick) {
+            customOnClick(e);
+            // If custom handler prevented default, don't continue
+            if (e.defaultPrevented) {
+              return;
+            }
+          }
+
+          // Don't handle click if component is not clickable
+          if (!clickable) {
+            e.preventDefault();
+            e.stopPropagation();
             return;
           }
-        }
-
-        // Don't handle click if component is not clickable
-        if (!clickable) {
-          e.preventDefault();
-          e.stopPropagation();
-          return;
-        }
-
-        // Only prevent default and navigate if we have a valid href
-        if (href && href !== '#') {
-          e.preventDefault(); // Prevent default to handle navigation manually
-          e.stopPropagation(); // CRITICAL: Stop event bubbling to prevent edit mode activation
 
           // Remove focus from the clicked element to prevent focus ring on page
           if (e.target && typeof e.target.blur === 'function') {
             e.target.blur();
           }
 
-          // Track link click
-          trackInteractionEvent(events.INTERNAL_LINK_CLICKED, {
-            link_type: isPageLinkType ? 'page' : isUserLinkType ? 'user' : isGroupLinkType ? 'group' : 'unknown',
-            target_id: pageId,
-            target_title: children,
-            is_public: isPublic,
-            has_byline: !!byline,
-            source: 'pill_link'
-          });
-
-          // Special handling for group links to avoid scroll issues
-          if (isGroupLinkType) {
-
-            // Ensure we have a valid group ID
-            if (pageId) {
-              // Use direct navigation for group links to avoid scroll issues
-              try {
-                // Create a full URL to ensure proper navigation
-                const baseUrl = window.location.origin;
-                const fullUrl = `${baseUrl}/group/${pageId}`;
-
-                // Use window.location.href for more reliable navigation
-                window.location.href = fullUrl;
-              } catch (error) {
-                console.error('PillLink - Error with navigation, falling back to direct href', error);
-                window.location.href = `/group/${pageId}`;
-              }
-            } else {
-              // If we don't have a valid pageId, use the href directly
-              window.location.href = href;
-            }
-            return;
-          }
-
-          // Handle page links with click-to-edit functionality
-          if (isPageLinkType && pageId) {
-            // Use the new navigation function that handles edit permissions
-            navigateToPage(pageId, session, pageData, session?.groups, router);
-            return;
-          }
-
-          // Use Next.js router for navigation when possible (for non-page links)
-          if (typeof window !== 'undefined') {
-            // Use router.push for client-side navigation
-            router.push(href);
-
+          // In edit mode: show context menu for editing options
+          // In view mode: navigate directly to the link
+          if (isEditing) {
+            handleShowContextMenu(e);
           } else {
-            // Fallback to direct navigation if router is not available
-            window.location.href = href;
+            handleGoToLink();
           }
-        }
-      }}
-    >
-      {isGroupLinkType && <Users size={14} className="flex-shrink-0" />}
-      <span className="pill-text truncate">{formattedDisplayTitle}</span>
-      {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
-    </a>
+        }}
+      >
+        {isGroupLinkType && <Users size={14} className="flex-shrink-0" />}
+        <span className="pill-text truncate">{formattedDisplayTitle}</span>
+        {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
+      </a>
+
+      <PillLinkContextMenu
+        isOpen={showContextMenu}
+        onClose={() => setShowContextMenu(false)}
+        position={contextMenuPosition}
+        onGoToLink={handleGoToLink}
+        onEditLink={handleEditLink}
+        canEdit={canEdit}
+      />
+    </>
   );
 });
 

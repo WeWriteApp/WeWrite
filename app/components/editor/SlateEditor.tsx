@@ -1,0 +1,792 @@
+/**
+ * SlateEditor - A proper rich text editor with inline link support using Slate.js
+ * 
+ * This replaces the hacky textarea + overlay approach with proper inline elements
+ * that are treated as first-class citizens in the text flow.
+ * 
+ * Features:
+ * - Proper inline link elements using Slate's inline support
+ * - Cursor can move around links naturally
+ * - Links are editable objects within the text
+ * - No overlay hacks or positioning issues
+ * 
+ * @author WeWrite Team
+ * @version 3.0.0
+ */
+
+'use client';
+
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import { createEditor, Descendant, Element as SlateElement, Text, Transforms, Editor, Range, Point, Node } from 'slate';
+import { Slate, Editable, withReact, ReactEditor, useSlateStatic, RenderElementProps, RenderLeafProps } from 'slate-react';
+import { withHistory } from 'slate-history';
+import { PillLink } from '../utils/PillLink';
+import { Button } from '../ui/button';
+import { Link, Trash2 } from 'lucide-react';
+import LinkEditorModal from './LinkEditorModal';
+
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+/**
+ * Custom Slate element types
+ */
+type ParagraphElement = {
+  type: 'paragraph';
+  children: Descendant[];
+};
+
+type LinkElement = {
+  type: 'link';
+  url?: string;
+  pageId?: string;
+  pageTitle?: string;
+  isExternal: boolean;
+  isPublic: boolean;
+  isOwned: boolean;
+  children: Descendant[];
+};
+
+type CustomElement = ParagraphElement | LinkElement;
+
+type CustomText = {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+};
+
+declare module 'slate' {
+  interface CustomTypes {
+    Editor: ReactEditor;
+    Element: CustomElement;
+    Text: CustomText;
+  }
+}
+
+// ============================================================================
+// SLATE EDITOR CONFIGURATION
+// ============================================================================
+
+/**
+ * Create a Slate editor with React and History plugins
+ */
+const createSlateEditor = () => {
+  const editor = withHistory(withReact(createEditor()));
+
+  // Override isInline to treat link elements as inline
+  const { isInline } = editor;
+  editor.isInline = (element) => {
+    return element.type === 'link' ? true : isInline(element);
+  };
+
+  // Override isVoid - links are not void, they contain text
+  const { isVoid } = editor;
+  editor.isVoid = (element) => {
+    return element.type === 'link' ? false : isVoid(element);
+  };
+
+  return editor;
+};
+
+/**
+ * Convert our content format to Slate format
+ */
+const contentToSlate = (content: any[]): Descendant[] => {
+  if (!content || content.length === 0) {
+    return [{ type: 'paragraph', children: [{ text: '' }] }];
+  }
+
+  return content.map((node) => {
+    if (node.type === 'paragraph') {
+      const children: Descendant[] = [];
+      
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child: any) => {
+          if (child.type === 'link') {
+            children.push({
+              type: 'link',
+              url: child.url,
+              pageId: child.pageId,
+              pageTitle: child.pageTitle,
+              isExternal: child.isExternal || false,
+              isPublic: child.isPublic || true,
+              isOwned: child.isOwned || false,
+              children: [{ text: child.text || child.children?.[0]?.text || 'Link' }]
+            });
+          } else if (child.text !== undefined) {
+            children.push({ text: child.text });
+          }
+        });
+      }
+
+      if (children.length === 0) {
+        children.push({ text: '' });
+      }
+
+      return {
+        type: 'paragraph',
+        children
+      };
+    }
+
+    // Fallback for other node types
+    return {
+      type: 'paragraph',
+      children: [{ text: typeof node === 'string' ? node : '' }]
+    };
+  });
+};
+
+/**
+ * Convert Slate format back to our content format
+ */
+const slateToContent = (value: Descendant[]): any[] => {
+  return value.map((node) => {
+    if (SlateElement.isElement(node) && node.type === 'paragraph') {
+      const children: any[] = [];
+      
+      node.children.forEach((child) => {
+        if (SlateElement.isElement(child) && child.type === 'link') {
+          const linkText = child.children.map((c: any) => c.text).join('');
+          children.push({
+            type: 'link',
+            text: linkText,
+            url: child.url,
+            pageId: child.pageId,
+            pageTitle: child.pageTitle,
+            isExternal: child.isExternal,
+            isPublic: child.isPublic,
+            isOwned: child.isOwned,
+            children: [{ text: linkText }]
+          });
+        } else if (Text.isText(child)) {
+          children.push({ text: child.text });
+        }
+      });
+
+      return {
+        type: 'paragraph',
+        children
+      };
+    }
+
+    return {
+      type: 'paragraph',
+      children: [{ text: '' }]
+    };
+  });
+};
+
+// ============================================================================
+// RENDER COMPONENTS
+// ============================================================================
+
+/**
+ * Render custom elements (paragraphs and links)
+ */
+const Element = ({ attributes, children, element }: RenderElementProps) => {
+  const editor = useSlateStatic();
+
+  switch (element.type) {
+    case 'link':
+      return (
+        <span
+          {...attributes}
+          contentEditable={false}
+          className="inline-block"
+          draggable={true}
+          onMouseDown={(e) => {
+            // Store initial position for click vs drag detection
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const startTime = Date.now();
+            let isDragging = false;
+
+            const handleMouseMove = (moveEvent: MouseEvent) => {
+              const deltaX = Math.abs(moveEvent.clientX - startX);
+              const deltaY = Math.abs(moveEvent.clientY - startY);
+              const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+              // If mouse moved more than 5 pixels, consider it a drag
+              if (distance > 5) {
+                isDragging = true;
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+              }
+            };
+
+            const handleMouseUp = (upEvent: MouseEvent) => {
+              const deltaX = Math.abs(upEvent.clientX - startX);
+              const deltaY = Math.abs(upEvent.clientY - startY);
+              const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+              const duration = Date.now() - startTime;
+
+              // Clean up listeners
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+
+              // If it's a short click with minimal movement, simulate a click on the PillLink
+              if (!isDragging && distance <= 5 && duration < 300) {
+                // Find the PillLink element and trigger its click
+                const pillLink = e.currentTarget.querySelector('a');
+                if (pillLink) {
+                  // Create a synthetic click event
+                  const clickEvent = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: upEvent.clientX,
+                    clientY: upEvent.clientY
+                  });
+                  pillLink.dispatchEvent(clickEvent);
+                }
+              }
+            };
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+          }}
+          onDragStart={(e) => {
+            // Store the element data for drag and drop
+            const path = ReactEditor.findPath(editor, element);
+            e.dataTransfer.setData('application/x-slate-element', JSON.stringify({
+              type: 'link',
+              element,
+              path
+            }));
+            e.dataTransfer.effectAllowed = 'move';
+
+            // Prevent default URL dragging
+            e.dataTransfer.clearData('text/uri-list');
+            e.dataTransfer.clearData('text/plain');
+            e.dataTransfer.clearData('text/html');
+
+            console.log('Drag started for link element:', element);
+          }}
+          onDragEnd={(e) => {
+            console.log('Drag ended');
+          }}
+        >
+          <PillLink
+            href={element.url || '#'}
+            isPublic={element.isPublic}
+            className="cursor-pointer"
+            isEditing={true} // SlateEditor is always in edit mode
+            onEditLink={() => setShowLinkModal(true)}
+            draggable={false} // Disable dragging on the PillLink itself
+          >
+            {children}
+          </PillLink>
+        </span>
+      );
+    case 'paragraph':
+      // Get the path to this element to determine line number
+      const path = ReactEditor.findPath(editor, element);
+      const lineNumber = path[0] + 1; // Convert 0-based to 1-based
+
+      return (
+        <div
+          {...attributes}
+          className="flex items-start group"
+          style={{
+            minHeight: '1.5rem',
+            marginBottom: '0.5rem'
+          }}
+        >
+          {/* Line number - NO EXCESSIVE SPACING */}
+          <span
+            className="text-xs text-muted-foreground/60 font-mono select-none mr-2 flex-shrink-0"
+            style={{
+              lineHeight: '1.5rem',
+              paddingTop: '0.125rem'
+            }}
+            contentEditable={false}
+          >
+            {lineNumber}
+          </span>
+
+          {/* Paragraph content - NO LEFT PADDING */}
+          <div style={{ flex: 1, minHeight: '1.5rem' }}>
+            {children}
+          </div>
+        </div>
+      );
+    default:
+      return <div {...attributes}>{children}</div>;
+  }
+};
+
+/**
+ * Render text leaves (for formatting like bold, italic)
+ */
+const Leaf = ({ attributes, children, leaf }: RenderLeafProps) => {
+  if (leaf.bold) {
+    children = <strong>{children}</strong>;
+  }
+
+  if (leaf.italic) {
+    children = <em>{children}</em>;
+  }
+
+  return <span {...attributes}>{children}</span>;
+};
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+interface SlateEditorProps {
+  initialContent?: any[];
+  onChange: (content: any[]) => void;
+  onEmptyLinesChange?: (count: number) => void;
+  placeholder?: string;
+  readOnly?: boolean;
+
+  // Enhanced props for complete editing functionality
+  location?: { lat: number; lng: number } | null;
+  setLocation?: (location: { lat: number; lng: number } | null) => void;
+  onSave?: (content?: any) => void;
+  onCancel?: () => void;
+  onDelete?: (() => void) | null;
+  isSaving?: boolean;
+  error?: string;
+  isNewPage?: boolean;
+  showToolbar?: boolean;
+}
+
+const SlateEditor: React.FC<SlateEditorProps> = ({
+  initialContent = [],
+  onChange,
+  onEmptyLinesChange,
+  placeholder = 'Start writing...',
+  readOnly = false,
+  location,
+  setLocation,
+  onSave,
+  onCancel,
+  onDelete,
+  isSaving = false,
+  error,
+  isNewPage = false,
+  showToolbar = true
+}) => {
+  const editor = useMemo(() => createSlateEditor(), []);
+  // Create safe initial value for Slate
+  const safeInitialValue = useMemo(() => {
+    console.log('🔍 SlateEditor: Creating safe initial value', { initialContent, type: typeof initialContent });
+    try {
+      const content = initialContent || [];
+      console.log('🔍 SlateEditor: Content after null check', { content, length: content.length });
+      const slateValue = contentToSlate(content);
+      console.log('🔍 SlateEditor: Slate value after conversion', { slateValue, length: slateValue.length });
+      // Ensure we always have at least one paragraph
+      const result = slateValue.length > 0 ? slateValue : [{ type: 'paragraph', children: [{ text: '' }] }];
+      console.log('🔍 SlateEditor: Final safe initial value', { result });
+      return result;
+    } catch (error) {
+      console.error('❌ SlateEditor: Error initializing Slate value:', error);
+      // Fallback to empty paragraph
+      const fallback = [{ type: 'paragraph', children: [{ text: '' }] }];
+      console.log('🔍 SlateEditor: Using fallback value', { fallback });
+      return fallback;
+    }
+  }, [initialContent]);
+
+  // Track current value for controlled updates
+  const [value, setValue] = useState<Descendant[]>(() => {
+    console.log('🔍 SlateEditor: Initializing useState with', { safeInitialValue });
+    return safeInitialValue;
+  });
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Update value when initialContent changes
+  useEffect(() => {
+    try {
+      const content = initialContent || [];
+      const newValue = contentToSlate(content);
+      // Ensure we always have at least one paragraph
+      const safeValue = newValue.length > 0 ? newValue : [{ type: 'paragraph', children: [{ text: '' }] }];
+      setValue(safeValue);
+    } catch (error) {
+      console.error('Error converting initial content:', error);
+      // Fallback to empty content
+      setValue([{ type: 'paragraph', children: [{ text: '' }] }]);
+    }
+  }, [initialContent]);
+
+  // Handle content changes
+  const handleChange = useCallback((newValue: Descendant[]) => {
+    try {
+      setValue(newValue);
+      const content = slateToContent(newValue);
+      onChange(content);
+    } catch (error) {
+      console.error('Error handling content change:', error);
+      // Don't update if conversion fails
+    }
+  }, [onChange]);
+
+  // Helper function to ensure proper spacing around links
+  const ensureSpacing = useCallback((at: Location) => {
+    const [node, path] = Editor.node(editor, at);
+    const parentPath = path.slice(0, -1);
+    const [parentNode] = Editor.node(editor, parentPath);
+
+    if (!SlateElement.isElement(parentNode) || parentNode.type !== 'paragraph') {
+      return;
+    }
+
+    const nodeIndex = path[path.length - 1];
+    const siblings = parentNode.children;
+
+    // Check what's before this position
+    const prevSibling = nodeIndex > 0 ? siblings[nodeIndex - 1] : null;
+    const nextSibling = nodeIndex < siblings.length - 1 ? siblings[nodeIndex + 1] : null;
+
+    // Add space before if needed (previous element exists and isn't a space)
+    if (prevSibling) {
+      if (SlateElement.isElement(prevSibling) && prevSibling.type === 'link') {
+        // Previous is a link, ensure space between
+        Transforms.insertText(editor, ' ', { at: [...parentPath, nodeIndex] });
+      } else if (Text.isText(prevSibling) && !prevSibling.text.endsWith(' ')) {
+        // Previous is text that doesn't end with space
+        Transforms.insertText(editor, ' ', { at: [...parentPath, nodeIndex] });
+      }
+    }
+
+    // Add space after if needed (next element exists and isn't a space)
+    if (nextSibling) {
+      if (SlateElement.isElement(nextSibling) && nextSibling.type === 'link') {
+        // Next is a link, ensure space between
+        Transforms.insertText(editor, ' ', { at: [...parentPath, nodeIndex + 1] });
+      } else if (Text.isText(nextSibling) && !nextSibling.text.startsWith(' ')) {
+        // Next is text that doesn't start with space
+        Transforms.insertText(editor, ' ', { at: [...parentPath, nodeIndex + 1] });
+      }
+    }
+  }, [editor]);
+
+  // Insert link at current selection
+  const insertLink = useCallback((linkData: any) => {
+    console.log('insertLink called with:', linkData);
+    const { selection } = editor;
+    const isCollapsed = selection && Range.isCollapsed(selection);
+
+    if (isCollapsed) {
+      // Insert new link
+      const link: LinkElement = {
+        type: 'link',
+        url: linkData.url,
+        pageId: linkData.pageId,
+        pageTitle: linkData.pageTitle,
+        isExternal: linkData.type === 'external',
+        isPublic: true,
+        isOwned: false,
+        children: [{ text: linkData.text || linkData.pageTitle || 'Link' }]
+      };
+
+      // Ensure proper spacing before inserting
+      if (selection) {
+        ensureSpacing(selection.anchor);
+      }
+
+      Transforms.insertNodes(editor, link);
+    } else {
+      // Wrap selected text in link
+      Transforms.wrapNodes(
+        editor,
+        {
+          type: 'link',
+          url: linkData.url,
+          pageId: linkData.pageId,
+          pageTitle: linkData.pageTitle,
+          isExternal: linkData.type === 'external',
+          isPublic: true,
+          isOwned: false,
+          children: []
+        },
+        { split: true }
+      );
+    }
+
+    setShowLinkModal(false);
+  }, [editor, ensureSpacing]);
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
+    if (event.metaKey || event.ctrlKey) {
+      switch (event.key) {
+        case 'k':
+          event.preventDefault();
+          setShowLinkModal(true);
+          break;
+        case 's':
+          event.preventDefault();
+          onSave?.();
+          break;
+      }
+    }
+  }, [onSave]);
+
+  // State for drop indicator
+  const [dropIndicator, setDropIndicator] = useState<{ x: number; y: number; visible: boolean }>({
+    x: 0,
+    y: 0,
+    visible: false
+  });
+
+  // Handle drag over for drop zones
+  const handleDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+
+    // Only show drop indicator when actually dragging a link element
+    const slateData = event.dataTransfer.types.includes('application/x-slate-element');
+    if (slateData) {
+      // Show drop indicator at cursor position
+      const rect = event.currentTarget.getBoundingClientRect();
+      setDropIndicator({
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+        visible: true
+      });
+    }
+  }, []);
+
+  // Handle drop for moving link elements
+  const handleDrop = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+
+    // Hide drop indicator
+    setDropIndicator(prev => ({ ...prev, visible: false }));
+
+    const slateData = event.dataTransfer.getData('application/x-slate-element');
+    if (!slateData) return;
+
+    try {
+      const { type, element, path: sourcePath } = JSON.parse(slateData);
+
+      if (type === 'link') {
+        // Get the drop location
+        let range = ReactEditor.findEventRange(editor, event);
+
+        // If no range found (dropped outside content), insert at end of last line
+        if (!range) {
+          const lastPath = Editor.last(editor, [])[1];
+          const lastNode = Node.get(editor, lastPath);
+
+          // Find the end of the last text node in the last paragraph
+          if (SlateElement.isElement(lastNode) && lastNode.children) {
+            const lastChildIndex = lastNode.children.length - 1;
+            const lastChild = lastNode.children[lastChildIndex];
+
+            if (Text.isText(lastChild)) {
+              // Insert at the end of the last text node
+              range = {
+                anchor: { path: [...lastPath, lastChildIndex], offset: lastChild.text.length },
+                focus: { path: [...lastPath, lastChildIndex], offset: lastChild.text.length }
+              };
+            } else {
+              // Insert after the last child element
+              range = {
+                anchor: { path: [...lastPath, lastChildIndex + 1], offset: 0 },
+                focus: { path: [...lastPath, lastChildIndex + 1], offset: 0 }
+              };
+            }
+          } else {
+            // Fallback: insert at the very end
+            range = Editor.end(editor, []);
+          }
+        } else {
+          // COLLISION DETECTION: Check if we're trying to drop inside another link
+          const [node] = Editor.node(editor, range.anchor.path);
+          const parentPath = range.anchor.path.slice(0, -1);
+          const [parentNode] = Editor.node(editor, parentPath);
+
+          // If the target is inside a link element, find a safe position next to it
+          if (SlateElement.isElement(parentNode) && parentNode.type === 'link') {
+            console.log('🚫 Collision detected: Cannot drop link inside another link');
+
+            // Find the path of the link we're trying to drop into
+            const linkPath = parentPath;
+            const linkParentPath = linkPath.slice(0, -1);
+            const linkIndex = linkPath[linkPath.length - 1];
+
+            // Determine if we should place before or after the existing link
+            const rect = event.currentTarget.getBoundingClientRect();
+            const dropX = event.clientX - rect.left;
+
+            // Get the existing link element's position
+            const linkElement = ReactEditor.toDOMNode(editor, parentNode);
+            const linkRect = linkElement.getBoundingClientRect();
+            const linkCenterX = linkRect.left + linkRect.width / 2 - rect.left;
+
+            // Physics-based positioning: place before or after based on drop position
+            if (dropX < linkCenterX) {
+              // Drop before the existing link
+              range = {
+                anchor: { path: [...linkParentPath, linkIndex], offset: 0 },
+                focus: { path: [...linkParentPath, linkIndex], offset: 0 }
+              };
+              console.log('📍 Placing link BEFORE existing link at:', range);
+            } else {
+              // Drop after the existing link
+              range = {
+                anchor: { path: [...linkParentPath, linkIndex + 1], offset: 0 },
+                focus: { path: [...linkParentPath, linkIndex + 1], offset: 0 }
+              };
+              console.log('📍 Placing link AFTER existing link at:', range);
+            }
+          }
+        }
+
+        // Remove the element from its original location
+        Transforms.removeNodes(editor, { at: sourcePath });
+
+        // Ensure proper spacing at the drop location
+        ensureSpacing(range.anchor);
+
+        // Insert the element at the new location
+        Transforms.select(editor, range);
+        Transforms.insertNodes(editor, element);
+
+        console.log('Link moved successfully to:', range);
+      }
+    } catch (error) {
+      console.error('Error handling drop:', error);
+    }
+  }, [editor, ensureSpacing]);
+
+  // Handle drag leave to hide drop indicator
+  const handleDragLeave = useCallback((event: React.DragEvent) => {
+    // Only hide if we're leaving the editor entirely
+    if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+      setDropIndicator(prev => ({ ...prev, visible: false }));
+    }
+  }, []);
+
+  // Handle drag end to ensure drop indicator is hidden
+  const handleDragEnd = useCallback(() => {
+    setDropIndicator(prev => ({ ...prev, visible: false }));
+  }, []);
+
+  return (
+    <div className="slate-editor-container w-full">
+      {showToolbar && (
+        <div className="flex items-center gap-2 p-2 border-b bg-gray-50">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowLinkModal(true)}
+            disabled={readOnly}
+          >
+            <Link className="w-4 h-4 mr-1" />
+            Link
+          </Button>
+
+          {onSave && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => {
+                // CRITICAL FIX: Pass current content to onSave function
+                const currentContent = slateToContent(value);
+                console.log('🔵 DEBUG: SlateEditor Save button clicked, passing content:', {
+                  hasContent: !!currentContent,
+                  contentLength: currentContent ? currentContent.length : 0,
+                  contentSample: currentContent ? JSON.stringify(currentContent).substring(0, 100) : 'null'
+                });
+                onSave(currentContent);
+              }}
+              disabled={isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          )}
+
+          {onCancel && (
+            <Button variant="outline" size="sm" onClick={onCancel}>
+              Cancel
+            </Button>
+          )}
+
+          {onDelete && (
+            <Button variant="destructive" size="sm" onClick={() => onDelete()}>
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div className="p-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded">
+          {error}
+        </div>
+      )}
+
+      <Slate
+        editor={editor}
+        initialValue={safeInitialValue || [{ type: 'paragraph', children: [{ text: '' }] }]}
+        onChange={handleChange}
+      >
+        <div className={`relative w-full max-w-none border rounded-lg transition-all duration-200 ${
+          isFocused
+            ? 'border-primary/50 ring-2 ring-primary/20'
+            : 'border-muted-foreground/30 hover:border-muted-foreground/40'
+        }`}>
+          <Editable
+            renderElement={Element}
+            renderLeaf={Leaf}
+            placeholder={placeholder}
+            readOnly={readOnly}
+            onKeyDown={handleKeyDown}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDragEnd={handleDragEnd}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            className="min-h-[200px] focus:outline-none max-w-none"
+            style={{
+              lineHeight: '1.5',
+              fontSize: '1rem',
+              fontFamily: 'inherit',
+              padding: '0.75rem', // CONSISTENT padding on all sides
+              borderRadius: '0.5rem'
+            }}
+          />
+
+          {/* Drop Indicator - Simple line to avoid cursor confusion */}
+          {dropIndicator.visible && (
+            <div
+              className="absolute pointer-events-none z-50"
+              style={{
+                left: dropIndicator.x - 1,
+                top: dropIndicator.y - 8,
+                transform: 'translateX(-50%)'
+              }}
+            >
+              <div className="w-0.5 h-4 bg-green-500 shadow-lg rounded-full opacity-80"></div>
+            </div>
+          )}
+        </div>
+      </Slate>
+
+      {showLinkModal && (
+        <LinkEditorModal
+          isOpen={showLinkModal}
+          onClose={() => setShowLinkModal(false)}
+          onInsertLink={(linkData) => {
+            console.log('SlateEditor: onInsertLink called with:', linkData);
+            console.log('SlateEditor: insertLink function:', insertLink);
+            insertLink(linkData);
+          }}
+          editingLink={null}
+        />
+      )}
+    </div>
+  );
+};
+
+export default SlateEditor;

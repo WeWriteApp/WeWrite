@@ -33,7 +33,7 @@ export async function checkAdminPermissions(request: NextRequest): Promise<{succ
 
     // Get user email using Firebase Admin SDK
     const admin = getFirebaseAdmin();
-    const userRecord = await admin.auth().getUser(userId);
+    const userRecord = await admin!.auth().getUser(userId);
     const userEmail = userRecord.email;
 
     if (!userEmail) {

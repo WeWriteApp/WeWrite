@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     }
 
     const admin = getFirebaseAdmin();
-    const db = admin.firestore();
+    const db = admin!.firestore();
 
     console.log('Fetching database statistics...');
 
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     return createApiResponse({
       stats,
       message: 'Database statistics retrieved successfully'
-    });
+    }, null, 200);
 
   } catch (error) {
     console.error('Error fetching database statistics:', error);
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = getFirebaseAdmin();
-    const db = admin.firestore();
+    const db = admin!.firestore();
 
     console.log('Recalculating database statistics...');
 
@@ -109,13 +109,13 @@ export async function POST(request: NextRequest) {
     await db.collection('admin_stats').doc('database').set({
       ...getResult.data.stats,
       calculatedBy: adminCheck.userEmail,
-      calculatedAt: admin.firestore.FieldValue.serverTimestamp()
+      calculatedAt: admin!.firestore.FieldValue.serverTimestamp()
     });
 
     return createApiResponse({
       stats: getResult.data.stats,
       message: 'Database statistics recalculated and stored successfully'
-    });
+    }, null, 200);
 
   } catch (error) {
     console.error('Error recalculating database statistics:', error);

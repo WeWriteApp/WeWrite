@@ -8,7 +8,7 @@ import CustomDateField from "./CustomDateField";
 import LocationField from "./LocationField";
 import dynamic from "next/dynamic";
 import { Button } from "../ui/button";
-import { Reply } from "lucide-react";
+import { Reply, Save, RotateCcw, Trash2 } from "lucide-react";
 
 
 // Dynamically import AddToPageButton to avoid SSR issues
@@ -17,7 +17,7 @@ const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
   loading: () => <div className="h-8 w-24 bg-muted animate-pulse rounded-md"></div>
 });
 import { getPageViewsLast24Hours, getPageTotalViews } from "../../firebase/pageViews";
-import { getPageVersions } from "../../firebase/database";
+import { getPageVersions } from "../../services/versionService";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { getPagePledgeStats, getSupporterSparklineData } from "../../services/pledgeStatsService";
 import { useFeatureFlag } from "../../utils/feature-flags";
@@ -59,7 +59,8 @@ export default function PageFooter({
   onDelete,
   onInsertLink,
   isSaving,
-  hasUnsavedChanges
+  hasUnsavedChanges,
+  canEdit
 }) {
   const { currentAccount } = useCurrentAccount();
   const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
@@ -146,27 +147,56 @@ export default function PageFooter({
 
   return (
     <div className="mt-10 border-t-only pt-6 pb-6 px-4 sm:px-6">
+      {/* Save/Revert buttons - shown at top when there are unsaved changes */}
+      {canEdit && hasUnsavedChanges && (
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex flex-col gap-3 w-full md:flex-row md:justify-center">
+            <Button
+              variant="default"
+              size="lg"
+              className="gap-2 w-full md:w-auto rounded-2xl font-medium bg-green-600 hover:bg-green-700 text-white"
+              onClick={onSave}
+              disabled={isSaving}
+            >
+              <Save className="h-5 w-5" />
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2 w-full md:w-auto rounded-2xl font-medium border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800"
+              onClick={onCancel}
+              disabled={isSaving}
+            >
+              <RotateCcw className="h-5 w-5" />
+              Revert Changes
+            </Button>
+          </div>
+          <p className="text-sm text-blue-700 dark:text-blue-300 mt-2 text-center">
+            You have unsaved changes. Save them or revert to the last saved version.
+          </p>
+        </div>
+      )}
+
       {/* Word and character count - centered above action buttons */}
-      {!isEditing && content && (
+      {content && (
         <div className="mb-4 flex justify-center w-full">
           <WordCounter content={content} />
         </div>
       )}
 
-      {/* Show PageActions when not in edit mode */}
-      {!isEditing && (
-        <div className="mb-6 flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
-          <PageActions
-            page={page}
-            content={content}
-            isOwner={isOwner}
-            isEditing={isEditing}
-            setIsEditing={setIsEditing}
-            className="action-buttons-container"
-            showFollowButton={currentAccount && !isOwner}
-          />
-        </div>
-      )}
+      {/* Show PageActions - always visible now since pages are always editable */}
+      <div className="mb-6 flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
+        <PageActions
+          page={page}
+          content={content}
+          isOwner={isOwner}
+          isEditing={false} // Always pass false since we removed edit mode toggle
+          setIsEditing={setIsEditing}
+          className="action-buttons-container"
+          showFollowButton={currentAccount && !isOwner}
+        />
+      </div>
 
       {/* Similar pages section removed to conserve resources */}
 
@@ -237,6 +267,21 @@ export default function PageFooter({
           }}
         />
       </div>
+
+      {/* Delete button - moved to very bottom for owners */}
+      {isOwner && onDelete && (
+        <div className="mb-6">
+          <Button
+            variant="destructive"
+            size="lg"
+            className="gap-2 w-full md:w-auto rounded-2xl font-medium text-white"
+            onClick={onDelete}
+          >
+            <Trash2 className="h-5 w-5" />
+            <span>Delete</span>
+          </Button>
+        </div>
+      )}
 
       {/* Page stats section - only in view mode */}
       {!isEditing && (

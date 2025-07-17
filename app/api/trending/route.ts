@@ -3,15 +3,40 @@
  * Simplified trending pages endpoint using standardized API architecture
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse } from '../auth-helper';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
 
 export const dynamic = 'force-dynamic';
 
+// Type definitions
+interface TrendingPage {
+  id: string;
+  title: string;
+  views: number;
+  views24h: number;
+  userId: string;
+  lastModified: string;
+  hourlyViews: number[];
+}
+
+interface PageViewData {
+  total: number;
+  hourly: number[];
+}
+
+interface PageData {
+  title?: string;
+  views?: number;
+  userId?: string;
+  lastModified?: string;
+  isPublic?: boolean;
+  deleted?: boolean;
+}
+
 // GET endpoint - Get trending pages
-export async function GET(request) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url);
     const limitCount = Math.min(parseInt(searchParams.get('limit') || '10', 10), 50); // Cap at 50
@@ -41,9 +66,9 @@ export async function GET(request) {
     }
 
     // Process pages and get real view data
-    const trendingPages = [];
-    const userIds = new Set();
-    const pageIds = [];
+    const trendingPages: TrendingPage[] = [];
+    const userIds = new Set<string>();
+    const pageIds: string[] = [];
 
     let filteredCount = 0;
     let publicCount = 0;
@@ -52,7 +77,7 @@ export async function GET(request) {
     let lowViewsCount = 0;
 
     pagesSnapshot.forEach(doc => {
-      const pageData = doc.data();
+      const pageData = doc.data() as PageData;
 
       // Track filtering reasons
       if (!pageData.isPublic) publicCount++;
@@ -152,7 +177,7 @@ export async function GET(request) {
 }
 
 // Helper function to get real page view data from pageViews collection
-async function getRealPageViewData(db, pageId) {
+async function getRealPageViewData(db: any, pageId: string): Promise<PageViewData> {
   try {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];

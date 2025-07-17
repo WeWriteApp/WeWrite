@@ -28,7 +28,8 @@ class ContributorsService {
 
     try {
       // Query pledges where this user is the recipient (page author)
-collection(db, 'pledges'),
+      const pledgesQuery = query(
+        collection(db, getCollectionName('pledges')),
         where('metadata.authorUserId', '==', userId),
         where('status', 'in', ['active', 'completed'])
       );
@@ -72,7 +73,8 @@ collection(db, 'pledges'),
 
     try {
       // Query pledges where this user is the recipient (page author)
-collection(db, 'pledges'),
+      const pledgesQuery = query(
+        collection(db, getCollectionName('pledges')),
         where('metadata.authorUserId', '==', userId),
         where('status', 'in', ['active', 'completed'])
       );

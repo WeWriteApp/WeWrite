@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { BigQuery } from "@google-cloud/bigquery";
 import { searchUsers, getUserGroupMemberships, getGroupsData } from "../../firebase/database";
 import { getCollectionName, COLLECTIONS } from "../../utils/environmentConfig";
@@ -6,7 +6,28 @@ import { getCollectionName, COLLECTIONS } from "../../utils/environmentConfig";
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
 
-let bigquery = null;
+// Type definitions
+interface SearchResult {
+  id: string;
+  title: string;
+  content?: string;
+  userId?: string;
+  username?: string;
+  lastModified?: string;
+  type: 'page' | 'user' | 'group';
+  isPublic?: boolean;
+  groupId?: string;
+  groupName?: string;
+}
+
+interface SearchResponse {
+  results: SearchResult[];
+  totalResults: number;
+  hasMore: boolean;
+  searchTime: number;
+}
+
+let bigquery: BigQuery | null = null;
 
 // Only try to initialize BigQuery if we have credentials
 const credentialsEnvVar = process.env.GOOGLE_CLOUD_CREDENTIALS || process.env.GOOGLE_CLOUD_KEY_JSON;
@@ -477,7 +498,7 @@ async function searchPagesInFirestore(userId, searchTerm, groupIds = [], filterB
   }
 }
 
-export async function GET(request) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     // Extract query parameters from the URL
     const { searchParams } = new URL(request.url);

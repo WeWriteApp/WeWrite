@@ -32,9 +32,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Search, Mail, MailCheck, RefreshCw, Check, X, AlertTriangle } from 'lucide-react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
-import { auth } from '../../firebase/auth';
+// Using API endpoints instead of direct Firebase calls
 import { formatRelativeTime } from '../../utils/formatRelativeTime';
 import { format } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';

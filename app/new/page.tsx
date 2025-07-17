@@ -379,29 +379,40 @@ function NewPageContent() {
 
     // CRITICAL FIX: Handle both Firebase Auth and session-based auth
     try {
-      const { getAuth } = await import('firebase/auth');
-      const auth = getAuth();
+      // Check if Firebase app is initialized before trying to use it
+      const { getApps, getApp } = await import('firebase/app');
+      const apps = getApps();
 
-      // For session-based auth (after account switching), Firebase Auth might not be ready
-      // In this case, we trust the currentAccount from our session system
-      if (auth.currentUser) {
-        // Firebase Auth is available - verify it matches our currentAccount
-        if (auth.currentUser.uid !== currentAccount.uid) {
-          console.warn('🟡 DEBUG: Auth user mismatch - using session-based auth', {
-            authUid: auth.currentUser.uid,
-            currentAccountUid: currentAccount.uid
-          });
-          // Don't fail - session-based auth takes precedence after account switching
+      if (apps.length > 0) {
+        const { getAuth } = await import('firebase/auth');
+        const auth = getAuth();
+
+        // For session-based auth (after account switching), Firebase Auth might not be ready
+        // In this case, we trust the currentAccount from our session system
+        if (auth.currentUser) {
+          // Firebase Auth is available - verify it matches our currentAccount
+          if (auth.currentUser.uid !== currentAccount.uid) {
+            console.warn('🟡 DEBUG: Auth user mismatch - using session-based auth', {
+              authUid: auth.currentUser.uid,
+              currentAccountUid: currentAccount.uid
+            });
+            // Don't fail - session-based auth takes precedence after account switching
+          } else {
+            console.log('🔵 DEBUG: Firebase Auth verified:', {
+              authUid: auth.currentUser.uid,
+              currentAccountUid: currentAccount.uid,
+              emailVerified: auth.currentUser.emailVerified
+            });
+          }
         } else {
-          console.log('🔵 DEBUG: Firebase Auth verified:', {
-            authUid: auth.currentUser.uid,
+          // Firebase Auth not ready - use session-based auth
+          console.log('🔵 DEBUG: Using session-based auth (Firebase Auth not ready):', {
             currentAccountUid: currentAccount.uid,
-            emailVerified: auth.currentUser.emailVerified
+            authMethod: 'session-based'
           });
         }
       } else {
-        // Firebase Auth not ready - use session-based auth
-        console.log('🔵 DEBUG: Using session-based auth (Firebase Auth not ready):', {
+        console.log('🔵 DEBUG: Firebase app not initialized, using session-based auth:', {
           currentAccountUid: currentAccount.uid,
           authMethod: 'session-based'
         });
@@ -419,7 +430,21 @@ function NewPageContent() {
       const username = currentAccount?.username || currentAccount?.displayName || 'Anonymous';
       const userId = currentAccount.uid;
 
+      // CRITICAL FIX: Add detailed logging for content validation debugging
+      console.log('🔵 DEBUG: Content validation check:', {
+        hasContent: !!content,
+        isArray: Array.isArray(content),
+        contentType: typeof content,
+        contentLength: content ? content.length : 0,
+        contentSample: content ? JSON.stringify(content).substring(0, 200) : 'null'
+      });
+
       if (!content || !Array.isArray(content)) {
+        console.error('🔴 DEBUG: Content validation failed:', {
+          content,
+          isArray: Array.isArray(content),
+          type: typeof content
+        });
         setError("Error: Invalid content format");
         setIsSaving(false);
         return false;
@@ -435,14 +460,31 @@ function NewPageContent() {
               return true;
             }
             // Check for link content (links are valid content even without text)
-            if (child.type === 'link' || child.url || child.pageId) {
+            // CRITICAL FIX: Validate pageId before considering it valid content
+            if (child.type === 'link' || child.url) {
+              // For page links, ensure pageId is valid (not '#' or empty)
+              if (child.pageId) {
+                return child.pageId !== '#' && child.pageId.trim() !== '' && !child.pageId.includes('#');
+              }
+              // For external links, URL should be valid
+              if (child.url) {
+                return child.url !== '#' && child.url.trim() !== '';
+              }
               return true;
             }
             return false;
           });
         }
         // Check if the node itself is a link
-        if (node.type === 'link' || node.url || node.pageId) {
+        if (node.type === 'link' || node.url) {
+          // For page links, ensure pageId is valid (not '#' or empty)
+          if (node.pageId) {
+            return node.pageId !== '#' && node.pageId.trim() !== '' && !node.pageId.includes('#');
+          }
+          // For external links, URL should be valid
+          if (node.url) {
+            return node.url !== '#' && node.url.trim() !== '';
+          }
           return true;
         }
         return false;
@@ -900,15 +942,13 @@ function NewPageContent() {
           isNewPage={true} // Enable auto-focus for new pages
           isReply={isReply} // Pass reply status for contextual text
         />
-        <div className="w-full max-w-none box-border">
-          {/* Direct container - no padding for clean editor layout */}
-          <div
-            className="w-full max-w-none box-border"
-            style={{
-              paddingTop: 'calc(var(--page-header-height, 140px) + 1rem)', // Add extra 1rem (16px) to prevent overlap
-              transition: 'padding-top 300ms ease-in-out' // Smooth transition when header height changes
-            }}
-          >
+        <div
+          className="animate-in fade-in-0 duration-300 w-full pb-32 max-w-none box-border px-4"
+          style={{
+            paddingTop: '0', // Edit mode: header is static, no padding needed (matches PageView.tsx pattern)
+            transition: 'padding-top 300ms ease-in-out' // Smooth transition when header height changes
+          }}
+        >
             {isEditing ? (
               <div className="animate-in fade-in-0 duration-300">
                 <PageProvider>
@@ -975,7 +1015,6 @@ function NewPageContent() {
               </PageProvider>
               </div>
             ) : null}
-          </div>
         </div>
         {!isEditing && (
           <PledgeBar

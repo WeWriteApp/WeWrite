@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     // Get user email to verify admin status
     const admin = getFirebaseAdmin();
-    const userRecord = await admin.auth().getUser(userId);
+    const userRecord = await admin!.auth().getUser(userId);
     const userEmail = userRecord.email;
 
     if (!userEmail || !isAdminServer(userEmail)) {
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     console.log('[Reset Mock Earnings] Using current admin user as target:', targetUserId);
 
     // Use admin SDK to bypass security rules
-    const db = admin.firestore();
+    const db = admin!.firestore();
 
     // Find and clean up mock earnings from writerTokenEarnings
     const earningsSnapshot = await db.collection('writerTokenEarnings')
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
             allocations: nonMockAllocations,
             totalTokensReceived: totalTokens,
             totalUsdValue: totalUsd,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            updatedAt: admin!.firestore.FieldValue.serverTimestamp()
           });
           console.log('[Reset Mock Earnings] Updated earnings record:', earningsDoc.id);
           deletedCount++;

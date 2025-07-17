@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 // Firebase imports removed - using Firestore instead of Realtime Database
-import { listenToPageById, getPageVersions, getPageById } from "../../firebase/database";
+import { listenToPageById, getPageById } from "../../firebase/database";
+import { getPageVersions, getPageVersionById } from "../../services/versionService";
 import { recordPageView } from "../../firebase/pageViews";
 import { trackPageViewWhenReady } from "../../utils/analytics-page-titles";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
@@ -31,7 +32,6 @@ import { Button } from "../ui/button";
 import { LineSettingsMenu } from "../utils/LineSettingsMenu";
 
 // Editor Components
-import TextView from "../editor/TextView";
 import Editor from "../editor/Editor";
 import EmptyLinesAlert from "../editor/EmptyLinesAlert";
 // CustomDateField and LocationField are now handled by PageFooter
@@ -108,7 +108,7 @@ export default function PageView({
   const [page, setPage] = useState<Page | null>(null);
   const [editorState, setEditorState] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(initialEditMode);
+  const [isEditing, setIsEditing] = useState(false); // Will be set to true only if canEdit
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [titleError, setTitleError] = useState<string | null>(null);
@@ -122,6 +122,7 @@ export default function PageView({
   const [versionData, setVersionData] = useState<any>(null);
   const [compareVersionData, setCompareVersionData] = useState<any>(null);
   const [diffContent, setDiffContent] = useState<any>(null);
+  const [contentPaddingTop, setContentPaddingTop] = useState<string>('2rem');
 
   // Empty lines tracking for alert banner
   const [emptyLinesCount, setEmptyLinesCount] = useState(0);
@@ -503,32 +504,70 @@ export default function PageView({
   const memoizedPage = useMemo(() => page, [page?.id, page?.title, page?.updatedAt]);
   const memoizedLinkedPageIds = useMemo(() => [], [editorState]); // TODO: Extract linked page IDs
 
+  // Set edit mode only when user can edit
+  useEffect(() => {
+    setIsEditing(canEdit && !showVersion && !showDiff);
+  }, [canEdit, showVersion, showDiff]);
+
+  // Content padding: none for edit mode (static header), fixed for view mode (fixed header)
+  useEffect(() => {
+    if (isEditing) {
+      setContentPaddingTop('0'); // Edit mode: header is static, no padding needed
+    } else {
+      setContentPaddingTop('160px'); // View mode: header is fixed, need padding
+    }
+  }, [isEditing]);
+
   // Event handlers
   const handleContentChange = useCallback((content: any) => {
     setEditorState(content);
-    setHasUnsavedChanges(true);
-  }, []);
+
+    // Only set unsaved changes if content actually differs from original
+    const originalContent = page?.content ? JSON.parse(page.content) : [];
+    const contentChanged = JSON.stringify(content) !== JSON.stringify(originalContent);
+
+    if (contentChanged) {
+      setHasUnsavedChanges(true);
+    }
+  }, [page?.content]);
 
   const handleTitleChange = useCallback((newTitle: string) => {
     if (newTitle !== title) {
       logger.debug('Title changed', { oldTitle: title, newTitle });
     }
     setTitle(newTitle);
-    setHasUnsavedChanges(true);
+
+    // Only set unsaved changes if title actually differs from original page title
+    if (newTitle !== (page?.title || '')) {
+      setHasUnsavedChanges(true);
+    }
     setTitleError(null);
-  }, [title]);
+  }, [title, page?.title]);
 
 
 
   const handleLocationChange = useCallback((newLocation: Location | null) => {
     setLocation(newLocation);
-    setHasUnsavedChanges(true);
-  }, []);
+
+    // Only set unsaved changes if location actually differs from original
+    const originalLocation = page?.location || null;
+    const locationChanged = JSON.stringify(newLocation) !== JSON.stringify(originalLocation);
+
+    if (locationChanged) {
+      setHasUnsavedChanges(true);
+    }
+  }, [page?.location]);
 
   const handleCustomDateChange = useCallback((newCustomDate: string | null) => {
     setCustomDate(newCustomDate);
-    setHasUnsavedChanges(true);
-  }, []);
+
+    // Only set unsaved changes if custom date actually differs from original
+    const originalCustomDate = page?.customDate || null;
+
+    if (newCustomDate !== originalCustomDate) {
+      setHasUnsavedChanges(true);
+    }
+  }, [page?.customDate]);
 
   // Handle empty lines count changes
   const handleEmptyLinesChange = useCallback((count: number) => {
@@ -542,12 +581,7 @@ export default function PageView({
     }
   }, []);
 
-  const handleSetIsEditing = useCallback((editing: boolean, position?: { x: number; y: number }) => {
-    setIsEditing(editing);
-    if (position) {
-      setClickPosition(position);
-    }
-  }, []);
+  // No need for handleSetIsEditing - always in edit mode
 
   const handleSave = useCallback(async () => {
     console.log('🚨 SAVE DEBUG: handleSave called', { pageId, hasPage: !!page, title });
@@ -625,7 +659,7 @@ export default function PageView({
       }
 
       setHasUnsavedChanges(false);
-      setIsEditing(false);
+      // Keep isEditing true - ALWAYS edit mode
 
       // Show success feedback to user
       try {
@@ -639,20 +673,19 @@ export default function PageView({
         console.error('Error showing success toast (non-fatal):', toastError);
       }
 
-      // CRITICAL FIX: Redirect to page view after successful save to prevent error boundary issues
-      // This ensures the user sees the saved page instead of staying in edit mode
+      // Clear unsaved changes flag and stay in always-editable mode
+      console.log('🚨 SAVE DEBUG: Save successful, clearing unsaved changes flag');
+      setHasUnsavedChanges(false);
+      setError(null);
+
+      // Clear version cache to ensure fresh data
+      const { clearPageVersionCache } = await import('../../services/versionService');
+      clearPageVersionCache(pageId);
+
+      // Reload the page data to reflect the changes without redirecting
       setTimeout(() => {
-        try {
-          // Use window.location for more reliable navigation that doesn't trigger React errors
-          window.location.href = `/${pageId}`;
-        } catch (routerError) {
-          console.error('Error during post-save redirect (non-fatal):', routerError);
-          // If redirect fails, just stay on the page - it's already saved
-          // Show success message to user
-          setError(null);
-          // Could add a success toast here if needed
-        }
-      }, 500); // Increased delay to ensure save is fully processed
+        loadPageData();
+      }, 500); // Delay to ensure save is fully processed
     } catch (error) {
       console.error("Error saving page:", error);
       setError("Failed to save page. Please try again.");
@@ -672,20 +705,14 @@ export default function PageView({
     setLocation(page?.location || '');
     setEditorState(page?.content ? JSON.parse(page.content) : [{ type: "paragraph", children: [{ text: "" }] }]);
     setHasUnsavedChanges(false);
-    setIsEditing(false);
+    // Keep isEditing true - ALWAYS edit mode
     setClickPosition(null);
   }, [hasUnsavedChanges, page]);
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + E to toggle edit mode
-      if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
-        e.preventDefault();
-        if (canEdit) {
-          setIsEditing(!isEditing);
-        }
-      }
+      // Cmd/Ctrl + E removed - always in edit mode
 
       // Cmd/Ctrl + S to save
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
@@ -817,9 +844,9 @@ export default function PageView({
           )}
 
           <div
-            className="animate-in fade-in-0 duration-300 w-full pb-32 max-w-none box-border"
+            className="animate-in fade-in-0 duration-300 w-full pb-32 max-w-none box-border px-4"
             style={{
-              paddingTop: isEditing ? '1rem' : 'calc(var(--page-header-height, 140px) + 0.5rem)', // No extra padding in edit mode since header is not fixed
+              paddingTop: contentPaddingTop,
               transition: 'padding-top 300ms ease-in-out'
             }}
           >
@@ -837,52 +864,28 @@ export default function PageView({
                     <p className="text-sm mt-2">Page ID: {page.id}</p>
                   </div>
                 }>
-                  {console.log('🔍 PageView: Rendering decision - isEditing:', isEditing, 'showVersion:', showVersion, 'showDiff:', showDiff)}
-                  {isEditing ? (
-                    <Editor
-                      ref={editorRef}
-                      title={title}
-                      setTitle={handleTitleChange}
-                      initialContent={editorState}
-                      onChange={handleContentChange}
-                      onEmptyLinesChange={handleEmptyLinesChange}
+                  {console.log('🔍 PageView: ALWAYS USE EDITOR - canEdit:', canEdit, 'showVersion:', showVersion, 'showDiff:', showDiff)}
+                  {/* ALWAYS USE EDITOR - NO MORE TEXTVIEW */}
+                  <Editor
+                    ref={editorRef}
+                    title={title}
+                    setTitle={handleTitleChange}
+                    initialContent={editorState}
+                    onChange={handleContentChange}
+                    onEmptyLinesChange={handleEmptyLinesChange}
 
-                      location={location}
-                      setLocation={handleLocationChange}
-                      onSave={handleSave}
-                      onCancel={handleCancel}
-                      onDelete={canEdit ? handleDelete : null}
-                      isSaving={isSaving}
-                      error={error || ""}
-                      isNewPage={false}
-                      placeholder="Start typing..."
-                      showToolbar={true}
-                    />
-                  ) : (
-                    <>
-                      {console.log('🔍 PageView: NOT in editing mode, about to render TextView')}
-                      {console.log('🔍 PageView: About to render TextView with editorState:', {
-                        editorState,
-                        editorStateType: typeof editorState,
-                        isArray: Array.isArray(editorState),
-                        length: Array.isArray(editorState) ? editorState.length : editorState?.length || 0,
-                        pageId: page.id,
-                        hasContent: !!editorState
-                      })}
-                      <TextView
-                        key={`textview-${page.id}-${showVersion ? 'version' : showDiff ? 'diff' : 'normal'}`}
-                        content={editorState?.content || editorState}
-                        page={page}
-                        canEdit={canEdit}
-                        setIsEditing={handleSetIsEditing}
-                        user={currentAccount}
-                        contentType="wiki"
-                        isEditing={false}
-                        showDiff={showDiff}
-                        viewMode={showDiff ? "diff" : "normal"}
-                      />
-                    </>
-                  )}
+                    location={location}
+                    setLocation={handleLocationChange}
+                    onSave={canEdit ? handleSave : undefined}
+                    onCancel={canEdit ? handleCancel : undefined}
+                    onDelete={canEdit ? handleDelete : null}
+                    isSaving={isSaving}
+                    error={error || ""}
+                    isNewPage={false}
+                    placeholder="Start typing..."
+                    showToolbar={false} // Hide toolbar since save/revert will be in button stack
+                    readOnly={!canEdit} // Read-only if user can't edit
+                  />
                 </TextViewErrorBoundary>
 
                 {/* Custom Date Field and Location Field are now handled by PageFooter */}
@@ -898,6 +901,7 @@ export default function PageView({
             {/* Page Footer with actions */}
             <PageFooter
               page={memoizedPage}
+              content={editorState}
               linkedPageIds={memoizedLinkedPageIds}
               isEditing={isEditing}
               canEdit={canEdit}
@@ -917,8 +921,8 @@ export default function PageView({
               hasUnsavedChanges={hasUnsavedChanges}
             />
 
-            {/* Backlinks and Related Pages */}
-            {page && !isEditing && (
+            {/* Backlinks and Related Pages - show for read-only pages */}
+            {page && (!canEdit || showVersion || showDiff) && (
               <>
                 <BacklinksSection page={page} linkedPageIds={memoizedLinkedPageIds} />
                 <RelatedPagesSection
@@ -935,8 +939,8 @@ export default function PageView({
             )}
           </div>
 
-          {/* Pledge Bar - Always floating at bottom */}
-          {page && !isEditing && (
+          {/* Pledge Bar - Show for read-only pages */}
+          {page && (!canEdit || showVersion || showDiff) && (
             <PledgeBar
               pageId={page.id}
               pageTitle={page.title}
@@ -945,8 +949,8 @@ export default function PageView({
             />
           )}
 
-          {/* Empty Lines Alert - Shows when editing and there are empty lines */}
-          {isEditing && (
+          {/* Empty Lines Alert - Shows when page is editable and there are empty lines */}
+          {canEdit && !showVersion && !showDiff && (
             <EmptyLinesAlert
               emptyLinesCount={emptyLinesCount}
               onDeleteAllEmptyLines={handleDeleteAllEmptyLines}

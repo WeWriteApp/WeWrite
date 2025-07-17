@@ -43,7 +43,7 @@ export const getPagePledgeStats = async (pageId: string): Promise<PagePledgeStat
     // Try the global pledges collection first (if it exists)
     try {
       const pledgesQuery = query(
-collection(db, 'pledges'),
+        collection(db, getCollectionName('pledges')),
         where('pageId', '==', pageId),
         where('status', 'in', ['active', 'completed'])
       );
@@ -120,7 +120,7 @@ export const subscribeToPagePledgeStats = (
     // Try to subscribe to global pledges collection first
     try {
       const pledgesQuery = query(
-collection(db, 'pledges'),
+        collection(db, getCollectionName('pledges')),
         where('pageId', '==', pageId),
         where('status', 'in', ['active', 'completed'])
       );

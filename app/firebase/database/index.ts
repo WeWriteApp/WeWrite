@@ -22,8 +22,8 @@ export * from './access';
 // Page operations
 export * from './pages';
 
-// Version management
-export * from './versions';
+// Version management - DEPRECATED: Use app/services/versionService.ts instead
+// export * from './versions'; // Commented out to force migration to unified service
 
 // Link management
 export * from './links';
@@ -221,7 +221,8 @@ export const getCachedPageTitle = async (pageId: string): Promise<string> => {
  * Get page statistics for pledge system
  */
 export const getPageStats = async (pageId: string): Promise<any> => {
-const pageRef = doc(db, getCollectionName("pages"), pageId);
+  try {
+    const pageRef = doc(db, getCollectionName("pages"), pageId);
     const docSnap = await getDoc(pageRef);
 
     if (docSnap.exists()) {

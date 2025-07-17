@@ -4,6 +4,10 @@ import { getSingleUserData } from "../../firebase/batchUserData";
 import { UsernameSkeleton } from "../ui/skeleton";
 import Link from "next/link";
 
+// Simple in-memory cache to prevent duplicate API calls
+const userCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 const User = ({ uid, showUsername = true, className = "" }) => {
   const [username, setUsername] = useState("Loading...");
   const [isLoading, setIsLoading] = useState(true);
@@ -19,13 +23,24 @@ const User = ({ uid, showUsername = true, className = "" }) => {
       try {
         setIsLoading(true);
 
+        // Check cache first
+        const cached = userCache.get(uid);
+        if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+          setUsername(cached.username);
+          setIsLoading(false);
+          return;
+        }
+
         // Use the same API endpoint as UsernameBadge for consistency
         const response = await fetch(`/api/users/profile?id=${encodeURIComponent(uid)}`);
 
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data?.username) {
-            setUsername(result.data.username);
+            const username = result.data.username;
+            setUsername(username);
+            // Cache the result
+            userCache.set(uid, { username, timestamp: Date.now() });
           } else {
             setUsername("Missing username");
           }
@@ -33,7 +48,10 @@ const User = ({ uid, showUsername = true, className = "" }) => {
           // Fallback to old method if API fails
           const userData = await getSingleUserData(uid);
           if (userData && userData.username) {
-            setUsername(userData.username);
+            const username = userData.username;
+            setUsername(username);
+            // Cache the result
+            userCache.set(uid, { username, timestamp: Date.now() });
           } else {
             setUsername("Missing username");
           }

@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 import { getPageById } from '../firebase/database/pages';
 
 interface PageData {
   id: string;
   title: string;
-  content: any[];
+  content: any[] | string;
   userId: string;
   username?: string;
   isPublic: boolean;
   createdAt: any;
-  updatedAt: any;
+  updatedAt?: any;
 }
 
 interface PageComponentProps {
@@ -217,8 +217,8 @@ function SimpleNode({ node }: { node: any }) {
   switch (type) {
     case 'heading':
       const level = node.level || 1;
-      const HeadingTag = `h${Math.min(level, 6)}` as keyof JSX.IntrinsicElements;
-      return <HeadingTag>{renderChildren()}</HeadingTag>;
+      const HeadingTag = `h${Math.min(level, 6)}` as keyof React.JSX.IntrinsicElements;
+      return React.createElement(HeadingTag, {}, renderChildren());
       
     case 'paragraph':
       return <p>{renderChildren()}</p>;

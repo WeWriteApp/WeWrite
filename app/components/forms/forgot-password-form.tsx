@@ -37,8 +37,7 @@ import { LoadingButton } from "../ui/loading-button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
-import { sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "../../firebase/auth";
+// Using API endpoints instead of direct Firebase calls
 import Link from "next/link";
 import { cn } from "../../lib/utils";
 
@@ -66,7 +65,21 @@ export function ForgotPasswordForm({
     setError("");
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      // Use API endpoint for password reset
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to send reset email: ${response.status}`);
+      }
+
+      const data = await response.json();
       console.log("Password reset email sent successfully to:", email);
       setSuccess(true);
     } catch (error: any) {

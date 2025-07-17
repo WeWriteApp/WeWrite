@@ -12,7 +12,7 @@ import { getStripeSecretKey } from '../../../utils/stripeConfig';
 const adminApp = initAdmin();
 const adminDb = adminApp.firestore();
 const stripe = new Stripe(getStripeSecretKey() || '', {
-  apiVersion: '2024-12-18.acacia'});
+  apiVersion: '2025-06-30.basil'});
 
 export async function GET(request: NextRequest) {
   try {

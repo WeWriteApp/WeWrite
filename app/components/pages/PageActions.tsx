@@ -328,36 +328,8 @@ export function PageActions({
       <div className="flex flex-col items-stretch gap-3 w-full">
         {/* Main action buttons - horizontal on desktop, vertical on mobile */}
         <div className="flex flex-col items-stretch gap-3 w-full md:flex-row md:flex-wrap md:items-center md:justify-center">
-          {/* Owner-only actions - Edit and Delete buttons */}
-          {isOwner && (
-            <>
-              <Button
-                variant={isEditing ? "outline" : "default"}
-                size="lg"
-                className="gap-2 w-full md:w-auto rounded-2xl font-medium"
-                onClick={() => setIsEditing && setIsEditing(!isEditing)}
-              >
-                {isEditing ? <X className="h-5 w-5" /> : <Edit className="h-5 w-5" />}
-                <span>{isEditing ? "Cancel" : "Edit"}</span>
-              </Button>
-              {isEditing && (
-                <Button
-                  variant="destructive"
-                  size="lg"
-                  className="gap-2 w-full md:w-auto rounded-2xl font-medium text-white"
-                  onClick={handleDelete}
-                >
-                  <Trash2 className="h-5 w-5" />
-                  <span>Delete</span>
-                </Button>
-              )}
-            </>
-          )}
-
-          {/* Share button removed - now only in page header */}
-
           {/* Follow button - available to non-owners when logged in */}
-          {showFollowButton && session && !isOwner && !isEditing && (
+          {showFollowButton && session && !isOwner && (
             <FollowButton
               pageId={page.id}
               pageTitle={page.title}
@@ -382,8 +354,8 @@ export function PageActions({
           </Button>
         </div>
 
-        {/* Paragraph Mode Toggle - only show in view mode */}
-        {!isEditing && (
+        {/* Paragraph Mode Toggle - only show for pages user doesn't own (read-only mode) */}
+        {!isOwner && (
           <div className="flex items-center justify-center gap-3 py-4 border-t border-border/50">
             <div className="flex items-center gap-3">
               {lineMode === LINE_MODES.DENSE ? (

@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   try {
     // Initialize Firebase Admin
     const admin = getFirebaseAdmin();
-    const db = admin.firestore();
+    const db = admin!.firestore();
 
     // Verify admin access
     const userId = await getUserIdFromRequest(request);
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user email to check admin status
-    const userRecord = await admin.auth().getUser(userId);
+    const userRecord = await admin!.auth().getUser(userId);
     const userEmail = userRecord.email;
 
     if (!userEmail || !isAdminServer(userEmail)) {
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
   try {
     // Initialize Firebase Admin
     const admin = getFirebaseAdmin();
-    const db = admin.firestore();
+    const db = admin!.firestore();
 
     // Verify admin access
     const userId = await getUserIdFromRequest(request);
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user email to check admin status
-    const userRecord = await admin.auth().getUser(userId);
+    const userRecord = await admin!.auth().getUser(userId);
     const userEmail = userRecord.email;
 
     if (!userEmail || !isAdminServer(userEmail)) {
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
         await db.collection('featureHistory').add({
           featureId: featureFlagId,
           userId: targetUserId,
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          timestamp: admin!.firestore.FieldValue.serverTimestamp(),
           adminEmail: userEmail,
           action: enabled ? 'enabled_for_user' : 'disabled_for_user',
           details: `Feature ${enabled ? 'enabled' : 'disabled'} for user ${targetUserId}`
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
         await db.collection('featureHistory').add({
           featureId: featureFlagId,
           userId: targetUserId,
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          timestamp: admin!.firestore.FieldValue.serverTimestamp(),
           adminEmail: userEmail,
           action: 'removed_user_override',
           details: `User override removed for ${targetUserId}`

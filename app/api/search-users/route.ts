@@ -1,11 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { searchUsers } from "../../firebase/database";
 import { sortSearchResultsByScore } from "../../utils/searchUtils";
 
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';
 
-export async function GET(request) {
+// Type definitions
+interface UserSearchResult {
+  id: string;
+  username: string;
+  photoURL: string | null;
+  type: 'user';
+}
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url);
 
@@ -30,11 +38,11 @@ export async function GET(request) {
     const users = await searchUsers(searchTerm, limit);
 
     // Format the users for the response
-    const formattedUsers = users.map(user => ({
+    const formattedUsers: UserSearchResult[] = users.map(user => ({
       id: user.id,
       username: user.username || "Anonymous",
       photoURL: user.photoURL || null,
-      type: 'user' // Add a type field to distinguish from pages
+      type: 'user' as const // Add a type field to distinguish from pages
     }));
 
     console.log(`Found ${formattedUsers.length} users matching "${searchTerm}"`);

@@ -180,6 +180,17 @@ export function validateLink(linkData) {
         }
       }
 
+      // CRITICAL FIX: Validate pageId and prevent invalid values like '#'
+      if (link.pageId && (link.pageId === '#' || link.pageId.trim() === '' || link.pageId.includes('#'))) {
+        console.warn('Invalid pageId detected and removed:', link.pageId);
+        delete link.pageId;
+        // If this was supposed to be a page link but has invalid pageId, convert to external link
+        if (link.url && link.url !== '#') {
+          link.isPageLink = false;
+          link.isExternal = true;
+        }
+      }
+
       // CRITICAL FIX: Preserve originalPageTitle for page links
       if (link.pageTitle && !link.originalPageTitle) {
         link.originalPageTitle = link.pageTitle;

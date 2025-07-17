@@ -106,7 +106,7 @@ export default function PaymentsAdminPage() {
   };
 
   const getTroubleshootingSteps = () => {
-    const steps = [];
+    const steps: string[] = [];
 
     if (systemHealth.payments === 'critical') {
       steps.push('1. Check Firebase Console for missing indexes on subscription collection');
@@ -130,7 +130,12 @@ export default function PaymentsAdminPage() {
   };
 
   const getFirebaseIndexInstructions = () => {
-    const instructions = [];
+    const instructions: Array<{
+      title: string;
+      collection: string;
+      fields: Array<{ name: string; order: string }>;
+      description: string;
+    }> = [];
 
     if (systemHealth.payments === 'critical') {
       instructions.push({

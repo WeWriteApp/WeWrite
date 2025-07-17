@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 
     // Build query
     let errorsQuery = collection(db, getCollectionName('payoutErrorLogs'));
-    const constraints = [];
+    const constraints: any[] = [];
 
     // Time filter
     constraints.push(where('metadata.timestamp', '>=', Timestamp.fromDate(timeFilter)));
@@ -176,11 +176,11 @@ export async function GET(request: NextRequest) {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error getting error logs:', error);
     return NextResponse.json({
       error: 'Internal server error',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
@@ -236,11 +236,11 @@ export async function PUT(request: NextRequest) {
       message: 'Error resolution updated'
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error updating error resolution:', error);
     return NextResponse.json({
       error: 'Internal server error',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
@@ -269,7 +269,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const results = [];
+    const results: any[] = [];
 
     switch (action) {
       case 'bulk_resolve':
@@ -282,8 +282,8 @@ export async function POST(request: NextRequest) {
               updatedAt: new Date().toISOString()
             });
             results.push({ errorId, success: true });
-          } catch (error) {
-            results.push({ errorId, success: false, error: error.message });
+          } catch (error: unknown) {
+            results.push({ errorId, success: false, error: error instanceof Error ? error.message : 'Unknown error' });
           }
         }
         break;
@@ -297,8 +297,8 @@ export async function POST(request: NextRequest) {
               updatedAt: new Date().toISOString()
             });
             results.push({ errorId, success: true });
-          } catch (error) {
-            results.push({ errorId, success: false, error: error.message });
+          } catch (error: unknown) {
+            results.push({ errorId, success: false, error: error instanceof Error ? error.message : 'Unknown error' });
           }
         }
         break;
@@ -321,11 +321,11 @@ export async function POST(request: NextRequest) {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error processing bulk error operation:', error);
     return NextResponse.json({
       error: 'Internal server error',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

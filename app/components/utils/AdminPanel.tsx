@@ -8,11 +8,8 @@ import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronRight, Database } from "lucide-react";
-// Removed direct Firebase imports - now using API endpoints
+// Using API endpoints instead of direct Firebase calls
 import { useToast } from "../ui/use-toast";
-import { db } from "../../firebase/config";
-import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
-import { getCollectionName } from '../../utils/environmentConfig';
 import { FeatureFlag, isAdmin } from "../../utils/feature-flags";
 import { usePWA } from '../../providers/PWAProvider';
 import { getAnalyticsService } from "../../utils/analytics-service";
@@ -104,35 +101,24 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
     }
   }, [isOpen]);
 
-  // Load admin users from Firestore
+  // Load admin users from API
   const loadAdminUsers = async () => {
     try {
       setIsLoading(true);
 
-      // Get admin users from Firestore
-      const adminUsersRef = doc(db, getCollectionName('config'), 'adminUsers');
-      const adminUsersDoc = await getDoc(adminUsersRef);
+      // Get admin users from API
+      const response = await fetch('/api/admin/admin-users');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch admin users: ${response.status}`);
+      }
 
-      if (adminUsersDoc.exists()) {
-        const adminUserIds = adminUsersDoc.data().userIds || [];
+      const data = await response.json();
+      console.log('Admin users from API:', data);
 
-        // Get user details for each admin user
-        const adminUserPromises = adminUserIds.map(async (userId: string) => {
-          const userRef = doc(db, getCollectionName('users'), userId);
-          const userDoc = await getDoc(userRef);
-
-          if (userDoc.exists()) {
-            return {
-              id: userId,
-              ...userDoc.data(),
-              isAdmin: true
-            } as User;
-          }
-          return null;
-        });
-
-        const adminUserResults = await Promise.all(adminUserPromises);
-        setAdminUsers(adminUserResults.filter(Boolean) as User[]);
+      if (data.success && data.adminUsers) {
+        setAdminUsers(data.adminUsers);
+      } else {
+        setAdminUsers([]);
       }
     } catch (error) {
       console.error('Error loading admin users:', error);
@@ -146,43 +132,30 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
     }
   };
 
-  // Load feature flags from Firestore
+  // Load feature flags from API
   const loadFeatureFlags = async () => {
     try {
       setIsLoading(true);
 
-      // Get feature flags from Firestore
-      const featureFlagsRef = doc(db, getCollectionName('config'), 'featureFlags');
-      const featureFlagsDoc = await getDoc(featureFlagsRef);
+      // Get feature flags from API
+      const response = await fetch('/api/feature-flags');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch feature flags: ${response.status}`);
+      }
 
-      if (featureFlagsDoc.exists()) {
-        const flagsData = featureFlagsDoc.data();
-        console.log('Feature flags from database:', flagsData);
+      const data = await response.json();
+      console.log('Feature flags from API:', data);
 
-        // Filter out any flags that aren't defined in our FeatureFlag type
-        const validFlags = {};
-        Object.keys(flagsData).forEach(key => {
-          // Only include keys that match our defined feature flags
-          if (featureFlags.some(flag => flag.id === key)) {
-            validFlags[key] = flagsData[key];
-          } else {
-            console.log(`Removing undefined feature flag from database: ${key}`);
-          }
-        });
+      if (data.success && data.data) {
+        const flagsData = data.data;
 
-        // Update local state with data from Firestore
+        // Update local state with data from API
         setFeatureFlags(prev =>
           prev.map(flag => ({
             ...flag,
-            enabled: validFlags[flag.id] !== undefined ? validFlags[flag.id] : flag.enabled
+            enabled: flagsData[flag.id] !== undefined ? flagsData[flag.id] : flag.enabled
           }))
         );
-
-        // If we found invalid flags, update the database to remove them
-        if (Object.keys(validFlags).length !== Object.keys(flagsData).length) {
-          console.log('Updating database to remove invalid feature flags');
-          await setDoc(featureFlagsRef, validFlags);
-        }
       }
     } catch (error) {
       console.error('Error loading feature flags:', error);
@@ -243,27 +216,28 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
     try {
       setIsLoading(true);
 
-      // Get current admin users
-      const adminUsersRef = doc(db, getCollectionName('config'), 'adminUsers');
-      const adminUsersDoc = await getDoc(adminUsersRef);
+      // Determine action based on current admin status
+      const action = user.isAdmin ? 'remove' : 'add';
 
-      let adminUserIds: string[] = [];
+      // Update via API
+      const response = await fetch('/api/admin/admin-users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action,
+          targetUserId: user.id
+        }),
+      });
 
-      if (adminUsersDoc.exists()) {
-        adminUserIds = adminUsersDoc.data().userIds || [];
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to update admin status: ${response.status}`);
       }
 
-      // Toggle admin status
-      if (user.isAdmin) {
-        // Remove from admin users
-        adminUserIds = adminUserIds.filter(id => id !== user.id);
-      } else {
-        // Add to admin users
-        adminUserIds.push(user.id);
-      }
-
-      // Update Firestore
-      await setDoc(adminUsersRef, { userIds: adminUserIds });
+      const data = await response.json();
+      console.log('Admin status update response:', data);
 
       // Update local state
       if (user.isAdmin) {
@@ -284,14 +258,14 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
 
       toast({
         title: 'Success',
-        description: `${session.username || session.email} is ${user.isAdmin ? 'no longer' : 'now'} an admin`,
+        description: `${user.username || user.email} is ${user.isAdmin ? 'no longer' : 'now'} an admin`,
         variant: 'default'
       });
     } catch (error) {
       console.error('Error toggling admin status:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update admin status',
+        description: error.message || 'Failed to update admin status',
         variant: "destructive"
       });
     } finally {
@@ -304,28 +278,33 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
     try {
       setIsLoading(true);
 
-      // Get current feature flags from database first to avoid race conditions
-      const featureFlagsRef = doc(db, getCollectionName('config'), 'featureFlags');
-      const featureFlagsDoc = await getDoc(featureFlagsRef);
+      // Get current value from local state
+      const currentFlag = featureFlags.find(flag => flag.id === flagId);
+      const currentValue = currentFlag?.enabled || false;
+      const newValue = !currentValue;
 
-      let flagsData = {};
-      if (featureFlagsDoc.exists()) {
-        flagsData = featureFlagsDoc.data();
+      // Update via API
+      const response = await fetch('/api/feature-flags', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          flagId,
+          enabled: newValue,
+          description: `Feature flag ${newValue ? 'enabled' : 'disabled'} via admin panel`
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to update feature flag: ${response.status}`);
       }
 
-      // Get the current value from the database (not local state)
-      const currentDatabaseValue = flagsData[flagId] || false;
-      const newValue = !currentDatabaseValue;
+      const data = await response.json();
+      console.log('Feature flag update response:', data);
 
-      // Update the database first
-      const updatedFlagsData = {
-        ...flagsData,
-        [flagId]: newValue
-      };
-
-      await setDoc(featureFlagsRef, updatedFlagsData);
-
-      // Update local state after successful database write
+      // Update local state after successful API call
       setFeatureFlags(prev =>
         prev.map(flag =>
           flag.id === flagId ? { ...flag, enabled: newValue } : flag
@@ -353,11 +332,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
 
       // Provide more specific error messages
       let errorMessage = 'Failed to update feature flag';
-      if (error.code === 'permission-denied') {
-        errorMessage = 'Permission denied. You may not have admin access.';
-      } else if (error.code === 'unavailable') {
-        errorMessage = 'Database is temporarily unavailable. Please try again.';
-      } else if (error.message) {
+      if (error.message) {
         errorMessage = `Error: ${error.message}`;
       }
 
@@ -367,7 +342,7 @@ export default function AdminPanel({ userEmail }: AdminPanelProps) {
         variant: "destructive"
       });
 
-      // Reload feature flags from database to ensure consistency
+      // Reload feature flags from API to ensure consistency
       await loadFeatureFlags();
     } finally {
       setIsLoading(false);

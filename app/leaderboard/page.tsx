@@ -1,10 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
-import { collection, query, limit, getDocs } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { ref, onValue } from "firebase/database";
 import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 import { db } from "../firebase/config";
 import { rtdb } from "../firebase/rtdb";
+import { getCollectionName } from "../utils/environmentConfig";
 import {
   Trophy,
   ArrowLeft,
@@ -22,7 +23,8 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow} from "../components/ui/table";
+  TableRow
+} from "../components/ui/table";
 import {
   Tooltip,
   TooltipContent,
@@ -31,20 +33,38 @@ import {
 } from "../components/ui/tooltip";
 import { PillLink } from "../components/utils/PillLink";
 
+// Type definitions
+interface User {
+  id: string;
+  username: string;
+  photoURL?: string;
+  pageCount: number;
+}
+
+interface UserData {
+  username?: string;
+  displayName?: string;
+  photoURL?: string;
+}
+
+interface PageCountsByUser {
+  [userId: string]: number;
+}
+
 export default function LeaderboardPage() {
   const { session } = useCurrentAccount();
-  const [loading, setLoading] = useState(true);
-  const [allUsers, setAllUsers] = useState([]);
-  const [displayedUsers, setDisplayedUsers] = useState([]);
-  const [sortDirection, setSortDirection] = useState("desc");
-  const [error, setError] = useState(null);
-  const [errorDetails, setErrorDetails] = useState("");
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [displayedUsers, setDisplayedUsers] = useState<User[]>([]);
+  const [sortDirection, setSortDirection] = useState<"desc" | "asc">("desc");
+  const [error, setError] = useState<Error | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string>("");
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [page, setPage] = useState<number>(1);
   const usersPerPage = 100;
   const hasMore = displayedUsers.length < allUsers.length;
 
-  const toggleSortDirection = () => {
+  const toggleSortDirection = (): void => {
     setSortDirection(sortDirection === "desc" ? "asc" : "desc");
   };
 
@@ -57,13 +77,13 @@ export default function LeaderboardPage() {
     }
   });
 
-  const loadMore = () => {
+  const loadMore = (): void => {
     if (loadingMore || !hasMore) return;
 
     setLoadingMore(true);
 
     // Calculate start and end indices
-    const start = (page) * usersPerPage;
+    const start = page * usersPerPage;
     const end = start + usersPerPage;
 
     // Get next batch of users
@@ -76,10 +96,10 @@ export default function LeaderboardPage() {
   };
 
   useEffect(() => {
-    const fetchUsersAndPages = async () => {
+    const fetchUsersAndPages = async (): Promise<void> => {
       try {
         // First, let's check if user auth state is available
-        console.log("Leaderboard: Current auth user state:", user ? `Logged in as ${session.email}` : "Not logged in");
+        console.log("Leaderboard: Current auth user state:", session ? `Logged in as ${session.email}` : "Not logged in");
 
         // Try to fetch users from RTDB
         console.log("Leaderboard: Attempting to fetch users from RTDB");
@@ -98,12 +118,12 @@ export default function LeaderboardPage() {
               return;
             }
 
-            const data = snapshot.val();
+            const data = snapshot.val() as Record<string, UserData>;
             console.log(`Leaderboard: Retrieved data for ${Object.keys(data).length} users`);
 
             if (data) {
               // Create a lookup object to store page counts per user
-              const pageCountsByUser = {};
+              const pageCountsByUser: PageCountsByUser = {};
 
               // Now get pages from Firestore
               try {
@@ -132,7 +152,7 @@ export default function LeaderboardPage() {
                     console.log("Leaderboard: Processing user data");
 
                     // Process users with their page counts
-                    const usersArray = Object.entries(data).map(([id, sessionData]) => ({
+                    const usersArray: User[] = Object.entries(data).map(([id, userData]) => ({
                       id,
                       username: userData.username || userData.displayName || "Unknown User",
                       photoURL: userData.photoURL,
@@ -149,19 +169,19 @@ export default function LeaderboardPage() {
                     setDisplayedUsers(sortedUsers.slice(0, usersPerPage));
                     setLoading(false);
                     setError(null);
-                  } catch (innerErr) {
+                  } catch (innerErr: any) {
                     console.error("Leaderboard: Inner error fetching Firestore pages:", innerErr);
                     setErrorDetails(`Firestore inner error: ${innerErr.message}`);
                     setError(innerErr);
                     setLoading(false);
                   }
-                })().catch(firestoreErr => {
+                })().catch((firestoreErr: any) => {
                   console.error("Leaderboard: Error fetching Firestore pages:", firestoreErr);
                   setErrorDetails(`Firestore error: ${firestoreErr.message}`);
                   setError(firestoreErr);
                   setLoading(false);
                 });
-              } catch (firestoreErr) {
+              } catch (firestoreErr: any) {
                 console.error("Leaderboard: Error fetching Firestore pages:", firestoreErr);
                 setErrorDetails(`Firestore error: ${firestoreErr.message}`);
                 setError(firestoreErr);
@@ -174,13 +194,13 @@ export default function LeaderboardPage() {
               setLoading(false);
             }
           });
-        } catch (rtdbErr) {
+        } catch (rtdbErr: any) {
           console.error("Leaderboard: Error getting RTDB snapshot:", rtdbErr);
           setErrorDetails(`RTDB error: ${rtdbErr.message}`);
           setError(rtdbErr);
           setLoading(false);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Leaderboard: General error in fetchUsersAndPages:", err);
         setErrorDetails(`General error: ${err.message}`);
         setError(err);
@@ -189,7 +209,7 @@ export default function LeaderboardPage() {
     };
 
     fetchUsersAndPages();
-  }, [, session]);
+  }, [session]);
 
   return (
     <main className="p-4 md:p-6 space-y-6 max-w-full overflow-hidden">
@@ -267,10 +287,9 @@ export default function LeaderboardPage() {
                           <TooltipTrigger asChild>
                             <PillLink
                               href={`/user/${user.id}`}
-                              variant="primary"
                               className="max-w-[180px] truncate"
                             >
-                              {session.username}
+                              {user.username}
                             </PillLink>
                           </TooltipTrigger>
                           <TooltipContent>

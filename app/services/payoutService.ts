@@ -308,7 +308,7 @@ class PayoutService {
       
       // Get all pledges for the period
       const pledgesQuery = query(
-        collection(db, 'pledges'),
+        collection(db, getCollectionName('pledges')),
         where('period', '==', period),
         where('status', '==', 'active')
       );

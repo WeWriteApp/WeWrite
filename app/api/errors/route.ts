@@ -1,9 +1,32 @@
-// app/api/logError/route.js
-import { NextResponse } from 'next/server';
+// app/api/logError/route.ts
+import { NextRequest, NextResponse } from 'next/server';
 import { Logging } from '@google-cloud/logging';
 
+// Type definitions
+interface ErrorData {
+  message?: string;
+  stack?: string;
+  timestamp?: string;
+  url?: string;
+  userAgent?: string;
+  isGoogleApiError?: boolean;
+}
+
+interface ErrorRequestBody {
+  error: ErrorData | string;
+  stackAnalysis?: string;
+  filename?: string;
+  lineno?: number;
+  colno?: number;
+  scriptTags?: string[];
+  stack?: string;
+  url?: string;
+  type?: string;
+  userAgent?: string;
+}
+
 // Initialize Google Cloud Logging
-let logging = null;
+let logging: Logging | null = null;
 
 // Skip Google Cloud Logging in development to prevent authentication errors
 if (process.env.NODE_ENV === 'development') {
@@ -34,7 +57,7 @@ if (process.env.NODE_ENV === 'development') {
 const log = logging ? logging.log('frontend-errors') : null; // Log name
 
 // Function to log the error to Google Cloud Logging
-const logToGCP = async (error) => {
+const logToGCP = async (error: ErrorData | string): Promise<void> => {
   if (!logging || !log) {
     console.log('Google Cloud Logging not available, skipping GCP log');
     return;
@@ -52,17 +75,16 @@ const logToGCP = async (error) => {
   }
 };
 
-export async function POST(request) {
-
+export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!request) {
     return NextResponse.json({ error: 'Request is required' }, { status: 400 });
   }
   try {
     // Handle malformed JSON gracefully
-    let body;
+    let body: ErrorRequestBody;
     try {
       body = await request.json();
-    } catch (jsonError) {
+    } catch (jsonError: any) {
       console.error('Invalid JSON in errors request:', jsonError.message);
       return NextResponse.json({ success: true, warning: 'Invalid JSON, error logged locally only' }, { status: 200 });
     }
@@ -123,6 +145,6 @@ export async function POST(request) {
   }
 }
 
-export async function GET() {
+export async function GET(): Promise<NextResponse> {
   return NextResponse.json({ message: 'Method not allowed' }, { status: 405 });
 }

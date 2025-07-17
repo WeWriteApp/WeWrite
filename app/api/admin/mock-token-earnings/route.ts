@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     // Verify admin privileges using Firebase Admin SDK
     const admin = getFirebaseAdmin();
-    const userRecord = await admin.auth().getUser(userId);
+    const userRecord = await admin!.auth().getUser(userId);
     const userEmail = userRecord.email;
 
     if (!userEmail || !isAdminUser(userEmail)) {
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
        *
        * CONVERSION RATE: $0.10 per token (10 tokens = $1.00)
        */
-      const db = admin.firestore();
+      const db = admin!.firestore();
       const earningsId = `${targetUserId}_${month}`;
       const usdValue = tokenAmount * 0.10;
 
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
        */
       if (existingEarnings.exists) {
         // Update existing earnings by adding new allocation
-        const current = existingEarnings.data();
+        const current = existingEarnings.data() || {};
         const updatedAllocations = [...(current.allocations || []), allocationData];
         const totalTokens = updatedAllocations.reduce((sum, alloc) => sum + alloc.tokens, 0);
         const totalUsd = totalTokens * 0.10;
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
           totalTokensReceived: totalTokens,
           totalUsdValue: totalUsd,
           allocations: updatedAllocations,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          updatedAt: admin!.firestore.FieldValue.serverTimestamp()
         });
       } else {
         // Create new earnings record
@@ -187,8 +187,8 @@ export async function POST(request: NextRequest) {
           totalUsdValue: usdValue,
           status: 'available' as const,
           allocations: [allocationData],
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          createdAt: admin!.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin!.firestore.FieldValue.serverTimestamp()
         });
       }
 
@@ -201,13 +201,13 @@ export async function POST(request: NextRequest) {
 
       if (existingBalance.exists) {
         // Update existing balance by adding mock earnings
-        const current = existingBalance.data();
+        const current = existingBalance.data() || {};
         await balanceRef.update({
           totalTokensEarned: (current.totalTokensEarned || 0) + tokenAmount,
           totalUsdEarned: (current.totalUsdEarned || 0) + usdValue,
           availableTokens: (current.availableTokens || 0) + tokenAmount,
           availableUsdValue: (current.availableUsdValue || 0) + usdValue,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          updatedAt: admin!.firestore.FieldValue.serverTimestamp()
         });
       } else {
         // Create new balance record with mock earnings
@@ -222,8 +222,8 @@ export async function POST(request: NextRequest) {
           paidOutTokens: 0,
           paidOutUsdValue: 0,
           lastProcessedMonth: month,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          createdAt: admin!.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin!.firestore.FieldValue.serverTimestamp()
         });
       }
 

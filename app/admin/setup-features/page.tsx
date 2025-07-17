@@ -44,15 +44,17 @@ export default function SetupFeaturesPage() {
       } else {
         toast({
           title: 'Setup Failed',
-          description: result.error?.message || 'An unknown error occurred',
+          description: (result.error && typeof result.error === 'object' && 'message' in result.error)
+            ? (result.error as { message: string }).message
+            : 'An unknown error occurred',
           variant: 'destructive'
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error running setup:', error);
       toast({
         title: 'Setup Failed',
-        description: error.message || 'An unknown error occurred',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
         variant: 'destructive'
       });
     } finally {
