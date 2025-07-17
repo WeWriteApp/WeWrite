@@ -12,7 +12,7 @@ export type FeatureFlag =
   | 'calendar_view'
   | 'inactive_subscription';
 
-// Define admin user IDs
+// Define admin user IDs - ONLY jamiegray2234@gmail.com has admin access
 const ADMIN_USER_IDS = [
   'jamiegray2234@gmail.com',
 ];

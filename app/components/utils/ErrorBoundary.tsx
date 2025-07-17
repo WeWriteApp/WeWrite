@@ -53,6 +53,18 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     // Log the error
     console.error('ErrorBoundary caught an error:', error, errorInfo);
 
+    // Check if this is a navigation-related error that we can ignore
+    const isNavigationError = error.message?.includes('router') ||
+                             error.message?.includes('navigation') ||
+                             error.message?.includes('redirect') ||
+                             error.stack?.includes('router');
+
+    if (isNavigationError) {
+      console.warn('ErrorBoundary: Ignoring navigation-related error:', error.message);
+      // Don't show error boundary for navigation errors
+      return;
+    }
+
     // Update state with error info
     this.setState({
       error,

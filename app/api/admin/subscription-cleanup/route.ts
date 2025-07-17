@@ -44,12 +44,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is admin (you may want to implement proper admin check)
-    const userRef = adminDb.collection('users').doc(userId);
-    const userDoc = await userRef.get();
-    const userData = userDoc.data();
-    
-    if (!userData?.isAdmin) {
+    // Check if user is admin - only jamiegray2234@gmail.com has admin access
+    const userRecord = await adminApp.auth().getUser(userId);
+    const userEmail = userRecord.email;
+
+    if (!userEmail || userEmail !== 'jamiegray2234@gmail.com') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 

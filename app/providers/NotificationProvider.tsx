@@ -2,9 +2,17 @@
 
 import { useEffect, useState, createContext, useContext, ReactNode } from "react";
 import { useCurrentAccount } from "./CurrentAccountProvider";
-// Import notification types
-import { type Notification } from "../firebase/notifications";
+// Import notification types and API service
+import {
+  type Notification,
+  getNotifications,
+  getUnreadNotificationsCount,
+  markNotificationAsRead,
+  markNotificationAsUnread,
+  markAllNotificationsAsRead
+} from "../services/notificationsApi";
 import { checkEmailVerificationPeriodically } from "../services/emailVerificationNotifications";
+import { preloadUserData } from "../firebase/batchUserData";
 
 /**
  * Notification context interface
@@ -40,7 +48,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
-  const [lastDoc, setLastDoc] = useState<any>(null);
+  const [lastVisible, setLastVisible] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState<boolean>(true);
 
   // Fetch notifications when session changes
@@ -50,7 +58,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       console.log('🟣 NOTIFICATION_PROVIDER EFFECT: No session, clearing notifications');
       setNotifications([]);
       setUnreadCount(0);
-      setLastDoc(null);
+      setLastVisible(null);
       setHasMore(true);
       return;
     }
@@ -60,63 +68,39 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       try {
         setLoading(true);
 
-        // Get notifications via API
-        const response = await fetch('/api/notifications?action=list&limit=20');
-        if (!response.ok) {
-          throw new Error(`Failed to fetch notifications: ${response.status}`);
-        }
-        const data = await response.json();
-        const notificationData = data.notifications || [];
-        const lastVisible = null; // API doesn't return lastVisible yet
+        // Get notifications via new API service
+        const result = await getNotifications(20);
+        const notificationData = result.notifications || [];
 
-        console.log('NotificationProvider - fetched notifications:', Array.isArray(notificationData) ? notificationData.map(n => ({ id: n.id, read: n.read, type: n.type })) : []);
+        console.log('NotificationProvider - fetched notifications:', notificationData.map(n => ({ id: n.id, read: n.read, type: n.type })));
 
         // Extract unique user IDs from notifications for batch fetching
         const userIds = new Set<string>();
-        if (Array.isArray(notificationData)) {
-          notificationData.forEach(notification => {
-            if (notification.sourceUserId) {
-              userIds.add(notification.sourceUserId);
-            }
-          });
-        }
+        notificationData.forEach(notification => {
+          if (notification.sourceUserId) {
+            userIds.add(notification.sourceUserId);
+          }
+        });
 
-        // TEMPORARY: Disable user data preloading to fix dashboard rendering issue
         // Preload user data for all users mentioned in notifications
         if (userIds.size > 0) {
-          console.log(`NotificationProvider - skipping user data preloading for ${userIds.size} users (temporarily disabled)`);
-          // try {
-          //   const { preloadUserData } = await import('../firebase/batchUserData');
-          //   if (typeof preloadUserData === 'function') {
-          //     await preloadUserData(Array.from(userIds));
-          //     console.log('NotificationProvider - user data preloaded successfully');
-          //   } else {
-          //     console.warn('NotificationProvider - preloadUserData is not a function');
-          //   }
-          // } catch (preloadError) {
-          //   console.warn('NotificationProvider - error preloading user data:', preloadError?.message || preloadError);
-          //   // Continue even if preloading fails - don't let this crash the app
-          // }
+          try {
+            await preloadUserData(Array.from(userIds));
+            console.log('NotificationProvider - user data preloaded successfully');
+          } catch (preloadError) {
+            console.warn('NotificationProvider - error preloading user data:', preloadError?.message || preloadError);
+            // Continue even if preloading fails - don't let this crash the app
+          }
         }
 
-        // Count actual unread notifications from the fetched data
-        const actualUnreadCount = Array.isArray(notificationData) ? notificationData.filter(n => !n.read).length : 0;
-        console.log('NotificationProvider - actual unread count from data:', actualUnreadCount);
+        // Get unread count via new API service
+        const unreadCount = await getUnreadNotificationsCount();
+        console.log('NotificationProvider - unread count:', unreadCount);
 
-        // Get stored unread count via API
-        const countResponse = await fetch('/api/notifications?action=count');
-        if (!countResponse.ok) {
-          throw new Error(`Failed to fetch notification count: ${countResponse.status}`);
-        }
-        const countData = await countResponse.json();
-        const storedCount = countData.count || 0;
-        console.log('NotificationProvider - stored unread count:', storedCount);
-
-        setUnreadCount(storedCount);
-
-        setNotifications(Array.isArray(notificationData) ? notificationData : []);
-        setLastDoc(lastVisible);
-        setHasMore(Array.isArray(notificationData) && notificationData.length === 20); // Assuming pageSize is 20
+        setUnreadCount(unreadCount);
+        setNotifications(notificationData);
+        setLastVisible(result.lastVisible);
+        setHasMore(result.hasMore);
 
         // Check for email verification notifications after fetching notifications
         checkEmailVerificationPeriodically();
@@ -139,14 +123,9 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     try {
       setLoading(true);
 
-      // Load more notifications via API (pagination not fully implemented yet)
-      const response = await fetch('/api/notifications?action=list&limit=20');
-      if (!response.ok) {
-        throw new Error(`Failed to fetch more notifications: ${response.status}`);
-      }
-      const data = await response.json();
-      const newNotifications = data.notifications || [];
-      const newLastDoc = null; // API doesn't support pagination yet
+      // Load more notifications via new API service
+      const result = await getNotifications(20, lastVisible);
+      const newNotifications = result.notifications || [];
 
       // Extract unique user IDs from new notifications for batch fetching
       const userIds = new Set<string>();
@@ -160,7 +139,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       if (userIds.size > 0) {
         console.log(`NotificationProvider - preloading user data for ${userIds.size} additional users`);
         try {
-          const { preloadUserData } = await import('../firebase/batchUserData');
           await preloadUserData(Array.from(userIds));
           console.log('NotificationProvider - additional user data preloaded successfully');
         } catch (preloadError) {
@@ -170,8 +148,8 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       }
 
       setNotifications(prev => [...prev, ...newNotifications]);
-      setLastDoc(newLastDoc);
-      setHasMore(newNotifications.length === 20); // Assuming pageSize is 20
+      setLastVisible(result.lastVisible);
+      setHasMore(result.hasMore);
     } catch (error) {
       console.error("Error loading more notifications:", error);
     } finally {
@@ -192,21 +170,8 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       const notification = notifications.find(n => n.id === notificationId);
       const wasUnread = notification && !notification.read;
 
-      // Call the API to mark as read
-      const response = await fetch('/api/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'markAsRead',
-          notificationId
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to mark notification as read: ${response.status}`);
-      }
+      // Call the new API service to mark as read
+      await markNotificationAsRead(notificationId);
 
       // Update local state
       setNotifications(prev =>
@@ -241,21 +206,8 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       const notification = notifications.find(n => n.id === notificationId);
       const wasRead = notification && notification.read;
 
-      // Call the API to mark as unread
-      const response = await fetch('/api/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'markAsUnread',
-          notificationId
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to mark notification as unread: ${response.status}`);
-      }
+      // Call the new API service to mark as unread
+      await markNotificationAsUnread(notificationId);
 
       // Update local state
       setNotifications(prev =>
@@ -287,20 +239,8 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       console.log('markAllAsRead called - current unreadCount:', unreadCount);
       console.log('markAllAsRead called - current notifications:', notifications.map(n => ({ id: n.id, read: n.read })));
 
-      // Call the API to mark all as read
-      const response = await fetch('/api/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'markAllAsRead'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to mark all notifications as read: ${response.status}`);
-      }
+      // Call the new API service to mark all as read
+      await markAllNotificationsAsRead();
 
       // Update local state
       setNotifications(prev =>

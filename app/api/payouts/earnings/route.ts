@@ -25,26 +25,41 @@ import { FinancialUtils } from '../../../types/financial';
 import { getCollectionName } from "../../../utils/environmentConfig";
 import { getMinimumPayoutThreshold } from '../../../utils/feeCalculations';
 import { payoutRateLimiter } from '../../../utils/rateLimiter';
+import { FeeConfigurationService } from '../../../services/feeConfigurationService';
 
-// Fee calculation function (should match PayoutFeeBreakdown component)
-function calculatePayoutFees(grossAmount: number) {
-  const stripeFeePercentage = 2.9; // 2.9%
-  const stripeFeeFixed = 0.30; // $0.30
-  const platformFeePercentage = 7; // 7%
+// Fee calculation function using centralized fee service
+async function calculatePayoutFees(grossAmount: number, payoutMethod: 'standard' | 'instant' = 'standard') {
+  try {
+    // Use centralized fee calculation service
+    const result = await FeeConfigurationService.calculatePayoutFees(grossAmount, payoutMethod);
 
-  const stripeFee = (grossAmount * stripeFeePercentage) / 100;
-  const platformFee = (grossAmount * platformFeePercentage) / 100;
-  const totalFees = stripeFee + stripeFeeFixed + platformFee;
-  const netAmount = Math.max(0, grossAmount - totalFees);
+    return {
+      grossAmount: result.grossAmount,
+      stripeFee: result.stripeConnectFee,
+      stripeFeeFixed: result.stripePayoutFee,
+      platformFee: result.platformFee,
+      totalFees: result.totalFees,
+      netAmount: result.netAmount
+    };
+  } catch (error) {
+    console.error('Error calculating fees with centralized service, using fallback:', error);
 
-  return {
-    grossAmount,
-    stripeFee,
-    stripeFeeFixed,
-    platformFee,
-    totalFees,
-    netAmount
-  };
+    // Fallback to basic calculation
+    const stripeFee = grossAmount * 0.0025; // 0.25% Stripe Connect fee
+    const stripeFeeFixed = payoutMethod === 'instant' ? 0.50 : 0.00;
+    const platformFee = 0; // 0% platform fee
+    const totalFees = stripeFee + stripeFeeFixed + platformFee;
+    const netAmount = Math.max(0, grossAmount - totalFees);
+
+    return {
+      grossAmount,
+      stripeFee,
+      stripeFeeFixed,
+      platformFee,
+      totalFees,
+      netAmount
+    };
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -119,9 +134,9 @@ export async function GET(request: NextRequest) {
         .limit(pageSize);
 
       const payoutsSnapshot = await getDocs(payoutsQuery);
-      payouts = payoutsSnapshot.docs.map(payoutDoc => {
+      payouts = await Promise.all(payoutsSnapshot.docs.map(async (payoutDoc) => {
         const payout = payoutDoc.data();
-        const feeBreakdown = calculatePayoutFees(payout.amount);
+        const feeBreakdown = await calculatePayoutFees(payout.amount);
 
         return {
           id: payout.id,
@@ -136,7 +151,7 @@ export async function GET(request: NextRequest) {
           retryCount: payout.retryCount || 0,
           feeBreakdown
         };
-      });
+      }));
     }
 
     return NextResponse.json({
@@ -256,7 +271,7 @@ await setDoc(doc(db, getCollectionName("payouts"), payoutId), payout);
         const stripeResult = await stripePayoutService.processPayout(payoutId);
 
         if (stripeResult.success) {
-          const feeBreakdown = calculatePayoutFees(payout.amount);
+          const feeBreakdown = await calculatePayoutFees(payout.amount);
 
           return NextResponse.json({
             success: true,
@@ -271,7 +286,7 @@ await setDoc(doc(db, getCollectionName("payouts"), payoutId), payout);
           });
         } else {
           // Payout failed, but record was created for retry
-          const feeBreakdown = calculatePayoutFees(payout.amount);
+          const feeBreakdown = await calculatePayoutFees(payout.amount);
 
           return NextResponse.json({
             success: false,

@@ -537,6 +537,17 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     router.push('/settings/subscription');
   };
 
+  // Handle pledge bar click - redirect to landing page if not logged in
+  const handlePledgeBarClick = () => {
+    if (!currentAccount && !isPageOwner) {
+      // Redirect to landing page for logged-out users
+      router.push('/');
+    } else {
+      // Open modal for logged-in users
+      setIsModalOpen(true);
+    }
+  };
+
   // Don't show if not visible or no pageId
   if (!visible || !pageId) return null;
 
@@ -593,7 +604,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
           className
         )}
         data-pledge-bar
-        onClick={() => setIsModalOpen(true)}
+        onClick={handlePledgeBarClick}
       >
         {/* Main Content */}
         <div className={cn(

@@ -37,6 +37,16 @@ const getUserStorageKey = (userId: string): string => {
  */
 export const getLoggedOutTokenBalance = (): SimulatedTokenBalance => {
   try {
+    // Check if we're on the server side
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return {
+        totalTokens: 0,
+        allocatedTokens: 0,
+        availableTokens: 0,
+        allocations: []
+      };
+    }
+
     const stored = localStorage.getItem(LOGGED_OUT_STORAGE_KEY);
     if (stored) {
       const data = JSON.parse(stored);

@@ -38,7 +38,7 @@ function ApiSessionInitializer({ children }: ApiSessionInitializerProps) {
   // Session management functions
   const createSessionCookies = useCallback((sessionData: any) => {
     const expires = new Date();
-    expires.setTime(expires.getTime() + (24 * 60 * 60 * 1000)); // 24 hours
+    expires.setTime(expires.getTime() + (30 * 24 * 60 * 60 * 1000)); // 30 days
 
     Cookies.set('currentUser', JSON.stringify(sessionData), {
       expires,

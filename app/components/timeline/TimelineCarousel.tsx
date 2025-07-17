@@ -235,6 +235,33 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
     }
   }, []);
 
+  // Scroll to focus date or today on initial load
+  useEffect(() => {
+    if (!loading && scrollContainerRef.current) {
+      const timer = setTimeout(() => {
+        if (focusDate) {
+          // Scroll to specific focus date if provided
+          const focusCard = scrollContainerRef.current?.querySelector(`[data-date="${focusDate}"]`);
+          if (focusCard) {
+            const container = scrollContainerRef.current;
+            const cardRect = focusCard.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const scrollLeft = container.scrollLeft + cardRect.left - containerRect.left - (container.clientWidth / 2) + (cardRect.width / 2);
+            container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+          } else {
+            // Focus date not found, fall back to today
+            scrollToToday();
+          }
+        } else if (isFullPage) {
+          // In full page mode without focus date, scroll to today
+          scrollToToday();
+        }
+      }, 300);
+
+      return () => clearTimeout(timer);
+    }
+  }, [loading, focusDate, isFullPage, scrollToToday]);
+
   // Expose scroll function globally for the Today button
   useEffect(() => {
     (window as any).timelineScrollToToday = scrollToToday;

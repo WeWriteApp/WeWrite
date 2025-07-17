@@ -21,8 +21,8 @@ export async function POST(request: NextRequest) {
     // Verify the ID token first
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     
-    // Create session cookie that expires in 7 days
-    const expiresIn = 60 * 60 * 24 * 7 * 1000; // 7 days in milliseconds
+    // Create session cookie that expires in 30 days - optimal for content creation apps
+    const expiresIn = 60 * 60 * 24 * 30 * 1000; // 30 days in milliseconds
     const sessionCookie = await admin.auth().createSessionCookie(idToken, { expiresIn });
 
     // Set the session cookie in the response

@@ -67,7 +67,6 @@ export default function UserPage({ params }: UserPageProps) {
         });
 
         // Use API endpoint to get user profile (works in both dev and prod)
-        console.log('🔍 Fetching user profile via API for:', id);
         const response = await fetch(`/api/users/profile?id=${encodeURIComponent(id)}`);
 
         let userData = null;
@@ -78,12 +77,11 @@ export default function UserPage({ params }: UserPageProps) {
           if (result.success) {
             userData = result.data;
             userId = userData.uid || userData.id;
-            console.log('✅ Found user via API:', userData.username);
           } else {
-            console.warn('❌ API returned error:', result.error);
+            console.warn('API returned error for user profile:', result.error);
           }
         } else {
-          console.warn('❌ API request failed:', response.status, response.statusText);
+          console.warn('User profile API request failed:', response.status, response.statusText);
         }
 
         if (userData) {

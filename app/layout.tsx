@@ -11,7 +11,7 @@ import { DataProvider } from "./providers/DataProvider"
 import { DateFormatProvider } from "./contexts/DateFormatContext"
 import { AccentColorProvider } from "./contexts/AccentColorContext"
 import { PillStyleProvider } from "./contexts/PillStyleContext"
-import { LoggingProvider } from "./providers/LoggingProvider"
+// LoggingProvider removed - using unified logger from init-logger.ts
 import { LineSettingsProvider } from "./contexts/LineSettingsContext"
 import { RecentPagesProvider } from "./contexts/RecentPagesContext"
 import { TokenIncrementProvider } from "./contexts/TokenIncrementContext"
@@ -37,7 +37,6 @@ export default function RootLayout({
           <ErrorBoundary name="root">
             <GlobalErrorHandler />
             <ThemeProvider>
-            <LoggingProvider>
               <MultiAuthProvider>
                 <CurrentAccountProvider>
                   <AdminStateSimulatorProvider>
@@ -70,7 +69,6 @@ export default function RootLayout({
                   </AdminStateSimulatorProvider>
                 </CurrentAccountProvider>
               </MultiAuthProvider>
-            </LoggingProvider>
           </ThemeProvider>
           </ErrorBoundary>
         </NextJSErrorBoundary>

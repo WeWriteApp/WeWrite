@@ -1,6 +1,19 @@
 "use client";
+/**
+ * DEPRECATED: LoggingProvider
+ *
+ * This provider has been replaced by the unified logging system.
+ * Please use the unified logger instead:
+ *
+ * import logger from '../utils/logger';
+ * logger.error('message', data);
+ *
+ * @deprecated Use unified logger from '../utils/logger' instead
+ */
 // contexts/LoggingProvider.tsx
 import React, { createContext, useContext, useEffect, ReactNode } from "react";
+
+console.warn('⚠️ LoggingProvider is deprecated. Use unified logger from ../utils/logger instead');
 
 // Types
 interface LoggingError {

@@ -51,57 +51,24 @@ export function usePageConnections(pageId: string, pageTitle?: string): PageConn
       setError(null);
       console.log('🔗 usePageConnections: Fetching connections for page:', pageId);
 
-      // Get incoming connections (backlinks)
-      const { getBacklinks } = await import('../firebase/database/backlinks');
-      const incomingConnections = await getBacklinks(pageId, 50);
-      console.log('🔗 usePageConnections: Incoming connections:', incomingConnections.length);
+      // Use the page connections API
+      const response = await fetch(`/api/page-connections?pageId=${pageId}&includeSecondHop=false&limit=50`);
 
-      // Get outgoing connections (forward links)
-      const outgoingConnections: PageConnection[] = [];
-      try {
-        const { getPageById } = await import('../firebase/database/pages');
-        const { pageData } = await getPageById(pageId);
-        
-        if (pageData?.content) {
-          const { extractLinksFromNodes } = await import('../firebase/database/links');
-          const content = typeof pageData.content === 'string' 
-            ? JSON.parse(pageData.content) 
-            : pageData.content;
-          const allLinks = extractLinksFromNodes(content);
-          const pageLinks = allLinks.filter(link => link.type === 'page' && link.pageId);
-          
-          console.log('🔗 usePageConnections: Found page links in content:', pageLinks.length);
-
-          // Fetch page data for each outgoing link
-          for (const link of pageLinks) {
-            try {
-              const { pageData: linkedPage } = await getPageById(link.pageId);
-              if (linkedPage && !linkedPage.deleted) {
-                outgoingConnections.push({
-                  id: link.pageId,
-                  title: linkedPage.title || 'Untitled',
-                  username: linkedPage.username,
-                  lastModified: linkedPage.lastModified,
-                  isPublic: linkedPage.isPublic,
-                  linkText: link.text || linkedPage.title
-                });
-              }
-            } catch (linkError) {
-              console.warn(`Could not fetch outgoing link ${link.pageId}:`, linkError);
-            }
-          }
-        }
-      } catch (contentError) {
-        console.warn('Could not parse page content for outgoing links:', contentError);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔗 usePageConnections: API error response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      console.log('🔗 usePageConnections: Outgoing connections:', outgoingConnections.length);
+      const data = await response.json();
+      console.log('🔗 usePageConnections: API response:', data);
+      console.log('🔗 usePageConnections: API response:', data.stats);
 
-      setIncoming(incomingConnections);
-      setOutgoing(outgoingConnections);
+      setIncoming(data.incoming || []);
+      setOutgoing(data.outgoing || []);
 
     } catch (err) {
-      console.error('Error fetching page connections:', err);
+      console.error('🔗 usePageConnections: Error fetching page connections:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
       setIncoming([]);
       setOutgoing([]);
@@ -157,31 +124,20 @@ export function usePageConnectionsGraph(pageId: string, pageTitle?: string) {
       setGraphLoading(true);
       console.log('🔗 usePageConnectionsGraph: Fetching 2-hop connections');
 
-      const { getBacklinks } = await import('../firebase/database/backlinks');
-      const secondHopSet = new Set<string>();
-      const secondHopConnections: PageConnection[] = [];
+      // Use the page connections API with second-hop enabled
+      const response = await fetch(`/api/page-connections?pageId=${pageId}&includeSecondHop=true&limit=50`);
 
-      // Sample first-level connections to avoid too many requests
-      const firstLevelSample = baseConnections.allConnections.slice(0, 5);
-
-      for (const firstLevelPage of firstLevelSample) {
-        try {
-          const secondLevelBacklinks = await getBacklinks(firstLevelPage.id, 3);
-          secondLevelBacklinks.forEach(backlink => {
-            if (!secondHopSet.has(backlink.id) && 
-                backlink.id !== pageId && 
-                !baseConnections.allConnections.some(conn => conn.id === backlink.id)) {
-              secondHopSet.add(backlink.id);
-              secondHopConnections.push(backlink);
-            }
-          });
-        } catch (error) {
-          console.warn(`Could not fetch 2-hop connections for ${firstLevelPage.id}:`, error);
-        }
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔗 usePageConnectionsGraph: API error response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      console.log('🔗 usePageConnectionsGraph: 2-hop connections:', secondHopConnections.length);
-      setSecondHopConnections(secondHopConnections.slice(0, 10)); // Limit to 10
+      const data = await response.json();
+      console.log('🔗 usePageConnectionsGraph: API response:', data);
+      console.log('🔗 usePageConnectionsGraph: Second-hop API response:', data.stats);
+
+      setSecondHopConnections(data.secondHopConnections || []);
 
     } catch (error) {
       console.error('Error fetching 2-hop connections:', error);

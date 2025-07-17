@@ -21,14 +21,14 @@ export async function GET(request) {
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
-    // Simple trending algorithm: get pages with most views
-    // Simplified to avoid complex index requirements
-    console.log(`🔥 [TRENDING_API] Querying pages ordered by views, limit: ${limitCount * 3}`);
+    // Simple trending algorithm: get public pages and sort by actual view data
+    // Don't rely on 'views' field since it might not exist on all pages
+    console.log(`🔥 [TRENDING_API] Querying public pages, limit: ${limitCount * 5}`);
     console.log(`🔥 [TRENDING_API] Using collection:`, getCollectionName('pages'));
 
     const pagesQuery = db.collection(getCollectionName('pages'))
-      .orderBy('views', 'desc')
-      .limit(limitCount * 3); // Get more to filter out private/deleted pages
+      .where('isPublic', '==', true)
+      .limit(limitCount * 5); // Get more to filter and sort by actual views
 
     const pagesSnapshot = await pagesQuery.get();
     console.log(`🔥 [TRENDING_API] Raw query returned ${pagesSnapshot.size} documents`);
@@ -59,14 +59,12 @@ export async function GET(request) {
       if (pageData.deleted) deletedCount++;
       if (!pageData.title) noTitleCount++;
 
-      // Skip private pages, deleted pages, or pages without titles
-      // For development, be less restrictive about view counts
-      const isDevelopment = process.env.NODE_ENV === 'development';
-      const minViews = isDevelopment ? 0 : 1;
+      // Skip private pages, deleted pages, pages without titles, or pages with zero views
+      const views = pageData.views || 0;
 
-      if ((pageData.views || 0) < minViews) lowViewsCount++;
+      if (views < 1) lowViewsCount++;
 
-      if (!pageData.isPublic || pageData.deleted || !pageData.title || (pageData.views || 0) < minViews) {
+      if (!pageData.isPublic || pageData.deleted || !pageData.title || views < 1) {
         filteredCount++;
         return;
       }

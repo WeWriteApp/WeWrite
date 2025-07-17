@@ -197,6 +197,31 @@ export async function POST(request: NextRequest) {
         })
       });
 
+      // Convert unfunded tokens to funded tokens
+      console.log(`[CREATE SUBSCRIPTION] Converting unfunded tokens to funded tokens...`);
+      try {
+        const convertResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/tokens/convert-unfunded`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cookie': request.headers.get('cookie') || '', // Forward auth cookies
+          },
+          body: JSON.stringify({
+            userId
+          })
+        });
+
+        if (convertResponse.ok) {
+          const convertResult = await convertResponse.json();
+          console.log(`[CREATE SUBSCRIPTION] Successfully converted ${convertResult.convertedCount} unfunded token allocations`);
+        } else {
+          console.warn(`[CREATE SUBSCRIPTION] Failed to convert unfunded tokens: ${convertResponse.status}`);
+        }
+      } catch (convertError) {
+        console.warn(`[CREATE SUBSCRIPTION] Error converting unfunded tokens:`, convertError);
+        // Don't fail subscription creation if token conversion fails
+      }
+
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text();
         console.warn(`[CREATE SUBSCRIPTION] Failed to update token allocation: ${tokenResponse.status} ${errorText}`);

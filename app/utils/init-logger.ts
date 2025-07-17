@@ -1,21 +1,22 @@
 /**
- * Logger Initialization
- * 
- * This file initializes the logging system and can optionally replace
- * the default console methods to reduce log duplication.
+ * Unified Logger Initialization
+ *
+ * This file initializes the unified logging system with deduplication,
+ * terminal integration, and console replacement for maximum readability.
  */
 
-import logger, { replaceConsole } from './logger';
+import logger from './logger';
 
-// Initialize logger on app startup
+// Initialize unified logger on app startup
 if (typeof window !== 'undefined') {
-  // Client-side initialization - silent init to reduce noise
+  // Client-side initialization - enable console replacement for unified logging
+  logger.replaceConsole();
 
-  // Optionally replace console methods to catch all logging
-  // Uncomment the line below to enable global console replacement
-  // replaceConsole();
+  // Log initialization
+  logger.info('Unified logging system initialized with console replacement and deduplication');
 } else {
-  // Server-side initialization - silent init to reduce noise
+  // Server-side initialization - no console replacement needed
+  logger.info('Unified logging system initialized (server-side)');
 }
 
 export default logger;

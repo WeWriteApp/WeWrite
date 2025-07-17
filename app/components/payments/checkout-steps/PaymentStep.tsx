@@ -535,24 +535,28 @@ export function PaymentStep({
 
                   {/* New Payment Method Form */}
                   {!useExistingPayment && (
-                    <PaymentElement
-                      options={{
-                        layout: 'tabs',
-                        paymentMethodOrder: ['card', 'apple_pay', 'google_pay']
-                      }}
-                      onChange={handlePaymentElementChange}
-                    />
+                    <div className="payment-form-container">
+                      <PaymentElement
+                        options={{
+                          layout: 'tabs',
+                          paymentMethodOrder: ['card', 'apple_pay', 'google_pay']
+                        }}
+                        onChange={handlePaymentElementChange}
+                      />
+                    </div>
                   )}
                 </>
               ) : (
                 /* No existing payment methods - show new payment form */
-                <PaymentElement
-                  options={{
-                    layout: 'tabs',
-                    paymentMethodOrder: ['card', 'apple_pay', 'google_pay']
-                  }}
-                  onChange={handlePaymentElementChange}
-                />
+                <div className="payment-form-container">
+                  <PaymentElement
+                    options={{
+                      layout: 'tabs',
+                      paymentMethodOrder: ['card', 'apple_pay', 'google_pay']
+                    }}
+                    onChange={handlePaymentElementChange}
+                  />
+                </div>
               )}
             </CardContent>
           </Card>
@@ -585,13 +589,15 @@ export function PaymentStep({
               </CardHeader>
               {!billingAddressCollapsed && (
                 <CardContent>
-                  <AddressElement
-                    options={{
-                      mode: 'billing',
-                      allowedCountries: ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'NL', 'SE', 'NO', 'DK', 'FI']
-                    }}
-                    onChange={handleAddressChange}
-                  />
+                  <div className="payment-form-container">
+                    <AddressElement
+                      options={{
+                        mode: 'billing',
+                        allowedCountries: ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'NL', 'SE', 'NO', 'DK', 'FI']
+                      }}
+                      onChange={handleAddressChange}
+                    />
+                  </div>
                 </CardContent>
               )}
             </Card>

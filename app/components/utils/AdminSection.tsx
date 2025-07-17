@@ -19,37 +19,16 @@ export default function AdminSection({ userId, userEmail }: AdminSectionProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Check if user is in the default admin list
-        if (userEmail === 'jamiegray2234@gmail.com') {
-          setIsAdmin(true);
-          setIsLoading(false);
-          return;
-        }
-        
-        // Check if user is in the admin users list in Firestore
-        const adminUsersRef = doc(db, 'config', 'adminUsers');
-        const adminUsersDoc = await getDoc(adminUsersRef);
-        
-        if (adminUsersDoc.exists()) {
-          const adminUserIds = adminUsersDoc.data().userIds || [];
-          setIsAdmin(adminUserIds.includes(userId));
-        } else {
-          setIsAdmin(false);
-        }
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
-      } finally {
-        setIsLoading(false);
-      }
+    const checkAdminStatus = () => {
+      setIsLoading(true);
+
+      // Only jamiegray2234@gmail.com has admin access
+      setIsAdmin(userEmail === 'jamiegray2234@gmail.com');
+      setIsLoading(false);
     };
-    
+
     checkAdminStatus();
-  }, [userId, userEmail]);
+  }, [userEmail]);
   
   if (isLoading) {
     return null;

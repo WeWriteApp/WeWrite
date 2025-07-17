@@ -933,6 +933,41 @@ textarea.text-2xl {
   border-color: hsl(var(--border) / 0.6);
 }
 
+/* Stripe Elements dark mode optimization */
+.dark .StripeElement {
+  background-color: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .StripeElement:focus {
+  border-color: hsl(var(--ring)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2) !important;
+}
+
+.dark .StripeElement--invalid {
+  border-color: hsl(var(--destructive)) !important;
+}
+
+.dark .StripeElement--complete {
+  border-color: hsl(var(--primary)) !important;
+}
+
+/* Payment form containers */
+.payment-form-container {
+  background-color: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.dark .payment-form-container {
+  background-color: hsl(var(--card));
+  border-color: hsl(var(--border));
+}
+
 /* Standard card styling for consistent appearance across the app */
 .wewrite-card {
   background-color: hsl(var(--card));

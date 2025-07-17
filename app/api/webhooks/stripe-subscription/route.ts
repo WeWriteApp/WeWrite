@@ -197,6 +197,30 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
     // Update user's token allocation
     if (subscription.status === 'active') {
       await ServerTokenService.updateMonthlyTokenAllocation(userId, amount);
+
+      // Convert unfunded tokens to funded tokens
+      try {
+        console.log(`[SUBSCRIPTION WEBHOOK] Converting unfunded tokens for user ${userId}`);
+        const convertResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/tokens/convert-unfunded`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId
+          })
+        });
+
+        if (convertResponse.ok) {
+          const convertResult = await convertResponse.json();
+          console.log(`[SUBSCRIPTION WEBHOOK] Successfully converted ${convertResult.convertedCount} unfunded token allocations for user ${userId}`);
+        } else {
+          console.warn(`[SUBSCRIPTION WEBHOOK] Failed to convert unfunded tokens for user ${userId}: ${convertResponse.status}`);
+        }
+      } catch (convertError) {
+        console.warn(`[SUBSCRIPTION WEBHOOK] Error converting unfunded tokens for user ${userId}:`, convertError);
+        // Don't fail webhook processing if token conversion fails
+      }
     }
 
     console.log(`[SUBSCRIPTION WEBHOOK] Successfully updated subscription for user ${userId}, final status: ${subscriptionData.status}`);
@@ -406,8 +430,8 @@ async function createFailedPaymentNotification(
   failureRecord?: any
 ) {
   try {
-    // Import notification function
-    const { createNotification } = await import('../../../firebase/notifications');
+    // Import notification function from API service
+    const { createNotification } = await import('../../../services/notificationsApi');
 
     const amount = invoice.amount_due / 100; // Convert from cents
 

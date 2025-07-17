@@ -595,6 +595,14 @@ export default function PageView({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('🚨 SAVE DEBUG: API error response:', errorData);
+
+        // Handle authentication errors specifically
+        if (response.status === 401) {
+          setError("Your session has expired. Please refresh the page and log in again.");
+          return; // Don't throw, just show error message
+        }
+
         throw new Error(errorData.message || `API request failed: ${response.status} ${response.statusText}`);
       }
 
@@ -635,12 +643,16 @@ export default function PageView({
       // This ensures the user sees the saved page instead of staying in edit mode
       setTimeout(() => {
         try {
-          router.replace(`/${pageId}`);
+          // Use window.location for more reliable navigation that doesn't trigger React errors
+          window.location.href = `/${pageId}`;
         } catch (routerError) {
           console.error('Error during post-save redirect (non-fatal):', routerError);
           // If redirect fails, just stay on the page - it's already saved
+          // Show success message to user
+          setError(null);
+          // Could add a success toast here if needed
         }
-      }, 100);
+      }, 500); // Increased delay to ensure save is fully processed
     } catch (error) {
       console.error("Error saving page:", error);
       setError("Failed to save page. Please try again.");
@@ -915,13 +927,10 @@ export default function PageView({
                 />
 
                 {/* Page Graph View */}
-                <div className="mt-8 mb-8">
-                  <PageGraphView
-                    pageId={page.id}
-                    pageTitle={page.title}
-                    className="max-w-4xl mx-auto"
-                  />
-                </div>
+                <PageGraphView
+                  pageId={page.id}
+                  pageTitle={page.title}
+                />
               </>
             )}
           </div>

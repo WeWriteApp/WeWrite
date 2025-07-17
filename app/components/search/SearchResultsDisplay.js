@@ -9,6 +9,7 @@ import { Pin } from 'lucide-react';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import { useDateFormat } from '../../contexts/DateFormatContext';
+import { wewriteCard } from '../../lib/utils';
 
 /**
  * SearchResultsDisplay Component
@@ -200,7 +201,7 @@ const SearchResultsDisplay = React.memo(({
          (!results?.pages || results.pages.length === 0) &&
          (!results?.users || results.users.length === 0) &&
          (!groupsEnabled || !results?.groups || results.groups.length === 0) && (
-          <div className="text-center py-8">
+          <div className={wewriteCard('default', 'text-center py-4')}>
             <p className="text-muted-foreground mb-4">No results found for "{query}"</p>
             <Button asChild>
               <Link href={`/new?title=${encodeURIComponent(query.trim())}`}>

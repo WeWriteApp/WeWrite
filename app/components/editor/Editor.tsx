@@ -83,7 +83,124 @@ const Editor = React.forwardRef<any, EditorProps>((props, ref) => {
   // Drag and drop state
   const [draggedLineId, setDraggedLineId] = useState<string | null>(null);
   const [dragOverLineId, setDragOverLineId] = useState<string | null>(null);
-  const [draggedLink, setDraggedLink] = useState<{ lineId: string; itemIndex: number } | null>(null);
+
+  // Link drag state
+  const [draggedLink, setDraggedLink] = useState<{
+    lineId: string;
+    linkIndex: number;
+    linkData: LinkItem;
+  } | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<{
+    lineId: string;
+    position: number;
+  } | null>(null);
+
+  // Animation state for smooth character repositioning
+  const [isRepositioning, setIsRepositioning] = useState(false);
+  const [isSqueezing, setIsSqueezing] = useState(false);
+
+  // Physics-based animation state
+  const [elementAnimations, setElementAnimations] = useState<Map<string, {
+    x: number;
+    targetX: number;
+    velocity: number;
+  }>>(new Map());
+
+  // Undo/Redo history state
+  const [history, setHistory] = useState<EditorLine[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [isUndoRedoOperation, setIsUndoRedoOperation] = useState(false);
+
+  // Animation loop for smooth physics
+  useEffect(() => {
+    let animationFrame: number;
+
+    const animate = () => {
+      setElementAnimations(prev => {
+        const newAnimations = new Map(prev);
+        let hasChanges = false;
+
+        for (const [key, animation] of newAnimations) {
+          const spring = 0.15; // Spring strength
+          const damping = 0.8;  // Damping factor
+
+          const force = (animation.targetX - animation.x) * spring;
+          animation.velocity = (animation.velocity + force) * damping;
+          animation.x += animation.velocity;
+
+          // Stop animation when close enough
+          if (Math.abs(animation.targetX - animation.x) < 0.1 && Math.abs(animation.velocity) < 0.1) {
+            animation.x = animation.targetX;
+            animation.velocity = 0;
+          } else {
+            hasChanges = true;
+          }
+        }
+
+        if (hasChanges) {
+          animationFrame = requestAnimationFrame(animate);
+        }
+
+        return newAnimations;
+      });
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [elementAnimations.size]);
+
+  // Save state to history for undo functionality
+  const saveToHistory = useCallback((newLines: EditorLine[]) => {
+    if (isUndoRedoOperation) return; // Don't save during undo/redo operations
+
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1); // Remove any future history
+      newHistory.push(JSON.parse(JSON.stringify(newLines))); // Deep copy
+
+      // Limit history to 50 entries
+      if (newHistory.length > 50) {
+        newHistory.shift();
+        return newHistory;
+      }
+
+      return newHistory;
+    });
+
+    setHistoryIndex(prev => Math.min(prev + 1, 49));
+  }, [historyIndex, isUndoRedoOperation]);
+
+  // Undo function
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      console.log('🔄 Undo operation');
+      setIsUndoRedoOperation(true);
+      const previousState = history[historyIndex - 1];
+      setLines(JSON.parse(JSON.stringify(previousState))); // Deep copy
+      setHistoryIndex(prev => prev - 1);
+
+      // Re-enable history saving after a brief delay
+      setTimeout(() => setIsUndoRedoOperation(false), 100);
+    }
+  }, [history, historyIndex]);
+
+  // Redo function
+  const handleRedo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      console.log('🔄 Redo operation');
+      setIsUndoRedoOperation(true);
+      const nextState = history[historyIndex + 1];
+      setLines(JSON.parse(JSON.stringify(nextState))); // Deep copy
+      setHistoryIndex(prev => prev + 1);
+
+      // Re-enable history saving after a brief delay
+      setTimeout(() => setIsUndoRedoOperation(false), 100);
+    }
+  }, [history, historyIndex]);
 
   // Initialize lines from content
   useEffect(() => {
@@ -195,6 +312,9 @@ const Editor = React.forwardRef<any, EditorProps>((props, ref) => {
   // Smart text input handler that PRESERVES LINKS as bulletproof objects
   const handleTextInput = useCallback((lineId: string, newText: string, cursorPos: number) => {
     setLines(prevLines => {
+      // Save current state to history before making changes
+      saveToHistory(prevLines);
+
       const updatedLines = prevLines.map(line => {
         if (line.id === lineId) {
           // This handler is called by the keyboard input, so we trust it
@@ -216,7 +336,7 @@ const Editor = React.forwardRef<any, EditorProps>((props, ref) => {
       generateContent(updatedLines);
       return updatedLines;
     });
-  }, [generateContent]);
+  }, [generateContent, saveToHistory]);
 
   // Handle Enter key to create new line
   const handleEnter = useCallback((lineId: string) => {
@@ -300,6 +420,249 @@ const Editor = React.forwardRef<any, EditorProps>((props, ref) => {
     setDraggedLineId(null);
     setDragOverLineId(null);
   }, []);
+
+  // Link drag handlers
+  const handleLinkDragStart = useCallback((event: React.DragEvent, lineId: string, linkIndex: number) => {
+    const line = lines.find(l => l.id === lineId);
+    if (!line || !line.items[linkIndex] || line.items[linkIndex].type !== 'link') return;
+
+    const linkData = line.items[linkIndex] as LinkItem;
+
+    console.log('🔗 Link drag start:', { lineId, linkIndex, linkText: linkData.text });
+    console.log('🔗 Setting draggedLink state...');
+
+    // Disable text selection during link drag
+    document.body.style.userSelect = 'none';
+
+    setDraggedLink({
+      lineId,
+      linkIndex,
+      linkData
+    });
+
+    // Set drag data
+    event.dataTransfer.setData('text/plain', JSON.stringify({
+      type: 'link',
+      lineId,
+      linkIndex,
+      linkData
+    }));
+    event.dataTransfer.effectAllowed = 'move';
+
+    // Prevent line drag when dragging a link
+    event.stopPropagation();
+
+    console.log('🔗 Drag start complete');
+  }, [lines]);
+
+  const handleLinkDragEnd = useCallback(() => {
+    console.log('🔗 Link drag end - collapsing all gaps');
+    setDraggedLink(null);
+    setDragOverPosition(null);
+
+    // Reset all animations to 0 to collapse any gaps
+    setElementAnimations(prev => {
+      const newAnimations = new Map(prev);
+      for (const [key, animation] of newAnimations) {
+        animation.targetX = 0; // Collapse back to natural position
+      }
+      console.log(`🔗 Resetting ${newAnimations.size} element animations to collapse gaps`);
+      return newAnimations;
+    });
+
+    // Re-enable text selection
+    document.body.style.userSelect = '';
+  }, []);
+
+  // Function to trigger physics animations
+  const triggerElementAnimations = useCallback((lineId: string, dropPosition: number) => {
+    console.log('🔗 Triggering physics animations for line:', lineId, 'position:', dropPosition);
+
+    setElementAnimations(prev => {
+      const newAnimations = new Map(prev);
+
+      // First, reset all other lines to natural positions (collapse any gaps)
+      lines.forEach(line => {
+        if (line.id !== lineId) {
+          line.items.forEach((item, index) => {
+            const elementKey = `${line.id}-${index}`;
+            const current = newAnimations.get(elementKey) || { x: 0, targetX: 0, velocity: 0 };
+            current.targetX = 0; // Reset to natural position
+            newAnimations.set(elementKey, current);
+          });
+        }
+      });
+
+      // Find the target line and animate elements
+      const targetLine = lines.find(l => l.id === lineId);
+      if (!targetLine) return prev;
+
+      const linkWidth = draggedLink ? Math.max(60, (draggedLink.linkData.text?.length || 4) * 8) : 60;
+
+      targetLine.items.forEach((item, index) => {
+        const elementKey = `${lineId}-${index}`;
+
+        let targetX = 0;
+        if (index >= dropPosition) {
+          // Elements after drop position move right
+          targetX = linkWidth + 10;
+        }
+
+        // Initialize or update animation
+        const current = newAnimations.get(elementKey) || { x: 0, targetX: 0, velocity: 0 };
+        current.targetX = targetX;
+
+        newAnimations.set(elementKey, current);
+
+        console.log(`🔗 Element ${index} target position: ${targetX}px`);
+      });
+
+      return newAnimations;
+    });
+  }, [lines, draggedLink]);
+
+  const handleLinkDragOver = useCallback((event: React.DragEvent, lineId: string, position: number) => {
+    if (!draggedLink) {
+      console.log('🔗 Link drag over: No draggedLink');
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+
+    console.log('🔗 Link drag over:', {
+      lineId,
+      position,
+      draggedLink: draggedLink.linkData.text,
+      currentDragOverPosition: dragOverPosition
+    });
+    setDragOverPosition({ lineId, position });
+
+    // Trigger physics animations
+    triggerElementAnimations(lineId, position);
+
+    // Prevent line drag over when dragging a link
+    event.stopPropagation();
+  }, [draggedLink, dragOverPosition]);
+
+  const handleLinkDrop = useCallback((event: React.DragEvent, targetLineId: string, targetPosition: number) => {
+    if (!draggedLink) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const { lineId: sourceLineId, linkIndex: sourceLinkIndex, linkData } = draggedLink;
+
+    console.log('🔗 Link drop:', {
+      from: { lineId: sourceLineId, index: sourceLinkIndex },
+      to: { lineId: targetLineId, position: targetPosition },
+      linkText: linkData.text
+    });
+
+    // Don't drop on the same position
+    if (sourceLineId === targetLineId && sourceLinkIndex === targetPosition) {
+      console.log('🔗 Drop cancelled: same position');
+      setDraggedLink(null);
+      setDragOverPosition(null);
+      return;
+    }
+
+    console.log('🔗 Starting squeeze-back animation...');
+
+    // Apply the DOM change immediately and store the result
+    let finalUpdatedLines: EditorLine[] = [];
+
+    setLines(prevLines => {
+      const updatedLines = [...prevLines];
+
+      // Remove link from source position
+      const sourceLineIndex = updatedLines.findIndex(l => l.id === sourceLineId);
+      if (sourceLineIndex === -1) return prevLines;
+
+      const sourceLine = updatedLines[sourceLineIndex];
+      if (!sourceLine || !sourceLine.items) return prevLines;
+
+      const newSourceItems = [...sourceLine.items];
+      newSourceItems.splice(sourceLinkIndex, 1);
+      updatedLines[sourceLineIndex] = {
+        ...sourceLine,
+        items: newSourceItems
+      };
+
+      // Insert link at target position
+      const targetLineIndex = updatedLines.findIndex(l => l.id === targetLineId);
+      if (targetLineIndex === -1) return prevLines;
+
+      const targetLine = updatedLines[targetLineIndex];
+      if (!targetLine || !targetLine.items) return prevLines;
+
+      const newTargetItems = [...targetLine.items];
+
+      // Adjust target position if we're moving within the same line and the target is after the source
+      let adjustedTargetPosition = targetPosition;
+      if (sourceLineId === targetLineId && targetPosition > sourceLinkIndex) {
+        adjustedTargetPosition = targetPosition - 1;
+      }
+
+      newTargetItems.splice(adjustedTargetPosition, 0, linkData);
+      updatedLines[targetLineIndex] = {
+        ...targetLine,
+        items: newTargetItems
+      };
+
+      finalUpdatedLines = updatedLines;
+      return updatedLines;
+    });
+
+    // Reset animations for both source and target lines to collapse characters
+    setElementAnimations(prev => {
+      const newAnimations = new Map(prev);
+
+      // Reset all elements in source line to collapse the gap
+      const sourceLine = finalUpdatedLines.find(l => l.id === sourceLineId);
+      if (sourceLine) {
+        sourceLine.items.forEach((item, index) => {
+          const elementKey = `${sourceLineId}-${index}`;
+          const current = newAnimations.get(elementKey) || { x: 0, targetX: 0, velocity: 0 };
+          current.targetX = 0; // Collapse back to natural position
+          newAnimations.set(elementKey, current);
+        });
+        console.log(`🔗 Resetting ${sourceLine.items.length} elements in source line ${sourceLineId} to collapse`);
+      }
+
+      // Reset all elements in target line to natural positions
+      if (sourceLineId !== targetLineId) {
+        const targetLine = finalUpdatedLines.find(l => l.id === targetLineId);
+        if (targetLine) {
+          targetLine.items.forEach((item, index) => {
+            const elementKey = `${targetLineId}-${index}`;
+            const current = newAnimations.get(elementKey) || { x: 0, targetX: 0, velocity: 0 };
+            current.targetX = 0; // Natural position
+            newAnimations.set(elementKey, current);
+          });
+          console.log(`🔗 Resetting ${targetLine.items.length} elements in target line ${targetLineId} to natural positions`);
+        }
+      }
+
+      return newAnimations;
+    });
+
+    // Call generateContent after state update completes
+    setTimeout(() => {
+      generateContent(finalUpdatedLines);
+    }, 0);
+
+    // Trigger squeeze-back animation
+    setIsSqueezing(true);
+
+    // Reset squeeze animation after completion
+    setTimeout(() => {
+      setIsSqueezing(false);
+    }, 1000); // 1 second for squeeze animation
+
+    setDraggedLink(null);
+    setDragOverPosition(null);
+  }, [draggedLink, generateContent]);
 
   const handleLineDragOver = useCallback((event: React.DragEvent, targetLineId: string) => {
     event.preventDefault();
@@ -396,8 +759,30 @@ const Editor = React.forwardRef<any, EditorProps>((props, ref) => {
     }
   }));
 
+  // Keyboard handler for undo/redo at the main Editor level
+  const handleEditorKeyDown = (event: React.KeyboardEvent) => {
+    // Cmd+Z: Undo
+    if (event.key === 'z' && event.metaKey && !event.shiftKey) {
+      event.preventDefault();
+      handleUndo();
+      return;
+    }
+
+    // Cmd+Shift+Z: Redo
+    if (event.key === 'z' && event.metaKey && event.shiftKey) {
+      event.preventDefault();
+      handleRedo();
+      return;
+    }
+  };
+
   return (
-    <div className="character-editor" style={{ fontFamily: 'inherit' }}>
+    <div
+      className="character-editor"
+      style={{ fontFamily: 'inherit' }}
+      onKeyDown={handleEditorKeyDown}
+      tabIndex={-1} // Make div focusable for keyboard events
+    >
       {lines.map((line) => {
         const isDragging = draggedLineId === line.id;
         const isDropTarget = dragOverLineId === line.id;
@@ -437,6 +822,17 @@ const Editor = React.forwardRef<any, EditorProps>((props, ref) => {
               generateContent={generateContent}
               isFocused={focusedLineId === line.id}
               onVerticalMove={handleVerticalMove}
+              // Link drag handlers
+              onLinkDragStart={handleLinkDragStart}
+              onLinkDragEnd={handleLinkDragEnd}
+              onLinkDragOver={handleLinkDragOver}
+              onLinkDrop={handleLinkDrop}
+              draggedLink={draggedLink}
+              dragOverPosition={dragOverPosition}
+              // Animation state
+              isRepositioning={isRepositioning}
+              isSqueezing={isSqueezing}
+              elementAnimations={elementAnimations}
             />
           </React.Fragment>
         );
@@ -479,6 +875,19 @@ const Editor = React.forwardRef<any, EditorProps>((props, ref) => {
                 <Check className="h-5 w-5" />
               )}
               {isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          )}
+
+          {/* Cancel button */}
+          {onCancel && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={onCancel}
+              disabled={isSaving}
+              className="gap-2 w-full rounded-2xl font-medium border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800"
+            >
+              Cancel
             </Button>
           )}
 
@@ -525,6 +934,17 @@ interface LineComponentProps {
   generateContent: (lines: EditorLine[]) => any[];
   isFocused: boolean;
   onVerticalMove?: (direction: 'up' | 'down', currentPosition: number) => void;
+  // Link drag handlers
+  onLinkDragStart: (event: React.DragEvent, lineId: string, linkIndex: number) => void;
+  onLinkDragEnd: () => void;
+  onLinkDragOver: (event: React.DragEvent, lineId: string, position: number) => void;
+  onLinkDrop: (event: React.DragEvent, lineId: string, position: number) => void;
+  draggedLink: { lineId: string; linkIndex: number; linkData: LinkItem } | null;
+  dragOverPosition: { lineId: string; position: number } | null;
+  // Animation state
+  isRepositioning: boolean;
+  isSqueezing: boolean;
+  elementAnimations: Map<string, { x: number; targetX: number; velocity: number }>;
 }
 
 const LineComponent: React.FC<LineComponentProps> = ({
@@ -543,7 +963,18 @@ const LineComponent: React.FC<LineComponentProps> = ({
   setLines,
   generateContent,
   isFocused,
-  onVerticalMove
+  onVerticalMove,
+  // Link drag handlers
+  onLinkDragStart,
+  onLinkDragEnd,
+  onLinkDragOver,
+  onLinkDrop,
+  draggedLink,
+  dragOverPosition,
+  // Animation state
+  isRepositioning,
+  isSqueezing,
+  elementAnimations
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -552,7 +983,18 @@ const LineComponent: React.FC<LineComponentProps> = ({
 
   return (
     <div
-      className={`editor-line ${isFocused ? 'editor-line-focused' : ''}`}
+      className={(() => {
+        const classes = [];
+        if (isFocused) classes.push('editor-line-focused');
+        if (draggedLink) {
+          classes.push('dragging-link');
+          console.log(`🔗 Line ${line.id} has dragging-link class`);
+        }
+        if (isRepositioning) classes.push('repositioning');
+        if (isSqueezing) classes.push('squeezing');
+        return `editor-line ${classes.join(' ')}`;
+      })()}
+      data-line-id={line.id}
       style={{
         display: 'flex',
         alignItems: 'flex-start',
@@ -566,11 +1008,29 @@ const LineComponent: React.FC<LineComponentProps> = ({
         padding: '2px 4px',
         margin: '0 -4px 0.25rem -4px'
       }}
-      draggable={!readOnly}
-      onDragStart={(e) => onLineDragStart(e, line.id)}
+      draggable={!readOnly && !draggedLink} // Don't make line draggable when dragging a link
+      onDragStart={(e) => {
+        if (!draggedLink) {
+          onLineDragStart(e, line.id);
+        }
+      }}
       onDragEnd={onLineDragEnd}
-      onDragOver={(e) => onLineDragOver(e, line.id)}
-      onDrop={(e) => onLineDrop(e, line.id)}
+      onDragOver={(e) => {
+        if (draggedLink) {
+          // When dragging a link, treat the whole line as a drop zone for the end position
+          onLinkDragOver(e, line.id, line.items.length);
+        } else {
+          onLineDragOver(e, line.id);
+        }
+      }}
+      onDrop={(e) => {
+        if (draggedLink) {
+          console.log('🔗 Line onDrop triggered (fallback):', { lineId: line.id, position: line.items.length });
+          onLinkDrop(e, line.id, line.items.length);
+        } else {
+          onLineDrop(e, line.id);
+        }
+      }}
     >
       {/* Drag handle */}
       {!readOnly && (
@@ -605,8 +1065,12 @@ const LineComponent: React.FC<LineComponentProps> = ({
         {line.lineNumber}
       </span>
 
-      {/* Content area */}
-      <div style={{ flex: 1, minHeight: '1.5rem' }}>
+      {/* Content area with smooth animations */}
+      <div style={{
+        flex: 1,
+        minHeight: '1.5rem',
+        transition: 'all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+      }}>
         <LineContent
           line={line}
           readOnly={readOnly}
@@ -619,6 +1083,13 @@ const LineComponent: React.FC<LineComponentProps> = ({
           generateContent={generateContent}
           onVerticalMove={onVerticalMove}
           isFocused={isFocused}
+          onLinkDragStart={onLinkDragStart}
+          onLinkDragEnd={onLinkDragEnd}
+          onLinkDragOver={onLinkDragOver}
+          onLinkDrop={onLinkDrop}
+          draggedLink={draggedLink}
+          dragOverPosition={dragOverPosition}
+          elementAnimations={elementAnimations}
         />
       </div>
     </div>
@@ -638,6 +1109,15 @@ interface LineContentProps {
   generateContent: (lines: EditorLine[]) => any[];
   onVerticalMove?: (direction: 'up' | 'down', currentPosition: number) => void;
   isFocused: boolean;
+  // Link drag handlers
+  onLinkDragStart: (event: React.DragEvent, lineId: string, linkIndex: number) => void;
+  onLinkDragEnd: () => void;
+  onLinkDragOver: (event: React.DragEvent, lineId: string, position: number) => void;
+  onLinkDrop: (event: React.DragEvent, lineId: string, position: number) => void;
+  draggedLink: { lineId: string; linkIndex: number; linkData: LinkItem } | null;
+  dragOverPosition: { lineId: string; position: number } | null;
+  elementAnimations: Map<string, { x: number; targetX: number; velocity: number }>;
+
 }
 
 const LineContent: React.FC<LineContentProps> = ({
@@ -651,7 +1131,14 @@ const LineContent: React.FC<LineContentProps> = ({
   setLines,
   generateContent,
   onVerticalMove,
-  isFocused
+  isFocused,
+  onLinkDragStart,
+  onLinkDragEnd,
+  onLinkDragOver,
+  onLinkDrop,
+  draggedLink,
+  dragOverPosition,
+  elementAnimations
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [showCursor, setShowCursor] = useState(false);
@@ -748,6 +1235,83 @@ const LineContent: React.FC<LineContentProps> = ({
       return;
     }
 
+    // Option+Delete: Delete whole word
+    if (event.key === 'Backspace' && event.altKey) {
+      event.preventDefault();
+      console.log('🔗 Option+Delete: Deleting whole word');
+
+      // Find the start of the current word
+      let wordStart = cursorPosition;
+      while (wordStart > 0) {
+        const item = line.items[wordStart - 1];
+        if (item && item.type === 'char' && /\s/.test(item.char)) {
+          break; // Stop at whitespace
+        }
+        if (item && item.type === 'link') {
+          break; // Stop at links (don't delete them)
+        }
+        wordStart--;
+      }
+
+      // Delete characters from wordStart to cursor (but preserve links)
+      if (wordStart < cursorPosition) {
+        setLines(prevLines => {
+          // History saving handled at the main Editor level
+
+          const updatedLines = prevLines.map(lineItem => {
+            if (lineItem.id === line.id) {
+              const newItems = [...lineItem.items];
+              // Only delete characters, skip links
+              for (let i = cursorPosition - 1; i >= wordStart; i--) {
+                const item = newItems[i];
+                if (item && item.type === 'char') {
+                  newItems.splice(i, 1);
+                }
+              }
+              return { ...lineItem, items: newItems };
+            }
+            return lineItem;
+          });
+
+          generateContent(updatedLines);
+          return updatedLines;
+        });
+
+        // Move cursor to word start
+        setCursorPosition(wordStart);
+        onCursorChange(wordStart);
+      }
+      return;
+    }
+
+    // Cmd+Delete: Delete whole line
+    if (event.key === 'Backspace' && event.metaKey) {
+      event.preventDefault();
+      console.log('🔗 Cmd+Delete: Deleting whole line');
+
+      // Clear all items in the line (but preserve the line structure)
+      setLines(prevLines => {
+        // History saving handled at the main Editor level
+
+        const updatedLines = prevLines.map(lineItem => {
+          if (lineItem.id === line.id) {
+            return { ...lineItem, items: [] };
+          }
+          return lineItem;
+        });
+
+        generateContent(updatedLines);
+        return updatedLines;
+      });
+
+      // Move cursor to start of line
+      setCursorPosition(0);
+      onCursorChange(0);
+      return;
+    }
+
+    // Undo/Redo handled at the main Editor level, not here
+
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
       const newPos = Math.max(0, cursorPosition - 1);
@@ -843,9 +1407,39 @@ const LineContent: React.FC<LineContentProps> = ({
 
       {line.items.map((item, index) => {
         const isAtCursor = showCursor && cursorPosition === index;
+        const isLinkBeingDragged = draggedLink && draggedLink.lineId === line.id && draggedLink.linkIndex === index;
+        const isDropZone = dragOverPosition && dragOverPosition.lineId === line.id && dragOverPosition.position === index;
 
         return (
           <React.Fragment key={index}>
+            {/* Blue cursor drop indicator */}
+            {draggedLink && isDropZone && (
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: '2px',
+                  height: '20px',
+                  backgroundColor: '#3b82f6',
+                  marginRight: '2px',
+                  verticalAlign: 'baseline',
+                  animation: 'pulse 1s infinite'
+                }}
+                onDragOver={(e) => {
+                  if (!readOnly && draggedLink) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    onLinkDragOver(e, line.id, index);
+                  }
+                }}
+                onDrop={(e) => {
+                  console.log('🔗 Drop zone onDrop triggered:', { lineId: line.id, position: index, draggedLink: !!draggedLink });
+                  if (!readOnly && draggedLink) {
+                    onLinkDrop(e, line.id, index);
+                  }
+                }}
+              />
+            )}
+
             {/* Cursor before this item */}
             {isAtCursor && (
               <span
@@ -863,54 +1457,151 @@ const LineContent: React.FC<LineContentProps> = ({
               />
             )}
 
-            {item.type === 'link' ? (
-              <PillLink
-                href={item.url || `/${item.pageId}`}
-                isPublic={item.isPublic}
-                isOwned={item.isOwned}
-                clickable={!readOnly}
-                style={{
-                  cursor: readOnly ? 'pointer' : 'grab',
-                  margin: '0 1px',
-                  userSelect: 'none', // Prevent text selection
-                  pointerEvents: 'auto', // Ensure it's clickable
-                  border: '1px solid transparent', // Subtle border for bulletproof indication
-                  borderRadius: '4px'
-                }}
-                draggable={!readOnly}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  // Position cursor after the link
-                  handleClick(e, index + 1);
-                }}
-                onDoubleClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (readOnly) return;
-                  // BULLETPROOF: Links can ONLY be edited through the modal
-                  // NEVER convert to text - they are bulletproof objects
-                  console.log('🔒 BULLETPROOF LINK: Double-click detected but conversion blocked');
-                  console.log('💡 Use the Link Editor Modal to edit this link');
-                  // TODO: Open link editor modal for this specific link
-                }}
-              >
-                {item.text || 'Link'}
-              </PillLink>
-            ) : (
-              <span
-                style={{
-                  whiteSpace: 'pre',
-                  cursor: readOnly ? 'default' : 'text'
-                }}
-                onClick={(e) => handleClick(e, index)}
-              >
-                {item.char}
-              </span>
-            )}
+
+
+            <div
+              data-item-index={index}
+              style={(() => {
+                const elementKey = `${line.id}-${index}`;
+                const animation = elementAnimations.get(elementKey);
+                const translateX = animation ? animation.x : 0;
+
+                if (translateX !== 0) {
+                  console.log(`🔗 Animating element ${index}: translateX(${translateX}px)`);
+                }
+
+                return {
+                  display: 'inline',
+                  transform: `translateX(${translateX}px)`,
+                  transition: 'none', // Disable CSS transitions, use physics instead
+                  willChange: 'transform', // Optimize for animations
+                  whiteSpace: 'pre-wrap', // Allow wrapping within elements
+                  wordWrap: 'break-word' // Break long words if needed
+                };
+              })()}
+            >
+              {item.type === 'link' ? (
+                <PillLink
+                  href={item.url || `/${item.pageId}`}
+                  isPublic={item.isPublic}
+                  isOwned={item.isOwned}
+                  clickable={!readOnly}
+                  style={{
+                    cursor: readOnly ? 'pointer' : (isLinkBeingDragged ? 'grabbing' : 'grab'),
+                    margin: '0 1px',
+                    userSelect: 'none', // Prevent text selection
+                    pointerEvents: 'auto', // Always keep interactive for dragging
+                    border: '1px solid transparent', // Subtle border for bulletproof indication
+                    borderRadius: '4px',
+                    // Completely hide the source link when dragging
+                    visibility: isLinkBeingDragged ? 'hidden' : 'visible',
+                    transition: 'all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                  }}
+                  draggable={!readOnly}
+                  onDragStart={(e: React.DragEvent) => {
+                    console.log('🔗 PillLink onDragStart called', { readOnly, lineId: line.id, index });
+                    if (!readOnly) {
+                      onLinkDragStart(e, line.id, index);
+                    } else {
+                      console.log('🔗 Preventing drag in read-only mode');
+                      e.preventDefault(); // Prevent drag in read-only mode
+                    }
+                  }}
+                  onDragEnd={(e: React.DragEvent) => {
+                    if (!readOnly) {
+                      onLinkDragEnd();
+                    }
+                  }}
+                  onDragOver={(e: React.DragEvent) => {
+                    if (!readOnly && draggedLink) {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      onLinkDragOver(e, line.id, index);
+                    }
+                  }}
+                  onDrop={(e: React.DragEvent) => {
+                    console.log('🔗 PillLink onDrop triggered:', { lineId: line.id, index, draggedLink: !!draggedLink });
+                    if (!readOnly && draggedLink) {
+                      onLinkDrop(e, line.id, index);
+                    }
+                  }}
+                  onClick={(e: any) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Position cursor after the link
+                    handleClick(e, index + 1);
+                  }}
+                  onDoubleClick={(e: any) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (readOnly) return;
+                    // BULLETPROOF: Links can ONLY be edited through the modal
+                    // NEVER convert to text - they are bulletproof objects
+                    console.log('🔒 BULLETPROOF LINK: Double-click detected but conversion blocked');
+                    console.log('💡 Use the Link Editor Modal to edit this link');
+                    // TODO: Open link editor modal for this specific link
+                  }}
+                >
+                  {item.text || 'Link'}
+                </PillLink>
+              ) : (
+                <span
+                  style={{
+                    whiteSpace: 'pre',
+                    cursor: readOnly ? 'default' : 'text',
+                    transition: 'all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    display: 'inline-block'
+                  }}
+                  onClick={(e) => handleClick(e, index)}
+                  onDragOver={(e) => {
+                    if (!readOnly && draggedLink) {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      onLinkDragOver(e, line.id, index);
+                    }
+                  }}
+                  onDrop={(e) => {
+                    console.log('🔗 Span onDrop triggered:', { lineId: line.id, index, draggedLink: !!draggedLink });
+                    if (!readOnly && draggedLink) {
+                      onLinkDrop(e, line.id, index);
+                    }
+                  }}
+                >
+                  {item.char}
+                </span>
+              )}
+            </div>
           </React.Fragment>
         );
       })}
+
+      {/* Blue cursor at end of line */}
+      {draggedLink && dragOverPosition && dragOverPosition.lineId === line.id && dragOverPosition.position >= line.items.length && (
+        <span
+          style={{
+            display: 'inline-block',
+            width: '2px',
+            height: '20px',
+            backgroundColor: '#3b82f6',
+            marginRight: '2px',
+            verticalAlign: 'baseline',
+            animation: 'pulse 1s infinite'
+          }}
+          onDragOver={(e) => {
+            if (!readOnly && draggedLink) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              onLinkDragOver(e, line.id, line.items.length);
+            }
+          }}
+          onDrop={(e) => {
+            console.log('🔗 End drop zone onDrop triggered:', { lineId: line.id, position: line.items.length, draggedLink: !!draggedLink });
+            if (!readOnly && draggedLink) {
+              onLinkDrop(e, line.id, line.items.length);
+            }
+          }}
+        />
+      )}
 
       {/* Cursor at end */}
       {showCursor && cursorPosition >= line.items.length && (
@@ -929,6 +1620,8 @@ const LineContent: React.FC<LineContentProps> = ({
         />
       )}
 
+
+
       {/* Clickable area at end of line */}
       <span
         style={{
@@ -937,6 +1630,19 @@ const LineContent: React.FC<LineContentProps> = ({
           cursor: readOnly ? 'default' : 'text'
         }}
         onClick={(e) => handleClick(e, line.items.length)}
+        onDragOver={(e) => {
+          if (!readOnly && draggedLink) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            onLinkDragOver(e, line.id, line.items.length);
+          }
+        }}
+        onDrop={(e) => {
+          console.log('🔗 End-of-line area onDrop triggered:', { lineId: line.id, position: line.items.length, draggedLink: !!draggedLink });
+          if (!readOnly && draggedLink) {
+            onLinkDrop(e, line.id, line.items.length);
+          }
+        }}
       />
 
       <style jsx>{`
@@ -960,9 +1666,137 @@ const LineContent: React.FC<LineContentProps> = ({
           background-color: hsl(var(--primary) / 0.1);
         }
 
+        /* Drag and drop animations */
         @keyframes cursor-blink {
           0%, 50% { opacity: 1; }
           51%, 100% { opacity: 0; }
+        }
+
+
+
+        /* Smooth transitions for all elements */
+        :global(.pill-link) {
+          transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* Visual feedback during drag */
+        :global(.pill-link[draggable="true"]:hover) {
+          transform: scale(1.02);
+        }
+
+        /* Real-time drag animations - smooth and responsive */
+        .editor-line {
+          transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .editor-line * {
+          transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* Enhanced drop zone animations with spring effect */
+        .drop-zone-container {
+          transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Real-time character spreading during drag */
+        .editor-line.dragging-link [data-item-index] {
+          transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* Characters move apart when drop zone appears */
+        .editor-line.dragging-link [data-item-index].push-right {
+          transform: translateX(var(--push-distance, 80px));
+        }
+
+        .editor-line.dragging-link [data-item-index].push-left {
+          transform: translateX(var(--push-distance, -20px));
+        }
+
+        /* Squeeze back together after drop - spring animation */
+        .editor-line.squeezing [data-item-index] {
+          transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
+          transform: translateX(0) !important;
+        }
+
+        /* Staggered squeeze animation for natural flow */
+        .editor-line.squeezing [data-item-index]:nth-child(1) { transition-delay: 0ms; }
+        .editor-line.squeezing [data-item-index]:nth-child(2) { transition-delay: 50ms; }
+        .editor-line.squeezing [data-item-index]:nth-child(3) { transition-delay: 100ms; }
+        .editor-line.squeezing [data-item-index]:nth-child(4) { transition-delay: 150ms; }
+        .editor-line.squeezing [data-item-index]:nth-child(5) { transition-delay: 200ms; }
+        .editor-line.squeezing [data-item-index]:nth-child(6) { transition-delay: 250ms; }
+        .editor-line.squeezing [data-item-index]:nth-child(7) { transition-delay: 300ms; }
+        .editor-line.squeezing [data-item-index]:nth-child(8) { transition-delay: 350ms; }
+        .editor-line.squeezing [data-item-index]:nth-child(9) { transition-delay: 400ms; }
+        .editor-line.squeezing [data-item-index]:nth-child(10) { transition-delay: 450ms; }
+
+        @keyframes characterSlide {
+          0% {
+            transform: translateX(-20px) scale(0.95);
+            opacity: 0.6;
+            background-color: rgba(59, 130, 246, 0.1);
+          }
+          25% {
+            transform: translateX(10px) scale(1.05);
+            opacity: 0.8;
+            background-color: rgba(59, 130, 246, 0.2);
+          }
+          75% {
+            transform: translateX(-5px) scale(1.02);
+            opacity: 0.9;
+            background-color: rgba(59, 130, 246, 0.1);
+          }
+          100% {
+            transform: translateX(0) scale(1);
+            opacity: 1;
+            background-color: transparent;
+          }
+        }
+
+        /* Make repositioning VERY obvious */
+        .editor-line.repositioning {
+          background-color: rgba(59, 130, 246, 0.05) !important;
+          border-left: 3px solid rgba(59, 130, 246, 0.3) !important;
+          padding-left: 8px !important;
+          margin-left: -8px !important;
+          border-radius: 4px !important;
+        }
+
+        /* Blue cursor pulse animation */
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+
+        /* Word wrapping for editor lines */
+        .editor-line {
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          white-space: pre-wrap;
+          max-width: 100%;
+        }
+
+        /* Ensure inline elements can wrap */
+        .editor-line [data-item-index] {
+          display: inline;
+          white-space: pre-wrap;
+        }
+
+        /* Prevent text selection during link drag */
+        .editor-line.dragging-link {
+          user-select: none;
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+        }
+
+        /* Ensure pill links are always draggable */
+        :global(.pill-link) {
+          -webkit-user-drag: element;
+          -khtml-user-drag: element;
+          -moz-user-drag: element;
+          -o-user-drag: element;
+          user-drag: element;
         }
       `}</style>
     </div>

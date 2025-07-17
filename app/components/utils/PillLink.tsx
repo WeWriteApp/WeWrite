@@ -32,7 +32,9 @@ export const PillLink = forwardRef(({
   isLoading,
   deleted = false,
   isFallback = false,
-  clickable = true
+  clickable = true,
+  onClick: customOnClick,
+  ...otherProps
 }, ref) => {
   // Hooks
   const { session } = useCurrentAccount();
@@ -176,7 +178,17 @@ export const PillLink = forwardRef(({
         <a
           ref={ref}
           href="#"
+          {...otherProps}
           onClick={(e) => {
+            // Call custom onClick first if provided
+            if (customOnClick) {
+              customOnClick(e);
+              // If custom handler prevented default, don't continue
+              if (e.defaultPrevented) {
+                return;
+              }
+            }
+
             e.preventDefault();
             e.stopPropagation(); // Prevent event bubbling to parent containers
 
@@ -222,7 +234,17 @@ export const PillLink = forwardRef(({
       data-page-id={isPageLinkType ? pageId : undefined}
       data-user-id={isUserLinkType ? pageId : undefined}
       data-group-id={isGroupLinkType ? pageId : undefined}
+      {...otherProps}
       onClick={(e) => {
+        // Call custom onClick first if provided
+        if (customOnClick) {
+          customOnClick(e);
+          // If custom handler prevented default, don't continue
+          if (e.defaultPrevented) {
+            return;
+          }
+        }
+
         // Don't handle click if component is not clickable
         if (!clickable) {
           e.preventDefault();

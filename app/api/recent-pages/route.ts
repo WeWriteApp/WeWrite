@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase, ref, get } from 'firebase/database';
-import { app } from '../../firebase/config';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { initAdmin } from '../../firebase/admin';
 import { getCollectionName } from "../../utils/environmentConfig";
 
 /**
  * GET /api/recent-pages
- * 
- * Fetches recent pages for the current user based on their activity history
- * 
+ *
+ * Fetches recent pages for the current user based on their recent activity
+ * Uses the same logic as /api/home to ensure consistency
+ *
  * Query parameters:
  * - userId: The user ID to fetch recent pages for
  * - searchTerm: Optional search term to filter results
@@ -28,67 +26,48 @@ export async function GET(request: NextRequest) {
 
     console.log('[recent-pages API] Starting recent pages fetch for user:', userId);
 
-    // Get recent pages from Firebase Realtime Database
-    const rtdb = getDatabase(app);
-    const recentPagesRef = ref(rtdb, `users/${userId}/recentPages`);
-    const recentPagesSnapshot = await get(recentPagesRef);
+    // Initialize Firebase Admin
+    const adminApp = initAdmin();
+    const db = adminApp.firestore();
 
-    let recentPageIds: string[] = [];
-    
-    if (recentPagesSnapshot.exists()) {
-      const recentPagesData = recentPagesSnapshot.val();
-      // Convert to array and sort by timestamp (most recent first)
-      const recentPagesArray = Object.values(recentPagesData || {}) as any[];
-      recentPageIds = recentPagesArray
-        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-        .map(page => page.id)
-        .slice(0, limitCount);
-    }
+    // Use the same logic as /api/home - get recently modified pages for the user
+    let pagesQuery;
 
-    if (recentPageIds.length === 0) {
-      return NextResponse.json({ pages: [] });
-    }
+    // For logged-in users, get recent pages and filter deleted ones in code
+    // This avoids the composite index requirement
+    pagesQuery = db.collection(getCollectionName('pages'))
+      .where('userId', '==', userId)
+      .orderBy('lastModified', 'desc')
+      .limit(limitCount * 2); // Get more to account for filtering
 
-    // Fetch page details from Firestore
-    // We'll need to fetch in batches since Firestore 'in' queries are limited to 10 items
-    const pages: any[] = [];
-    const batchSize = 10;
-    
-    for (let i = 0; i < recentPageIds.length; i += batchSize) {
-      const batch = recentPageIds.slice(i, i + batchSize);
+    const snapshot = await pagesQuery.get();
+    console.log(`[recent-pages API] Raw query returned ${snapshot.size} documents`);
 
-      const pagesQuery = query(
-        collection(db, getCollectionName('pages')),
-        where('__name__', 'in', batch)
-      );
+    const pages = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
 
-      const pagesSnapshot = await getDocs(pagesQuery);
+    // Filter out deleted pages and apply search filter
+    const filteredPages = pages.filter(page => {
+      // Skip deleted pages
+      if (page.deleted === true) {
+        return false;
+      }
 
-      pagesSnapshot.forEach(doc => {
-        const pageData = { id: doc.id, ...doc.data() } as any;
+      // Apply search filter if provided
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        return page.title?.toLowerCase().includes(searchLower) ||
+               page.content?.toLowerCase().includes(searchLower);
+      }
 
-        // Filter out soft-deleted pages and apply search filter
-        if (pageData.deleted === true) {
-          return; // Skip deleted pages
-        }
+      return true;
+    }).slice(0, limitCount); // Apply final limit
 
-        // Apply search filter if provided
-        if (!searchTerm ||
-            pageData.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            pageData.content?.toLowerCase().includes(searchTerm.toLowerCase())) {
-          pages.push(pageData);
-        }
-      });
-    }
+    console.log(`[recent-pages API] Returning ${filteredPages.length} pages after filtering`);
 
-    // Sort pages by their position in the recent pages list to maintain recency order
-    const sortedPages = pages.sort((a, b) => {
-      const aIndex = recentPageIds.indexOf(a.id);
-      const bIndex = recentPageIds.indexOf(b.id);
-      return aIndex - bIndex;
-    });
-
-    return NextResponse.json({ pages: sortedPages });
+    return NextResponse.json({ pages: filteredPages });
 
   } catch (error) {
     console.error('Error fetching recent pages:', error);

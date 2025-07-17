@@ -208,12 +208,20 @@ export const recordPageView = async (pageId: string, userId: string | null = nul
     if (!pageId) return;
 
     // Only count views from the main domain, not Vercel previews
+    // BUT allow views in development and test environments
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
-      // Check if this is a Vercel preview deployment
-      if (hostname.includes('vercel.app') || hostname.includes('localhost')) {
-        console.log("Vercel preview or localhost view, not counting");
+      const isDevelopment = process.env.NODE_ENV === 'development';
+
+      // Skip view counting only for production Vercel previews, not dev/test
+      if (!isDevelopment && hostname.includes('vercel.app') && !hostname.includes('wewrite.app')) {
+        console.log("Production Vercel preview view, not counting");
         return;
+      }
+
+      // Allow localhost and dev environments to count views for testing
+      if (hostname.includes('localhost') || hostname.includes('dev-wewrite')) {
+        console.log("Development/test environment view, counting for testing purposes");
       }
     }
 

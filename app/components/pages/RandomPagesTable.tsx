@@ -6,7 +6,7 @@ import { PillLink } from "../utils/PillLink";
 import { formatRelativeTime } from "../../utils/formatRelativeTime";
 
 import { format } from 'date-fns';
-import { cn } from '../../lib/utils';
+import { cn, wewriteCard } from '../../lib/utils';
 
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
@@ -51,7 +51,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
 
   if (!pages || pages.length === 0) {
     return (
-      <div className="border border-theme-medium rounded-2xl p-8 text-center">
+      <div className={wewriteCard('default', 'text-center')}>
         <p className="text-muted-foreground">No pages to display</p>
       </div>
     );
@@ -65,7 +65,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
 
     return (
       <div
-        className="border border-theme-medium rounded-2xl p-6"
+        className={wewriteCard('default')}
         style={{ minHeight: `${dynamicHeight}px` }}
       >
         <div className="flex flex-wrap gap-2">
@@ -128,7 +128,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
     <div>
       {/* Desktop Table Layout */}
       <div
-        className="hidden md:block border border-theme-medium rounded-2xl overflow-hidden relative shadow-md dark:bg-card/90"
+        className={cn("hidden md:block relative", wewriteCard('default', 'p-0'))}
         style={{ minHeight }}
       >
         {/* Loading overlay */}
@@ -202,10 +202,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
         {pages.map((page) => (
           <div
             key={page.id}
-            className={cn(
-              "border border-theme-medium rounded-2xl p-5 space-y-3 shadow-md",
-              "hover:bg-muted/30 transition-colors dark:bg-card/90"
-            )}
+            className={cn(wewriteCard('interactive'), "space-y-3")}
           >
             {/* Title */}
             <div className="flex items-center gap-2">

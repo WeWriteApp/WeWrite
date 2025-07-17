@@ -5,6 +5,7 @@
 
 import { db } from '../firebase/config';
 import { UnifiedFeeCalculationService } from './unifiedFeeCalculationService';
+import { FeeConfigurationService } from './feeConfigurationService';
 import {
   doc,
   getDoc,
@@ -70,16 +71,16 @@ class PayoutService {
 
     // Always get the latest fee structure from the unified service
     try {
-      const feeService = UnifiedFeeCalculationService.getInstance();
-      const feeStructure = await feeService.getFeeStructure();
+      // Use new centralized fee configuration service
+      const feeStructure = await FeeConfigurationService.getCurrentFeeStructure();
 
       // Update config with current fee structure (convert to percentage for consistency)
       this.config.platformFeePercentage = feeStructure.platformFeePercentage * 100;
-      this.config.stripeFeePercentage = feeStructure.stripeProcessingFeePercentage * 100;
-      this.config.stripeFeeFixed = feeStructure.stripeProcessingFeeFixed;
+      this.config.stripeFeePercentage = feeStructure.stripeConnectFeePercentage * 100;
+      this.config.stripeFeeFixed = feeStructure.stripeStandardPayoutFee;
       this.config.minimumPayoutThreshold = feeStructure.minimumPayoutThreshold;
     } catch (feeError) {
-      console.warn('Could not fetch unified fee structure, using static config:', feeError);
+      console.warn('Could not fetch centralized fee structure, using static config:', feeError);
       // Keep the existing config value as fallback
     }
 
@@ -87,11 +88,12 @@ class PayoutService {
   }
 
   private getDefaultConfig(): PayoutConfig {
+    // Use centralized fee configuration as defaults
     return {
-      platformFeePercentage: 7,
-      stripeFeePercentage: 2.9,
-      stripeFeeFixed: 0.30,
-      minimumPayoutThreshold: 25,
+      platformFeePercentage: 0,     // 0% - Use centralized config
+      stripeFeePercentage: 0.25,    // 0.25% - Stripe Connect fee
+      stripeFeeFixed: 0.00,         // $0.00 - Standard payouts are free
+      minimumPayoutThreshold: 25,   // $25 - Use centralized config
       payoutSchedule: 'monthly',
       payoutProcessingDay: 1,
       earlySupporter: {

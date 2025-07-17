@@ -25,6 +25,7 @@ import type { User } from "../../types/database";
  */
 export async function getUserPages(
   userId: string,
+  includePrivate: boolean = false,
   currentUserId: string | null = null,
   lastVisible: any = null,
   pageSize: number = 200

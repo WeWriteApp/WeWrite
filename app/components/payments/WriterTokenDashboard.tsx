@@ -307,7 +307,7 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
             allocations: data.earnings.pendingAllocations || [],
             timeUntilDeadline: data.earnings.timeUntilDeadline
           });
-          setUnfundedEarnings(null); // No unfunded data in this API yet
+          setUnfundedEarnings(data.earnings.unfundedEarnings || null);
         } else {
           // No earnings data
           setBalance(null);
@@ -317,8 +317,12 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
         }
       }
 
-      // No unfunded message for now since the API doesn't provide this data yet
-      setUnfundedMessage(null);
+      // Set unfunded message if available
+      if (data.earnings?.unfundedEarnings?.message) {
+        setUnfundedMessage(data.earnings.unfundedEarnings.message);
+      } else {
+        setUnfundedMessage(null);
+      }
 
     } catch (error) {
       console.error('[WriterTokenDashboard] Error loading writer data:', error);

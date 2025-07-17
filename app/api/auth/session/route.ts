@@ -59,30 +59,30 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString()
     };
 
-    // Set session cookies
+    // Set session cookies with 30-day expiry for optimal content creation UX
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax' as const,
-      maxAge: 60 * 60 * 24 // 24 hours for development, 1 hour for production
+      maxAge: 60 * 60 * 24 * 30 // 30 days - industry standard for content creation apps
     };
 
     if (isDevelopment) {
-      // Development session - longer expiry for easier testing
+      // Development session - 30 days for uninterrupted development workflow
       cookieStore.set('devUserSession', JSON.stringify(sessionData), {
         ...cookieOptions,
-        maxAge: 60 * 60 * 24 // 24 hours
+        maxAge: 60 * 60 * 24 * 30 // 30 days
       });
-      
-      console.log(`[Session API] Development session created for: ${user.username} (${user.email})`);
+
+      console.log(`[Session API] Development session created for: ${user.username} (${user.email}) - expires in 30 days`);
     } else {
-      // Production session
+      // Production session - 30 days to match industry standards for content apps
       cookieStore.set('userSession', JSON.stringify(sessionData), {
         ...cookieOptions,
-        maxAge: 60 * 60 // 1 hour
+        maxAge: 60 * 60 * 24 * 30 // 30 days - optimal for content creation
       });
-      
-      console.log(`[Session API] Production session created for: ${user.email}`);
+
+      console.log(`[Session API] Production session created for: ${user.email} - expires in 30 days`);
     }
 
     return createApiResponse({

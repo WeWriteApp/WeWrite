@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { doc, getDoc } from "firebase/firestore";
-import { addUsername, updateEmail as updateFirebaseEmail, checkUsernameAvailability } from "../../firebase/auth";
+import { addUsername, updateEmail as updateFirebaseEmail, updatePassword, checkUsernameAvailability } from "../../firebase/auth";
 import { db } from "../../firebase/database";
 import { validateUsernameFormat } from '../../utils/usernameValidation';
 import { useRouter } from 'next/navigation';
@@ -17,7 +17,7 @@ import { useAlert } from '../../hooks/useAlert';
 import { useConfirmation } from '../../hooks/useConfirmation';
 import AlertModal from '../../components/utils/AlertModal';
 import ConfirmationModal from '../../components/utils/ConfirmationModal';
-import { ChevronLeft, Edit3, Save, X, AlertCircle } from 'lucide-react';
+import { ChevronLeft, Edit3, Save, X, AlertCircle, Eye, EyeOff, Lock } from 'lucide-react';
 import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 
 export default function ProfilePage() {
@@ -35,8 +35,18 @@ export default function ProfilePage() {
   // Edit state management
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [isEditingPassword, setIsEditingPassword] = useState(false);
   const [tempUsername, setTempUsername] = useState('');
   const [tempEmail, setTempEmail] = useState('');
+
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -118,6 +128,64 @@ export default function ProfilePage() {
     setTempEmail(email);
     setIsEditingEmail(false);
     setEmailError('');
+  };
+
+  const handleEditPassword = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+    setIsEditingPassword(true);
+  };
+
+  const handleSavePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('All password fields are required');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters long');
+      return;
+    }
+
+    if (newPassword === currentPassword) {
+      setPasswordError('New password must be different from current password');
+      return;
+    }
+
+    setLoading(true);
+    setPasswordError('');
+    try {
+      const result = await updatePassword(currentPassword, newPassword);
+      if (result.success) {
+        setIsEditingPassword(false);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        await showSuccess('Success', 'Password updated successfully!');
+      } else {
+        setPasswordError(result.error?.message || 'Failed to update password');
+      }
+    } catch (error) {
+      console.error('Error updating password:', error);
+      setPasswordError(error.message || 'Failed to update password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelPassword = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+    setIsEditingPassword(false);
   };
 
   const handleUsernameChange = async (newUsername: string) => {
@@ -207,7 +275,7 @@ export default function ProfilePage() {
           <CardHeader className="pb-6">
             <CardTitle className="text-xl font-semibold">Profile Information</CardTitle>
             <CardDescription className="text-muted-foreground">
-              Update your username and email
+              Update your username, email, and password
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -338,6 +406,160 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2 mt-2 p-3 bg-destructive/10 border-theme-medium rounded-md">
                   <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
                   <p className="text-sm text-red-700 dark:text-red-300">{emailError}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-medium text-foreground">
+                Password
+              </Label>
+              {!isEditingPassword ? (
+                <div className="flex gap-3 items-center">
+                  <div className="flex-1">
+                    <Input
+                      id="password"
+                      type="password"
+                      value="••••••••"
+                      disabled={true}
+                      className="border-border/50 bg-muted/30 text-muted-foreground"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleEditPassword}
+                      className="h-9 px-3"
+                    >
+                      <Lock className="h-4 w-4 mr-1" />
+                      Change
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Current Password */}
+                  <div className="space-y-2">
+                    <Label htmlFor="currentPassword" className="text-sm font-medium text-foreground">
+                      Current Password
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="currentPassword"
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="Enter current password"
+                        className="pr-10 border-primary ring-1 ring-primary/20 bg-background"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      >
+                        {showCurrentPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* New Password */}
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword" className="text-sm font-medium text-foreground">
+                      New Password
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="newPassword"
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password"
+                        className="pr-10 border-primary ring-1 ring-primary/20 bg-background"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                      >
+                        {showNewPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Confirm New Password */}
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">
+                      Confirm New Password
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                        className="pr-10 border-primary ring-1 ring-primary/20 bg-background"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Password Action Buttons */}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={handleSavePassword}
+                      disabled={loading || !currentPassword || !newPassword || !confirmPassword}
+                      className="h-9 px-3"
+                    >
+                      <Save className="h-4 w-4 mr-1" />
+                      Update Password
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleCancelPassword}
+                      disabled={loading}
+                      className="h-9 px-3"
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+
+                  {/* Password Error */}
+                  {passwordError && (
+                    <div className="flex items-center gap-2 mt-2 p-3 bg-destructive/10 border-theme-medium rounded-md">
+                      <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      <p className="text-sm text-red-700 dark:text-red-300">{passwordError}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

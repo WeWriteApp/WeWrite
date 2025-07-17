@@ -15,6 +15,9 @@ import {
   type UserCredential,
   updateProfile,
   updateEmail as firebaseUpdateEmail,
+  updatePassword as firebaseUpdatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   signInAnonymously
 } from 'firebase/auth';
 import {
@@ -380,7 +383,7 @@ export const updateEmail = async (user: FirebaseUser, newEmail: string): Promise
     await firebaseUpdateEmail(user, newEmail);
 
     // Update the email in Firestore users collection
-const userDocRef = doc(db, getCollectionName("users"), session.uid);
+    const userDocRef = doc(db, getCollectionName("users"), user.uid);
     await updateDoc(userDocRef, {
       email: newEmail
     });
@@ -389,6 +392,54 @@ const userDocRef = doc(db, getCollectionName("users"), session.uid);
   } catch (error) {
     console.error("Error updating email:", error);
     return { success: false, error };
+  }
+}
+
+/**
+ * Update user password with reauthentication
+ * @param currentPassword - Current password for reauthentication
+ * @param newPassword - New password to set
+ * @returns Promise resolving to update result
+ */
+export const updatePassword = async (currentPassword: string, newPassword: string): Promise<AuthResult> => {
+  try {
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+      return { success: false, error: new Error('No authenticated user found') };
+    }
+
+    // Reauthenticate user with current password
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+    await reauthenticateWithCredential(user, credential);
+
+    // Update password in Firebase Authentication
+    await firebaseUpdatePassword(user, newPassword);
+
+    // Update last password change time in Firestore
+    const userDocRef = doc(db, getCollectionName("users"), user.uid);
+    await updateDoc(userDocRef, {
+      lastPasswordChange: new Date().toISOString(),
+      lastModified: new Date().toISOString()
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating password:", error);
+
+    // Convert Firebase error codes to user-friendly messages
+    let message = "Failed to update password. Please try again.";
+
+    if (error.code === "auth/wrong-password") {
+      message = "Current password is incorrect. Please try again.";
+    } else if (error.code === "auth/weak-password") {
+      message = "New password is too weak. Please choose a stronger password.";
+    } else if (error.code === "auth/requires-recent-login") {
+      message = "Please log out and log back in before changing your password.";
+    } else if (error.code === "auth/too-many-requests") {
+      message = "Too many failed attempts. Please try again later.";
+    }
+
+    return { success: false, error: new Error(message) };
   }
 }
 

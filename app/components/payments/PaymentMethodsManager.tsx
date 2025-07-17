@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Badge } from '../ui/badge';
-import { useTheme } from 'next-themes';
+import { useTheme } from '../../providers/ThemeProvider';
 import { toast } from 'sonner';
 import { useFeatureFlag } from '../../utils/feature-flags';
 import { getStripePublishableKey } from '../../utils/stripeConfig';
@@ -101,14 +101,30 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
       base: {
         fontSize: '16px',
         color: theme === 'dark' ? '#ffffff' : '#424770',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         fontSmoothing: 'antialiased',
+        backgroundColor: 'transparent',
         '::placeholder': {
-          color: theme === 'dark' ? 'rgba(255, 255, 255, 0.6)' : '#aab7c4'},
-        iconColor: theme === 'dark' ? '#ffffff' : '#424770'},
+          color: theme === 'dark' ? '#71717a' : '#aab7c4'
+        },
+        iconColor: theme === 'dark' ? '#a1a1aa' : '#424770',
+        ':focus': {
+          color: theme === 'dark' ? '#ffffff' : '#424770'
+        },
+        ':disabled': {
+          color: theme === 'dark' ? '#52525b' : '#9ca3af'
+        }
+      },
       invalid: {
-        color: '#fa755a',
-        iconColor: '#fa755a'}}};
+        color: '#ef4444',
+        iconColor: '#ef4444'
+      },
+      complete: {
+        color: theme === 'dark' ? '#22c55e' : '#16a34a',
+        iconColor: theme === 'dark' ? '#22c55e' : '#16a34a'
+      }
+    }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">

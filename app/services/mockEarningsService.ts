@@ -237,21 +237,18 @@ export class MockEarningsService {
 
   /**
    * Validate that user has admin privileges
-   * 
+   *
    * @param userEmail - User email to check
    * @returns True if user is admin
    */
   static isAdminUser(userEmail?: string | null): boolean {
     if (!userEmail) return false;
-    
+
+    // Only jamiegray2234@gmail.com has admin access
     const adminEmails = [
-      'jamiegray2234@gmail.com',
-      'patrick@mailfischer.com',
-      'skyler99ireland@gmail.com',
-      'diamatryistmatov@gmail.com',
-      'josiahsparrow@gmail.com'
+      'jamiegray2234@gmail.com'
     ];
-    
+
     return adminEmails.includes(userEmail);
   }
 }

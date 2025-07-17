@@ -513,14 +513,14 @@ export default function UserProfileTabs({ profile }) {
                 <span>Pages</span>
               </TabsTrigger>
 
-              {/* Activity tab */}
+              {/* Recent Edits tab */}
               <TabsTrigger
                 value="activity"
                 data-value="activity"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
               >
                 <Clock className="h-4 w-4" />
-                <span>Activity</span>
+                <span>Recent Edits</span>
               </TabsTrigger>
 
               {/* External Links tab */}

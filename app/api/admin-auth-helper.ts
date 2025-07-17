@@ -7,13 +7,9 @@ import { NextRequest } from 'next/server';
 import { getUserIdFromRequest } from './auth-helper';
 import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 
-// Define admin user IDs
+// Define admin user IDs - ONLY jamiegray2234@gmail.com has admin access
 const ADMIN_USER_IDS = [
-  'jamiegray2234@gmail.com',
-  'patrick@mailfischer.com',
-  'skyler99ireland@gmail.com',
-  'diamatryistmatov@gmail.com',
-  'josiahsparrow@gmail.com'
+  'jamiegray2234@gmail.com'
 ];
 
 /**

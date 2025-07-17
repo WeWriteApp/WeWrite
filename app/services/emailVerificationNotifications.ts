@@ -1,7 +1,7 @@
 "use client";
 
 import { auth } from '../firebase/auth';
-import { createEmailVerificationNotification } from '../firebase/notifications';
+import { createEmailVerificationNotification } from '../services/notificationsApi';
 
 /**
  * Email Verification Notification Service

@@ -1,4 +1,4 @@
-// Define admin user IDs
+// Define admin user IDs - ONLY jamiegray2234@gmail.com has admin access
 const ADMIN_USER_IDS = [
   'jamiegray2234@gmail.com',
 ];
@@ -10,5 +10,7 @@ const ADMIN_USER_IDS = [
  */
 export const isAdmin = (userEmail) => {
   if (!userEmail) return false;
+
+  // Only the specific admin user has access
   return ADMIN_USER_IDS.includes(userEmail);
 };

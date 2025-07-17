@@ -2,11 +2,12 @@
 import { useEffect, useState } from "react";
 import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Header from "../layout/Header";
 import RandomPages from "../features/RandomPages";
 import TrendingPages from "../features/TrendingPages";
 import { useOptimizedHome } from "../../hooks/useOptimizedHome";
-import { Shuffle, TrendingUp, Clock, Zap, Activity } from "lucide-react";
+import { Shuffle, TrendingUp, Clock, Zap, Activity, ArrowRight } from "lucide-react";
 import RandomPagesTable from "../pages/RandomPagesTable";
 import RecentPagesActivity from "./RecentPagesActivity";
 import StickySection from "../utils/StickySection";
@@ -22,21 +23,25 @@ import { getEnvironmentType } from "../../utils/environmentConfig";
 
 // Recently Viewed Section Component - moved outside to prevent infinite re-renders
 const RecentPagesSection = () => {
-  console.log('🚀 [RECENT_VIEWED] Component mounted/rendered');
+  console.log('🚀 [RECENT_VIEWED] Component mounted/rendered - timestamp:', new Date().toISOString());
   const { data, loading, error } = useOptimizedHome();
+  console.log('🚀 [RECENT_VIEWED] useOptimizedHome hook result:', { data: !!data, loading, error });
   console.log('🟠 [RECENT_VIEWED] useOptimizedHome returned:', {
     hasData: !!data,
     loading,
     error,
-    recentPagesCount: data?.recentPages?.length || 0,
+    recentPagesCount: data?.recentlyVisitedPages?.length || 0,
     batchUserDataKeys: data?.batchUserData ? Object.keys(data.batchUserData).length : 0
   });
   const [pagesWithSubscriptions, setPagesWithSubscriptions] = useState([]);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
+  // Mobile detection state - must be at the top level
+  const [isMobile, setIsMobile] = useState(false);
+
   // Use batched subscription data from the home API
   useEffect(() => {
-    const recentPages = data?.recentPages || [];
+    const recentPages = data?.recentlyVisitedPages || [];
     const batchUserData = data?.batchUserData || {};
 
     console.log('🟠 [RECENT_VIEWED] Processing data:', {
@@ -80,7 +85,18 @@ const RecentPagesSection = () => {
     });
 
     setPagesWithSubscriptions(pagesWithSubs);
-  }, [data?.recentPages, data?.batchUserData]);
+  }, [data?.recentlyVisitedPages, data?.batchUserData]);
+
+  // Mobile detection effect - must be after other useEffect hooks
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   if (loading) {
     return (
@@ -114,7 +130,11 @@ const RecentPagesSection = () => {
     );
   }
 
-  const recentPages = pagesWithSubscriptions.length > 0 ? pagesWithSubscriptions : (data?.recentPages || []);
+  const allRecentPages = pagesWithSubscriptions.length > 0 ? pagesWithSubscriptions : (data?.recentlyVisitedPages || []);
+
+  // Mobile: show 4 items, Desktop: show 8 items
+  const itemLimit = isMobile ? 4 : 8;
+  const recentPages = allRecentPages.slice(0, itemLimit);
 
   if (recentPages.length === 0) {
     console.log('🟠 [RECENT_VIEWED] Showing empty state - no recent pages available');
@@ -141,14 +161,31 @@ const RecentPagesSection = () => {
         <SectionTitle icon={Clock} title="Recently Viewed" />
       }
     >
-      <RandomPagesTable pages={pagesWithSubscriptions} loading={subscriptionLoading} denseMode={false} />
+      <div className="space-y-4">
+        <RandomPagesTable pages={recentPages} loading={subscriptionLoading} denseMode={false} />
+
+        {/* View More Button - only show if there are more pages than the current limit */}
+        {allRecentPages.length > itemLimit && (
+          <div className="flex justify-center pt-2">
+            <Link
+              href="/recents"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors border border-border rounded-lg hover:bg-muted/50"
+            >
+              View More
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+        )}
+      </div>
     </StickySection>
   );
 };
 
 
 const Home: React.FC = () => {
+  console.log('🏠 [HOME_COMPONENT] Rendering - timestamp:', new Date().toISOString());
   const { currentAccount, isAuthenticated, isLoading } = useCurrentAccount();
+  console.log('🏠 [HOME_COMPONENT] Auth state:', { isAuthenticated, isLoading, hasCurrentAccount: !!currentAccount });
   const router = useRouter();
 
   // Handle search functionality - navigate to search page
@@ -158,12 +195,25 @@ const Home: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       router.push("/auth/login");
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isLoading]);
 
-  if (!isAuthenticated) {
+  // Show loading state while authentication is being determined
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Only redirect if we're sure the user is not authenticated
+  if (!isLoading && !isAuthenticated) {
     return null;
   }
 

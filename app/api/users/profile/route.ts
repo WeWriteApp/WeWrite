@@ -28,21 +28,18 @@ export async function GET(request: NextRequest) {
 
     // First, try to get user by ID directly
     if (id) {
-      console.log('🔍 Looking up user by ID:', id);
       const userDoc = await db.collection(usersCollection).doc(id).get();
-      
+
       if (userDoc.exists) {
         userData = { id: userDoc.id, ...userDoc.data() };
         userId = userDoc.id;
-        console.log('✅ Found user by ID:', userData.username);
       }
     }
 
     // If not found by ID, try to find by username
     if (!userData && (username || id)) {
       const searchUsername = username || id;
-      console.log('🔍 Looking up user by username:', searchUsername);
-      
+
       const usernameQuery = db.collection(usersCollection).where('username', '==', searchUsername);
       const usernameSnapshot = await usernameQuery.get();
 
@@ -50,12 +47,12 @@ export async function GET(request: NextRequest) {
         const userDoc = usernameSnapshot.docs[0];
         userData = { id: userDoc.id, ...userDoc.data() };
         userId = userDoc.id;
-        console.log('✅ Found user by username:', userData.username);
       }
     }
 
     if (!userData) {
-      console.log('❌ User not found:', { id, username });
+      // Only log when user is actually not found (error case)
+      console.warn('User not found:', { id, username });
       return createErrorResponse('NOT_FOUND', 'User not found');
     }
 

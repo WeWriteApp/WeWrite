@@ -268,6 +268,38 @@ export async function POST(request: NextRequest) {
       // Don't fail page creation if activity recording fails
     }
 
+    // Update backlinks index for new page
+    if (content) {
+      try {
+        console.log('🔗 Updating backlinks index for new page:', pageRef.id);
+        const { updateBacklinksIndex } = await import('../../firebase/database/backlinks');
+
+        // Parse content to extract links
+        let contentNodes = [];
+        if (content && typeof content === 'string') {
+          try {
+            contentNodes = JSON.parse(content);
+          } catch (parseError) {
+            console.warn('Could not parse content for backlinks indexing:', parseError);
+          }
+        }
+
+        await updateBacklinksIndex(
+          pageRef.id,
+          pageData.title,
+          pageData.username,
+          contentNodes,
+          pageData.isPublic || false,
+          pageData.lastModified
+        );
+
+        console.log('✅ Backlinks index updated for new page:', pageRef.id);
+      } catch (backlinkError) {
+        console.error('⚠️ Error updating backlinks index for new page (non-fatal):', backlinkError);
+        // Don't fail page creation if backlinks update fails
+      }
+    }
+
     return createApiResponse({
       id: pageRef.id,
       ...pageData,
@@ -288,7 +320,10 @@ export async function PUT(request: NextRequest) {
 
     const currentUserId = await getUserIdFromRequest(request);
     if (!currentUserId) {
-      return createErrorResponse('UNAUTHORIZED');
+      console.error('🔴 Page save failed: No authenticated user found');
+      console.error('🔴 Request headers:', Object.fromEntries(request.headers.entries()));
+      console.error('🔴 Request cookies:', request.cookies.getAll());
+      return createErrorResponse('UNAUTHORIZED', 'Authentication required. Please log in again.');
     }
 
     const body = await request.json();
@@ -412,15 +447,63 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    // Update backlinks index when content is updated
+    if (content !== undefined) {
+      try {
+        console.log('🔗 Updating backlinks index for page:', id);
+        const { updateBacklinksIndex } = await import('../../firebase/database/backlinks');
+
+        // Parse content to extract links
+        let contentNodes = [];
+        if (content && typeof content === 'string') {
+          try {
+            contentNodes = JSON.parse(content);
+          } catch (parseError) {
+            console.warn('Could not parse content for backlinks indexing:', parseError);
+          }
+        }
+
+        // Get the updated page data
+        const updatedPageDoc = await pageRef.get();
+        const updatedPageData = updatedPageDoc.data();
+
+        await updateBacklinksIndex(
+          id,
+          updatedPageData?.title || title || 'Untitled',
+          updatedPageData?.username || 'Anonymous',
+          contentNodes,
+          updatedPageData?.isPublic || false,
+          new Date().toISOString()
+        );
+
+        console.log('✅ Backlinks index updated for page:', id);
+      } catch (backlinkError) {
+        console.error('⚠️ Error updating backlinks index (non-fatal):', backlinkError);
+        // Don't fail the page update if backlinks update fails
+      }
+    }
+
     return createApiResponse({
       id,
       ...updateData,
       message: 'Page updated successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating page:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to update page');
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      pageId: body.id
+    });
+
+    // Don't expose internal errors that might cause session issues
+    const userMessage = error.message?.includes('permission') || error.message?.includes('auth')
+      ? 'Authentication error. Please refresh the page and try again.'
+      : 'Failed to update page. Please try again.';
+
+    return createErrorResponse('INTERNAL_ERROR', userMessage);
   }
 }
 

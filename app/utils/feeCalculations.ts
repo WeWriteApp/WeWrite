@@ -548,3 +548,27 @@ export function getPayoutProtectionWarnings(
 
   return warnings;
 }
+
+/**
+ * MIGRATION TO NEW FEE SERVICE
+ *
+ * The functions above are being migrated to use the new centralized FeeConfigurationService.
+ * New implementations should use FeeConfigurationService directly.
+ */
+
+/**
+ * MIGRATION TO NEW FEE SERVICE COMPLETE
+ *
+ * All fee-related functionality has been migrated to the new centralized FeeConfigurationService.
+ *
+ * For new implementations, use:
+ * import { FeeConfigurationService } from '../services/feeConfigurationService';
+ *
+ * Available methods:
+ * - FeeConfigurationService.getCurrentFeeStructure()
+ * - FeeConfigurationService.updateFeeStructure(updates, updatedBy)
+ * - FeeConfigurationService.subscribeFeeChanges(callback)
+ *
+ * Or import from the convenience export file:
+ * import { FeeConfigurationService } from '../utils/feeConfigurationExports';
+ */

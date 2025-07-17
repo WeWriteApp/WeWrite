@@ -8,13 +8,9 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { getCollectionName } from "../../../utils/environmentConfig";
 
-// Inline admin check to avoid module resolution issues
+// Inline admin check to avoid module resolution issues - ONLY jamiegray2234@gmail.com has admin access
 const ADMIN_USER_IDS = [
-  'jamiegray2234@gmail.com',
-  'patrick@mailfischer.com',
-  'skyler99ireland@gmail.com',
-  'diamatryistmatov@gmail.com',
-  'josiahsparrow@gmail.com'
+  'jamiegray2234@gmail.com'
 ];
 
 const isAdminServer = (userEmail?: string | null): boolean => {

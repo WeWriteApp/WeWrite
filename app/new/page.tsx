@@ -714,8 +714,8 @@ function NewPageContent() {
           // This prevents 404 errors when navigating to newly created pages
           setTimeout(() => {
             try {
-              // Use replace instead of push to prevent back button issues
-              router.replace(`/${pageId}`);
+              // Use window.location for more reliable navigation that doesn't trigger React errors
+              window.location.href = `/${pageId}`;
             } catch (routerError) {
               console.error('Error during post-save redirect (non-fatal):', routerError);
               // If redirect fails, show success message and let user navigate manually
@@ -725,7 +725,7 @@ function NewPageContent() {
                 variant: "default"
               });
             }
-          }, 1000);
+          }, 1500); // Increased delay to ensure save is fully processed
 
           return true;
         } else {

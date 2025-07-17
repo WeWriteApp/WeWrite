@@ -2,7 +2,7 @@
 
 import React, { useContext } from 'react';
 import { MobileContext } from '../../providers/MobileProvider';
-import { cn } from '../../lib/utils';
+import { cn, wewriteCard } from '../../lib/utils';
 import { Edit } from 'lucide-react';
 
 /**
@@ -47,11 +47,11 @@ export default function EmptyContentState({
     <div
       onClick={handleClick}
       className={cn(
-        "relative p-6 rounded-lg transition-all duration-200",
+        "relative transition-all duration-200",
         isOwner ? (
-          "border-2 border-dashed border-muted-foreground/30 hover:border-muted-foreground/50 cursor-pointer bg-muted/20 hover:bg-muted/30"
+          wewriteCard('default', 'border-2 border-dashed border-muted-foreground/30 hover:border-muted-foreground/50 cursor-pointer bg-muted/20 hover:bg-muted/30 p-2')
         ) : (
-          "border border-border bg-card"
+          wewriteCard('default')
         ),
         className
       )}

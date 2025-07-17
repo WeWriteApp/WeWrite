@@ -1,26 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Calendar, List, ArrowLeft } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { useCurrentAccount } from '../components/providers/CurrentAccountProvider';
-import { useAccentColor } from '../components/contexts/AccentColorContext';
+import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAccentColor } from '../contexts/AccentColorContext';
 import DailyNotesCarousel from '../components/daily-notes/DailyNotesCarousel';
+import DailyNotesCalendar from '../components/daily-notes/DailyNotesCalendar';
 import TimelineCarousel from '../components/timeline/TimelineCarousel';
 
 /**
- * Full-page Timeline View
- * 
- * Displays either:
- * - Daily Notes timeline (grouped by createdAt date)
- * - Custom Timeline (grouped by custom date field)
- * 
- * URL params:
- * - type: 'daily-notes' | 'timeline' 
- * - date: YYYY-MM-DD (optional, to focus on specific date)
+ * Timeline Content Component (uses useSearchParams)
  */
-export default function TimelinePage() {
+function TimelineContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { currentAccount, isAuthenticated } = useCurrentAccount();
@@ -46,7 +39,7 @@ export default function TimelinePage() {
     return accentColor;
   };
 
-  // Scroll to specific date if provided
+  // Scroll to specific date if provided (prioritize over today)
   useEffect(() => {
     if (focusDate) {
       // Wait for component to mount and then scroll
@@ -57,10 +50,32 @@ export default function TimelinePage() {
           dateElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }, 500);
-      
+
       return () => clearTimeout(timer);
     }
   }, [focusDate]);
+
+  // Handle view mode changes and update URL
+  const handleViewModeChange = (newMode: 'timeline' | 'calendar') => {
+    setViewMode(newMode);
+    const params = new URLSearchParams();
+    params.set('type', type);
+    if (newMode === 'calendar') {
+      params.set('view', 'calendar');
+    }
+    if (focusDate) {
+      params.set('date', focusDate);
+    }
+    router.replace(`/timeline?${params.toString()}`);
+  };
+
+  // Initialize view mode from URL
+  useEffect(() => {
+    const urlViewMode = searchParams.get('view');
+    if (urlViewMode === 'calendar') {
+      setViewMode('calendar');
+    }
+  }, [searchParams]);
 
   const handleBack = () => {
     router.back();
@@ -93,86 +108,102 @@ export default function TimelinePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      {/* Header - Mobile Optimized */}
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBack}
-                className="rounded-2xl"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-              
-              <div>
-                <h1 className="text-2xl font-bold flex items-center gap-2">
-                  {type === 'daily-notes' ? (
-                    <Calendar className="h-6 w-6" />
-                  ) : (
-                    <List className="h-6 w-6" />
-                  )}
-                  {getTitle()}
-                </h1>
-                <p className="text-sm text-muted-foreground">{getDescription()}</p>
-              </div>
-            </div>
+          <div className="flex items-center gap-4">
+            {/* Mobile-optimized back button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="rounded-2xl p-2 md:px-3"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden md:inline ml-2">Back</span>
+            </Button>
 
-            {/* View Mode Toggle - only for daily notes */}
-            {type === 'daily-notes' && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={viewMode === 'timeline' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('timeline')}
-                  className="rounded-2xl"
-                >
-                  <List className="h-4 w-4 mr-2" />
-                  Timeline
-                </Button>
-                <Button
-                  variant={viewMode === 'calendar' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('calendar')}
-                  className="rounded-2xl"
-                >
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Calendar
-                </Button>
-              </div>
-            )}
+            <div className="flex-1">
+              <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+                {type === 'daily-notes' ? (
+                  <Calendar className="h-5 w-5 md:h-6 md:w-6" />
+                ) : (
+                  <List className="h-5 w-5 md:h-6 md:w-6" />
+                )}
+                {getTitle()}
+              </h1>
+              <p className="text-xs md:text-sm text-muted-foreground hidden md:block">{getDescription()}</p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6 md:py-8">
+        {/* View Mode Toggle - only for daily notes, in body section */}
+        {type === 'daily-notes' && (
+          <div className="flex justify-center mb-6">
+            <div className="flex items-center border border-border rounded-lg p-1 w-full max-w-sm">
+              <Button
+                variant={viewMode === 'timeline' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => handleViewModeChange('timeline')}
+                className="h-8 px-3 rounded-md flex-1"
+              >
+                <List className="h-4 w-4 mr-2" />
+                Timeline
+              </Button>
+              <Button
+                variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => handleViewModeChange('calendar')}
+                className="h-8 px-3 rounded-md flex-1"
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Calendar
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Content based on type and view mode */}
         {type === 'daily-notes' ? (
           viewMode === 'timeline' ? (
-            <DailyNotesCarousel 
-              accentColor={getAccentColorValue()} 
+            <DailyNotesCarousel
+              accentColor={getAccentColorValue()}
               isFullPage={true}
               focusDate={focusDate}
             />
           ) : (
             <div className="max-w-4xl mx-auto">
-              {/* Calendar view would go here */}
-              <div className="text-center py-12 text-muted-foreground">
-                Calendar view coming soon
-              </div>
+              <DailyNotesCalendar
+                accentColor={getAccentColorValue()}
+              />
             </div>
           )
         ) : (
-          <TimelineCarousel 
-            accentColor={getAccentColorValue()} 
+          <TimelineCarousel
+            accentColor={getAccentColorValue()}
             isFullPage={true}
             focusDate={focusDate}
           />
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Main Timeline Page with Suspense boundary
+ */
+export default function TimelinePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">Loading timeline...</div>
+      </div>
+    }>
+      <TimelineContent />
+    </Suspense>
   );
 }

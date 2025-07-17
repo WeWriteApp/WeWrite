@@ -52,7 +52,7 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
   renderFilterInHeader = false,
   isCarousel = true
 }, ref) => {
-  console.log('🚀 [RECENT_EDITS] Component mounted/rendered');
+  console.log('🚀 [RECENT_EDITS] Component mounted/rendered with props:', { limit, renderFilterInHeader, isCarousel });
 
   const [pages, setPages] = useState<RecentPage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,7 +105,8 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
         const data = await response.json();
         console.log('🔍 [RECENT_EDITS] API response data:', data);
 
-        const recentPages = data.recentPages || [];
+        // The API returns recentlyVisitedPages, not recentPages
+        const recentPages = data.recentlyVisitedPages || data.recentPages || [];
         const batchUserData = data.batchUserData || {};
 
         console.log(`📊 [RECENT_EDITS] Found ${recentPages.length} recent pages`);
@@ -117,10 +118,11 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
 
         const pagesWithDiff = recentPages.filter(page => page.lastDiff && page.lastDiff.hasChanges);
         const pagesWithoutDiff = recentPages.filter(page => !page.lastDiff);
+        // Extend time window to 7 days for pages without diff data to show more activity
         const recentPagesWithoutDiff = pagesWithoutDiff.filter(page => {
           const lastModified = new Date(page.lastModified);
-          const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-          return lastModified > oneDayAgo;
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          return lastModified > sevenDaysAgo;
         });
 
         console.log('🔍 [RECENT_EDITS] Activity analysis:', {

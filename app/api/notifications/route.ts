@@ -30,41 +30,77 @@ export async function GET(request: NextRequest) {
     // Handle different actions
     switch (action) {
       case 'count':
-        // Get unread notification count
-        const countRef = db.collection(getCollectionName('notifications'))
-          .where('userId', '==', userId)
-          .where('read', '==', false);
-        const countSnapshot = await countRef.get();
+        // Get unread notification count - use subcollection structure
+        const userNotificationsRef = db.collection(getCollectionName('users'))
+          .doc(userId)
+          .collection(getCollectionName('notifications'));
+
+        const countQuery = userNotificationsRef.where('read', '==', false);
+        const countSnapshot = await countQuery.get();
         const count = countSnapshot.size;
+
+        // Also try to get cached count from user document
+        const userDocRef = db.collection(getCollectionName('users')).doc(userId);
+        const userDoc = await userDocRef.get();
+        const cachedCount = userDoc.exists ? (userDoc.data()?.unreadNotificationsCount || 0) : 0;
 
         return NextResponse.json({
           success: true,
-          count
+          count,
+          cachedCount
         });
 
       case 'list':
       default:
-        // Get notifications list (simplified query to avoid index requirement)
-        let notificationsRef = db.collection(getCollectionName('notifications'))
-          .where('userId', '==', userId)
+        // Get notifications list using subcollection structure
+        const notificationsRef = db.collection(getCollectionName('users'))
+          .doc(userId)
+          .collection(getCollectionName('notifications'));
+
+        let query = notificationsRef
+          .orderBy('createdAt', 'desc')
           .limit(limit ? parseInt(limit) : 20);
 
-        const notificationsSnapshot = await notificationsRef.get();
-        let notifications = notificationsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        // Handle pagination with lastVisible
+        if (lastVisible) {
+          try {
+            // In a real implementation, you'd need to reconstruct the document reference
+            // For now, we'll skip pagination and just return the first page
+            console.log('Pagination not fully implemented in API - returning first page');
+          } catch (error) {
+            console.warn('Error handling pagination:', error);
+          }
+        }
 
-        // Sort by createdAt in memory since we can't use orderBy without an index
-        notifications.sort((a, b) => {
-          const aTime = a.createdAt?.toDate?.() || a.createdAt || new Date(0);
-          const bTime = b.createdAt?.toDate?.() || b.createdAt || new Date(0);
-          return bTime - aTime; // Descending order (newest first)
+        const notificationsSnapshot = await query.get();
+        const notifications = notificationsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            userId: data.userId || userId,
+            type: data.type || 'unknown',
+            title: data.title || '',
+            message: data.message || '',
+            sourceUserId: data.sourceUserId,
+            targetPageId: data.targetPageId,
+            targetPageTitle: data.targetPageTitle,
+            actionUrl: data.actionUrl,
+            metadata: data.metadata || {},
+            read: data.read || false,
+            createdAt: data.createdAt,
+            readAt: data.readAt
+          };
         });
+
+        const lastDoc = notificationsSnapshot.docs.length > 0
+          ? notificationsSnapshot.docs[notificationsSnapshot.docs.length - 1].id
+          : null;
 
         return NextResponse.json({
           success: true,
-          notifications
+          notifications,
+          lastVisible: lastDoc,
+          hasMore: notifications.length === (limit ? parseInt(limit) : 20)
         });
     }
 
@@ -79,7 +115,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { action, notificationId } = await request.json();
+    const body = await request.json();
+    const { action, notificationId, notificationData } = body;
 
     // Get the current user ID from request (authenticated user)
     const userId = await getUserIdFromRequest(request);
@@ -100,6 +137,46 @@ export async function POST(request: NextRequest) {
 
     // Handle different actions
     switch (action) {
+      case 'create':
+        // Create a new notification
+        if (!notificationData) {
+          return NextResponse.json(
+            { error: 'Notification data is required for create' },
+            { status: 400 }
+          );
+        }
+
+        const batch = db.batch();
+
+        // Create the notification document in subcollection
+        const notificationsRef = db.collection(getCollectionName('users'))
+          .doc(notificationData.userId)
+          .collection(getCollectionName('notifications'));
+        const notificationRef = notificationsRef.doc();
+
+        const notification = {
+          ...notificationData,
+          read: notificationData.read || false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+
+        batch.set(notificationRef, notification);
+
+        // Increment unread count if notification is unread
+        if (!notificationData.read) {
+          const userDocRef = db.collection(getCollectionName('users')).doc(notificationData.userId);
+          batch.update(userDocRef, {
+            unreadNotificationsCount: admin.firestore.FieldValue.increment(1)
+          });
+        }
+
+        await batch.commit();
+
+        return NextResponse.json({
+          success: true,
+          notificationId: notificationRef.id
+        });
+
       case 'markAsRead':
         if (!notificationId) {
           return NextResponse.json(
@@ -107,10 +184,27 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        await db.collection(getCollectionName('notifications')).doc(notificationId).update({
+
+        const readBatch = db.batch();
+
+        // Update the notification in subcollection
+        const notificationToReadRef = db.collection(getCollectionName('users'))
+          .doc(userId)
+          .collection(getCollectionName('notifications'))
+          .doc(notificationId);
+
+        readBatch.update(notificationToReadRef, {
           read: true,
-          readAt: new Date()
+          readAt: admin.firestore.FieldValue.serverTimestamp()
         });
+
+        // Decrement unread count in user document
+        const userDocRef = db.collection(getCollectionName('users')).doc(userId);
+        readBatch.update(userDocRef, {
+          unreadNotificationsCount: admin.firestore.FieldValue.increment(-1)
+        });
+
+        await readBatch.commit();
         return NextResponse.json({ success: true });
 
       case 'markAsUnread':
@@ -120,29 +214,58 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        await db.collection(getCollectionName('notifications')).doc(notificationId).update({
+
+        const unreadBatch = db.batch();
+
+        // Update the notification in subcollection
+        const notificationToUnreadRef = db.collection(getCollectionName('users'))
+          .doc(userId)
+          .collection(getCollectionName('notifications'))
+          .doc(notificationId);
+
+        unreadBatch.update(notificationToUnreadRef, {
           read: false,
           readAt: null
         });
+
+        // Increment unread count in user document
+        const userDocRefUnread = db.collection(getCollectionName('users')).doc(userId);
+        unreadBatch.update(userDocRefUnread, {
+          unreadNotificationsCount: admin.firestore.FieldValue.increment(1)
+        });
+
+        await unreadBatch.commit();
         return NextResponse.json({ success: true });
 
       case 'markAllAsRead':
-        // Get all unread notifications for the user
-        const unreadRef = db.collection(getCollectionName('notifications'))
-          .where('userId', '==', userId)
-          .where('read', '==', false);
-        const unreadSnapshot = await unreadRef.get();
+        // Get all unread notifications for the user from subcollection
+        const userNotificationsRef = db.collection(getCollectionName('users'))
+          .doc(userId)
+          .collection(getCollectionName('notifications'));
+
+        const unreadQuery = userNotificationsRef.where('read', '==', false);
+        const unreadSnapshot = await unreadQuery.get();
+
+        if (unreadSnapshot.empty) {
+          return NextResponse.json({ success: true, message: 'No unread notifications' });
+        }
 
         // Update all unread notifications to read
-        const batch = db.batch();
+        const markAllBatch = db.batch();
         unreadSnapshot.docs.forEach(doc => {
-          batch.update(doc.ref, {
+          markAllBatch.update(doc.ref, {
             read: true,
-            readAt: new Date()
+            readAt: admin.firestore.FieldValue.serverTimestamp()
           });
         });
-        await batch.commit();
 
+        // Reset unread count in user document
+        const userDocRefMarkAll = db.collection(getCollectionName('users')).doc(userId);
+        markAllBatch.update(userDocRefMarkAll, {
+          unreadNotificationsCount: 0
+        });
+
+        await markAllBatch.commit();
         return NextResponse.json({ success: true });
 
       case 'delete':
@@ -152,7 +275,14 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        await db.collection(getCollectionName('notifications')).doc(notificationId).delete();
+
+        // Delete from subcollection
+        const notificationToDeleteRef = db.collection(getCollectionName('users'))
+          .doc(userId)
+          .collection(getCollectionName('notifications'))
+          .doc(notificationId);
+
+        await notificationToDeleteRef.delete();
         return NextResponse.json({ success: true });
 
       default:

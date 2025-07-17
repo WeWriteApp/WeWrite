@@ -187,9 +187,21 @@ export function SubscriptionCheckout({
                 theme: theme === 'dark' ? 'night' : 'stripe',
                 variables: {
                   colorPrimary: '#0057FF',
-                  colorBackground: theme === 'dark' ? '#1a1a1a' : '#ffffff',
+                  colorBackground: theme === 'dark' ? '#0a0a0a' : '#ffffff',
                   colorText: theme === 'dark' ? '#ffffff' : '#000000',
-                  borderRadius: '8px'
+                  colorTextSecondary: theme === 'dark' ? '#a1a1aa' : '#6b7280',
+                  colorTextPlaceholder: theme === 'dark' ? '#71717a' : '#9ca3af',
+                  colorIconTab: theme === 'dark' ? '#a1a1aa' : '#6b7280',
+                  colorIconTabSelected: theme === 'dark' ? '#ffffff' : '#000000',
+                  colorIconCardError: '#ef4444',
+                  colorDanger: '#ef4444',
+                  fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontSizeBase: '16px',
+                  borderRadius: '8px',
+                  focusBoxShadow: theme === 'dark'
+                    ? '0 0 0 2px rgba(59, 130, 246, 0.5)'
+                    : '0 0 0 2px rgba(59, 130, 246, 0.3)',
+                  focusOutline: 'none'
                 }
               }
             }}

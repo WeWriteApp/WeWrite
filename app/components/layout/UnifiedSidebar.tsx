@@ -240,7 +240,7 @@ function UnifiedSidebarContent({
     { icon: Clock, label: 'Recently viewed', href: '/recents' },
     { icon: Plus, label: 'New Page', href: '/new' },
     { icon: Bell, label: 'Notifications', href: '/notifications' },
-    { icon: User, label: 'Profile', href: session ? `/user/${session.uid}` : '/login' },
+    { icon: User, label: 'Profile', href: session ? `/user/${session.uid}` : '/auth/login' },
     { icon: Settings, label: 'Settings', href: '/settings' },
     // Admin Dashboard - only for admin users
     ...(isAdmin ? [{ icon: Shield, label: 'Admin Dashboard', href: '/admin' }] : []),

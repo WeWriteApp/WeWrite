@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
 import { Search } from 'lucide-react';
+import { wewriteCard } from '../../lib/utils';
 
 /**
  * ActivityEmptyState Component
@@ -25,7 +26,7 @@ export default function ActivityEmptyState({ mode = 'all' }) {
   const isFollowingMode = safeMode === 'following';
 
   return (
-    <div className="flex flex-col items-center justify-center py-8 px-4 text-center bg-muted/30 rounded-lg border border-border/40">
+    <div className={wewriteCard('default', 'flex flex-col items-center justify-center py-4 text-center')}>
       <h3 className="text-lg font-semibold mb-2">
         {isFollowingMode ? 'No followed activity' : 'No activity to display'}
       </h3>

@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
 import { Button } from '../ui/button';
 import { SectionTitle } from '../ui/section-title';
@@ -28,6 +28,8 @@ export default function TimelineSection({}: TimelineSectionProps) {
   const { currentAccount, isAuthenticated } = useCurrentAccount();
   const { accentColor, customColors } = useAccentColor();
   const router = useRouter();
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [hasAutoScrolled, setHasAutoScrolled] = useState(false);
 
   // Get the accent color value (either custom or default)
   const getAccentColorValue = () => {
@@ -59,6 +61,7 @@ export default function TimelineSection({}: TimelineSectionProps) {
 
   // Function to scroll to today's card using the carousel's exposed function
   const scrollToToday = () => {
+    console.log('📅 TimelineSection: scrollToToday called, hasAutoScrolled:', hasAutoScrolled);
     // Use the globally exposed function from TimelineCarousel
     if ((window as any).timelineScrollToToday) {
       (window as any).timelineScrollToToday();
@@ -73,25 +76,56 @@ export default function TimelineSection({}: TimelineSectionProps) {
     }
   };
 
-  return (
-    <StickySection
-      sectionId="timeline"
-      headerContent={
-        <SectionTitle
-          icon={Clock}
-          title="Timeline"
-        >
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={scrollToToday}
-            className="rounded-2xl"
-          >
-            Today
-          </Button>
-        </SectionTitle>
+  // Auto-scroll to today when the timeline section comes into view
+  useEffect(() => {
+    if (!sectionRef.current || hasAutoScrolled) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !hasAutoScrolled) {
+            console.log('📅 TimelineSection: Section came into view, auto-scrolling to today');
+            // Add a small delay to ensure the carousel is fully rendered
+            setTimeout(() => {
+              scrollToToday();
+              setHasAutoScrolled(true);
+            }, 500);
+          }
+        });
+      },
+      {
+        threshold: 0.3, // Trigger when 30% of the section is visible
+        rootMargin: '0px 0px -10% 0px' // Trigger slightly before the section is fully in view
       }
-    >
+    );
+
+    observer.observe(sectionRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasAutoScrolled]);
+
+  return (
+    <div ref={sectionRef}>
+      <StickySection
+        sectionId="timeline"
+        headerContent={
+          <SectionTitle
+            icon={Clock}
+            title="Timeline"
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={scrollToToday}
+              className="rounded-2xl"
+            >
+              Today
+            </Button>
+          </SectionTitle>
+        }
+      >
       {/* Carousel container */}
       <div className="relative" id="timeline-carousel">
         <TimelineCarousel accentColor={getAccentColorValue()} />
@@ -101,6 +135,7 @@ export default function TimelineSection({}: TimelineSectionProps) {
         <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none" />
       </div>
 
-    </StickySection>
+      </StickySection>
+    </div>
   );
 }

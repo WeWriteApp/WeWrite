@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect } from "react"
-import { X, ChevronLeft, Settings, Check, User, Users, Shield, Link as LinkIcon, Trash2, Clock, Shuffle, LogOut } from "lucide-react"
+import { X, ChevronLeft, Settings, Check, Users, Shield, Link as LinkIcon, Trash2, Clock, Shuffle, LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
 // Removed direct Firebase auth imports - using session management system
 import { cn } from "../../lib/utils"
@@ -177,17 +177,6 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
                     position="static"
                   />
                 )}
-              </button>
-
-              <button
-                onClick={() => {
-                  onClose();
-                  router.push(`/user/${session?.uid}`);
-                }}
-                className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
-              >
-                <User className="h-5 w-5 mr-2" />
-                <span>Profile</span>
               </button>
 
               {/* Admin Dashboard - Only visible for admins */}

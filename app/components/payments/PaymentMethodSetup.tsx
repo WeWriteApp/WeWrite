@@ -9,7 +9,7 @@ import { CreditCard, Plus, AlertTriangle, CheckCircle } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { getStripePublishableKey } from '../../utils/stripeConfig';
-import { useTheme } from 'next-themes';
+import { useTheme } from '../../providers/ThemeProvider';
 
 // Initialize Stripe
 const stripePromise = loadStripe(getStripePublishableKey() || '');
@@ -116,16 +116,27 @@ const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCan
                 base: {
                   fontSize: '16px',
                   color: theme === 'dark' ? '#ffffff' : '#424770',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                   fontSmoothing: 'antialiased',
+                  backgroundColor: 'transparent',
                   '::placeholder': {
-                    color: theme === 'dark' ? 'rgba(255, 255, 255, 0.6)' : '#aab7c4'
+                    color: theme === 'dark' ? '#71717a' : '#aab7c4'
                   },
-                  iconColor: theme === 'dark' ? '#ffffff' : '#424770'
+                  iconColor: theme === 'dark' ? '#a1a1aa' : '#424770',
+                  ':focus': {
+                    color: theme === 'dark' ? '#ffffff' : '#424770'
+                  },
+                  ':disabled': {
+                    color: theme === 'dark' ? '#52525b' : '#9ca3af'
+                  }
                 },
                 invalid: {
-                  color: '#fa755a',
-                  iconColor: '#fa755a'
+                  color: '#ef4444',
+                  iconColor: '#ef4444'
+                },
+                complete: {
+                  color: theme === 'dark' ? '#22c55e' : '#16a34a',
+                  iconColor: theme === 'dark' ? '#22c55e' : '#16a34a'
                 }
               }
             }}
@@ -199,9 +210,21 @@ export const PaymentMethodSetup: React.FC<PaymentMethodSetupProps> = ({
           theme: theme === 'dark' ? 'night' : 'stripe',
           variables: {
             colorPrimary: '#0057FF',
-            colorBackground: theme === 'dark' ? '#1a1a1a' : '#ffffff',
+            colorBackground: theme === 'dark' ? '#0a0a0a' : '#ffffff',
             colorText: theme === 'dark' ? '#ffffff' : '#000000',
-            borderRadius: '8px'
+            colorTextSecondary: theme === 'dark' ? '#a1a1aa' : '#6b7280',
+            colorTextPlaceholder: theme === 'dark' ? '#71717a' : '#9ca3af',
+            colorIconTab: theme === 'dark' ? '#a1a1aa' : '#6b7280',
+            colorIconTabSelected: theme === 'dark' ? '#ffffff' : '#000000',
+            colorIconCardError: '#ef4444',
+            colorDanger: '#ef4444',
+            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            fontSizeBase: '16px',
+            borderRadius: '8px',
+            focusBoxShadow: theme === 'dark'
+              ? '0 0 0 2px rgba(59, 130, 246, 0.5)'
+              : '0 0 0 2px rgba(59, 130, 246, 0.3)',
+            focusOutline: 'none'
           }
         }
       }}

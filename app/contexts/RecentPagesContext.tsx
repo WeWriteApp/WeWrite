@@ -1,8 +1,6 @@
 "use client";
 
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { getDatabase, ref, onValue, set, Unsubscribe } from 'firebase/database';
-import { app } from "../firebase/config";
 import { useCurrentAccount } from "../providers/CurrentAccountProvider";
 
 /**
@@ -63,7 +61,7 @@ export function RecentPagesProvider({ children }: RecentPagesProviderProps) {
   const [loading, setLoading] = useState<boolean>(true);
   const { session } = useCurrentAccount();
 
-  // Load recently viewed pages from Firebase when user changes
+  // Load recently viewed pages from API when user changes
   useEffect(() => {
     if (!session) {
       setRecentPages([]);
@@ -71,56 +69,51 @@ export function RecentPagesProvider({ children }: RecentPagesProviderProps) {
       return;
     }
 
-    setLoading(true);
+    const fetchRecentPages = async () => {
+      setLoading(true);
+      try {
+        console.log('🔍 [RECENT_PAGES_CONTEXT] Fetching recent pages for user:', session.uid);
 
-    try {
-      const db = getDatabase(app);
-      const recentPagesRef = ref(db, `users/${session.uid}/recentPages`);
+        const response = await fetch(`/api/recent-pages?userId=${session.uid}&limit=${MAX_RECENT_PAGES}`);
 
-      const unsubscribe: Unsubscribe = onValue(recentPagesRef, async (snapshot) => {
-        try {
-          const data = snapshot.val();
-          if (data) {
-            // Convert to array and sort by timestamp (newest first)
-            let pagesArray = Object.values(data)
-              .filter((page: any): page is RecentPage => page && page.id) // Ensure valid page objects
-              .sort((a: RecentPage, b: RecentPage) => (b.timestamp || 0) - (a.timestamp || 0))
-              .slice(0, MAX_RECENT_PAGES);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch recent pages: ${response.status}`);
+        }
 
-            // Just set the pages as-is, don't try to fix usernames in the listener
-            // (Username fixing should be done elsewhere to avoid infinite loops)
-            setRecentPages(pagesArray);
-          } else {
-            setRecentPages([]);
-          }
-        } catch (error) {
-          console.error("Error processing recent pages data:", error);
+        const data = await response.json();
+        console.log('🔍 [RECENT_PAGES_CONTEXT] API response:', data);
+
+        if (data.pages && Array.isArray(data.pages)) {
+          // Convert API response to RecentPage format
+          const recentPagesData: RecentPage[] = data.pages.map((page: any) => ({
+            id: page.id,
+            title: page.title || 'Untitled',
+            timestamp: page.lastModified ? new Date(page.lastModified).getTime() : Date.now(),
+            userId: page.userId || session.uid,
+            username: page.username || page.authorUsername || 'Anonymous'
+          }));
+
+          console.log('🔍 [RECENT_PAGES_CONTEXT] Processed pages:', recentPagesData.length);
+          setRecentPages(recentPagesData);
+        } else {
+          console.log('🔍 [RECENT_PAGES_CONTEXT] No recent pages found');
           setRecentPages([]);
-        } finally {
-          setLoading(false);
         }
-      }, (error) => {
-        console.error("Firebase onValue error:", error);
+      } catch (error) {
+        console.error('🔍 [RECENT_PAGES_CONTEXT] Error fetching recent pages:', error);
         setRecentPages([]);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
 
-      return () => {
-        try {
-          unsubscribe();
-        } catch (error) {
-          console.error("Error unsubscribing from recent pages:", error);
-        }
-      };
-    } catch (error) {
-      console.error("Error setting up recently viewed pages listener:", error);
-      setRecentPages([]);
-      setLoading(false);
-    }
+    fetchRecentPages();
   }, [session?.uid]); // Only depend on session.uid to avoid unnecessary re-renders
 
   /**
    * Add a page to recent pages
+   * Since we now use lastModified-based recent pages, this is a no-op
+   * Pages automatically appear in recent pages when they're viewed/modified
    *
    * @param page - The page data to add to recent pages
    */
@@ -128,30 +121,18 @@ export function RecentPagesProvider({ children }: RecentPagesProviderProps) {
     if (!session || !page || !page.id) return;
 
     try {
-      const db = getDatabase(app);
-      const recentPageRef = ref(db, `users/${session.uid}/recentPages/${page.id}`);
+      console.log('🔍 [RECENT_PAGES_CONTEXT] Page view tracked (no action needed - using lastModified):', page.id);
 
-      // Create a recent page entry with only necessary data
-      const recentPage: RecentPage = {
-        id: page.id,
-        title: page.title || 'Untitled',
-        timestamp: Date.now(),
-        userId: page.userId || session.uid,
-        username: page.username || session.displayName || "Anonymous"
-      };
+      // Since we now use the user's own pages sorted by lastModified,
+      // we don't need to manually track page views. The pages will automatically
+      // appear in recent pages when they're modified.
 
-      // Save to Firebase
-      await set(recentPageRef, recentPage);
+      // Optionally refresh the recent pages list to show the latest data
+      // This is not strictly necessary but provides immediate feedback
+      // We could add a refresh mechanism here if needed
 
-      // Update local state (optimistic update)
-      setRecentPages(prev => {
-        // Remove if already exists
-        const filtered = Array.isArray(prev) ? prev.filter(p => p && p.id !== page.id) : [];
-        // Add to beginning
-        return [recentPage, ...filtered].slice(0, MAX_RECENT_PAGES);
-      });
     } catch (error) {
-      console.error("Error adding recent page:", error);
+      console.error("Error in addRecentPage:", error);
     }
   };
 

@@ -112,7 +112,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
     setMounted(true);
   }, []);
 
-  // Fetch related pages
+  // Fetch related pages from API
   useEffect(() => {
     if (!page?.id || !mounted) return;
 
@@ -126,10 +126,27 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
           linkedPageIds: linkedPageIds?.length || 0
         });
 
-        // Get related pages based on content similarity
-        const related = await getRelatedPagesAsync(page.id, page.title, page.content || '', linkedPageIds, 10);
-        console.log('📄 RelatedPagesSection: Related pages found:', related.length, related);
-        setRelatedPages(related);
+        // Build API URL with parameters
+        const params = new URLSearchParams({
+          pageId: page.id,
+          pageTitle: page.title || '',
+          pageContent: (page.content || '').substring(0, 2000), // Limit content length for URL
+          limit: '10'
+        });
+
+        if (linkedPageIds && linkedPageIds.length > 0) {
+          params.set('linkedPageIds', linkedPageIds.join(','));
+        }
+
+        const response = await fetch(`/api/related-pages?${params.toString()}`);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('📄 RelatedPagesSection: Related pages found:', data.relatedPages?.length || 0);
+        setRelatedPages(data.relatedPages || []);
       } catch (error) {
         console.error('Error fetching related pages:', error);
         setRelatedPages([]);
@@ -138,7 +155,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
     };
 
     fetchRelatedPages();
-  }, [page?.id, mounted]);
+  }, [page?.id, page?.title, page?.content, linkedPageIds, mounted]);
 
   if (!mounted) {
     return null;
@@ -147,62 +164,66 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
   // Always render the section, even if empty
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-          Related Pages
-        </h3>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-3 w-3 text-gray-400 cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">Pages with similar content or topics</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+    <div className="mt-8 px-4 sm:px-6 max-w-4xl mx-auto">
+      <div className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm">
+        {/* Header */}
+        <div className="flex items-center gap-2 mb-4">
+          <h3 className="text-sm font-medium">
+            Related Pages
+          </h3>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Pages with similar content or topics</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
 
-      {loading ? (
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span>Loading related pages...</span>
-        </div>
-      ) : relatedPages.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {relatedPages.map((relatedPage, index) => (
-            <div key={relatedPage.id} className="flex items-center">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <PillLink href={`/${relatedPage.id}`}>
-                      {relatedPage.title || "Untitled"}
-                    </PillLink>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="text-xs space-y-1">
-                      <div className="font-medium">{relatedPage.title || "Untitled"}</div>
-                      {relatedPage.username && (
-                        <div className="text-gray-400">by {relatedPage.username}</div>
-                      )}
-                      {relatedPage.similarity && (
-                        <div className="text-blue-400">
-                          {Math.round(relatedPage.similarity * 100)}% similar
-                        </div>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-sm text-gray-500">
-          No related pages found
-        </div>
-      )}
+        {/* Content */}
+        {loading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span>Loading related pages...</span>
+          </div>
+        ) : relatedPages.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {relatedPages.map((relatedPage, index) => (
+              <div key={relatedPage.id} className="flex items-center">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <PillLink href={`/${relatedPage.id}`}>
+                        {relatedPage.title || "Untitled"}
+                      </PillLink>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="text-xs space-y-1">
+                        <div className="font-medium">{relatedPage.title || "Untitled"}</div>
+                        {relatedPage.username && (
+                          <div className="text-muted-foreground">by {relatedPage.username}</div>
+                        )}
+                        {relatedPage.similarity && (
+                          <div className="text-blue-400">
+                            {Math.round(relatedPage.similarity * 100)}% similar
+                          </div>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground">
+            No related pages found
+          </div>
+        )}
+      </div>
     </div>
   );
 }

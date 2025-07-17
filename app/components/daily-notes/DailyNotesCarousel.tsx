@@ -9,6 +9,7 @@ import { format, subDays, addDays } from 'date-fns';
 import { Button } from '../ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDateFormat } from '../../contexts/DateFormatContext';
+import { cn } from '../../lib/utils';
 /**
  * Check if a title exactly matches the YYYY-MM-DD format
  * Returns true only for exact matches (10 characters, no additional text)
@@ -420,18 +421,52 @@ export default function DailyNotesCarousel({
     }
   }, [dates]);
 
-  // Scroll to today's card on initial mount with animation
+  // Scroll to focus date or today's card on initial mount with animation
   useEffect(() => {
     if (!loading && isInitialLoad) {
       // Delay to ensure DOM is fully rendered and carousel is ready
       const timer = setTimeout(() => {
-        animatedScrollToToday();
+        if (focusDate) {
+          // Scroll to specific focus date if provided
+          const focusDateObj = new Date(focusDate);
+          const focusIndex = dates.findIndex(date =>
+            date.toDateString() === focusDateObj.toDateString()
+          );
+
+          if (focusIndex !== -1) {
+            // Use the same scrolling logic as animatedScrollToToday but for focus date
+            const carousel = carouselRef.current;
+            if (carousel) {
+              const containerWidth = 200; // Approximate width of each container
+              const containerPadding = 24; // px-6 = 24px
+              const loadMoreButtonWidth = 120; // Approximate width of load more button
+              const visibleWidth = carousel.clientWidth - (containerPadding * 2);
+              const visibleCenter = visibleWidth / 2;
+              const containerCenter = containerWidth / 2;
+
+              const focusContainerStart = loadMoreButtonWidth + (focusIndex * containerWidth);
+              const focusContainerCenter = focusContainerStart + containerCenter;
+              const targetScrollPosition = Math.max(0, focusContainerCenter - visibleCenter);
+
+              carousel.scrollTo({ left: 0, behavior: 'instant' });
+              setTimeout(() => {
+                carousel.scrollTo({ left: targetScrollPosition, behavior: 'smooth' });
+              }, 100);
+            }
+          } else {
+            // Focus date not found, fall back to today
+            animatedScrollToToday();
+          }
+        } else {
+          // No focus date, scroll to today
+          animatedScrollToToday();
+        }
         setIsInitialLoad(false); // Mark initial load as complete
       }, 200); // Slightly longer delay to ensure smooth animation
 
       return () => clearTimeout(timer);
     }
-  }, [loading, isInitialLoad, animatedScrollToToday]);
+  }, [loading, isInitialLoad, animatedScrollToToday, focusDate, dates]);
 
   // Expose scrollToToday function globally for the "Today" button
   useEffect(() => {
@@ -460,7 +495,10 @@ export default function DailyNotesCarousel({
     <div
       ref={carouselRef}
       id="daily-notes-carousel"
-      className="flex gap-4 overflow-x-auto pb-2 px-6 pt-2 scrollbar-hide"
+      className={cn(
+        "flex overflow-x-auto pb-2 px-6 pt-2 scrollbar-hide",
+        isFullPage ? "gap-8" : "gap-4" // Larger gaps for full page
+      )}
       style={{
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
@@ -489,8 +527,8 @@ export default function DailyNotesCarousel({
 
       {/* Day Containers */}
       {(() => {
-        // Calculate the maximum number of notes across all dates for consistent card heights
-        const maxNotesCount = Math.max(
+        // Calculate the maximum number of notes across all dates for consistent card heights (only for card view)
+        const maxNotesCount = isFullPage ? 0 : Math.max(
           ...dates.map(date => {
             const dateString = format(date, 'yyyy-MM-dd');
             const notesForDate = notesByDate.get(dateString) || [];
@@ -503,15 +541,6 @@ export default function DailyNotesCarousel({
           const dateString = format(date, 'yyyy-MM-dd');
           const notesForDate = notesByDate.get(dateString) || [];
           const isToday = new Date().toDateString() === date.toDateString();
-
-          // Reduced debug logging to prevent terminal spam
-          // if (notesForDate.length > 0) {
-          //   console.log('🔍 DailyNotesCarousel: Rendering date with notes:', {
-          //     date: dateString,
-          //     notesCount: notesForDate.length,
-          //     notes: notesForDate.map(note => ({ id: note.id, title: note.title }))
-          //   });
-          // }
 
           return (
             <DayContainer
@@ -548,10 +577,6 @@ export default function DailyNotesCarousel({
           )}
         </Button>
       </div>
-
-
-
-
     </div>
   );
 }

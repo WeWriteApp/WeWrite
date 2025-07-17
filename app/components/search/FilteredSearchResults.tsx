@@ -18,6 +18,7 @@ import { ClearableInput } from "../ui/clearable-input";
 import { PillLink } from "../utils/PillLink";
 import searchPerformanceMonitor from '../../utils/searchPerformanceMonitor';
 import { shouldAllowRequest } from "../../utils/requestThrottle";
+import { cn, wewriteCard } from '../../lib/utils';
 
 // Simple Loader component
 const Loader = () => {
@@ -641,7 +642,7 @@ const FilteredSearchResults = forwardRef(({
             {/* No Results - Only show after search has completed and we have attempted a search */}
             {(search.length >= 2 || (isLinkEditor && lastRequestRef.current !== null)) &&
              pages.length === 0 && users.length === 0 && groups.length === 0 && !isSearching && (
-              <div className="p-4 text-center">
+              <div className={wewriteCard('default', 'text-center')}>
                 <div className="text-muted-foreground mb-4">
                   {search.length >= 2
                     ? `No results found for "${search}"`

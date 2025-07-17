@@ -32,14 +32,10 @@ import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
  * Hardcoded list of admin emails for security. This approach is used instead of
  * database lookups to ensure admin verification works even if database is compromised.
  *
- * SECURITY NOTE: Only these emails can create/modify mock earnings data.
+ * SECURITY NOTE: Only jamiegray2234@gmail.com can create/modify mock earnings data.
  */
 const ADMIN_USER_EMAILS = [
-  'jamiegray2234@gmail.com',
-  'patrick@mailfischer.com',
-  'skyler99ireland@gmail.com',
-  'diamatryistmatov@gmail.com',
-  'josiahsparrow@gmail.com'
+  'jamiegray2234@gmail.com'
 ];
 
 /**

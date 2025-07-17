@@ -23,6 +23,7 @@ import { useRouter } from 'next/navigation';
 import { useConfirmation } from '../../hooks/useConfirmation';
 import ConfirmationModal from '../../components/utils/ConfirmationModal';
 import FeeManagementSection from '../../components/admin/FeeManagementSection';
+import ComprehensiveFeeManagement from '../../components/admin/ComprehensiveFeeManagement';
 
 export default function AdminToolsPage() {
   const { session, isAuthenticated } = useCurrentAccount();
@@ -99,9 +100,8 @@ export default function AdminToolsPage() {
       // Check if user is admin
       const checkAdmin = async () => {
         try {
-          // This is a simple check - in a real app, you'd want to check against a database
-          // or use Firebase Auth custom claims
-          const adminEmails = ['admin@wewrite.com', 'jamie@wewrite.com'];
+          // Only jamiegray2234@gmail.com has admin access
+          const adminEmails = ['jamiegray2234@gmail.com'];
           setIsAdmin(adminEmails.includes(session.email));
 
           if (!adminEmails.includes(session.email)) {
@@ -447,20 +447,7 @@ export default function AdminToolsPage() {
         </TabsContent>
 
         <TabsContent value="fees" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <DollarSign className="mr-2 h-5 w-5" />
-                WeWrite Fee Management
-              </CardTitle>
-              <CardDescription>
-                Configure the platform fee percentage for payouts
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <FeeManagementSection />
-            </CardContent>
-          </Card>
+          <ComprehensiveFeeManagement />
         </TabsContent>
 
         {/* State Simulator Tab */}

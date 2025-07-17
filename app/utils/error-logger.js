@@ -1,7 +1,16 @@
 /**
- * Comprehensive Error Logging System
- * Captures and reports all types of errors with maximum detail
+ * DEPRECATED: Comprehensive Error Logging System
+ *
+ * This module has been replaced by the unified logging system in logger.ts
+ * Please use the unified logger instead:
+ *
+ * import logger from './logger';
+ * logger.error('message', data);
+ *
+ * @deprecated Use unified logger from './logger' instead
  */
+
+console.warn('⚠️ error-logger.js is deprecated. Use unified logger from ./logger instead');
 
 class ErrorLogger {
   constructor() {

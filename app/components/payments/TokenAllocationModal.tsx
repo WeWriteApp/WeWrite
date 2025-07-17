@@ -85,7 +85,8 @@ export function TokenAllocationModal({
 
   const handleLogin = () => {
     onClose();
-    router.push('/login');
+    // Redirect to landing page so users can get "sold" on WeWrite first
+    router.push('/');
   };
 
   const handleSubscribe = () => {

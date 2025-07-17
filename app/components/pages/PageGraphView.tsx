@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as d3 from 'd3';
 import { useRouter } from 'next/navigation';
 import { usePillStyle } from '../../contexts/PillStyleContext';
-import { Loader2, Maximize2, Minimize2, RefreshCw } from 'lucide-react';
+import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { usePageConnectionsGraph, getLinkDirection } from '../../hooks/usePageConnections';
 
@@ -347,26 +347,23 @@ export default function PageGraphView({ pageId, pageTitle, className = "" }: Pag
 
   if (nodes.length <= 1) {
     return (
-      <div className={`flex items-center justify-center h-64 text-muted-foreground ${className}`}>
-        <p>No page connections found</p>
+      <div className={`mt-8 px-4 sm:px-6 max-w-4xl mx-auto ${className}`}>
+        <div className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm">
+          <h3 className="text-sm font-medium mb-4">Page Connections</h3>
+          <div className="flex items-center justify-center h-32 text-muted-foreground">
+            <p>No page connections found</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={`relative ${className}`}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Page Connections</h3>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={refresh}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
+    <div className={`mt-8 px-4 sm:px-6 max-w-4xl mx-auto ${className}`}>
+      <div className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-medium">Page Connections</h3>
           <Button
             variant="outline"
             size="sm"
@@ -375,38 +372,40 @@ export default function PageGraphView({ pageId, pageTitle, className = "" }: Pag
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
         </div>
-      </div>
 
-      {/* Graph container */}
-      <div 
-        ref={containerRef}
-        className={`border border-border rounded-lg bg-background ${
-          isFullscreen ? 'fixed inset-4 z-50 p-4' : 'h-96'
-        }`}
-      >
-        <svg ref={svgRef} className="w-full h-full" />
-        
-        {/* Legend */}
-        <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm border border-border rounded-lg p-3 text-xs">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-primary"></div>
-              <span>Current page</span>
+        {/* Graph container */}
+        <div className="relative">
+          <div
+            ref={containerRef}
+            className={`border border-border rounded-lg bg-background ${
+              isFullscreen ? 'fixed inset-4 z-50 p-4' : 'h-96'
+            }`}
+          >
+            <svg ref={svgRef} className="w-full h-full" />
+
+            {/* Legend */}
+            <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm border border-border rounded-lg p-3 text-xs">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-primary"></div>
+                  <span>Current page</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary/70"></div>
+                  <span>Direct connections</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary/40"></div>
+                  <span>2 hops away</span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-primary/70"></div>
-              <span>Direct connections</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary/40"></div>
-              <span>2 hops away</span>
+
+            {/* Instructions */}
+            <div className="absolute bottom-4 right-4 bg-background/90 backdrop-blur-sm border border-border rounded-lg p-3 text-xs text-muted-foreground">
+              <div>Click nodes to navigate • Drag to move • Scroll to zoom</div>
             </div>
           </div>
-        </div>
-
-        {/* Instructions */}
-        <div className="absolute bottom-4 right-4 bg-background/90 backdrop-blur-sm border border-border rounded-lg p-3 text-xs text-muted-foreground">
-          <div>Click nodes to navigate • Drag to move • Scroll to zoom</div>
         </div>
       </div>
     </div>

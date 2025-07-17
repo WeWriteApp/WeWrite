@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, wewriteCard } from '../../lib/utils';
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -27,19 +27,19 @@ export default function EmptyState({
 }: EmptyStateProps) {
   const sizeClasses = {
     sm: {
-      container: 'p-6',
+      container: '',
       icon: 'h-6 w-6 mb-2',
       title: 'text-sm font-medium',
       description: 'text-xs'
     },
     md: {
-      container: 'p-8',
+      container: 'p-4', // Extra padding beyond card default
       icon: 'h-8 w-8 mb-3',
       title: 'text-base font-medium',
       description: 'text-sm'
     },
     lg: {
-      container: 'p-12',
+      container: 'p-8', // Extra padding beyond card default
       icon: 'h-12 w-12 mb-4',
       title: 'text-lg font-medium',
       description: 'text-base'
@@ -50,7 +50,8 @@ export default function EmptyState({
 
   return (
     <div className={cn(
-      "border border-border rounded-lg text-center text-muted-foreground",
+      wewriteCard('default'),
+      "text-center text-muted-foreground",
       classes.container,
       className
     )}>

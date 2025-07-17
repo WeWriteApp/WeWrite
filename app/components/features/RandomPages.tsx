@@ -7,6 +7,7 @@ import { Button } from '../ui/button';
 import { Shuffle } from 'lucide-react';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import RandomPagesTable from '../pages/RandomPagesTable';
+import { wewriteCard } from '../../lib/utils';
 
 interface RandomPage {
   id: string;
@@ -197,7 +198,7 @@ const RandomPages = React.memo(function RandomPages({
   if (error && !shuffling) {
     return (
       <div className="space-y-4">
-        <div className="border border-theme-medium rounded-2xl p-8 text-center">
+        <div className={wewriteCard('default', 'text-center')}>
           <p className="text-muted-foreground mb-4">Failed to load random pages</p>
           <p className="text-sm text-muted-foreground mb-4">{error}</p>
           <Button
@@ -216,7 +217,7 @@ const RandomPages = React.memo(function RandomPages({
   if (!loading && !shuffling && randomPages.length === 0) {
     return (
       <div className="space-y-4">
-        <div className="border border-theme-medium rounded-2xl p-8 text-center">
+        <div className={wewriteCard('default', 'text-center')}>
           <p className="text-muted-foreground">No pages available to display</p>
           <Button
             variant="outline"
