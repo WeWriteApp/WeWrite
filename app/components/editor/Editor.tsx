@@ -6,6 +6,7 @@ import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
 import { AlertTriangle, X, Trash2, Check, Link, GripVertical } from 'lucide-react';
 import LinkEditorModal from './LinkEditorModal';
+import { useLogRocket } from '../../providers/LogRocketProvider';
 
 interface EditorProps {
   initialContent?: any[];
@@ -79,6 +80,9 @@ const Editor = React.forwardRef<any, EditorProps>((props, ref) => {
   const [focusedLineId, setFocusedLineId] = useState<string | null>(null);
   const [cursorPosition, setCursorPosition] = useState<{ lineId: string; position: number } | null>(null);
   const [showLinkModal, setShowLinkModal] = useState(false);
+
+  // LogRocket tracking
+  const { trackDragDropLink, trackPageEdit } = useLogRocket();
 
   // Drag and drop state
   const [draggedLineId, setDraggedLineId] = useState<string | null>(null);
@@ -414,7 +418,14 @@ const Editor = React.forwardRef<any, EditorProps>((props, ref) => {
     event.dataTransfer.setData('text/plain', lineId);
     event.dataTransfer.effectAllowed = 'move';
     setDraggedLineId(lineId);
-  }, []);
+
+    // Track line drag start in LogRocket
+    trackDragDropLink({
+      action: 'start',
+      linkId: lineId,
+      pageId: 'current_page' // Could be enhanced with actual page ID
+    });
+  }, [trackDragDropLink]);
 
   const handleLineDragEnd = useCallback(() => {
     setDraggedLineId(null);
@@ -430,6 +441,14 @@ const Editor = React.forwardRef<any, EditorProps>((props, ref) => {
 
     console.log('🔗 Link drag start:', { lineId, linkIndex, linkText: linkData.text });
     console.log('🔗 Setting draggedLink state...');
+
+    // Track link drag start in LogRocket
+    trackDragDropLink({
+      action: 'start',
+      linkId: linkData.pageId || linkData.text,
+      fromPosition: linkIndex,
+      pageId: 'current_page' // Could be enhanced with actual page ID
+    });
 
     // Disable text selection during link drag
     document.body.style.userSelect = 'none';
@@ -457,13 +476,20 @@ const Editor = React.forwardRef<any, EditorProps>((props, ref) => {
 
   const handleLinkDragEnd = useCallback(() => {
     console.log('🔗 Link drag end - collapsing all gaps');
+
+    // Track link drag end in LogRocket
+    trackDragDropLink({
+      action: 'drop',
+      pageId: 'current_page' // Could be enhanced with actual page ID
+    });
+
     setDraggedLink(null);
     setDragOverPosition(null);
 
     // Reset all animations to 0 to collapse any gaps
     setElementAnimations(prev => {
       const newAnimations = new Map(prev);
-      for (const [key, animation] of newAnimations) {
+      for (const [, animation] of newAnimations) {
         animation.targetX = 0; // Collapse back to natural position
       }
       console.log(`🔗 Resetting ${newAnimations.size} element animations to collapse gaps`);
@@ -472,7 +498,7 @@ const Editor = React.forwardRef<any, EditorProps>((props, ref) => {
 
     // Re-enable text selection
     document.body.style.userSelect = '';
-  }, []);
+  }, [trackDragDropLink]);
 
   // Function to trigger physics animations
   const triggerElementAnimations = useCallback((lineId: string, dropPosition: number) => {

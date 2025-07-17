@@ -23,6 +23,7 @@ import { CurrentAccountProvider } from "./providers/CurrentAccountProvider"
 import { NotificationProvider } from "./providers/NotificationProvider"
 import { MobileProvider } from "./providers/MobileProvider"
 import { AdminStateSimulatorProvider } from "./providers/AdminStateSimulatorProvider"
+import { LogRocketProvider } from "./providers/LogRocketProvider"
 import GlobalNavigation from "./components/layout/GlobalNavigation"
 import AdminStateSimulatorGuard from "./components/admin/AdminStateSimulatorGuard"
 
@@ -37,12 +38,13 @@ export default function RootLayout({
           <ErrorBoundary name="root">
             <GlobalErrorHandler />
             <ThemeProvider>
-              <MultiAuthProvider>
-                <CurrentAccountProvider>
-                  <AdminStateSimulatorProvider>
-                    <NotificationProvider>
-                      <MobileProvider>
-                        <DataProvider>
+              <LogRocketProvider>
+                <MultiAuthProvider>
+                  <CurrentAccountProvider>
+                    <AdminStateSimulatorProvider>
+                      <NotificationProvider>
+                        <MobileProvider>
+                          <DataProvider>
                             <DateFormatProvider>
                               <AccentColorProvider>
                                 <PillStyleProvider>
@@ -63,13 +65,14 @@ export default function RootLayout({
                                 </PillStyleProvider>
                               </AccentColorProvider>
                             </DateFormatProvider>
-                        </DataProvider>
-                      </MobileProvider>
-                    </NotificationProvider>
-                  </AdminStateSimulatorProvider>
-                </CurrentAccountProvider>
-              </MultiAuthProvider>
-          </ThemeProvider>
+                          </DataProvider>
+                        </MobileProvider>
+                      </NotificationProvider>
+                    </AdminStateSimulatorProvider>
+                  </CurrentAccountProvider>
+                </MultiAuthProvider>
+              </LogRocketProvider>
+            </ThemeProvider>
           </ErrorBoundary>
         </NextJSErrorBoundary>
       </body>

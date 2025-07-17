@@ -6,6 +6,7 @@ import { useMultiAuth } from './MultiAuthProvider';
 import Cookies from 'js-cookie';
 import { auth } from '../firebase/config';
 import { reload } from 'firebase/auth';
+import { identifyUser } from '../utils/logrocket';
 
 // Safety check for auth object
 if (!auth && process.env.NODE_ENV === 'development') {
@@ -42,6 +43,25 @@ export const CurrentAccountProvider: React.FC<CurrentSessionProviderProps> = ({ 
   // Storage key for active account
   const ACTIVE_SESSION_KEY = 'wewrite_active_session_id';
 
+  // Helper function to identify user in LogRocket
+  const identifyUserInLogRocket = useCallback((session: UserAccount | null) => {
+    if (session) {
+      try {
+        // Identify user in LogRocket with sanitized data
+        identifyUser({
+          id: session.uid,
+          username: session.username,
+          email: session.email,
+          accountType: 'user', // Could be enhanced with actual account types
+          createdAt: session.createdAt,
+        });
+        console.log('👤 User identified in LogRocket:', session.uid);
+      } catch (error) {
+        console.error('❌ Failed to identify user in LogRocket:', error);
+      }
+    }
+  }, []);
+
   // Helper function to set authentication cookies
   const setAuthenticationCookies = useCallback((session: UserAccount | null) => {
     if (session) {
@@ -53,12 +73,15 @@ export const CurrentAccountProvider: React.FC<CurrentSessionProviderProps> = ({ 
         displayName: session.displayName || session.username,
         emailVerified: session.emailVerified ?? false // Include email verification status
       }), { expires: 7 });
+
+      // Identify user in LogRocket when setting cookies
+      identifyUserInLogRocket(session);
     } else {
       Cookies.remove('authenticated');
       Cookies.remove('userSession');
       Cookies.remove('session');
     }
-  }, []);
+  }, [identifyUserInLogRocket]);
 
   // Storage utilities
   const saveActiveSessionToStorage = useCallback((sessionId: string | null) => {

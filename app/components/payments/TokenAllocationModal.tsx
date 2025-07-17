@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '../../lib/utils';
 import { useTokenIncrement } from '../../contexts/TokenIncrementContext';
+import { useLogRocket } from '../../providers/LogRocketProvider';
 
 interface TokenAllocationModalProps {
   isOpen: boolean;
@@ -47,6 +48,7 @@ export function TokenAllocationModal({
   pageId
 }: TokenAllocationModalProps) {
   const router = useRouter();
+  const { trackModalInteraction, trackTokenAllocation } = useLogRocket();
 
   // Debug logging
   console.log('🔍 TokenAllocationModal: Props received', {
@@ -70,18 +72,32 @@ export function TokenAllocationModal({
     setCustomTokenInput(tokenData.currentPageAllocation.toString());
   }, [tokenData.currentPageAllocation]);
 
-  // URL tracking for Google Analytics
+  // URL tracking for Google Analytics and LogRocket tracking
   useEffect(() => {
     if (isOpen) {
       // Add hash to URL when modal opens
       window.history.pushState(null, '', '#token-allocation-modal');
+
+      // Track modal open in LogRocket
+      trackModalInteraction({
+        modalType: 'token_allocation',
+        action: 'open',
+        source: userState
+      });
     } else {
       // Remove hash when modal closes
       if (window.location.hash === '#token-allocation-modal') {
         window.history.pushState(null, '', window.location.pathname + window.location.search);
       }
+
+      // Track modal close in LogRocket
+      trackModalInteraction({
+        modalType: 'token_allocation',
+        action: 'close',
+        source: userState
+      });
     }
-  }, [isOpen]);
+  }, [isOpen, userState, trackModalInteraction]);
 
   const handleLogin = () => {
     onClose();
@@ -97,6 +113,14 @@ export function TokenAllocationModal({
   const handleTokenChange = (change: number) => {
     if (onTokenChange && !isPageOwner) {
       onTokenChange(change);
+
+      // Track token allocation in LogRocket
+      trackTokenAllocation({
+        action: change > 0 ? 'allocate' : 'deallocate',
+        amount: Math.abs(change),
+        pageId: pageId,
+        totalBalance: tokenData.totalTokens
+      });
     }
   };
 

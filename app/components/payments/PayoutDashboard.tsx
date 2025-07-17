@@ -36,6 +36,7 @@ import {
   Zap,
   Wallet
 } from 'lucide-react';
+import { useLogRocket } from '../../providers/LogRocketProvider';
 
 interface EarningsBreakdown {
   totalEarnings: number;
@@ -63,6 +64,7 @@ export default function PayoutDashboard() {
   const { currentAccount } = useCurrentAccount();
   const { toast } = useToast();
   const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+  const { trackPayoutFlow } = useLogRocket();
 
   const [setup, setSetup] = useState<PayoutSetup | null>(null);
   const [earnings, setEarnings] = useState<any[]>([]);
@@ -289,24 +291,49 @@ export default function PayoutDashboard() {
   const requestPayout = async () => {
     try {
       setRequesting(true);
-      
+
+      // Track payout flow start
+      trackPayoutFlow({
+        step: 'start',
+        payoutAmount: setup?.earnings?.availableAmount
+      });
+
       const response = await fetch('/api/payouts/earnings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'request_payout' })
       });
-      
+
       if (response.ok) {
+        // Track successful payout
+        trackPayoutFlow({
+          step: 'complete',
+          payoutAmount: setup?.earnings?.availableAmount
+        });
+
         toast({
           title: "Payout Requested",
           description: "Your payout has been scheduled for processing"});
         loadPayoutData();
       } else {
         const error = await response.json();
+
+        // Track payout error
+        trackPayoutFlow({
+          step: 'error',
+          errorType: error.error || 'unknown_error'
+        });
+
         throw new Error(error.error);
       }
-      
+
     } catch (error: any) {
+      // Track payout error
+      trackPayoutFlow({
+        step: 'error',
+        errorType: error.message || 'request_failed'
+      });
+
       toast({
         title: "Request Failed",
         description: error.message || "Failed to request payout",

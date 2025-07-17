@@ -28,6 +28,7 @@ import SlideUpPage from "../components/ui/slide-up-page";
 import { NewPageSkeleton } from "../components/skeletons/PageEditorSkeleton";
 import { toast } from "../components/ui/use-toast";
 import CustomDateField from "../components/pages/CustomDateField";
+import { useLogRocket } from "../providers/LogRocketProvider";
 import LocationField from "../components/pages/LocationField";
 import { isExactDateFormat } from "../utils/dateUtils";
 
@@ -80,8 +81,9 @@ function NewPageContent() {
   const { currentAccount, isAuthenticated, isEmailVerified, isLoading: authLoading } = useCurrentAccount();
   // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
   // const { trackPageCreationFlow, trackEditingFlow } = useWeWriteAnalytics();
-  
+
   const { addRecentPage } = useRecentPages();
+  const { trackPageCreation } = useLogRocket();
 
   // RUTHLESS SIMPLIFICATION: No cache invalidation at all - just use short TTLs and browser refresh
   const { formatDateString } = useDateFormat();
@@ -587,6 +589,14 @@ function NewPageContent() {
           const pageId = res;
           console.log('🔵 PAGE CREATION: Page creation successful, pageId:', pageId, 'userId:', userId);
           console.error('🔵 PAGE CREATION: Page creation successful, pageId:', pageId, 'userId:', userId);
+
+          // Track page creation in LogRocket
+          trackPageCreation({
+            pageType: isReply ? 'reply' : 'original',
+            hasCustomDate: !!intendedCustomDate,
+            hasLocation: !!location,
+            templateUsed: 'default' // Could be enhanced with actual template detection
+          });
 
           // CRITICAL DEBUG: Immediately try to fetch the page to see if it exists
           try {
