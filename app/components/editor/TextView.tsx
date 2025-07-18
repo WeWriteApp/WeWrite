@@ -680,6 +680,7 @@ const TextView: React.FC<TextViewProps> = ({
               showDiff={showDiff}
               clickPosition={clickPosition}
               isEditing={isEditing}
+              handleEditLink={handleEditLink}
             />
           )}
         </div>
@@ -724,7 +725,7 @@ const TextView: React.FC<TextViewProps> = ({
   }
 };
 
-export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false, clickPosition = null, isEditing = false }) => {
+export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEdit = false, activeLineIndex = null, onActiveLine = null, showDiff = false, clickPosition = null, isEditing = false, handleEditLink }) => {
   // Wrap in try-catch to handle any rendering errors
   try {
     if (!contents) return null;
@@ -822,6 +823,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
                 showDiff={showDiff}
                 isEditing={isEditing}
                 animationDelay={index * ANIMATION_CONSTANTS.PARAGRAPH_LOADING_DELAY}
+                handleEditLink={handleEditLink}
               />
             );
           })}
@@ -856,7 +858,7 @@ export const RenderContent = ({ contents, loadedParagraphs, effectiveMode, canEd
  * SimpleParagraphNode - Renders a paragraph as a simple div
  * CSS handles dense mode styling automatically via container classes
  */
-const SimpleParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onActiveLine = null, showDiff = false, isEditing = false, animationDelay = 0 }) => {
+const SimpleParagraphNode = ({ node, index = 0, canEdit = false, isActive = false, onActiveLine = null, showDiff = false, isEditing = false, animationDelay = 0, handleEditLink }) => {
   const paragraphRef = useRef(null);
   const [lineHovered, setLineHovered] = useState(false);
 

@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { SubscriptionTierBadge } from './SubscriptionTierBadge';
 import { PillLink } from '../utils/PillLink';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
+import { SubscriptionTiersModal } from '../modals/SubscriptionTiersModal';
 import { cn } from '../../lib/utils';
 
 // Simple in-memory cache to prevent duplicate API calls
@@ -41,6 +43,12 @@ export function UsernameBadge({
   // State for fresh username fetching
   const [freshUsername, setFreshUsername] = useState<string | null>(null);
   const [isLoadingUsername, setIsLoadingUsername] = useState(false);
+
+  // State for subscription tiers modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Get current pathname to detect if we're on a user page
+  const pathname = usePathname();
 
   // Fetch fresh username on mount to ensure consistency
   useEffect(() => {
@@ -147,6 +155,9 @@ export function UsernameBadge({
   // Determine if user is inactive (no active subscription)
   const isInactive = !subscriptionStatus || subscriptionStatus !== 'active';
 
+  // Check if we're on a user page
+  const isOnUserPage = pathname?.startsWith('/user/');
+
   // Generate tooltip text for subscription status
   const getTooltipText = () => {
     if (!subscriptionStatus || subscriptionStatus !== 'active') {
@@ -162,6 +173,20 @@ export function UsernameBadge({
     }
 
     return 'Active subscription';
+  };
+
+  // Handle click - show modal on user pages, navigate elsewhere
+  const handleClick = (e: React.MouseEvent) => {
+    if (onClick) {
+      onClick(e);
+      return;
+    }
+
+    if (isOnUserPage) {
+      e.preventDefault();
+      setIsModalOpen(true);
+    }
+    // For non-user pages, let the Link component handle navigation
   };
 
   const wrappedContent = (
@@ -195,35 +220,47 @@ export function UsernameBadge({
 
   if (variant === 'pill') {
     return (
-      <PillLink
-        href={`/user/${userId}`}
-        variant={pillVariant}
-        onClick={onClick}
-        className={className}
-      >
-        {wrappedContent}
-      </PillLink>
+      <>
+        <PillLink
+          href={`/user/${userId}`}
+          variant={pillVariant}
+          onClick={handleClick}
+          className={className}
+        >
+          {wrappedContent}
+        </PillLink>
+        <SubscriptionTiersModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
+      </>
     );
   }
 
   return (
-    <Link
-      href={`/user/${userId}`}
-      onClick={onClick}
-      className={cn(
-        "username-badge-link inline-flex items-center gap-1 px-2 py-1 rounded-md transition-colors w-fit no-underline",
-        isInactive
-          ? "hover:bg-muted/50 text-muted-foreground"
-          : "hover:bg-accent/50 text-primary",
-        "hover:no-underline focus:no-underline",
-        className
-      )}
-      style={{
-        color: isInactive ? undefined : 'hsl(var(--primary))',
-        textDecoration: 'none'
-      }}
-    >
-      {wrappedContent}
-    </Link>
+    <>
+      <Link
+        href={`/user/${userId}`}
+        onClick={handleClick}
+        className={cn(
+          "username-badge-link inline-flex items-center gap-1 px-2 py-1 rounded-md transition-colors w-fit no-underline",
+          isInactive
+            ? "hover:bg-muted/50 text-muted-foreground"
+            : "hover:bg-accent/50 text-primary",
+          "hover:no-underline focus:no-underline",
+          className
+        )}
+        style={{
+          color: isInactive ? undefined : 'hsl(var(--primary))',
+          textDecoration: 'none'
+        }}
+      >
+        {wrappedContent}
+      </Link>
+      <SubscriptionTiersModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
+    </>
   );
 }

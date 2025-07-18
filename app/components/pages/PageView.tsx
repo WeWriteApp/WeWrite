@@ -20,7 +20,6 @@ import PublicLayout from "../layout/PublicLayout";
 import PageHeader from "./PageHeader";
 import PageFooter from "./PageFooter";
 import PledgeBar from "../payments/PledgeBar";
-import BacklinksSection from "../features/BacklinksSection";
 import RelatedPagesSection from "../features/RelatedPagesSection";
 import PageGraphView from "./PageGraphView";
 import DeletedPageBanner from "../utils/DeletedPageBanner";
@@ -109,7 +108,7 @@ export default function PageView({
   const [page, setPage] = useState<Page | null>(null);
   const [editorState, setEditorState] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false); // Will be set to true only if canEdit
+  const [isEditing, setIsEditing] = useState(false); // MY page = always true, NOT my page = always false
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [titleError, setTitleError] = useState<string | null>(null);
@@ -533,16 +532,18 @@ export default function PageView({
   const memoizedPage = useMemo(() => page, [page?.id, page?.title, page?.updatedAt]);
   const memoizedLinkedPageIds = useMemo(() => [], [editorState]); // TODO: Extract linked page IDs
 
-  // Don't automatically set edit mode - let user click to edit
-  // This ensures TextView is shown by default for viewing, even on own pages
+  // BULLETPROOF EDIT MODE LOGIC:
+  // MY page = ALWAYS edit mode
+  // NOT my page = ALWAYS view mode
   useEffect(() => {
-    // Only auto-edit for new pages or when explicitly requested
-    if (initialEditMode && canEdit && !showVersion && !showDiff) {
+    if (canEdit && !showVersion && !showDiff) {
+      // This is MY page - ALWAYS edit mode
       setIsEditing(true);
     } else {
+      // This is NOT my page OR showing version/diff - ALWAYS view mode
       setIsEditing(false);
     }
-  }, [canEdit, showVersion, showDiff, initialEditMode]);
+  }, [canEdit, showVersion, showDiff]);
 
   // Content padding: none for edit mode (static header), fixed for view mode (fixed header)
   useEffect(() => {
@@ -717,10 +718,8 @@ export default function PageView({
       const { clearPageVersionCache } = await import('../../services/versionService');
       clearPageVersionCache(pageId);
 
-      // Reload the page data to reflect the changes without redirecting
-      setTimeout(() => {
-        loadPageData();
-      }, 500); // Delay to ensure save is fully processed
+      // Page data should already be updated after save
+      // No need to reload since the save operation updates the page state
     } catch (error) {
       console.error("Error saving page:", error);
       setError("Failed to save page. Please try again.");
@@ -864,7 +863,6 @@ export default function PageView({
             userId={page?.userId}
             isLoading={isLoading}
             isEditing={isEditing}
-            setIsEditing={setIsEditing}
             onTitleChange={handleTitleChange}
             canEdit={canEdit}
             titleError={!!titleError}
@@ -927,7 +925,7 @@ export default function PageView({
                     <TextView
                       content={editorState}
                       viewMode="normal"
-                      setIsEditing={canEdit ? setIsEditing : undefined}
+                      // setIsEditing removed - no manual edit mode toggling allowed
                       canEdit={canEdit}
                       showDiff={showDiff}
                       isEditing={false}
@@ -962,33 +960,32 @@ export default function PageView({
               onSave={handleSave}
               onCancel={handleCancel}
               onDelete={handleDelete}
-              setIsEditing={setIsEditing} // Fix: Pass setIsEditing instead of onEdit
+              // setIsEditing removed - no manual edit mode toggling allowed
               isSaving={isSaving}
               error={error}
               titleError={titleError}
               hasUnsavedChanges={hasUnsavedChanges}
             />
 
-            {/* Backlinks and Related Pages - show for read-only pages */}
-            {page && (!canEdit || showVersion || showDiff) && (
+            {/* Page Connections and Related Pages - show for all pages */}
+            {page && (
               <>
-                <BacklinksSection page={page} linkedPageIds={memoizedLinkedPageIds} />
-                <RelatedPagesSection
-                  page={page}
-                  linkedPageIds={memoizedLinkedPageIds}
-                />
-
                 {/* Page Graph View */}
                 <PageGraphView
                   pageId={page.id}
                   pageTitle={page.title}
                 />
+
+                <RelatedPagesSection
+                  page={page}
+                  linkedPageIds={memoizedLinkedPageIds}
+                />
               </>
             )}
           </div>
 
-          {/* Pledge Bar - Show for read-only pages */}
-          {page && (!canEdit || showVersion || showDiff) && (
+          {/* Pledge Bar - Show for all pages */}
+          {page && (
             <PledgeBar
               pageId={page.id}
               pageTitle={page.title}

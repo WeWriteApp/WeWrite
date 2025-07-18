@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as d3 from 'd3';
 import { useRouter } from 'next/navigation';
 import { usePillStyle } from '../../contexts/PillStyleContext';
-import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
+import { Loader2, Maximize2, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { usePageConnectionsGraph, getLinkDirection } from '../../hooks/usePageConnections';
 
@@ -62,8 +62,8 @@ export default function PageGraphView({ pageId, pageTitle, className = "" }: Pag
     refresh
   } = usePageConnectionsGraph(pageId, pageTitle);
 
-  // Build graph data from consolidated connections
-  const buildGraphData = useCallback(() => {
+  // Build graph when connections data changes
+  useEffect(() => {
     if (loading || !allConnections.length) return;
 
     console.log('🎯 PageGraphView: Building graph with consolidated data:', {
@@ -152,12 +152,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "" }: Pag
 
     setNodes(allNodes);
     setLinks(allLinks);
-  }, [pageId, pageTitle, loading, allConnections, incoming, outgoing, bidirectional, secondHopConnections]);
-
-  // Build graph when connections data changes
-  useEffect(() => {
-    buildGraphData();
-  }, [buildGraphData]);
+  }, [pageId, pageTitle, loading, allConnections.length, incoming.length, outgoing.length, bidirectional.length, secondHopConnections.length]);
 
   // D3 visualization
   useEffect(() => {
@@ -172,7 +167,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "" }: Pag
 
     // Set up dimensions
     const width = container.clientWidth;
-    const height = isFullscreen ? window.innerHeight - 100 : 400;
+    const height = isFullscreen ? window.innerHeight : 400;
     
     svg.attr("width", width).attr("height", height);
 
@@ -358,8 +353,58 @@ export default function PageGraphView({ pageId, pageTitle, className = "" }: Pag
     );
   }
 
+  if (isFullscreen) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-sm animate-in fade-in-0 duration-300">
+        {/* Background overlay */}
+        <div className="absolute inset-0 bg-background/80" />
+
+        {/* Close button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsFullscreen(false)}
+          className="absolute top-4 right-4 z-10 animate-in slide-in-from-top-2 duration-300 delay-150"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+
+        {/* Fullscreen graph container */}
+        <div
+          ref={containerRef}
+          className="w-full h-full bg-background animate-in zoom-in-95 duration-500 ease-out"
+        >
+          <svg ref={svgRef} className="w-full h-full" />
+
+          {/* Legend */}
+          <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm border border-border rounded-lg p-3 text-xs animate-in slide-in-from-left-2 duration-300 delay-300">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-primary"></div>
+                <span>Current page</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-primary/70"></div>
+                <span>Direct connections</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary/40"></div>
+                <span>2 hops away</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Instructions */}
+          <div className="absolute bottom-4 right-4 bg-background/90 backdrop-blur-sm border border-border rounded-lg p-3 text-xs text-muted-foreground animate-in slide-in-from-bottom-2 duration-300 delay-300">
+            <div>Click nodes to navigate • Drag to move • Scroll to zoom</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={`mt-8 px-4 sm:px-6 max-w-4xl mx-auto ${className}`}>
+    <div className={`mt-8 px-4 sm:px-6 max-w-4xl mx-auto ${className} animate-in fade-in-0 duration-300`}>
       <div className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
@@ -367,9 +412,10 @@ export default function PageGraphView({ pageId, pageTitle, className = "" }: Pag
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsFullscreen(!isFullscreen)}
+            onClick={() => setIsFullscreen(true)}
+            className="transition-all duration-200 hover:scale-105"
           >
-            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            <Maximize2 className="h-4 w-4" />
           </Button>
         </div>
 
@@ -377,14 +423,12 @@ export default function PageGraphView({ pageId, pageTitle, className = "" }: Pag
         <div className="relative">
           <div
             ref={containerRef}
-            className={`border border-border rounded-lg bg-background ${
-              isFullscreen ? 'fixed inset-4 z-50 p-4' : 'h-96'
-            }`}
+            className="bg-background h-96 transition-all duration-300"
           >
             <svg ref={svgRef} className="w-full h-full" />
 
             {/* Legend */}
-            <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm border border-border rounded-lg p-3 text-xs">
+            <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm border border-border rounded-lg p-3 text-xs transition-all duration-200 hover:bg-background/95">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-primary"></div>
@@ -402,7 +446,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "" }: Pag
             </div>
 
             {/* Instructions */}
-            <div className="absolute bottom-4 right-4 bg-background/90 backdrop-blur-sm border border-border rounded-lg p-3 text-xs text-muted-foreground">
+            <div className="absolute bottom-4 right-4 bg-background/90 backdrop-blur-sm border border-border rounded-lg p-3 text-xs text-muted-foreground transition-all duration-200 hover:bg-background/95">
               <div>Click nodes to navigate • Drag to move • Scroll to zoom</div>
             </div>
           </div>

@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
+import { extractPageReferences } from '../../firebase/database/links';
 
 interface PageConnection {
   id: string;
@@ -123,12 +124,12 @@ export async function GET(request: NextRequest) {
         const pageData = pageDoc.data();
         let linkedPageIds: string[] = [];
         
-        // Extract from content
+        // Extract page references from content using the proper link extraction function
         if (pageData.content) {
-          linkedPageIds.push(...extractPageIdsFromContent(pageData.content));
+          linkedPageIds.push(...extractPageReferences(pageData.content));
         }
-        
-        // Extract from nodes
+
+        // Extract from nodes (legacy support)
         if (pageData.nodes) {
           linkedPageIds.push(...extractPageIdsFromNodes(pageData.nodes));
         }

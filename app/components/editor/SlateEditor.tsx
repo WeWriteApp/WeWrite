@@ -257,7 +257,7 @@ const Element = ({ attributes, children, element }: RenderElementProps) => {
               document.removeEventListener('mouseup', handleMouseUp);
 
               // If it's a short click with minimal movement, simulate a click on the PillLink
-              if (!isDragging && distance <= 5 && duration < 300) {
+              if (!isDragging && distance <= 5 && duration < 300 && e.currentTarget) {
                 // Find the PillLink element and trigger its click
                 const pillLink = e.currentTarget.querySelector('a');
                 if (pillLink) {

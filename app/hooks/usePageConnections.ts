@@ -144,7 +144,7 @@ export function usePageConnectionsGraph(pageId: string, pageTitle?: string) {
     } finally {
       setGraphLoading(false);
     }
-  }, [pageId, baseConnections.loading, baseConnections.allConnections]);
+  }, [pageId, baseConnections.loading, baseConnections.allConnections.length]);
 
   useEffect(() => {
     fetchSecondHopConnections();
