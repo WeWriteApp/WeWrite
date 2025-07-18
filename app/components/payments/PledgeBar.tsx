@@ -542,6 +542,9 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     if (!currentAccount && !isPageOwner) {
       // Redirect to landing page for logged-out users
       router.push('/');
+    } else if (availableTokens <= 0 && !isPageOwner) {
+      // Redirect to spend-tokens page if out of tokens
+      router.push('/settings/spend-tokens');
     } else {
       // Open modal for logged-in users
       setIsModalOpen(true);
@@ -582,6 +585,9 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   const otherPagesPercentage = totalTokens > 0 ? (otherPagesTokens / totalTokens) * 100 : 0;
   const currentPagePercentage = totalTokens > 0 ? (currentTokenAllocation / totalTokens) * 100 : 0;
   const availablePercentage = totalTokens > 0 ? (availableTokens / totalTokens) * 100 : 0;
+
+  // Check if user is out of tokens
+  const isOutOfTokens = availableTokens <= 0 && totalTokens > 0 && !isPageOwner;
 
   // Determine user state for notices
   const hasSubscription = subscription && isActiveSubscription(subscription.status);
@@ -665,47 +671,63 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                         handleTokenChange(-incrementAmount);
                       }
                     }}
-                    className={`h-8 w-8 p-0 ${currentTokenAllocation <= 0 ? 'opacity-50' : ''} ${isRefreshing ? 'opacity-75' : ''}`}
+                    className={`h-8 w-8 p-0 ${currentTokenAllocation <= 0 || isOutOfTokens ? 'opacity-50' : ''} ${isRefreshing ? 'opacity-75' : ''}`}
+                    disabled={isOutOfTokens}
                   >
                     <Minus className="h-4 w-4" />
                   </Button>
 
               {/* Composition Bar */}
-              <div className="flex-1 bg-muted rounded-lg h-12 flex gap-1 p-1">
-                {/* Other pages */}
-                {otherPagesPercentage > 0 && (
-                  <div
-                    className="h-full bg-muted-foreground/30 rounded-md flex items-center justify-center"
-                    style={{ width: `${otherPagesPercentage}%`, minWidth: '20px' }}
-                  >
+              <div className={cn(
+                "flex-1 rounded-lg h-12 flex gap-1 p-1",
+                isOutOfTokens ? "bg-orange-500/20" : "bg-muted"
+              )}>
+                {isOutOfTokens ? (
+                  /* Out of tokens state - single orange bar */
+                  <div className="h-full bg-orange-500 rounded-md flex items-center justify-center w-full">
                     <span className="text-white font-medium text-xs">
-                      {Math.round(otherPagesTokens)}
+                      Out of tokens
                     </span>
                   </div>
-                )}
+                ) : (
+                  /* Normal token allocation display */
+                  <>
+                    {/* Other pages */}
+                    {otherPagesPercentage > 0 && (
+                      <div
+                        className="h-full bg-muted-foreground/30 rounded-md flex items-center justify-center"
+                        style={{ width: `${otherPagesPercentage}%`, minWidth: '20px' }}
+                      >
+                        <span className="text-white font-medium text-xs">
+                          {Math.round(otherPagesTokens)}
+                        </span>
+                      </div>
+                    )}
 
-                {/* Current page */}
-                {currentPagePercentage > 0 && (
-                  <div
-                    className="h-full bg-primary rounded-md flex items-center justify-center"
-                    style={{ width: `${currentPagePercentage}%`, minWidth: '20px' }}
-                  >
-                    <span className="text-white font-medium text-xs">
-                      {Math.round(currentTokenAllocation)}
-                    </span>
-                  </div>
-                )}
+                    {/* Current page */}
+                    {currentPagePercentage > 0 && (
+                      <div
+                        className="h-full bg-primary rounded-md flex items-center justify-center"
+                        style={{ width: `${currentPagePercentage}%`, minWidth: '20px' }}
+                      >
+                        <span className="text-white font-medium text-xs">
+                          {Math.round(currentTokenAllocation)}
+                        </span>
+                      </div>
+                    )}
 
-                {/* Available/Unfunded */}
-                {availablePercentage > 0 && (
-                  <div
-                    className="h-full bg-muted-foreground/10 rounded-md flex items-center justify-center"
-                    style={{ width: `${availablePercentage}%`, minWidth: '20px' }}
-                  >
-                    <span className="text-muted-foreground font-medium text-xs">
-                      {Math.round(Math.abs(availableTokens))}
-                    </span>
-                  </div>
+                    {/* Available/Unfunded */}
+                    {availablePercentage > 0 && (
+                      <div
+                        className="h-full bg-muted-foreground/10 rounded-md flex items-center justify-center"
+                        style={{ width: `${availablePercentage}%`, minWidth: '20px' }}
+                      >
+                        <span className="text-muted-foreground font-medium text-xs">
+                          {Math.round(Math.abs(availableTokens))}
+                        </span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -714,10 +736,13 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Always allow plus button for optimistic updates (allow overspending)
-                      handleTokenChange(incrementAmount);
+                      // Don't allow plus button when out of tokens
+                      if (!isOutOfTokens) {
+                        handleTokenChange(incrementAmount);
+                      }
                     }}
-                    className={`h-8 w-8 p-0 ${isRefreshing ? 'opacity-75' : ''}`}
+                    className={`h-8 w-8 p-0 ${isOutOfTokens ? 'opacity-50' : ''} ${isRefreshing ? 'opacity-75' : ''}`}
+                    disabled={isOutOfTokens}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -729,8 +754,14 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
           {/* Token Text - Only show for non-page owners */}
           {!isPageOwner && (
             <div className="text-center">
-              <span className="font-medium text-primary text-sm">
-                {currentTokenAllocation} tokens pledged per month
+              <span className={cn(
+                "font-medium text-sm",
+                isOutOfTokens ? "text-orange-500" : "text-primary"
+              )}>
+                {isOutOfTokens
+                  ? "You're out of tokens"
+                  : `${currentTokenAllocation} tokens pledged per month`
+                }
               </span>
             </div>
           )}
