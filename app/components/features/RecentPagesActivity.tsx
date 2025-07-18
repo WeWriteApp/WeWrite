@@ -45,12 +45,14 @@ interface RecentPagesActivityProps {
   limit?: number;
   renderFilterInHeader?: boolean;
   isCarousel?: boolean; // true for homepage carousel, false for activity page grid
+  userId?: string; // Optional: filter to show only this user's edits
 }
 
 const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
   limit = 8,
   renderFilterInHeader = false,
-  isCarousel = true
+  isCarousel = true,
+  userId = null // Optional user ID to filter by
 }, ref) => {
   console.log('🚀 [RECENT_EDITS] Component mounted/rendered with props:', { limit, renderFilterInHeader, isCarousel });
 
@@ -200,19 +202,24 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
     };
   };
 
-  // Filter activities based on current view mode
+  // Filter activities based on current view mode and optional userId prop
   const filteredActivities = React.useMemo(() => {
     console.log('🔍 [RECENT_EDITS] Filtering activities:', {
       totalPages: pages.length,
       currentViewMode,
       hasCurrentAccount: !!currentAccount,
       followedPagesCount: followedPages.length,
+      userId,
       limit
     });
 
     let filtered = pages;
 
-    if (currentViewMode === 'following' && currentAccount) {
+    // If userId prop is provided, filter to only show that user's edits
+    if (userId) {
+      filtered = pages.filter(page => page.userId === userId);
+      console.log('🔍 [RECENT_EDITS] User-specific filter result:', filtered.length, 'for userId:', userId);
+    } else if (currentViewMode === 'following' && currentAccount) {
       filtered = pages.filter(page =>
         followedPages.some(followedPage => followedPage.id === page.id)
       );
@@ -228,11 +235,12 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
     console.log('🔍 [RECENT_EDITS] Final activities after limit and conversion:', finalActivities.length);
 
     return finalActivities;
-  }, [pages, currentViewMode, followedPages, currentAccount, limit]);
+  }, [pages, currentViewMode, followedPages, currentAccount, userId, limit]);
 
   // Function to render the filter dropdown button
   const renderFilterDropdown = () => {
-    if (!currentAccount) return null;
+    // Don't show filter dropdown if filtering by specific user or no current account
+    if (!currentAccount || userId) return null;
 
     return (
       <div className="ml-auto">
@@ -305,6 +313,9 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
 
   if (filteredActivities.length === 0) {
     const getEmptyMessage = () => {
+      if (userId) {
+        return 'This user hasn\'t made any recent edits';
+      }
       switch (currentViewMode) {
         case 'following': return 'No edits from pages you follow';
         case 'mine': return 'No edits from your pages';

@@ -567,7 +567,7 @@ export default function UserProfileTabs({ profile }) {
                 : "hidden"
             }`}
           >
-            <RecentPagesActivity limit={10} isCarousel={false} />
+            <RecentPagesActivity limit={10} isCarousel={false} userId={profile?.uid} />
           </TabsContent>
 
           <TabsContent
