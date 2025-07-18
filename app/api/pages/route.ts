@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '../auth-helper';
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
+import logger from '../../utils/unifiedLogger';
 
 interface PageData {
   id?: string;
@@ -314,42 +315,81 @@ export async function POST(request: NextRequest) {
 
 // PUT endpoint - Update an existing page
 export async function PUT(request: NextRequest) {
+  logger.apiRequest('PUT', '/api/pages');
+
   try {
+    logger.debug('Initializing Firebase Admin', undefined, 'PAGE_SAVE');
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
+    logger.debug('Getting authenticated user', undefined, 'PAGE_SAVE');
     const currentUserId = await getUserIdFromRequest(request);
+
     if (!currentUserId) {
-      console.error('🔴 Page save failed: No authenticated user found');
-      console.error('🔴 Request headers:', Object.fromEntries(request.headers.entries()));
-      console.error('🔴 Request cookies:', request.cookies.getAll());
+      logger.error('Authentication failed - no user found', {
+        headers: Object.fromEntries(request.headers.entries()),
+        cookies: request.cookies.getAll()
+      }, 'PAGE_SAVE');
       return createErrorResponse('UNAUTHORIZED', 'Authentication required. Please log in again.');
     }
 
+    logger.debug('Parsing request body', undefined, 'PAGE_SAVE');
     const body = await request.json();
     const { id, title, content, location, groupId, customDate } = body;
 
+    logger.info('Page save request', {
+      pageId: id,
+      title: title ? `"${title}"` : 'undefined',
+      hasContent: !!content,
+      contentLength: content ? JSON.stringify(content).length : 0,
+      hasLocation: !!location,
+      groupId,
+      customDate,
+      userId: currentUserId
+    }, 'PAGE_SAVE');
+
     if (!id) {
+      logger.error('No page ID provided', undefined, 'PAGE_SAVE');
       return createErrorResponse('BAD_REQUEST', 'Page ID is required');
     }
+
+    logger.debug('Loading page document', {
+      collection: getCollectionName('pages'),
+      pageId: id
+    }, 'PAGE_SAVE');
 
     // Get the existing page
     const pageRef = db.collection(getCollectionName('pages')).doc(id);
     const pageDoc = await pageRef.get();
 
+    logger.debug('Page document loaded', { exists: pageDoc.exists }, 'PAGE_SAVE');
+
     if (!pageDoc.exists) {
+      logger.error('Page not found', { pageId: id }, 'PAGE_SAVE');
       return createErrorResponse('NOT_FOUND', 'Page not found');
     }
 
     const pageData = pageDoc.data();
+    logger.debug('Page data loaded', {
+      userId: pageData.userId,
+      title: pageData.title,
+      hasContent: !!pageData.content,
+      lastModified: pageData.lastModified,
+      deleted: pageData.deleted
+    }, 'PAGE_SAVE');
 
     // Check ownership
     if (pageData.userId !== currentUserId) {
+      logger.error('Permission denied - user does not own page', {
+        pageUserId: pageData.userId,
+        currentUserId: currentUserId
+      }, 'PAGE_SAVE');
       return createErrorResponse('FORBIDDEN', 'You can only edit your own pages');
     }
 
     // Check if page is deleted
     if (pageData.deleted) {
+      logger.error('Cannot edit deleted page', { pageId: id }, 'PAGE_SAVE');
       return createErrorResponse('BAD_REQUEST', 'Cannot edit deleted pages');
     }
 
@@ -383,9 +423,10 @@ export async function PUT(request: NextRequest) {
 
     // If content is being updated, use the version saving system to create activity records
     if (content !== undefined) {
-      console.log('🔍 Content update detected, using version saving system for activity tracking');
+      logger.info('Content update detected - using version saving system', { pageId: id }, 'PAGE_SAVE');
 
       // Get current user data for version saving
+      logger.debug('Loading user profile for version save', { userId: currentUserId }, 'PAGE_SAVE');
       const { getUserProfile } = await import('../../firebase/database/users');
       const currentUser = await getUserProfile(currentUserId);
 
@@ -400,13 +441,29 @@ export async function PUT(request: NextRequest) {
         groupId: groupId
       };
 
+      logger.debug('Calling saveNewVersion', {
+        pageId: id,
+        username: versionData.username,
+        hasContent: !!content,
+        contentLength: JSON.stringify(content).length
+      }, 'PAGE_SAVE');
+
       // Save new version (this creates activity records and updates lastDiff)
       const versionResult = await saveNewVersion(id, versionData);
 
       if (!versionResult || !versionResult.success) {
-        console.error('Failed to save version:', versionResult?.error || 'Version save returned null');
+        logger.error('Version save failed', {
+          pageId: id,
+          error: versionResult?.error || 'Version save returned null',
+          versionResult
+        }, 'PAGE_SAVE');
         return createErrorResponse('INTERNAL_ERROR', 'Failed to save page version');
       }
+
+      logger.info('Version saved successfully', {
+        pageId: id,
+        versionId: versionResult?.versionId
+      }, 'PAGE_SAVE');
 
       // Update any additional metadata (title, location) that wasn't handled by saveNewVersion
       const metadataUpdate: any = {};
@@ -483,6 +540,11 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    logger.info('Page save completed successfully', {
+      pageId: id,
+      updateFields: Object.keys(updateData)
+    }, 'PAGE_SAVE');
+
     return createApiResponse({
       id,
       ...updateData,
@@ -490,13 +552,12 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error updating page:', error);
-    console.error('Error details:', {
-      message: error.message,
+    logger.critical('Page save failed with error', {
+      error: error.message,
       stack: error.stack,
       name: error.name,
-      pageId: body.id
-    });
+      pageId: body?.id
+    }, 'PAGE_SAVE');
 
     // Don't expose internal errors that might cause session issues
     const userMessage = error.message?.includes('permission') || error.message?.includes('auth')

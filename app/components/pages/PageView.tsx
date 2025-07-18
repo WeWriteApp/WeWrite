@@ -13,7 +13,7 @@ import { TextSelectionProvider } from "../../providers/TextSelectionProvider";
 import { PageProvider } from "../../contexts/PageContext";
 import { useRecentPages } from "../../contexts/RecentPagesContext";
 import { useLineSettings } from "../../contexts/LineSettingsContext";
-import { createLogger } from '../../utils/logger';
+import logger from '../../utils/unifiedLogger';
 
 // UI Components
 import PublicLayout from "../layout/PublicLayout";
@@ -620,22 +620,22 @@ export default function PageView({
   // No need for handleSetIsEditing - always in edit mode
 
   const handleSave = useCallback(async () => {
-    console.log('🚨 SAVE DEBUG: handleSave called', { pageId, hasPage: !!page, title });
+    logger.userAction('Page save initiated', { pageId, hasPage: !!page, title });
 
     if (!page || !pageId) {
-      console.log('🚨 SAVE DEBUG: Early return - no page or pageId');
+      logger.warn('Save aborted - no page or pageId', { pageId, hasPage: !!page });
       return;
     }
 
     // Validate title is not empty
     if (!title || title.trim() === '') {
-      console.log('🚨 SAVE DEBUG: Early return - no title');
+      logger.warn('Save aborted - no title provided', { pageId });
       setTitleError("Title is required");
       setError("Please add a title before saving");
       return;
     }
 
-    console.log('🚨 SAVE DEBUG: Starting save process...');
+    logger.info('Starting page save process', { pageId, title });
     setIsSaving(true);
     setError(null);
     setTitleError(null);
@@ -653,7 +653,12 @@ export default function PageView({
         customDate: customDate
       };
 
-      console.log('🚨 SAVE DEBUG: Calling API route with data:', { ...updateData, content: '(content omitted)' });
+      logger.apiRequest('PUT', '/api/pages', {
+        pageId: id,
+        title,
+        hasContent: !!content,
+        contentLength: editorStateJSON.length
+      });
 
       const response = await fetch('/api/pages', {
         method: 'PUT',
@@ -665,7 +670,7 @@ export default function PageView({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('🚨 SAVE DEBUG: API error response:', errorData);
+        logger.apiResponse('PUT', '/api/pages', response.status, errorData);
 
         // Handle authentication errors specifically
         if (response.status === 401) {
@@ -677,7 +682,7 @@ export default function PageView({
       }
 
       const result = await response.json();
-      console.log('🚨 SAVE DEBUG: API response:', result);
+      logger.apiResponse('PUT', '/api/pages', response.status, result);
 
       if (!result.success) {
         throw new Error(result.message || 'Failed to update page');
@@ -710,7 +715,7 @@ export default function PageView({
       }
 
       // Clear unsaved changes flag and stay in always-editable mode
-      console.log('🚨 SAVE DEBUG: Save successful, clearing unsaved changes flag');
+      logger.pageSave(pageId, true, { title });
       setHasUnsavedChanges(false);
       setError(null);
 
@@ -721,7 +726,7 @@ export default function PageView({
       // Page data should already be updated after save
       // No need to reload since the save operation updates the page state
     } catch (error) {
-      console.error("Error saving page:", error);
+      logger.pageSave(pageId, false, { error: error.message, title });
       setError("Failed to save page. Please try again.");
     } finally {
       setIsSaving(false);

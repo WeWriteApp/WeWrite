@@ -17,6 +17,7 @@ import { extractLinksFromNodes } from "./links";
 import { recordUserActivity } from "../streaks";
 import { hasContentChangedSync } from "../../utils/diffService";
 import { getCollectionName } from "../../utils/environmentConfig";
+import logger from "../../utils/unifiedLogger";
 
 import type { PageVersion } from "../../types/database";
 
@@ -290,13 +291,16 @@ await setDoc(doc(db, getCollectionName("pages"), pageId), {
  */
 export const saveNewVersion = async (pageId: string, data: any): Promise<any> => {
   try {
-    console.log('🚨 ACTIVITY DEBUG: saveNewVersion called with pageId:', pageId);
-    console.log('🚨 ACTIVITY DEBUG: saveNewVersion data:', { ...data, content: '(content omitted)' });
-    console.log('🚨 ACTIVITY DEBUG: Starting version save process...');
+    logger.info('Starting version save process', {
+      pageId,
+      userId: data.userId,
+      username: data.username,
+      hasContent: !!data.content
+    }, 'VERSION_SAVE');
 
     // Validate content to prevent saving empty versions
     if (!data.content) {
-      console.error("Cannot save empty content");
+      logger.error("Cannot save empty content", { pageId }, 'VERSION_SAVE');
       return null;
     }
 
