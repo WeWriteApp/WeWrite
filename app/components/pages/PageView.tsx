@@ -26,6 +26,7 @@ import PageGraphView from "./PageGraphView";
 import DeletedPageBanner from "../utils/DeletedPageBanner";
 import UnifiedTextHighlighter from "../text-highlighting/UnifiedTextHighlighter";
 import TextViewErrorBoundary from "../editor/TextViewErrorBoundary";
+import TextView from "../editor/TextView";
 import { SmartLoader } from "../ui/smart-loader";
 import { ErrorDisplay } from "../ui/error-display";
 import { Button } from "../ui/button";
@@ -532,10 +533,16 @@ export default function PageView({
   const memoizedPage = useMemo(() => page, [page?.id, page?.title, page?.updatedAt]);
   const memoizedLinkedPageIds = useMemo(() => [], [editorState]); // TODO: Extract linked page IDs
 
-  // Set edit mode only when user can edit
+  // Don't automatically set edit mode - let user click to edit
+  // This ensures TextView is shown by default for viewing, even on own pages
   useEffect(() => {
-    setIsEditing(canEdit && !showVersion && !showDiff);
-  }, [canEdit, showVersion, showDiff]);
+    // Only auto-edit for new pages or when explicitly requested
+    if (initialEditMode && canEdit && !showVersion && !showDiff) {
+      setIsEditing(true);
+    } else {
+      setIsEditing(false);
+    }
+  }, [canEdit, showVersion, showDiff, initialEditMode]);
 
   // Content padding: none for edit mode (static header), fixed for view mode (fixed header)
   useEffect(() => {
@@ -892,28 +899,41 @@ export default function PageView({
                     <p className="text-sm mt-2">Page ID: {page.id}</p>
                   </div>
                 }>
-                  {console.log('🔍 PageView: ALWAYS USE EDITOR - canEdit:', canEdit, 'showVersion:', showVersion, 'showDiff:', showDiff)}
-                  {/* ALWAYS USE EDITOR - NO MORE TEXTVIEW */}
-                  <Editor
-                    ref={editorRef}
-                    title={title}
-                    setTitle={handleTitleChange}
-                    initialContent={editorState}
-                    onChange={handleContentChange}
-                    onEmptyLinesChange={handleEmptyLinesChange}
+                  {console.log('🔍 PageView: Rendering content - canEdit:', canEdit, 'isEditing:', isEditing, 'showVersion:', showVersion, 'showDiff:', showDiff)}
 
-                    location={location}
-                    setLocation={handleLocationChange}
-                    onSave={canEdit ? handleSave : undefined}
-                    onCancel={canEdit ? handleCancel : undefined}
-                    onDelete={canEdit ? handleDelete : null}
-                    isSaving={isSaving}
-                    error={error || ""}
-                    isNewPage={false}
-                    placeholder="Start typing..."
-                    showToolbar={false} // Hide toolbar since save/revert will be in button stack
-                    readOnly={!canEdit} // Read-only if user can't edit
-                  />
+                  {/* Use Editor only when user is actively editing their own content */}
+                  {canEdit && isEditing ? (
+                    <Editor
+                      ref={editorRef}
+                      title={title}
+                      setTitle={handleTitleChange}
+                      initialContent={editorState}
+                      onChange={handleContentChange}
+                      onEmptyLinesChange={handleEmptyLinesChange}
+                      location={location}
+                      setLocation={handleLocationChange}
+                      onSave={handleSave}
+                      onCancel={handleCancel}
+                      onDelete={handleDelete}
+                      isSaving={isSaving}
+                      error={error || ""}
+                      isNewPage={false}
+                      placeholder="Start typing..."
+                      showToolbar={false}
+                      readOnly={false}
+                    />
+                  ) : (
+                    /* Use TextView for viewing content (other users' pages or when not editing) */
+                    <TextView
+                      content={editorState}
+                      viewMode="normal"
+                      setIsEditing={canEdit ? setIsEditing : undefined}
+                      canEdit={canEdit}
+                      showDiff={showDiff}
+                      isEditing={false}
+                      showLineNumbers={true}
+                    />
+                  )}
                 </TextViewErrorBoundary>
 
                 {/* Custom Date Field and Location Field are now handled by PageFooter */}
