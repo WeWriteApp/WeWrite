@@ -238,6 +238,9 @@ export default function PageView({
     setIsLoading(true);
     setError(null);
 
+    // Declare fallbackTimeout in the proper scope
+    let fallbackTimeout: NodeJS.Timeout;
+
     // If showing version or diff, load version data instead of live page
     if (showVersion && versionId) {
       logger.debug('Loading version data', { versionId });
@@ -257,7 +260,6 @@ export default function PageView({
 
       // Try Firebase listener first, with aggressive fallback to API
       let hasReceivedData = false;
-      let fallbackTimeout: NodeJS.Timeout;
 
       // Set up Firebase listener for live page
       const unsubscribe = listenToPageById(pageId, (data) => {
