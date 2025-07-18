@@ -313,26 +313,52 @@ export default function PageView({
 
           if (contentToUse) {
             try {
+              console.log('📄 PageView: Raw content before parsing:', {
+                contentToUse,
+                type: typeof contentToUse,
+                length: typeof contentToUse === 'string' ? contentToUse.length : 'not string'
+              });
+
               const parsedContent = typeof contentToUse === 'string'
                 ? JSON.parse(contentToUse)
                 : contentToUse;
+
               console.log('📄 PageView parsed content:', {
                 source: contentSource,
                 type: typeof parsedContent,
                 isArray: Array.isArray(parsedContent),
                 length: Array.isArray(parsedContent) ? parsedContent.length : 'not array',
-                firstElement: Array.isArray(parsedContent) && parsedContent.length > 0 ? parsedContent[0] : null
+                firstElement: Array.isArray(parsedContent) && parsedContent.length > 0 ? parsedContent[0] : null,
+                fullContent: parsedContent
               });
 
-              console.log('🔍 PageView: Setting editorState with parsed content:', {
-                parsedContent,
-                isArray: Array.isArray(parsedContent),
-                length: Array.isArray(parsedContent) ? parsedContent.length : 'not array'
-              });
-              setEditorState(parsedContent);
+              // Validate that we have proper content structure
+              if (!Array.isArray(parsedContent)) {
+                console.warn('📄 PageView: Content is not an array, converting to array format');
+                if (typeof parsedContent === 'string') {
+                  // Legacy string content
+                  setEditorState([{ type: "paragraph", children: [{ text: parsedContent }] }]);
+                } else if (parsedContent && typeof parsedContent === 'object') {
+                  // Try to extract text from object
+                  const text = parsedContent.text || parsedContent.content || JSON.stringify(parsedContent);
+                  setEditorState([{ type: "paragraph", children: [{ text }] }]);
+                } else {
+                  // Fallback
+                  setEditorState([{ type: "paragraph", children: [{ text: "Content format not recognized" }] }]);
+                }
+              } else {
+                console.log('🔍 PageView: Setting editorState with parsed content array');
+                setEditorState(parsedContent);
+              }
             } catch (error) {
-              console.error("Error parsing content:", error);
-              setEditorState([{ type: "paragraph", children: [{ text: "Error loading content." }] }]);
+              console.error("📄 PageView: Error parsing content:", error, { contentToUse });
+              // Try to use raw content as text if JSON parsing fails
+              if (typeof contentToUse === 'string') {
+                console.log('📄 PageView: Using raw string content as fallback');
+                setEditorState([{ type: "paragraph", children: [{ text: contentToUse }] }]);
+              } else {
+                setEditorState([{ type: "paragraph", children: [{ text: "Error loading content - please refresh the page" }] }]);
+              }
             }
           } else {
             console.log('📄 PageView: No content found in page or version, using empty content');

@@ -93,16 +93,24 @@ const createSlateEditor = () => {
  * Convert our content format to Slate format
  */
 const contentToSlate = (content: any[]): Descendant[] => {
+  console.log('🔍 contentToSlate: Input content:', { content, type: typeof content, isArray: Array.isArray(content) });
+
   if (!content || content.length === 0) {
+    console.log('🔍 contentToSlate: Empty content, returning default paragraph');
     return [{ type: 'paragraph', children: [{ text: '' }] }];
   }
 
-  return content.map((node) => {
+  return content.map((node, index) => {
+    console.log(`🔍 contentToSlate: Processing node ${index}:`, { node, type: typeof node });
+
     if (node.type === 'paragraph') {
       const children: Descendant[] = [];
-      
-      if (node.children && node.children.length > 0) {
-        node.children.forEach((child: any) => {
+
+      // Handle new format with children array
+      if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+        node.children.forEach((child: any, childIndex: number) => {
+          console.log(`🔍 contentToSlate: Processing child ${childIndex}:`, { child });
+
           if (child.type === 'link') {
             children.push({
               type: 'link',
@@ -119,18 +127,40 @@ const contentToSlate = (content: any[]): Descendant[] => {
           }
         });
       }
+      // Handle legacy format where text might be directly on the paragraph
+      else if (node.text !== undefined) {
+        console.log('🔍 contentToSlate: Legacy format detected - text directly on paragraph');
+        children.push({ text: node.text });
+      }
+      // Handle legacy format where content might be a string
+      else if (typeof node.content === 'string') {
+        console.log('🔍 contentToSlate: Legacy format detected - content as string');
+        children.push({ text: node.content });
+      }
 
       if (children.length === 0) {
+        console.log('🔍 contentToSlate: No children found, adding empty text');
         children.push({ text: '' });
       }
 
+      console.log(`🔍 contentToSlate: Created paragraph with ${children.length} children:`, children);
       return {
         type: 'paragraph',
         children
       };
     }
 
+    // Handle legacy format where node might be a string
+    if (typeof node === 'string') {
+      console.log('🔍 contentToSlate: Legacy format detected - node is string');
+      return {
+        type: 'paragraph',
+        children: [{ text: node }]
+      };
+    }
+
     // Fallback for other node types
+    console.log('🔍 contentToSlate: Unknown node type, using fallback');
     return {
       type: 'paragraph',
       children: [{ text: typeof node === 'string' ? node : '' }]
