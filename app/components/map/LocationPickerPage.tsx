@@ -47,7 +47,14 @@ export default function LocationPickerPage({
   };
 
   const handleCancel = () => {
-    onCancel();
+    // Go to previous page - users can reach home via WeWrite logo
+    try {
+      router.back();
+    } catch (error) {
+      console.error("Navigation error:", error);
+      // Fallback to onCancel callback
+      onCancel();
+    }
   };
 
   return (

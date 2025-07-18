@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { MapPin, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 import { useAccentColor } from '../../contexts/AccentColorContext';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import OpenStreetMapPicker from '../map/OpenStreetMapPicker';
@@ -35,7 +35,8 @@ export default function LocationField({
 }: LocationFieldProps) {
   const { accentColor, customColors } = useAccentColor();
   const { currentAccount } = useCurrentAccount();
-  const mapFeatureEnabled = useFeatureFlag('map_view', currentAccount?.email, currentAccount?.uid);
+  // Map feature is now always enabled
+  const mapFeatureEnabled = true;
   const router = useRouter();
   const [savedZoom, setSavedZoom] = useState<number>(15);
 

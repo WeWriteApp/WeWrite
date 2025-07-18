@@ -95,7 +95,7 @@ export default function TokenAllocationDisplay({
       <CardContent className="space-y-6">
         {/* Overspending/No Subscription Warning with Buy Tokens Button */}
         {!isPreviewMode && isOverspent && (
-          <div className="p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+          <div className="p-3 bg-orange-50 dark:bg-orange-950/20 border border-theme-medium rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 flex-shrink-0" />
               <p className="font-medium text-orange-800 dark:text-orange-200">

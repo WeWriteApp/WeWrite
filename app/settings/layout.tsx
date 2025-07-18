@@ -18,7 +18,7 @@ import {
   Palette
 } from 'lucide-react';
 import { StatusIcon } from '../components/ui/status-icon';
-import { useFeatureFlag } from '../utils/feature-flags';
+
 import { cn } from '../lib/utils';
 // Removed old optimized subscription import - using API-first approach
 import { isActiveSubscription, getSubscriptionStatusInfo } from '../utils/subscriptionStatus';
@@ -48,8 +48,8 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
   const [subscriptionStatusInfo, setSubscriptionStatusInfo] = useState<any>(null);
 
-  // Check payments feature flag with proper user ID for real-time updates
-  const paymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
+  // Payments feature is now always enabled
+  const paymentsEnabled = true;
 
   // Get bank setup status, token balance, and user earnings
   const bankSetupStatus = useBankSetupStatus();

@@ -43,13 +43,38 @@ export function usePageConnections(pageId: string, pageTitle?: string): PageConn
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // Listen for page save events to trigger automatic refresh
+  useEffect(() => {
+    const handlePageSave = (event: CustomEvent) => {
+      if (event.detail.pageId === pageId) {
+        console.log('🔄 [CONNECTIONS] Page save detected, auto-refreshing connections');
+        setRefreshTrigger(prev => prev + 1);
+      }
+    };
+
+    const handlePageCreated = (event: CustomEvent) => {
+      // Refresh connections when any new page is created that might link to this page
+      console.log('🔄 [CONNECTIONS] New page created, refreshing connections to check for new links');
+      setRefreshTrigger(prev => prev + 1);
+    };
+
+    // Listen for page save and creation events
+    window.addEventListener('pageSaved', handlePageSave as EventListener);
+    window.addEventListener('page-created-immediate', handlePageCreated as EventListener);
+
+    return () => {
+      window.removeEventListener('pageSaved', handlePageSave as EventListener);
+      window.removeEventListener('page-created-immediate', handlePageCreated as EventListener);
+    };
+  }, [pageId]);
+
   const fetchConnections = useCallback(async () => {
     if (!pageId) return;
 
     try {
       setLoading(true);
       setError(null);
-      console.log('🔗 usePageConnections: Fetching connections for page:', pageId);
+      console.log('🔗 [CONNECTIONS] fetchConnections called for page:', pageId, 'refreshTrigger:', refreshTrigger);
 
       // Use the page connections API
       const response = await fetch(`/api/page-connections?pageId=${pageId}&includeSecondHop=false&limit=50`);
@@ -61,8 +86,11 @@ export function usePageConnections(pageId: string, pageTitle?: string): PageConn
       }
 
       const data = await response.json();
-      console.log('🔗 usePageConnections: API response:', data);
-      console.log('🔗 usePageConnections: API response:', data.stats);
+      console.log('🔗 [CONNECTIONS] Received fresh data:', {
+        incomingCount: data.incoming?.length || 0,
+        outgoingCount: data.outgoing?.length || 0,
+        refreshTrigger: refreshTrigger
+      });
 
       setIncoming(data.incoming || []);
       setOutgoing(data.outgoing || []);
@@ -75,7 +103,7 @@ export function usePageConnections(pageId: string, pageTitle?: string): PageConn
     } finally {
       setLoading(false);
     }
-  }, [pageId]);
+  }, [pageId, refreshTrigger]);
 
   useEffect(() => {
     fetchConnections();
@@ -83,8 +111,13 @@ export function usePageConnections(pageId: string, pageTitle?: string): PageConn
 
   const refresh = useCallback(() => {
     console.log('🔄 [CONNECTIONS] Manual refresh triggered for page:', pageId);
-    setRefreshTrigger(prev => prev + 1);
-  }, [pageId]);
+    console.log('🔄 [CONNECTIONS] Current refreshTrigger value:', refreshTrigger);
+    setRefreshTrigger(prev => {
+      const newValue = prev + 1;
+      console.log('🔄 [CONNECTIONS] Setting refreshTrigger to:', newValue);
+      return newValue;
+    });
+  }, [pageId, refreshTrigger]);
 
   // Calculate derived data
   const bidirectional = incoming.filter(incomingPage => 

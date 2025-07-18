@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/ta
 import { ChevronLeft, DollarSign, Wallet } from 'lucide-react';
 import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 import WriterTokenDashboard from '../../components/payments/WriterTokenDashboard';
-import WriterEarningsFeatureGuard from '../../components/payments/WriterEarningsFeatureGuard';
+// WriterEarningsFeatureGuard removed - all features are now always enabled
 import { PayoutsManager } from '../../components/payments/PayoutsManager';
 
 export default function EarningsPage() {
@@ -41,9 +41,7 @@ export default function EarningsPage() {
               </TabsList>
 
               <TabsContent value="earnings" className="space-y-4 sm:space-y-6">
-                <WriterEarningsFeatureGuard>
-                  <WriterTokenDashboard />
-                </WriterEarningsFeatureGuard>
+                <WriterTokenDashboard />
               </TabsContent>
 
               <TabsContent value="payouts" className="space-y-4 sm:space-y-6">

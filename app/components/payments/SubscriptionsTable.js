@@ -3,16 +3,11 @@ import React, { useContext, useEffect, useState } from "react";
 import { PortfolioContext } from "../../providers/PortfolioProvider";
 // Using API endpoints instead of direct Firebase calls
 import {PillLink} from "../utils/PillLink";
-import { useFeatureFlag } from "../../utils/feature-flags";
+
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 const SubscriptionsTable = () => {
   const { session } = useCurrentAccount();
-  const isPaymentsEnabled = useFeatureFlag('payments', session?.email);
-
-  // If payments feature flag is disabled, don't render anything
-  if (!isPaymentsEnabled) {
-    return null;
-  }
+  // Payments feature is now always enabled - no conditional rendering needed
   const { subscriptions } = useContext(PortfolioContext);
 
   // Local copy of subscriptions for editing
@@ -113,7 +108,7 @@ const SubscriptionItem = ({
 
   return (
     <>
-      <div className="flex items-center justify-between border-b border-gray-200 py-4">
+      <div className="flex items-center justify-between border-b-only py-4">
         <PillLink href={`/pages/${page.id}`} isPublic={page.isPublic}>
           {page.title}
         </PillLink>

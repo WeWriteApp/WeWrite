@@ -15,7 +15,7 @@ import { getPageById } from "../../firebase/database/pages";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import DiffPreview, { DiffStats } from "./DiffPreview";
-import { useFeatureFlag } from "../../utils/feature-flags";
+
 import { navigateToPage } from "../../utils/pagePermissions";
 import { useRouter } from "next/navigation";
 import { setCurrentVersion } from "../../firebase/database";
@@ -166,8 +166,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
     }
   }, [activity?.pageId, currentAccount, activity?.activityType, fetchAttempts]);
 
-  // Use the reactive feature flag hook instead of manual Firestore check
-  const subscriptionEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+  // Subscription feature is now always enabled
+  const subscriptionEnabled = true;
 
   // Ensure we have valid content before generating diffs
   const hasValidContent = activity.currentContent &&

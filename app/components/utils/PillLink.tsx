@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, forwardRef, useEffect } from "react";
+import React, { useState, forwardRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ExternalLink, Users, Trash2 } from "lucide-react";
 import { ShimmerEffect } from "../ui/skeleton";
@@ -26,6 +26,7 @@ const PillLinkSkeleton = () => (
 interface PillLinkProps {
   children: React.ReactNode;
   href: string;
+  pageId?: string; // Direct pageId prop for better navigation
   isPublic?: boolean;
   groupId?: string;
   className?: string;
@@ -47,6 +48,7 @@ interface PillLinkProps {
 export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   children,
   href,
+  pageId: propPageId, // Rename to avoid conflict with extracted pageId
   isPublic,
   groupId,
   className = "",
@@ -83,9 +85,21 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
 
   // Handle going to link (navigation)
   const handleGoToLink = () => {
+    console.log('🔵 PillLink: handleGoToLink called', {
+      href,
+      effectiveHref,
+      pageId,
+      isExternalLinkType,
+      isPageLinkType,
+      isUserLinkType,
+      isGroupLinkType,
+      children
+    });
+
     if (isExternalLinkType) {
+      console.log('🔵 PillLink: Opening external link modal');
       setShowExternalLinkModal(true);
-    } else if (href && href !== '#') {
+    } else if (effectiveHref && effectiveHref !== '#') {
       // Track link click
       trackInteractionEvent(events.INTERNAL_LINK_CLICKED, {
         link_type: isPageLinkType ? 'page' : isUserLinkType ? 'user' : isGroupLinkType ? 'group' : 'unknown',
@@ -98,16 +112,20 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
 
       // Handle page links with click-to-edit functionality
       if (isPageLinkType && pageId) {
+        console.log('🔵 PillLink: Navigating to page', { pageId, effectiveHref });
         navigateToPage(pageId, session, pageData, session?.groups, router);
         return;
       }
 
       // Use Next.js router for navigation when possible (for non-page links)
+      console.log('🔵 PillLink: Using router.push for non-page link', { effectiveHref });
       if (typeof window !== 'undefined') {
-        router.push(href);
+        router.push(effectiveHref);
       } else {
-        window.location.href = href;
+        window.location.href = effectiveHref;
       }
+    } else {
+      console.log('🔴 PillLink: No valid href to navigate to', { href, effectiveHref });
     }
   };
 
@@ -126,7 +144,18 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   const isGroupLinkType = isGroupLink(href);
   const isPageLinkType = isPageLink(href);
   const isExternalLinkType = isExternalLink(href);
-  const pageId = href.split('/').pop();
+  // Use prop pageId if available, otherwise extract from href
+  const pageId = propPageId || href.split('/').pop();
+
+  // CRITICAL FIX: Generate proper href for page links when href is invalid
+  const effectiveHref = useMemo(() => {
+    // If we have a pageId and the href is invalid (like '#'), generate the correct href
+    if (isPageLinkType && pageId && pageId !== '#' && (href === '#' || !href || href.trim() === '')) {
+      console.log('🔵 PillLink: Generating href from pageId', { pageId, originalHref: href });
+      return `/${pageId}`;
+    }
+    return href;
+  }, [href, pageId, isPageLinkType]);
 
   // Listen for page title updates
   useEffect(() => {
@@ -232,7 +261,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   }
 
   // Ensure we have a valid href to prevent errors
-  const safeHref = href || '#';
+  const safeHref = effectiveHref || '#';
 
   // Format display title
   let formattedDisplayTitle = displayTitle;

@@ -4,7 +4,7 @@ import React from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
-import { useFeatureFlag } from "../../utils/feature-flags";
+
 import { getEffectiveTier, SUBSCRIPTION_TIERS } from '../../utils/subscriptionTiers';
 
 interface SupporterBadgeProps {
@@ -17,12 +17,7 @@ interface SupporterBadgeProps {
 
 export default function SupporterBadge({ tier, className = '', showLabel = false, status = 'active', amount }: SupporterBadgeProps) {
   const { currentAccount } = useCurrentAccount();
-  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
-
-  // If payments feature flag is disabled, don't render anything
-  if (!isPaymentsEnabled) {
-    return null;
-  }
+  // Payments feature is now always enabled - no conditional rendering needed
 
   // Use centralized tier determination logic with safety fallback
   const effectiveTier = getEffectiveTier(amount, tier, status) || 'inactive';

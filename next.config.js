@@ -107,11 +107,11 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://connect-js.stripe.com https://*.stripe.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://connect-js.stripe.com https://*.stripe.com https://cdn.lgrckt-in.com https://www.googletagmanager.com https://*.googleapis.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://connect-js.stripe.com https://*.stripe.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https: https://*.stripe.com",
-              "connect-src 'self' https://api.stripe.com https://connect-js.stripe.com https://*.stripe.com wss://*.stripe.com",
+              "connect-src 'self' https://api.stripe.com https://connect-js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.googleapis.com https://firebase.googleapis.com https://firebaseinstallations.googleapis.com https://cdn.lgrckt-in.com",
               "frame-src 'self' https://js.stripe.com https://connect-js.stripe.com https://*.stripe.com",
               "worker-src 'self' blob:",
               "object-src 'none'",

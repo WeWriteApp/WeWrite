@@ -3,9 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useCurrentAccount } from '../../../providers/CurrentAccountProvider';
-import { isAdmin } from '../../../utils/feature-flags';
+// Admin check function - only jamiegray2234@gmail.com has admin access
+const isAdmin = (userEmail?: string | null): boolean => {
+  if (!userEmail) return false;
+  return userEmail === 'jamiegray2234@gmail.com';
+};
 import { PageLoader } from '../../../components/ui/page-loader';
-import FeatureDetailPage from '../../../components/admin/FeatureDetailPage';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { Button } from '../../../components/ui/button';
@@ -50,25 +53,8 @@ export default function FeatureDetail() {
         const featureMetaRef = doc(db, 'config', 'featureMetadata');
         const featureMetaDoc = await getDoc(featureMetaRef);
 
-        if (featureFlagsDoc.exists()) {
-          const flagsData = featureFlagsDoc.data();
-          const metaData = featureMetaDoc.exists() ? featureMetaDoc.data() : {};
-
-          // Get the specific feature metadata
-          const featureMeta = metaData[featureId] || {
-            createdAt: new Date().toISOString(),
-            lastModified: new Date().toISOString(),
-            description: 'No description available'
-          };
-
-          setFeatureData({
-            id: featureId,
-            enabled: flagsData[featureId] === true,
-            ...featureMeta
-          });
-        } else {
-          setError('Feature flags not found');
-        }
+        // Feature flags have been removed - no longer fetching feature data
+        setError('Feature flags have been removed from the system');
       } catch (err) {
         console.error('Error fetching feature data:', err);
         setError('Failed to load feature data');
@@ -125,5 +111,18 @@ export default function FeatureDetail() {
     );
   }
 
-  return <FeatureDetailPage feature={featureData} />;
+  return (
+    <div className="p-6 space-y-4">
+      <Link href="/admin" passHref>
+        <Button variant="outline" size="sm" className="mb-4">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Admin Panel
+        </Button>
+      </Link>
+      <div className="p-6 bg-muted rounded-2xl text-center">
+        <h2 className="text-xl font-semibold">Feature Flags Removed</h2>
+        <p className="mt-2">Feature flags have been completely removed from the system. All features are now always enabled for all users.</p>
+      </div>
+    </div>
+  );
 }

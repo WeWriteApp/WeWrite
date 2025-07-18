@@ -15,7 +15,7 @@ import ClickableByline from "../utils/ClickableByline";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useDateFormat } from '../../contexts/DateFormatContext';
 import { handleAddToPage, handleReply, handleShare } from "../../utils/pageActionHandlers";
-import { useFeatureFlag } from "../../utils/feature-flags";
+
 import { useSidebarContext } from "../layout/UnifiedSidebar";
 import {
   DropdownMenu,
@@ -531,7 +531,7 @@ export default function PageHeader({
     }
   };
 
-  // Function to handle back button click
+  // Function to handle back button click - now goes to previous page
   const handleBackClick = (e: React.MouseEvent) => {
     e.preventDefault();
 
@@ -547,20 +547,15 @@ export default function PageHeader({
       }
     }
 
-    // Check if we came from a user page or home
-    if (document.referrer.includes('/user/')) {
-      // Extract user ID from referrer and navigate to that user's page
-      const referrer = new URL(document.referrer);
-      const userPath = referrer.pathname.split('/');
-      if (userPath.length >= 3) {
-        const userId = userPath[2];
-        router.push(`/user/${userId}`);
-        return;
-      }
+    // Go to previous page in browser history
+    // Users can always reach home via the WeWrite logo
+    try {
+      router.back();
+    } catch (error) {
+      console.error("Navigation error:", error);
+      // Fallback to browser history if router.back() fails
+      window.history.back();
     }
-
-    // Default to home page
-    router.push('/');
   };
 
   return (
@@ -598,9 +593,9 @@ export default function PageHeader({
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               >
                 {/* Center: Logo + Title and Byline compound element */}
-                <div className="flex items-center gap-2 cursor-pointer">
-                  {/* Logo to the left of text */}
-                  <Logo size="sm" priority={true} styled={true} />
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
+                  {/* Logo to the left of text - clickable to go home */}
+                  <Logo size="sm" priority={true} styled={true} clickable={true} />
 
                   {/* Title and Byline */}
                   <div className="flex items-center gap-1 min-w-0">
@@ -668,9 +663,9 @@ export default function PageHeader({
                     </Button>
                   </div>
 
-                  {/* Center: Logo */}
-                  <div className="flex items-center">
-                    <Logo size="lg" priority={true} styled={true} />
+                  {/* Center: Logo - clickable to go home */}
+                  <div className="flex items-center cursor-pointer" onClick={() => router.push('/')}>
+                    <Logo size="lg" priority={true} styled={true} clickable={true} />
                   </div>
 
                   {/* Right: Menu */}

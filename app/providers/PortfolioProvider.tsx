@@ -224,18 +224,8 @@ export const PortfolioProvider = ({ children }: PortfolioProviderProps) => {
             return;
           }
 
-          // First check if subscription feature is enabled
-          const { doc, getDoc } = await import('firebase/firestore');
-          const { db } = await import('../firebase/database');
-
-          const featureFlagsRef = doc(db, 'config', 'featureFlags');
-          const featureFlagsDoc = await getDoc(featureFlagsRef);
-
-          let subscriptionEnabled = false;
-          if (featureFlagsDoc.exists()) {
-            const flagsData = featureFlagsDoc.data();
-            subscriptionEnabled = flagsData.payments === true;
-          }
+          // Subscription feature is now always enabled
+          const subscriptionEnabled = true;
 
           // Only fetch subscription data if the feature is enabled
           if (subscriptionEnabled) {

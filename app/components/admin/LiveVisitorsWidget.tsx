@@ -154,7 +154,7 @@ export function LiveVisitorsWidget({ className = "" }: LiveVisitorsWidgetProps) 
 
           {/* Bot Detection Info (Debug Mode) */}
           {debugMode && (
-            <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+            <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-theme-medium">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-orange-600" />
                 <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Bots Filtered</span>

@@ -12,7 +12,7 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 import { Badge } from '../ui/badge';
 import { useTheme } from '../../providers/ThemeProvider';
 import { toast } from 'sonner';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 import { getStripePublishableKey } from '../../utils/stripeConfig';
 
 // Initialize Stripe
@@ -171,7 +171,8 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
 
 export function PaymentMethodsManager() {
   const { session } = useCurrentAccount();
-  const isPaymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
+  // Payments feature is now always enabled
+  const isPaymentsEnabled = true;
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

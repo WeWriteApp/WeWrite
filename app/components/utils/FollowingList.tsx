@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { PillLink } from "./PillLink";
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 import { UsernameBadge } from '../ui/UsernameBadge';
-import { useFeatureFlag } from "../../utils/feature-flags";
+
 import { useAlert } from '../../hooks/useAlert';
 import AlertModal from './AlertModal';
 
@@ -32,8 +32,8 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
   const [page, setPage] = useState(1);
   const limit = 50;
 
-  // Use the reactive feature flag hook instead of manual Firestore check
-  const subscriptionEnabled = useFeatureFlag('payments', session?.email, session?.uid);
+  // Subscription feature is now always enabled
+  const subscriptionEnabled = true;
 
   // Custom modal hooks
   const { alertState, showError, closeAlert } = useAlert();

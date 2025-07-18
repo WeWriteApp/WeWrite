@@ -8,7 +8,7 @@ import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader
 import TokenAllocationDisplay from '../../components/subscription/TokenAllocationDisplay';
 import TokenAllocationBreakdown from '../../components/subscription/TokenAllocationBreakdown';
 import { TokenPieChart } from '../../components/ui/TokenPieChart';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { NAVIGATION_EVENTS } from '../../constants/analytics-events';
 import { getUserTokenBalance, clearUserTokens, SimulatedTokenBalance } from '../../utils/simulatedTokens';
@@ -53,8 +53,8 @@ export default function SpendTokensPage() {
   const [allocationData, setAllocationData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check payments feature flag
-  const paymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+  // Payments feature is now always enabled
+  const paymentsEnabled = true;
 
   // State to track real-time allocation changes from the breakdown component
   const [liveAllocationData, setLiveAllocationData] = useState<any>(null);
@@ -418,7 +418,7 @@ export default function SpendTokensPage() {
 
           {/* Subscription Status Messages */}
           {currentSubscription && currentSubscription.cancelAtPeriodEnd && (
-            <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-950/20 border-theme-medium rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                 <h3 className="font-medium text-amber-800 dark:text-amber-200">
@@ -433,7 +433,7 @@ export default function SpendTokensPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => router.push('/settings/subscription')}
-                className="mt-3 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/20"
+                className="mt-3 border-theme-medium text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/20"
               >
                 Reactivate Subscription
               </Button>

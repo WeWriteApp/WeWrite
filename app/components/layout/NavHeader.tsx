@@ -50,6 +50,7 @@ export default function NavHeader({
     } else {
       console.log("NavHeader: Going back in history");
 
+      // Go to previous page - users can reach home via WeWrite logo
       // Navigate without scrolling current page - scroll restoration handled by destination
 
       // Try router.back() first, but fall back to window.history if needed

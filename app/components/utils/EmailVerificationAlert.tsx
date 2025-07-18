@@ -152,7 +152,7 @@ function EmailVerificationAlert({
   if (variant === 'banner') {
     return (
       <div className={`
-        bg-amber-50 dark:bg-amber-950/20 border-b border-amber-200 dark:border-amber-800/30
+        bg-amber-50 dark:bg-amber-950/20 border-b border-theme-medium/30
         transition-all duration-300 ease-in-out overflow-hidden
         ${isAnimatingIn ? 'opacity-100 max-h-20' : 'opacity-0 max-h-0'}
       `}>
@@ -183,7 +183,7 @@ function EmailVerificationAlert({
                 size="sm"
                 onClick={handleResendVerification}
                 disabled={isResending || cooldownRemaining > 0}
-                className="bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 h-auto"
+                className="bg-amber-100 dark:bg-amber-900/30 border-theme-medium text-amber-800 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 h-auto"
               >
                 {cooldownRemaining > 0 ? (
                   <>
@@ -253,7 +253,7 @@ function EmailVerificationAlert({
             size="sm"
             onClick={handleResendVerification}
             disabled={isResending || cooldownRemaining > 0}
-            className="bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 h-auto"
+            className="bg-amber-100 dark:bg-amber-900/30 border-theme-medium text-amber-800 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 h-auto"
           >
             {cooldownRemaining > 0 ? (
               <>

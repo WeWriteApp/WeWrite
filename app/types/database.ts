@@ -305,15 +305,7 @@ export type NotificationType =
   | 'payout_processed'
   | 'payment_failed';
 
-// Feature flag types
-export interface FeatureFlag {
-  id: string;
-  name: string;
-  enabled: boolean;
-  description?: string;
-  userEmails?: string[];
-  rolloutPercentage?: number;
-}
+// Feature flags have been removed - all features are now always enabled
 
 // Subscription-based token system only - no direct payments or pledges
 

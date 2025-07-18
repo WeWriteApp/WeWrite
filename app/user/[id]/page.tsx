@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Loader } from '../../components/utils/Loader';
 import SingleProfileView from '../../components/pages/SingleProfileView';
 
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { PageProvider } from '../../contexts/PageContext';
 import { getUserSubscriptionTier } from '../../utils/userUtils';
@@ -31,14 +31,8 @@ export default function UserPage({ params }: UserPageProps) {
   const { id } = unwrappedParams;
   const router = useRouter();
   const { currentAccount } = useCurrentAccount();
-  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
-
-  // Debug the payments flag
-  console.warn('🔍 User page: Payments flag value:', {
-    isPaymentsEnabled,
-    currentAccountEmail: currentAccount?.email,
-    currentAccountUid: currentAccount?.uid
-  });
+  // Payments feature is now always enabled
+  const isPaymentsEnabled = true;
 
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);

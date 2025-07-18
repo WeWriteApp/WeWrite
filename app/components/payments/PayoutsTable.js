@@ -2,16 +2,11 @@
 import React, { useEffect, useState, useContext } from "react";
 import { PortfolioContext } from "../../providers/PortfolioProvider";
 import DataTable from "react-data-table-component";
-import { useFeatureFlag } from "../../utils/feature-flags";
+
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 const PayoutsTable = () => {
   const { session } = useCurrentAccount();
-  const isPaymentsEnabled = useFeatureFlag('payments', session?.email);
-
-  // If payments feature flag is disabled, don't render anything
-  if (!isPaymentsEnabled) {
-    return null;
-  }
+  // Payments feature is now always enabled - no conditional rendering needed
   const {
     payouts} = useContext(PortfolioContext);
   const columns = [

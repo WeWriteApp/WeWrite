@@ -3,12 +3,16 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
-import { isAdmin } from "../../utils/feature-flags";
+// Admin check function - only jamiegray2234@gmail.com has admin access
+const isAdmin = (userEmail?: string | null): boolean => {
+  if (!userEmail) return false;
+  return userEmail === 'jamiegray2234@gmail.com';
+};
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { ArrowLeft, Shield, Database, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
-import { setupFeatureManagement } from '../../scripts/setup-feature-management';
+// Feature management setup has been removed - all features are now always enabled
 import { useToast } from '../../components/ui/use-toast';
 
 export default function SetupFeaturesPage() {

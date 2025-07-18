@@ -16,7 +16,7 @@ import {
   Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 
 interface FailedPaymentRecoveryProps {
   subscription: any;
@@ -28,12 +28,7 @@ export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: Failed
   const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
-
-  // Don't show if payments feature is disabled
-  if (!isPaymentsEnabled) {
-    return null;
-  }
+  // Payments feature is now always enabled - no conditional rendering needed
 
   // Only show for past_due subscriptions
   if (!subscription || subscription.status !== 'past_due') {

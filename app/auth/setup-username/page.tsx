@@ -305,7 +305,7 @@ export default function SetupUsernamePage() {
         description="Setting up your account..."
       >
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
         </div>
       </AuthLayout>
     }>

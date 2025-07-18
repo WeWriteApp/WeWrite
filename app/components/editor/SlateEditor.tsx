@@ -213,140 +213,6 @@ const slateToContent = (value: Descendant[]): any[] => {
 // ============================================================================
 
 /**
- * Render custom elements (paragraphs and links)
- */
-const Element = ({ attributes, children, element }: RenderElementProps) => {
-  const editor = useSlateStatic();
-
-  switch (element.type) {
-    case 'link':
-      return (
-        <span
-          {...attributes}
-          contentEditable={false}
-          className="inline-block"
-          draggable={true}
-          onMouseDown={(e) => {
-            // Store initial position for click vs drag detection
-            const startX = e.clientX;
-            const startY = e.clientY;
-            const startTime = Date.now();
-            let isDragging = false;
-
-            const handleMouseMove = (moveEvent: MouseEvent) => {
-              const deltaX = Math.abs(moveEvent.clientX - startX);
-              const deltaY = Math.abs(moveEvent.clientY - startY);
-              const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-              // If mouse moved more than 5 pixels, consider it a drag
-              if (distance > 5) {
-                isDragging = true;
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-              }
-            };
-
-            const handleMouseUp = (upEvent: MouseEvent) => {
-              const deltaX = Math.abs(upEvent.clientX - startX);
-              const deltaY = Math.abs(upEvent.clientY - startY);
-              const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-              const duration = Date.now() - startTime;
-
-              // Clean up listeners
-              document.removeEventListener('mousemove', handleMouseMove);
-              document.removeEventListener('mouseup', handleMouseUp);
-
-              // If it's a short click with minimal movement, simulate a click on the PillLink
-              if (!isDragging && distance <= 5 && duration < 300 && e.currentTarget) {
-                // Find the PillLink element and trigger its click
-                const pillLink = e.currentTarget.querySelector('a');
-                if (pillLink) {
-                  // Create a synthetic click event
-                  const clickEvent = new MouseEvent('click', {
-                    bubbles: true,
-                    cancelable: true,
-                    clientX: upEvent.clientX,
-                    clientY: upEvent.clientY
-                  });
-                  pillLink.dispatchEvent(clickEvent);
-                }
-              }
-            };
-
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-          }}
-          onDragStart={(e) => {
-            // Store the element data for drag and drop
-            const path = ReactEditor.findPath(editor, element);
-            e.dataTransfer.setData('application/x-slate-element', JSON.stringify({
-              type: 'link',
-              element,
-              path
-            }));
-            e.dataTransfer.effectAllowed = 'move';
-
-            // Prevent default URL dragging
-            e.dataTransfer.clearData('text/uri-list');
-            e.dataTransfer.clearData('text/plain');
-            e.dataTransfer.clearData('text/html');
-
-            console.log('Drag started for link element:', element);
-          }}
-          onDragEnd={(e) => {
-            console.log('Drag ended');
-          }}
-        >
-          <PillLink
-            href={element.url || '#'}
-            isPublic={element.isPublic}
-            className="cursor-pointer"
-            isEditing={true} // SlateEditor is always in edit mode
-            onEditLink={() => setShowLinkModal(true)}
-            draggable={false} // Disable dragging on the PillLink itself
-          >
-            {children}
-          </PillLink>
-        </span>
-      );
-    case 'paragraph':
-      // Get the path to this element to determine line number
-      const path = ReactEditor.findPath(editor, element);
-      const lineNumber = path[0] + 1; // Convert 0-based to 1-based
-
-      return (
-        <div
-          {...attributes}
-          className="flex items-start group"
-          style={{
-            minHeight: '1.5rem',
-            marginBottom: '0.5rem'
-          }}
-        >
-          {/* Line number - NO EXCESSIVE SPACING */}
-          <span
-            className="text-xs text-muted-foreground/60 font-mono select-none mr-2 flex-shrink-0"
-            style={{
-              lineHeight: '1.5rem',
-              paddingTop: '0.125rem'
-            }}
-            contentEditable={false}
-          >
-            {lineNumber}
-          </span>
-
-          {/* Paragraph content - NO LEFT PADDING */}
-          <div style={{ flex: 1, minHeight: '1.5rem' }}>
-            {children}
-          </div>
-        </div>
-      );
-    default:
-      return <div {...attributes}>{children}</div>;
-  }
-};
-
-/**
  * Render text leaves (for formatting like bold, italic)
  */
 const Leaf = ({ attributes, children, leaf }: RenderLeafProps) => {
@@ -429,6 +295,90 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
   });
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+
+  // Element component - defined inside to access state
+  const Element = useCallback(({ attributes, children, element }: RenderElementProps) => {
+    const editor = useSlateStatic();
+
+    switch (element.type) {
+      case 'link':
+        return (
+          <span
+            {...attributes}
+            contentEditable={false}
+            className="inline-block"
+            draggable={true}
+            // Remove complex drag simulation - let PillLink handle its own clicks
+            onDragStart={(e) => {
+              // Store the element data for drag and drop
+              const path = ReactEditor.findPath(editor, element);
+              e.dataTransfer.setData('application/x-slate-element', JSON.stringify({
+                type: 'link',
+                element,
+                path
+              }));
+              e.dataTransfer.effectAllowed = 'move';
+
+              // Prevent default URL dragging
+              e.dataTransfer.clearData('text/uri-list');
+              e.dataTransfer.clearData('text/plain');
+              e.dataTransfer.clearData('text/html');
+
+              console.log('Drag started for link element:', element);
+            }}
+            onDragEnd={(e) => {
+              console.log('Drag ended');
+            }}
+          >
+            <PillLink
+              href={element.url || '#'}
+              pageId={element.pageId} // Pass pageId directly for proper navigation
+              isPublic={element.isPublic}
+              className="cursor-pointer"
+              isEditing={true} // SlateEditor is always in edit mode
+              onEditLink={() => setShowLinkModal(true)}
+              draggable={false} // Disable dragging on the PillLink itself
+            >
+              {children}
+            </PillLink>
+          </span>
+        );
+      case 'paragraph':
+        // Get the path to this element to determine line number
+        const path = ReactEditor.findPath(editor, element);
+        const lineNumber = path[0] + 1; // Convert 0-based to 1-based
+
+        return (
+          <div
+            {...attributes}
+            className="flex items-start group"
+            style={{
+              minHeight: '1.5rem',
+              marginBottom: '0.5rem'
+            }}
+          >
+            {/* Line number - NO EXCESSIVE SPACING */}
+            <span
+              className="text-xs text-muted-foreground/60 font-mono select-none mr-2 flex-shrink-0"
+              style={{
+                lineHeight: '1.5rem',
+                paddingTop: '0.125rem'
+              }}
+              contentEditable={false}
+            >
+              {lineNumber}
+            </span>
+
+            {/* Paragraph content - NO LEFT PADDING */}
+            <div style={{ flex: 1, minHeight: '1.5rem' }}>
+              {children}
+            </div>
+          </div>
+        );
+      default:
+        return <div {...attributes}>{children}</div>;
+    }
+  }, [setShowLinkModal]);
 
   // Update value when initialContent changes
   useEffect(() => {
@@ -704,7 +654,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
   return (
     <div className="slate-editor-container w-full">
       {showToolbar && (
-        <div className="flex items-center gap-2 p-2 border-b bg-gray-50">
+        <div className="flex items-center gap-2 p-2 border-b-only bg-muted/30">
           <Button
             variant="outline"
             size="sm"
@@ -750,7 +700,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
       )}
 
       {error && (
-        <div className="p-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded">
+        <div className="p-2 text-sm text-destructive bg-destructive/10 border-theme-medium rounded">
           {error}
         </div>
       )}
@@ -760,10 +710,10 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
         initialValue={safeInitialValue || [{ type: 'paragraph', children: [{ text: '' }] }]}
         onChange={handleChange}
       >
-        <div className={`relative w-full max-w-none border rounded-lg transition-all duration-200 ${
+        <div className={`relative w-full max-w-none rounded-lg transition-all duration-200 ${
           isFocused
-            ? 'border-primary/50 ring-2 ring-primary/20'
-            : 'border-muted-foreground/30 hover:border-muted-foreground/40'
+            ? 'border-theme-solid ring-2 ring-primary/20'
+            : 'border-theme-medium hover-border-strong'
         }`}>
           <Editable
             renderElement={Element}

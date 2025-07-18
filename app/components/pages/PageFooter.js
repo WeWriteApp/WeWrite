@@ -20,7 +20,7 @@ import { getPageViewsLast24Hours, getPageTotalViews } from "../../firebase/pageV
 import { getPageVersions } from "../../services/versionService";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { getPagePledgeStats, getSupporterSparklineData } from "../../services/pledgeStatsService";
-import { useFeatureFlag } from "../../utils/feature-flags";
+
 /**
  * PageFooter Component
  *
@@ -63,7 +63,8 @@ export default function PageFooter({
   canEdit
 }) {
   const { currentAccount } = useCurrentAccount();
-  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+  // Payments feature is now always enabled
+  const isPaymentsEnabled = true;
   const [viewData, setViewData] = useState({ total: 0, hourly: [] });
   const [changeData, setChangeData] = useState({ count: 0, hourly: [] });
   const [supporterData, setSupporterData] = useState({ count: 0, hourly: [] });
@@ -149,7 +150,7 @@ export default function PageFooter({
     <div className="mt-10 border-t-only pt-6 pb-6 px-4 sm:px-6">
       {/* Save/Revert buttons - shown at top when there are unsaved changes */}
       {canEdit && hasUnsavedChanges && (
-        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950/20 border border-theme-medium rounded-lg">
           <div className="flex flex-col gap-3 w-full md:flex-row md:justify-center">
             <Button
               variant="default"

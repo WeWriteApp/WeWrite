@@ -22,7 +22,7 @@ import {
   Edit3
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 import { SUBSCRIPTION_TIERS, CUSTOM_TIER_CONFIG, getTierById, calculateTokensForAmount, validateCustomAmount } from '../../utils/subscriptionTiers';
 
 interface SubscriptionModificationProps {
@@ -41,7 +41,8 @@ interface ProrationPreview {
 
 export function SubscriptionModification({ subscription, onModificationSuccess }: SubscriptionModificationProps) {
   const { currentAccount } = useCurrentAccount();
-  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+  // Payments feature is now always enabled
+  const isPaymentsEnabled = true;
   
   const [selectedTier, setSelectedTier] = useState<string>('');
   const [customAmount, setCustomAmount] = useState<number>(60);

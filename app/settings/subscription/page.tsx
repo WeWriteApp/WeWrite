@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -65,8 +65,8 @@ export default function SubscriptionPage() {
   const [cancelling, setCancelling] = useState(false);
 
 
-  // Check payments feature flag
-  const paymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+  // Payments feature is now always enabled
+  const paymentsEnabled = true;
 
   // Debug current state
   console.log('[SubscriptionPage] Component rendering...', {
@@ -634,7 +634,7 @@ export default function SubscriptionPage() {
             <div>
               {/* PWA Embedded Checkout Notice */}
               {isPWA && (
-                <Card className="mb-6 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                <Card className="mb-6 bg-blue-50 dark:bg-blue-950/20 border-theme-medium">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />

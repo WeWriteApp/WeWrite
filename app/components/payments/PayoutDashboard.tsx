@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -63,7 +63,8 @@ interface PayoutSetup {
 export default function PayoutDashboard() {
   const { currentAccount } = useCurrentAccount();
   const { toast } = useToast();
-  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+  // Payments feature is now always enabled
+  const isPaymentsEnabled = true;
   const { trackPayoutFlow } = useLogRocket();
 
   const [setup, setSetup] = useState<PayoutSetup | null>(null);
@@ -830,7 +831,7 @@ export default function PayoutDashboard() {
                     <div className="font-medium text-green-900 dark:text-green-100">
                       Automatic Payouts Enabled
                     </div>
-                    <div className="text-sm text-green-700 dark:text-green-300">
+                    <div className="text-sm text-success-foreground">
                       Automatic monthly payouts when balance ≥ ${preferences.minimumThreshold}
                     </div>
                   </div>

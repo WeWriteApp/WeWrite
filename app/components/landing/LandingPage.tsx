@@ -500,12 +500,13 @@ const LandingPage = () => {
               onClick={() => {
                 // Track logo click in Google Analytics
                 analytics.trackInteractionEvent(ANALYTICS_EVENTS.LINK_CLICKED, {
-                  label: 'Logo click: scroll to top',
+                  label: 'Logo click: go to home',
                   link_type: 'logo',
                   link_text: 'WeWrite',
-                  link_url: '#top'
+                  link_url: '/'
                 });
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                // Navigate to home page instead of scrolling to top
+                window.location.href = '/';
               }}
             >
               WeWrite

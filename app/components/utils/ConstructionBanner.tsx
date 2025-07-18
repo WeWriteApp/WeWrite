@@ -3,7 +3,7 @@
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { AlertTriangle, Heart } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFeatureFlag } from "../../utils/feature-flags";
+
 import { openExternalLink } from "../../utils/pwa-detection";
 
 /**
@@ -12,7 +12,8 @@ import { openExternalLink } from "../../utils/pwa-detection";
  */
 export default function ConstructionBanner() {
   const { session } = useCurrentAccount();
-  const isPaymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
+  // Payments feature is now always enabled
+  const isPaymentsEnabled = true;
 
   // Only show for logged-in users
   if (!session) {

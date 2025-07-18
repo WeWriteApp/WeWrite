@@ -265,9 +265,9 @@ export function SecurityComplianceChecker({
 
             {/* Success Alert */}
             {criticalFailures.length === 0 && warnings.length === 0 && (
-              <Alert className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+              <Alert className="bg-success/10 border-success/30">
                 <CheckCircle className="h-4 w-4 text-green-600" />
-                <AlertDescription className="text-green-700 dark:text-green-300">
+                <AlertDescription className="text-success-foreground">
                   All security checks passed. PCI DSS compliant payment processing available.
                 </AlertDescription>
               </Alert>

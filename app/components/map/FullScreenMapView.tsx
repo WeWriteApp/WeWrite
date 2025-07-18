@@ -41,7 +41,17 @@ export default function FullScreenMapView({
         <Button
           variant="ghost"
           size="sm"
-          onClick={onBack}
+          onClick={() => {
+            // Go to previous page - users can reach home via WeWrite logo
+            try {
+              // Try to go back in history first
+              window.history.back();
+            } catch (error) {
+              console.error("Navigation error:", error);
+              // Fallback to onBack callback
+              onBack();
+            }
+          }}
           className="flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />

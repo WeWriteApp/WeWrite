@@ -61,18 +61,18 @@ export default function PayoutFeeBreakdown({
   };
 
   return (
-    <div className={`bg-gray-50 border border-gray-200 rounded-lg p-4 ${className}`}>
+    <div className={`bg-muted/30 border-theme-medium rounded-lg p-4 ${className}`}>
       <div className="flex items-center space-x-2 mb-3">
         <h3 className="font-semibold text-gray-900">Payout Breakdown</h3>
         {showTooltip && (
           <div className="relative group">
             <InformationCircleIcon className="w-4 h-4 text-gray-400 cursor-help" />
-            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-popover text-popover-foreground text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10 border-theme-medium">
               <div className="text-center">
                 <div>Fees are deducted from your earnings</div>
                 <div>to cover payment processing costs</div>
               </div>
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-popover"></div>
             </div>
           </div>
         )}
@@ -106,14 +106,14 @@ export default function PayoutFeeBreakdown({
           </div>
 
           {/* Total Fees */}
-          <div className="flex justify-between items-center text-sm font-medium border-t border-gray-100 pt-1 mt-1">
-            <span className="text-gray-700">Total fees</span>
-            <span className="text-red-600">-{formatCurrency(fees.totalFees)}</span>
+          <div className="flex justify-between items-center text-sm font-medium border-t-only pt-1 mt-1">
+            <span className="text-muted-foreground">Total fees</span>
+            <span className="text-destructive">-{formatCurrency(fees.totalFees)}</span>
           </div>
         </div>
 
         {/* Net Amount */}
-        <div className="border-t border-gray-300 pt-2">
+        <div className="border-t-only pt-2">
           <div className="flex justify-between items-center">
             <span className="font-semibold text-gray-900">You receive</span>
             <span className="font-bold text-green-600 text-lg">{formatCurrency(fees.netAmount)}</span>

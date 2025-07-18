@@ -163,10 +163,14 @@ export async function POST(request: NextRequest) {
     const userRecord = await admin.auth().getUser(currentUserId);
     const username = userRecord.email?.split('@')[0] || 'Anonymous';
 
-    // Create page data
+    // Create page data - ensure content is properly stringified
+    const contentString = content ?
+      (typeof content === 'string' ? content : JSON.stringify(content)) :
+      null;
+
     const pageData: PageData = {
       title: title.trim(),
-      content: content || null,
+      content: contentString,
       userId: currentUserId,
       username,
       groupId: groupId || null,
@@ -189,7 +193,7 @@ export async function POST(request: NextRequest) {
       const { calculateDiff } = await import('../../utils/diffService');
 
       // For new pages, there's no previous content, so diff against empty string
-      const currentContent = content || '';
+      const currentContent = contentString || '';
       let diffResult = await calculateDiff(currentContent, '');
 
       // If the diff API didn't generate a good preview, create one manually for new pages
@@ -277,9 +281,9 @@ export async function POST(request: NextRequest) {
 
         // Parse content to extract links
         let contentNodes = [];
-        if (content && typeof content === 'string') {
+        if (contentString) {
           try {
-            contentNodes = JSON.parse(content);
+            contentNodes = JSON.parse(contentString);
           } catch (parseError) {
             console.warn('Could not parse content for backlinks indexing:', parseError);
           }
@@ -315,27 +319,45 @@ export async function POST(request: NextRequest) {
 
 // PUT endpoint - Update an existing page
 export async function PUT(request: NextRequest) {
+  console.log('🔵 API: PUT /api/pages endpoint called');
   logger.apiRequest('PUT', '/api/pages');
 
   try {
+    console.log('🔵 API: Initializing Firebase Admin');
     logger.debug('Initializing Firebase Admin', undefined, 'PAGE_SAVE');
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
+    console.log('🔵 API: Getting authenticated user');
     logger.debug('Getting authenticated user', undefined, 'PAGE_SAVE');
     const currentUserId = await getUserIdFromRequest(request);
 
     if (!currentUserId) {
+      console.error('🔴 API: Authentication failed - no user found');
       logger.error('Authentication failed - no user found', {
         headers: Object.fromEntries(request.headers.entries()),
         cookies: request.cookies.getAll()
       }, 'PAGE_SAVE');
       return createErrorResponse('UNAUTHORIZED', 'Authentication required. Please log in again.');
     }
+    console.log('🔵 API: User authenticated', { userId: currentUserId });
 
+    console.log('🔵 API: Parsing request body');
     logger.debug('Parsing request body', undefined, 'PAGE_SAVE');
     const body = await request.json();
     const { id, title, content, location, groupId, customDate } = body;
+
+    console.log('🔵 API: Request body parsed', {
+      pageId: id,
+      title: title ? `"${title}"` : 'undefined',
+      hasContent: !!content,
+      contentType: typeof content,
+      contentLength: content ? JSON.stringify(content).length : 0,
+      hasLocation: !!location,
+      groupId,
+      customDate,
+      userId: currentUserId
+    });
 
     logger.info('Page save request', {
       pageId: id,
@@ -449,9 +471,20 @@ export async function PUT(request: NextRequest) {
       }, 'PAGE_SAVE');
 
       // Save new version (this creates activity records and updates lastDiff)
+      console.log('🔵 API: Calling saveNewVersion', { pageId: id, versionDataKeys: Object.keys(versionData) });
       const versionResult = await saveNewVersion(id, versionData);
+      console.log('🔵 API: saveNewVersion returned', {
+        versionResult,
+        success: versionResult?.success,
+        error: versionResult?.error
+      });
 
       if (!versionResult || !versionResult.success) {
+        console.error('🔴 API: Version save failed', {
+          pageId: id,
+          error: versionResult?.error || 'Version save returned null',
+          versionResult
+        });
         logger.error('Version save failed', {
           pageId: id,
           error: versionResult?.error || 'Version save returned null',
@@ -460,6 +493,10 @@ export async function PUT(request: NextRequest) {
         return createErrorResponse('INTERNAL_ERROR', 'Failed to save page version');
       }
 
+      console.log('✅ API: Version saved successfully', {
+        pageId: id,
+        versionId: versionResult?.versionId
+      });
       logger.info('Version saved successfully', {
         pageId: id,
         versionId: versionResult?.versionId
@@ -512,11 +549,18 @@ export async function PUT(request: NextRequest) {
 
         // Parse content to extract links
         let contentNodes = [];
-        if (content && typeof content === 'string') {
-          try {
-            contentNodes = JSON.parse(content);
-          } catch (parseError) {
-            console.warn('Could not parse content for backlinks indexing:', parseError);
+        if (content) {
+          if (typeof content === 'string') {
+            try {
+              contentNodes = JSON.parse(content);
+            } catch (parseError) {
+              console.warn('Could not parse content string for backlinks indexing:', parseError);
+            }
+          } else if (Array.isArray(content)) {
+            // Content is already parsed as an array
+            contentNodes = content;
+          } else {
+            console.warn('Unexpected content type for backlinks indexing:', typeof content);
           }
         }
 
@@ -540,18 +584,30 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    console.log('✅ API: Page save completed successfully', {
+      pageId: id,
+      updateFields: Object.keys(updateData)
+    });
     logger.info('Page save completed successfully', {
       pageId: id,
       updateFields: Object.keys(updateData)
     }, 'PAGE_SAVE');
 
-    return createApiResponse({
+    const responseData = {
       id,
       ...updateData,
       message: 'Page updated successfully'
-    });
+    };
+    console.log('✅ API: Returning success response', { responseData });
+    return createApiResponse(responseData);
 
   } catch (error: any) {
+    console.error('🔴 API: Page save failed with error', {
+      error: error.message,
+      stack: error.stack,
+      name: error.name,
+      pageId: body?.id
+    });
     logger.critical('Page save failed with error', {
       error: error.message,
       stack: error.stack,
@@ -564,6 +620,7 @@ export async function PUT(request: NextRequest) {
       ? 'Authentication error. Please refresh the page and try again.'
       : 'Failed to update page. Please try again.';
 
+    console.error('🔴 API: Returning error response', { userMessage });
     return createErrorResponse('INTERNAL_ERROR', userMessage);
   }
 }

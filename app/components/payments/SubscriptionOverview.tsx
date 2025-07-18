@@ -7,7 +7,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { CreditCard, Settings, AlertTriangle, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import { StatusIcon } from '../ui/status-icon';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 // Removed old smart subscription state hook - using API-first approach
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -26,7 +26,8 @@ interface Subscription {
 
 export function SubscriptionOverview() {
   const { currentAccount } = useCurrentAccount();
-  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email);
+  // Payments feature is now always enabled
+  const isPaymentsEnabled = true;
 
   // Use API-first approach instead of complex smart subscription state
   const [subscription, setSubscription] = useState(null);

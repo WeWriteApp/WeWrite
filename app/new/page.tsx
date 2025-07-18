@@ -59,7 +59,7 @@ interface PageData {
   title: string;
 
   location: any;
-  content: string;
+  content: any; // Can be object or string - API will handle stringification
   userId: string;
   username: string;
   lastModified: string;
@@ -525,7 +525,7 @@ function NewPageContent() {
         title: pageTitle,
 
         location,
-        content: JSON.stringify(finalContent),
+        content: finalContent, // Pass as object, not stringified - API will handle stringification
         userId,
         username,
         lastModified: new Date().toISOString(),
@@ -695,7 +695,10 @@ function NewPageContent() {
               window.dispatchEvent(new CustomEvent('page-created-immediate', {
                 detail: { pageData: newPageData, userId }
               }));
-              console.log('✅ Immediate page-created event dispatched with page data');
+              window.dispatchEvent(new CustomEvent('pageSaved', {
+                detail: { pageId, title: eventTitle, content: content }
+              }));
+              console.log('✅ Immediate page-created and pageSaved events dispatched');
             }
           } catch (eventError) {
             console.error('Error dispatching immediate page-created event (non-fatal):', eventError);

@@ -14,12 +14,8 @@ import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphon
 import { db } from "../firebase/config";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
-import { FeatureFlag, isAdmin } from "../utils/feature-flags";
 import { usePWA } from '../providers/PWAProvider';
-import { useFeatureFlags } from "../hooks/useFeatureFlags";
-import SyncFeatureFlagsButton from '../components/utils/SyncFeatureFlagsButton';
 import Link from 'next/link';
-import FeatureFlagCard from '../components/admin/FeatureFlagCard';
 import { UserManagement } from '../components/admin/UserManagement';
 import { MockEarningsService } from '../services/mockEarningsService';
 
@@ -30,12 +26,7 @@ interface User {
   isAdmin?: boolean;
 }
 
-interface FeatureFlagState {
-  id: FeatureFlag;
-  name: string;
-  description: string;
-  enabled: boolean;
-}
+
 
 export default function AdminPage() {
   const { currentAccount, isLoading: authLoading } = useCurrentAccount();
@@ -69,28 +60,7 @@ export default function AdminPage() {
   const [distributionLoading, setDistributionLoading] = useState(false);
   const [inactiveSubscriptionEnabled, setInactiveSubscriptionEnabled] = useState(false);
 
-  // Feature flags state - using system string names for easier identification
-  const [featureFlags, setFeatureFlags] = useState<FeatureFlagState[]>([
-    {
-      id: 'payments',
-      name: 'payments',
-      description: 'Enable subscription functionality, payment processing, and token-based pledge system',
-      enabled: false
-    },
-    {
-      id: 'map_view',
-      name: 'map_view',
-      description: 'Enable map view for pages with location data and geographic visualization',
-      enabled: false
-    },
-    {
-      id: 'calendar_view',
-      name: 'calendar_view',
-      description: 'Enable calendar view for activity tracking and temporal organization',
-      enabled: false
-    }
-
-  ]);
+  // Feature flags have been removed - all features are now always enabled
 
   // Load filter state from session storage
   useEffect(() => {
@@ -166,7 +136,6 @@ export default function AdminPage() {
       } else {
         try {
           loadAdminUsers();
-          loadFeatureFlags();
         } catch (error) {
           console.error('Error in admin data loading:', error);
         }
@@ -224,63 +193,7 @@ export default function AdminPage() {
     }
   };
 
-  // Load feature flags from Firestore
-  const loadFeatureFlags = async () => {
-    try {
-      setIsLoading(true);
-
-      // Get feature flags from Firestore
-      const featureFlagsRef = doc(db, 'config', 'featureFlags');
-      const featureFlagsDoc = await getDoc(featureFlagsRef);
-
-      if (featureFlagsDoc.exists()) {
-        const flagsData = featureFlagsDoc.data();
-
-        // Filter out any flags that aren't defined in our FeatureFlag type
-        const validFlags = {};
-        Object.keys(flagsData).forEach(key => {
-          // Only include keys that match our defined feature flags
-          if (featureFlags.some(flag => flag.id === key)) {
-            validFlags[key] = flagsData[key];
-          }
-        });
-
-        // Update local state with data from Firestore
-        setFeatureFlags(prev => {
-          const updatedFlags = prev.map(flag => ({
-            ...flag,
-            enabled: validFlags[flag.id] !== undefined ? validFlags[flag.id] : flag.enabled
-          }));
-          return updatedFlags;
-        });
-
-        // Groups feature flag removed - no longer needed
-
-        // If we found invalid flags, update the database to remove them
-        if (Object.keys(validFlags).length !== Object.keys(flagsData).length) {
-          await setDoc(featureFlagsRef, validFlags);
-        }
-      } else {
-        // If the document doesn't exist, create it with all feature flags
-
-        const initialFlags = {};
-        featureFlags.forEach(flag => {
-          initialFlags[flag.id] = flag.enabled;
-        });
-
-        await setDoc(featureFlagsRef, initialFlags);
-      }
-    } catch (error) {
-      console.error('[DEBUG] Error loading feature flags:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load feature flags',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Feature flags have been removed - no loading needed
 
   // Handle search for users
   const handleSearch = async () => {
@@ -390,143 +303,7 @@ export default function AdminPage() {
     }
   };
 
-  // Toggle feature flag with robust error handling and retry logic
-  const toggleFeatureFlag = async (flagId: FeatureFlag, newState?: boolean) => {
-    try {
-      setIsLoading(true);
-
-      // Check if user is admin
-      if (!currentAccount || currentAccount.email !== 'jamiegray2234@gmail.com') {
-        throw new Error('Admin access required');
-      }
-
-      const featureFlagsRef = doc(db, 'config', 'featureFlags');
-
-      // Get current value if newState is not provided
-      let newEnabledState = newState;
-      if (newState === undefined) {
-        const featureFlagsDoc = await getDoc(featureFlagsRef);
-        const currentValue = featureFlagsDoc.exists() ? featureFlagsDoc.data()[flagId] || false : false;
-        newEnabledState = !currentValue;
-      }
-
-      // Multiple retry strategies to handle "blocked by client" errors
-      let updateSuccess = false;
-      let lastError: unknown = null;
-
-      // Strategy 1: Try updateDoc
-      if (!updateSuccess) {
-        try {
-          await updateDoc(featureFlagsRef, {
-            [flagId]: newEnabledState
-          });
-          updateSuccess = true;
-        } catch (updateError) {
-          lastError = updateError;
-        }
-      }
-
-      // Strategy 2: Try setDoc with merge
-      if (!updateSuccess) {
-        try {
-          const currentDoc = await getDoc(featureFlagsRef);
-          const currentData = currentDoc.exists() ? currentDoc.data() : {};
-          await setDoc(featureFlagsRef, {
-            ...currentData,
-            [flagId]: newEnabledState
-          });
-          updateSuccess = true;
-        } catch (setDocError) {
-          lastError = setDocError;
-        }
-      }
-
-      // Strategy 3: Try with a small delay (sometimes helps with rate limiting)
-      if (!updateSuccess) {
-        try {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          await updateDoc(featureFlagsRef, {
-            [flagId]: newEnabledState
-          });
-          updateSuccess = true;
-        } catch (delayedError) {
-          lastError = delayedError;
-        }
-      }
-
-      if (!updateSuccess) {
-        throw lastError || new Error('All update strategies failed');
-      }
-
-      // Update local state after successful database write
-      setFeatureFlags(prev =>
-        prev.map(flag =>
-          flag.id === flagId ? { ...flag, enabled: newEnabledState ?? false } : flag
-        )
-      );
-
-      // Trigger a feature flag refresh event for all users
-      try {
-        window.dispatchEvent(new CustomEvent('featureFlagChanged', {
-          detail: { flagId, newValue: newEnabledState, timestamp: Date.now() }
-        }));
-      } catch (eventError) {
-        console.warn('Could not dispatch feature flag change event:', eventError);
-      }
-
-      toast({
-        title: 'Success',
-        description: `${flagId} is now ${newEnabledState ? 'enabled' : 'disabled'} for everyone`,
-        variant: 'default'
-      });
-
-    } catch (error: unknown) {
-      console.error('Error toggling feature flag:', error);
-
-      // Enhanced error handling with specific solutions
-      let errorMessage = 'Failed to update feature flag';
-      let showConsoleHelp = false;
-
-      if (error && typeof error === 'object' && 'code' in error) {
-        const firebaseError = error as { code: string; message?: string };
-        if (firebaseError.code === 'permission-denied') {
-          errorMessage = 'Permission denied. You may not have admin access.';
-        } else if (firebaseError.code === 'unavailable') {
-          errorMessage = 'Database is temporarily unavailable. Please try again.';
-        } else if (firebaseError.message?.includes('blocked') || firebaseError.message?.includes('client')) {
-          errorMessage = 'Request blocked by browser security or ad blocker. Try disabling ad blockers or use browser console.';
-          showConsoleHelp = true;
-        } else if (firebaseError.message?.includes('network')) {
-          errorMessage = 'Network error occurred. Check your internet connection.';
-        } else if (firebaseError.message) {
-          errorMessage = `Error: ${firebaseError.message}`;
-          showConsoleHelp = true;
-        }
-      }
-
-      // Show enhanced error message
-      toast({
-        title: 'Error',
-        description: errorMessage + (showConsoleHelp ? ` Console command: enableFeatureFlag("${flagId}")` : ''),
-        variant: 'destructive'
-      });
-
-      // Log console command for easy copy-paste
-      if (showConsoleHelp) {
-        console.log(`%c🚀 Console Command to Fix This:`, 'color: #00ff00; font-weight: bold; font-size: 14px;');
-        console.log(`%cenableFeatureFlag("${flagId}")`, 'color: #ffff00; font-weight: bold; font-size: 12px; background: #333; padding: 4px;');
-      }
-
-      // Reload feature flags from database to ensure consistency
-      try {
-        await loadFeatureFlags();
-      } catch (reloadError) {
-        console.error('Failed to reload feature flags after error:', reloadError);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Feature flags have been removed - no toggle function needed
 
   // Handle triggering PWA alert
   const handleTriggerPWAAlert = () => {
@@ -877,10 +654,7 @@ export default function AdminPage() {
     }
   };
 
-  // Filter feature flags based on hideGloballyEnabled setting
-  const filteredFeatureFlags = hideGloballyEnabled
-    ? featureFlags.filter(flag => !flag.enabled)
-    : featureFlags;
+  // Feature flags have been removed
 
   // Enhanced loading and error states
   if (authLoading) {
@@ -967,46 +741,7 @@ export default function AdminPage() {
           </div>
         </SwipeableTabsList>
 
-        {/* Feature Flags Tab */}
-        <SwipeableTabsContent value="features" className="space-y-6 pt-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Feature Flags</h2>
-            <div className="flex items-center gap-3">
-              <Checkbox
-                id="hide-globally-enabled"
-                checked={hideGloballyEnabled}
-                onCheckedChange={(checked) => setHideGloballyEnabled(checked as boolean)}
-              />
-              <label htmlFor="hide-globally-enabled" className="text-sm cursor-pointer">
-                Hide enabled ({filteredFeatureFlags.length}/{featureFlags.length})
-              </label>
-            </div>
-          </div>
-
-          {isLoading ? (
-            <div className="flex justify-center py-4">
-              <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <>
-
-              <div className="space-y-3">
-                {filteredFeatureFlags.map(flag => (
-                  <FeatureFlagCard
-                    key={flag.id}
-                    flag={flag}
-                    onToggle={(flagId, checked) => toggleFeatureFlag(flagId, checked)}
-                    onPersonalToggle={(flagId, checked) => {
-                      // Personal toggle doesn't need to update the global state
-                      // The component handles its own personal state
-                    }}
-                    isLoading={isLoading}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </SwipeableTabsContent>
+        {/* Feature Flags Tab - Removed as all features are now always enabled */}
 
         {/* Users Tab - Combined User Management and Admin Users */}
         <SwipeableTabsContent value="users" className="space-y-6 pt-6">
@@ -1267,18 +1002,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Feature Flags Sync Tool */}
-            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">Feature Flags Sync</h3>
-              </div>
-              <span className="text-sm text-muted-foreground mb-3">
-                Synchronize feature flags in the database by removing invalid flags and ensuring all valid flags are present with correct metadata.
-              </span>
-              <div className="mt-2">
-                <SyncFeatureFlagsButton />
-              </div>
-            </div>
+            {/* Feature Flags Sync Tool - Removed as feature flags have been eliminated */}
 
             {/* Admin Dashboard */}
             <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">

@@ -303,23 +303,7 @@ service cloud.firestore {
 
     // Groups functionality removed - no longer needed
 
-    // Feature flags - Public configuration that everyone can read
-    match /config/featureFlags {
-      // Allow everyone to read feature flags (no auth required)
-      allow read: if true;
-
-      // Only allow writing by admin users
-      allow write: if isAdmin();
-    }
-
-    // Environment-specific feature flags - Public configuration that everyone can read
-    match /{envConfig}/featureFlags {
-      // Allow everyone to read feature flags from any environment (no auth required)
-      allow read: if envConfig.matches('.*config') || envConfig == 'config';
-
-      // Only allow writing by admin users
-      allow write: if (envConfig.matches('.*config') || envConfig == 'config') && isAdmin();
-    }
+    // Feature flags have been removed - all features are now always enabled
 
     // Admin users configuration - Super restricted
     match /config/adminUsers {
@@ -781,8 +765,9 @@ service cloud.firestore {
 
     // Backlinks - Efficient backlinks index for fast retrieval
     match /backlinks/{backlinkId} {
-      // Allow reading public backlinks for anyone (needed for backlinks display)
-      allow read: if resource.data.isPublic == true;
+      // Allow authenticated users to read backlinks (needed for page connections and backlinks display)
+      // This enables queries to work properly since all documents in query results must pass security rules
+      allow read: if isAuthenticated();
 
       // Allow authenticated users to create/update backlinks for their own pages
       allow create, update: if isAuthenticated() && (

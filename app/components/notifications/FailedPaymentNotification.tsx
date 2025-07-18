@@ -11,7 +11,7 @@ import {
   X
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 interface FailedPaymentNotificationProps {
   notification: {
@@ -40,12 +40,7 @@ export function FailedPaymentNotification({
   const { currentAccount } = useCurrentAccount();
   const [retrying, setRetrying] = useState(false);
   const [dismissed, setDismissed] = useState(false);
-  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
-
-  // Don't show if payments feature is disabled
-  if (!isPaymentsEnabled) {
-    return null;
-  }
+  // Payments feature is now always enabled - no conditional rendering needed
 
   // Don't show if dismissed
   if (dismissed) {

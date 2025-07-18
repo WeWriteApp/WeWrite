@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCurrentAccount } from '../../../providers/CurrentAccountProvider';
 import { SubscriptionSuccessModal } from '../../../components/payments/SubscriptionSuccessModal';
-import { useFeatureFlag } from "../../../utils/feature-flags";
+
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import OpenCollectiveSupport from '../../../components/payments/OpenCollectiveSupport';
@@ -13,7 +13,8 @@ export default function SubscriptionSuccessPage() {
   const { session } = useCurrentAccount();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isPaymentsEnabled = useFeatureFlag('payments', session?.email);
+  // Payments feature is now always enabled
+  const isPaymentsEnabled = true;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);

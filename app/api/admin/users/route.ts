@@ -6,7 +6,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { isAdminServer } from '../../../utils/server-feature-flags';
+// Admin check function - only jamiegray2234@gmail.com has admin access
+const isAdminServer = (userEmail?: string | null): boolean => {
+  if (!userEmail) return false;
+  return userEmail === 'jamiegray2234@gmail.com';
+};
 
 interface UserData {
   uid: string;
@@ -15,11 +19,7 @@ interface UserData {
   emailVerified: boolean;
   createdAt: any;
   lastLogin?: any;
-  featureFlags: {
-    payments: boolean | null;
-    map_view: boolean | null;
-    calendar_view: boolean | null;
-  };
+  // Feature flags removed - all features are now always enabled
 }
 
 // GET endpoint - Get all users with their details and feature flag overrides
@@ -168,36 +168,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { targetUserId, featureId, enabled } = body;
-
-    if (!targetUserId || !featureId || enabled === undefined) {
-      return NextResponse.json({ 
-        error: 'targetUserId, featureId, and enabled are required' 
-      }, { status: 400 });
-    }
-
-    // Update or create feature flag override
-    const overrideRef = db.collection('featureOverrides').doc(`${targetUserId}_${featureId}`);
-    
-    if (enabled === null) {
-      // Remove override (revert to global setting)
-      await overrideRef.delete();
-    } else {
-      // Set override
-      await overrideRef.set({
-        userId: targetUserId,
-        featureId,
-        enabled,
-        lastModified: new Date().toISOString(),
-        modifiedBy: userId
-      });
-    }
-
+    // Feature flags have been removed - this endpoint no longer handles feature flag updates
     return NextResponse.json({
-      success: true,
-      message: `Feature flag ${featureId} ${enabled === null ? 'reset' : enabled ? 'enabled' : 'disabled'} for user ${targetUserId}`
-    });
+      error: 'Feature flags have been removed from the system'
+    }, { status: 410 }); // 410 Gone - resource no longer available
+
+    // This code is unreachable since we return early above
 
   } catch (error) {
     console.error('Error updating user feature flag:', error);

@@ -11,7 +11,7 @@ import Logo from "../ui/Logo";
 import { openExternalLink } from "../../utils/pwa-detection";
 import { useSidebarContext } from "./UnifiedSidebar";
 import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
-import { useFeatureFlag } from "../../utils/feature-flags";
+
 // Removed old optimized subscription import - using API-first approach
 import { getSubscriptionButtonText, getSubscriptionNavigationPath, isActiveSubscription } from "../../utils/subscriptionStatus";
 import { TokenService } from "../../services/tokenService";
@@ -32,8 +32,8 @@ export default function Header() {
   const [simulatedTokenBalance, setSimulatedTokenBalance] = React.useState<any>(null);
   const headerRef = React.useRef<HTMLDivElement>(null);
 
-  // Check if payments feature is enabled
-  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+  // Payments feature is now always enabled
+  const isPaymentsEnabled = true;
 
   // Helper function to render token allocation display
   const renderTokenAllocationDisplay = () => {
@@ -245,7 +245,7 @@ export default function Header() {
                 {/* Auth navigation removed - functionality moved to UnifiedSidebar */}
               </div>
 
-              {/* Logo/Title (centered) */}
+              {/* Logo/Title (centered) - clickable to go home */}
               <div className="flex items-center justify-center">
                 <Link href="/" className="flex items-center space-x-2 transition-all duration-200 hover:scale-105">
                   <Logo size="md" priority={true} clickable={true} styled={true} />

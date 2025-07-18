@@ -17,7 +17,7 @@ import { extractLinksFromNodes } from "./links";
 import { recordUserActivity } from "../streaks";
 import { hasContentChangedSync } from "../../utils/diffService";
 import { getCollectionName } from "../../utils/environmentConfig";
-import logger from "../../utils/unifiedLogger";
+import logger from "../../utils/logger";
 
 import type { PageVersion } from "../../types/database";
 
@@ -291,6 +291,13 @@ await setDoc(doc(db, getCollectionName("pages"), pageId), {
  */
 export const saveNewVersion = async (pageId: string, data: any): Promise<any> => {
   try {
+    console.log('🔵 VERSION: Starting version save process', {
+      pageId,
+      userId: data.userId,
+      username: data.username,
+      hasContent: !!data.content,
+      contentType: typeof data.content
+    });
     logger.info('Starting version save process', {
       pageId,
       userId: data.userId,
@@ -300,14 +307,23 @@ export const saveNewVersion = async (pageId: string, data: any): Promise<any> =>
 
     // Validate content to prevent saving empty versions
     if (!data.content) {
+      console.error('🔴 VERSION: Cannot save empty content', { pageId });
       logger.error("Cannot save empty content", { pageId }, 'VERSION_SAVE');
       return null;
     }
 
     // Ensure content is a string
+    console.log('🔵 VERSION: Processing content', {
+      contentType: typeof data.content,
+      isString: typeof data.content === 'string'
+    });
     let contentString = typeof data.content === 'string'
       ? data.content
       : JSON.stringify(data.content);
+    console.log('🔵 VERSION: Content processed', {
+      contentStringLength: contentString.length,
+      contentStringSample: contentString.substring(0, 100)
+    });
 
     // CRITICAL FIX: Allow empty content structures to be saved
     // Users should be able to save pages with just a title
@@ -415,11 +431,12 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
     }
 
     // Create the new version document
+    console.log('🔵 VERSION: Creating new version document');
 const versionRef = await addDoc(collection(db, getCollectionName("pages"), pageId, "versions"), versionData);
-    console.log("Created new version with ID:", versionRef.id);
+    console.log("✅ VERSION: Created new version with ID:", versionRef.id);
 
     // Update the page document with the new current version and content
-await setDoc(doc(db, getCollectionName("pages"), pageId), {
+    const pageUpdateData = {
       currentVersion: versionRef.id,
       content: contentString, // Store content directly on page for faster access
       lastModified: now,
@@ -430,19 +447,34 @@ await setDoc(doc(db, getCollectionName("pages"), pageId), {
         hasChanges: (diffResult.added > 0 || diffResult.removed > 0) || isNewPage,
         preview: diffResult.preview || null
       } : null
-    }, { merge: true });
+    };
+    console.log('🔵 VERSION: Updating page document with', {
+      pageId,
+      currentVersion: versionRef.id,
+      contentLength: contentString.length,
+      lastModified: now,
+      hasDiff: !!diffResult
+    });
+await setDoc(doc(db, getCollectionName("pages"), pageId), pageUpdateData, { merge: true });
+    console.log("✅ VERSION: Page document updated successfully");
 
     // Note: User activity for streak tracking is handled on the client side
 
     // Activity creation removed - now using recent pages with diff data stored on pages
 
-    console.log("Successfully saved new version and updated page");
+    console.log("✅ VERSION: Successfully saved new version and updated page");
     return {
       success: true,
       versionId: versionRef.id
     };
 
   } catch (error) {
+    console.error("🔴 VERSION: Error saving new version:", {
+      error: error.message,
+      stack: error.stack,
+      pageId,
+      userId: data.userId
+    });
     console.error("🚨 ACTIVITY DEBUG: Error saving new version:", error);
     return {
       success: false,

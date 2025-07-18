@@ -3,7 +3,7 @@
 import React, { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { SubscriptionCheckoutForm } from '../../../components/payments/SubscriptionCheckoutForm';
-import { useFeatureFlag } from '../../../utils/feature-flags';
+
 import { useCurrentAccount } from '../../../providers/CurrentAccountProvider';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
@@ -20,7 +20,8 @@ function CheckoutPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { currentAccount } = useCurrentAccount();
-  const paymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+  // Payments feature is now always enabled
+  const paymentsEnabled = true;
 
   // Debug logging (development only)
   if (process.env.NODE_ENV === 'development') {

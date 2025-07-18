@@ -36,7 +36,7 @@ export default function EmptyLinesAlert({
 
   return (
     <div className={`mt-6 ${className}`}>
-      <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 shadow-lg rounded-lg">
+      <div className="bg-amber-50 dark:bg-amber-950/20 border-theme-medium shadow-lg rounded-lg">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 gap-3 sm:gap-4">
             {/* Warning content */}
@@ -65,7 +65,7 @@ export default function EmptyLinesAlert({
                 variant="outline"
                 size="sm"
                 onClick={onDeleteAllEmptyLines}
-                className="gap-2 h-8 px-3 text-xs sm:text-sm border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+                className="gap-2 h-8 px-3 text-xs sm:text-sm border-theme-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Delete Empty Lines

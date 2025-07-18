@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 // Removed enhanced subscription error logging imports
 import { 
   CreditCard, 
@@ -61,7 +61,8 @@ interface Pledge {
 
 function CombinedSubscriptionSectionInner() {
   const { currentAccount } = useCurrentAccount();
-  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+  // Payments feature is now always enabled
+  const isPaymentsEnabled = true;
 
   // Removed enhanced error tracking
 

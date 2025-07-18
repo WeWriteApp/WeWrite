@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { X, Heart, Map, Info, MessageSquare, Github } from 'lucide-react';
-import { useFeatureFlag } from "../../utils/feature-flags";
+
 import { openExternalLink } from "../../utils/pwa-detection";
 
 interface SiteFooterProps {
@@ -23,7 +23,8 @@ interface FooterLink {
  */
 export default function SiteFooter({ className = "" }: SiteFooterProps) {
   const currentYear = new Date().getFullYear();
-  const isPaymentsEnabled = useFeatureFlag('payments');
+  // Payments feature is now always enabled
+  const isPaymentsEnabled = true;
 
   // Interactive footer text options
   const [madeWithIndex, setMadeWithIndex] = useState(0);

@@ -2,7 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
-import { isAdmin } from '../../utils/feature-flags';
+// Admin check function - only jamiegray2234@gmail.com has admin access
+const isAdmin = (userEmail?: string | null): boolean => {
+  if (!userEmail) return false;
+  return userEmail === 'jamiegray2234@gmail.com';
+};
 import AdminStateSimulator from './AdminStateSimulator';
 
 /**

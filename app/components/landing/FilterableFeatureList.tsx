@@ -139,7 +139,7 @@ export function FilterableFeatureList({
             className={`filter-chip px-3 py-1.5 h-auto rounded-full transition-all duration-300 ease-in-out flex-shrink-0 text-xs ${
               filters.inProgress
                 ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-md'
-                : 'text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-950/30'
+                : 'text-amber-600 border-theme-medium hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30'
             }`}
             onClick={() => toggleFilter('inProgress')}
           >
@@ -165,7 +165,7 @@ export function FilterableFeatureList({
             className={`filter-chip px-3 py-1.5 h-auto rounded-full transition-all duration-300 ease-in-out flex-shrink-0 text-xs ${
               filters.available
                 ? 'bg-green-500 hover:bg-green-600 text-white shadow-md'
-                : 'text-green-600 border-green-300 hover:bg-green-100 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-900/30'
+                : 'text-green-600 border-theme-medium hover:bg-green-100 dark:text-green-400 dark:hover:bg-green-900/30'
             }`}
             onClick={() => toggleFilter('available')}
           >

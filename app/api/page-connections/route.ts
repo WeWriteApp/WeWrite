@@ -41,24 +41,18 @@ function extractPageIdsFromContent(content: string): string[] {
   return [...new Set(pageIds)]; // Remove duplicates
 }
 
-// Extract page IDs from nodes structure
+// Extract page IDs from nodes structure using the same method as backlinks
 function extractPageIdsFromNodes(nodes: any[]): string[] {
   if (!Array.isArray(nodes)) return [];
-  
-  const pageIds = [];
-  
-  for (const node of nodes) {
-    if (node.type === 'link' && node.url) {
-      // Extract page ID from URL
-      const urlParts = node.url.split('/');
-      const lastPart = urlParts[urlParts.length - 1];
-      if (lastPart && lastPart.length >= 20 && lastPart.length <= 30) {
-        pageIds.push(lastPart);
-      }
-    }
-  }
-  
-  return [...new Set(pageIds)]; // Remove duplicates
+
+  console.log('🔍 [PAGE_CONNECTIONS_API] Extracting page IDs from nodes:', nodes.length);
+
+  // Use the same extraction method as the backlinks system
+  const links = extractPageReferences(nodes);
+
+  console.log('🔍 [PAGE_CONNECTIONS_API] Extracted page IDs:', links);
+
+  return links;
 }
 
 export async function GET(request: NextRequest) {
@@ -116,26 +110,39 @@ export async function GET(request: NextRequest) {
 
     // Get outgoing connections (forward links)
     let outgoing: PageConnection[] = [];
+    console.log(`🔗 [PAGE_CONNECTIONS_API] Getting outgoing connections for page: ${pageId}`);
     
     try {
       const pageDoc = await db.collection(getCollectionName('pages')).doc(pageId).get();
       
       if (pageDoc.exists) {
         const pageData = pageDoc.data();
+        console.log(`🔗 [PAGE_CONNECTIONS_API] Page data:`, {
+          hasContent: !!pageData.content,
+          contentType: typeof pageData.content,
+          contentLength: pageData.content ? JSON.stringify(pageData.content).length : 0,
+          hasNodes: !!pageData.nodes
+        });
+
         let linkedPageIds: string[] = [];
-        
+
         // Extract page references from content using the proper link extraction function
         if (pageData.content) {
-          linkedPageIds.push(...extractPageReferences(pageData.content));
+          const extractedIds = extractPageReferences(pageData.content);
+          console.log(`🔗 [PAGE_CONNECTIONS_API] extractPageReferences found ${extractedIds.length} IDs:`, extractedIds);
+          linkedPageIds.push(...extractedIds);
         }
 
         // Extract from nodes (legacy support)
         if (pageData.nodes) {
-          linkedPageIds.push(...extractPageIdsFromNodes(pageData.nodes));
+          const nodeIds = extractPageIdsFromNodes(pageData.nodes);
+          console.log(`🔗 [PAGE_CONNECTIONS_API] extractPageIdsFromNodes found ${nodeIds.length} IDs:`, nodeIds);
+          linkedPageIds.push(...nodeIds);
         }
-        
+
         // Remove duplicates and the current page
         linkedPageIds = [...new Set(linkedPageIds)].filter(id => id !== pageId);
+        console.log(`🔗 [PAGE_CONNECTIONS_API] After filtering: ${linkedPageIds.length} unique outgoing links:`, linkedPageIds);
         
         if (linkedPageIds.length > 0) {
           // Get details for linked pages (batch them to avoid too many queries)

@@ -31,7 +31,7 @@ function SecurityPageContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-card border-b-only">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -54,7 +54,7 @@ function SecurityPageContent() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-card border-b-only">
         <div className="px-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-5 bg-transparent border-b-0">
@@ -284,7 +284,7 @@ export default function SecurityPage() {
     <Suspense fallback={
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground mx-auto mb-4"></div>
           <p className="text-gray-600">Loading security dashboard...</p>
         </div>
       </div>

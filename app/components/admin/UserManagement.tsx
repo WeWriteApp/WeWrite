@@ -40,17 +40,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Alert, AlertDescription } from '../ui/alert';
 
-/**
- * Available feature flags in the WeWrite application
- * These flags control access to various features and can be overridden per user
- */
-const FEATURE_FLAGS = [
-  'payments',           // Subscription and payment functionality (includes token system)
-  'map_view',          // Geographic visualization features
-  'calendar_view',     // Temporal organization and calendar features
-] as const;
+// Feature flags have been removed - all features are now always enabled
 
-type FeatureFlagKey = typeof FEATURE_FLAGS[number];
+// Feature flags have been removed
 
 /**
  * User data interface for admin panel display
@@ -64,7 +56,7 @@ interface UserData {
   emailVerified?: boolean;  // Fetched from Firebase Auth, not Firestore
   createdAt?: string;
   lastLogin?: string;
-  featureFlags?: Record<FeatureFlagKey, boolean | null>; // null = using global default
+  // Feature flags removed - all features are now always enabled
 }
 
 /**
@@ -224,82 +216,7 @@ export function UserManagement() {
     }
   }, [searchTerm, users]);
 
-  /**
-   * Toggle feature flag for a specific user
-   *
-   * Implements three-state logic:
-   * - null (Global) → true (Enabled override)
-   * - true (Enabled) → false (Disabled override)
-   * - false (Disabled) → null (Global default)
-   *
-   * @param userId - The user's unique identifier
-   * @param flag - The feature flag to toggle
-   * @param currentValue - Current state: null=global, true=enabled, false=disabled
-   */
-  const toggleUserFeatureFlag = async (userId: string, flag: FeatureFlagKey, currentValue: boolean | null) => {
-    try {
-      console.log(`Toggling feature flag ${flag} for user ${userId} from ${currentValue}`);
-
-      let newValue: boolean | null;
-      if (currentValue === null) {
-        // Currently using global default, set to enabled override
-        newValue = true;
-      } else if (currentValue === true) {
-        // Currently enabled, set to disabled override
-        newValue = false;
-      } else {
-        // Currently disabled, remove override (use global default)
-        newValue = null;
-      }
-
-      // Call the admin users API endpoint to update feature flag
-      const response = await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          targetUserId: userId,
-          featureId: flag,
-          enabled: newValue
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to update feature flag');
-      }
-
-      console.log(`Successfully updated ${flag} for user ${userId} to ${newValue}`);
-
-      // Reload users to reflect changes
-      await loadUsers();
-    } catch (error: any) {
-      console.error(`Error toggling feature flag ${flag} for user ${userId}:`, error);
-
-      // Show user-friendly error message
-      let errorMessage = `Failed to update ${flag} setting`;
-      if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
-        errorMessage = 'Authentication required: Please log in again';
-      } else if (error.message?.includes('403') || error.message?.includes('Admin access required')) {
-        errorMessage = 'Permission denied: Cannot modify feature flags';
-      } else if (error.message?.includes('500')) {
-        errorMessage = 'Server error: Please try again later';
-      }
-
-      setError({
-        hasError: true,
-        message: errorMessage,
-        details: error.message || 'Unknown error occurred'
-      });
-    }
-  };
+  // Feature flag management removed - all features are now always enabled
 
   /**
    * Load users on component mount
@@ -350,56 +267,7 @@ export function UserManagement() {
     }
   };
 
-  /**
-   * Render feature flag cell with interactive toggle button
-   *
-   * Displays current state and allows toggling between three states:
-   * - G (Global): Using system default
-   * - ✓ (Check): User override enabled
-   * - ✗ (X): User override disabled
-   *
-   * @param user - User data object
-   * @param flag - Feature flag key
-   * @returns JSX table cell with interactive button
-   */
-  const renderFeatureFlagCell = (user: UserData, flag: FeatureFlagKey) => {
-    const value = user.featureFlags?.[flag];
-
-    /**
-     * Generate tooltip text explaining current state
-     */
-    const getTooltipText = () => {
-      if (value === null) return `Using global default for ${flag}`;
-      return `${flag} is ${value ? 'enabled' : 'disabled'} for this user`;
-    };
-
-    return (
-      <TableCell key={flag} className="text-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          className={`h-8 w-8 p-0 hover:bg-muted/50 ${
-            value === null
-              ? 'text-muted-foreground'
-              : value
-                ? 'text-success hover:text-success/80'
-                : 'text-destructive hover:text-destructive/80'
-          }`}
-          onClick={() => toggleUserFeatureFlag(user.uid, flag, value ?? null)}
-          disabled={loading}
-          title={getTooltipText()}
-        >
-          {value === null ? (
-            <span className="text-xs font-medium">G</span>
-          ) : value ? (
-            <Check className="h-4 w-4" />
-          ) : (
-            <X className="h-4 w-4" />
-          )}
-        </Button>
-      </TableCell>
-    );
-  };
+  // Feature flag cell rendering removed - all features are now always enabled
 
   return (
     <div className="w-full space-y-6">
@@ -505,11 +373,7 @@ export function UserManagement() {
                 <TableHead className="w-[120px]">Username</TableHead>
                 <TableHead className="w-[100px]">Status</TableHead>
                 <TableHead className="w-[120px]">Joined</TableHead>
-                {FEATURE_FLAGS.map(flag => (
-                  <TableHead key={flag} className="w-[80px] text-center">
-                    {flag.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </TableHead>
-                ))}
+                {/* Feature flag columns removed - all features are now always enabled */}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -544,7 +408,7 @@ export function UserManagement() {
                       </Tooltip>
                     </TooltipProvider>
                   </TableCell>
-                  {FEATURE_FLAGS.map(flag => renderFeatureFlagCell(session, flag))}
+                  {/* Feature flag cells removed - all features are now always enabled */}
                 </TableRow>
               ))}
             </TableBody>

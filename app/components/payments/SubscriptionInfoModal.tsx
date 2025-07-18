@@ -14,7 +14,7 @@ import { Button } from "../ui/button";
 import Link from "next/link";
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 import { SUBSCRIPTION_TIERS } from '../../utils/subscriptionTiers';
 
 interface TierModalProps {
@@ -28,7 +28,8 @@ interface TierModalProps {
 
 export function SubscriptionInfoModal({ children, trigger, currentTier = null, currentStatus = null, userId = null, username = null }: TierModalProps) {
   const { currentAccount } = useCurrentAccount();
-  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email);
+  // Payments feature is now always enabled
+  const isPaymentsEnabled = true;
 
   // If payments feature flag is disabled, just render the children without modal functionality
   if (!isPaymentsEnabled) {

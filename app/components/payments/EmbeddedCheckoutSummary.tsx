@@ -128,7 +128,7 @@ export function EmbeddedCheckoutSummary() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 border-green-200 dark:border-green-800">
+      <Card className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 border-theme-medium">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-green-800 dark:text-green-200">
             <CheckCircle className="w-6 h-6" />
@@ -136,7 +136,7 @@ export function EmbeddedCheckoutSummary() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-green-700 dark:text-green-300 mb-4">
+          <p className="text-success-foreground mb-4">
             The PWA-compatible embedded subscription checkout system has been successfully implemented. 
             All payment flows now work seamlessly within the app without external redirects.
           </p>

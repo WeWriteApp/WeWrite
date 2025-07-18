@@ -65,19 +65,25 @@ export const navigateToPage = (
 ): void => {
   const url = getPageUrl(pageId, currentAccount, page, userGroups);
 
-  console.log('Navigating to page with permissions:', {
+  console.log('🔵 NAVIGATION: navigateToPage called', {
     pageId,
     url,
     canEdit: page ? canUserEditPage(currentAccount, page, userGroups) : 'unknown',
     userId: currentAccount?.uid,
-    pageUserId: page?.userId
+    pageUserId: page?.userId,
+    hasRouter: !!router,
+    routerType: typeof router?.push
   });
 
   // Navigate without scrolling the current page
   // Scroll restoration will be handled by the destination page
   if (router && typeof router.push === 'function') {
+    console.log('🔵 NAVIGATION: Using router.push', { url });
     router.push(url);
   } else if (typeof window !== 'undefined') {
+    console.log('🔵 NAVIGATION: Using window.location.href', { url });
     window.location.href = url;
+  } else {
+    console.error('🔴 NAVIGATION: No navigation method available', { router, hasWindow: typeof window !== 'undefined' });
   }
 };

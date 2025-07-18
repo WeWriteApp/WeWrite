@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { MapPin, X } from 'lucide-react';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 import MapView from './MapView';
 
 /**
@@ -14,14 +14,12 @@ import MapView from './MapView';
  * Only renders when the 'map' feature flag is enabled.
  */
 const MapEditor = ({ location, onChange, compact = false }) => {
-  const mapFeatureEnabled = useFeatureFlag('map');
+  // Map feature is now always enabled
+  const mapFeatureEnabled = true;
   const [isOpen, setIsOpen] = useState(false);
   const [tempLocation, setTempLocation] = useState(location);
 
-  // Don't render if map feature is disabled
-  if (!mapFeatureEnabled) {
-    return null;
-  }
+  // Map feature is always enabled now
 
   const handleOpenChange = (open) => {
     setIsOpen(open);

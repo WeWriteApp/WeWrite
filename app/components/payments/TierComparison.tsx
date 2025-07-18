@@ -6,7 +6,7 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Check, Star, Zap, Crown } from 'lucide-react';
 import { SUBSCRIPTION_TIERS, CUSTOM_TIER_CONFIG } from '../../utils/subscriptionTiers';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 interface TierComparisonProps {
   currentTier?: string;
@@ -24,12 +24,8 @@ export function TierComparison({
   compact = false 
 }: TierComparisonProps) {
   const { session } = useCurrentAccount();
-  const isPaymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
-
-  // Don't render if payments feature is disabled
-  if (!isPaymentsEnabled) {
-    return null;
-  }
+  // Payments feature is now always enabled - no conditional rendering needed
+  const isPaymentsEnabled = true;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

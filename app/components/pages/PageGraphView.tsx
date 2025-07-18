@@ -30,6 +30,7 @@ interface PageGraphViewProps {
   pageId: string;
   pageTitle: string;
   className?: string;
+  onRefreshReady?: (refreshFn: () => void) => void;
 }
 
 /**
@@ -42,7 +43,7 @@ interface PageGraphViewProps {
  * - Interactive: Click to navigate, pinch to zoom, drag nodes
  * - Styled with current pill link style
  */
-export default function PageGraphView({ pageId, pageTitle, className = "" }: PageGraphViewProps) {
+export default function PageGraphView({ pageId, pageTitle, className = "", onRefreshReady }: PageGraphViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [nodes, setNodes] = useState<GraphNode[]>([]);
@@ -61,6 +62,13 @@ export default function PageGraphView({ pageId, pageTitle, className = "" }: Pag
     graphLoading: loading,
     refresh
   } = usePageConnectionsGraph(pageId, pageTitle);
+
+  // Expose refresh function to parent component
+  useEffect(() => {
+    if (onRefreshReady && refresh) {
+      onRefreshReady(refresh);
+    }
+  }, [onRefreshReady, refresh]);
 
   // Build graph when connections data changes
   useEffect(() => {

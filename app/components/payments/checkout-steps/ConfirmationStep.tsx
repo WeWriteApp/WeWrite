@@ -177,7 +177,7 @@ export function ConfirmationStep({
           <h2 className="text-2xl font-bold text-green-800 dark:text-green-200 mb-2">
             Subscription Activated!
           </h2>
-          <p className="text-green-700 dark:text-green-300">
+          <p className="text-success-foreground">
             Welcome to WeWrite! Your subscription is now active and ready to use.
           </p>
           {subscriptionId && (

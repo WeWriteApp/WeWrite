@@ -37,7 +37,18 @@ function LocationViewContent() {
   }, [searchParams]);
 
   const handleBack = () => {
-    router.push(returnPath);
+    // Go to previous page - users can reach home via WeWrite logo
+    try {
+      router.back();
+    } catch (error) {
+      console.error("Navigation error:", error);
+      // Fallback to return path if available
+      if (returnPath) {
+        router.push(returnPath);
+      } else {
+        window.history.back();
+      }
+    }
   };
 
   const formatCoordinates = (loc: Location) => {

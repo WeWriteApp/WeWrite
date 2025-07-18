@@ -77,7 +77,7 @@ export function WarningDot({
   return (
     <div
       className={cn(
-        'absolute rounded-full border-2 border-white dark:border-gray-900 z-10',
+        'absolute rounded-full border-2 border-background z-10',
         sizeClasses[size],
         variantClasses[variant],
         !offset && positionClasses[position],

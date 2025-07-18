@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { useCurrentAccount } from '../providers/CurrentAccountProvider';
-import { useFeatureFlag } from '../utils/feature-flags';
+
 
 interface UseSubscriptionWarningReturn {
   shouldShowWarning: boolean;
@@ -23,8 +23,8 @@ export function useSubscriptionWarning(): UseSubscriptionWarningReturn {
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if payments feature is enabled
-  const paymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
+  // Payments feature is now always enabled
+  const paymentsEnabled = true;
 
   useEffect(() => {
     if (!session?.uid || !paymentsEnabled) {

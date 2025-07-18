@@ -13,7 +13,7 @@ import { TextSelectionProvider } from "../../providers/TextSelectionProvider";
 import { PageProvider } from "../../contexts/PageContext";
 import { useRecentPages } from "../../contexts/RecentPagesContext";
 import { useLineSettings } from "../../contexts/LineSettingsContext";
-import logger from '../../utils/unifiedLogger';
+import logger, { createLogger } from '../../utils/logger';
 
 // UI Components
 import PublicLayout from "../layout/PublicLayout";
@@ -113,6 +113,11 @@ export default function PageView({
   const [error, setError] = useState<string | null>(null);
   const [titleError, setTitleError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Debug logging for hasUnsavedChanges state
+  useEffect(() => {
+    console.log('🔍 UNSAVED CHANGES: hasUnsavedChanges state changed to:', hasUnsavedChanges);
+  }, [hasUnsavedChanges]);
   const [title, setTitle] = useState('');
   const [customDate, setCustomDate] = useState<string | null>(null);
   const [location, setLocation] = useState<Location | null>(null);
@@ -132,6 +137,7 @@ export default function PageView({
   const contentRef = useRef<HTMLDivElement>(null);
   const viewRecorded = useRef(false);
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const graphRefreshRef = useRef<(() => void) | null>(null);
 
   // Hooks
   const router = useRouter();
@@ -140,7 +146,12 @@ export default function PageView({
   const { addRecentPage } = useRecentPages();
 
   // Logger
-  const logger = createLogger('PageView');
+  const pageLogger = createLogger('PageView');
+
+  // Callback to capture graph refresh function
+  const handleGraphRefreshReady = useCallback((refreshFn: () => void) => {
+    graphRefreshRef.current = refreshFn;
+  }, []);
 
   // Constants
   const maxLoadAttempts = 3;
@@ -149,15 +160,15 @@ export default function PageView({
   // API fallback function
   const tryApiFallback = useCallback(async () => {
     try {
-      logger.debug('Trying API fallback for page load', { pageId });
+      pageLogger.debug('Trying API fallback for page load', { pageId });
       const result = await getPageById(pageId, currentAccount?.uid);
 
       if (result.error) {
-        logger.warn('API fallback failed', { error: result.error, pageId });
+        pageLogger.warn('API fallback failed', { error: result.error, pageId });
         setError(result.error);
         setIsLoading(false);
       } else if (result.pageData) {
-        logger.debug('API fallback successful', { pageId });
+        pageLogger.debug('API fallback successful', { pageId });
         const pageData = result.pageData;
         const versionData = result.versionData;
 
@@ -191,7 +202,7 @@ export default function PageView({
               viewRecorded.current = true;
             }
           } catch (parseError) {
-            logger.error('Failed to parse content from API fallback', { parseError });
+            pageLogger.error('Failed to parse content from API fallback', { parseError });
             setError('Failed to parse page content');
             setIsLoading(false);
           }
@@ -202,39 +213,39 @@ export default function PageView({
           setIsLoading(false);
         }
       } else {
-        logger.warn('API fallback returned no data', { pageId });
+        pageLogger.warn('API fallback returned no data', { pageId });
         setError('Page not found');
         setIsLoading(false);
       }
     } catch (error) {
-      logger.error('API fallback error', { error, pageId });
+      pageLogger.error('API fallback error', { error, pageId });
       setError('Failed to load page');
       setIsLoading(false);
     }
-  }, [pageId, currentAccount?.uid, logger]);
+  }, [pageId, currentAccount?.uid]);
 
   // Handle params Promise
   useEffect(() => {
     if (params && typeof params.then === 'function') {
-      logger.debug('Resolving params Promise');
+      pageLogger.debug('Resolving params Promise');
       params.then((resolvedParams) => {
         setPageId(resolvedParams.id || '');
-        logger.debug('Params resolved', { id: resolvedParams.id });
+        pageLogger.debug('Params resolved', { id: resolvedParams.id });
       });
     } else if (unwrappedParams) {
       setPageId(unwrappedParams.id || '');
-      logger.debug('Using unwrapped params', { id: unwrappedParams.id });
+      pageLogger.debug('Using unwrapped params', { id: unwrappedParams.id });
     }
   }, [params, unwrappedParams]);
 
   // Page loading effect
   useEffect(() => {
     if (!pageId) {
-      logger.debug('No pageId provided');
+      pageLogger.debug('No pageId provided');
       return;
     }
 
-    logger.debug('Starting page load', { pageId, userId: currentAccount?.uid });
+    pageLogger.debug('Starting page load', { pageId, userId: currentAccount?.uid });
     setIsLoading(true);
     setError(null);
 
@@ -243,17 +254,17 @@ export default function PageView({
 
     // If showing version or diff, load version data instead of live page
     if (showVersion && versionId) {
-      logger.debug('Loading version data', { versionId });
+      pageLogger.debug('Loading version data', { versionId });
       loadVersionData();
     } else if (showDiff && versionId) {
-      logger.debug('Loading diff data', { versionId });
+      pageLogger.debug('Loading diff data', { versionId });
       loadDiffData();
     } else {
-      logger.debug('Setting up page loading with API fallback', { pageId });
+      pageLogger.debug('Setting up page loading with API fallback', { pageId });
 
       // In development, use API fallback immediately due to Firestore connectivity issues
       if (process.env.NODE_ENV === 'development') {
-        logger.debug('Development mode detected, using API fallback immediately', { pageId });
+        pageLogger.debug('Development mode detected, using API fallback immediately', { pageId });
         tryApiFallback();
         return;
       }
@@ -264,7 +275,7 @@ export default function PageView({
       // Set up Firebase listener for live page
       const unsubscribe = listenToPageById(pageId, (data) => {
         if (data.error) {
-          logger.warn('Page load error', { error: data.error, pageId });
+          pageLogger.warn('Page load error', { error: data.error, pageId });
         } else {
           console.log('🔍 PageView: Firebase listener - Page data received', {
             hasPageData: !!(data.pageData || data),
@@ -279,7 +290,7 @@ export default function PageView({
         if (data.error) {
           // If Firebase listener fails, try API fallback
           if (!hasReceivedData) {
-            logger.debug('Firebase listener failed, trying API fallback', { pageId });
+            pageLogger.debug('Firebase listener failed, trying API fallback', { pageId });
             tryApiFallback();
           } else {
             setError(data.error);
@@ -293,7 +304,7 @@ export default function PageView({
 
           setPage(pageData);
           if (pageData.title !== title) {
-            logger.debug('Title updated from page data', {
+            pageLogger.debug('Title updated from page data', {
               oldTitle: title,
               newTitle: pageData.title
             });
@@ -313,10 +324,13 @@ export default function PageView({
 
           if (contentToUse) {
             try {
-              console.log('📄 PageView: Raw content before parsing:', {
+              console.log('🔍 PAGE LOAD: Raw content before parsing:', {
                 contentToUse,
                 type: typeof contentToUse,
-                length: typeof contentToUse === 'string' ? contentToUse.length : 'not string'
+                length: typeof contentToUse === 'string' ? contentToUse.length : 'not string',
+                contentSource,
+                pageLastModified: page?.lastModified,
+                versionTimestamp: versionData?.timestamp
               });
 
               const parsedContent = typeof contentToUse === 'string'
@@ -374,7 +388,7 @@ export default function PageView({
       // Set up fallback timeout in case Firebase listener doesn't respond
       fallbackTimeout = setTimeout(() => {
         if (!hasReceivedData) {
-          logger.debug('Firebase listener timeout, trying API fallback', { pageId });
+          pageLogger.debug('Firebase listener timeout, trying API fallback', { pageId });
           tryApiFallback();
         }
       }, 3000); // 3 second timeout
@@ -556,20 +570,38 @@ export default function PageView({
 
   // Event handlers
   const handleContentChange = useCallback((content: any) => {
+    console.log('🔍 CONTENT CHANGE: handleContentChange called', {
+      hasContent: !!content,
+      contentType: typeof content,
+      contentLength: content ? content.length : 0,
+      hasPageContent: !!page?.content
+    });
+
     setEditorState(content);
 
     // Only set unsaved changes if content actually differs from original
     const originalContent = page?.content ? JSON.parse(page.content) : [];
     const contentChanged = JSON.stringify(content) !== JSON.stringify(originalContent);
 
+    console.log('🔍 CONTENT CHANGE: Comparing content', {
+      originalContentLength: originalContent.length,
+      newContentLength: content ? content.length : 0,
+      contentChanged,
+      originalSample: JSON.stringify(originalContent).substring(0, 100),
+      newSample: content ? JSON.stringify(content).substring(0, 100) : 'null'
+    });
+
     if (contentChanged) {
+      console.log('✅ CONTENT CHANGE: Setting hasUnsavedChanges to true');
       setHasUnsavedChanges(true);
+    } else {
+      console.log('⚪ CONTENT CHANGE: No changes detected, not setting hasUnsavedChanges');
     }
   }, [page?.content]);
 
   const handleTitleChange = useCallback((newTitle: string) => {
     if (newTitle !== title) {
-      logger.debug('Title changed', { oldTitle: title, newTitle });
+      pageLogger.debug('Title changed', { oldTitle: title, newTitle });
     }
     setTitle(newTitle);
 
@@ -619,23 +651,43 @@ export default function PageView({
 
   // No need for handleSetIsEditing - always in edit mode
 
-  const handleSave = useCallback(async () => {
-    logger.userAction('Page save initiated', { pageId, hasPage: !!page, title });
+  const handleSave = useCallback(async (passedContent?: any) => {
+    console.log('🔵 PAGE SAVE: Save initiated', {
+      pageId,
+      hasPage: !!page,
+      title,
+      editorStateLength: editorState ? editorState.length : 0,
+      editorStateType: typeof editorState,
+      editorStateSample: editorState ? JSON.stringify(editorState).substring(0, 200) : 'null',
+      passedContentLength: passedContent ? passedContent.length : 0,
+      passedContentType: typeof passedContent
+    });
+
+
+    pageLogger.info('Page save initiated', { pageId, hasPage: !!page, title });
 
     if (!page || !pageId) {
-      logger.warn('Save aborted - no page or pageId', { pageId, hasPage: !!page });
+      console.error('🔴 PAGE SAVE: Save aborted - no page or pageId', { pageId, hasPage: !!page });
+      pageLogger.warn('Save aborted - no page or pageId', { pageId, hasPage: !!page });
       return;
     }
 
     // Validate title is not empty
     if (!title || title.trim() === '') {
-      logger.warn('Save aborted - no title provided', { pageId });
+      console.error('🔴 PAGE SAVE: Save aborted - no title provided', { pageId });
+      pageLogger.warn('Save aborted - no title provided', { pageId });
       setTitleError("Title is required");
       setError("Please add a title before saving");
       return;
     }
 
-    logger.info('Starting page save process', { pageId, title });
+    console.log('🔵 PAGE SAVE: Starting page save process', {
+      pageId,
+      title,
+      contentType: typeof editorState,
+      contentLength: editorState ? editorState.length : 0
+    });
+    pageLogger.info('Starting page save process', { pageId, title });
     setIsSaving(true);
     setError(null);
     setTitleError(null);
@@ -643,23 +695,38 @@ export default function PageView({
     try {
       // Use API route instead of direct Firebase calls
       const contentToSave = editorState;
-      const editorStateJSON = JSON.stringify(contentToSave);
+      console.log('🔵 PAGE SAVE: Content to save prepared', {
+        contentToSaveType: typeof contentToSave,
+        contentToSaveLength: contentToSave ? contentToSave.length : 0,
+        contentToSaveSample: contentToSave ? JSON.stringify(contentToSave).substring(0, 200) : 'null'
+      });
 
       const updateData = {
         id: pageId,
         title: title.trim(),
-        content: editorStateJSON,
+        content: contentToSave, // Pass as object, not stringified - API will handle stringification
         location: location,
         customDate: customDate
       };
 
-      logger.apiRequest('PUT', '/api/pages', {
-        pageId: id,
-        title,
-        hasContent: !!content,
-        contentLength: editorStateJSON.length
+      console.log('🔵 PAGE SAVE: Update data prepared', {
+        id: updateData.id,
+        title: updateData.title,
+        hasContent: !!updateData.content,
+        contentType: typeof updateData.content,
+        contentLength: updateData.content ? JSON.stringify(updateData.content).length : 0,
+        hasLocation: !!updateData.location,
+        customDate: updateData.customDate
       });
 
+      pageLogger.debug('API request: PUT /api/pages', {
+        pageId: pageId,
+        title,
+        hasContent: !!contentToSave,
+        contentLength: contentToSave ? JSON.stringify(contentToSave).length : 0
+      });
+
+      console.log('🔵 PAGE SAVE: Making API request to /api/pages');
       const response = await fetch('/api/pages', {
         method: 'PUT',
         headers: {
@@ -668,27 +735,101 @@ export default function PageView({
         body: JSON.stringify(updateData),
       });
 
+      console.log('🔵 PAGE SAVE: API response received', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        logger.apiResponse('PUT', '/api/pages', response.status, errorData);
+        console.error('🔴 PAGE SAVE: API response not ok', {
+          status: response.status,
+          statusText: response.statusText
+        });
+
+        let errorData = {};
+        try {
+          errorData = await response.json();
+          console.error('🔴 PAGE SAVE: Error response data', errorData);
+        } catch (parseError) {
+          console.error('🔴 PAGE SAVE: Failed to parse error response', parseError);
+        }
+
+        pageLogger.error('API response error: PUT /api/pages', { status: response.status, error: errorData });
 
         // Handle authentication errors specifically
         if (response.status === 401) {
+          console.error('🔴 PAGE SAVE: Authentication error');
           setError("Your session has expired. Please refresh the page and log in again.");
           return; // Don't throw, just show error message
         }
 
-        throw new Error(errorData.message || `API request failed: ${response.status} ${response.statusText}`);
+        const errorMessage = errorData.message || `API request failed: ${response.status} ${response.statusText}`;
+        console.error('🔴 PAGE SAVE: Throwing error', errorMessage);
+        throw new Error(errorMessage);
       }
 
+      console.log('🔵 PAGE SAVE: Parsing successful response');
       const result = await response.json();
-      logger.apiResponse('PUT', '/api/pages', response.status, result);
+      console.log('🔵 PAGE SAVE: Response parsed successfully', {
+        success: result.success,
+        hasData: !!result.data,
+        message: result.message,
+        resultKeys: Object.keys(result)
+      });
+
+      pageLogger.debug('API response success: PUT /api/pages', { status: response.status, result });
 
       if (!result.success) {
+        console.error('🔴 PAGE SAVE: Result indicates failure', result);
         throw new Error(result.message || 'Failed to update page');
       }
 
-      logger.info('Page saved successfully via API', { pageId });
+      console.log('✅ PAGE SAVE: Page saved successfully via API', { pageId });
+      pageLogger.info('Page saved successfully via API', { pageId });
+
+      // CRITICAL: Update local page state with saved content to fix comparison logic
+      console.log('🔍 PAGE SAVE: Updating local page state with saved content');
+      if (page) {
+        const updatedPage = {
+          ...page,
+          content: JSON.stringify(contentToSave), // Store as string like it comes from DB
+          title: title.trim(),
+          location: location,
+          customDate: customDate,
+          lastModified: new Date().toISOString()
+        };
+        setPage(updatedPage);
+        console.log('✅ PAGE SAVE: Local page state updated');
+      }
+
+      // Emit page save event for real-time updates
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pageSaved', {
+          detail: { pageId, title: title.trim(), content: contentToSave }
+        }));
+        console.log('✅ PAGE SAVE: pageSaved event emitted for real-time updates');
+      }
+
+      // CRITICAL: Clear all caches to ensure updated content is loaded
+      console.log('🔍 PAGE SAVE: Clearing all caches for page', { pageId });
+
+      // Clear localStorage and sessionStorage caches
+      if (typeof window !== 'undefined') {
+        const cacheKeys = [
+          `page_${pageId}_${currentAccount?.uid || 'public'}`,
+          `page_${pageId}_public`,
+          `page_${pageId}_undefined`,
+          `cache_page_${pageId}`,
+          `cache_page_${pageId}_${currentAccount?.uid}`
+        ];
+        cacheKeys.forEach(key => {
+          localStorage.removeItem(key);
+          sessionStorage.removeItem(key);
+        });
+        console.log('🔍 PAGE SAVE: Browser cache cleared for keys', cacheKeys);
+      }
 
       // Trigger cache invalidation to refresh daily notes and other components
       try {
@@ -699,6 +840,7 @@ export default function PageView({
         console.error('Error triggering cache invalidation (non-fatal):', cacheError);
       }
 
+      console.log('🔍 PAGE SAVE: Resetting hasUnsavedChanges to false');
       setHasUnsavedChanges(false);
       // Keep isEditing true - ALWAYS edit mode
 
@@ -715,7 +857,7 @@ export default function PageView({
       }
 
       // Clear unsaved changes flag and stay in always-editable mode
-      logger.pageSave(pageId, true, { title });
+      pageLogger.info('Page saved successfully', { pageId, title });
       setHasUnsavedChanges(false);
       setError(null);
 
@@ -723,10 +865,16 @@ export default function PageView({
       const { clearPageVersionCache } = await import('../../services/versionService');
       clearPageVersionCache(pageId);
 
+      // Page connections will refresh automatically via the pageSaved event
+      // No manual refresh needed since we now have real-time updates
+
+      // REMOVED: Page reload was causing issues with subsequent saves
+      // The content should update automatically without needing a reload
+
       // Page data should already be updated after save
       // No need to reload since the save operation updates the page state
     } catch (error) {
-      logger.pageSave(pageId, false, { error: error.message, title });
+      pageLogger.error('Page save failed', { pageId, error: error.message, title });
       setError("Failed to save page. Please try again.");
     } finally {
       setIsSaving(false);
@@ -979,6 +1127,7 @@ export default function PageView({
                 <PageGraphView
                   pageId={page.id}
                   pageTitle={page.title}
+                  onRefreshReady={handleGraphRefreshReady}
                 />
 
                 <RelatedPagesSection
@@ -989,7 +1138,7 @@ export default function PageView({
             )}
           </div>
 
-          {/* Pledge Bar - Show for all pages */}
+          {/* Pledge Bar - Only shows on other users' pages */}
           {page && (
             <PledgeBar
               pageId={page.id}

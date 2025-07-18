@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Input } from '../ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Wallet, DollarSign, Settings, AlertTriangle, CheckCircle, Clock, TrendingUp } from 'lucide-react';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 import { useToast } from '../ui/use-toast';
 import { Alert, AlertDescription } from '../ui/alert';
 import { TokenEarningsService } from '../../services/tokenEarningsService';
@@ -79,7 +79,8 @@ function BankSetup({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: (
 export function PayoutsManager() {
   const { currentAccount } = useCurrentAccount();
   const { toast } = useToast();
-  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+  // Payments feature is now always enabled
+  const isPaymentsEnabled = true;
 
 
 

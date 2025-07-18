@@ -15,7 +15,11 @@ import {
 import { useToast } from '../ui/use-toast';
 import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 import { TestModeDetectionService, TestModeStatus } from '../../services/testModeDetectionService';
-import { isAdmin } from '../../utils/feature-flags';
+// Admin check function - only jamiegray2234@gmail.com has admin access
+const isAdmin = (userEmail?: string | null): boolean => {
+  if (!userEmail) return false;
+  return userEmail === 'jamiegray2234@gmail.com';
+};
 
 /**
  * Test Mode Alert Bar Component
@@ -156,7 +160,7 @@ export default function TestModeAlertBar() {
   };
 
   return (
-    <div className="w-full bg-orange-50 dark:bg-orange-950/20 border-b border-orange-200 dark:border-orange-800">
+    <div className="w-full bg-orange-50 dark:bg-orange-950/20 border-b-only">
       <Alert className="rounded-none border-0 bg-transparent">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-3">
@@ -168,12 +172,12 @@ export default function TestModeAlertBar() {
               
               <div className="flex gap-1">
                 {testStatus.activeTests.mockEarnings && (
-                  <Badge variant="outline" className="text-xs bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-700">
+                  <Badge variant="outline" className="text-xs bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 border-theme-medium">
                     Mock Earnings
                   </Badge>
                 )}
                 {testStatus.activeTests.inactiveSubscription && (
-                  <Badge variant="outline" className="text-xs bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-700">
+                  <Badge variant="outline" className="text-xs bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 border-theme-medium">
                     Inactive Sub Test
                   </Badge>
                 )}

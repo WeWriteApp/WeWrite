@@ -311,7 +311,7 @@ export default function PaymentsAdminPage() {
                 {systemHealth.webhooks === 'critical' && (
                   <div>• <strong>Webhook Processing:</strong> Payment status updates not being received</div>
                 )}
-                <div className="mt-2 pt-2 border-t border-red-200 dark:border-red-800">
+                <div className="mt-2 pt-2 border-t-only">
                   <div className="flex items-center justify-between mb-2">
                     <strong>Quick Fix - Create Missing Firebase Indexes:</strong>
                     <Button
@@ -326,7 +326,7 @@ export default function PaymentsAdminPage() {
 
                   <div className="mt-2 space-y-3">
                     {getFirebaseIndexInstructions().map((instruction, index) => (
-                      <div key={index} className="bg-red-50 dark:bg-red-950 p-3 rounded border border-red-200 dark:border-red-800">
+                      <div key={index} className="bg-red-50 dark:bg-red-950 p-3 rounded border-theme-medium">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-red-700 dark:text-red-300 text-sm">
                             {instruction.title}
@@ -359,7 +359,7 @@ URL: https://console.firebase.google.com/project/wewrite-ccd82/firestore/indexes
                     ))}
                   </div>
 
-                  <div className="mt-3 pt-2 border-t border-red-200 dark:border-red-800">
+                  <div className="mt-3 pt-2 border-t-only">
                     <strong>Additional Troubleshooting:</strong>
                     <div className="mt-1 space-y-1">
                       {getTroubleshootingSteps().map((step, index) => (

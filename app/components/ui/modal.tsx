@@ -184,7 +184,7 @@ export function Modal({
             ref={modalRef}
             className={cn(
               // Base styles
-              "relative bg-background shadow-lg border border-border dark:border-border z-10",
+              "relative bg-background shadow-lg border-theme-medium z-10",
               // Mobile: Full screen slide-up modal with top margin
               "w-full rounded-t-2xl md:rounded-2xl",
               // Mobile height: account for top padding (20px) to prevent full screen coverage

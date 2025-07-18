@@ -16,7 +16,7 @@ import {
   Palette
 } from 'lucide-react';
 import { StatusIcon } from '../components/ui/status-icon';
-import { useFeatureFlag } from '../utils/feature-flags';
+
 // Removed old optimized subscription import - using API-first approach
 import { isActiveSubscription, getSubscriptionStatusInfo } from '../utils/subscriptionStatus';
 import { WarningDot } from '../components/ui/warning-dot';
@@ -45,10 +45,9 @@ export default function SettingsIndexPage() {
   const bankSetupStatus = useBankSetupStatus();
   const tokenBalance = useTokenBalance();
 
-  // Check feature flags with proper user ID for real-time updates
-  const paymentsEnabled = useFeatureFlag('payments', session?.email, session?.uid);
-  // Token system is enabled by payments feature flag
-  const tokenSystemEnabled = paymentsEnabled;
+  // All features are now always enabled
+  const paymentsEnabled = true;
+  const tokenSystemEnabled = true;
 
   const settingsSections: SettingsSection[] = [
     {

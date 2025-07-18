@@ -11,7 +11,7 @@ import { Switch } from "../ui/switch"
 import { logoutUser } from "../../firebase/auth"
 
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
-import { useFeatureFlag } from "../../utils/feature-flags"
+
 import MapEditor from "../editor/MapEditor"
 import { navigateToRandomPage, RandomPageFilters } from "../../utils/randomPageNavigation"
 import RandomPageFilterMenu from "../ui/RandomPageFilterMenu"
@@ -78,8 +78,8 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
 
   // Groups functionality removed
 
-  // Check if map feature is enabled
-  const mapFeatureEnabled = useFeatureFlag('map_view', session?.email, session?.uid);
+  // Map feature is now always enabled
+  const mapFeatureEnabled = true;
 
   // Determine if we're in edit mode
   const isEditMode = !!(editorProps?.onSave && editorProps?.onCancel);

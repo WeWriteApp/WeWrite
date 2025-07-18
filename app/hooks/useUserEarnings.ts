@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useCurrentAccount } from '../providers/CurrentAccountProvider';
-import { useFeatureFlag } from '../utils/feature-flags';
+
 
 interface UserEarnings {
   totalEarnings: number;
@@ -16,7 +16,8 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
   const [earnings, setEarnings] = useState<UserEarnings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const paymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+  // Payments feature is now always enabled
+  const paymentsEnabled = true;
 
   useEffect(() => {
     const fetchEarnings = async () => {

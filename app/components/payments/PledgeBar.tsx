@@ -6,7 +6,7 @@ import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { Button } from "../ui/button";
 import { Plus, Minus } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { useFeatureFlag } from "../../utils/feature-flags";
+
 // Removed old optimized subscription import - using API-first approach
 import { isActiveSubscription } from "../../utils/subscriptionStatus";
 
@@ -63,8 +63,8 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   // Check if current user is the page owner
   const isPageOwner = !!(currentAccount && authorId && currentAccount.uid === authorId);
 
-  // Feature flags
-  const isSubscriptionEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+  // Subscription feature is now always enabled
+  const isSubscriptionEnabled = true;
   
   // State
   const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null);
@@ -79,10 +79,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   }>>([]);
   const [pendingUpdates, setPendingUpdates] = useState<Set<string>>(new Set());
   const [lastUserAction, setLastUserAction] = useState<number>(0);
-  const [pageStats, setPageStats] = useState<{
-    sponsorCount: number;
-    totalPledgedTokens: number;
-  } | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -223,24 +220,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
           setIsLoading(false); // Fast for logged-out users
         }
 
-        // Load page stats for page owners (in background, non-blocking)
-        if (isPageOwner) {
-          fetch(`/api/tokens/page-stats?pageId=${pageId}`)
-            .then(async (statsResponse) => {
-              if (statsResponse.ok) {
-                const statsData = await statsResponse.json();
-                if (statsData.success) {
-                  setPageStats({
-                    sponsorCount: statsData.data.sponsorCount,
-                    totalPledgedTokens: statsData.data.totalPledgedTokens
-                  });
-                }
-              }
-            })
-            .catch(error => {
-              console.error('Error loading page stats:', error);
-            });
-        }
+
       } catch (error) {
         console.error('Error loading token data:', error);
         setIsLoading(false); // Ensure loading state is cleared on error
@@ -248,11 +228,11 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     };
 
     loadTokenData();
-  }, [currentAccount, pageId, isSubscriptionEnabled, isPageOwner]);
+  }, [currentAccount, pageId, isSubscriptionEnabled]);
 
   // Handle token allocation changes
   const handleTokenChange = async (change: number) => {
-    if (!pageId || isPageOwner) return;
+    if (!pageId) return;
 
     // Don't block on isRefreshing - allow rapid clicks for true optimistic updates
     // Set refreshing for visual feedback but don't block subsequent clicks
@@ -539,10 +519,10 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
   // Handle pledge bar click - redirect to landing page if not logged in
   const handlePledgeBarClick = () => {
-    if (!currentAccount && !isPageOwner) {
+    if (!currentAccount) {
       // Redirect to landing page for logged-out users
       router.push('/');
-    } else if (availableTokens <= 0 && !isPageOwner) {
+    } else if (availableTokens <= 0) {
       // Redirect to spend-tokens page if out of tokens
       router.push('/settings/spend-tokens');
     } else {
@@ -553,6 +533,9 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
   // Don't show if not visible or no pageId
   if (!visible || !pageId) return null;
+
+  // Don't show pledge bar on user's own pages
+  if (isPageOwner) return null;
 
   // Calculate token data with correct math
   const totalTokens = tokenBalance?.totalTokens || 0;
@@ -587,12 +570,12 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   const availablePercentage = totalTokens > 0 ? (availableTokens / totalTokens) * 100 : 0;
 
   // Check if user is out of tokens
-  const isOutOfTokens = availableTokens <= 0 && totalTokens > 0 && !isPageOwner;
+  const isOutOfTokens = availableTokens <= 0 && totalTokens > 0;
 
   // Determine user state for notices
   const hasSubscription = subscription && isActiveSubscription(subscription.status);
-  const showSubscriptionNotice = currentAccount && !hasSubscription && isSubscriptionEnabled && !isPageOwner;
-  const showLoginNotice = !currentAccount && !isPageOwner;
+  const showSubscriptionNotice = currentAccount && !hasSubscription && isSubscriptionEnabled;
+  const showLoginNotice = !currentAccount;
 
   return createPortal(
     <div
@@ -613,45 +596,9 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
         onClick={handlePledgeBarClick}
       >
         {/* Main Content */}
-        <div className={cn(
-          "space-y-4",
-          isPageOwner ? "p-3" : "p-4" // Reduced padding for page owners
-        )}>
-          {/* Page Stats for Page Owners - Compact Version */}
-          {isPageOwner && (
-            <div>
-              {pageStats ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="text-center p-2 bg-muted/30 rounded-lg">
-                    <div className="text-xl font-bold text-primary">
-                      {pageStats.sponsorCount}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {pageStats.sponsorCount === 1 ? 'Supporter' : 'Supporters'}
-                    </div>
-                  </div>
-
-                  <div className="text-center p-2 bg-muted/30 rounded-lg">
-                    <div className="text-xl font-bold text-primary">
-                      {pageStats.totalPledgedTokens}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Total Tokens
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center p-2 bg-muted/30 rounded-lg">
-                  <div className="text-xs text-muted-foreground">
-                    Loading...
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+        <div className="space-y-4 p-4">
 
           {/* Token Controls */}
-          {!isPageOwner && (
             <div className="flex items-center gap-3">
               {isLoading ? (
                 <div className="flex items-center gap-3 w-full">
@@ -749,22 +696,19 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                 </>
               )}
             </div>
-          )}
 
-          {/* Token Text - Only show for non-page owners */}
-          {!isPageOwner && (
-            <div className="text-center">
-              <span className={cn(
-                "font-medium text-sm",
-                isOutOfTokens ? "text-orange-500" : "text-primary"
-              )}>
-                {isOutOfTokens
-                  ? "You're out of tokens"
-                  : `${currentTokenAllocation} tokens pledged per month`
-                }
-              </span>
-            </div>
-          )}
+          {/* Token Text */}
+          <div className="text-center">
+            <span className={cn(
+              "font-medium text-sm",
+              isOutOfTokens ? "text-orange-500" : "text-primary"
+            )}>
+              {isOutOfTokens
+                ? "You're out of tokens"
+                : `${currentTokenAllocation} tokens pledged per month`
+              }
+            </span>
+          </div>
         </div>
 
         {/* Warning Banners - MOVED TO BOTTOM */}

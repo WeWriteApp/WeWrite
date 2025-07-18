@@ -202,7 +202,7 @@ export const FeatureCarousel = () => {
                     className="w-full flex-shrink-0"
                     style={{ display: index === activeIndex ? 'block' : 'none' }}
                   >
-                    <Card className="h-full border border-border dark:border-border overflow-hidden">
+                    <Card className="h-full border-theme-medium overflow-hidden">
                       {feature.image && (
                         <div className="relative w-full h-48 overflow-hidden">
                           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-emerald-500/30 z-10"></div>
@@ -246,14 +246,14 @@ export const FeatureCarousel = () => {
           {/* Navigation buttons */}
           <button
             onClick={handlePrev}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 bg-background border border-border dark:border-border rounded-full p-2 shadow-md hover:bg-muted transition-colors z-10"
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 bg-background border-theme-medium rounded-full p-2 shadow-md hover:bg-muted transition-colors z-10"
             aria-label="Previous slide"
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
           <button
             onClick={handleNext}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 bg-background border border-border dark:border-border rounded-full p-2 shadow-md hover:bg-muted transition-colors z-10"
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 bg-background border-theme-medium rounded-full p-2 shadow-md hover:bg-muted transition-colors z-10"
             aria-label="Next slide"
           >
             <ChevronRight className="h-6 w-6" />

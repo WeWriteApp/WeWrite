@@ -50,23 +50,9 @@ export default function UsersPageClient() {
     }
   });
 
-  // Check if subscription feature is enabled
+  // Subscription feature is now always enabled
   useEffect(() => {
-    const checkSubscriptionFeature = async () => {
-      try {
-        const featureFlagsRef = doc(db, getCollectionName('config'), 'featureFlags');
-        const featureFlagsDoc = await getDoc(featureFlagsRef);
-
-        if (featureFlagsDoc.exists()) {
-          const flagsData = featureFlagsDoc.data();
-          setSubscriptionEnabled(flagsData.payments === true);
-        }
-      } catch (error) {
-        console.error('Error checking subscription feature flag:', error);
-      }
-    };
-
-    checkSubscriptionFeature();
+    setSubscriptionEnabled(true);
   }, []);
 
   // Fetch users data

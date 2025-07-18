@@ -16,7 +16,7 @@ import UsernameHistory from "../auth/UsernameHistory";
 import FollowingList from './FollowingList';
 
 import UserBioTab from './UserBioTab';
-import { useFeatureFlag } from "../../utils/feature-flags";
+
 import { useUnifiedSearch, SEARCH_CONTEXTS } from '../../hooks/useUnifiedSearch';
 import SearchResultsDisplay from '../search/SearchResultsDisplay';
 import FollowingTabContent from './FollowingTabContent';

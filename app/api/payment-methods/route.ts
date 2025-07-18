@@ -4,7 +4,7 @@ import { initAdmin } from '../../firebase/admin';
 import { getUserIdFromRequest } from '../auth-helper';
 import Stripe from 'stripe';
 import { getStripeSecretKey } from '../../utils/stripeConfig';
-import { checkPaymentsFeatureFlag } from '../feature-flag-helper';
+
 
 // Initialize Firebase Admin lazily
 let db: any;
@@ -54,11 +54,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if payments feature is enabled for this user
-    const featureCheckResponse = await checkPaymentsFeatureFlag(userId);
-    if (featureCheckResponse) {
-      return featureCheckResponse;
-    }
+    // Payments feature is now always enabled - no feature flag check needed
 
     // Get the user's customer ID from Firestore
     const userDoc = await db.collection('users').doc(userId).get();
@@ -171,11 +167,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if payments feature is enabled for this user
-    const featureCheckResponse = await checkPaymentsFeatureFlag(userId);
-    if (featureCheckResponse) {
-      return featureCheckResponse;
-    }
+    // Payments feature is now always enabled - no feature flag check needed
 
     // Get the payment method ID from the request body
     const { paymentMethodId } = await request.json();

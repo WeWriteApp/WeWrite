@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useRouter, usePathname } from "next/navigation";
-import { useFeatureFlag } from "../../utils/feature-flags";
+
 import { navigateToRandomPage, RandomPageFilters } from "../../utils/randomPageNavigation";
 import MapEditor from "../editor/MapEditor";
 import RandomPageFilterMenu from "../ui/RandomPageFilterMenu";
@@ -211,8 +211,8 @@ function UnifiedSidebarContent({
     }
   }, [paymentsEnabled, hasActiveSubscription, shouldShowSubscriptionWarning, warningVariant, bankSetupStatus.isSetup, criticalSettingsStatus]);
 
-  // Check if map feature is enabled
-  const mapFeatureEnabled = useFeatureFlag('map_view', session?.email, session?.uid);
+  // Map feature is now always enabled
+  const mapFeatureEnabled = true;
 
   // Check if account is admin
   const isAdmin = session?.email === 'jamiegray2234@gmail.com';

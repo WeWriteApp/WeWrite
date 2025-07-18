@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -63,7 +63,8 @@ export default function RevenueSplitManager({
 }: RevenueSplitManagerProps) {
   const { currentAccount } = useCurrentAccount();
   const { toast } = useToast();
-  const isPaymentsEnabled = useFeatureFlag('payments', currentAccount?.email, currentAccount?.uid);
+  // Payments feature is now always enabled
+  const isPaymentsEnabled = true;
   
   const [revenueSplit, setRevenueSplit] = useState<RevenueSplit | null>(null);
   const [loading, setLoading] = useState(true);

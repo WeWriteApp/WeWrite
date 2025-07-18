@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { MapPin } from 'lucide-react';
-import { useFeatureFlag } from '../../utils/feature-flags';
+
 import OpenStreetMapPicker from '../map/OpenStreetMapPicker';
 
 /**
@@ -13,7 +13,8 @@ import OpenStreetMapPicker from '../map/OpenStreetMapPicker';
  * When enabled, it loads the actual OpenStreetMap implementation.
  */
 function MapView({ location, readOnly, onChange, height = '200px', expandable, showInMetadata }) {
-  const mapFeatureEnabled = useFeatureFlag('map_view');
+  // Map feature is now always enabled
+  const mapFeatureEnabled = true;
 
   if (!mapFeatureEnabled) {
     return (
