@@ -1202,7 +1202,7 @@ export class DashboardAnalyticsService {
       });
 
       // Query pageViews collection for visitor data
-      const pageViewsRef = collection(db, 'pageViews');
+      const pageViewsRef = collection(db, getCollectionName('pageViews'));
       const q = query(
         pageViewsRef,
         where('lastUpdated', '>=', Timestamp.fromDate(startDate)),

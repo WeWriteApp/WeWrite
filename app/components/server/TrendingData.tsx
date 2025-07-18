@@ -1,4 +1,5 @@
 import { initServerAdmin } from '../../firebase/serverAdmin.js';
+import { getCollectionName } from '../../utils/environmentConfig';
 
 /**
  * Server component that fetches trending pages data
@@ -24,7 +25,7 @@ export async function getServerTrendingData(limitCount = 10) {
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
     // Get page views for today and yesterday
-    const pageViewsRef = db.collection("pageViews");
+    const pageViewsRef = db.collection(getCollectionName("pageViews"));
     const todayQuery = pageViewsRef.where("date", "==", todayStr);
     const yesterdayQuery = pageViewsRef.where("date", "==", yesterdayStr);
 

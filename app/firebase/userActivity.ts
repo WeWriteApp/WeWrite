@@ -144,8 +144,8 @@ const versionDocRef = doc(db, getCollectionName("pages"), pageId, "versions", pa
         await Promise.all(pageIds.slice(0, 20).map(async (pageId) => { // Limit to 20 pages for performance
           try {
             const [todayViewsDoc, yesterdayViewsDoc] = await Promise.all([
-              getDoc(doc(db, "pageViews", `${pageId}_${todayStr}`)),
-              getDoc(doc(db, "pageViews", `${pageId}_${yesterdayStr}`))
+              getDoc(doc(db, getCollectionName("pageViews"), `${pageId}_${todayStr}`)),
+              getDoc(doc(db, getCollectionName("pageViews"), `${pageId}_${yesterdayStr}`))
             ]);
 
             // Process today's views

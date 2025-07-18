@@ -186,8 +186,8 @@ async function getRealPageViewData(db: any, pageId: string): Promise<PageViewDat
 
     // Get today's and yesterday's pageViews documents
     const [todayDoc, yesterdayDoc] = await Promise.all([
-      db.collection('pageViews').doc(`${pageId}_${todayStr}`).get(),
-      db.collection('pageViews').doc(`${pageId}_${yesterdayStr}`).get()
+      db.collection(getCollectionName('pageViews')).doc(`${pageId}_${todayStr}`).get(),
+      db.collection(getCollectionName('pageViews')).doc(`${pageId}_${yesterdayStr}`).get()
     ]);
 
     // Initialize 24-hour array
