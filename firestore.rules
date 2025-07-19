@@ -421,6 +421,18 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Environment-specific page views collections (DEV_pageViews, PREVIEW_pageViews, etc.)
+    match /{envPageViews}/{viewId} {
+      // Allow reading aggregated view data for trending/analytics (public data)
+      allow read: if envPageViews.matches('.*pageViews') || envPageViews == 'pageViews';
+
+      // Allow anyone to record views (for anonymous tracking)
+      allow create: if envPageViews.matches('.*pageViews') || envPageViews == 'pageViews';
+      allow update: if envPageViews.matches('.*pageViews') || envPageViews == 'pageViews';
+      // Prevent deletion of view records for analytics integrity
+      allow delete: if (envPageViews.matches('.*pageViews') || envPageViews == 'pageViews') && isAdmin();
+    }
+
     // User activity tracking - Privacy-sensitive data
     match /userActivity/{activityId} {
       // Only allow users to read their own activity or admins for analytics
@@ -734,6 +746,21 @@ service cloud.firestore {
 
       // Allow deletion for cleanup (admins only)
       allow delete: if isAdmin();
+    }
+
+    // Environment-specific analytics events collections (DEV_analytics_events, PREVIEW_analytics_events, etc.)
+    match /{envAnalyticsEvents}/{eventId} {
+      // Allow anyone to create analytics events (for anonymous tracking)
+      allow create: if envAnalyticsEvents.matches('.*analytics_events') || envAnalyticsEvents == 'analytics_events';
+
+      // Allow reading analytics data for dashboard (admins only)
+      allow read: if (envAnalyticsEvents.matches('.*analytics_events') || envAnalyticsEvents == 'analytics_events') && isAdmin();
+
+      // Allow updating analytics events (for event completion tracking)
+      allow update: if envAnalyticsEvents.matches('.*analytics_events') || envAnalyticsEvents == 'analytics_events';
+
+      // Allow deletion for cleanup (admins only)
+      allow delete: if (envAnalyticsEvents.matches('.*analytics_events') || envAnalyticsEvents == 'analytics_events') && isAdmin();
     }
 
     // Analytics counters collection - Global system counters for admin dashboard

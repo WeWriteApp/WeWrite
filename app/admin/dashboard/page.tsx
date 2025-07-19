@@ -199,6 +199,14 @@ export default function AdminDashboardPage() {
     viewMode
   });
 
+  // Debug current user authentication
+  console.log('🔐 [Admin Dashboard] Current user:', {
+    user: currentAccount?.user,
+    email: currentAccount?.user?.email,
+    uid: currentAccount?.user?.uid,
+    isAdmin: currentAccount?.user?.email ? isAdmin(currentAccount.user.email) : false
+  });
+
   // Handle view mode toggle
   const handleViewModeToggle = () => {
     const newMode = viewMode === 'grid' ? 'list' : 'grid';
@@ -417,19 +425,23 @@ export default function AdminDashboardPage() {
                 );
               } else {
                 console.log('🎯🎯🎯 Dashboard loaded, rendering in', viewMode, 'mode! 🎯🎯🎯');
+                console.log('🎯 Dashboard widgets available:', widgets.length);
+                console.log('🎯 List items available:', listItems.length);
 
                 if (viewMode === 'list') {
                   return (
                     <>
                       {/* List Mode Layout */}
                       <div className="max-w-4xl mx-auto">
-                        <DashboardListMode
-                          dateRange={dateRange}
-                          granularity={granularity}
-                          globalFilters={globalFilters}
-                          items={listItems}
-                          onItemsReorder={handleListItemsReorder}
-                        />
+                        <DashboardErrorBoundary>
+                          <DashboardListMode
+                            dateRange={dateRange}
+                            granularity={granularity}
+                            globalFilters={globalFilters}
+                            items={listItems}
+                            onItemsReorder={handleListItemsReorder}
+                          />
+                        </DashboardErrorBoundary>
                       </div>
                     </>
                   );

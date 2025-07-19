@@ -56,47 +56,60 @@ function DraggableListItem({ item, index, moveItem, dateRange, granularity, glob
     },
   });
 
-  // Fetch data based on item type
+  // Call all hooks unconditionally (Rules of Hooks)
+  const accountsResult = useAccountsMetrics(dateRange, granularity);
+  const pagesResult = usePagesMetrics(dateRange, granularity);
+  const sharesResult = useSharesMetrics(dateRange, granularity);
+  const editsResult = useEditsMetrics(dateRange, granularity);
+  const contentChangesResult = useContentChangesMetrics(dateRange, granularity);
+  const pwaInstallsResult = usePWAInstallsMetrics(dateRange, granularity);
+  const visitorsResult = useVisitorMetrics(dateRange, granularity);
+
+  // Select the appropriate result based on item type
   let data: any[] = [];
   let loading = false;
   let error: string | null = null;
 
-  // Use the appropriate hook based on item ID
-  if (item.id === 'new-accounts') {
-    const result = useAccountsMetrics(dateRange, granularity);
-    data = result.data;
-    loading = result.loading;
-    error = result.error;
-  } else if (item.id === 'new-pages') {
-    const result = usePagesMetrics(dateRange, granularity);
-    data = result.data;
-    loading = result.loading;
-    error = result.error;
-  } else if (item.id === 'shares') {
-    const result = useSharesMetrics(dateRange, granularity);
-    data = result.data;
-    loading = result.loading;
-    error = result.error;
-  } else if (item.id === 'edits') {
-    const result = useEditsMetrics(dateRange, granularity);
-    data = result.data;
-    loading = result.loading;
-    error = result.error;
-  } else if (item.id === 'content-changes') {
-    const result = useContentChangesMetrics(dateRange, granularity);
-    data = result.data;
-    loading = result.loading;
-    error = result.error;
-  } else if (item.id === 'pwa-installs') {
-    const result = usePWAInstallsMetrics(dateRange, granularity);
-    data = result.data;
-    loading = result.loading;
-    error = result.error;
-  } else if (item.id === 'visitors') {
-    const result = useVisitorMetrics(dateRange, granularity);
-    data = result.data;
-    loading = result.loading;
-    error = result.error;
+  switch (item.id) {
+    case 'new-accounts':
+      data = accountsResult.data;
+      loading = accountsResult.loading;
+      error = accountsResult.error;
+      break;
+    case 'new-pages':
+      data = pagesResult.data;
+      loading = pagesResult.loading;
+      error = pagesResult.error;
+      break;
+    case 'shares':
+      data = sharesResult.data;
+      loading = sharesResult.loading;
+      error = sharesResult.error;
+      break;
+    case 'edits':
+      data = editsResult.data;
+      loading = editsResult.loading;
+      error = editsResult.error;
+      break;
+    case 'content-changes':
+      data = contentChangesResult.data;
+      loading = contentChangesResult.loading;
+      error = contentChangesResult.error;
+      break;
+    case 'pwa-installs':
+      data = pwaInstallsResult.data;
+      loading = pwaInstallsResult.loading;
+      error = pwaInstallsResult.error;
+      break;
+    case 'visitors':
+      data = visitorsResult.data;
+      loading = visitorsResult.loading;
+      error = visitorsResult.error;
+      break;
+    default:
+      data = [];
+      loading = false;
+      error = null;
   }
 
   // Convert data to sparkline format
