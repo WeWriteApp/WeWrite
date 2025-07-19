@@ -147,10 +147,10 @@ export default function PageFooter({
   if (!page) return null;
 
   return (
-    <div className="mt-10 border-t-only pt-6 pb-6 px-4 sm:px-6">
+    <div className="mt-10 border-t-only pt-6 pb-6">
       {/* Save/Revert buttons - shown at top when there are unsaved changes */}
       {canEdit && hasUnsavedChanges && (
-        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950/20 border border-theme-medium rounded-lg">
+        <div className="mb-6 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
           <div className="flex flex-col gap-3 w-full md:flex-row md:justify-center">
             <Button
               variant="default"

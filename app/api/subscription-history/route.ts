@@ -22,7 +22,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 interface SubscriptionHistoryEvent {
   id: string;
-  type: 'subscription_created' | 'subscription_updated' | 'subscription_cancelled' | 'subscription_reactivated' | 'payment_succeeded' | 'payment_failed' | 'plan_changed';
+  type: 'subscription_created' | 'subscription_updated' | 'subscription_cancelled' | 'subscription_reactivated' | 'payment_succeeded' | 'payment_failed' | 'payment_recovered' | 'plan_changed';
   timestamp: Date;
   description: string;
   details: {
@@ -31,6 +31,10 @@ interface SubscriptionHistoryEvent {
     amount?: number;
     currency?: string;
     stripeEventId?: string;
+    failureReason?: string;
+    failureCount?: number;
+    failureType?: string;
+    previousFailureCount?: number;
     metadata?: Record<string, any>;
   };
   source: 'stripe' | 'system' | 'user';
@@ -40,68 +44,52 @@ async function getSubscriptionHistory(userId: string): Promise<SubscriptionHisto
   const events: SubscriptionHistoryEvent[] = [];
 
   try {
-    // For now, skip complex queries and just show current subscription status
-    // This avoids Firebase index requirements and makes the system more reliable
     console.log(`[SUBSCRIPTION HISTORY] Getting history for user: ${userId}`);
 
-    // For development simplicity, just return a basic history based on current subscription
-    // This avoids Firebase index requirements and complex queries
+    // 1. Get audit trail events for this user
+    try {
+      const auditQuery = db.collection(getCollectionName('auditTrail'))
+        .where('userId', '==', userId)
+        .where('entityType', '==', 'subscription')
+        .orderBy('timestamp', 'desc')
+        .limit(50);
 
-    events.push({
-      id: 'subscription_upgrade',
-      type: 'subscription_updated',
-      timestamp: new Date(),
-      description: 'Subscription upgraded to $20/month (200 tokens)',
-      details: {
-        oldValue: '$10/month (100 tokens)',
-        newValue: '$20/month (200 tokens)',
-        amount: 20,
-        currency: 'usd',
-        metadata: {
-          tier: 'tier2',
-          upgrade: true
-        }
-      },
-      source: 'user'
-    });
+      const auditSnapshot = await auditQuery.get();
 
-    events.push({
-      id: 'subscription_created',
-      type: 'subscription_created',
-      timestamp: new Date('2025-07-12T19:41:17.000Z'),
-      description: 'Subscription created with $10/month (100 tokens)',
-      details: {
-        newValue: '$10/month (100 tokens)',
-        amount: 10,
-        currency: 'usd',
-        metadata: {
-          tier: 'tier1',
-          initial: true
-        }
-      },
-      source: 'system'
-    });
+      auditSnapshot.forEach((doc) => {
+        const auditEvent = doc.data();
 
-    // Add a default subscription created event if no history exists
-    if (events.length === 0) {
-      events.push({
-        id: 'subscription_created',
-        type: 'subscription_created',
-        timestamp: new Date('2025-07-12T19:41:17.000Z'),
-        description: 'Subscription created with amount $10/month',
-        details: {
-          oldValue: null,
-          newValue: {
-            amount: 10,
-            status: 'active',
-            tier: 'tier1'
+        // Convert audit events to subscription history events
+        const historyEvent: SubscriptionHistoryEvent = {
+          id: doc.id,
+          type: auditEvent.eventType as any,
+          timestamp: auditEvent.timestamp?.toDate() || new Date(),
+          description: auditEvent.description || 'Subscription event',
+          details: {
+            amount: auditEvent.metadata?.amount,
+            currency: auditEvent.metadata?.currency,
+            stripeEventId: auditEvent.metadata?.stripeSubscriptionId || auditEvent.metadata?.stripeInvoiceId,
+            failureReason: auditEvent.metadata?.failureReason,
+            failureCount: auditEvent.metadata?.failureCount,
+            failureType: auditEvent.metadata?.failureType,
+            previousFailureCount: auditEvent.metadata?.previousFailureCount,
+            metadata: {
+              ...auditEvent.metadata,
+              correlationId: auditEvent.correlationId,
+              severity: auditEvent.severity,
+              hostedInvoiceUrl: auditEvent.metadata?.hostedInvoiceUrl
+            }
           },
-          metadata: {
-            stripeSubscriptionId: 'sub_1Rk9IPI0PN4TYfxotNgRazbc'
-          }
-        },
-        source: 'system'
+          source: auditEvent.source || 'system'
+        };
+
+        events.push(historyEvent);
       });
+
+      console.log(`[SUBSCRIPTION HISTORY] Found ${events.length} audit events for user ${userId}`);
+    } catch (auditError) {
+      console.warn('[SUBSCRIPTION HISTORY] Could not fetch audit events:', auditError);
+      // Continue with Stripe data even if audit trail fails
     }
 
     // 2. Get user's Stripe customer ID

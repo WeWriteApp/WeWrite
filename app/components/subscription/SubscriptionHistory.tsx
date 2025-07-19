@@ -4,12 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { 
-  History, 
-  CreditCard, 
-  CheckCircle, 
-  XCircle, 
-  ArrowUpCircle, 
+import {
+  History,
+  CreditCard,
+  CheckCircle,
+  XCircle,
+  ArrowUpCircle,
   ArrowDownCircle,
   PauseCircle,
   PlayCircle,
@@ -23,7 +23,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 interface SubscriptionHistoryEvent {
   id: string;
-  type: 'subscription_created' | 'subscription_updated' | 'subscription_cancelled' | 'subscription_reactivated' | 'payment_succeeded' | 'payment_failed' | 'plan_changed';
+  type: 'subscription_created' | 'subscription_updated' | 'subscription_cancelled' | 'subscription_reactivated' | 'payment_succeeded' | 'payment_failed' | 'payment_recovered' | 'plan_changed';
   timestamp: Date;
   description: string;
   details: {
@@ -32,6 +32,10 @@ interface SubscriptionHistoryEvent {
     amount?: number;
     currency?: string;
     stripeEventId?: string;
+    failureReason?: string;
+    failureCount?: number;
+    failureType?: string;
+    previousFailureCount?: number;
     metadata?: Record<string, any>;
   };
   source: 'stripe' | 'system' | 'user';
@@ -100,6 +104,8 @@ export default function SubscriptionHistory({ className = '' }: SubscriptionHist
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'payment_failed':
         return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'payment_recovered':
+        return <CheckCircle className="h-4 w-4 text-orange-500" />;
       default:
         return <History className="h-4 w-4 text-gray-500" />;
     }
@@ -114,6 +120,8 @@ export default function SubscriptionHistory({ className = '' }: SubscriptionHist
       case 'subscription_cancelled':
       case 'payment_failed':
         return 'destructive';
+      case 'payment_recovered':
+        return 'secondary';
       case 'subscription_updated':
       case 'plan_changed':
         return 'secondary';
@@ -220,7 +228,57 @@ export default function SubscriptionHistory({ className = '' }: SubscriptionHist
                   </div>
                   
                   <p className="text-sm font-medium mb-1">{event.description}</p>
-                  
+
+                  {/* Enhanced payment failure details */}
+                  {event.type === 'payment_failed' && (
+                    <div className="mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-destructive mb-1">
+                            Payment Failed - Action Required
+                          </p>
+                          {event.details.failureReason && (
+                            <p className="text-xs text-destructive/80 mb-2">
+                              <strong>Reason:</strong> {event.details.failureReason}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap gap-3 text-xs">
+                            {event.details.failureCount && (
+                              <span className="text-destructive font-medium">
+                                Attempt #{event.details.failureCount}
+                              </span>
+                            )}
+                            {event.details.failureType && (
+                              <span className="text-muted-foreground">
+                                Type: {event.details.failureType.replace('_', ' ')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Enhanced payment recovery details */}
+                  {event.type === 'payment_recovered' && (
+                    <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                      <div className="flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-green-800 mb-1">
+                            Payment Recovered Successfully
+                          </p>
+                          {event.details.previousFailureCount && (
+                            <p className="text-xs text-green-700">
+                              Resolved after {event.details.previousFailureCount} failed attempt{event.details.previousFailureCount > 1 ? 's' : ''}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />

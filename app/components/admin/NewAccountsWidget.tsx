@@ -24,8 +24,16 @@ interface NewAccountsWidgetProps {
 
 export function NewAccountsWidget({ dateRange, granularity, className = "", globalFilters }: NewAccountsWidgetProps) {
   console.log('🔥🔥🔥 NewAccountsWidget is rendering! 🔥🔥🔥');
+  console.log('📊 NewAccountsWidget props:', { dateRange, granularity, globalFilters });
 
   const { data: rawData, loading, error } = useAccountsMetrics(dateRange, granularity);
+
+  console.log('📈 NewAccountsWidget data state:', {
+    rawDataLength: rawData?.length,
+    loading,
+    error,
+    hasData: !!rawData
+  });
 
   // Debug: Log what filters we received
   console.log('🔍 NewAccountsWidget received filters:', globalFilters);

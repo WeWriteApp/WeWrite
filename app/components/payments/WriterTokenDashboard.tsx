@@ -19,6 +19,7 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useToast } from '../ui/use-toast';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { logEnhancedFirebaseError, createUserFriendlyErrorMessage } from '../../utils/firebase-error-handler';
 import { TokenEarningsService } from '../../services/tokenEarningsService';
 import { WriterTokenBalance, WriterTokenEarnings } from '../../types/database';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -308,27 +309,32 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
             timeUntilDeadline: data.earnings.timeUntilDeadline
           });
           setUnfundedEarnings(data.earnings.unfundedEarnings || null);
+
+          // Set unfunded message if available
+          if (data.earnings?.unfundedEarnings?.message) {
+            setUnfundedMessage(data.earnings.unfundedEarnings.message);
+          } else {
+            setUnfundedMessage(null);
+          }
         } else {
           // No earnings data
           setBalance(null);
           setEarnings([]);
           setPendingAllocations(null);
           setUnfundedEarnings(null);
+          setUnfundedMessage(null);
         }
       }
 
-      // Set unfunded message if available
-      if (data.earnings?.unfundedEarnings?.message) {
-        setUnfundedMessage(data.earnings.unfundedEarnings.message);
-      } else {
-        setUnfundedMessage(null);
-      }
-
     } catch (error) {
-      console.error('[WriterTokenDashboard] Error loading writer data:', error);
+      // Use enhanced error handling for better debugging
+      logEnhancedFirebaseError(error, 'WriterTokenDashboard.loadWriterData');
+
+      const userFriendlyMessage = createUserFriendlyErrorMessage(error, 'loading earnings data');
+
       toast({
-        title: "Error",
-        description: "Failed to load earnings data",
+        title: "Error Loading Earnings",
+        description: userFriendlyMessage,
         variant: "destructive"
       });
     } finally {

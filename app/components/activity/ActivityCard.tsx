@@ -254,7 +254,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
       const userId = activity.pageId.replace("user-bio-", "");
       const url = `/user/${userId}`;
       console.log('ActivityCard: Bio edit clicked, navigating to:', url);
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       window.location.href = url;
       return;
     }
@@ -263,7 +262,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
       const groupId = activity.pageId.replace("group-about-", "");
       const url = `/group/${groupId}`;
       console.log('ActivityCard: Group about edit clicked, navigating to:', url);
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       window.location.href = url;
       return;
     }
@@ -275,7 +273,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
       if (process.env.NODE_ENV === 'development') {
         console.log('ActivityCard: Activity context detected, navigating to version page:', url);
       }
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       window.location.href = url;
     } else {
       // For home page and other contexts - always go to current page
@@ -285,7 +282,6 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
       if (process.env.NODE_ENV === 'development') {
         console.log('ActivityCard: Non-activity context, navigating to main page:', url);
       }
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       window.location.href = url;
     }
   };

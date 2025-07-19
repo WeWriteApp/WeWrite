@@ -115,15 +115,8 @@ export function PageTransition({
     // Skip transitions for search parameter changes on the search page to prevent flashing
     const isSearchPageParamChange = pathname === '/search' && !isPathChange && isSearchParamsChange;
 
-    // SCROLL RESTORATION: Use a small delay to ensure the new page has loaded
-    // This prevents scrolling the current page before navigation
-    if (isPathChange && enableTransitions && typeof window !== 'undefined') {
-      // Small delay to ensure we're scrolling the destination page, not the current one
-      setTimeout(() => {
-        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-        console.log('Page transition: Scrolled to top for new page:', pathname);
-      }, 50);
-    }
+    // Scroll restoration removed - let the browser handle natural scroll behavior
+    // Forcing scroll-to-top during navigation creates jarring UX
 
     if ((isPathChange || isSearchParamsChange) && !isSearchPageParamChange) {
       // Start loading state

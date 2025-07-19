@@ -14,7 +14,7 @@ const db = admin.firestore();
 
 export interface SubscriptionAuditEvent {
   userId: string;
-  eventType: 'subscription_created' | 'subscription_updated' | 'subscription_cancelled' | 'subscription_reactivated' | 'plan_changed' | 'payment_method_updated';
+  eventType: 'subscription_created' | 'subscription_updated' | 'subscription_cancelled' | 'subscription_reactivated' | 'plan_changed' | 'payment_method_updated' | 'payment_failed' | 'payment_recovered';
   description: string;
   entityType: 'subscription';
   entityId?: string;
@@ -23,7 +23,7 @@ export interface SubscriptionAuditEvent {
   metadata?: Record<string, any>;
   source: 'stripe' | 'system' | 'user';
   correlationId?: string;
-  severity: 'info' | 'warning' | 'error';
+  severity: 'info' | 'warning' | 'error' | 'critical';
 }
 
 class SubscriptionAuditService {
@@ -230,6 +230,87 @@ class SubscriptionAuditService {
       entityType: 'subscription',
       metadata: options.metadata,
       source: options.source || 'system',
+      correlationId: options.correlationId,
+      severity: 'info'
+    });
+  }
+
+  /**
+   * Log payment failure
+   */
+  async logPaymentFailed(
+    userId: string,
+    paymentData: {
+      amount: number;
+      currency: string;
+      invoiceId: string;
+      subscriptionId: string;
+      failureReason: string;
+      failureCount: number;
+      failureType?: string;
+    },
+    options: {
+      source?: 'stripe' | 'system' | 'user';
+      correlationId?: string;
+      metadata?: Record<string, any>;
+    } = {}
+  ): Promise<void> {
+    const severity = paymentData.failureCount >= 3 ? 'critical' :
+                    paymentData.failureCount >= 2 ? 'warning' : 'info';
+
+    await this.logEvent({
+      userId,
+      eventType: 'payment_failed',
+      description: `Payment failed: ${paymentData.failureReason} (Attempt ${paymentData.failureCount})`,
+      entityType: 'subscription',
+      entityId: paymentData.subscriptionId,
+      metadata: {
+        amount: paymentData.amount,
+        currency: paymentData.currency,
+        invoiceId: paymentData.invoiceId,
+        failureReason: paymentData.failureReason,
+        failureCount: paymentData.failureCount,
+        failureType: paymentData.failureType,
+        ...options.metadata
+      },
+      source: options.source || 'stripe',
+      correlationId: options.correlationId,
+      severity
+    });
+  }
+
+  /**
+   * Log payment success after failure
+   */
+  async logPaymentRecovered(
+    userId: string,
+    paymentData: {
+      amount: number;
+      currency: string;
+      invoiceId: string;
+      subscriptionId: string;
+      previousFailureCount: number;
+    },
+    options: {
+      source?: 'stripe' | 'system' | 'user';
+      correlationId?: string;
+      metadata?: Record<string, any>;
+    } = {}
+  ): Promise<void> {
+    await this.logEvent({
+      userId,
+      eventType: 'payment_recovered',
+      description: `Payment recovered after ${paymentData.previousFailureCount} failed attempts`,
+      entityType: 'subscription',
+      entityId: paymentData.subscriptionId,
+      metadata: {
+        amount: paymentData.amount,
+        currency: paymentData.currency,
+        invoiceId: paymentData.invoiceId,
+        previousFailureCount: paymentData.previousFailureCount,
+        ...options.metadata
+      },
+      source: options.source || 'stripe',
       correlationId: options.correlationId,
       severity: 'info'
     });

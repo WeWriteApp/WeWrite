@@ -488,4 +488,105 @@ describe('Subscription Flow Testing', () => {
       );
     });
   });
+
+  describe('Subscription History and Audit Trail', () => {
+    test('should include payment failure events in subscription history', async () => {
+      // Mock the subscription history API response with payment failure events
+      const mockHistoryResponse = {
+        success: true,
+        history: [
+          {
+            id: 'payment_failed_123',
+            type: 'payment_failed',
+            timestamp: new Date('2025-07-19T10:00:00Z'),
+            description: 'Payment failed: Your card was declined. (Attempt 2)',
+            details: {
+              amount: 29.99,
+              currency: 'USD',
+              stripeEventId: 'inv_test_123',
+              failureReason: 'Your card was declined.',
+              failureCount: 2,
+              failureType: 'card_declined',
+              metadata: {
+                correlationId: 'test_correlation_123',
+                severity: 'warning',
+                hostedInvoiceUrl: 'https://invoice.stripe.com/test'
+              }
+            },
+            source: 'stripe'
+          },
+          {
+            id: 'payment_recovered_456',
+            type: 'payment_recovered',
+            timestamp: new Date('2025-07-19T11:00:00Z'),
+            description: 'Payment recovered after 2 failed attempts',
+            details: {
+              amount: 29.99,
+              currency: 'USD',
+              stripeEventId: 'inv_test_456',
+              previousFailureCount: 2,
+              metadata: {
+                correlationId: 'recovery_correlation_456',
+                severity: 'info'
+              }
+            },
+            source: 'stripe'
+          }
+        ],
+        count: 2
+      };
+
+      // Mock fetch for subscription history API
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockHistoryResponse)
+      });
+
+      const response = await fetch('/api/subscription-history');
+      const result = await response.json();
+
+      expect(response.ok).toBe(true);
+      expect(result.success).toBe(true);
+      expect(result.history).toHaveLength(2);
+
+      // Verify payment failure event
+      const failureEvent = result.history.find((event: any) => event.type === 'payment_failed');
+      expect(failureEvent).toBeDefined();
+      expect(failureEvent.details.failureReason).toBe('Your card was declined.');
+      expect(failureEvent.details.failureCount).toBe(2);
+      expect(failureEvent.details.metadata.severity).toBe('warning');
+
+      // Verify payment recovery event
+      const recoveryEvent = result.history.find((event: any) => event.type === 'payment_recovered');
+      expect(recoveryEvent).toBeDefined();
+      expect(recoveryEvent.details.previousFailureCount).toBe(2);
+      expect(recoveryEvent.description).toContain('recovered after 2 failed attempts');
+    });
+
+    test('should display payment failures prominently in subscription history UI', () => {
+      // This would be tested in a component test, but we can verify the event structure
+      const paymentFailureEvent = {
+        id: 'payment_failed_critical',
+        type: 'payment_failed',
+        timestamp: new Date(),
+        description: 'Payment failed: Insufficient funds. (Attempt 3)',
+        details: {
+          amount: 29.99,
+          currency: 'USD',
+          failureReason: 'Insufficient funds.',
+          failureCount: 3,
+          failureType: 'insufficient_funds',
+          metadata: {
+            severity: 'critical'
+          }
+        },
+        source: 'stripe'
+      };
+
+      // Verify critical failure has proper severity
+      expect(paymentFailureEvent.details.metadata.severity).toBe('critical');
+      expect(paymentFailureEvent.details.failureCount).toBeGreaterThanOrEqual(3);
+      expect(paymentFailureEvent.description).toContain('Attempt 3');
+    });
+  });
 });

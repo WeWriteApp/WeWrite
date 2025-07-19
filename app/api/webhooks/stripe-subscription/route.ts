@@ -277,6 +277,23 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     // Simplified approach - directly update subscription without complex synchronization
     const correlationId = `payment_${invoice.id}_${Date.now()}`;
 
+    // Get current subscription to check for previous failures
+    let previousFailureCount = 0;
+    try {
+      const { parentPath, subCollectionName } = getSubCollectionPath(
+        PAYMENT_COLLECTIONS.USERS,
+        userId,
+        PAYMENT_COLLECTIONS.SUBSCRIPTIONS
+      );
+      const subscriptionRef = doc(db, parentPath, subCollectionName, 'current');
+      const currentSub = await getDoc(subscriptionRef);
+      if (currentSub.exists()) {
+        previousFailureCount = currentSub.data().failureCount || 0;
+      }
+    } catch (error) {
+      console.warn('[PAYMENT SUCCEEDED] Could not get previous failure count:', error);
+    }
+
     const subscriptionData = {
       stripeSubscriptionId: subscription.id,
       status: 'active', // Always set to active on successful payment
@@ -305,6 +322,35 @@ export async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     } catch (error) {
       console.error(`[SUBSCRIPTION WEBHOOK] Failed to update subscription for user ${userId}:`, error);
       throw error;
+    }
+
+    // Log payment recovery to audit trail if there were previous failures
+    if (previousFailureCount > 0) {
+      try {
+        const { subscriptionAuditService } = await import('../../../services/subscriptionAuditService');
+        const amount = invoice.amount_paid / 100; // Convert from cents
+
+        await subscriptionAuditService.logPaymentRecovered(userId, {
+          amount,
+          currency: invoice.currency.toUpperCase(),
+          invoiceId: invoice.id,
+          subscriptionId: subscription.id,
+          previousFailureCount
+        }, {
+          source: 'stripe',
+          correlationId,
+          metadata: {
+            stripeInvoiceId: invoice.id,
+            stripeSubscriptionId: subscription.id,
+            hostedInvoiceUrl: invoice.hosted_invoice_url,
+            paymentMethodId: invoice.default_payment_method,
+            recoveredAfterFailures: previousFailureCount
+          }
+        });
+      } catch (auditError) {
+        console.warn('[PAYMENT SUCCEEDED] Failed to log payment recovery audit event:', auditError);
+        // Don't fail the webhook if audit logging fails
+      }
     }
 
     // Ensure token allocation is up to date
@@ -407,6 +453,34 @@ export async function handlePaymentFailed(invoice: Stripe.Invoice) {
       invoice.currency.toUpperCase(),
       correlationId
     );
+
+    // Log payment failure to audit trail for maximum visibility
+    try {
+      const { subscriptionAuditService } = await import('../../../services/subscriptionAuditService');
+      await subscriptionAuditService.logPaymentFailed(userId, {
+        amount,
+        currency: invoice.currency.toUpperCase(),
+        invoiceId: invoice.id,
+        subscriptionId: subscription.id,
+        failureReason,
+        failureCount: failureRecord.failureCount,
+        failureType: failureRecord.failureType
+      }, {
+        source: 'stripe',
+        correlationId,
+        metadata: {
+          stripeInvoiceId: invoice.id,
+          stripeSubscriptionId: subscription.id,
+          nextRetryAt: failureRecord.nextRetryAt?.toISOString(),
+          hostedInvoiceUrl: invoice.hosted_invoice_url,
+          paymentMethodId: invoice.default_payment_method,
+          attemptCount: invoice.attempt_count
+        }
+      });
+    } catch (auditError) {
+      console.warn('[PAYMENT FAILED] Failed to log audit event:', auditError);
+      // Don't fail the webhook if audit logging fails
+    }
 
     // Create enhanced notification with retry information
     await createFailedPaymentNotification(userId, failureRecord.failureCount, invoice, failureRecord);

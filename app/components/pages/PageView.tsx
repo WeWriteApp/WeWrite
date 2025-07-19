@@ -652,21 +652,11 @@ export default function PageView({
   // No need for handleSetIsEditing - always in edit mode
 
   const handleSave = useCallback(async (passedContent?: any) => {
-    console.log('🚀 PAGE SAVE: ===== SAVE FUNCTION CALLED =====', {
-      timestamp: new Date().toISOString(),
+    console.log('🔵 PAGE SAVE: Save initiated', {
       pageId,
       hasPage: !!page,
       title,
-      isSaving,
-      hasUnsavedChanges,
-      editorStateLength: editorState ? editorState.length : 0,
-      editorStateType: typeof editorState,
-      editorStateSample: editorState ? JSON.stringify(editorState).substring(0, 200) : 'null',
-      passedContentLength: passedContent ? passedContent.length : 0,
-      passedContentType: typeof passedContent,
-      location,
-      customDate,
-      userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'server'
+      editorStateLength: editorState ? editorState.length : 0
     });
 
 
@@ -694,11 +684,7 @@ export default function PageView({
       contentLength: editorState ? editorState.length : 0
     });
 
-    console.log('🔵 PAGE SAVE: Validation passed, checking save state', {
-      isSaving,
-      hasUnsavedChanges,
-      willProceedWithSave: !isSaving
-    });
+
     pageLogger.info('Starting page save process', { pageId, title });
     setIsSaving(true);
     setError(null);
@@ -738,12 +724,7 @@ export default function PageView({
         contentLength: contentToSave ? JSON.stringify(contentToSave).length : 0
       });
 
-      console.log('🔵 PAGE SAVE: Making API request to /api/pages', {
-        method: 'PUT',
-        url: '/api/pages',
-        bodySize: JSON.stringify(updateData).length,
-        timestamp: new Date().toISOString()
-      });
+      console.log('🔵 PAGE SAVE: Making API request to /api/pages');
 
       const response = await fetch('/api/pages', {
         method: 'PUT',
@@ -873,17 +854,7 @@ export default function PageView({
         console.log('✅ PAGE SAVE: pageSaved event emitted for real-time updates');
       }
 
-      // SIMPLIFIED: No complex caching - just update state directly
-      console.log('🔍 PAGE SAVE: Skipping complex cache clearing - using direct state updates');
 
-      // Trigger cache invalidation to refresh daily notes and other components
-      try {
-        const { invalidateUserPagesCache } = await import('../../utils/cacheInvalidation');
-        invalidateUserPagesCache(page?.userId);
-        console.log('✅ Cache invalidation triggered after page update for user:', page?.userId);
-      } catch (cacheError) {
-        console.error('Error triggering cache invalidation (non-fatal):', cacheError);
-      }
 
       console.log('🔍 PAGE SAVE: Resetting hasUnsavedChanges to false');
       setHasUnsavedChanges(false);
@@ -906,8 +877,7 @@ export default function PageView({
       setHasUnsavedChanges(false);
       setError(null);
 
-      // SIMPLIFIED: No version cache clearing - let natural refresh handle it
-      console.log('🔍 PAGE SAVE: Skipping version cache clearing for reliability');
+
 
       // Page connections will refresh automatically via the pageSaved event
       // No manual refresh needed since we now have real-time updates
@@ -918,24 +888,14 @@ export default function PageView({
       // Page data should already be updated after save
       // No need to reload since the save operation updates the page state
     } catch (error) {
-      console.error('🔴 PAGE SAVE: ===== SAVE OPERATION FAILED =====', {
-        timestamp: new Date().toISOString(),
+      console.error('🔴 PAGE SAVE: Save operation failed', {
         pageId,
-        title,
-        errorMessage: error.message,
-        errorStack: error.stack,
-        errorName: error.name,
-        errorType: typeof error,
-        fullError: error
+        error: error.message,
+        title
       });
-      pageLogger.error('Page save failed', { pageId, error: error.message, title, errorStack: error.stack });
+      pageLogger.error('Page save failed', { pageId, error: error.message, title });
       setError("Failed to save page. Please try again.");
     } finally {
-      console.log('🔵 PAGE SAVE: ===== SAVE OPERATION COMPLETE =====', {
-        timestamp: new Date().toISOString(),
-        pageId,
-        settingIsSavingToFalse: true
-      });
       setIsSaving(false);
     }
   }, [page, pageId, editorState, title, location]);

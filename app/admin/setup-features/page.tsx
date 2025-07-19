@@ -15,6 +15,21 @@ import Link from 'next/link';
 // Feature management setup has been removed - all features are now always enabled
 import { useToast } from '../../components/ui/use-toast';
 
+// Temporary stub function for setupFeatureManagement
+async function setupFeatureManagement() {
+  // This is a placeholder implementation since feature management setup has been removed
+  // All features are now always enabled
+  return {
+    success: true,
+    message: 'Feature management setup completed (all features are always enabled)',
+    details: {
+      collectionsCreated: 0,
+      indexesCreated: 0,
+      rulesConfigured: 0
+    }
+  };
+}
+
 export default function SetupFeaturesPage() {
   const router = useRouter();
   const { session, isAuthenticated } = useCurrentAccount();

@@ -155,7 +155,7 @@ class RequestCache {
 const requestCache = new RequestCache();
 
 /**
- * Cached version of getPageById with deduplication
+ * Simple wrapper for getPageById - no caching for reliability
  */
 export const getCachedPageById = async (
   pageId: string,
@@ -163,16 +163,6 @@ export const getCachedPageById = async (
   options: RequestOptions = {}
 ) => {
   const { getPageById } = await import('../firebase/database/pages');
-  const cacheKey = `page:${pageId}:${userId || 'anonymous'}`;
-  
-  // DISABLED: No caching to prevent stale data issues
-  // return requestCache.get(
-  //   cacheKey,
-  //   () => getPageById(pageId, userId),
-  //   { ttl: 2 * 60 * 1000, ...options } // 2 minute TTL for page data
-  // );
-
-  // Always fetch fresh data
   return getPageById(pageId, userId);
 };
 

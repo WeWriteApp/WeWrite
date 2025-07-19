@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
+import { logEnhancedFirebaseError, createUserFriendlyErrorMessage } from '../../../utils/firebase-error-handler';
 import { PendingTokenAllocationService } from '../../../services/pendingTokenAllocationService';
 import { TokenEarningsService } from '../../../services/tokenEarningsService';
 import { ServerTokenService } from '../../../services/tokenService.server';
@@ -165,7 +166,8 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error getting user earnings:', error);
+    // Use enhanced error handling for better debugging
+    logEnhancedFirebaseError(error, 'earnings/user API endpoint');
 
     // Handle permission errors gracefully - return empty data instead of failing
     if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
@@ -180,8 +182,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const userFriendlyMessage = createUserFriendlyErrorMessage(error, 'earnings data');
+
     return NextResponse.json({
-      error: 'Failed to get user earnings'
+      error: userFriendlyMessage
     }, { status: 500 });
   }
 }

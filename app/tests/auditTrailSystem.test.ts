@@ -480,4 +480,107 @@ describe('Audit Trail System', () => {
       expect(retrievedPolicy!.regulatoryRequirement).toBe('Custom');
     });
   });
+
+  describe('Subscription Audit Events', () => {
+    test('should log payment failure with proper severity', async () => {
+      const { subscriptionAuditService } = await import('../services/subscriptionAuditService');
+
+      // Mock the logEvent method
+      const logEventSpy = jest.spyOn(subscriptionAuditService, 'logEvent').mockResolvedValue();
+
+      const paymentData = {
+        amount: 29.99,
+        currency: 'USD',
+        invoiceId: 'inv_test_123',
+        subscriptionId: 'sub_test_456',
+        failureReason: 'Your card was declined.',
+        failureCount: 2,
+        failureType: 'card_declined'
+      };
+
+      await subscriptionAuditService.logPaymentFailed('user123', paymentData, {
+        source: 'stripe',
+        correlationId: 'test_correlation_123'
+      });
+
+      expect(logEventSpy).toHaveBeenCalledWith({
+        userId: 'user123',
+        eventType: 'payment_failed',
+        description: 'Payment failed: Your card was declined. (Attempt 2)',
+        entityType: 'subscription',
+        entityId: 'sub_test_456',
+        metadata: {
+          amount: 29.99,
+          currency: 'USD',
+          invoiceId: 'inv_test_123',
+          failureReason: 'Your card was declined.',
+          failureCount: 2,
+          failureType: 'card_declined'
+        },
+        source: 'stripe',
+        correlationId: 'test_correlation_123',
+        severity: 'warning' // Should be warning for 2 failures
+      });
+    });
+
+    test('should log payment failure with critical severity for 3+ failures', async () => {
+      const { subscriptionAuditService } = await import('../services/subscriptionAuditService');
+
+      const logEventSpy = jest.spyOn(subscriptionAuditService, 'logEvent').mockResolvedValue();
+
+      const paymentData = {
+        amount: 29.99,
+        currency: 'USD',
+        invoiceId: 'inv_test_123',
+        subscriptionId: 'sub_test_456',
+        failureReason: 'Insufficient funds.',
+        failureCount: 3,
+        failureType: 'insufficient_funds'
+      };
+
+      await subscriptionAuditService.logPaymentFailed('user123', paymentData);
+
+      expect(logEventSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          severity: 'critical' // Should be critical for 3+ failures
+        })
+      );
+    });
+
+    test('should log payment recovery after failures', async () => {
+      const { subscriptionAuditService } = await import('../services/subscriptionAuditService');
+
+      const logEventSpy = jest.spyOn(subscriptionAuditService, 'logEvent').mockResolvedValue();
+
+      const paymentData = {
+        amount: 29.99,
+        currency: 'USD',
+        invoiceId: 'inv_test_789',
+        subscriptionId: 'sub_test_456',
+        previousFailureCount: 2
+      };
+
+      await subscriptionAuditService.logPaymentRecovered('user123', paymentData, {
+        source: 'stripe',
+        correlationId: 'recovery_correlation_456'
+      });
+
+      expect(logEventSpy).toHaveBeenCalledWith({
+        userId: 'user123',
+        eventType: 'payment_recovered',
+        description: 'Payment recovered after 2 failed attempts',
+        entityType: 'subscription',
+        entityId: 'sub_test_456',
+        metadata: {
+          amount: 29.99,
+          currency: 'USD',
+          invoiceId: 'inv_test_789',
+          previousFailureCount: 2
+        },
+        source: 'stripe',
+        correlationId: 'recovery_correlation_456',
+        severity: 'info'
+      });
+    });
+  });
 });

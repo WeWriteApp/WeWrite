@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import './dashboard.css';
 import { useRouter } from 'next/navigation';
 import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 import { Button } from '../../components/ui/button';
-import { ChevronLeft, Filter, GripVertical } from 'lucide-react';
+import { ChevronLeft, Filter, GripVertical, Grid3X3, List } from 'lucide-react';
 import { isAdmin } from "../../utils/isAdmin";
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -26,6 +27,7 @@ import { ContentChangesAnalyticsWidget } from "../../components/admin/ContentCha
 import { PWAInstallsAnalyticsWidget } from "../../components/admin/PWAInstallsAnalyticsWidget";
 import { LiveVisitorsWidget } from "../../components/admin/LiveVisitorsWidget";
 import { VisitorAnalyticsWidget } from "../../components/admin/VisitorAnalyticsWidget";
+import { DashboardListMode, createDefaultListItems, type DashboardListItem } from "../../components/admin/DashboardListMode";
 
 // Payment Analytics Widgets
 import { SubscriptionConversionFunnelWidget } from "../../components/admin/SubscriptionConversionFunnelWidget";
@@ -151,6 +153,7 @@ export default function AdminDashboardPage() {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 1);
 
+    console.log('🗓️ [Admin Dashboard] Initial date range:', { startDate, endDate });
     return { startDate, endDate };
   });
 
@@ -171,6 +174,57 @@ export default function AdminDashboardPage() {
 
   // Global analytics filters state
   const [globalFilters, setGlobalFilters] = useState<GlobalAnalyticsFiltersType>(defaultGlobalAnalyticsFilters);
+
+  // View mode state - 'grid' or 'list'
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('wewrite-admin-view-mode');
+      return (stored === 'list' || stored === 'grid') ? stored : 'grid';
+    }
+    return 'grid';
+  });
+
+  // List mode items state
+  const [listItems, setListItems] = useState<DashboardListItem[]>(() => {
+    return createDefaultListItems(dateRange, granularity);
+  });
+
+  // Debug logging for admin dashboard state
+  console.log('📊 [Admin Dashboard] Current state:', {
+    dateRange,
+    granularity,
+    globalFilters,
+    dashboardLoading,
+    isOptionsBarExpanded,
+    viewMode
+  });
+
+  // Handle view mode toggle
+  const handleViewModeToggle = () => {
+    const newMode = viewMode === 'grid' ? 'list' : 'grid';
+    setViewMode(newMode);
+
+    // Persist to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wewrite-admin-view-mode', newMode);
+    }
+  };
+
+  // Handle list items reorder
+  const handleListItemsReorder = (newItems: DashboardListItem[]) => {
+    setListItems(newItems);
+
+    // Persist order to localStorage
+    if (typeof window !== 'undefined') {
+      const itemIds = newItems.map(item => item.id);
+      localStorage.setItem('wewrite-admin-list-order', JSON.stringify(itemIds));
+    }
+  };
+
+  // Update list items when date range or granularity changes
+  useEffect(() => {
+    setListItems(createDefaultListItems(dateRange, granularity));
+  }, [dateRange, granularity]);
 
   // Handle options bar toggle with persistence
   const handleToggleOptionsBar = () => {
@@ -275,16 +329,39 @@ export default function AdminDashboardPage() {
 
               <h1 className="text-2xl font-bold">WeWrite Dashboard</h1>
 
-              {/* Options Button - toggle options bar */}
+              {/* View Mode and Options Controls */}
               {!dashboardLoading && (
-                <Button
-                  variant={isOptionsBarExpanded ? "default" : "outline"}
-                  onClick={handleToggleOptionsBar}
-                  className="gap-2"
-                >
-                  <Filter className="h-4 w-4" />
-                  Options
-                </Button>
+                <div className="flex items-center gap-2">
+                  {/* View Mode Toggle */}
+                  <Button
+                    variant="outline"
+                    onClick={handleViewModeToggle}
+                    className="gap-2"
+                    title={`Switch to ${viewMode === 'grid' ? 'list' : 'grid'} view`}
+                  >
+                    {viewMode === 'grid' ? (
+                      <>
+                        <List className="h-4 w-4" />
+                        List
+                      </>
+                    ) : (
+                      <>
+                        <Grid3X3 className="h-4 w-4" />
+                        Grid
+                      </>
+                    )}
+                  </Button>
+
+                  {/* Options Button - toggle options bar */}
+                  <Button
+                    variant={isOptionsBarExpanded ? "default" : "outline"}
+                    onClick={handleToggleOptionsBar}
+                    className="gap-2"
+                  >
+                    <Filter className="h-4 w-4" />
+                    Options
+                  </Button>
+                </div>
               )}
 
               {/* Loading state placeholder for options button */}
@@ -339,28 +416,46 @@ export default function AdminDashboardPage() {
                   </>
                 );
               } else {
-                console.log('🎯🎯🎯 Dashboard loaded, rendering widgets! 🎯🎯🎯', widgets.length, 'widgets');
-                return (
-                  <>
-                    {/* Responsive Grid Layout optimized for large displays */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-                  {widgets.map((widget, index) => {
-                    const WidgetComponent = widget.component;
-                    return (
-                      <DraggableWidget key={widget.id} id={widget.id} index={index} moveWidget={moveWidget}>
-                        <WidgetErrorBoundary widgetName={widget.id}>
-                          <WidgetComponent
-                            dateRange={dateRange}
-                            granularity={granularity}
-                            globalFilters={globalFilters}
-                          />
-                        </WidgetErrorBoundary>
-                      </DraggableWidget>
-                    );
-                    })}
-                  </div>
-                </>
-              );
+                console.log('🎯🎯🎯 Dashboard loaded, rendering in', viewMode, 'mode! 🎯🎯🎯');
+
+                if (viewMode === 'list') {
+                  return (
+                    <>
+                      {/* List Mode Layout */}
+                      <div className="max-w-4xl mx-auto">
+                        <DashboardListMode
+                          dateRange={dateRange}
+                          granularity={granularity}
+                          globalFilters={globalFilters}
+                          items={listItems}
+                          onItemsReorder={handleListItemsReorder}
+                        />
+                      </div>
+                    </>
+                  );
+                } else {
+                  return (
+                    <>
+                      {/* Grid Mode Layout - Responsive Grid optimized for large displays */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                        {widgets.map((widget, index) => {
+                          const WidgetComponent = widget.component;
+                          return (
+                            <DraggableWidget key={widget.id} id={widget.id} index={index} moveWidget={moveWidget}>
+                              <WidgetErrorBoundary widgetName={widget.id}>
+                                <WidgetComponent
+                                  dateRange={dateRange}
+                                  granularity={granularity}
+                                  globalFilters={globalFilters}
+                                />
+                              </WidgetErrorBoundary>
+                            </DraggableWidget>
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
+                }
               }
             })()}
           </DashboardErrorBoundary>

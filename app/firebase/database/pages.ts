@@ -18,6 +18,7 @@ import {
 import { get, ref } from "firebase/database";
 import { rtdb } from "../rtdb";
 import { getCollectionName } from "../../utils/environmentConfig";
+import { logEnhancedFirebaseError, createUserFriendlyErrorMessage } from "../../utils/firebase-error-handler";
 
 import {
   db,
@@ -30,7 +31,7 @@ import {
 
 import { checkPageAccess } from "./access";
 import { extractLinksFromNodes } from "./links";
-import { generateCacheKey, getCacheItem, setCacheItem } from "../../utils/cacheUtils";
+
 import { trackQueryPerformance } from "../../utils/queryMonitor";
 import { trackQuery, trackedFirestoreQuery } from "../../utils/queryOptimizer";
 import { recordUserActivity } from "../streaks";
@@ -266,17 +267,7 @@ export const getPageById = async (pageId: string, userId: string | null = null):
           return { pageData: null, error: "Invalid page ID" };
         }
 
-      // Check cache first (only for pages or if user is the owner)
-      // Skip caching on server-side (e.g., during generateMetadata)
-      if (typeof window !== 'undefined') {
-        const cacheKey = generateCacheKey('page', pageId, userId || 'public');
-        const cachedData = getCacheItem(cacheKey);
 
-        if (cachedData) {
-          console.log(`Using cached data for page ${pageId}`);
-          return cachedData;
-        }
-      }
 
       // Use API route for client-side requests to avoid Firebase connectivity issues
       if (typeof window !== 'undefined') {
@@ -294,11 +285,7 @@ export const getPageById = async (pageId: string, userId: string | null = null):
               links: [] // API doesn't return links yet
             };
 
-            // DISABLED: No caching to prevent stale data issues
-            // if (pageData && true) {
-            //   const cacheKey = generateCacheKey('page', pageId, userId || 'public');
-            //   setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
-            // }
+
 
             console.log("getPageById: Successfully used API route for client-side request");
             return result;
@@ -369,12 +356,7 @@ export const getPageById = async (pageId: string, userId: string | null = null):
 
             const result = { pageData, versionData, links };
 
-            // DISABLED: No caching to prevent stale data issues
-            // Skip caching on server-side
-            // if (typeof window !== 'undefined' && (pageData.isPublic || (userId && pageData.userId === userId))) {
-            //   const cacheKey = generateCacheKey('page', pageId, userId || 'public');
-            //   setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
-            // }
+
 
             console.log("getPageById: Using content directly from page document");
             return result;
@@ -440,12 +422,7 @@ export const getPageById = async (pageId: string, userId: string | null = null):
 
           const result = { pageData, versionData, links };
 
-          // DISABLED: No caching to prevent stale data issues
-          // Skip caching on server-side
-          // if (typeof window !== 'undefined' && (pageData.isPublic || (userId && pageData.userId === userId))) {
-          //   const cacheKey = generateCacheKey('page', pageId, userId || 'public');
-          //   setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
-          // }
+
 
           return result;
         } else {
@@ -455,38 +432,12 @@ export const getPageById = async (pageId: string, userId: string | null = null):
         return { pageData: null, error: "Page not found" };
       }
     } catch (error) {
-      // Only log as error if it's not a permission denied (which is expected for private pages)
-      if (error?.code !== 'permission-denied') {
-        console.error("Error fetching page:", error);
-        console.error("Fetch page error details:", {
-          pageId,
-          userId,
-          errorMessage: error?.message || 'Unknown error',
-          errorCode: error?.code || 'unknown',
-          errorType: typeof error,
-          errorString: String(error)
-        });
-      } else {
-        console.log(`Permission denied for page ${pageId} - this is expected for private pages`);
-      }
+      // Use enhanced error handling for better debugging and user messages
+      logEnhancedFirebaseError(error, `fetchPage(pageId: ${pageId}, userId: ${userId})`);
 
-      // Provide more specific error messages based on error type
-      let errorMessage = "Error fetching page";
-      if (error?.code === 'permission-denied') {
-        errorMessage = "You don't have permission to view this page";
-      } else if (error?.code === 'not-found') {
-        errorMessage = "Page not found";
-      } else if (error?.code === 'unavailable') {
-        errorMessage = "Service temporarily unavailable. Please try again later.";
-      } else if (error?.message?.includes('network')) {
-        errorMessage = "Network error. Please check your connection and try again.";
-      } else if (error?.message?.includes('empty path')) {
-        errorMessage = "Page data is corrupted. Please try refreshing the page.";
-      } else if (error?.message) {
-        errorMessage = `Error loading page: ${error.message}`;
-      }
+      const userFriendlyMessage = createUserFriendlyErrorMessage(error, 'page access');
 
-      return { pageData: null, error: errorMessage };
+      return { pageData: null, error: userFriendlyMessage };
     }
     }, { pageId, userId });
   }, { collection: 'pages', pageId });

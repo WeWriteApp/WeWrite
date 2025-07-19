@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { usePathname } from 'next/navigation';
 import { cn } from '../../lib/utils';
 import { useSidebarContext } from './UnifiedSidebar';
 
@@ -19,12 +20,17 @@ interface SidebarLayoutProps {
 
 export default function SidebarLayout({ children, className }: SidebarLayoutProps) {
   const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
+  const pathname = usePathname();
+
+  // Check if we're on admin dashboard (should be full-width)
+  const isAdminDashboard = pathname === '/admin/dashboard';
 
   // Calculate the actual width that should push content
   // Content should only respond to persistent expanded state, not hover state
   // When expanded: always use full width (256px) regardless of hover
   // When collapsed: always use collapsed width (64px) regardless of hover
-  const contentPushWidth = isExpanded ? sidebarWidth : sidebarWidth > 0 ? 64 : 0;
+  // Admin dashboard: always full-width (no sidebar spacer)
+  const contentPushWidth = isAdminDashboard ? 0 : (isExpanded ? sidebarWidth : sidebarWidth > 0 ? 64 : 0);
 
   return (
     <div className="flex min-h-screen">
