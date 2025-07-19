@@ -760,7 +760,50 @@ export default function PageView({
 
         // Handle authentication errors specifically
         if (response.status === 401) {
-          console.error('🔴 PAGE SAVE: Authentication error');
+          console.error('🔴 PAGE SAVE: Authentication error - attempting to refresh auth');
+
+          // Try to refresh the authentication
+          try {
+            const { getAuth } = await import('firebase/auth');
+            const auth = getAuth();
+            const user = auth.currentUser;
+
+            if (user) {
+              console.log('🔄 PAGE SAVE: Refreshing auth token');
+              const newToken = await user.getIdToken(true); // Force refresh
+
+              // Create new session cookie
+              const sessionResponse = await fetch('/api/create-session-cookie', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken: newToken })
+              });
+
+              if (sessionResponse.ok) {
+                console.log('✅ PAGE SAVE: Auth refreshed, retrying save');
+                // Retry the save operation
+                const retryResponse = await fetch('/api/pages', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(updateData),
+                });
+
+                if (retryResponse.ok) {
+                  console.log('✅ PAGE SAVE: Retry successful');
+                  // Continue with normal success flow
+                  const responseData = await retryResponse.json();
+                  console.log('✅ PAGE SAVE: Page saved successfully via API (after retry)', { pageId });
+                  // Skip to success handling
+                  setHasUnsavedChanges(false);
+                  setError(null);
+                  return;
+                }
+              }
+            }
+          } catch (refreshError) {
+            console.error('🔴 PAGE SAVE: Auth refresh failed:', refreshError);
+          }
+
           setError("Your session has expired. Please refresh the page and log in again.");
           return; // Don't throw, just show error message
         }

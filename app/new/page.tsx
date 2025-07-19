@@ -592,7 +592,9 @@ function NewPageContent() {
         console.log('🔵 DEBUG: About to call API route with data:', { ...data, content: '(content omitted)' });
 
         let res = null;
-        try {
+        let authRetryAttempted = false;
+
+        const attemptPageCreation = async () => {
           const response = await fetch('/api/pages', {
             method: 'POST',
             headers: {
@@ -602,13 +604,50 @@ function NewPageContent() {
           });
 
           if (!response.ok) {
+            // Handle authentication errors specifically
+            if (response.status === 401 && !authRetryAttempted) {
+              console.error('🔴 DEBUG: Authentication error - attempting to refresh auth');
+              authRetryAttempted = true;
+
+              try {
+                const { getAuth } = await import('firebase/auth');
+                const auth = getAuth();
+                const user = auth.currentUser;
+
+                if (user) {
+                  console.log('🔄 DEBUG: Refreshing auth token');
+                  const newToken = await user.getIdToken(true); // Force refresh
+
+                  // Create new session cookie
+                  const sessionResponse = await fetch('/api/create-session-cookie', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idToken: newToken })
+                  });
+
+                  if (sessionResponse.ok) {
+                    console.log('✅ DEBUG: Auth refreshed, retrying page creation');
+                    // Retry the page creation
+                    return await attemptPageCreation();
+                  }
+                }
+              } catch (refreshError) {
+                console.error('🔴 DEBUG: Auth refresh failed:', refreshError);
+              }
+
+              throw new Error(`Authentication failed: Please refresh the page and log in again.`);
+            }
+
             throw new Error(`API request failed: ${response.status} ${response.statusText}`);
           }
 
           const result = await response.json();
           console.log('🔵 DEBUG: API response:', result);
+          return result.success ? result.data.id : null;
+        };
 
-          res = result.success ? result.data.id : null;
+        try {
+          res = await attemptPageCreation();
           console.log('🔵 DEBUG: Extracted pageId:', res);
 
         } catch (apiError) {
