@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import MobileSlider from '../ui/MobileSlider';
 
 interface GraphPhysicsSettings {
   chargeStrength: number;
@@ -23,7 +24,7 @@ interface GraphSettingsPanelProps {
  * Physics settings panel for graph visualization
  * Used in fullscreen mode to preview changes in real-time
  */
-export default function GraphSettingsPanel({ 
+export default function GraphSettingsPanel({
   settings = {
     chargeStrength: -300,
     linkDistance: 100,
@@ -40,8 +41,10 @@ export default function GraphSettingsPanel({
     onSettingsChange({ [key]: value });
   };
 
+
+
   return (
-    <div className="p-6">
+    <div className="p-6" style={{ touchAction: 'pan-y' }}>
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold">Physics Settings</h3>
         <button
@@ -52,108 +55,69 @@ export default function GraphSettingsPanel({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Charge Strength */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Node Repulsion: {settings.chargeStrength}
-          </label>
-          <input
-            type="range"
-            min="-500"
-            max="-50"
-            step="10"
-            value={settings.chargeStrength}
-            onChange={(e) => handleSettingChange('chargeStrength', parseInt(e.target.value))}
-            className="w-full"
-          />
-          <p className="text-xs text-muted-foreground">How strongly nodes push away from each other</p>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6" style={{ touchAction: 'manipulation' }}>
+        <MobileSlider
+          label="Node Repulsion"
+          value={settings.chargeStrength}
+          min={-500}
+          max={-50}
+          step={10}
+          onChange={(value) => handleSettingChange('chargeStrength', value)}
+          description="How strongly nodes push away from each other"
+        />
 
-        {/* Link Distance */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Link Distance: {settings.linkDistance}
-          </label>
-          <input
-            type="range"
-            min="50"
-            max="200"
-            step="10"
-            value={settings.linkDistance}
-            onChange={(e) => handleSettingChange('linkDistance', parseInt(e.target.value))}
-            className="w-full"
-          />
-          <p className="text-xs text-muted-foreground">Preferred distance between connected nodes</p>
-        </div>
+        <MobileSlider
+          label="Link Distance"
+          value={settings.linkDistance}
+          min={50}
+          max={200}
+          step={10}
+          onChange={(value) => handleSettingChange('linkDistance', value)}
+          description="Preferred distance between connected nodes"
+        />
 
-        {/* Center Strength */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Center Pull: {settings.centerStrength.toFixed(2)}
-          </label>
-          <input
-            type="range"
-            min="0.1"
-            max="1.0"
-            step="0.1"
-            value={settings.centerStrength}
-            onChange={(e) => handleSettingChange('centerStrength', parseFloat(e.target.value))}
-            className="w-full"
-          />
-          <p className="text-xs text-muted-foreground">How strongly nodes are pulled to center</p>
-        </div>
+        <MobileSlider
+          label="Center Pull"
+          value={settings.centerStrength}
+          min={0.1}
+          max={1.0}
+          step={0.1}
+          onChange={(value) => handleSettingChange('centerStrength', value)}
+          formatValue={(val) => val.toFixed(2)}
+          description="How strongly nodes are pulled to center"
+        />
 
-        {/* Collision Radius */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Node Size: {settings.collisionRadius}
-          </label>
-          <input
-            type="range"
-            min="20"
-            max="50"
-            step="2"
-            value={settings.collisionRadius}
-            onChange={(e) => handleSettingChange('collisionRadius', parseInt(e.target.value))}
-            className="w-full"
-          />
-          <p className="text-xs text-muted-foreground">Collision radius around nodes</p>
-        </div>
+        <MobileSlider
+          label="Node Size"
+          value={settings.collisionRadius}
+          min={20}
+          max={50}
+          step={2}
+          onChange={(value) => handleSettingChange('collisionRadius', value)}
+          description="Collision radius around nodes"
+        />
 
-        {/* Alpha Decay */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Simulation Speed: {settings.alphaDecay.toFixed(3)}
-          </label>
-          <input
-            type="range"
-            min="0.01"
-            max="0.1"
-            step="0.005"
-            value={settings.alphaDecay}
-            onChange={(e) => handleSettingChange('alphaDecay', parseFloat(e.target.value))}
-            className="w-full"
-          />
-          <p className="text-xs text-muted-foreground">How quickly the simulation settles</p>
-        </div>
+        <MobileSlider
+          label="Simulation Speed"
+          value={settings.alphaDecay}
+          min={0.01}
+          max={0.1}
+          step={0.005}
+          onChange={(value) => handleSettingChange('alphaDecay', value)}
+          formatValue={(val) => val.toFixed(3)}
+          description="How quickly the simulation settles"
+        />
 
-        {/* Velocity Decay */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Damping: {settings.velocityDecay.toFixed(2)}
-          </label>
-          <input
-            type="range"
-            min="0.1"
-            max="0.9"
-            step="0.05"
-            value={settings.velocityDecay}
-            onChange={(e) => handleSettingChange('velocityDecay', parseFloat(e.target.value))}
-            className="w-full"
-          />
-          <p className="text-xs text-muted-foreground">How much velocity is retained each frame</p>
-        </div>
+        <MobileSlider
+          label="Damping"
+          value={settings.velocityDecay}
+          min={0.1}
+          max={0.9}
+          step={0.05}
+          onChange={(value) => handleSettingChange('velocityDecay', value)}
+          formatValue={(val) => val.toFixed(2)}
+          description="How much velocity is retained each frame"
+        />
       </div>
 
       <div className="mt-6 text-xs text-muted-foreground">

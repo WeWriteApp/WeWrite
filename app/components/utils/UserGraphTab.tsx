@@ -9,6 +9,7 @@ import { Loader2, Maximize2, X, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../ui/button';
 import { graphDataCache } from '../../utils/graphDataCache';
 import GraphSettingsPanel from '../pages/GraphSettingsPanel';
+import { createPortal } from 'react-dom';
 
 interface UserPage {
   id: string;
@@ -56,8 +57,14 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
   const [loading, setLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isViewSettingsOpen, setIsViewSettingsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const { getPillStyleClasses } = usePillStyle();
+
+  // Ensure we're mounted on the client side for portal rendering
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   // const { settings, openDrawer } = useGraphSettings();
   const settings = {
     chargeStrength: -300,
@@ -254,6 +261,17 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
     // Create main group
     const g = svg.append("g");
 
+    // Initialize node positions for better distribution
+    nodes.forEach((node, i) => {
+      if (node.x === undefined || node.y === undefined) {
+        // Distribute nodes in a circle for better initial layout
+        const angle = (i / nodes.length) * 2 * Math.PI;
+        const radius = Math.min(width, height) * 0.3;
+        node.x = width / 2 + Math.cos(angle) * radius;
+        node.y = height / 2 + Math.sin(angle) * radius;
+      }
+    });
+
     // Create force simulation with settings
     const simulation = d3.forceSimulation<GraphNode>(nodes)
       .force("link", d3.forceLink<GraphNode, GraphLink>(links)
@@ -262,6 +280,26 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
       .force("charge", d3.forceManyBody().strength(settings.chargeStrength))
       .force("center", d3.forceCenter(width / 2, height / 2).strength(settings.centerStrength))
       .force("collision", d3.forceCollide().radius(settings.collisionRadius))
+      .force("boundary", () => {
+        // Keep nodes within container bounds with gentle constraints
+        const padding = 30;
+        nodes.forEach(node => {
+          if (node.x !== undefined && node.y !== undefined) {
+            // Apply gentle boundary forces instead of hard constraints
+            if (node.x < padding) {
+              node.vx = (node.vx || 0) + (padding - node.x) * 0.1;
+            } else if (node.x > width - padding) {
+              node.vx = (node.vx || 0) + (width - padding - node.x) * 0.1;
+            }
+
+            if (node.y < padding) {
+              node.vy = (node.vy || 0) + (padding - node.y) * 0.1;
+            } else if (node.y > height - padding) {
+              node.vy = (node.vy || 0) + (height - padding - node.y) * 0.1;
+            }
+          }
+        });
+      })
       .alphaDecay(settings.alphaDecay)
       .velocityDecay(settings.velocityDecay);
 
@@ -436,11 +474,11 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
         </div>
       </div>
 
-      {/* Fullscreen modal */}
-      {isFullscreen && (
-        <div className="fixed inset-0 z-50 bg-background">
+      {/* Fullscreen modal - rendered via portal to escape container constraints */}
+      {mounted && isFullscreen && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-background animate-in fade-in-0 duration-300">
           {/* Header with controls */}
-          <div className="absolute top-0 left-0 right-0 z-10 bg-background border-b border-border p-4">
+          <div className="absolute top-0 left-0 right-0 z-[10000] bg-background border-b border-border p-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Page Connections Graph</h3>
               <div className="flex items-center gap-2">
@@ -481,7 +519,8 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
               />
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

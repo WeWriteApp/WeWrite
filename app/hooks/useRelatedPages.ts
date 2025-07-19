@@ -21,7 +21,7 @@ export interface RelatedPagesData {
  * Hook to fetch related pages for a given page
  * Uses the existing related pages API endpoint
  */
-export function useRelatedPages(pageId: string, pageTitle?: string, pageContent?: string): RelatedPagesData & { refresh: () => void } {
+export function useRelatedPages(pageId: string, pageTitle?: string, pageContent?: string, currentUsername?: string): RelatedPagesData & { refresh: () => void } {
   const [relatedPages, setRelatedPages] = useState<RelatedPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +54,10 @@ export function useRelatedPages(pageId: string, pageTitle?: string, pageContent?
         params.append('pageContent', pageContent.substring(0, 1000));
       }
 
+      if (currentUsername) {
+        params.append('excludeUsername', currentUsername);
+      }
+
       const response = await fetch(`/api/related-pages?${params.toString()}`);
 
       if (!response.ok) {
@@ -79,7 +83,7 @@ export function useRelatedPages(pageId: string, pageTitle?: string, pageContent?
     } finally {
       setLoading(false);
     }
-  }, [pageId, pageTitle, pageContent, refreshTrigger]);
+  }, [pageId, pageTitle, pageContent, currentUsername, refreshTrigger]);
 
   // Fetch related pages when dependencies change
   useEffect(() => {

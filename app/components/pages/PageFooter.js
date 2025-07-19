@@ -8,7 +8,7 @@ import CustomDateField from "./CustomDateField";
 import LocationField from "./LocationField";
 import dynamic from "next/dynamic";
 import { Button } from "../ui/button";
-import { Reply, Save, RotateCcw, Trash2 } from "lucide-react";
+import { Reply, Save, RotateCcw, Trash2, Check } from "lucide-react";
 
 
 // Dynamically import AddToPageButton to avoid SSR issues
@@ -159,7 +159,7 @@ export default function PageFooter({
               onClick={onSave}
               disabled={isSaving}
             >
-              <Save className="h-5 w-5" />
+              <Check className="h-5 w-5" />
               {isSaving ? "Saving..." : "Save Changes"}
             </Button>
             <Button
@@ -173,7 +173,7 @@ export default function PageFooter({
               Revert Changes
             </Button>
           </div>
-          <p className="text-sm text-blue-700 dark:text-blue-300 mt-2 text-center">
+          <p className="text-sm text-green-700 dark:text-green-300 mt-2 text-center">
             You have unsaved changes. Save them or revert to the last saved version.
           </p>
         </div>

@@ -9,6 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "../ui/tooltip";
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 
 // Import related pages function with working algorithm
 const getRelatedPagesAsync = async (pageId: string, pageTitle: string, pageContent: string, linkedPageIds: string[] = [], limit: number = 10) => {
@@ -106,6 +107,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
   const [relatedPages, setRelatedPages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const { currentAccount } = useCurrentAccount();
 
   // Set mounted state
   useEffect(() => {
@@ -138,6 +140,10 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
           params.set('linkedPageIds', linkedPageIds.join(','));
         }
 
+        if (currentAccount?.username) {
+          params.set('excludeUsername', currentAccount.username);
+        }
+
         const response = await fetch(`/api/related-pages?${params.toString()}`);
 
         if (!response.ok) {
@@ -155,7 +161,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
     };
 
     fetchRelatedPages();
-  }, [page?.id, page?.title, page?.content, linkedPageIds, mounted]);
+  }, [page?.id, page?.title, page?.content, linkedPageIds, mounted, currentAccount?.username]);
 
   if (!mounted) {
     return null;
@@ -169,7 +175,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
         {/* Header */}
         <div className="flex items-center gap-2 mb-4">
           <h3 className="text-sm font-medium">
-            Related Pages
+            Related pages by others
           </h3>
           <TooltipProvider>
             <Tooltip>
@@ -187,7 +193,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />
-            <span>Loading related pages...</span>
+            <span>Loading related pages by others...</span>
           </div>
         ) : relatedPages.length > 0 ? (
           <div className="flex flex-wrap gap-2">
@@ -220,7 +226,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
           </div>
         ) : (
           <div className="text-sm text-muted-foreground">
-            No related pages found
+            No related pages by others found
           </div>
         )}
       </div>

@@ -11,6 +11,7 @@ import { usePageConnectionsGraph, getLinkDirection } from '../../hooks/usePageCo
 import { useRelatedPages } from '../../hooks/useRelatedPages';
 import { graphDataCache } from '../../utils/graphDataCache';
 import GraphSettingsPanel from './GraphSettingsPanel';
+import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 
 interface GraphNode {
   id: string;
@@ -58,14 +59,15 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
   const [isViewSettingsOpen, setIsViewSettingsOpen] = useState(false);
   const router = useRouter();
   const { getPillStyleClasses } = usePillStyle();
+  const { currentAccount } = useCurrentAccount();
   // const { settings, openDrawer } = useGraphSettings();
   const settings = {
-    chargeStrength: -300,
-    linkDistance: 100,
-    centerStrength: 0.3,
-    collisionRadius: 30,
-    alphaDecay: 0.0228,
-    velocityDecay: 0.4
+    chargeStrength: -400,
+    linkDistance: 120,
+    centerStrength: 0.8,
+    collisionRadius: 35,
+    alphaDecay: 0.02,
+    velocityDecay: 0.3
   };
   const openDrawer = () => {};
 
@@ -85,7 +87,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
           if (d.nodeType === 'related') return settings.chargeStrength * 0.5;
           return settings.chargeStrength;
         }))
-        .force("center", d3.forceCenter().strength(settings.centerStrength))
+        .force("center", d3.forceCenter(containerRef.current?.clientWidth / 2 || 0, (isFullscreen ? window.innerHeight : 400) / 2).strength(settings.centerStrength))
         .force("collision", d3.forceCollide().radius(d => {
           if (d.nodeType === 'related') return settings.collisionRadius * 0.8;
           return settings.collisionRadius;
@@ -111,12 +113,12 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
 
   const handleResetSettings = () => {
     const defaultSettings = {
-      chargeStrength: -300,
-      linkDistance: 100,
-      centerStrength: 0.3,
-      collisionRadius: 30,
-      alphaDecay: 0.0228,
-      velocityDecay: 0.4
+      chargeStrength: -400,
+      linkDistance: 120,
+      centerStrength: 0.8,
+      collisionRadius: 35,
+      alphaDecay: 0.02,
+      velocityDecay: 0.3
     };
     handleSettingsChange(defaultSettings);
   };
@@ -132,8 +134,8 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
     refresh
   } = usePageConnectionsGraph(pageId, pageTitle);
 
-  // Use related pages hook
-  const { relatedPages, loading: relatedLoading } = useRelatedPages(pageId, pageTitle);
+  // Use related pages hook - exclude current user's pages
+  const { relatedPages, loading: relatedLoading } = useRelatedPages(pageId, pageTitle, undefined, currentAccount?.username);
 
   // Expose refresh function to parent component
   useEffect(() => {
@@ -147,11 +149,14 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
     if (loading || relatedLoading) return;
 
     console.log('🎯 PageGraphView: Building graph with consolidated data:', {
+      pageId,
+      pageTitle,
       incoming: incoming.length,
       outgoing: outgoing.length,
       bidirectional: bidirectional.length,
       secondHop: secondHopConnections.length,
-      related: relatedPages.length
+      related: relatedPages.length,
+      allConnectionIds: allConnections.map(c => c.id)
     });
 
     // Create center node
@@ -183,13 +188,15 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       nodeType: 'connected'
     }));
 
-    // Create related pages nodes (floating without connections)
+    // Create related pages nodes (floating without connections) - only show others' pages
     const relatedNodes: GraphNode[] = relatedPages
       .filter(page =>
         // Exclude pages that are already in the graph as connections
         page.id !== pageId &&
         !allConnections.some(conn => conn.id === page.id) &&
-        !secondHopConnections.some(conn => conn.id === page.id)
+        !secondHopConnections.some(conn => conn.id === page.id) &&
+        // Only show related pages by other people (exclude current user's pages)
+        page.username !== currentAccount?.username
       )
       .map(page => ({
         id: page.id,
@@ -269,7 +276,17 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
     // Set up dimensions
     const width = container.clientWidth;
     const height = isFullscreen ? window.innerHeight : 400;
-    
+
+    console.log('🎯 PageGraphView: Container dimensions:', {
+      width,
+      height,
+      centerX: width / 2,
+      centerY: height / 2,
+      containerClientWidth: container.clientWidth,
+      containerClientHeight: container.clientHeight,
+      isFullscreen
+    });
+
     svg.attr("width", width).attr("height", height);
 
     // Create zoom behavior - only enable in fullscreen mode
@@ -285,6 +302,8 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
     } else {
       // Disable zoom/pan in collapsed mode
       svg.on('.zoom', null);
+      // Make graph completely non-interactive when collapsed
+      svg.style("pointer-events", "none");
     }
 
     // Create main group for zooming
@@ -332,6 +351,36 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       .attr("d", "M0,-5L10,0L0,5")
       .attr("fill", "hsl(var(--primary) / 0.8)");
 
+    // Initialize node positions for better distribution
+    const centerNodes = nodes.filter(n => n.level === 0);
+    const connectedNodes = nodes.filter(n => n.level === 1);
+    const relatedNodes = nodes.filter(n => n.level === 2);
+
+    nodes.forEach((node, i) => {
+      if (node.x === undefined || node.y === undefined) {
+        if (node.level === 0) {
+          // Center node in the middle
+          node.x = width / 2;
+          node.y = height / 2;
+          console.log('🎯 PageGraphView: Positioning center node at:', { x: node.x, y: node.y, nodeId: node.id });
+        } else if (node.level === 1) {
+          // Connected nodes in inner circle
+          const connectedIndex = connectedNodes.indexOf(node);
+          const angle = (connectedIndex / connectedNodes.length) * 2 * Math.PI;
+          const radius = Math.min(width, height) * 0.25;
+          node.x = width / 2 + Math.cos(angle) * radius;
+          node.y = height / 2 + Math.sin(angle) * radius;
+        } else {
+          // Related nodes in outer circle
+          const relatedIndex = relatedNodes.indexOf(node);
+          const angle = (relatedIndex / relatedNodes.length) * 2 * Math.PI;
+          const radius = Math.min(width, height) * 0.4;
+          node.x = width / 2 + Math.cos(angle) * radius;
+          node.y = height / 2 + Math.sin(angle) * radius;
+        }
+      }
+    });
+
     // Create force simulation with settings
     const simulation = d3.forceSimulation<GraphNode>(nodes)
       .force("link", d3.forceLink<GraphNode, GraphLink>(links)
@@ -353,6 +402,26 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         if (d.nodeType === 'related') return settings.collisionRadius * 0.8;
         return settings.collisionRadius;
       }))
+      .force("boundary", () => {
+        // Keep nodes within container bounds with gentle constraints
+        const padding = 20;
+        nodes.forEach(node => {
+          if (node.x !== undefined && node.y !== undefined) {
+            // Apply gentle boundary forces instead of hard constraints
+            if (node.x < padding) {
+              node.vx = (node.vx || 0) + (padding - node.x) * 0.05;
+            } else if (node.x > width - padding) {
+              node.vx = (node.vx || 0) + (width - padding - node.x) * 0.05;
+            }
+
+            if (node.y < padding) {
+              node.vy = (node.vy || 0) + (padding - node.y) * 0.05;
+            } else if (node.y > height - padding) {
+              node.vy = (node.vy || 0) + (height - padding - node.y) * 0.05;
+            }
+          }
+        });
+      })
       .alphaDecay(settings.alphaDecay)
       .velocityDecay(settings.velocityDecay);
 
@@ -386,8 +455,11 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       .selectAll("g")
       .data(nodes)
       .enter().append("g")
-      .style("cursor", "pointer")
-      .call(d3.drag<SVGGElement, GraphNode>()
+      .style("cursor", isFullscreen ? "pointer" : "default");
+
+    // Only enable drag behavior in fullscreen mode
+    if (isFullscreen) {
+      node.call(d3.drag<SVGGElement, GraphNode>()
         .on("start", (event, d) => {
           if (!event.active) simulation.alphaTarget(0.3).restart();
           d.fx = d.x;
@@ -402,6 +474,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
           d.fx = null;
           d.fy = null;
         }));
+    }
 
     // Add circles to nodes
     node.append("circle")
@@ -441,12 +514,42 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       .attr("fill", d => d.nodeType === 'related' ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))")
       .style("pointer-events", "none");
 
-    // Add click handler
-    node.on("click", (event, d) => {
-      if (d.id !== pageId) {
-        router.push(`/${d.id}`);
+    // Add click handler only in fullscreen mode
+    if (isFullscreen) {
+      node.on("click", (event, d) => {
+        if (d.id !== pageId) {
+          console.log('🎯 PageGraphView: Navigating to page:', d.id, 'from current page:', pageId);
+          router.push(`/${d.id}`);
+        }
+      });
+    }
+
+    // Start simulation with strong centering
+    simulation.alpha(0.8).restart();
+
+    // Force immediate centering after a short delay
+    setTimeout(() => {
+      if (simulation) {
+        nodes.forEach(node => {
+          if (node.level === 0) {
+            // Ensure center node stays centered
+            node.fx = width / 2;
+            node.fy = height / 2;
+          }
+        });
+        simulation.alpha(0.5).restart();
+
+        // Release fixed positions after centering
+        setTimeout(() => {
+          nodes.forEach(node => {
+            if (node.level === 0) {
+              node.fx = null;
+              node.fy = null;
+            }
+          });
+        }, 1000);
       }
-    });
+    }, 100);
 
     // Update positions on simulation tick
     simulation.on("tick", () => {
@@ -477,7 +580,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         if (d.nodeType === 'related') return settings.chargeStrength * 0.5;
         return settings.chargeStrength;
       }))
-      .force("center", d3.forceCenter().strength(settings.centerStrength))
+      .force("center", d3.forceCenter(containerRef.current?.clientWidth / 2 || 0, (isFullscreen ? window.innerHeight : 400) / 2).strength(settings.centerStrength))
       .force("collision", d3.forceCollide().radius(d => {
         if (d.nodeType === 'related') return settings.collisionRadius * 0.8;
         return settings.collisionRadius;
@@ -578,7 +681,10 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
 
   return (
     <div className={`mt-8 px-4 sm:px-6 max-w-4xl mx-auto ${className} animate-in fade-in-0 duration-300`}>
-      <div className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm">
+      <div
+        className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm cursor-pointer hover:shadow-md transition-all duration-200"
+        onClick={() => setIsFullscreen(true)}
+      >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium">Graph view</h3>
@@ -586,7 +692,8 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
             <Button
               variant={isViewSettingsOpen ? "default" : "outline"}
               size="sm"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 setIsViewSettingsOpen(true);
                 setIsFullscreen(true);
               }}
@@ -597,7 +704,8 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 setIsViewSettingsOpen(false);
                 setIsFullscreen(true);
               }}
@@ -620,7 +728,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-muted-foreground/30 border border-muted-foreground/50"></div>
-            <span>Related pages</span>
+            <span>Related pages by others</span>
           </div>
         </div>
 

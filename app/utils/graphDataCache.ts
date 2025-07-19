@@ -121,17 +121,17 @@ class GraphDataCache {
   /**
    * Get related pages with caching
    */
-  async getRelatedPages(pageId: string, pageTitle?: string, pageContent?: string): Promise<RelatedPagesData> {
-    const cacheKey = `related:${pageId}:${pageTitle?.substring(0, 20) || ''}`;
+  async getRelatedPages(pageId: string, pageTitle?: string, pageContent?: string, excludeUsername?: string): Promise<RelatedPagesData> {
+    const cacheKey = `related:${pageId}:${pageTitle?.substring(0, 20) || ''}:${excludeUsername || ''}`;
     const cached = this.get<RelatedPagesData>(cacheKey);
-    
+
     if (cached) {
       console.log('🚀 [CACHE] Hit for related pages:', pageId);
       return cached;
     }
 
     console.log('📡 [CACHE] Miss for related pages, fetching:', pageId);
-    
+
     try {
       const params = new URLSearchParams({
         pageId,
@@ -144,6 +144,10 @@ class GraphDataCache {
 
       if (pageContent) {
         params.append('pageContent', pageContent.substring(0, 1000));
+      }
+
+      if (excludeUsername) {
+        params.append('excludeUsername', excludeUsername);
       }
 
       const response = await fetch(`/api/related-pages?${params.toString()}`);
