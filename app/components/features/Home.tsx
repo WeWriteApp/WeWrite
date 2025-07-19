@@ -20,6 +20,7 @@ import TimelineSection from "../timeline/TimelineSection";
 import EmailVerificationAlert from "../utils/EmailVerificationAlert";
 import EmptyState from "../ui/EmptyState";
 import { getEnvironmentType } from "../../utils/environmentConfig";
+import UserPagesGraphView from "../pages/UserPagesGraphView";
 
 // Recently Viewed Section Component - moved outside to prevent infinite re-renders
 const RecentPagesSection = () => {
@@ -244,6 +245,9 @@ const Home: React.FC = () => {
 
             {/* Daily Notes Section */}
             <DailyNotesSection />
+
+            {/* User Pages Graph View */}
+            <UserPagesGraphView />
 
             {/* Timeline Section */}
             <TimelineSection />

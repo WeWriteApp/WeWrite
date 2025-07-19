@@ -7,13 +7,15 @@ import { usePillStyle } from '../../contexts/PillStyleContext';
 import { Loader2, Maximize2, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { usePageConnectionsGraph, getLinkDirection } from '../../hooks/usePageConnections';
+import { useRelatedPages } from '../../hooks/useRelatedPages';
 
 interface GraphNode {
   id: string;
   title: string;
   username?: string;
   isCenter: boolean;
-  level: number; // 0 = center, 1 = direct connections, 2 = second-hop
+  level: number; // 0 = center, 1 = direct connections, 2 = second-hop, 3 = related pages
+  nodeType: 'center' | 'connected' | 'related'; // Type of node for styling
   x?: number;
   y?: number;
   fx?: number | null;
@@ -63,6 +65,9 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
     refresh
   } = usePageConnectionsGraph(pageId, pageTitle);
 
+  // Use related pages hook
+  const { relatedPages, loading: relatedLoading } = useRelatedPages(pageId, pageTitle);
+
   // Expose refresh function to parent component
   useEffect(() => {
     if (onRefreshReady && refresh) {
@@ -72,13 +77,14 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
 
   // Build graph when connections data changes
   useEffect(() => {
-    if (loading || !allConnections.length) return;
+    if (loading || relatedLoading) return;
 
     console.log('🎯 PageGraphView: Building graph with consolidated data:', {
       incoming: incoming.length,
       outgoing: outgoing.length,
       bidirectional: bidirectional.length,
-      secondHop: secondHopConnections.length
+      secondHop: secondHopConnections.length,
+      related: relatedPages.length
     });
 
     // Create center node
@@ -86,7 +92,8 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       id: pageId,
       title: pageTitle || 'Current Page',
       isCenter: true,
-      level: 0
+      level: 0,
+      nodeType: 'center'
     };
 
     // Create level 1 nodes (direct connections)
@@ -95,7 +102,8 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       title: connection.title,
       username: connection.username,
       isCenter: false,
-      level: 1
+      level: 1,
+      nodeType: 'connected'
     }));
 
     // Create level 2 nodes (2-hop connections)
@@ -104,11 +112,29 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       title: connection.title,
       username: connection.username,
       isCenter: false,
-      level: 2
+      level: 2,
+      nodeType: 'connected'
     }));
 
+    // Create related pages nodes (floating without connections)
+    const relatedNodes: GraphNode[] = relatedPages
+      .filter(page =>
+        // Exclude pages that are already in the graph as connections
+        page.id !== pageId &&
+        !allConnections.some(conn => conn.id === page.id) &&
+        !secondHopConnections.some(conn => conn.id === page.id)
+      )
+      .map(page => ({
+        id: page.id,
+        title: page.title,
+        username: page.username,
+        isCenter: false,
+        level: 3,
+        nodeType: 'related'
+      }));
+
     // Combine all nodes
-    const allNodes = [centerNode, ...level1Nodes, ...level2Nodes];
+    const allNodes = [centerNode, ...level1Nodes, ...level2Nodes, ...relatedNodes];
 
     // Create links with proper directionality
     const allLinks: GraphLink[] = [];
@@ -160,11 +186,11 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
 
     setNodes(allNodes);
     setLinks(allLinks);
-  }, [pageId, pageTitle, loading, allConnections.length, incoming.length, outgoing.length, bidirectional.length, secondHopConnections.length]);
+  }, [pageId, pageTitle, loading, relatedLoading, allConnections.length, incoming.length, outgoing.length, bidirectional.length, secondHopConnections.length, relatedPages.length]);
 
   // D3 visualization
   useEffect(() => {
-    if (!svgRef.current || nodes.length === 0 || loading) return;
+    if (!svgRef.current || nodes.length === 0 || loading || relatedLoading) return;
 
     const svg = d3.select(svgRef.current);
     const container = containerRef.current;
@@ -243,9 +269,17 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
           if (source.level === 0 || target.level === 0) return 100; // Center connections
           return 80; // Other connections
         }))
-      .force("charge", d3.forceManyBody().strength(-300))
+      .force("charge", d3.forceManyBody().strength(d => {
+        // Related pages have weaker repulsion so they float more freely
+        if (d.nodeType === 'related') return -150;
+        return -300;
+      }))
       .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(30));
+      .force("collision", d3.forceCollide().radius(d => {
+        // Related pages have smaller collision radius
+        if (d.nodeType === 'related') return 25;
+        return 30;
+      }));
 
     // Create links with directional arrows
     const link = g.append("g")
@@ -293,24 +327,40 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
 
     // Add circles to nodes
     node.append("circle")
-      .attr("r", d => d.isCenter ? 12 : (d.level === 1 ? 8 : 6))
+      .attr("r", d => {
+        if (d.isCenter) return 12;
+        if (d.nodeType === 'connected') return d.level === 1 ? 8 : 6;
+        if (d.nodeType === 'related') return 6;
+        return 6;
+      })
       .attr("fill", d => {
         if (d.isCenter) return "hsl(var(--primary))";
-        if (d.level === 1) return "hsl(var(--primary) / 0.7)";
+        if (d.nodeType === 'connected') return d.level === 1 ? "hsl(var(--primary) / 0.7)" : "hsl(var(--primary) / 0.4)";
+        if (d.nodeType === 'related') return "hsl(var(--muted-foreground) / 0.3)"; // Grey for related pages
         return "hsl(var(--primary) / 0.4)";
       })
-      .attr("stroke", "#fff")
+      .attr("stroke", d => d.nodeType === 'related' ? "hsl(var(--muted-foreground) / 0.5)" : "#fff")
       .attr("stroke-width", 2);
 
     // Add labels
     node.append("text")
       .text(d => d.title.length > 20 ? d.title.substring(0, 20) + "..." : d.title)
       .attr("x", 0)
-      .attr("y", d => d.isCenter ? -18 : (d.level === 1 ? -14 : -12))
+      .attr("y", d => {
+        if (d.isCenter) return -18;
+        if (d.nodeType === 'connected') return d.level === 1 ? -14 : -12;
+        if (d.nodeType === 'related') return -12;
+        return -12;
+      })
       .attr("text-anchor", "middle")
-      .attr("font-size", d => d.isCenter ? "12px" : (d.level === 1 ? "10px" : "8px"))
+      .attr("font-size", d => {
+        if (d.isCenter) return "12px";
+        if (d.nodeType === 'connected') return d.level === 1 ? "10px" : "8px";
+        if (d.nodeType === 'related') return "8px";
+        return "8px";
+      })
       .attr("font-weight", d => d.isCenter ? "bold" : "normal")
-      .attr("fill", "hsl(var(--foreground))")
+      .attr("fill", d => d.nodeType === 'related' ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))")
       .style("pointer-events", "none");
 
     // Add click handler
@@ -337,7 +387,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
     };
   }, [nodes, links, loading, isFullscreen, pageId, router]);
 
-  if (loading) {
+  if (loading || relatedLoading) {
     return (
       <div className={`flex items-center justify-center h-64 ${className}`}>
         <div className="flex items-center gap-2 text-muted-foreground">
@@ -352,7 +402,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
     return (
       <div className={`mt-8 px-4 sm:px-6 max-w-4xl mx-auto ${className}`}>
         <div className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm">
-          <h3 className="text-sm font-medium mb-4">Page Connections</h3>
+          <h3 className="text-sm font-medium mb-4">Graph view</h3>
           <div className="flex items-center justify-center h-32 text-muted-foreground">
             <p>No page connections found</p>
           </div>
@@ -416,7 +466,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       <div className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-medium">Page Connections</h3>
+          <h3 className="text-sm font-medium">Graph view</h3>
           <Button
             variant="outline"
             size="sm"
@@ -425,6 +475,22 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
           >
             <Maximize2 className="h-4 w-4" />
           </Button>
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap items-center gap-4 mb-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-primary"></div>
+            <span>Current page</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-primary/70"></div>
+            <span>Connected pages</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-muted-foreground/30 border border-muted-foreground/50"></div>
+            <span>Related pages</span>
+          </div>
         </div>
 
         {/* Graph container */}
