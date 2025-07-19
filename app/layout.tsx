@@ -13,6 +13,7 @@ import { DataProvider } from "./providers/DataProvider"
 import { DateFormatProvider } from "./contexts/DateFormatContext"
 import { AccentColorProvider } from "./contexts/AccentColorContext"
 import { PillStyleProvider } from "./contexts/PillStyleContext"
+// import { GraphSettingsProvider, GraphSettingsDrawer } from "./contexts/GraphSettingsContext"
 // LoggingProvider removed - using unified logger from init-logger.ts
 import { LineSettingsProvider } from "./contexts/LineSettingsContext"
 import { RecentPagesProvider } from "./contexts/RecentPagesContext"

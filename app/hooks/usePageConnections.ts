@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import { graphDataCache } from '../utils/graphDataCache';
 
 export interface PageConnection {
   id: string;
@@ -76,17 +77,10 @@ export function usePageConnections(pageId: string, pageTitle?: string): PageConn
       setError(null);
       console.log('🔗 [CONNECTIONS] fetchConnections called for page:', pageId, 'refreshTrigger:', refreshTrigger);
 
-      // Use the page connections API
-      const response = await fetch(`/api/page-connections?pageId=${pageId}&includeSecondHop=false&limit=50`);
+      // Use cached data for better performance
+      const data = await graphDataCache.getPageConnections(pageId, false);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('🔗 usePageConnections: API error response:', errorText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log('🔗 [CONNECTIONS] Received fresh data:', {
+      console.log('🔗 [CONNECTIONS] Received data:', {
         incomingCount: data.incoming?.length || 0,
         outgoingCount: data.outgoing?.length || 0,
         refreshTrigger: refreshTrigger

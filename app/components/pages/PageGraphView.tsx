@@ -4,10 +4,12 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as d3 from 'd3';
 import { useRouter } from 'next/navigation';
 import { usePillStyle } from '../../contexts/PillStyleContext';
-import { Loader2, Maximize2, X } from 'lucide-react';
+// import { useGraphSettings } from '../../contexts/GraphSettingsContext';
+import { Loader2, Maximize2, X, Settings } from 'lucide-react';
 import { Button } from '../ui/button';
 import { usePageConnectionsGraph, getLinkDirection } from '../../hooks/usePageConnections';
 import { useRelatedPages } from '../../hooks/useRelatedPages';
+import { graphDataCache } from '../../utils/graphDataCache';
 
 interface GraphNode {
   id: string;
@@ -48,11 +50,22 @@ interface PageGraphViewProps {
 export default function PageGraphView({ pageId, pageTitle, className = "", onRefreshReady }: PageGraphViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [links, setLinks] = useState<GraphLink[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const router = useRouter();
   const { getPillStyleClasses } = usePillStyle();
+  // const { settings, openDrawer } = useGraphSettings();
+  const settings = {
+    chargeStrength: -300,
+    linkDistance: 100,
+    centerStrength: 0.3,
+    collisionRadius: 30,
+    alphaDecay: 0.0228,
+    velocityDecay: 0.4
+  };
+  const openDrawer = () => {};
 
   // Use consolidated page connections hook
   const {
@@ -259,27 +272,32 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       .attr("d", "M0,-5L10,0L0,5")
       .attr("fill", "hsl(var(--primary) / 0.8)");
 
-    // Create force simulation
+    // Create force simulation with settings
     const simulation = d3.forceSimulation<GraphNode>(nodes)
       .force("link", d3.forceLink<GraphNode, GraphLink>(links)
         .id(d => d.id)
         .distance(d => {
           const source = d.source as GraphNode;
           const target = d.target as GraphNode;
-          if (source.level === 0 || target.level === 0) return 100; // Center connections
-          return 80; // Other connections
+          if (source.level === 0 || target.level === 0) return settings.linkDistance; // Center connections
+          return settings.linkDistance * 0.8; // Other connections
         }))
       .force("charge", d3.forceManyBody().strength(d => {
         // Related pages have weaker repulsion so they float more freely
-        if (d.nodeType === 'related') return -150;
-        return -300;
+        if (d.nodeType === 'related') return settings.chargeStrength * 0.5;
+        return settings.chargeStrength;
       }))
-      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("center", d3.forceCenter(width / 2, height / 2).strength(settings.centerStrength))
       .force("collision", d3.forceCollide().radius(d => {
         // Related pages have smaller collision radius
-        if (d.nodeType === 'related') return 25;
-        return 30;
-      }));
+        if (d.nodeType === 'related') return settings.collisionRadius * 0.8;
+        return settings.collisionRadius;
+      }))
+      .alphaDecay(settings.alphaDecay)
+      .velocityDecay(settings.velocityDecay);
+
+    // Store simulation reference for settings updates
+    simulationRef.current = simulation;
 
     // Create links with directional arrows
     const link = g.append("g")
@@ -385,7 +403,42 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
     return () => {
       simulation.stop();
     };
-  }, [nodes, links, loading, isFullscreen, pageId, router]);
+  }, [nodes, links, loading, isFullscreen, pageId, router, settings]);
+
+  // Update simulation when settings change
+  useEffect(() => {
+    if (!simulationRef.current) return;
+
+    const simulation = simulationRef.current;
+
+    // Update forces with new settings
+    simulation
+      .force("charge", d3.forceManyBody().strength(d => {
+        if (d.nodeType === 'related') return settings.chargeStrength * 0.5;
+        return settings.chargeStrength;
+      }))
+      .force("center", d3.forceCenter().strength(settings.centerStrength))
+      .force("collision", d3.forceCollide().radius(d => {
+        if (d.nodeType === 'related') return settings.collisionRadius * 0.8;
+        return settings.collisionRadius;
+      }))
+      .alphaDecay(settings.alphaDecay)
+      .velocityDecay(settings.velocityDecay);
+
+    // Update link distance
+    const linkForce = simulation.force("link") as d3.ForceLink<GraphNode, GraphLink>;
+    if (linkForce) {
+      linkForce.distance(d => {
+        const source = d.source as GraphNode;
+        const target = d.target as GraphNode;
+        if (source.level === 0 || target.level === 0) return settings.linkDistance;
+        return settings.linkDistance * 0.8;
+      });
+    }
+
+    // Restart simulation with new settings
+    simulation.alpha(0.3).restart();
+  }, [settings]);
 
   if (loading || relatedLoading) {
     return (
@@ -413,16 +466,13 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
 
   if (isFullscreen) {
     return (
-      <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-sm animate-in fade-in-0 duration-300">
-        {/* Background overlay */}
-        <div className="absolute inset-0 bg-background/80" />
-
+      <div className="fixed inset-0 z-[9999] bg-background animate-in fade-in-0 duration-300">
         {/* Close button */}
         <Button
           variant="outline"
           size="sm"
           onClick={() => setIsFullscreen(false)}
-          className="absolute top-4 right-4 z-10 animate-in slide-in-from-top-2 duration-300 delay-150"
+          className="absolute top-4 right-4 z-10"
         >
           <X className="h-4 w-4" />
         </Button>
@@ -430,32 +480,9 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         {/* Fullscreen graph container */}
         <div
           ref={containerRef}
-          className="w-full h-full bg-background animate-in zoom-in-95 duration-500 ease-out"
+          className="w-full h-full bg-background"
         >
           <svg ref={svgRef} className="w-full h-full" />
-
-          {/* Legend */}
-          <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm border border-border rounded-lg p-3 text-xs animate-in slide-in-from-left-2 duration-300 delay-300">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-primary"></div>
-                <span>Current page</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-primary/70"></div>
-                <span>Direct connections</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary/40"></div>
-                <span>2 hops away</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Instructions */}
-          <div className="absolute bottom-4 right-4 bg-background/90 backdrop-blur-sm border border-border rounded-lg p-3 text-xs text-muted-foreground animate-in slide-in-from-bottom-2 duration-300 delay-300">
-            <div>Click nodes to navigate • Drag to move • Scroll to zoom</div>
-          </div>
         </div>
       </div>
     );
@@ -467,14 +494,24 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium">Graph view</h3>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsFullscreen(true)}
-            className="transition-all duration-200 hover:scale-105"
-          >
-            <Maximize2 className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openDrawer}
+              className="transition-all duration-200 hover:scale-105"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsFullscreen(true)}
+              className="transition-all duration-200 hover:scale-105"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Legend */}
@@ -500,29 +537,6 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
             className="bg-background h-96 transition-all duration-300"
           >
             <svg ref={svgRef} className="w-full h-full" />
-
-            {/* Legend */}
-            <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm border border-border rounded-lg p-3 text-xs transition-all duration-200 hover:bg-background/95">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-primary"></div>
-                  <span>Current page</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary/70"></div>
-                  <span>Direct connections</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary/40"></div>
-                  <span>2 hops away</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Instructions */}
-            <div className="absolute bottom-4 right-4 bg-background/90 backdrop-blur-sm border border-border rounded-lg p-3 text-xs text-muted-foreground transition-all duration-200 hover:bg-background/95">
-              <div>Click nodes to navigate • Drag to move • Scroll to zoom</div>
-            </div>
           </div>
         </div>
       </div>

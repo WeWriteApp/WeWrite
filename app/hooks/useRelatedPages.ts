@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import { graphDataCache } from '../utils/graphDataCache';
 
 export interface RelatedPage {
   id: string;
@@ -39,29 +40,9 @@ export function useRelatedPages(pageId: string, pageTitle?: string, pageContent?
       
       console.log('🔗 [RELATED_PAGES] Fetching related pages for:', pageId);
 
-      // Build query parameters
-      const params = new URLSearchParams({
-        pageId,
-        limit: '10' // Get up to 10 related pages for the graph
-      });
+      // Use cached data for better performance
+      const data = await graphDataCache.getRelatedPages(pageId, pageTitle, pageContent);
 
-      if (pageTitle) {
-        params.append('pageTitle', pageTitle);
-      }
-
-      if (pageContent) {
-        params.append('pageContent', pageContent.substring(0, 1000)); // First 1000 chars
-      }
-
-      const response = await fetch(`/api/related-pages?${params.toString()}`);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('🔗 useRelatedPages: API error response:', errorText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
       console.log('🔗 [RELATED_PAGES] Received data:', {
         relatedPagesCount: data.relatedPages?.length || 0,
         refreshTrigger: refreshTrigger

@@ -201,10 +201,10 @@ export default function AdminDashboardPage() {
 
   // Debug current user authentication
   console.log('🔐 [Admin Dashboard] Current user:', {
-    user: currentAccount?.user,
-    email: currentAccount?.user?.email,
-    uid: currentAccount?.user?.uid,
-    isAdmin: currentAccount?.user?.email ? isAdmin(currentAccount.user.email) : false
+    user: session?.user,
+    email: session?.user?.email,
+    uid: session?.user?.uid,
+    isAdmin: session?.user?.email ? isAdmin(session.user.email) : false
   });
 
   // Handle view mode toggle

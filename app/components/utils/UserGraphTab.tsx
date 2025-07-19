@@ -4,8 +4,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as d3 from 'd3';
 import { useRouter } from 'next/navigation';
 import { usePillStyle } from '../../contexts/PillStyleContext';
-import { Loader2, Maximize2, X } from 'lucide-react';
+// import { useGraphSettings } from '../../contexts/GraphSettingsContext';
+import { Loader2, Maximize2, X, Settings } from 'lucide-react';
 import { Button } from '../ui/button';
+import { graphDataCache } from '../../utils/graphDataCache';
 
 interface UserPage {
   id: string;
@@ -47,33 +49,38 @@ interface UserGraphTabProps {
 export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [links, setLinks] = useState<GraphLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const router = useRouter();
   const { getPillStyleClasses } = usePillStyle();
+  // const { settings, openDrawer } = useGraphSettings();
+  const settings = {
+    chargeStrength: -300,
+    linkDistance: 100,
+    centerStrength: 0.3,
+    collisionRadius: 30,
+    alphaDecay: 0.0228,
+    velocityDecay: 0.4
+  };
+  const openDrawer = () => {};
 
-  // Fetch user's pages and their connections
+  // Fetch user's pages and their connections (optimized with caching)
   useEffect(() => {
     if (!userId) return;
 
     const fetchUserGraph = async () => {
       try {
         setLoading(true);
-        
+
         console.log('🔗 [USER_GRAPH] Fetching graph for user:', userId);
 
-        // First, get all user's pages
-        const pagesResponse = await fetch(`/api/my-pages?userId=${userId}&limit=100&sortBy=lastModified`);
-        
-        if (!pagesResponse.ok) {
-          throw new Error(`Failed to fetch pages: ${pagesResponse.status}`);
-        }
+        // Get user's pages from cache
+        const userPagesData = await graphDataCache.getUserPages(userId, 100);
+        const userPages = userPagesData.pages || [];
 
-        const pagesData = await pagesResponse.json();
-        const userPages = pagesData.pages || [];
-        
         console.log('🔗 [USER_GRAPH] Found user pages:', userPages.length);
 
         if (userPages.length === 0) {
@@ -83,64 +90,53 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
           return;
         }
 
-        // Get connections for all pages
-        const allConnections = new Map();
+        // Batch fetch connections for all pages (optimized)
+        const pageIds = userPages.map(p => p.id);
+        const connectionsMap = await graphDataCache.getBatchPageConnections(pageIds);
+
         const allLinks: GraphLink[] = [];
-        
+        const processedPairs = new Set<string>();
+
+        // Process connections to create links between user's pages
         for (const page of userPages) {
-          try {
-            const connectionsResponse = await fetch(`/api/page-connections?pageId=${page.id}&includeSecondHop=false&limit=50`);
-            
-            if (connectionsResponse.ok) {
-              const connectionsData = await connectionsResponse.json();
-              
-              // Store connections for this page
-              allConnections.set(page.id, {
-                incoming: connectionsData.incoming || [],
-                outgoing: connectionsData.outgoing || []
-              });
+          const connections = connectionsMap.get(page.id);
+          if (!connections) continue;
 
-              // Create links for connections between user's pages
-              const incoming = connectionsData.incoming || [];
-              const outgoing = connectionsData.outgoing || [];
+          const { incoming, outgoing } = connections;
 
-              // Add outgoing links (this page links TO other user pages)
-              outgoing.forEach((targetPage: UserPage) => {
-                if (userPages.some(p => p.id === targetPage.id)) {
-                  // Check if bidirectional
-                  const targetConnections = allConnections.get(targetPage.id);
-                  const isBidirectional = targetConnections?.outgoing?.some((p: UserPage) => p.id === page.id);
-                  
-                  allLinks.push({
-                    source: page.id,
-                    target: targetPage.id,
-                    type: isBidirectional ? 'bidirectional' : 'outgoing'
-                  });
-                }
-              });
+          // Add outgoing links (this page links TO other user pages)
+          outgoing.forEach((targetPage: UserPage) => {
+            if (userPages.some(p => p.id === targetPage.id)) {
+              const pairKey = [page.id, targetPage.id].sort().join('-');
+              if (processedPairs.has(pairKey)) return;
+              processedPairs.add(pairKey);
 
-              // Add incoming links (other user pages link TO this page)
-              incoming.forEach((sourcePage: UserPage) => {
-                if (userPages.some(p => p.id === sourcePage.id)) {
-                  // Only add if not already added as outgoing
-                  const existingLink = allLinks.find(link => 
-                    (link.source === sourcePage.id && link.target === page.id) ||
-                    (link.source === page.id && link.target === sourcePage.id)
-                  );
-                  
-                  if (!existingLink) {
-                    allLinks.push({
-                      source: sourcePage.id,
-                      target: page.id,
-                      type: 'incoming'
-                    });
-                  }
-                }
+              // Check if bidirectional
+              const targetConnections = connectionsMap.get(targetPage.id);
+              const isBidirectional = targetConnections?.outgoing?.some((p: UserPage) => p.id === page.id);
+
+              allLinks.push({
+                source: page.id,
+                target: targetPage.id,
+                type: isBidirectional ? 'bidirectional' : 'outgoing'
               });
             }
-          } catch (error) {
-            console.error('Error fetching connections for page:', page.id, error);
-          }
+          });
+
+          // Add incoming links (other user pages link TO this page)
+          incoming.forEach((sourcePage: UserPage) => {
+            if (userPages.some(p => p.id === sourcePage.id)) {
+              const pairKey = [sourcePage.id, page.id].sort().join('-');
+              if (processedPairs.has(pairKey)) return;
+              processedPairs.add(pairKey);
+
+              allLinks.push({
+                source: sourcePage.id,
+                target: page.id,
+                type: 'incoming'
+              });
+            }
+          });
         }
 
         // Create nodes for all user pages
@@ -210,14 +206,19 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
     // Create main group
     const g = svg.append("g");
 
-    // Create force simulation
+    // Create force simulation with settings
     const simulation = d3.forceSimulation<GraphNode>(nodes)
       .force("link", d3.forceLink<GraphNode, GraphLink>(links)
         .id(d => d.id)
-        .distance(100))
-      .force("charge", d3.forceManyBody().strength(-300))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(35));
+        .distance(settings.linkDistance))
+      .force("charge", d3.forceManyBody().strength(settings.chargeStrength))
+      .force("center", d3.forceCenter(width / 2, height / 2).strength(settings.centerStrength))
+      .force("collision", d3.forceCollide().radius(settings.collisionRadius))
+      .alphaDecay(settings.alphaDecay)
+      .velocityDecay(settings.velocityDecay);
+
+    // Store simulation reference for settings updates
+    simulationRef.current = simulation;
 
     // Create links
     const link = g.append("g")
@@ -296,7 +297,31 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
     return () => {
       simulation.stop();
     };
-  }, [nodes, links, loading, isFullscreen, router]);
+  }, [nodes, links, loading, isFullscreen, router, settings]);
+
+  // Update simulation when settings change
+  useEffect(() => {
+    if (!simulationRef.current) return;
+
+    const simulation = simulationRef.current;
+
+    // Update forces with new settings
+    simulation
+      .force("charge", d3.forceManyBody().strength(settings.chargeStrength))
+      .force("center", d3.forceCenter().strength(settings.centerStrength))
+      .force("collision", d3.forceCollide().radius(settings.collisionRadius))
+      .alphaDecay(settings.alphaDecay)
+      .velocityDecay(settings.velocityDecay);
+
+    // Update link distance
+    const linkForce = simulation.force("link") as d3.ForceLink<GraphNode, GraphLink>;
+    if (linkForce) {
+      linkForce.distance(settings.linkDistance);
+    }
+
+    // Restart simulation with new settings
+    simulation.alpha(0.3).restart();
+  }, [settings]);
 
   if (loading) {
     return (
@@ -327,14 +352,24 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
             {nodes.length} pages with {links.length} connections
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsFullscreen(true)}
-          className="transition-all duration-200 hover:scale-105"
-        >
-          <Maximize2 className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={openDrawer}
+            className="transition-all duration-200 hover:scale-105"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsFullscreen(true)}
+            className="transition-all duration-200 hover:scale-105"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Graph container */}
