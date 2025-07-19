@@ -3,7 +3,7 @@
 import React from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { GripVertical } from 'lucide-react';
+
 import { SparklineWithLabel, convertToSparklineData, formatSparklineValue } from './Sparkline';
 import { type DateRange } from './DateRangeFilter';
 import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
@@ -142,28 +142,20 @@ function DraggableListItem({ item, index, moveItem, dateRange, granularity, glob
   return (
     <div
       ref={(node) => drag(drop(node))}
-      className={`relative list-item ${isDragging ? 'opacity-50' : ''}`}
+      className={`w-full py-4 px-6 border-b border-border cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-muted/50 ${isDragging ? 'opacity-50 bg-muted' : ''}`}
     >
-      {/* Drag handle */}
-      <div className="absolute left-1 top-1/2 transform -translate-y-1/2 z-10 cursor-grab active:cursor-grabbing drag-handle">
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
-      </div>
-
-      {/* List item with left padding for drag handle */}
-      <div className="pl-8">
-        <SparklineWithLabel
-          label={item.label}
-          value={currentValue}
-          subtitle={subtitle}
-          icon={item.icon}
-          data={sparklineData}
-          height={32}
-          width={100}
-          strokeWidth={1.5}
-          showDots={false}
-          className="sparkline"
-        />
-      </div>
+      <SparklineWithLabel
+        label={item.label}
+        value={currentValue}
+        subtitle={subtitle}
+        icon={item.icon}
+        data={sparklineData}
+        height={32}
+        width={100}
+        strokeWidth={1.5}
+        showDots={false}
+        className="sparkline"
+      />
     </div>
   );
 }
@@ -192,7 +184,7 @@ export function DashboardListMode({
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="dashboard-list-mode space-y-3">
+      <div className="dashboard-list-mode w-full bg-background border border-border rounded-lg overflow-hidden">
         {items.map((item, index) => (
           <DraggableListItem
             key={item.id}

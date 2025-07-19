@@ -272,14 +272,20 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
     
     svg.attr("width", width).attr("height", height);
 
-    // Create zoom behavior
+    // Create zoom behavior - only enable in fullscreen mode
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
       .on("zoom", (event) => {
         g.attr("transform", event.transform);
       });
 
-    svg.call(zoom);
+    // Only enable zoom/pan in fullscreen mode
+    if (isFullscreen) {
+      svg.call(zoom);
+    } else {
+      // Disable zoom/pan in collapsed mode
+      svg.on('.zoom', null);
+    }
 
     // Create main group for zooming
     const g = svg.append("g");

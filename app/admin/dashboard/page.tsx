@@ -431,8 +431,8 @@ export default function AdminDashboardPage() {
                 if (viewMode === 'list') {
                   return (
                     <>
-                      {/* List Mode Layout */}
-                      <div className="max-w-4xl mx-auto">
+                      {/* List Mode Layout - Full Width */}
+                      <div className="w-full">
                         <DashboardErrorBoundary>
                           <DashboardListMode
                             dateRange={dateRange}
