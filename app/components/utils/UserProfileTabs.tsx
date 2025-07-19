@@ -3,7 +3,7 @@ import React, { useState, useRef, useContext } from "react";
 import { PillLink } from "./PillLink";
 import { Button } from "../ui/button";
 import SupporterBadge from "../payments/SupporterBadge";
-import { User, Clock, FileText, Plus, Loader, Info, Users, BookText, Heart, ArrowUpDown, Check, ChevronUp, ChevronDown, ExternalLink, Link as LinkIcon } from "lucide-react";
+import { User, Clock, FileText, Plus, Loader, Info, Users, BookText, Heart, ArrowUpDown, Check, ChevronUp, ChevronDown, ExternalLink, Link as LinkIcon, Network } from "lucide-react";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import Link from "next/link";
@@ -21,6 +21,7 @@ import { useUnifiedSearch, SEARCH_CONTEXTS } from '../../hooks/useUnifiedSearch'
 import SearchResultsDisplay from '../search/SearchResultsDisplay';
 import FollowingTabContent from './FollowingTabContent';
 import ExternalLinksTab from './ExternalLinksTab';
+import UserGraphTab from './UserGraphTab';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -104,7 +105,7 @@ export default function UserProfileTabs({ profile }) {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.slice(1);
       // Define basic valid tabs (we'll validate against full list in useEffect)
-      const basicValidTabs = ["bio", "pages", "activity", "groups", "following", "external-links"];
+      const basicValidTabs = ["bio", "pages", "activity", "graph", "groups", "following", "external-links"];
       if (hash && basicValidTabs.includes(hash)) {
         return hash;
       }
@@ -232,6 +233,9 @@ export default function UserProfileTabs({ profile }) {
   // Determine which tabs to show in the requested order
   const visibleTabs = React.useMemo(() => {
     const tabs = ["bio", "pages", "activity"];
+
+    // Add graph tab for all users
+    tabs.push("graph");
 
     // Add external links tab for all users
     tabs.push("external-links");
@@ -523,6 +527,16 @@ export default function UserProfileTabs({ profile }) {
                 <span>Recent Edits</span>
               </TabsTrigger>
 
+              {/* Graph tab */}
+              <TabsTrigger
+                value="graph"
+                data-value="graph"
+                className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
+              >
+                <Network className="h-4 w-4" />
+                <span>Graph</span>
+              </TabsTrigger>
+
               {/* External Links tab */}
               <TabsTrigger
                 value="external-links"
@@ -663,6 +677,21 @@ export default function UserProfileTabs({ profile }) {
                 {/* 🚨 URGENT FIX: Load more temporarily disabled - simple API shows all pages at once */}
               </>
             )}
+          </TabsContent>
+
+          {/* Graph tab content */}
+          <TabsContent
+            value="graph"
+            className={`mt-0 transition-all duration-300 ${
+              activeTab === "graph"
+                ? "block"
+                : "hidden"
+            }`}
+          >
+            <UserGraphTab
+              userId={profile?.uid}
+              username={profile?.username || 'this user'}
+            />
           </TabsContent>
 
           {/* External Links tab content */}
