@@ -6,22 +6,40 @@
  * an index that gets updated when pages are saved.
  */
 
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  setDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
+import {
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
   limit as firestoreLimit,
   writeBatch,
-  serverTimestamp 
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../config';
 import { extractLinksFromNodes } from './links';
 import { getCollectionName } from '../../utils/environmentConfig';
+
+// Helper function to get the appropriate database instance
+function getDatabase() {
+  // Check if we're running on the server (Node.js environment)
+  if (typeof window === 'undefined') {
+    try {
+      // Use Firebase Admin SDK on server
+      const { getFirebaseAdmin } = require('../admin');
+      const admin = getFirebaseAdmin();
+      return admin.firestore();
+    } catch (error) {
+      console.warn('Firebase Admin not available, falling back to client SDK:', error.message);
+      return db;
+    }
+  }
+  // Use client SDK in browser
+  return db;
+}
 
 export interface BacklinkEntry {
   id: string;
@@ -135,8 +153,13 @@ export async function updateBacklinksIndex(
       isPublic,
       contentType: typeof content,
       contentLength: Array.isArray(content) ? content.length : 'not array',
-      environment: getCollectionName('backlinks')
+      environment: getCollectionName('backlinks'),
+      isServer: typeof window === 'undefined'
     });
+
+    // Get the appropriate database instance (Admin SDK on server, client SDK in browser)
+    const database = getDatabase();
+    const isServerSide = typeof window === 'undefined';
 
     // First, remove all existing backlinks from this page
     await removeBacklinksFromPage(pageId);
@@ -156,33 +179,61 @@ export async function updateBacklinksIndex(
       console.log(`📝 [BACKLINKS] No page links found in ${pageId}, backlinks index updated`);
       return;
     }
-    
+
     // Create batch for efficient writes
-    const batch = writeBatch(db);
+    let batch;
+    if (isServerSide) {
+      // Use Admin SDK batch
+      batch = database.batch();
+    } else {
+      // Use client SDK batch
+      batch = writeBatch(db);
+    }
     
     // Add new backlink entries
     for (const link of pageLinks) {
       const backlinkId = `${pageId}_to_${link.pageId}`;
-const backlinkRef = doc(db, getCollectionName("backlinks"), backlinkId);
-      
-      const backlinkEntry: BacklinkEntry = {
-        id: backlinkId,
-        sourcePageId: pageId,
-        sourcePageTitle: pageTitle,
-        sourceUsername: username,
-        targetPageId: link.pageId,
-        linkText: link.text || '',
-        linkUrl: link.url || '',
-        createdAt: serverTimestamp(),
-        lastModified: lastModified,
-        isPublic: isPublic
-      };
-      
+
+      let backlinkRef;
+      let backlinkEntry;
+
+      if (isServerSide) {
+        // Use Admin SDK
+        backlinkRef = database.collection(getCollectionName("backlinks")).doc(backlinkId);
+        backlinkEntry = {
+          id: backlinkId,
+          sourcePageId: pageId,
+          sourcePageTitle: pageTitle,
+          sourceUsername: username,
+          targetPageId: link.pageId,
+          linkText: link.text || '',
+          linkUrl: link.url || '',
+          createdAt: new Date(), // Admin SDK uses Date objects
+          lastModified: lastModified,
+          isPublic: isPublic
+        };
+      } else {
+        // Use client SDK
+        backlinkRef = doc(db, getCollectionName("backlinks"), backlinkId);
+        backlinkEntry = {
+          id: backlinkId,
+          sourcePageId: pageId,
+          sourcePageTitle: pageTitle,
+          sourceUsername: username,
+          targetPageId: link.pageId,
+          linkText: link.text || '',
+          linkUrl: link.url || '',
+          createdAt: serverTimestamp(),
+          lastModified: lastModified,
+          isPublic: isPublic
+        };
+      }
+
       batch.set(backlinkRef, backlinkEntry);
     }
-    
+
     // Commit the batch
-    console.log(`🔄 [BACKLINKS] Committing batch with ${pageLinks.length} backlink entries...`);
+    console.log(`🔄 [BACKLINKS] Committing batch with ${pageLinks.length} backlink entries using ${isServerSide ? 'Admin SDK' : 'Client SDK'}...`);
     await batch.commit();
 
     console.log(`✅ [BACKLINKS] Successfully updated backlinks index: ${pageLinks.length} links from page ${pageId}`);
@@ -198,28 +249,46 @@ const backlinkRef = doc(db, getCollectionName("backlinks"), backlinkId);
  */
 export async function removeBacklinksFromPage(sourcePageId: string): Promise<void> {
   try {
-    const backlinksQuery = query(
-      collection(db, getCollectionName('backlinks')),
-      where('sourcePageId', '==', sourcePageId)
-    );
-    
-    const snapshot = await getDocs(backlinksQuery);
-    
+    const database = getDatabase();
+    const isServerSide = typeof window === 'undefined';
+
+    let snapshot;
+    if (isServerSide) {
+      // Use Admin SDK
+      const backlinksQuery = database.collection(getCollectionName('backlinks'))
+        .where('sourcePageId', '==', sourcePageId);
+      snapshot = await backlinksQuery.get();
+    } else {
+      // Use client SDK
+      const backlinksQuery = query(
+        collection(db, getCollectionName('backlinks')),
+        where('sourcePageId', '==', sourcePageId)
+      );
+      snapshot = await getDocs(backlinksQuery);
+    }
+
     if (snapshot.empty) {
       return;
     }
-    
+
     // Create batch for efficient deletes
-    const batch = writeBatch(db);
-    
-    snapshot.docs.forEach(doc => {
-      batch.delete(doc.ref);
-    });
-    
+    let batch;
+    if (isServerSide) {
+      batch = database.batch();
+      snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+    } else {
+      batch = writeBatch(db);
+      snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+    }
+
     await batch.commit();
-    
-    console.log(`🗑️ Removed ${snapshot.docs.length} backlinks from page ${sourcePageId}`);
-    
+
+    console.log(`🗑️ Removed ${snapshot.docs.length} backlinks from page ${sourcePageId} using ${isServerSide ? 'Admin SDK' : 'Client SDK'}`);
+
   } catch (error) {
     console.error('Error removing backlinks from page:', error);
     throw error;
