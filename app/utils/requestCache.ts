@@ -165,11 +165,15 @@ export const getCachedPageById = async (
   const { getPageById } = await import('../firebase/database/pages');
   const cacheKey = `page:${pageId}:${userId || 'anonymous'}`;
   
-  return requestCache.get(
-    cacheKey,
-    () => getPageById(pageId, userId),
-    { ttl: 2 * 60 * 1000, ...options } // 2 minute TTL for page data
-  );
+  // DISABLED: No caching to prevent stale data issues
+  // return requestCache.get(
+  //   cacheKey,
+  //   () => getPageById(pageId, userId),
+  //   { ttl: 2 * 60 * 1000, ...options } // 2 minute TTL for page data
+  // );
+
+  // Always fetch fresh data
+  return getPageById(pageId, userId);
 };
 
 /**

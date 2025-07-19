@@ -294,11 +294,11 @@ export const getPageById = async (pageId: string, userId: string | null = null):
               links: [] // API doesn't return links yet
             };
 
-            // Cache the result
-            if (pageData && true) {
-              const cacheKey = generateCacheKey('page', pageId, userId || 'public');
-              setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
-            }
+            // DISABLED: No caching to prevent stale data issues
+            // if (pageData && true) {
+            //   const cacheKey = generateCacheKey('page', pageId, userId || 'public');
+            //   setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
+            // }
 
             console.log("getPageById: Successfully used API route for client-side request");
             return result;
@@ -369,12 +369,12 @@ export const getPageById = async (pageId: string, userId: string | null = null):
 
             const result = { pageData, versionData, links };
 
-            // Cache the result (only for pages or if user is the owner)
+            // DISABLED: No caching to prevent stale data issues
             // Skip caching on server-side
-            if (typeof window !== 'undefined' && (pageData.isPublic || (userId && pageData.userId === userId))) {
-              const cacheKey = generateCacheKey('page', pageId, userId || 'public');
-              setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
-            }
+            // if (typeof window !== 'undefined' && (pageData.isPublic || (userId && pageData.userId === userId))) {
+            //   const cacheKey = generateCacheKey('page', pageId, userId || 'public');
+            //   setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
+            // }
 
             console.log("getPageById: Using content directly from page document");
             return result;
@@ -440,12 +440,12 @@ export const getPageById = async (pageId: string, userId: string | null = null):
 
           const result = { pageData, versionData, links };
 
-          // Cache the result (only for pages or if user is the owner)
+          // DISABLED: No caching to prevent stale data issues
           // Skip caching on server-side
-          if (typeof window !== 'undefined' && (pageData.isPublic || (userId && pageData.userId === userId))) {
-            const cacheKey = generateCacheKey('page', pageId, userId || 'public');
-            setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
-          }
+          // if (typeof window !== 'undefined' && (pageData.isPublic || (userId && pageData.userId === userId))) {
+          //   const cacheKey = generateCacheKey('page', pageId, userId || 'public');
+          //   setCacheItem(cacheKey, result, 5 * 60 * 1000); // Cache for 5 minutes
+          // }
 
           return result;
         } else {

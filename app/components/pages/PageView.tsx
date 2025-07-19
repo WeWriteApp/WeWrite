@@ -873,24 +873,8 @@ export default function PageView({
         console.log('✅ PAGE SAVE: pageSaved event emitted for real-time updates');
       }
 
-      // CRITICAL: Clear all caches to ensure updated content is loaded
-      console.log('🔍 PAGE SAVE: Clearing all caches for page', { pageId });
-
-      // Clear localStorage and sessionStorage caches
-      if (typeof window !== 'undefined') {
-        const cacheKeys = [
-          `page_${pageId}_${currentAccount?.uid || 'public'}`,
-          `page_${pageId}_public`,
-          `page_${pageId}_undefined`,
-          `cache_page_${pageId}`,
-          `cache_page_${pageId}_${currentAccount?.uid}`
-        ];
-        cacheKeys.forEach(key => {
-          localStorage.removeItem(key);
-          sessionStorage.removeItem(key);
-        });
-        console.log('🔍 PAGE SAVE: Browser cache cleared for keys', cacheKeys);
-      }
+      // SIMPLIFIED: No complex caching - just update state directly
+      console.log('🔍 PAGE SAVE: Skipping complex cache clearing - using direct state updates');
 
       // Trigger cache invalidation to refresh daily notes and other components
       try {
@@ -922,9 +906,8 @@ export default function PageView({
       setHasUnsavedChanges(false);
       setError(null);
 
-      // Clear version cache to ensure fresh data
-      const { clearPageVersionCache } = await import('../../services/versionService');
-      clearPageVersionCache(pageId);
+      // SIMPLIFIED: No version cache clearing - let natural refresh handle it
+      console.log('🔍 PAGE SAVE: Skipping version cache clearing for reliability');
 
       // Page connections will refresh automatically via the pageSaved event
       // No manual refresh needed since we now have real-time updates
