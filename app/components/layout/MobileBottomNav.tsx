@@ -123,9 +123,9 @@ export default function MobileBottomNav() {
       return false;
     }
 
-    // Always show on admin routes (including admin dashboard)
+    // Hide on admin routes (including admin dashboard)
     if (pathname.startsWith('/admin/')) {
-      return false;
+      return true;
     }
 
     // Hide on subscription pages

@@ -119,7 +119,7 @@ export function SparklineWithLabel({
   ...sparklineProps
 }: SparklineWithLabelProps) {
   return (
-    <div className="flex items-center justify-between p-3 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors">
+    <div className="flex items-center justify-between">
       {/* Left side - Label and value */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
         {icon && (

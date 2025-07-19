@@ -115,6 +115,14 @@ function DraggableListItem({ item, index, moveItem, dateRange, granularity, glob
   // Convert data to sparkline format
   const sparklineData = convertToSparklineData(data, item.sparklineValueKey || 'value');
 
+  // Debug logging for data issues
+  console.log(`📊 [DashboardListMode] ${item.id} data:`, {
+    dataLength: data?.length || 0,
+    loading,
+    error,
+    sampleData: data?.slice(0, 2)
+  });
+
   // Calculate current value
   let currentValue = '0';
   if (data && data.length > 0) {
@@ -124,25 +132,30 @@ function DraggableListItem({ item, index, moveItem, dateRange, granularity, glob
       const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
       currentValue = formatSparklineValue(total, item.sparklineType);
     }
+  } else if (loading) {
+    currentValue = 'Loading...';
+  } else if (error) {
+    currentValue = 'Error';
   }
 
-  // Generate subtitle
+  // Generate subtitle with more detailed information
   let subtitle = '';
   if (loading) {
     subtitle = 'Loading...';
   } else if (error) {
-    subtitle = 'Error loading data';
+    subtitle = `Error: ${error.substring(0, 50)}`;
   } else if (data && data.length > 0) {
     const timeRange = Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24));
     subtitle = `${timeRange} day${timeRange !== 1 ? 's' : ''} • ${data.length} data points`;
   } else {
-    subtitle = 'No data available';
+    const timeRange = Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24));
+    subtitle = `No data for ${timeRange} day${timeRange !== 1 ? 's' : ''}`;
   }
 
   return (
     <div
       ref={(node) => drag(drop(node))}
-      className={`w-full py-4 px-6 border-b border-border cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-muted/50 ${isDragging ? 'opacity-50 bg-muted' : ''}`}
+      className={`w-full py-2 px-4 border-b border-border cursor-grab active:cursor-grabbing transition-all duration-200 hover:bg-muted/50 ${isDragging ? 'opacity-50 bg-muted' : ''}`}
     >
       <SparklineWithLabel
         label={item.label}
@@ -184,7 +197,7 @@ export function DashboardListMode({
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="dashboard-list-mode w-full bg-background border border-border rounded-lg overflow-hidden">
+      <div className="dashboard-list-mode w-full">
         {items.map((item, index) => (
           <DraggableListItem
             key={item.id}
