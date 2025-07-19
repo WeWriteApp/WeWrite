@@ -40,12 +40,34 @@ export function useRelatedPages(pageId: string, pageTitle?: string, pageContent?
       
       console.log('🔗 [RELATED_PAGES] Fetching related pages for:', pageId);
 
-      // Use cached data for better performance
-      const data = await graphDataCache.getRelatedPages(pageId, pageTitle, pageContent);
+      // Temporarily bypass cache for debugging
+      const params = new URLSearchParams({
+        pageId,
+        limit: '10'
+      });
+
+      if (pageTitle) {
+        params.append('pageTitle', pageTitle);
+      }
+
+      if (pageContent) {
+        params.append('pageContent', pageContent.substring(0, 1000));
+      }
+
+      const response = await fetch(`/api/related-pages?${params.toString()}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔗 useRelatedPages: API error response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
 
       console.log('🔗 [RELATED_PAGES] Received data:', {
         relatedPagesCount: data.relatedPages?.length || 0,
-        refreshTrigger: refreshTrigger
+        refreshTrigger: refreshTrigger,
+        fullResponse: data
       });
 
       setRelatedPages(data.relatedPages || []);

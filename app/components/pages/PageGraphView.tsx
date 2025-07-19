@@ -5,11 +5,12 @@ import * as d3 from 'd3';
 import { useRouter } from 'next/navigation';
 import { usePillStyle } from '../../contexts/PillStyleContext';
 // import { useGraphSettings } from '../../contexts/GraphSettingsContext';
-import { Loader2, Maximize2, X, Settings } from 'lucide-react';
+import { Loader2, Maximize2, X, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../ui/button';
 import { usePageConnectionsGraph, getLinkDirection } from '../../hooks/usePageConnections';
 import { useRelatedPages } from '../../hooks/useRelatedPages';
 import { graphDataCache } from '../../utils/graphDataCache';
+import GraphSettingsPanel from './GraphSettingsPanel';
 
 interface GraphNode {
   id: string;
@@ -54,6 +55,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [links, setLinks] = useState<GraphLink[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isViewSettingsOpen, setIsViewSettingsOpen] = useState(false);
   const router = useRouter();
   const { getPillStyleClasses } = usePillStyle();
   // const { settings, openDrawer } = useGraphSettings();
@@ -66,6 +68,58 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
     velocityDecay: 0.4
   };
   const openDrawer = () => {};
+
+  // Handle settings changes
+  const handleSettingsChange = (newSettings: Partial<typeof settings>) => {
+    // For now, just update the local settings object
+    // In the future, this would update the context
+    Object.assign(settings, newSettings);
+
+    // Trigger simulation update
+    if (simulationRef.current) {
+      const simulation = simulationRef.current;
+
+      // Update forces with new settings
+      simulation
+        .force("charge", d3.forceManyBody().strength(d => {
+          if (d.nodeType === 'related') return settings.chargeStrength * 0.5;
+          return settings.chargeStrength;
+        }))
+        .force("center", d3.forceCenter().strength(settings.centerStrength))
+        .force("collision", d3.forceCollide().radius(d => {
+          if (d.nodeType === 'related') return settings.collisionRadius * 0.8;
+          return settings.collisionRadius;
+        }))
+        .alphaDecay(settings.alphaDecay)
+        .velocityDecay(settings.velocityDecay);
+
+      // Update link distance
+      const linkForce = simulation.force("link") as d3.ForceLink<GraphNode, GraphLink>;
+      if (linkForce) {
+        linkForce.distance(d => {
+          const source = d.source as GraphNode;
+          const target = d.target as GraphNode;
+          if (source.level === 0 || target.level === 0) return settings.linkDistance;
+          return settings.linkDistance * 0.8;
+        });
+      }
+
+      // Restart simulation with new settings
+      simulation.alpha(0.3).restart();
+    }
+  };
+
+  const handleResetSettings = () => {
+    const defaultSettings = {
+      chargeStrength: -300,
+      linkDistance: 100,
+      centerStrength: 0.3,
+      collisionRadius: 30,
+      alphaDecay: 0.0228,
+      velocityDecay: 0.4
+    };
+    handleSettingsChange(defaultSettings);
+  };
 
   // Use consolidated page connections hook
   const {
@@ -467,23 +521,51 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
   if (isFullscreen) {
     return (
       <div className="fixed inset-0 z-[9999] bg-background animate-in fade-in-0 duration-300">
-        {/* Close button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsFullscreen(false)}
-          className="absolute top-4 right-4 z-10"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        {/* Header with controls */}
+        <div className="absolute top-0 left-0 right-0 z-10 bg-background border-b border-border p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Graph view</h3>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={isViewSettingsOpen ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsViewSettingsOpen(!isViewSettingsOpen)}
+                className="transition-all duration-200"
+              >
+                {isViewSettingsOpen ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsFullscreen(false);
+                  setIsViewSettingsOpen(false);
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
 
-        {/* Fullscreen graph container */}
+        {/* Graph container */}
         <div
           ref={containerRef}
-          className="w-full h-full bg-background"
+          className={`bg-background ${isViewSettingsOpen ? 'h-1/2 mt-16' : 'h-full pt-16'} transition-all duration-300`}
         >
           <svg ref={svgRef} className="w-full h-full" />
         </div>
+
+        {/* Settings panel (bottom half when open) */}
+        {isViewSettingsOpen && (
+          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-background border-t border-border overflow-y-auto">
+            <GraphSettingsPanel
+              settings={settings}
+              onSettingsChange={handleSettingsChange}
+              onReset={handleResetSettings}
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -496,17 +578,23 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
           <h3 className="text-sm font-medium">Graph view</h3>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
+              variant={isViewSettingsOpen ? "default" : "outline"}
               size="sm"
-              onClick={openDrawer}
+              onClick={() => {
+                setIsViewSettingsOpen(true);
+                setIsFullscreen(true);
+              }}
               className="transition-all duration-200 hover:scale-105"
             >
-              <Settings className="h-4 w-4" />
+              {isViewSettingsOpen ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </Button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsFullscreen(true)}
+              onClick={() => {
+                setIsViewSettingsOpen(false);
+                setIsFullscreen(true);
+              }}
               className="transition-all duration-200 hover:scale-105"
             >
               <Maximize2 className="h-4 w-4" />
