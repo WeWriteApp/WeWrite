@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { isAdmin } from '../../../utils/isAdmin';
+import { checkAdminPermissions } from '../../admin-auth-helper';
+import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import {
   Timestamp
 } from 'firebase-admin/firestore';
@@ -89,22 +90,13 @@ function safeParseDateKey(dateKey: string, granularity: string): Date {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the current user from the request headers (set by middleware)
-    const userEmail = request.headers.get('x-user-email');
-
-    console.log('[Payment Analytics API] User email from headers:', userEmail);
-    console.log('[Payment Analytics API] Is admin check:', userEmail ? isAdmin(userEmail) : 'no email');
-
-    if (!userEmail || !isAdmin(userEmail)) {
-      console.log('[Payment Analytics API] Unauthorized access attempt');
-      return NextResponse.json({
-        error: 'Unauthorized',
-        debug: {
-          hasEmail: !!userEmail,
-          email: userEmail,
-          isAdmin: userEmail ? isAdmin(userEmail) : false
-        }
-      }, { status: 403 });
+    // Check admin permissions
+    const adminCheck = await checkAdminPermissions(request);
+    if (!adminCheck.success) {
+      return createErrorResponse(
+        adminCheck.error === 'Unauthorized - no user ID' ? 'UNAUTHORIZED' : 'FORBIDDEN',
+        adminCheck.error
+      );
     }
 
     // Get query parameters

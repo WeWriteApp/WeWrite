@@ -30,25 +30,57 @@ class LogRocketService {
   }
 
   /**
+   * Check if LogRocket is ready for use
+   */
+  get isReady(): boolean {
+    return this.isInitialized;
+  }
+
+  /**
    * Initialize LogRocket - only in production and client-side
    * Called from the main app component
    */
   init(): void {
+    console.log('🔍 LogRocket initialization check:', {
+      isInitialized: this.isInitialized,
+      isProduction: this.isProduction,
+      isClientSide: typeof window !== 'undefined',
+      hasAppId: !!process.env.NEXT_PUBLIC_LOGROCKET_APP_ID,
+      appIdPreview: process.env.NEXT_PUBLIC_LOGROCKET_APP_ID ?
+        `${process.env.NEXT_PUBLIC_LOGROCKET_APP_ID.substring(0, 8)}...` : 'NOT_SET',
+      nodeEnv: process.env.NODE_ENV,
+      vercelEnv: process.env.VERCEL_ENV
+    });
+
     // Skip initialization if:
     // - Already initialized
     // - Not in production
     // - Running on server-side
     // - No app ID configured
-    if (
-      this.isInitialized ||
-      !this.isProduction ||
-      typeof window === 'undefined' ||
-      !process.env.NEXT_PUBLIC_LOGROCKET_APP_ID
-    ) {
+    if (this.isInitialized) {
+      console.log('⏭️ LogRocket already initialized, skipping');
+      return;
+    }
+
+    if (!this.isProduction) {
+      console.log('⏭️ LogRocket skipped: Not in production environment');
+      return;
+    }
+
+    if (typeof window === 'undefined') {
+      console.log('⏭️ LogRocket skipped: Server-side rendering');
+      return;
+    }
+
+    if (!process.env.NEXT_PUBLIC_LOGROCKET_APP_ID) {
+      console.error('❌ LogRocket skipped: NEXT_PUBLIC_LOGROCKET_APP_ID not configured');
       return;
     }
 
     try {
+      console.log('🚀 Initializing LogRocket with app ID:',
+        `${process.env.NEXT_PUBLIC_LOGROCKET_APP_ID.substring(0, 8)}...`);
+
       // Initialize LogRocket with app ID
       LogRocket.init(process.env.NEXT_PUBLIC_LOGROCKET_APP_ID);
 
@@ -60,6 +92,11 @@ class LogRocketService {
 
       this.isInitialized = true;
       console.log('✅ LogRocket initialized successfully');
+
+      // Log session URL for debugging
+      LogRocket.getSessionURL((sessionURL) => {
+        console.log('🔗 LogRocket session URL:', sessionURL);
+      });
     } catch (error) {
       console.error('❌ Failed to initialize LogRocket:', error);
     }
