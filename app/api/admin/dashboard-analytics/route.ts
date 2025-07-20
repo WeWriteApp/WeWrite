@@ -44,36 +44,36 @@ export async function GET(request: NextRequest) {
     // Route to appropriate analytics method based on type
     switch (type) {
       case 'accounts':
-        data = await DashboardAnalyticsService.getAccountsMetrics(dateRange, granularity);
+        data = await DashboardAnalyticsService.getNewAccountsCreated(dateRange, granularity);
         break;
       case 'pages':
-        data = await DashboardAnalyticsService.getPagesMetrics(dateRange, granularity);
+        data = await DashboardAnalyticsService.getNewPagesCreated(dateRange, granularity);
         break;
       case 'shares':
-        data = await DashboardAnalyticsService.getSharesMetrics(dateRange, granularity);
+        data = await DashboardAnalyticsService.getSharesAnalytics(dateRange, granularity);
         break;
       case 'edits':
-        data = await DashboardAnalyticsService.getEditsMetrics(dateRange, granularity);
+        data = await DashboardAnalyticsService.getEditsAnalytics(dateRange, granularity);
         break;
       case 'contentChanges':
-        data = await DashboardAnalyticsService.getContentChangesMetrics(dateRange, granularity);
+        data = await DashboardAnalyticsService.getContentChangesAnalytics(dateRange, granularity);
         break;
       case 'pwaInstalls':
-        data = await DashboardAnalyticsService.getPWAInstallsMetrics(dateRange, granularity);
+        data = await DashboardAnalyticsService.getPWAInstallsAnalytics(dateRange, granularity);
         break;
       case 'visitors':
-        data = await DashboardAnalyticsService.getVisitorMetrics(dateRange, granularity);
+        data = await DashboardAnalyticsService.getVisitorAnalytics(dateRange, granularity);
         break;
       case 'all':
         // Get all metrics
         const [accounts, pages, shares, edits, contentChanges, pwaInstalls, visitors] = await Promise.all([
-          DashboardAnalyticsService.getAccountsMetrics(dateRange, granularity),
-          DashboardAnalyticsService.getPagesMetrics(dateRange, granularity),
-          DashboardAnalyticsService.getSharesMetrics(dateRange, granularity),
-          DashboardAnalyticsService.getEditsMetrics(dateRange, granularity),
-          DashboardAnalyticsService.getContentChangesMetrics(dateRange, granularity),
-          DashboardAnalyticsService.getPWAInstallsMetrics(dateRange, granularity),
-          DashboardAnalyticsService.getVisitorMetrics(dateRange, granularity)
+          DashboardAnalyticsService.getNewAccountsCreated(dateRange, granularity),
+          DashboardAnalyticsService.getNewPagesCreated(dateRange, granularity),
+          DashboardAnalyticsService.getSharesAnalytics(dateRange, granularity),
+          DashboardAnalyticsService.getEditsAnalytics(dateRange, granularity),
+          DashboardAnalyticsService.getContentChangesAnalytics(dateRange, granularity),
+          DashboardAnalyticsService.getPWAInstallsAnalytics(dateRange, granularity),
+          DashboardAnalyticsService.getVisitorAnalytics(dateRange, granularity)
         ]);
 
         data = {
