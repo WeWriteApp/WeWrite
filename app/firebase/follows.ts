@@ -443,6 +443,61 @@ export const getPageFollowerCount = async (pageId: string): Promise<number> => {
 };
 
 /**
+ * Check if a user is following another user
+ *
+ * @param followerId - The ID of the user doing the following
+ * @param followedId - The ID of the user being followed
+ * @returns True if the user is following the other user
+ */
+export const isFollowingUser = async (followerId: string, followedId: string): Promise<boolean> => {
+  if (!followerId || !followedId || followerId === followedId) {
+    return false;
+  }
+
+  try {
+    const userFollowingRef = doc(db, getCollectionName('userFollowing'), followerId);
+    const userFollowingDoc = await getDoc(userFollowingRef);
+
+    if (userFollowingDoc.exists()) {
+      const data = userFollowingDoc.data();
+      return data.following && data.following.includes(followedId);
+    }
+
+    return false;
+  } catch (error) {
+    console.error('Error checking if following user:', error);
+    return false;
+  }
+};
+
+/**
+ * Get the list of users a user is following
+ *
+ * @param userId - The ID of the user
+ * @returns Array of user IDs the user is following
+ */
+export const getUserFollowing = async (userId: string): Promise<string[]> => {
+  if (!userId) {
+    return [];
+  }
+
+  try {
+    const userFollowingRef = doc(db, getCollectionName('userFollowing'), userId);
+    const userFollowingDoc = await getDoc(userFollowingRef);
+
+    if (userFollowingDoc.exists()) {
+      const data = userFollowingDoc.data();
+      return data.following || [];
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error getting user following list:', error);
+    return [];
+  }
+};
+
+/**
  * Get the count of pages a user follows
  *
  * @param userId - The ID of the user

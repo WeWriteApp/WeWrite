@@ -170,7 +170,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
   // Always render the section, even if empty
 
   return (
-    <div className="mt-8 px-4 sm:px-6 max-w-4xl mx-auto">
+    <div className="mt-8">
       <div className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm">
         {/* Header */}
         <div className="flex items-center gap-2 mb-4">

@@ -1,18 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Calendar, List, ChevronDown } from 'lucide-react';
+import React from 'react';
+import { Calendar } from 'lucide-react';
 import { Button } from '../ui/button';
 import { SectionTitle } from '../ui/section-title';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
 import StickySection from "../utils/StickySection";
 import DailyNotesCarousel from './DailyNotesCarousel';
-import DailyNotesCalendar from './DailyNotesCalendar';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 
@@ -32,7 +25,6 @@ interface DailyNotesSectionProps {
 export default function DailyNotesSection({}: DailyNotesSectionProps) {
   const { currentAccount, isAuthenticated } = useCurrentAccount();
   const { accentColor, customColors } = useAccentColor();
-  const [viewMode, setViewMode] = useState<'timeline' | 'calendar'>('timeline');
 
   // Get the actual color value from the accent color system
   const getAccentColorValue = () => {
@@ -76,85 +68,23 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
           icon={Calendar}
           title="My Daily Notes"
         >
-          <div className="flex items-center gap-2">
-            {/* Today Button - show in both modes, positioned left */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={scrollToToday}
-              className="rounded-2xl"
-            >
-              Today
-            </Button>
-
-            {/* View Mode Dropdown - positioned right */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 rounded-2xl hover:bg-muted/80 transition-colors md:px-3 px-2"
-                  aria-label="Switch view mode"
-                >
-                  {/* Mobile: Icon only */}
-                  <span className="md:hidden">
-                    {viewMode === 'timeline' ? (
-                      <List className="h-4 w-4" />
-                    ) : (
-                      <Calendar className="h-4 w-4" />
-                    )}
-                  </span>
-
-                  {/* Desktop: Icon + Text + Chevron */}
-                  <span className="hidden md:flex md:items-center">
-                    {viewMode === 'timeline' ? (
-                      <>
-                        <List className="h-3 w-3 mr-1" />
-                        Timeline
-                      </>
-                    ) : (
-                      <>
-                        <Calendar className="h-3 w-3 mr-1" />
-                        Calendar
-                      </>
-                    )}
-                    <ChevronDown className="h-3 w-3 ml-1" />
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setViewMode('timeline')}>
-                  <List className="h-4 w-4 mr-2" />
-                  Timeline
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setViewMode('calendar')}>
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Calendar
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={scrollToToday}
+            className="rounded-2xl"
+          >
+            Today
+          </Button>
         </SectionTitle>
       }
     >
       {/* Content container */}
       <div className="relative">
-        {viewMode === 'timeline' ? (
-          <>
-            <DailyNotesCarousel accentColor={getAccentColorValue()} />
-            {/* Gradient fade on edges for better visual indication of scrollability */}
-            <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none" />
-            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none" />
-          </>
-        ) : (
-          <DailyNotesCalendar
-            accentColor={getAccentColorValue()}
-            onPageSelect={(pageId) => {
-              // Navigate to the selected page
-              window.location.href = `/${pageId}`;
-            }}
-          />
-        )}
+        <DailyNotesCarousel accentColor={getAccentColorValue()} />
+        {/* Gradient fade on edges for better visual indication of scrollability */}
+        <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none" />
       </div>
 
     </StickySection>

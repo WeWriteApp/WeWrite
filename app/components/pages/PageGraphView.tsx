@@ -61,21 +61,20 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
   const { getPillStyleClasses } = usePillStyle();
   const { currentAccount } = useCurrentAccount();
   // const { settings, openDrawer } = useGraphSettings();
-  const settings = {
+  const [settings, setSettings] = useState({
     chargeStrength: -400,
     linkDistance: 120,
     centerStrength: 0.8,
     collisionRadius: 35,
     alphaDecay: 0.02,
     velocityDecay: 0.3
-  };
+  });
   const openDrawer = () => {};
 
   // Handle settings changes
   const handleSettingsChange = (newSettings: Partial<typeof settings>) => {
-    // For now, just update the local settings object
-    // In the future, this would update the context
-    Object.assign(settings, newSettings);
+    console.log('Settings change:', newSettings);
+    setSettings(prev => ({ ...prev, ...newSettings }));
 
     // Trigger simulation update
     if (simulationRef.current) {
@@ -616,7 +615,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
 
   if (nodes.length <= 1) {
     return (
-      <div className={`mt-8 px-4 sm:px-6 max-w-4xl mx-auto ${className}`}>
+      <div className={`mt-8 ${className}`}>
         <div className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm">
           <h3 className="text-sm font-medium mb-4">Graph view</h3>
           <div className="flex items-center justify-center h-32 text-muted-foreground">
@@ -629,7 +628,13 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
 
   if (isFullscreen) {
     return (
-      <div className="fixed inset-0 z-[9999] bg-background animate-in fade-in-0 duration-300">
+      <div
+        className="fixed inset-0 z-[9999] bg-background animate-in fade-in-0 duration-300"
+        style={{
+          touchAction: 'manipulation',
+          pointerEvents: 'auto'
+        }}
+      >
         {/* Header with controls */}
         <div className="absolute top-0 left-0 right-0 z-10 bg-background border-b border-border p-4">
           <div className="flex items-center justify-between">
@@ -667,7 +672,13 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
 
         {/* Settings panel (bottom half when open) */}
         {isViewSettingsOpen && (
-          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-background border-t border-border overflow-y-auto">
+          <div
+            className="absolute bottom-0 left-0 right-0 h-1/2 bg-background border-t border-border overflow-y-auto"
+            style={{
+              touchAction: 'manipulation',
+              pointerEvents: 'auto'
+            }}
+          >
             <GraphSettingsPanel
               settings={settings}
               onSettingsChange={handleSettingsChange}
@@ -680,7 +691,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
   }
 
   return (
-    <div className={`mt-8 px-4 sm:px-6 max-w-4xl mx-auto ${className} animate-in fade-in-0 duration-300`}>
+    <div className={`mt-8 ${className} animate-in fade-in-0 duration-300`}>
       <div
         className="p-4 rounded-lg border border-border/40 bg-card dark:bg-card text-card-foreground shadow-sm cursor-pointer hover:shadow-md transition-all duration-200"
         onClick={() => setIsFullscreen(true)}

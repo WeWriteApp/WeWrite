@@ -269,20 +269,7 @@ export default function PageFooter({
         />
       </div>
 
-      {/* Delete button - moved to very bottom for owners */}
-      {isOwner && onDelete && (
-        <div className="mb-6">
-          <Button
-            variant="destructive"
-            size="lg"
-            className="gap-2 w-full md:w-auto rounded-2xl font-medium text-white"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-5 w-5" />
-            <span>Delete</span>
-          </Button>
-        </div>
-      )}
+
 
       {/* Page stats section - only in view mode */}
       {!isEditing && (

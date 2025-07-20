@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect } from "react"
-import { X, ChevronLeft, Settings, Check, Users, Shield, Link as LinkIcon, Trash2, Clock, Shuffle, LogOut } from "lucide-react"
+import { X, ChevronLeft, Settings, Check, Users, Shield, Link as LinkIcon, Trash2, Clock, Shuffle, LogOut, Search, TrendingUp, Heart } from "lucide-react"
 import { useRouter } from "next/navigation"
 // Removed direct Firebase auth imports - using session management system
 import { cn } from "../../lib/utils"
@@ -119,28 +119,30 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
         return (
           <div className="flex flex-col h-full">
             {/* Main Menu Items */}
-            <div className="space-y-1 mb-6">
+            <div className="space-y-2 mb-6">
+              {/* Search */}
               <button
                 onClick={() => {
                   onClose();
-                  router.push('/recents');
+                  router.push('/search');
                 }}
-                className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
               >
-                <Clock className="h-5 w-5 mr-2" />
-                <span>Recently viewed</span>
+                <Search className="h-5 w-5 mr-3" />
+                <span>Search</span>
               </button>
 
+              {/* Random Pages */}
               <div className="relative group">
                 <button
-                  onClick={async () => {
+                  onClick={() => {
                     onClose();
-                    await navigateToRandomPage(router, session?.uid);
+                    router.push('/random-pages');
                   }}
-                  className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                  className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
                 >
-                  <Shuffle className="h-5 w-5 mr-2" />
-                  <span>Random Page</span>
+                  <Shuffle className="h-5 w-5 mr-3" />
+                  <span>Random Pages</span>
                 </button>
 
                 {/* Random Page Filter Menu */}
@@ -157,17 +159,52 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
                 </div>
               </div>
 
-              {/* Groups functionality removed */}
+              {/* Trending Pages */}
+              <button
+                onClick={() => {
+                  onClose();
+                  router.push('/trending-pages');
+                }}
+                className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
+              >
+                <TrendingUp className="h-5 w-5 mr-3" />
+                <span>Trending Pages</span>
+              </button>
 
+              {/* Recently viewed */}
+              <button
+                onClick={() => {
+                  onClose();
+                  router.push('/recents');
+                }}
+                className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
+              >
+                <Clock className="h-5 w-5 mr-3" />
+                <span>Recently viewed</span>
+              </button>
+
+              {/* Following */}
+              <button
+                onClick={() => {
+                  onClose();
+                  router.push('/following');
+                }}
+                className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
+              >
+                <Heart className="h-5 w-5 mr-3" />
+                <span>Following</span>
+              </button>
+
+              {/* Settings */}
               <button
                 onClick={() => {
                   onClose();
                   router.push('/settings');
                 }}
-                className="flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                className="flex items-center justify-between w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
               >
                 <div className="flex items-center">
-                  <Settings className="h-5 w-5 mr-2" />
+                  <Settings className="h-5 w-5 mr-3" />
                   <span>Settings</span>
                 </div>
                 {criticalSettingsStatus === 'warning' && (
@@ -186,9 +223,9 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
                     onClose();
                     router.push('/admin');
                   }}
-                  className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted"
+                  className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-neutral-alpha-2 dark:hover:bg-muted min-h-[48px]"
                 >
-                  <Shield className="h-5 w-5 mr-2" />
+                  <Shield className="h-5 w-5 mr-3" />
                   <span>Admin Dashboard</span>
                 </button>
               )}
@@ -199,7 +236,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
               <>
                 <div className="border-t border-border my-4" />
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium text-muted-foreground px-2">Editor</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground px-4">Editor</h3>
 
 
 
@@ -207,7 +244,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
 
                   {/* Location button - only show if map feature is enabled */}
                   {mapFeatureEnabled && (
-                    <div className="px-3">
+                    <div className="px-4">
                       <MapEditor
                         location={editorProps?.location}
                         onChange={editorProps?.setLocation}
@@ -221,15 +258,15 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
                     <button
                       onClick={editorProps?.onDelete}
                       disabled={editorProps?.isSaving}
-                      className="flex items-center w-full px-3 py-2.5 text-sm rounded-md transition-colors hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+                      className="flex items-center w-full px-4 py-3 text-sm rounded-md transition-colors hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 min-h-[48px]"
                     >
-                      <Trash2 className="h-5 w-5 mr-2" />
+                      <Trash2 className="h-5 w-5 mr-3" />
                       <span>Delete</span>
                     </button>
                   )}
 
                   {/* Cancel and Save buttons */}
-                  <div className="flex gap-2 px-3">
+                  <div className="flex gap-2 px-4">
                     <Button
                       onClick={editorProps?.onCancel}
                       variant="outline"

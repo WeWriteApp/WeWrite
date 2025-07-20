@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Filter, Clock, Activity } from 'lucide-react';
+import { Filter, Clock, Activity, Loader } from 'lucide-react';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import ActivityCard from '../activity/ActivityCard';
 import { Button } from '../ui/button';
@@ -55,6 +55,7 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
   userId = null // Optional user ID to filter by
 }, ref) => {
   console.log('🚀 [RECENT_EDITS] Component mounted/rendered with props:', { limit, renderFilterInHeader, isCarousel });
+  console.log('🚀 [RECENT_EDITS] Using infinite scroll mode:', !isCarousel);
 
   const [pages, setPages] = useState<RecentPage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +66,59 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
   const { currentAccount } = useCurrentAccount();
   const router = useRouter();
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  // State for infinite scroll (only used when not carousel)
+  const [allActivities, setAllActivities] = useState<any[]>([]);
+  const [displayedCount, setDisplayedCount] = useState(8); // Start with fewer items for lighter initial load
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMoreData, setHasMoreData] = useState(true);
+
+  // Load more data for infinite scroll
+  const loadMoreData = useCallback(() => {
+    if (loadingMore || !hasMoreData || isCarousel) {
+      return;
+    }
+
+    setLoadingMore(true);
+    console.log('🔄 [RECENT_ACTIVITY] Loading more data, increasing display count');
+
+    // Simulate loading delay and increase displayed count
+    setTimeout(() => {
+      const newCount = displayedCount + 10; // Load 10 more items at a time
+      setDisplayedCount(newCount);
+
+      // Check if we've reached the end of available data
+      if (newCount >= allActivities.length) {
+        setHasMoreData(false);
+      }
+
+      setLoadingMore(false);
+    }, 300); // Faster loading for better UX
+  }, [loadingMore, hasMoreData, isCarousel, displayedCount, allActivities.length]);
+
+  // Infinite scroll handler for window scroll
+  const handleScroll = useCallback(() => {
+    if (isCarousel || loadingMore || !hasMoreData) {
+      return;
+    }
+
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollHeight = document.documentElement.scrollHeight;
+    const clientHeight = window.innerHeight;
+
+    // Load more when user is within 800px of the bottom (more responsive)
+    if (scrollTop + clientHeight >= scrollHeight - 800) {
+      loadMoreData();
+    }
+  }, [isCarousel, loadingMore, hasMoreData, loadMoreData]);
+
+  // Attach scroll listener to window for infinite scroll
+  useEffect(() => {
+    if (!isCarousel) {
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      return () => window.removeEventListener('scroll', handleScroll);
+    }
+  }, [handleScroll, isCarousel]);
 
   // Fetch followed pages when needed
   useEffect(() => {
@@ -164,6 +218,19 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
         console.log('🔍 [RECENT_EDITS] Sample enriched pages:', enrichedPages.slice(0, 2));
 
         setPages(enrichedPages);
+
+        // For infinite scroll mode, also populate allActivities
+        if (!isCarousel) {
+          const allActivitiesData = enrichedPages.map(convertPageToActivity);
+          setAllActivities(allActivitiesData);
+          setDisplayedCount(Math.min(8, allActivitiesData.length)); // Start with 8 items
+          setHasMoreData(allActivitiesData.length > 8);
+          console.log('🔄 [RECENT_ACTIVITY] Populated infinite scroll data:', {
+            totalActivities: allActivitiesData.length,
+            initialDisplayCount: Math.min(8, allActivitiesData.length),
+            hasMore: allActivitiesData.length > 8
+          });
+        }
       } catch (err) {
         console.error('Error fetching recent pages activity:', err);
         setError(err instanceof Error ? err.message : 'Failed to load recent edits');
@@ -173,7 +240,7 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
     };
 
     fetchRecentPages();
-  }, [currentAccount]);
+  }, [currentAccount, isCarousel]);
 
   // Convert pages to activity format for ActivityCard
   const convertPageToActivity = (page: RecentPage) => {
@@ -290,39 +357,64 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
     FilterDropdown: renderFilterDropdown
   }));
 
-  if (loading) {
-    return (
-      <div className="flex gap-4 overflow-x-auto pb-2">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="flex-shrink-0 w-[280px] animate-pulse">
-            <div className="h-[120px] bg-muted rounded-lg"></div>
-          </div>
-        ))}
-      </div>
-    );
+  // For carousel mode, use the original loading/error states
+  if (isCarousel) {
+    if (loading) {
+      return (
+        <div className="flex gap-4 overflow-x-auto pb-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex-shrink-0 w-[280px] animate-pulse">
+              <div className="h-[120px] bg-muted rounded-lg"></div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="text-center p-8 border rounded-lg">
+          <p className="text-muted-foreground">Failed to load recent edits</p>
+          <p className="text-sm text-muted-foreground mt-2">{error}</p>
+        </div>
+      );
+    }
+  } else {
+    // For infinite scroll mode, use regular loading/error states
+    if (loading) {
+      return (
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="h-[120px] bg-muted rounded-lg animate-pulse"></div>
+          ))}
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="text-center p-8 border rounded-lg">
+          <p className="text-muted-foreground">Failed to load recent activity</p>
+          <p className="text-sm text-muted-foreground mt-2">{error}</p>
+        </div>
+      );
+    }
   }
 
-  if (error) {
-    return (
-      <div className="text-center p-8 border rounded-lg">
-        <p className="text-muted-foreground">Failed to load recent edits</p>
-        <p className="text-sm text-muted-foreground mt-2">{error}</p>
-      </div>
-    );
-  }
+  // Handle empty states for both modes
+  const getEmptyMessage = () => {
+    if (userId) {
+      return 'This user hasn\'t made any recent edits';
+    }
+    switch (currentViewMode) {
+      case 'following': return 'No edits from pages you follow';
+      case 'mine': return 'No edits from your pages';
+      default: return 'Recent page edits will appear here';
+    }
+  };
 
-  if (filteredActivities.length === 0) {
-    const getEmptyMessage = () => {
-      if (userId) {
-        return 'This user hasn\'t made any recent edits';
-      }
-      switch (currentViewMode) {
-        case 'following': return 'No edits from pages you follow';
-        case 'mine': return 'No edits from your pages';
-        default: return 'Recent page edits will appear here';
-      }
-    };
-
+  const dataToCheck = isCarousel ? filteredActivities : allActivities;
+  if (dataToCheck.length === 0 && !loading) {
     return (
       <EmptyState
         icon={Activity}
@@ -365,16 +457,35 @@ const RecentPagesActivity = React.forwardRef<any, RecentPagesActivityProps>(({
           </div>
         </div>
       ) : (
-        /* Grid layout for activity page */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredActivities.map((activity, index) => (
-            <div key={`${activity.pageId}-${index}`} className="h-[200px]">
+        /* Vertical list with infinite scroll on main page */
+        <div className="space-y-4">
+          {allActivities.slice(0, displayedCount).map((activity, index) => (
+            <div key={`${activity.pageId}-${index}`} className="w-full">
               <ActivityCard
                 activity={activity}
                 isCarousel={false}
               />
             </div>
           ))}
+
+          {/* Loading indicator for infinite scroll */}
+          {loadingMore && (
+            <div className="flex justify-center py-8">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Loading more activity...</span>
+              </div>
+            </div>
+          )}
+
+          {/* End of results indicator */}
+          {!hasMoreData && allActivities.length > 0 && (
+            <div className="flex justify-center py-8">
+              <span className="text-sm text-muted-foreground">
+                You've reached the end of recent activity
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>

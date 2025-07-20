@@ -23,12 +23,13 @@ import PledgeBar from "../payments/PledgeBar";
 import RelatedPagesSection from "../features/RelatedPagesSection";
 import PageGraphView from "./PageGraphView";
 import DeletedPageBanner from "../utils/DeletedPageBanner";
+import { Button } from "../ui/button";
+import { Trash2 } from "lucide-react";
 import UnifiedTextHighlighter from "../text-highlighting/UnifiedTextHighlighter";
 import TextViewErrorBoundary from "../editor/TextViewErrorBoundary";
 import TextView from "../editor/TextView";
 import { SmartLoader } from "../ui/smart-loader";
 import { ErrorDisplay } from "../ui/error-display";
-import { Button } from "../ui/button";
 import { LineSettingsMenu } from "../utils/LineSettingsMenu";
 
 // Editor Components
@@ -1153,6 +1154,21 @@ export default function PageView({
                   page={page}
                   linkedPageIds={memoizedLinkedPageIds}
                 />
+
+                {/* Delete button - positioned at the very bottom for page owners */}
+                {canEdit && (
+                  <div className="mt-8 mb-6">
+                    <Button
+                      variant="destructive"
+                      size="lg"
+                      className="gap-2 w-full md:w-auto rounded-2xl font-medium text-white"
+                      onClick={handleDelete}
+                    >
+                      <Trash2 className="h-5 w-5" />
+                      <span>Delete</span>
+                    </Button>
+                  </div>
+                )}
               </>
             )}
           </div>

@@ -12,6 +12,7 @@ import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { ChevronLeft, Share2 } from "lucide-react";
 import { UsernameBadge } from "../ui/UsernameBadge";
 import { Button } from "../ui/button";
+import { UserFollowButton } from "../utils/UserFollowButton";
 
 import UserProfileTabs from '../utils/UserProfileTabs';
 
@@ -102,6 +103,18 @@ const SingleProfileView = ({ profile }) => {
               className="text-3xl font-semibold"
             />
           </div>
+
+          {/* Follow button - only show for other users */}
+          {!isCurrentUser && (
+            <div className="mb-3">
+              <UserFollowButton
+                userId={profile.uid}
+                username={profile.username}
+                size="md"
+                variant="outline"
+              />
+            </div>
+          )}
 
           {/* UsernameBadge handles all subscription display automatically */}
         </div>

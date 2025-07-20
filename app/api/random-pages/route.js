@@ -20,13 +20,38 @@ export async function GET(request) {
     console.log('Random pages API: Requested limit:', limitCount, 'User ID:', userId, 'Exclude own pages:', excludeOwnPages);
 
     // Import Firebase modules
-    const { initAdmin } = await import('../../firebase/admin');
+    const { initAdmin } = await import('../../firebase/admin.ts');
     const { getEffectiveTier } = await import('../../utils/subscriptionTiers');
     const { executeDeduplicatedOperation } = await import('../../utils/serverRequestDeduplication');
 
     // Initialize Firebase Admin
     const adminApp = initAdmin();
     const db = adminApp.firestore();
+
+    // Initialize RTDB if available
+    let rtdb = null;
+    try {
+      const { initializeApp, getApps } = await import('firebase/app');
+      const { getDatabase, ref, get } = await import('firebase/database');
+
+      // Use existing app or create new one for client SDK
+      let app;
+      const existingApps = getApps();
+      if (existingApps.length > 0) {
+        app = existingApps[0];
+      } else {
+        const firebaseConfig = {
+          databaseURL: process.env.FIREBASE_DATABASE_URL
+        };
+        app = initializeApp(firebaseConfig, 'random-pages-client');
+      }
+
+      if (process.env.FIREBASE_DATABASE_URL) {
+        rtdb = getDatabase(app);
+      }
+    } catch (rtdbError) {
+      console.warn('RTDB not available for random pages API:', rtdbError.message);
+    }
 
     if (!db) {
       console.log('Firebase database not available - returning empty array');
@@ -91,8 +116,9 @@ export async function GET(request) {
         // Groups functionality removed
 
         // Fetch username and subscription data
-        if (!page.username || page.username === 'Anonymous') {
+        if (rtdb && (!page.username || page.username === 'Anonymous')) {
           try {
+            const { ref, get } = await import('firebase/database');
             const userRef = ref(rtdb, `users/${page.userId}`);
             const userSnapshot = await get(userRef);
 
@@ -237,7 +263,7 @@ async function getBatchUserDataOptimized(userIds, db, rtdb, getEffectiveTier) {
     }
 
     // Import environment config modules
-    const { getSubCollectionPath, PAYMENT_COLLECTIONS } = await import('../../utils/environmentConfig');
+    const { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionName } = await import('../../utils/environmentConfig');
 
     const results = {};
     const batchSize = 10; // Process in batches to avoid overwhelming the database

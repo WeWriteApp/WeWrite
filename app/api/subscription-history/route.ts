@@ -48,13 +48,28 @@ async function getSubscriptionHistory(userId: string): Promise<SubscriptionHisto
 
     // 1. Get audit trail events for this user
     try {
-      const auditQuery = db.collection(getCollectionName('auditTrail'))
-        .where('userId', '==', userId)
-        .where('entityType', '==', 'subscription')
-        .orderBy('timestamp', 'desc')
-        .limit(50);
+      // Try the full query first, but fall back to simpler queries if index doesn't exist
+      let auditSnapshot;
 
-      const auditSnapshot = await auditQuery.get();
+      try {
+        const auditQuery = db.collection(getCollectionName('auditTrail'))
+          .where('userId', '==', userId)
+          .where('entityType', '==', 'subscription')
+          .orderBy('timestamp', 'desc')
+          .limit(50);
+
+        auditSnapshot = await auditQuery.get();
+      } catch (indexError) {
+        console.warn('[SUBSCRIPTION HISTORY] Composite index not available, trying simpler query:', indexError.message);
+
+        // Fall back to simpler query without orderBy
+        const simpleQuery = db.collection(getCollectionName('auditTrail'))
+          .where('userId', '==', userId)
+          .where('entityType', '==', 'subscription')
+          .limit(50);
+
+        auditSnapshot = await simpleQuery.get();
+      }
 
       auditSnapshot.forEach((doc) => {
         const auditEvent = doc.data();
@@ -88,8 +103,8 @@ async function getSubscriptionHistory(userId: string): Promise<SubscriptionHisto
 
       console.log(`[SUBSCRIPTION HISTORY] Found ${events.length} audit events for user ${userId}`);
     } catch (auditError) {
-      console.warn('[SUBSCRIPTION HISTORY] Could not fetch audit events:', auditError);
-      // Continue with Stripe data even if audit trail fails
+      console.warn('[SUBSCRIPTION HISTORY] Could not fetch audit events:', auditError.message || auditError);
+      // Continue with Stripe data even if audit trail fails - this is expected for new installations
     }
 
     // 2. Get user's Stripe customer ID
@@ -98,15 +113,18 @@ async function getSubscriptionHistory(userId: string): Promise<SubscriptionHisto
 
     if (userDoc.exists) {
       const userData = userDoc.data();
-      const stripeCustomerId = userData.stripeCustomerId;
+      const stripeCustomerId = userData?.stripeCustomerId;
 
       if (stripeCustomerId) {
-        // 3. Get payment history from Stripe
-        const invoices = await stripe.invoices.list({
-          customer: stripeCustomerId,
-          limit: 20,
-          expand: ['data.subscription']
-        });
+        try {
+          console.log(`[SUBSCRIPTION HISTORY] Found Stripe customer ID: ${stripeCustomerId}`);
+
+          // 3. Get payment history from Stripe
+          const invoices = await stripe.invoices.list({
+            customer: stripeCustomerId,
+            limit: 20,
+            expand: ['data.subscription']
+          });
 
         invoices.data.forEach((invoice) => {
           events.push({
@@ -171,7 +189,15 @@ async function getSubscriptionHistory(userId: string): Promise<SubscriptionHisto
             });
           }
         });
+        } catch (stripeError) {
+          console.warn('[SUBSCRIPTION HISTORY] Error fetching from Stripe:', stripeError.message || stripeError);
+          // Continue even if Stripe API fails
+        }
+      } else {
+        console.log(`[SUBSCRIPTION HISTORY] No Stripe customer ID found for user ${userId}`);
       }
+    } else {
+      console.log(`[SUBSCRIPTION HISTORY] User document not found for user ${userId}`);
     }
 
     // 5. Sort all events by timestamp (newest first)
@@ -187,11 +213,16 @@ async function getSubscriptionHistory(userId: string): Promise<SubscriptionHisto
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('[SUBSCRIPTION HISTORY API] Starting request');
+
     // Get authenticated user ID
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
+      console.log('[SUBSCRIPTION HISTORY API] No user ID found - unauthorized');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    console.log(`[SUBSCRIPTION HISTORY API] Processing request for user: ${userId}`);
 
     // Check if a specific userId is requested via query parameter (for admin access)
     const url = new URL(request.url);
@@ -206,6 +237,8 @@ export async function GET(request: NextRequest) {
 
     const history = await getSubscriptionHistory(targetUserId);
 
+    console.log(`[SUBSCRIPTION HISTORY API] Successfully fetched ${history.length} events for user ${targetUserId}`);
+
     return NextResponse.json({
       success: true,
       history,
@@ -213,9 +246,14 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching subscription history:', error);
+    console.error('[SUBSCRIPTION HISTORY API] Error:', error);
+    console.error('[SUBSCRIPTION HISTORY API] Error stack:', error.stack);
+
     return NextResponse.json(
-      { error: 'Failed to fetch subscription history' },
+      {
+        error: 'Failed to fetch subscription history',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     );
   }

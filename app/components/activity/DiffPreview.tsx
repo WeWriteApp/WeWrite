@@ -43,13 +43,19 @@ import { DiffPreview as DiffPreviewType, calculateDiff } from '../../utils/diffS
  * @param {Object} props.textDiff - Pre-calculated diff object (optional, for backward compatibility)
  * @param {boolean} props.isNewPage - Whether this is a new page creation
  * @param {string} props.className - Additional CSS classes
+ * @param {boolean} props.showInlineStats - Whether to show diff stats inline with the preview
+ * @param {number} props.added - Number of characters added (for inline stats)
+ * @param {number} props.removed - Number of characters removed (for inline stats)
  */
 export default function DiffPreview({
   currentContent,
   previousContent,
   textDiff,
   isNewPage = false,
-  className = ""
+  className = "",
+  showInlineStats = false,
+  added = 0,
+  removed = 0
 }) {
   const [diffPreview, setDiffPreview] = useState<DiffPreviewType | null>(null);
   const [loading, setLoading] = useState(false);
@@ -130,6 +136,19 @@ export default function DiffPreview({
             <span className="text-muted-foreground dark:text-slate-300">{preview.afterContext}</span>
             <span className="text-muted-foreground dark:text-slate-300">...</span>
           </>
+        )}
+
+        {/* Inline diff stats */}
+        {showInlineStats && (
+          <span className="ml-2 font-medium">
+            <DiffStats
+              added={added}
+              removed={removed}
+              isNewPage={isNewPage}
+              showTooltips={true}
+              className="inline-flex"
+            />
+          </span>
         )}
       </div>
     </div>

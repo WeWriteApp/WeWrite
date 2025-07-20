@@ -165,7 +165,7 @@ function generateDiffPreview(oldText: string, newText: string, operations: DiffO
     return null;
   }
 
-  const contextLength = 60; // Characters of context on each side
+  const contextLength = 150; // Characters of context on each side
   const changeOp = largestChange.operation;
   const changeIndex = largestChange.index;
 

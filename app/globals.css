@@ -126,6 +126,16 @@
     pointer-events: auto; /* Ensure buttons are clickable */
   }
 
+  /* Special handling for range sliders - they need manipulation touch action */
+  input[type="range"], .mobile-slider-input {
+    touch-action: manipulation !important;
+    pointer-events: auto !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+  }
+
   /* Allow text selection in input fields */
   input[type="text"], input[type="email"], input[type="password"],
   input[type="search"], textarea {
@@ -294,6 +304,33 @@ textarea.text-2xl {
   -moz-user-select: none !important;
   -ms-user-select: none !important;
   user-select: none !important;
+}
+
+/* Global range slider interactivity (all screen sizes) */
+input[type="range"],
+.mobile-slider-input {
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  cursor: pointer !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Range slider thumb interactivity */
+input[type="range"]::-webkit-slider-thumb,
+.mobile-slider-input::-webkit-slider-thumb {
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  cursor: pointer !important;
+}
+
+input[type="range"]::-moz-range-thumb,
+.mobile-slider-input::-moz-range-thumb {
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  cursor: pointer !important;
 }
 
 /* Global pledge bar container interactivity */

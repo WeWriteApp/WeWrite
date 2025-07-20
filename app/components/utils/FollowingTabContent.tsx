@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Users, FileText, Heart, Lock } from 'lucide-react';
-import FollowingList from './FollowingList';
+import UserFollowingList from './UserFollowingList';
 import FollowedPages from '../pages/FollowedPages';
 
 interface FollowingTabContentProps {
@@ -58,7 +58,7 @@ export default function FollowingTabContent({ userId, isCurrentUser }: Following
         </TabsList>
 
         <TabsContent value="users" className="mt-0">
-          <FollowingList userId={userId} isCurrentUser={isCurrentUser} />
+          <UserFollowingList userId={userId} isCurrentUser={isCurrentUser} />
         </TabsContent>
 
         <TabsContent value="pages" className="mt-0">

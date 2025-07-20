@@ -55,7 +55,14 @@ export default function GraphSettingsPanel({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6" style={{ touchAction: 'manipulation' }}>
+      <div
+        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        style={{
+          touchAction: 'manipulation',
+          pointerEvents: 'auto',
+          userSelect: 'none'
+        }}
+      >
         <MobileSlider
           label="Node Repulsion"
           value={settings.chargeStrength}

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useCurrentAccount } from "../providers/CurrentAccountProvider";
 
 interface HomeData {
-  recentPages: any[];
+  recentlyVisitedPages: any[];
   trendingPages: any[];
   userStats?: any;
   batchUserData?: Record<string, any>;
@@ -14,28 +14,51 @@ interface HomeData {
  * Simple home data hook - no bullshit
  */
 export function useOptimizedHome() {
-  const { session } = useCurrentAccount();
+  const { currentAccount } = useCurrentAccount();
   const [data, setData] = useState<HomeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!session?.uid) {
+    if (!currentAccount?.uid) {
       setLoading(false);
       return;
     }
 
-    fetch(`/api/home?userId=${session.uid}`)
-      .then(res => res.json())
-      .then(data => {
+    const fetchHomeData = async () => {
+      try {
+        console.log('[useOptimizedHome] Fetching data for user:', currentAccount.uid);
+
+        const response = await fetch(`/api/home?userId=${currentAccount.uid}`);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        console.log('[useOptimizedHome] Data received:', {
+          recentlyVisitedPages: data.recentlyVisitedPages?.length || 0,
+          trendingPages: data.trendingPages?.length || 0,
+          hasBatchUserData: !!data.batchUserData
+        });
+
         setData(data);
+        setError(null);
+      } catch (err) {
+        console.error('[useOptimizedHome] Error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      } finally {
         setLoading(false);
-      })
-      .catch(err => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, [session?.uid]);
+      }
+    };
+
+    fetchHomeData();
+  }, [currentAccount?.uid]);
 
   return { data, loading, error };
 }

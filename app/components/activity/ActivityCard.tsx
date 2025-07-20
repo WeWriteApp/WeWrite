@@ -31,9 +31,8 @@ import { RotateCcw } from "lucide-react";
  * @param {Object} activity - The activity data to display
  * @param {boolean} isCarousel - Whether this card is in a carousel
  * @param {boolean} compactLayout - Whether to use a more compact layout with less padding
- * @param {boolean} useDynamicHeight - Whether to use dynamic height on mobile (for diff cards)
  */
-const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, useDynamicHeight = false }) => {
+const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) => {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const { currentAccount } = useCurrentAccount();
@@ -308,17 +307,12 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
     }
   }
 
-  // Determine if this card has diff content (for dynamic height on mobile)
-  const hasDiffContent = diffResult && (diffResult.added > 0 || diffResult.removed > 0);
+
 
   return (
     <div
       className={cn(
         "w-full border border-theme-strong rounded-xl shadow-sm dark:bg-card/90 dark:hover:bg-card/100 hover:bg-muted/30 cursor-pointer no-underline bg-card overflow-hidden",
-        // Mobile: dynamic height for diff cards, fixed height for others; Desktop: always fixed height
-        useDynamicHeight && hasDiffContent
-          ? "min-h-[160px] md:h-[200px]" // Dynamic height on mobile for diff cards
-          : "min-h-[160px] md:h-[200px]", // Fixed minimum height for all others
         "flex flex-col",
         // Mobile-first padding with better spacing
         "p-5 md:p-4",
@@ -328,28 +322,25 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
       style={{ transform: 'none' }}
       onClick={handleCardClick}
     >
-      {/* Header section with fixed height */}
-      <div className="flex flex-col w-full flex-shrink-0">
-        {/* Page title with fixed height and ellipsis */}
-        <div className="flex-shrink-0 min-w-0 overflow-hidden h-[48px]">
-          <PillLink href={activityUrl}>
-            {currentPageName && isExactDateFormat(currentPageName)
-              ? formatDate(new Date(currentPageName))
-              : (currentPageName || "Untitled page")}
-          </PillLink>
-        </div>
-
-        {/* User and timestamp info */}
-        <div className="flex justify-between items-center w-full mt-1 flex-shrink-0">
-          <div className="text-xs">
+      {/* Header section */}
+      <div className="flex justify-between items-start w-full mb-3">
+        {/* Left side: Page link and user info that can wrap */}
+        <div className="flex-1 min-w-0 pr-3">
+          {/* Page title and user info on same line, can wrap */}
+          <div className="flex flex-wrap items-center gap-1 text-xs">
+            <PillLink href={activityUrl} className="flex-shrink-0">
+              {currentPageName && isExactDateFormat(currentPageName)
+                ? formatDate(new Date(currentPageName))
+                : (currentPageName || "Untitled page")}
+            </PillLink>
             {activity.groupId && activity.groupName ? (
               <>
-                <span className="text-foreground">
-                  {isNewPage ? "created in" : isTitleChange ? "renamed in" : "edited in"}{" "}
+                <span className="text-foreground whitespace-nowrap">
+                  {isNewPage ? "created in" : isTitleChange ? "renamed in" : "edited in"}
                 </span>
                 <Link
                   href={`/group/${activity.groupId}`}
-                  className="hover:underline text-primary"
+                  className="hover:underline text-primary flex-shrink-0"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {activity.groupName}
@@ -357,12 +348,12 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
               </>
             ) : (
               <>
-                <span className="text-foreground">
-                  {isNewPage ? "created by" : isTitleChange ? "renamed by" : "edited by"}{" "}
+                <span className="text-foreground whitespace-nowrap">
+                  {isNewPage ? "created by" : isTitleChange ? "renamed by" : "edited by"}
                 </span>
                 {/* Don't make user links clickable for sample data */}
                 {activity.isSample ? (
-                  <span className="text-primary">
+                  <span className="text-primary flex-shrink-0">
                     {activity.username || "Missing username"}
                   </span>
                 ) : (
@@ -375,16 +366,20 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
                     size="sm"
                     showBadge={true}
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex"
+                    className="inline-flex flex-shrink-0"
                   />
                 )}
               </>
             )}
           </div>
+        </div>
+
+        {/* Right side: Timestamp and diff counter */}
+        <div className="flex-shrink-0 flex flex-col items-end gap-1">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 ml-auto cursor-pointer">
+                <span className="text-xs text-muted-foreground whitespace-nowrap cursor-pointer">
                   {formatRelativeTime(activity.timestamp)}
                 </span>
               </TooltipTrigger>
@@ -395,62 +390,53 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        </div>
-      </div>
 
-      {/* Content section with flex-grow to fill remaining space */}
-      <div className="flex flex-col flex-grow mt-3 justify-between">
-        {/* Enhanced text diff preview showing both additions and deletions */}
-        <div className={cn(
-          "relative min-w-0 overflow-hidden",
-          // Dynamic height on mobile for diff cards, fixed height otherwise
-          useDynamicHeight && hasDiffContent
-            ? "min-h-[70px] md:h-[70px]" // Dynamic height on mobile, fixed on desktop
-            : "h-[70px]" // Fixed height for all others
-        )}>
-          {isTitleChange ? (
-            <div className="flex items-center justify-center h-full text-sm text-muted-foreground italic">
-              Page title was changed
-            </div>
-          ) : (
-            <DiffPreview
-              currentContent={activity.currentContent}
-              previousContent={isNewPage ? null : activity.previousContent}
-              textDiff={{
-                preview: activity.diffPreview, // Use stored diff preview
-                added: activity.diff?.added || 0,
-                removed: activity.diff?.removed || 0,
-                hasChanges: activity.diff?.hasChanges || false
-              }}
+          {/* Diff counter underneath timestamp */}
+          {!isTitleChange && (
+            <DiffStats
+              added={added}
+              removed={removed}
               isNewPage={isNewPage}
+              showTooltips={true}
+              className="text-xs"
             />
           )}
         </div>
+      </div>
 
-        {/* Character count stats positioned at the bottom of the card with proper padding */}
-        <div className="flex-shrink-0 pb-2 pt-2 px-1 border-t border-border/20 mt-auto">
-          <div className="flex justify-between items-center">
-            {isTitleChange ? (
-              <div className="text-xs text-muted-foreground">
-                Title change
-              </div>
-            ) : (
-              <DiffStats
-                added={added}
-                removed={removed}
-                isNewPage={isNewPage}
-                showTooltips={true}
-              />
-            )}
+      {/* Diff section at bottom */}
+      <div className="mt-auto">
+        {isTitleChange ? (
+          <div className="flex items-center justify-center py-4 text-sm text-muted-foreground italic">
+            Page title was changed
+          </div>
+        ) : (
+          <DiffPreview
+            currentContent={activity.currentContent}
+            previousContent={isNewPage ? null : activity.previousContent}
+            textDiff={{
+              preview: activity.diffPreview, // Use stored diff preview
+              added: activity.diff?.added || 0,
+              removed: activity.diff?.removed || 0,
+              hasChanges: activity.diff?.hasChanges || false
+            }}
+            isNewPage={isNewPage}
+            showInlineStats={false}
+            added={added}
+            removed={removed}
+          />
+        )}
 
-            {/* Restore button for activity context */}
-            {canRestore && (
+        {/* Restore button for activity context - only show if needed */}
+        {canRestore && (
+          <div className="flex-shrink-0 pt-3 border-t border-border/20 mt-3">
+            <div className="flex justify-end items-center">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleRestore}
                 disabled={isRestoring}
-                className="ml-2 h-6 px-2 text-xs"
+                className="h-6 px-2 text-xs"
               >
                 {isRestoring ? (
                   <>
@@ -464,9 +450,9 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false, use
                   </>
                 )}
               </Button>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

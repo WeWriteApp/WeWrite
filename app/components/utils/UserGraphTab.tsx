@@ -66,20 +66,20 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
     setMounted(true);
   }, []);
   // const { settings, openDrawer } = useGraphSettings();
-  const settings = {
+  const [settings, setSettings] = useState({
     chargeStrength: -300,
     linkDistance: 100,
     centerStrength: 0.3,
     collisionRadius: 30,
     alphaDecay: 0.0228,
     velocityDecay: 0.4
-  };
+  });
   const openDrawer = () => {};
 
   // Handle settings changes
   const handleSettingsChange = (newSettings: Partial<typeof settings>) => {
-    // For now, just update the local settings object
-    Object.assign(settings, newSettings);
+    console.log('Settings change:', newSettings);
+    setSettings(prev => ({ ...prev, ...newSettings }));
 
     // Trigger simulation update
     if (simulationRef.current) {

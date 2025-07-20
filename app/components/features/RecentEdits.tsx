@@ -24,6 +24,16 @@ interface RecentActivityProps {
   limit?: number;
   renderFilterInHeader?: boolean;
   isCarousel?: boolean;
+  onFilterStateChange?: (state: {
+    currentViewMode: 'all' | 'following';
+    hideMyEdits: boolean;
+    isLoadingFollows: boolean;
+  }) => void;
+  // External filter control props
+  externalViewMode?: 'all' | 'following';
+  externalHideMyEdits?: boolean;
+  onExternalViewModeChange?: (mode: 'all' | 'following') => void;
+  onExternalHideMyEditsChange?: (hide: boolean) => void;
 }
 
 interface ActivityData {
@@ -55,19 +65,73 @@ interface ActivityData {
  * Features:
  * - Fetches recently edited pages from /api/home (recentlyVisitedPages with lastDiff data)
  * - Filters for pages that have meaningful changes (lastDiff.hasChanges)
- * - Supports filtering (All/Following/Mine)
+ * - Supports filtering (All/Following) with "Hide my own edits" toggle
+ * - Hides user's own edits by default
  * - Works in both carousel and grid layouts
  * - Shows actual diff data from page edits
  */
 const RecentEdits = React.forwardRef<any, RecentActivityProps>(({
   limit = 8,
   renderFilterInHeader = false,
-  isCarousel = true
+  isCarousel = true,
+  onFilterStateChange,
+  externalViewMode,
+  externalHideMyEdits,
+  onExternalViewModeChange,
+  onExternalHideMyEditsChange
 }, ref) => {
   const [activities, setActivities] = useState<ActivityData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentViewMode, setCurrentViewMode] = useState<'all' | 'following' | 'mine'>('all');
+  const [internalViewMode, setInternalViewMode] = useState<'all' | 'following'>('all');
+  const [internalHideMyEdits, setInternalHideMyEdits] = useState(true); // Hide own edits by default
+
+  // Use external props if provided, otherwise use internal state
+  const currentViewMode = externalViewMode ?? internalViewMode;
+  const hideMyEdits = externalHideMyEdits ?? internalHideMyEdits;
+  const setCurrentViewMode = onExternalViewModeChange ?? setInternalViewMode;
+  const setHideMyEdits = onExternalHideMyEditsChange ?? setInternalHideMyEdits;
+
+  // Load user preferences from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !externalViewMode && !externalHideMyEdits) {
+      try {
+        const savedViewMode = localStorage.getItem('recentEdits_viewMode') as 'all' | 'following' | null;
+        const savedHideMyEdits = localStorage.getItem('recentEdits_hideMyEdits');
+
+        if (savedViewMode && (savedViewMode === 'all' || savedViewMode === 'following')) {
+          setInternalViewMode(savedViewMode);
+        }
+
+        if (savedHideMyEdits !== null) {
+          setInternalHideMyEdits(savedHideMyEdits === 'true');
+        }
+      } catch (error) {
+        console.error('Error loading Recent Edits preferences from localStorage:', error);
+      }
+    }
+  }, [externalViewMode, externalHideMyEdits]);
+
+  // Save user preferences to localStorage when they change (only for internal state)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !externalViewMode) {
+      try {
+        localStorage.setItem('recentEdits_viewMode', internalViewMode);
+      } catch (error) {
+        console.error('Error saving Recent Edits view mode to localStorage:', error);
+      }
+    }
+  }, [internalViewMode, externalViewMode]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && externalHideMyEdits === undefined) {
+      try {
+        localStorage.setItem('recentEdits_hideMyEdits', String(internalHideMyEdits));
+      } catch (error) {
+        console.error('Error saving Recent Edits hideMyEdits to localStorage:', error);
+      }
+    }
+  }, [internalHideMyEdits, externalHideMyEdits]);
   const [followedPages, setFollowedPages] = useState<any[]>([]);
   const [isLoadingFollows, setIsLoadingFollows] = useState(false);
   const { currentAccount } = useCurrentAccount();
@@ -158,20 +222,35 @@ const RecentEdits = React.forwardRef<any, RecentActivityProps>(({
     fetchRecentActivity();
   }, [currentAccount, limit]);
 
-  // Filter activities based on current view mode
+  // Notify parent component of filter state changes
+  useEffect(() => {
+    if (onFilterStateChange) {
+      onFilterStateChange({
+        currentViewMode,
+        hideMyEdits,
+        isLoadingFollows
+      });
+    }
+  }, [currentViewMode, hideMyEdits, isLoadingFollows, onFilterStateChange]);
+
+  // Filter activities based on current view mode and hide my edits setting
   const filteredActivities = React.useMemo(() => {
     let filtered = activities;
 
+    // First apply view mode filter
     if (currentViewMode === 'following' && currentAccount) {
       filtered = activities.filter(activity =>
         followedPages.some(followedPage => followedPage.id === activity.pageId)
       );
-    } else if (currentViewMode === 'mine' && currentAccount) {
-      filtered = activities.filter(activity => activity.userId === currentAccount.uid);
+    }
+
+    // Then apply "hide my edits" filter if enabled
+    if (hideMyEdits && currentAccount) {
+      filtered = filtered.filter(activity => activity.userId !== currentAccount.uid);
     }
 
     return filtered.slice(0, limit);
-  }, [activities, currentViewMode, followedPages, currentAccount, limit]);
+  }, [activities, currentViewMode, followedPages, currentAccount, limit, hideMyEdits]);
 
   // Function to render the filter dropdown button
   const renderFilterDropdown = () => {
@@ -188,27 +267,27 @@ const RecentEdits = React.forwardRef<any, RecentActivityProps>(({
                     variant="outline"
                     size="sm"
                     className={`gap-2 h-8 px-3 rounded-2xl hover:bg-muted/80 transition-colors ${
-                      currentViewMode === 'following' || currentViewMode === 'mine' ? 'border-primary text-primary' : ''
+                      currentViewMode === 'following' || hideMyEdits ? 'border-primary text-primary' : ''
                     }`}
-                    aria-label={`Filter edits: ${currentViewMode === 'all' ? 'All' : currentViewMode === 'following' ? 'Following' : 'Mine'}`}
+                    aria-label={`Filter edits: ${currentViewMode === 'following' ? 'Following' : 'All Recent Edits'}`}
                   >
                     <Filter className="h-4 w-4" />
                     <span className="sr-only md:not-sr-only md:inline-block">
-                      {currentViewMode === 'all' ? 'All' : currentViewMode === 'following' ? 'Following' : 'Mine'}
+                      {currentViewMode === 'following' ? 'Following' : 'All Recent Edits'}
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Filter edits by: {currentViewMode === 'all' ? 'All pages' : currentViewMode === 'following' ? 'Pages you follow' : 'Your pages'}</p>
+                <p>Filter edits by: {currentViewMode === 'following' ? 'Pages you follow' : 'All recent edits'}</p>
               </TooltipContent>
             </Tooltip>
-            <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem
                 onClick={() => setCurrentViewMode('all')}
                 className={currentViewMode === 'all' ? 'bg-muted' : ''}
               >
-                All Edits
+                All Recent Edits
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setCurrentViewMode('following')}
@@ -217,11 +296,21 @@ const RecentEdits = React.forwardRef<any, RecentActivityProps>(({
               >
                 Following
               </DropdownMenuItem>
+              <div className="border-t border-border my-1" />
               <DropdownMenuItem
-                onClick={() => setCurrentViewMode('mine')}
-                className={currentViewMode === 'mine' ? 'bg-muted' : ''}
+                onClick={() => setHideMyEdits(!hideMyEdits)}
+                className="flex items-center justify-between"
               >
-                My Edits
+                <span>Hide my own edits</span>
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                  hideMyEdits ? 'bg-primary border-primary' : 'border-muted-foreground'
+                }`}>
+                  {hideMyEdits && (
+                    <svg className="w-2.5 h-2.5 text-primary-foreground" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -262,15 +351,17 @@ const RecentEdits = React.forwardRef<any, RecentActivityProps>(({
       <div className="text-center py-8">
         <Clock className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
         <p className="text-muted-foreground">
-          {currentViewMode === 'mine'
-            ? "You haven't made any edits recently"
-            : currentViewMode === 'following'
+          {currentViewMode === 'following'
             ? "No recent edits from pages you follow"
+            : hideMyEdits
+            ? "No recent edits by others"
             : "No recent edits"}
         </p>
         <p className="text-sm text-muted-foreground mt-1">
-          {currentViewMode === 'mine'
-            ? "Edit a page to see your edits here"
+          {currentViewMode === 'following'
+            ? "Edits from pages you follow will appear here"
+            : hideMyEdits
+            ? "Edits by other users will appear here"
             : "Edits will appear here when users edit pages"}
         </p>
       </div>

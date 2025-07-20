@@ -175,6 +175,52 @@ export default function TrendingPages({ limit = 5 }) {
     fetchTrendingPages();
   }, [limit]);
 
+  // Listen for refresh events from the trending pages page
+  useEffect(() => {
+    const handleRefreshEvent = () => {
+      console.log('TrendingPages: Refresh event received');
+      // Force a refresh by clearing the throttle and refetching
+      localStorage.removeItem('trendingPages_lastFetch');
+
+      // Trigger a re-fetch by updating the limit state temporarily
+      const fetchTrendingPages = async () => {
+        try {
+          setLoading(true);
+          console.log('🔥 [TRENDING] Force refreshing trending pages with limit:', limit);
+
+          const apiUrl = `/api/trending?limit=${limit}`;
+          const apiResponse = await fetch(apiUrl);
+          if (!apiResponse.ok) {
+            const errorText = await apiResponse.text();
+            throw new Error(`API request failed: ${apiResponse.status} - ${errorText}`);
+          }
+          const response = await apiResponse.json();
+
+          if (!response.success) {
+            setError(response.error || 'Failed to load trending pages');
+            setTrendingPages([]);
+            return;
+          }
+
+          const pages = response.trendingPages || [];
+          await fetchSubscriptionData(pages);
+        } catch (err) {
+          console.error('Error refreshing trending pages:', err);
+          setError(`Failed to refresh trending pages: ${err.message}`);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchTrendingPages();
+    };
+
+    window.addEventListener('refreshTrendingPages', handleRefreshEvent);
+    return () => {
+      window.removeEventListener('refreshTrendingPages', handleRefreshEvent);
+    };
+  }, [limit]);
+
   if (loading) {
     return (
       <div className="space-y-4">

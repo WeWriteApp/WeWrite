@@ -57,17 +57,10 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
     );
   }
 
-  // Dense mode: Show only pill-style links with page titles
+  // Dense mode: Show only pill-style links with page titles (no container for full page)
   if (denseMode) {
-    // Calculate dynamic height based on content to reduce whitespace
-    const estimatedRows = Math.ceil(pages.length / 6); // Estimate ~6 pills per row
-    const dynamicHeight = Math.max(120, estimatedRows * 50 + 80); // Base height + row height + padding
-
     return (
-      <div
-        className={wewriteCard('default')}
-        style={{ minHeight: `${dynamicHeight}px` }}
-      >
+      <div className="space-y-4">
         <div className="flex flex-wrap gap-2">
           {pages.map((page) => (
             <PillLink
@@ -82,7 +75,7 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
           ))}
         </div>
         {loading && (
-          <div className="flex justify-center mt-4">
+          <div className="flex justify-center">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
           </div>
         )}

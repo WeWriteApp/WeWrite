@@ -110,7 +110,7 @@ export default function MobileBottomNav() {
     const staticRoutes = [
       '/', '/new', '/trending', '/activity', '/about', '/support', '/roadmap',
       '/login', '/signup', '/settings', '/privacy', '/terms', '/recents', '/groups',
-      '/search', '/notifications'
+      '/search', '/notifications', '/random-pages', '/trending-pages', '/following'
     ];
 
     // Always show on static routes

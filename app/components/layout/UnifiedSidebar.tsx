@@ -7,14 +7,12 @@ import { Switch } from "../ui/switch";
 import {
   Home, Search, User, Settings, ChevronLeft, ChevronRight, Bell, Plus,
   Link as LinkIcon, X, Check, Trash2, MapPin, Shield,
-  Clock, Shuffle, LogOut
+  Clock, Shuffle, LogOut, TrendingUp, Heart
 } from "lucide-react";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { useRouter, usePathname } from "next/navigation";
 
-import { navigateToRandomPage, RandomPageFilters } from "../../utils/randomPageNavigation";
 import MapEditor from "../editor/MapEditor";
-import RandomPageFilterMenu from "../ui/RandomPageFilterMenu";
 import { logoutUser } from "../../firebase/auth";
 import { cn } from "../../lib/utils";
 import { WarningDot } from '../ui/warning-dot';
@@ -76,7 +74,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [isRandomMenuOpen, setIsRandomMenuOpen] = useState(false);
+
 
   // Load sidebar state from localStorage and handle mounting
   useEffect(() => {
@@ -107,7 +105,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   return (
     <SidebarContext.Provider value={contextValue}>
       {/* Only render sidebar for authenticated users and not on admin dashboard */}
-      {isMounted && session && <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} isRandomMenuOpen={isRandomMenuOpen} setIsRandomMenuOpen={setIsRandomMenuOpen} />}
+      {isMounted && session && <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} />}
       {children}
     </SidebarContext.Provider>
   );
@@ -120,7 +118,7 @@ export default function UnifiedSidebar() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [isRandomMenuOpen, setIsRandomMenuOpen] = useState(false);
+
 
   // Load sidebar state from localStorage and handle mounting
   useEffect(() => {
@@ -142,7 +140,7 @@ export default function UnifiedSidebar() {
     return null;
   }
 
-  return <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} isRandomMenuOpen={isRandomMenuOpen} setIsRandomMenuOpen={setIsRandomMenuOpen} />;
+  return <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} />;
 }
 
 /**
@@ -154,17 +152,13 @@ function UnifiedSidebarContent({
   setIsExpanded,
   isHovering,
   setIsHovering,
-  toggleExpanded,
-  isRandomMenuOpen,
-  setIsRandomMenuOpen
+  toggleExpanded
 }: {
   isExpanded: boolean;
   setIsExpanded: (value: boolean) => void;
   isHovering: boolean;
   setIsHovering: (value: boolean) => void;
   toggleExpanded: () => void;
-  isRandomMenuOpen: boolean;
-  setIsRandomMenuOpen: (value: boolean) => void;
 }) {
   const { session } = useCurrentAccount();
   const router = useRouter();
@@ -236,8 +230,10 @@ function UnifiedSidebarContent({
   const navItems = [
     { icon: Home, label: 'Home', href: '/' },
     { icon: Search, label: 'Search', href: '/search' },
-    { icon: Shuffle, label: 'Random Page', action: () => navigateToRandomPage(router, session?.uid) },
+    { icon: Shuffle, label: 'Random Pages', href: '/random-pages' },
+    { icon: TrendingUp, label: 'Trending Pages', href: '/trending-pages' },
     { icon: Clock, label: 'Recently viewed', href: '/recents' },
+    { icon: Heart, label: 'Following', href: '/following' },
     { icon: Plus, label: 'New Page', href: '/new' },
     { icon: Bell, label: 'Notifications', href: '/notifications' },
     { icon: User, label: 'Profile', href: session ? `/user/${session.uid}` : '/auth/login' },
@@ -286,12 +282,7 @@ function UnifiedSidebarContent({
         isHovering && !isExpanded ? "sidebar-hover-overlay" : ""
       )}
       onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => {
-        // Don't collapse if the random page menu is open
-        if (!isRandomMenuOpen) {
-          setIsHovering(false);
-        }
-      }}
+      onMouseLeave={() => setIsHovering(false)}
     >
         <div className={cn(
           "flex flex-col h-full",
@@ -323,7 +314,7 @@ function UnifiedSidebarContent({
           <nav className="flex flex-col gap-2 mb-6">
             {navItems.map((item, index) => {
               const Icon = item.icon;
-              const isRandomPage = item.label === 'Random Page';
+              const isRandomPage = item.label === 'Random Pages';
               const isActive = isNavItemActive(item);
               const isSettings = item.label === 'Settings';
 
@@ -373,33 +364,14 @@ function UnifiedSidebarContent({
               );
 
               return (
-                <div key={item.href || index} className={cn("relative", isRandomPage && "group")}>
+                <div key={item.href || index}>
                   {buttonContent}
-
-                  {/* Random Page Filter Menu - only show when expanded and for random page item */}
-                  {isRandomPage && showContent && (
-                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                      <RandomPageFilterMenu
-                        size="sm"
-                        onFiltersChange={(filters) => {
-                          // Update the navigation action with new filters
-                          const updatedItem = { ...item, action: () => navigateToRandomPage(router, session?.uid, filters) };
-                          // The filters are already persisted by the component, so we don't need to do anything else
-                        }}
-                        onOpenChange={(isOpen) => {
-                          setIsRandomMenuOpen(isOpen);
-                          // If menu is closed and we're in hover mode, allow collapse
-                          if (!isOpen && isHovering && !isExpanded) {
-                            setIsHovering(false);
-                          }
-                        }}
-                      />
-                    </div>
-                  )}
                 </div>
               );
             })}
           </nav>
+
+
 
           {/* Editor Functions (only show in edit mode) */}
           {isEditMode && (

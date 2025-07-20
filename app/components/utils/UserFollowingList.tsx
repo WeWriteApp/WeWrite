@@ -4,24 +4,20 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { Loader, UserX, Users } from 'lucide-react';
-import { db } from "../../firebase/database";
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { unfollowUser, getFollowedUsers } from "../../firebase/follows";
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import Link from 'next/link';
-import { PillLink } from "./PillLink";
-import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 import { UsernameBadge } from '../ui/UsernameBadge';
 
 import { useAlert } from '../../hooks/useAlert';
 import AlertModal from './AlertModal';
 
-interface FollowingListProps {
+interface UserFollowingListProps {
   userId: string;
   isCurrentUser?: boolean;
 }
 
-export default function FollowingList({ userId, isCurrentUser = false }: FollowingListProps) {
+export default function UserFollowingList({ userId, isCurrentUser = false }: UserFollowingListProps) {
   const { session } = useCurrentAccount();
   const [followedUsers, setFollowedUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,9 +27,6 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
   const [unfollowingId, setUnfollowingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const limit = 50;
-
-  // Subscription feature is now always enabled
-  const subscriptionEnabled = true;
 
   // Custom modal hooks
   const { alertState, showError, closeAlert } = useAlert();
@@ -81,33 +74,18 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
       // Fetch user details for each followed user
       const userPromises = paginatedIds.map(async (followedId) => {
         try {
-          const userRef = doc(db, 'users', followedId);
-          const userDoc = await getDoc(userRef);
-
-          if (userDoc.exists()) {
-            // Get subscription tier if available
-            let tier = null;
-            let subscriptionStatus = null;
-
-            try {
-              const subscriptionRef = doc(db, 'users', followedId, 'subscription', 'current');
-              const subscriptionDoc = await getDoc(subscriptionRef);
-
-              if (subscriptionDoc.exists()) {
-                const subscriptionData = subscriptionDoc.data();
-                tier = subscriptionData.tier || null;
-                subscriptionStatus = subscriptionData.status || null;
-              }
-            } catch (err) {
-              console.error(`Error fetching subscription for user ${followedId}:`, err);
+          const response = await fetch(`/api/users/profile?id=${encodeURIComponent(followedId)}`);
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data) {
+              return {
+                id: followedId,
+                ...result.data,
+                tier: result.data.tier,
+                subscriptionStatus: result.data.subscriptionStatus,
+                subscriptionAmount: result.data.subscriptionAmount
+              };
             }
-
-            return {
-              id: followedId,
-              ...userDoc.data(),
-              tier,
-              subscriptionStatus
-            };
           }
           return null;
         } catch (err) {
@@ -175,11 +153,11 @@ export default function FollowingList({ userId, isCurrentUser = false }: Followi
         <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
           <Users className="h-5 w-5 text-primary" />
         </div>
-        <h3 className="text-lg font-medium mb-2">No followed users or pages yet</h3>
+        <h3 className="text-lg font-medium mb-2">No followed users yet</h3>
         <p className="text-sm text-muted-foreground max-w-md mb-4">
           {isCurrentUser
-            ? "When you follow users or pages, they'll appear here so you can easily find them later."
-            : "This user isn't following anyone or any pages yet."}
+            ? "When you follow users, they'll appear here so you can easily find them later."
+            : "This user isn't following anyone yet."}
         </p>
       </div>
     );
