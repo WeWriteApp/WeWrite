@@ -25,8 +25,9 @@ class LogRocketService {
   private isProduction = false;
 
   constructor() {
-    // Only initialize in production and client-side
-    this.isProduction = process.env.NODE_ENV === 'production';
+    // Initialize in production, or in development if explicitly enabled
+    this.isProduction = process.env.NODE_ENV === 'production' ||
+                       process.env.NEXT_PUBLIC_LOGROCKET_ENABLE_DEV === 'true';
   }
 
   /**
@@ -63,7 +64,7 @@ class LogRocketService {
     }
 
     if (!this.isProduction) {
-      console.log('⏭️ LogRocket skipped: Not in production environment');
+      console.log('⏭️ LogRocket skipped: Not in production environment (set NEXT_PUBLIC_LOGROCKET_ENABLE_DEV=true to enable in dev)');
       return;
     }
 
