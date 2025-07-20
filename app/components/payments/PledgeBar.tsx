@@ -683,13 +683,15 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Don't allow plus button when out of tokens
-                      if (!isOutOfTokens) {
+                      if (isOutOfTokens) {
+                        // Redirect to subscription page when out of tokens
+                        router.push('/settings/subscription');
+                      } else {
                         handleTokenChange(incrementAmount);
                       }
                     }}
-                    className={`h-8 w-8 p-0 ${isOutOfTokens ? 'opacity-50' : ''} ${isRefreshing ? 'opacity-75' : ''}`}
-                    disabled={isOutOfTokens}
+                    className={`h-8 w-8 p-0 ${isRefreshing ? 'opacity-75' : ''}`}
+                    disabled={isRefreshing}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>

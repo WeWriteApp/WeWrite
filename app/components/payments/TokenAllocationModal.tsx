@@ -243,9 +243,14 @@ export function TokenAllocationModal({
             className="h-10 w-10 p-0 flex-shrink-0"
             onClick={(e) => {
               e.stopPropagation();
-              handleTokenChange(incrementAmount);
+              if (availableTokens <= 0) {
+                // Redirect to subscription page when out of tokens
+                handleSubscribe();
+              } else {
+                handleTokenChange(incrementAmount);
+              }
             }}
-            disabled={availableTokens <= 0}
+            disabled={false}
           >
             <Plus className="h-4 w-4" />
           </Button>

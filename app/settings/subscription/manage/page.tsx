@@ -381,8 +381,15 @@ export default function SubscriptionManagePage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleTokenAllocationChange(allocation.id, incrementAmount)}
-                        disabled={updatingAllocation === allocation.id || (tokenBalance?.availableTokens || 0) <= 0}
+                        onClick={() => {
+                          if ((tokenBalance?.availableTokens || 0) <= 0) {
+                            // Redirect to main subscription page to upgrade
+                            router.push('/settings/subscription');
+                          } else {
+                            handleTokenAllocationChange(allocation.id, incrementAmount);
+                          }
+                        }}
+                        disabled={updatingAllocation === allocation.id}
                         className="h-8 w-8 p-0"
                       >
                         <Plus className="h-4 w-4" />
