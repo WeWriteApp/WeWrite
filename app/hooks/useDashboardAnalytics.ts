@@ -191,7 +191,11 @@ export function useAccountsMetrics(dateRange: DateRange, granularity?: number) {
         throw new Error(result.error || 'Failed to fetch accounts metrics');
       }
 
-      setData(result.data || []);
+      // Ensure data is always an array
+      const responseData = result.data;
+      const safeData = Array.isArray(responseData) ? responseData : [];
+      console.log('🔍 [useAccountsMetrics] API Response:', { responseData, safeData });
+      setData(safeData);
     } catch (err) {
       console.error('Error fetching accounts metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch accounts data');
@@ -250,7 +254,10 @@ export function usePagesMetrics(dateRange: DateRange, granularity?: number) {
         throw new Error(result.error || 'Failed to fetch pages metrics');
       }
 
-      setData(result.data || []);
+      // Ensure data is always an array
+      const responseData = result.data;
+      const safeData = Array.isArray(responseData) ? responseData : [];
+      setData(safeData);
     } catch (err) {
       console.error('Error fetching pages metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch pages data');
@@ -309,7 +316,10 @@ export function useSharesMetrics(dateRange: DateRange, granularity?: number) {
         throw new Error(result.error || 'Failed to fetch shares metrics');
       }
 
-      setData(result.data || []);
+      // Ensure data is always an array
+      const responseData = result.data;
+      const safeData = Array.isArray(responseData) ? responseData : [];
+      setData(safeData);
     } catch (err) {
       console.error('Error fetching shares metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch shares data');
@@ -368,7 +378,10 @@ export function useEditsMetrics(dateRange: DateRange, granularity?: number) {
         throw new Error(result.error || 'Failed to fetch edits metrics');
       }
 
-      setData(result.data || []);
+      // Ensure data is always an array
+      const responseData = result.data;
+      const safeData = Array.isArray(responseData) ? responseData : [];
+      setData(safeData);
     } catch (err) {
       console.error('Error fetching edits metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch edits data');
@@ -427,7 +440,10 @@ export function useContentChangesMetrics(dateRange: DateRange, granularity?: num
         throw new Error(result.error || 'Failed to fetch content changes metrics');
       }
 
-      setData(result.data || []);
+      // Ensure data is always an array
+      const responseData = result.data;
+      const safeData = Array.isArray(responseData) ? responseData : [];
+      setData(safeData);
     } catch (err) {
       console.error('Error fetching content changes metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch content changes data');
@@ -486,7 +502,10 @@ export function usePWAInstallsMetrics(dateRange: DateRange, granularity?: number
         throw new Error(result.error || 'Failed to fetch PWA installs metrics');
       }
 
-      setData(result.data || []);
+      // Ensure data is always an array
+      const responseData = result.data;
+      const safeData = Array.isArray(responseData) ? responseData : [];
+      setData(safeData);
     } catch (err) {
       console.error('Error fetching PWA installs metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch PWA installs data');
@@ -548,7 +567,10 @@ export function useVisitorMetrics(dateRange: DateRange, granularity?: number) {
         throw new Error(result.error || 'Failed to fetch visitor metrics');
       }
 
-      setData(result.data || []);
+      // Ensure data is always an array
+      const responseData = result.data;
+      const safeData = Array.isArray(responseData) ? responseData : [];
+      setData(safeData);
     } catch (err) {
       console.error('Error fetching visitor metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch visitor data');

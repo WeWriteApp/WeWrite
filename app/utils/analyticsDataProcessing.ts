@@ -95,14 +95,18 @@ export function calculateFilteredSummaryStats<T extends AnalyticsDataPoint>(
   processedData: T[],
   filters: GlobalAnalyticsFilters
 ) {
-  const originalTotal = originalData.reduce((sum, item) => sum + item.count, 0);
-  const processedTotal = processedData.length > 0 ? processedData[processedData.length - 1].count : 0;
+  // Ensure originalData is an array
+  const safeOriginalData = Array.isArray(originalData) ? originalData : [];
+  const safeProcessedData = Array.isArray(processedData) ? processedData : [];
+
+  const originalTotal = safeOriginalData.reduce((sum, item) => sum + (item?.count || 0), 0);
+  const processedTotal = safeProcessedData.length > 0 ? safeProcessedData[safeProcessedData.length - 1].count : 0;
   
   // For cumulative mode, the total is the last data point
   // For over time mode, the total is the sum of all points
-  const displayTotal = filters.timeDisplayMode === 'cumulative' 
-    ? processedTotal 
-    : processedData.reduce((sum, item) => sum + item.count, 0);
+  const displayTotal = filters.timeDisplayMode === 'cumulative'
+    ? processedTotal
+    : safeProcessedData.reduce((sum, item) => sum + (item?.count || 0), 0);
   
   const averagePerPeriod = processedData.length > 0 
     ? (displayTotal / processedData.length) 

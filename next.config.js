@@ -111,7 +111,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://connect-js.stripe.com https://*.stripe.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https: https://*.stripe.com",
-              "connect-src 'self' https://api.stripe.com https://connect-js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.googleapis.com https://firebase.googleapis.com https://firebaseinstallations.googleapis.com https://www.googletagmanager.com https://*.logrocket.io https://*.lr-ingest.io https://*.logrocket.com https://*.lr-in.com https://*.lr-in-prod.com https://*.lr-ingest.com https://*.ingest-lr.com https://cdn.lgrckt-in.com",
+              "connect-src 'self' https://api.stripe.com https://connect-js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.googleapis.com https://firebase.googleapis.com https://firebaseinstallations.googleapis.com https://www.googletagmanager.com https://www.google-analytics.com https://analytics.google.com https://*.logrocket.io https://*.lr-ingest.io https://*.logrocket.com https://*.lr-in.com https://*.lr-in-prod.com https://*.lr-ingest.com https://*.ingest-lr.com https://cdn.lgrckt-in.com",
               "frame-src 'self' https://js.stripe.com https://connect-js.stripe.com https://*.stripe.com",
               "worker-src 'self' blob:",
               "child-src 'self' blob:",

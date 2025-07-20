@@ -93,9 +93,12 @@ export function getResponsiveTickConfig(isMobile?: boolean) {
 export function detectGranularity(data: Array<{ label: string }>): 'hourly' | 'daily' {
   if (!data || data.length === 0) return 'daily';
 
+  // Ensure data is an array before checking
+  const safeData = Array.isArray(data) ? data : [];
+
   // Check if any label contains time information (e.g., "14:00", "Dec 21 14:00")
-  const hasTimeInfo = data.some(item =>
-    item.label && /\d{1,2}:\d{2}/.test(item.label)
+  const hasTimeInfo = safeData.some(item =>
+    item?.label && /\d{1,2}:\d{2}/.test(item.label)
   );
 
   return hasTimeInfo ? 'hourly' : 'daily';
