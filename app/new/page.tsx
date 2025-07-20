@@ -601,6 +601,7 @@ function NewPageContent() {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(data),
+            credentials: 'include'
           });
 
           if (!response.ok) {
@@ -610,29 +611,45 @@ function NewPageContent() {
               authRetryAttempted = true;
 
               try {
-                const { getAuth } = await import('firebase/auth');
-                const auth = getAuth();
-                const user = auth.currentUser;
+                console.log('🔄 DEBUG: Attempting session refresh via API');
 
-                if (user) {
-                  console.log('🔄 DEBUG: Refreshing auth token');
-                  const newToken = await user.getIdToken(true); // Force refresh
+                // First, try to refresh the session using the session API
+                const sessionRefreshResponse = await fetch('/api/auth/session', {
+                  method: 'GET',
+                  credentials: 'include'
+                });
 
-                  // Create new session cookie
-                  const sessionResponse = await fetch('/api/create-session-cookie', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ idToken: newToken })
-                  });
+                if (sessionRefreshResponse.ok) {
+                  console.log('✅ DEBUG: Session refreshed via API, retrying page creation');
+                  return await attemptPageCreation();
+                } else {
+                  console.log('🔄 DEBUG: Session API refresh failed, trying Firebase token refresh');
 
-                  if (sessionResponse.ok) {
-                    console.log('✅ DEBUG: Auth refreshed, retrying page creation');
-                    // Retry the page creation
-                    return await attemptPageCreation();
+                  // Fallback to Firebase token refresh
+                  const { getAuth } = await import('firebase/auth');
+                  const auth = getAuth();
+                  const user = auth.currentUser;
+
+                  if (user) {
+                    console.log('🔄 DEBUG: Refreshing Firebase auth token');
+                    const newToken = await user.getIdToken(true); // Force refresh
+
+                    // Create new session cookie
+                    const sessionResponse = await fetch('/api/create-session-cookie', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ idToken: newToken }),
+                      credentials: 'include'
+                    });
+
+                    if (sessionResponse.ok) {
+                      console.log('✅ DEBUG: Firebase auth refreshed, retrying page creation');
+                      return await attemptPageCreation();
+                    }
                   }
                 }
               } catch (refreshError) {
-                console.error('🔴 DEBUG: Auth refresh failed:', refreshError);
+                console.error('🔴 DEBUG: Session/auth refresh failed:', refreshError);
               }
 
               throw new Error(`Authentication failed: Please refresh the page and log in again.`);

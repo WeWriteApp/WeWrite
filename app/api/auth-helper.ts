@@ -123,6 +123,9 @@ export async function getUserIdFromRequest(request: NextRequest): Promise<string
   console.log('[AUTH DEBUG] Available cookies:', Object.keys(allCookies));
   console.log('[AUTH DEBUG] Session cookie exists:', !!request.cookies.get('session')?.value);
   console.log('[AUTH DEBUG] UserSession cookie exists:', !!request.cookies.get('userSession')?.value);
+  console.log('[AUTH DEBUG] DevUserSession cookie exists:', !!request.cookies.get('devUserSession')?.value);
+  console.log('[AUTH DEBUG] Environment:', process.env.NODE_ENV);
+  console.log('[AUTH DEBUG] Vercel Environment:', process.env.VERCEL_ENV);
 
   // SECURITY: Query parameter authentication has been permanently removed
   // to prevent authentication bypass vulnerabilities
@@ -171,6 +174,12 @@ async function trySessionCookie(request: NextRequest): Promise<string | null> {
     return decodedClaims.uid;
   } catch (sessionError: any) {
     console.log('[AUTH DEBUG] Session cookie verification failed:', sessionError.message);
+    console.log('[AUTH DEBUG] Session error code:', sessionError.code);
+    console.log('[AUTH DEBUG] Session error details:', {
+      name: sessionError.name,
+      code: sessionError.code,
+      message: sessionError.message
+    });
 
     try {
       // If session cookie fails, try as ID token
@@ -179,6 +188,12 @@ async function trySessionCookie(request: NextRequest): Promise<string | null> {
       return decodedToken.uid;
     } catch (tokenError: any) {
       console.error('[AUTH DEBUG] Error verifying session cookie as ID token:', tokenError.message);
+      console.error('[AUTH DEBUG] Token error code:', tokenError.code);
+      console.error('[AUTH DEBUG] Token error details:', {
+        name: tokenError.name,
+        code: tokenError.code,
+        message: tokenError.message
+      });
       return null;
     }
   }
@@ -201,6 +216,12 @@ async function tryUserSessionCookie(request: NextRequest): Promise<string | null
     const userSession: UserSession = JSON.parse(userSessionCookie);
     if (userSession && userSession.uid) {
       console.log('[AUTH DEBUG] Using userId from userSession cookie (JSON format):', userSession.uid);
+      console.log('[AUTH DEBUG] UserSession details:', {
+        uid: userSession.uid,
+        email: userSession.email,
+        username: userSession.username,
+        isDevelopment: userSession.isDevelopment
+      });
       return userSession.uid;
     } else {
       console.log('[AUTH DEBUG] userSession cookie missing uid:', userSession);
@@ -209,6 +230,13 @@ async function tryUserSessionCookie(request: NextRequest): Promise<string | null
   } catch (error: any) {
     // If JSON parsing fails, treat as plain string (legacy format)
     console.log('[AUTH DEBUG] JSON parsing failed, treating as plain string:', userSessionCookie);
+    console.log('[AUTH DEBUG] Parse error details:', {
+      name: error.name,
+      message: error.message,
+      cookieLength: userSessionCookie.length,
+      cookiePreview: userSessionCookie.substring(0, 100)
+    });
+
     if (userSessionCookie && typeof userSessionCookie === 'string' && userSessionCookie.trim()) {
       console.log('[AUTH DEBUG] Using userId from userSession cookie (string format):', userSessionCookie);
       return userSessionCookie.trim();

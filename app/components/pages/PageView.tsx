@@ -733,6 +733,7 @@ export default function PageView({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(updateData),
+        credentials: 'include'
       });
 
       console.log('🔵 PAGE SAVE: API response received', {
@@ -760,48 +761,86 @@ export default function PageView({
 
         // Handle authentication errors specifically
         if (response.status === 401) {
-          console.error('🔴 PAGE SAVE: Authentication error - attempting to refresh auth');
+          console.error('🔴 PAGE SAVE: Authentication error - attempting to refresh session');
 
-          // Try to refresh the authentication
+          // Try to refresh the session using the API-based approach
           try {
-            const { getAuth } = await import('firebase/auth');
-            const auth = getAuth();
-            const user = auth.currentUser;
+            console.log('🔄 PAGE SAVE: Attempting session refresh via API');
 
-            if (user) {
-              console.log('🔄 PAGE SAVE: Refreshing auth token');
-              const newToken = await user.getIdToken(true); // Force refresh
+            // First, try to refresh the session using the session API
+            const sessionRefreshResponse = await fetch('/api/auth/session', {
+              method: 'GET',
+              credentials: 'include'
+            });
 
-              // Create new session cookie
-              const sessionResponse = await fetch('/api/create-session-cookie', {
-                method: 'POST',
+            if (sessionRefreshResponse.ok) {
+              console.log('✅ PAGE SAVE: Session refreshed via API, retrying save');
+
+              // Retry the save operation
+              const retryResponse = await fetch('/api/pages', {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken: newToken })
+                body: JSON.stringify(updateData),
+                credentials: 'include'
               });
 
-              if (sessionResponse.ok) {
-                console.log('✅ PAGE SAVE: Auth refreshed, retrying save');
-                // Retry the save operation
-                const retryResponse = await fetch('/api/pages', {
-                  method: 'PUT',
+              if (retryResponse.ok) {
+                console.log('✅ PAGE SAVE: Retry successful after session refresh');
+                const responseData = await retryResponse.json();
+                console.log('✅ PAGE SAVE: Page saved successfully via API (after session refresh)', { pageId });
+                // Skip to success handling
+                setHasUnsavedChanges(false);
+                setError(null);
+                return;
+              } else {
+                console.error('🔴 PAGE SAVE: Retry failed after session refresh:', retryResponse.status);
+              }
+            } else {
+              console.log('🔄 PAGE SAVE: Session API refresh failed, trying Firebase token refresh');
+
+              // Fallback to Firebase token refresh
+              const { getAuth } = await import('firebase/auth');
+              const auth = getAuth();
+              const user = auth.currentUser;
+
+              if (user) {
+                console.log('🔄 PAGE SAVE: Refreshing Firebase auth token');
+                const newToken = await user.getIdToken(true); // Force refresh
+
+                // Create new session cookie
+                const sessionResponse = await fetch('/api/create-session-cookie', {
+                  method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(updateData),
+                  body: JSON.stringify({ idToken: newToken }),
+                  credentials: 'include'
                 });
 
-                if (retryResponse.ok) {
-                  console.log('✅ PAGE SAVE: Retry successful');
-                  // Continue with normal success flow
-                  const responseData = await retryResponse.json();
-                  console.log('✅ PAGE SAVE: Page saved successfully via API (after retry)', { pageId });
-                  // Skip to success handling
-                  setHasUnsavedChanges(false);
-                  setError(null);
-                  return;
+                if (sessionResponse.ok) {
+                  console.log('✅ PAGE SAVE: Firebase auth refreshed, retrying save');
+                  // Retry the save operation
+                  const retryResponse = await fetch('/api/pages', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData),
+                    credentials: 'include'
+                  });
+
+                  if (retryResponse.ok) {
+                    console.log('✅ PAGE SAVE: Retry successful after Firebase refresh');
+                    const responseData = await retryResponse.json();
+                    console.log('✅ PAGE SAVE: Page saved successfully via API (after Firebase refresh)', { pageId });
+                    // Skip to success handling
+                    setHasUnsavedChanges(false);
+                    setError(null);
+                    return;
+                  }
                 }
+              } else {
+                console.error('🔴 PAGE SAVE: No Firebase user available for token refresh');
               }
             }
           } catch (refreshError) {
-            console.error('🔴 PAGE SAVE: Auth refresh failed:', refreshError);
+            console.error('🔴 PAGE SAVE: Session/auth refresh failed:', refreshError);
           }
 
           setError("Your session has expired. Please refresh the page and log in again.");
