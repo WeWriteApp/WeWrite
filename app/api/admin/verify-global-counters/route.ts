@@ -8,13 +8,21 @@ import { collection, query, limit, getDocs, doc, getDoc, where } from 'firebase/
 import { db } from '../../../firebase/config';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { isAdmin } from '../../../utils/isAdmin';
-import { getServerSession } from 'next-auth/next';
+import { getUserIdFromRequest } from '../../auth-helper';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 
 export async function GET(request: NextRequest) {
   try {
     // Check admin access
-    const session = await getServerSession();
-    if (!session?.user?.email || !isAdmin(session.user.email)) {
+    const userId = await getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    // Get user email from Firebase to check admin status
+    const firebaseAdmin = getFirebaseAdmin();
+    const userRecord = await firebaseAdmin.auth().getUser(userId);
+    if (!userRecord.email || !isAdmin(userRecord.email)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

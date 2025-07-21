@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { isAdmin } from '../../../utils/isAdmin';
-import { getServerSession } from 'next-auth/next';
+import { getUserIdFromRequest } from '../../auth-helper';
 
 // Security: Only allow this endpoint to run once
 const ACCOUNT_CREATION_ENABLED = process.env.ENABLE_ADMIN_ACCOUNT_CREATION === 'true';
@@ -23,8 +23,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if current user is already an admin (for security)
-    const session = await getServerSession();
-    if (!session?.user?.email || !isAdmin(session.user.email)) {
+    const userId = await getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    // Get user email from Firebase to check admin status
+    const firebaseAdmin = getFirebaseAdmin();
+    const userRecord = await firebaseAdmin.auth().getUser(userId);
+    if (!userRecord.email || !isAdmin(userRecord.email)) {
       return NextResponse.json({ error: 'Only existing admins can create admin accounts' }, { status: 401 });
     }
 
@@ -32,8 +39,8 @@ export async function POST(request: NextRequest) {
     const { password } = body;
 
     if (!password || password.length < 12) {
-      return NextResponse.json({ 
-        error: 'Password must be at least 12 characters long' 
+      return NextResponse.json({
+        error: 'Password must be at least 12 characters long'
       }, { status: 400 });
     }
 
@@ -42,9 +49,8 @@ export async function POST(request: NextRequest) {
 
     console.log('🔐 Creating secure admin account...');
 
-    // Get Firebase Admin SDK
-    const admin = getFirebaseAdmin();
-    if (!admin) {
+    // Use the same Firebase Admin SDK instance
+    if (!firebaseAdmin) {
       return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 500 });
     }
 
@@ -56,7 +62,7 @@ export async function POST(request: NextRequest) {
         console.log('⚠️ Admin account already exists, updating password...');
         
         // Update existing user's password
-        await admin.auth().updateUser(userRecord.uid, {
+        await firebaseAdmin.auth().updateUser(userRecord.uid, {
           password: adminPassword,
           emailVerified: true
         });
@@ -79,7 +85,7 @@ export async function POST(request: NextRequest) {
           // User doesn't exist, create new one
           console.log('📝 Creating new admin account...');
           
-          userRecord = await admin.auth().createUser({
+          userRecord = await firebaseAdmin.auth().createUser({
             email: adminEmail,
             password: adminPassword,
             emailVerified: true,
@@ -131,21 +137,27 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Check if current user is an admin
-    const session = await getServerSession();
-    if (!session?.user?.email || !isAdmin(session.user.email)) {
+    const userId = await getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    // Get user email from Firebase to check admin status
+    const firebaseAdmin = getFirebaseAdmin();
+    const userRecord = await firebaseAdmin.auth().getUser(userId);
+    if (!userRecord.email || !isAdmin(userRecord.email)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 401 });
     }
 
     const adminEmail = 'admin.test@wewrite.app';
     
-    // Get Firebase Admin SDK
-    const admin = getFirebaseAdmin();
-    if (!admin) {
+    // Use the same Firebase Admin SDK instance
+    if (!firebaseAdmin) {
       return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 500 });
     }
 
     try {
-      const userRecord = await admin.auth().getUserByEmail(adminEmail);
+      const userRecord = await firebaseAdmin.auth().getUserByEmail(adminEmail);
       
       return NextResponse.json({
         success: true,
