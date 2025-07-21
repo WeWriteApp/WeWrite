@@ -82,11 +82,46 @@ class LogRocketService {
       console.log('🚀 Initializing LogRocket with app ID:',
         `${process.env.NEXT_PUBLIC_LOGROCKET_APP_ID.substring(0, 8)}...`);
 
-      // Initialize LogRocket with app ID
-      LogRocket.init(process.env.NEXT_PUBLIC_LOGROCKET_APP_ID);
+      // Initialize LogRocket with app ID and sanitization config
+      LogRocket.init(process.env.NEXT_PUBLIC_LOGROCKET_APP_ID, {
+        dom: {
+          inputSanitizer: true,
+          textSanitizer: true,
+          baseHref: null
+        },
+        network: {
+          requestSanitizer: (request: any) => {
+            // Sanitize sensitive headers and data
+            if (request.headers) {
+              delete request.headers['authorization'];
+              delete request.headers['x-auth-token'];
+              delete request.headers['stripe-signature'];
+            }
 
-      // Configure data sanitization
-      this.configureSanitization();
+            // Sanitize sensitive URL parameters
+            if (request.url && request.url.includes('token=')) {
+              request.url = request.url.replace(/token=[^&]+/g, 'token=***');
+            }
+
+            return request;
+          },
+          responseSanitizer: (response: any) => {
+            // Sanitize sensitive response data
+            if (response.body && typeof response.body === 'string') {
+              try {
+                const body = JSON.parse(response.body);
+                if (body.token) body.token = '***';
+                if (body.secret) body.secret = '***';
+                if (body.key) body.key = '***';
+                response.body = JSON.stringify(body);
+              } catch (e) {
+                // Not JSON, leave as is
+              }
+            }
+            return response;
+          }
+        }
+      });
 
       // Configure ignore rules
       this.configureIgnoreRules();
@@ -103,40 +138,7 @@ class LogRocketService {
     }
   }
 
-  /**
-   * Configure data sanitization to protect sensitive information
-   */
-  private configureSanitization(): void {
-    // Sanitize sensitive data from DOM
-    LogRocket.addSanitizedProperty('data-token-balance');
-    LogRocket.addSanitizedProperty('data-auth-token');
-    LogRocket.addSanitizedProperty('data-stripe-key');
-    LogRocket.addSanitizedProperty('data-payment-method');
 
-    // Sanitize input fields containing sensitive data
-    LogRocket.addSanitizedProperty('input[name*="password"]');
-    LogRocket.addSanitizedProperty('input[name*="token"]');
-    LogRocket.addSanitizedProperty('input[name*="key"]');
-    LogRocket.addSanitizedProperty('input[name*="secret"]');
-    LogRocket.addSanitizedProperty('input[type="password"]');
-
-    // Sanitize specific CSS selectors
-    LogRocket.addSanitizedProperty('.token-balance');
-    LogRocket.addSanitizedProperty('.auth-token');
-    LogRocket.addSanitizedProperty('.payment-info');
-    LogRocket.addSanitizedProperty('.stripe-element');
-
-    // Sanitize network requests containing sensitive data
-    LogRocket.getSessionURL((sessionURL) => {
-      // Custom sanitization for network requests
-      LogRocket.captureMessage('Session started', {
-        sessionURL,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        // Don't include sensitive headers or tokens
-      });
-    });
-  }
 
   /**
    * Configure ignore rules for bots and localhost

@@ -79,10 +79,12 @@ interface LogRocketProviderProps {
 export function LogRocketProvider({ children }: LogRocketProviderProps) {
   // Initialize LogRocket on mount (client-side only)
   useEffect(() => {
-    // Only initialize in production and client-side
-    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
-      logRocketService.init();
-    }
+    // Temporarily disabled LogRocket to fix initialization issues
+    // TODO: Re-enable after fixing the addSanitizedProperty error
+    console.log('LogRocket temporarily disabled for debugging');
+    // if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+    //   logRocketService.init();
+    // }
   }, []);
 
   // WeWrite-specific tracking functions with data sanitization

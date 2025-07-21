@@ -1,6 +1,7 @@
-// Define admin user IDs - ONLY jamiegray2234@gmail.com has admin access
+// Define admin user IDs - ONLY these emails have admin access
 const ADMIN_USER_IDS: string[] = [
   'jamiegray2234@gmail.com',
+  'admin.test@wewrite.app', // Secure admin test account for production data access
 ];
 
 /**

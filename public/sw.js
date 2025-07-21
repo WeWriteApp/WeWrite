@@ -79,7 +79,13 @@ const PAYMENT_NEVER_CACHE_PATTERNS = [
   '/api/user-subscription',
   '/api/webhooks/',
   'stripe.com',
-  'js.stripe.com'
+  'js.stripe.com',
+  'googletagmanager.com',
+  'google-analytics.com',
+  'analytics.google.com',
+  'logrocket.io',
+  'lr-ingest.io',
+  'lgrckt-in.com'
 ];
 
 // Cache-first strategies for these patterns

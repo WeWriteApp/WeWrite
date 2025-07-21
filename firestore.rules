@@ -531,6 +531,42 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Environment-specific token balances (DEV_tokenBalances, PREVIEW_tokenBalances, etc.)
+    match /{envTokenBalances}/{userId} {
+      // Users can only read their own token balance or admins
+      allow read: if (envTokenBalances.matches('.*tokenBalances') || envTokenBalances == 'tokenBalances') && (isOwner(userId) || isAdmin());
+
+      // Users can write their own token balance or admins
+      allow write: if (envTokenBalances.matches('.*tokenBalances') || envTokenBalances == 'tokenBalances') && (isOwner(userId) || isAdmin());
+    }
+
+    // Environment-specific token allocations (DEV_tokenAllocations, PREVIEW_tokenAllocations, etc.)
+    match /{envTokenAllocations}/{allocationId} {
+      // Users can read allocations they made or received, admins can read all
+      allow read: if (envTokenAllocations.matches('.*tokenAllocations') || envTokenAllocations == 'tokenAllocations') && isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.recipientUserId == request.auth.uid ||
+        isAdmin()
+      );
+
+      // Users can only create/update their own allocations
+      allow create: if (envTokenAllocations.matches('.*tokenAllocations') || envTokenAllocations == 'tokenAllocations') && isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if (envTokenAllocations.matches('.*tokenAllocations') || envTokenAllocations == 'tokenAllocations') && isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if (envTokenAllocations.matches('.*tokenAllocations') || envTokenAllocations == 'tokenAllocations') && isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Environment-specific writer token balances (DEV_writerTokenBalances, PREVIEW_writerTokenBalances, etc.)
+    match /{envWriterTokenBalances}/{balanceId} {
+      // Users can only read their own balance or admins
+      allow read: if (envWriterTokenBalances.matches('.*writerTokenBalances') || envWriterTokenBalances == 'writerTokenBalances') && isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+
+      // Only system/admin can write balances (automated process)
+      allow write: if (envWriterTokenBalances.matches('.*writerTokenBalances') || envWriterTokenBalances == 'writerTokenBalances') && isAdmin();
+    }
+
     // Writer Token Earnings - Track earnings from token allocations
     match /writerTokenEarnings/{earningsId} {
       // Users can only read their own earnings or admins
@@ -788,6 +824,33 @@ service cloud.firestore {
 
       // Only admins can write hourly aggregations
       allow write: if isAdmin();
+    }
+
+    // Environment-specific analytics hourly aggregations (DEV_analytics_hourly, PREVIEW_analytics_hourly, etc.)
+    match /{envAnalyticsHourly}/{aggregationId} {
+      // Only admins can read hourly aggregations
+      allow read: if (envAnalyticsHourly.matches('.*analytics_hourly') || envAnalyticsHourly == 'analytics_hourly') && isAdmin();
+
+      // Only admins can write hourly aggregations
+      allow write: if (envAnalyticsHourly.matches('.*analytics_hourly') || envAnalyticsHourly == 'analytics_hourly') && isAdmin();
+    }
+
+    // Environment-specific analytics counters (DEV_analytics_counters, PREVIEW_analytics_counters, etc.)
+    match /{envAnalyticsCounters}/{counterId} {
+      // Only admins can read global analytics counters
+      allow read: if (envAnalyticsCounters.matches('.*analytics_counters') || envAnalyticsCounters == 'analytics_counters') && isAdmin();
+
+      // Only admins can write/update global counters
+      allow write: if (envAnalyticsCounters.matches('.*analytics_counters') || envAnalyticsCounters == 'analytics_counters') && isAdmin();
+    }
+
+    // Environment-specific analytics daily aggregations (DEV_analytics_daily, PREVIEW_analytics_daily, etc.)
+    match /{envAnalyticsDaily}/{aggregationId} {
+      // Only admins can read daily aggregations
+      allow read: if (envAnalyticsDaily.matches('.*analytics_daily') || envAnalyticsDaily == 'analytics_daily') && isAdmin();
+
+      // Only admins can write daily aggregations
+      allow write: if (envAnalyticsDaily.matches('.*analytics_daily') || envAnalyticsDaily == 'analytics_daily') && isAdmin();
     }
 
     // Backlinks - Efficient backlinks index for fast retrieval

@@ -8,8 +8,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { determineTierFromAmount, calculateTokensForAmount } from '../../../utils/subscriptionTiers';
 import { initAdmin } from '../../../firebase/admin';
-import { getCollectionName } from '../../../utils/environmentConfig';
+import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
+import { SubscriptionAnalyticsService } from '../../../services/subscriptionAnalyticsService';
 
 // Initialize Firebase Admin
 const admin = initAdmin();
@@ -20,6 +21,12 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request: NextRequest) {
   try {
+    // Environment validation
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('[CREATE SUBSCRIPTION] Missing STRIPE_SECRET_KEY environment variable');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     // Get authenticated user
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
@@ -30,12 +37,17 @@ export async function POST(request: NextRequest) {
     const { paymentMethodId, tier, amount, tierName, tokens } = body;
 
     if (!paymentMethodId || !amount || !tier) {
-      return NextResponse.json({ 
-        error: 'paymentMethodId, amount, and tier are required' 
+      return NextResponse.json({
+        error: 'paymentMethodId, amount, and tier are required'
       }, { status: 400 });
     }
 
-    console.log(`[CREATE SUBSCRIPTION] Creating subscription for user ${userId}, tier: ${tier}, amount: $${amount}`);
+    console.log(`[CREATE SUBSCRIPTION] Creating subscription for user ${userId}, tier: ${tier}, amount: $${amount}`, {
+      environment: process.env.NODE_ENV,
+      vercelEnv: process.env.VERCEL_ENV,
+      hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
+      timestamp: new Date().toISOString()
+    });
 
     // Force recompilation after serverTimestamp fix
 
@@ -164,70 +176,55 @@ export async function POST(request: NextRequest) {
       updatedAt: 'FieldValue.serverTimestamp()'
     });
 
-    // Save subscription via API (following API-first architecture)
-    console.log(`[CREATE SUBSCRIPTION] Saving subscription via API...`);
-    const saveResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/subscription/save`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': request.headers.get('cookie') || '', // Forward auth cookies
-      },
-      body: JSON.stringify(subscriptionData)
-    });
+    // Save subscription directly to avoid internal API call issues in production
+    console.log(`[CREATE SUBSCRIPTION] Saving subscription directly to Firestore...`);
+    try {
+      const { parentPath, subCollectionName } = getSubCollectionPath(
+        PAYMENT_COLLECTIONS.USERS,
+        userId,
+        PAYMENT_COLLECTIONS.SUBSCRIPTIONS
+      );
 
-    if (!saveResponse.ok) {
-      const errorText = await saveResponse.text();
-      throw new Error(`Failed to save subscription: ${saveResponse.status} ${errorText}`);
-    }
-
-    console.log(`[CREATE SUBSCRIPTION] Successfully saved subscription via API`);
-
-    // Initialize user's token balance via API (following API-first architecture)
-    if (subscription.status === 'active') {
-      console.log(`[CREATE SUBSCRIPTION] Updating token allocation via API...`);
-      const tokenResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/tokens/update-allocation`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cookie': request.headers.get('cookie') || '', // Forward auth cookies
-        },
-        body: JSON.stringify({
-          userId,
-          monthlyTokens: finalTokens
-        })
+      console.log(`[CREATE SUBSCRIPTION] Firestore path:`, {
+        parentPath,
+        subCollectionName,
+        fullPath: `${parentPath}/${subCollectionName}/current`
       });
 
-      // Convert unfunded tokens to funded tokens
-      console.log(`[CREATE SUBSCRIPTION] Converting unfunded tokens to funded tokens...`);
+      // Save to Firestore directly
+      const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc('current');
+      await subscriptionRef.set({
+        ...subscriptionData,
+        updatedAt: FieldValue.serverTimestamp()
+      });
+
+      console.log(`[CREATE SUBSCRIPTION] Successfully saved subscription to Firestore`);
+    } catch (saveError) {
+      console.error(`[CREATE SUBSCRIPTION] Error saving subscription:`, saveError);
+      throw new Error(`Failed to save subscription: ${saveError instanceof Error ? saveError.message : 'Unknown error'}`);
+    }
+
+    // Initialize user's token balance directly to avoid internal API call issues
+    if (subscription.status === 'active') {
+      console.log(`[CREATE SUBSCRIPTION] Updating token allocation directly...`);
       try {
-        const convertResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/tokens/convert-unfunded`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Cookie': request.headers.get('cookie') || '', // Forward auth cookies
-          },
-          body: JSON.stringify({
-            userId
-          })
-        });
+        // Import ServerTokenService dynamically to avoid circular dependencies
+        const { ServerTokenService } = await import('../../../services/tokenService.server');
+        await ServerTokenService.updateMonthlyTokenAllocation(userId, finalTokens);
+        console.log(`[CREATE SUBSCRIPTION] Successfully updated token allocation`);
 
-        if (convertResponse.ok) {
-          const convertResult = await convertResponse.json();
+        // Convert unfunded tokens to funded tokens
+        console.log(`[CREATE SUBSCRIPTION] Converting unfunded tokens to funded tokens...`);
+        try {
+          const convertResult = await ServerTokenService.convertUnfundedTokens(userId);
           console.log(`[CREATE SUBSCRIPTION] Successfully converted ${convertResult.convertedCount} unfunded token allocations`);
-        } else {
-          console.warn(`[CREATE SUBSCRIPTION] Failed to convert unfunded tokens: ${convertResponse.status}`);
+        } catch (convertError) {
+          console.warn(`[CREATE SUBSCRIPTION] Error converting unfunded tokens:`, convertError);
+          // Don't fail subscription creation if token conversion fails
         }
-      } catch (convertError) {
-        console.warn(`[CREATE SUBSCRIPTION] Error converting unfunded tokens:`, convertError);
-        // Don't fail subscription creation if token conversion fails
-      }
-
-      if (!tokenResponse.ok) {
-        const errorText = await tokenResponse.text();
-        console.warn(`[CREATE SUBSCRIPTION] Failed to update token allocation: ${tokenResponse.status} ${errorText}`);
+      } catch (tokenError) {
+        console.warn(`[CREATE SUBSCRIPTION] Failed to update token allocation:`, tokenError);
         // Don't throw here - subscription was created successfully, token update is secondary
-      } else {
-        console.log(`[CREATE SUBSCRIPTION] Successfully updated token allocation via API`);
       }
     }
 
@@ -251,6 +248,25 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if audit logging fails
     }
 
+    // Track subscription completion analytics
+    try {
+      await SubscriptionAnalyticsService.trackSubscriptionCompleted(
+        userId,
+        subscription.id,
+        tier,
+        amount,
+        finalTokens,
+        {
+          tierName,
+          paymentMethodId,
+          source: 'subscription_checkout'
+        }
+      );
+    } catch (analyticsError) {
+      console.warn('[CREATE SUBSCRIPTION] Failed to track subscription analytics:', analyticsError);
+      // Don't fail the request if analytics tracking fails
+    }
+
     return NextResponse.json({
       success: true,
       subscriptionId: subscription.id,
@@ -259,9 +275,23 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error creating subscription:', error);
+    console.error('[CREATE SUBSCRIPTION] Critical error:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      userId,
+      tier,
+      amount,
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      vercelEnv: process.env.VERCEL_ENV
+    });
+
     return NextResponse.json(
-      { error: error.message || 'Failed to create subscription' },
+      {
+        error: error instanceof Error ? error.message : 'Failed to create subscription',
+        timestamp: new Date().toISOString(),
+        correlationId: `create_subscription_${Date.now()}`
+      },
       { status: 500 }
     );
   }
