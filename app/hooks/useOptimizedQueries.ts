@@ -187,22 +187,25 @@ export function useAnalytics(type: string, params?: any, enabled: boolean = true
 }
 
 /**
- * Optimized recent activity hook
+ * Optimized recent edits hook - simplified implementation
  */
-export function useRecentActivity(userId?: string, enabled: boolean = true) {
+export function useRecentEdits(userId?: string, enabled: boolean = true) {
   const config = getCacheConfig('realtime');
-  
+
   return useQuery({
-    queryKey: queryKeys.recentActivity(userId),
+    queryKey: ['recent-edits', userId],
     queryFn: async () => {
-      const url = new URL('/api/activity/recent', window.location.origin);
+      const url = new URL('/api/recent-edits', window.location.origin);
+      url.searchParams.set('limit', '20');
+      url.searchParams.set('includeOwn', 'false');
+      url.searchParams.set('followingOnly', 'false');
       if (userId) {
         url.searchParams.set('userId', userId);
       }
-      
+
       const response = await fetch(url.toString());
       if (!response.ok) {
-        throw new Error('Failed to fetch recent activity');
+        throw new Error('Failed to fetch recent edits');
       }
       return response.json();
     },

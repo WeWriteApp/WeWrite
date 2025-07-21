@@ -6,7 +6,7 @@ import { Button } from "../components/ui/button";
 import { ChevronLeft, Clock, Filter, Check } from "lucide-react";
 import { useCurrentAccount } from "../providers/CurrentAccountProvider";
 import { useActivityFilter } from "../contexts/ActivityFilterContext";
-import UnifiedRecentActivity from "../components/activity/UnifiedRecentActivity";
+import SimpleRecentEdits from "../components/features/SimpleRecentEdits";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,13 +57,7 @@ export default function ActivityPageClient({
       </div>
 
       {/* Activity Grid */}
-      <UnifiedRecentActivity
-        mode="edits"
-        limit={50}
-        showFilters={true}
-        isCarousel={false}
-        className="w-full"
-      />
+      <SimpleRecentEdits />
     </div>
   );
 }

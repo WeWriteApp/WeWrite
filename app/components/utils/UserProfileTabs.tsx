@@ -9,7 +9,7 @@ import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProfilePagesContext } from "../../providers/ProfilePageProvider";
-import UnifiedRecentActivity from "../activity/UnifiedRecentActivity";
+import SimpleRecentEdits from "../features/SimpleRecentEdits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import useSimplePages from "../../hooks/useSimplePages";
 import UsernameHistory from "../auth/UsernameHistory";
@@ -579,13 +579,7 @@ export default function UserProfileTabs({ profile }) {
                 : "hidden"
             }`}
           >
-            <UnifiedRecentActivity
-              mode="all"
-              limit={10}
-              showFilters={false}
-              isCarousel={false}
-              className="w-full"
-            />
+            <SimpleRecentEdits />
           </TabsContent>
 
           <TabsContent
