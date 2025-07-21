@@ -23,6 +23,7 @@ import { TokenBalanceProvider } from "./contexts/TokenBalanceContext"
 import { ThemeProvider } from "./providers/ThemeProvider"
 import { MultiAuthProvider } from "./providers/MultiAuthProvider"
 import { CurrentAccountProvider } from "./providers/CurrentAccountProvider"
+import { SimpleAuthProvider } from "./providers/SimpleAuthProvider"
 import { NotificationProvider } from "./providers/NotificationProvider"
 import { MobileProvider } from "./providers/MobileProvider"
 import { AdminStateSimulatorProvider } from "./providers/AdminStateSimulatorProvider"
@@ -47,9 +48,10 @@ export default function RootLayout({
           <ErrorBoundary name="root">
             <GlobalErrorHandler />
             <ThemeProvider>
-              <LogRocketProvider>
-                <MultiAuthProvider>
-                  <CurrentAccountProvider>
+              <SimpleAuthProvider>
+                <LogRocketProvider>
+                  <MultiAuthProvider>
+                    <CurrentAccountProvider>
                     <AdminStateSimulatorProvider>
                       <NotificationProvider>
                         <MobileProvider>
@@ -78,8 +80,9 @@ export default function RootLayout({
                       </NotificationProvider>
                     </AdminStateSimulatorProvider>
                   </CurrentAccountProvider>
-                </MultiAuthProvider>
-              </LogRocketProvider>
+                  </MultiAuthProvider>
+                </LogRocketProvider>
+              </SimpleAuthProvider>
             </ThemeProvider>
           </ErrorBoundary>
         </NextJSErrorBoundary>
