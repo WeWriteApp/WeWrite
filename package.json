@@ -2,7 +2,7 @@
   "name": "nextjs",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@10.13.1",
+
   "scripts": {
     "dev": "next dev -p 3000",
     "dev:console": "concurrently \"pnpm run console:listen\" \"pnpm run dev\" --names \"CONSOLE,DEV\" --prefix-colors \"cyan,green\"",
