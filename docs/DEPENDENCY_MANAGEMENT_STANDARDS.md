@@ -146,17 +146,17 @@ export { validateEmail } from './validation-utils';
 
 ### 1. Package Installation
 
-**Always use npm for consistency:**
+**Always use pnpm for consistency:**
 ```bash
 # ✅ Install production dependencies
-npm install package-name
+pnpm add package-name
 
 # ✅ Install development dependencies
-npm install --save-dev package-name
+pnpm add --save-dev package-name
 
 # ❌ Don't mix package managers
-yarn add package-name  # Avoid
-pnpm add package-name  # Avoid
+npm install package-name  # Avoid
+yarn add package-name     # Avoid
 ```
 
 **Version Management:**
@@ -197,7 +197,7 @@ pnpm add package-name  # Avoid
 ### 3. Regular Maintenance
 
 **Weekly Tasks:**
-- Run `npm run deps:audit` to check health
+- Run `pnpm run deps:audit` to check health
 - Review and update outdated packages
 - Remove unused dependencies
 
@@ -212,28 +212,28 @@ pnpm add package-name  # Avoid
 
 ```bash
 # Health monitoring
-npm run deps:check          # Comprehensive dependency analysis
-npm run deps:validate       # Validate all import statements
-npm run deps:map           # Generate dependency visualizations
-npm run deps:dashboard     # Create interactive dashboard
+pnpm run deps:check          # Comprehensive dependency analysis
+pnpm run deps:validate       # Validate all import statements
+pnpm run deps:map           # Generate dependency visualizations
+pnpm run deps:dashboard     # Create interactive dashboard
 
 # Fixing and maintenance
-npm run deps:fix           # Automatically fix import paths
-npm run deps:heal          # Self-healing dependency system
-npm run deps:heal:plan     # Preview healing actions
+pnpm run deps:fix           # Automatically fix import paths
+pnpm run deps:heal          # Self-healing dependency system
+pnpm run deps:heal:plan     # Preview healing actions
 
 # Testing and validation
-npm run deps:test          # Test dependency system
-npm run deps:audit         # Complete dependency audit
-npm run deps:health        # Full health check with dashboard
+pnpm run deps:test          # Test dependency system
+pnpm run deps:audit         # Complete dependency audit
+pnpm run deps:health        # Full health check with dashboard
 ```
 
 ### Pre-commit Hooks
 
 Husky pre-commit hook automatically runs:
-1. Dependency validation (`npm run deps:validate`)
-2. ESLint checks (`npm run lint`)
-3. TypeScript compilation (`npx tsc --noEmit`)
+1. Dependency validation (`pnpm run deps:validate`)
+2. ESLint checks (`pnpm run lint`)
+3. TypeScript compilation (`pnpm dlx tsc --noEmit`)
 
 ### CI/CD Integration
 
@@ -302,7 +302,7 @@ Strict TypeScript settings to catch import issues:
 **1. Circular Dependencies**
 ```bash
 # Identify circular dependencies
-npm run deps:check
+pnpm run deps:check
 
 # Common causes:
 # - Mutual imports between components
@@ -318,16 +318,16 @@ npm run deps:check
 **2. Missing Dependencies**
 ```bash
 # Auto-install missing dependencies
-npm run deps:heal
+pnpm run deps:heal
 
 # Manual installation
-npm install missing-package-name
+pnpm add missing-package-name
 ```
 
 **3. Broken Import Paths**
 ```bash
 # Auto-fix import paths
-npm run deps:fix
+pnpm run deps:fix
 
 # Manual fixes:
 # - Update relative paths to absolute (@/)
@@ -338,10 +338,10 @@ npm run deps:fix
 **4. Bundle Size Issues**
 ```bash
 # Analyze bundle size
-npm run analyze:bundle
+pnpm run analyze:bundle
 
 # Remove unused dependencies
-npm run deps:heal
+pnpm run deps:heal
 
 # Use tree-shaking friendly imports
 import { specific } from 'library';  // ✅ Good
