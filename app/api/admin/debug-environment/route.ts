@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { isAdmin } from '../../../utils/isAdmin';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { getEnvironmentType, getEnvironmentPrefix, getCollectionName, logEnvironmentConfig } from '../../../utils/environmentConfig';
 
 export async function GET(request: NextRequest) {

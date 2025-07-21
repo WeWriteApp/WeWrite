@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { isAdmin } from '../../../utils/isAdmin';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName, getSubCollectionPath, PAYMENT_COLLECTIONS } from '../../../utils/environmentConfig';
 

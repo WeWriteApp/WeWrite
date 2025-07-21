@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
 import { isAdmin } from '../../../utils/isAdmin';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 
 // Security: Only allow this endpoint to run once
 const ACCOUNT_CREATION_ENABLED = process.env.ENABLE_ADMIN_ACCOUNT_CREATION === 'true';

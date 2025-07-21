@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { collection, query, limit, getDocs, orderBy, where, Timestamp } from 'firebase/firestore';
 import { db } from '../../../firebase/config';
 import { isAdmin } from '../../../utils/isAdmin';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { AdminDataService } from '../../../services/adminDataService';
 
 export async function GET(request: NextRequest) {

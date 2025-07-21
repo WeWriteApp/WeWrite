@@ -4,8 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { isAdmin } from '../../../utils/adminUtils';
-import { getServerSession } from 'next-auth';
+import { isAdmin } from '../../../utils/isAdmin';
+import { getServerSession } from 'next-auth/next';
 
 export async function GET(request: NextRequest) {
   try {
