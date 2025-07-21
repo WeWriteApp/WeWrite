@@ -638,27 +638,7 @@ export async function PUT(request: NextRequest) {
 
     logger.critical('Page save failed with comprehensive error details', errorDetails, 'PAGE_SAVE');
 
-    // Also log to external error tracking if available
-    try {
-      // Send to frontend error logging endpoint for centralized tracking
-      fetch('/api/errors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          error: {
-            message: `Server-side page save error: ${error.message}`,
-            stack: error.stack,
-            timestamp: new Date().toISOString(),
-            url: '/api/pages',
-            context: errorDetails
-          }
-        })
-      }).catch(logError => {
-        console.error('Failed to send error to logging endpoint (non-fatal):', logError);
-      });
-    } catch (logError) {
-      console.error('Failed to send error to logging endpoint (non-fatal):', logError);
-    }
+    // REMOVED: Heavy error logging to prevent performance issues
 
     // Don't expose internal errors that might cause session issues
     const userMessage = error.message?.includes('permission') || error.message?.includes('auth')

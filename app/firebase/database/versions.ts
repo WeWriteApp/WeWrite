@@ -495,27 +495,7 @@ await setDoc(doc(db, getCollectionName("pages"), pageId), pageUpdateData, { merg
     console.error("🔴 VERSION: Error saving new version with comprehensive details:", errorDetails);
     logger.critical("Version save failed with comprehensive details", errorDetails, 'VERSION_SAVE');
 
-    // Log to external error tracking
-    try {
-      // Send to frontend error logging endpoint for centralized tracking
-      fetch('/api/errors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          error: {
-            message: `Server-side version save error: ${error.message}`,
-            stack: error.stack,
-            timestamp: new Date().toISOString(),
-            url: '/firebase/database/versions.ts',
-            context: errorDetails
-          }
-        })
-      }).catch(logError => {
-        console.error('Failed to send version error to logging endpoint (non-fatal):', logError);
-      });
-    } catch (logError) {
-      console.error('Failed to send version error to logging endpoint (non-fatal):', logError);
-    }
+    // REMOVED: Heavy error logging to prevent performance issues
 
     return {
       success: false,

@@ -273,71 +273,49 @@ class LogRocketService {
   }
 
   /**
-   * Log errors to LogRocket with comprehensive details
+   * Log errors to LogRocket with minimal overhead (following LogRocket performance best practices)
    */
   logError(error: Error | string, context?: Record<string, any>): void {
     if (!this.isInitialized) return;
 
     try {
-      const errorData = typeof error === 'string' ? { message: error } : {
-        message: error.message,
-        name: error.name,
-        stack: error.stack,
-        cause: error.cause
-      };
+      // Minimal error data to avoid performance issues
+      const errorMessage = typeof error === 'string' ? error : error.message;
 
-      const enhancedContext = {
-        ...context,
-        timestamp: new Date().toISOString(),
-        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
-        userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown',
-        environment: process.env.NODE_ENV,
-        sessionId: typeof window !== 'undefined' ? window.sessionStorage?.getItem('sessionId') : null
-      };
+      // Use LogRocket's built-in error handling instead of custom logging
+      // This respects LogRocket's circuit breakers and performance optimizations
+      LogRocket.captureException(typeof error === 'string' ? new Error(error) : error);
 
-      // Log as message
-      LogRocket.log(`🚨 ERROR: ${errorData.message}`, {
-        error: errorData,
-        context: enhancedContext
-      });
+      // Minimal context tracking - let LogRocket handle the heavy lifting
+      if (context) {
+        LogRocket.track('app_error', {
+          errorMessage: errorMessage.substring(0, 200), // Limit message length
+          context: context.operation || 'unknown',
+          pageId: context.pageId || null
+        });
+      }
 
-      // Also track as an event for better filtering
-      LogRocket.track('application_error', {
-        errorMessage: errorData.message,
-        errorName: errorData.name,
-        errorStack: errorData.stack?.substring(0, 1000), // Truncate stack for LogRocket
-        ...this.sanitizeEventProperties(enhancedContext)
-      });
-
-      console.error('🚨 LogRocket error logged:', errorData, enhancedContext);
     } catch (logError) {
-      console.error('❌ Failed to log error to LogRocket:', logError);
+      // Silently fail to prevent infinite loops
     }
   }
 
   /**
-   * Log API errors with request/response details
+   * Log API errors with minimal overhead (following LogRocket performance best practices)
    */
-  logApiError(endpoint: string, method: string, status: number, error: any, requestData?: any): void {
+  logApiError(endpoint: string, method: string, status: number, error: any): void {
     if (!this.isInitialized) return;
 
     try {
-      const apiErrorData = {
-        endpoint,
+      // Minimal API error tracking to avoid performance issues
+      LogRocket.track('api_error', {
+        endpoint: endpoint.substring(0, 50), // Limit endpoint length
         method,
         status,
-        error: typeof error === 'string' ? error : error?.message || 'Unknown error',
-        requestData: requestData ? JSON.stringify(requestData).substring(0, 500) : null,
-        timestamp: new Date().toISOString(),
-        url: typeof window !== 'undefined' ? window.location.href : 'unknown'
-      };
-
-      LogRocket.track('api_error', this.sanitizeEventProperties(apiErrorData));
-      LogRocket.log(`🚨 API ERROR: ${method} ${endpoint} - ${status}`, apiErrorData);
-
-      console.error('🚨 LogRocket API error logged:', apiErrorData);
+        error: typeof error === 'string' ? error.substring(0, 100) : 'API Error'
+      });
     } catch (logError) {
-      console.error('❌ Failed to log API error to LogRocket:', logError);
+      // Silently fail to prevent infinite loops
     }
   }
 

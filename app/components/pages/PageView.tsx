@@ -757,21 +757,14 @@ export default function PageView({
           console.error('🔴 PAGE SAVE: Failed to parse error response', parseError);
         }
 
-        // Enhanced LogRocket error logging
+        // Simplified LogRocket error logging (reduced to prevent performance issues)
         try {
           const { logRocketService } = await import('../../utils/logrocket');
-          logRocketService.logApiError('/api/pages', 'PUT', response.status, errorData, {
-            pageId,
-            title,
-            contentLength: editorState ? JSON.stringify(editorState).length : 0,
-            hasLocation: !!location,
-            customDate,
-            requestHeaders: Object.fromEntries(response.headers.entries()),
-            userAgent: navigator.userAgent,
-            timestamp: new Date().toISOString()
-          });
+          if (logRocketService.isReady) {
+            logRocketService.logApiError('/api/pages', 'PUT', response.status, errorData?.message || 'API Error');
+          }
         } catch (logRocketError) {
-          console.error('Failed to log to LogRocket (non-fatal):', logRocketError);
+          // Silently fail to prevent performance issues
         }
 
         pageLogger.error('API response error: PUT /api/pages', { status: response.status, error: errorData });
@@ -953,22 +946,14 @@ export default function PageView({
         name: error.name
       });
 
-      // Enhanced LogRocket error logging for save failures
+      // Simplified LogRocket error logging (reduced to prevent performance issues)
       try {
         const { logRocketService } = await import('../../utils/logrocket');
-        logRocketService.logError(error, {
-          operation: 'page_save',
-          pageId,
-          title,
-          contentLength: editorState ? JSON.stringify(editorState).length : 0,
-          hasLocation: !!location,
-          customDate,
-          userAgent: navigator.userAgent,
-          timestamp: new Date().toISOString(),
-          errorContext: 'client_side_save_operation'
-        });
+        if (logRocketService.isReady) {
+          logRocketService.logError(error, { operation: 'page_save', pageId });
+        }
       } catch (logRocketError) {
-        console.error('Failed to log error to LogRocket (non-fatal):', logRocketError);
+        // Silently fail to prevent performance issues
       }
 
       pageLogger.error('Page save failed', { pageId, error: error.message, title });
