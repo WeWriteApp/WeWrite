@@ -159,8 +159,8 @@ export default function SubscriptionPage() {
           const data = await response.json();
           console.log('[SubscriptionPage] ✅ Retrieved subscription data:', data);
 
-          // Check for error state
-          if (data.error) {
+          // Check for error state (but not inactive state which is normal)
+          if (data.error && data.status !== 'inactive') {
             console.error('[SubscriptionPage] ❌ Subscription data error:', data.error);
             setSubscriptionError(data.error);
             setCurrentSubscription(null);

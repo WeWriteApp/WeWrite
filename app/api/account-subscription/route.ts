@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!subscription) {
-      console.log(`[ACCOUNT SUBSCRIPTION] No valid subscription data found for user ${targetUserId} - this could indicate data corruption or sync issues`);
+      console.log(`[ACCOUNT SUBSCRIPTION] No subscription data found for user ${targetUserId} - this indicates data corruption or sync issues`);
       return NextResponse.json({
         hasSubscription: false,
         status: null,
@@ -54,8 +54,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Handle inactive state (no subscription)
+    // Handle inactive state (no subscription) - this is normal for users without subscriptions
     if (subscription.status === 'inactive') {
+      console.log(`[ACCOUNT SUBSCRIPTION] User ${targetUserId} has no active subscription (inactive state)`);
       return NextResponse.json({
         hasSubscription: false,
         status: 'inactive',
