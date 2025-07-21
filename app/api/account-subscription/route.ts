@@ -45,10 +45,21 @@ export async function GET(request: NextRequest) {
     });
 
     if (!subscription) {
+      console.log(`[ACCOUNT SUBSCRIPTION] No valid subscription data found for user ${targetUserId} - this could indicate data corruption or sync issues`);
       return NextResponse.json({
         hasSubscription: false,
         status: null,
-        fullData: null
+        fullData: null,
+        error: 'No valid subscription data found'
+      });
+    }
+
+    // Handle inactive state (no subscription)
+    if (subscription.status === 'inactive') {
+      return NextResponse.json({
+        hasSubscription: false,
+        status: 'inactive',
+        fullData: subscription
       });
     }
 

@@ -21,7 +21,8 @@ import {
   DollarSign,
   Settings,
   ArrowLeft,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 import Link from 'next/link';
 import SubscriptionTierSlider from '../../components/subscription/SubscriptionTierSlider';
@@ -56,6 +57,7 @@ export default function SubscriptionPage() {
   const { isPWA } = usePWA();
   const [loading, setLoading] = useState(true);
   const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
   const [selectedTier, setSelectedTier] = useState<string>('tier1');
   const [selectedAmount, setSelectedAmount] = useState<number>(10);
   const [previousCustomAmount, setPreviousCustomAmount] = useState<number | null>(null);
@@ -157,6 +159,17 @@ export default function SubscriptionPage() {
           const data = await response.json();
           console.log('[SubscriptionPage] ✅ Retrieved subscription data:', data);
 
+          // Check for error state
+          if (data.error) {
+            console.error('[SubscriptionPage] ❌ Subscription data error:', data.error);
+            setSubscriptionError(data.error);
+            setCurrentSubscription(null);
+            return;
+          }
+
+          // Clear any previous errors
+          setSubscriptionError(null);
+
           if (data.hasSubscription && data.fullData) {
             const transformedData = {
               status: data.fullData.status,
@@ -185,6 +198,18 @@ export default function SubscriptionPage() {
                 setSelectedTier('tier3');
               }
             }
+          } else if (data.status === 'inactive') {
+            // Handle inactive state (no subscription)
+            setCurrentSubscription({
+              status: 'inactive',
+              amount: 0,
+              tier: null,
+              stripeSubscriptionId: null,
+              stripeCustomerId: null,
+              cancelAtPeriodEnd: false,
+              currentPeriodStart: null,
+              currentPeriodEnd: null
+            });
           } else {
             setCurrentSubscription(null);
           }
@@ -505,6 +530,47 @@ export default function SubscriptionPage() {
     );
   }
 
+  // Show error state if subscription data is corrupted
+  if (subscriptionError) {
+    return (
+      <div>
+        <SettingsPageHeader
+          title="Subscription"
+          description="Manage your WeWrite subscription and get monthly tokens to support creators."
+        />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 md:pb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-600">
+                <AlertTriangle className="h-5 w-5" />
+                Subscription Data Error
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-muted-foreground">
+                  There was an issue loading your subscription data: {subscriptionError}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  This usually indicates a synchronization issue between our system and Stripe.
+                  Please contact support if this persists.
+                </p>
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <SettingsPageHeader
@@ -535,7 +601,7 @@ export default function SubscriptionPage() {
           })()}
 
           {/* Current Subscription Status */}
-          {currentSubscription && currentSubscription.status !== null && currentSubscription.status !== undefined && (
+          {currentSubscription && currentSubscription.status !== null && currentSubscription.status !== undefined && currentSubscription.status !== 'inactive' && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

@@ -22,16 +22,39 @@ export const getSubscriptionStatusInfo = (
 ): SubscriptionStatusInfo => {
   if (!status) {
     return {
-      status: 'none',
-      displayText: 'No Subscription',
-      variant: 'secondary',
-      color: 'text-gray-600',
+      status: 'error',
+      displayText: 'Subscription data error',
+      variant: 'destructive',
+      color: 'text-red-600',
       isActive: false,
-      showActivateButton: true,
-      showManageButton: false};
+      showActivateButton: false,
+      showManageButton: false
+    };
   }
 
   switch (status.toLowerCase()) {
+    case 'inactive':
+      return {
+        status: 'inactive',
+        displayText: 'No subscription',
+        variant: 'secondary',
+        color: 'text-gray-600',
+        isActive: false,
+        showActivateButton: true,
+        showManageButton: false
+      };
+
+    case 'none':
+      // Legacy support for 'none' status
+      return {
+        status: 'inactive',
+        displayText: 'No subscription',
+        variant: 'secondary',
+        color: 'text-gray-600',
+        isActive: false,
+        showActivateButton: true,
+        showManageButton: false
+      };
     case 'active':
       // Check if active subscription is set to cancel at period end
       if (cancelAtPeriodEnd && currentPeriodEnd) {

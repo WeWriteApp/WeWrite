@@ -86,20 +86,36 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
     const subscriptionRef = adminDb.doc(parentPath).collection(subCollectionName).doc("current");
     const subscriptionSnap = await subscriptionRef.get();
 
-    // If no subscription found, return null
+    // If no subscription found, return inactive state
     if (!subscriptionSnap.exists) {
       if (verbose) {
-        console.log(`[getUserSubscriptionServer] No subscription found for user: ${userId}`);
+        console.log(`[getUserSubscriptionServer] No subscription found for user: ${userId} - returning inactive state`);
       }
-      return null;
+      return {
+        id: 'inactive',
+        status: 'inactive',
+        amount: 0,
+        tier: null,
+        stripeSubscriptionId: null
+      };
     }
 
     // Get the subscription data
     const rawData = subscriptionSnap.data();
+
+    // Validate that we have a proper status - null/undefined status indicates data corruption
+    if (!rawData.status) {
+      if (verbose) {
+        console.error(`[getUserSubscriptionServer] Invalid subscription data for user ${userId}: missing status field`, rawData);
+      }
+      // Return null to indicate error state rather than defaulting to 'canceled'
+      return null;
+    }
+
     const subscriptionData: SubscriptionData = {
       id: subscriptionSnap.id,
       ...rawData,
-      status: rawData.status || 'canceled',
+      status: rawData.status, // Don't default - require valid status
       amount: rawData.amount || 0,
       tier: rawData.tier || null,
       stripeSubscriptionId: rawData.stripeSubscriptionId || null,

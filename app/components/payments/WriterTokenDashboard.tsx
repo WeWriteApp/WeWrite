@@ -46,7 +46,7 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
     allocations: any[];
     timeUntilDeadline: any;
   } | null>(null);
-  const [viewMode, setViewMode] = useState<'current' | 'historical'>('current');
+  const [viewMode, setViewMode] = useState<'current' | 'total' | 'historical'>('current');
   const [unfundedEarnings, setUnfundedEarnings] = useState<{
     totalUnfundedTokens: number;
     totalUnfundedUsdValue: number;
@@ -500,36 +500,82 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
   // Pending allocations (current month, can still be changed)
   if (pendingAllocations?.totalPendingUsdValue > 0) {
     currentChartData.push({
-      name: 'Pending Allocations',
+      name: 'Funded Allocations',
       value: pendingAllocations.totalPendingUsdValue,
       color: COLORS.pending,
-      description: 'Current month - can still be changed'
+      description: 'From users with active subscriptions'
     });
   }
 
-  // Locked earnings (from last month, finalized but not yet available)
-  if (balance?.pendingUsdValue > 0) {
+  // NOTE: Locked earnings are NOT included in "This Month" chart since they're from previous months
+  // They appear in the total earnings view instead
+
+  // Break down unfunded allocations by category
+  if (unfundedEarnings?.loggedOutUsdValue > 0) {
     currentChartData.push({
-      name: 'Locked Earnings',
+      name: 'Unfunded (Logged Out)',
+      value: unfundedEarnings.loggedOutUsdValue,
+      color: COLORS.unfunded,
+      description: 'From logged-out users with 100 free tokens'
+    });
+  }
+
+  if (unfundedEarnings?.noSubscriptionUsdValue > 0) {
+    currentChartData.push({
+      name: 'Unfunded (No Subscription)',
+      value: unfundedEarnings.noSubscriptionUsdValue,
+      color: COLORS.unfunded,
+      description: 'From users without subscriptions'
+    });
+  }
+
+  // TODO: Add unfunded overspending category when that data is available
+  // This would be: users who have subscriptions but are spending more than their allocation
+
+  // Create total earnings chart data (includes all pending allocations)
+  const totalChartData = [];
+
+  // Funded allocations (current month)
+  if (pendingAllocations?.totalPendingUsdValue > 0) {
+    totalChartData.push({
+      name: 'Funded (Current Month)',
+      value: pendingAllocations.totalPendingUsdValue,
+      color: COLORS.pending,
+      description: 'From users with active subscriptions'
+    });
+  }
+
+  // Locked earnings (from previous months)
+  if (balance?.pendingUsdValue > 0) {
+    totalChartData.push({
+      name: 'Funded (Previous Months)',
       value: balance.pendingUsdValue,
       color: COLORS.locked,
-      description: 'From last month - available next payout'
+      description: 'From previous months - available for payout'
     });
   }
 
-  // Unfunded allocations (from users without subscriptions)
-  if (unfundedEarnings?.totalUnfundedUsdValue > 0) {
-    currentChartData.push({
-      name: 'Unfunded Allocations',
-      value: unfundedEarnings.totalUnfundedUsdValue,
+  // Unfunded allocations broken down by category
+  if (unfundedEarnings?.loggedOutUsdValue > 0) {
+    totalChartData.push({
+      name: 'Unfunded (Logged Out)',
+      value: unfundedEarnings.loggedOutUsdValue,
       color: COLORS.unfunded,
-      description: 'From users without active subscriptions'
+      description: 'From logged-out users with 100 free tokens'
     });
   }
 
+  if (unfundedEarnings?.noSubscriptionUsdValue > 0) {
+    totalChartData.push({
+      name: 'Unfunded (No Subscription)',
+      value: unfundedEarnings.noSubscriptionUsdValue,
+      color: COLORS.unfunded,
+      description: 'From users without subscriptions'
+    });
+  }
 
-
-  const totalEarnings = currentChartData.reduce((sum, item) => sum + item.value, 0);
+  const currentMonthEarnings = currentChartData.reduce((sum, item) => sum + item.value, 0);
+  const totalEarnings = totalChartData.reduce((sum, item) => sum + item.value, 0);
 
 
 
@@ -555,15 +601,23 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
                   variant={viewMode === 'current' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('current')}
-                  className="h-8 px-3"
+                  className="h-8 px-2 text-xs"
                 >
                   This Month
+                </Button>
+                <Button
+                  variant={viewMode === 'total' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('total')}
+                  className="h-8 px-2 text-xs"
+                >
+                  Total Earnings
                 </Button>
                 <Button
                   variant={viewMode === 'historical' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewMode('historical')}
-                  className="h-8 px-3"
+                  className="h-8 px-2 text-xs"
                 >
                   History
                 </Button>
@@ -600,7 +654,7 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
         <CardContent>
           {viewMode === 'current' ? (
             // Current Month Pie Chart View
-            totalEarnings > 0 ? (
+            currentMonthEarnings > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Pie Chart */}
                 <div className="h-80">
@@ -631,7 +685,7 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
                 <div className="space-y-4">
                   <div className="text-center lg:text-left">
                     <div className="text-3xl font-bold text-primary">
-                      {formatCurrency(totalEarnings)}
+                      {formatCurrency(currentMonthEarnings)}
                     </div>
                     <div className="text-muted-foreground">This Month's Earnings</div>
                   </div>
@@ -655,6 +709,66 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
               <div className="text-center py-8">
                 <div className="text-muted-foreground mb-4">
                   No earnings this month yet. When users allocate tokens to your pages, they'll appear here.
+                </div>
+              </div>
+            )
+          ) : viewMode === 'total' ? (
+            // Total Earnings Pie Chart View
+            totalEarnings > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Pie Chart */}
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={totalChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={120}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {totalChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value) => [formatCurrency(value), '']}
+                        labelFormatter={(label) => label}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Summary Stats */}
+                <div className="space-y-4">
+                  <div className="text-center lg:text-left">
+                    <div className="text-3xl font-bold text-primary">
+                      {formatCurrency(totalEarnings)}
+                    </div>
+                    <div className="text-muted-foreground">Total Pending Earnings</div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {totalChartData.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 rounded-lg border-theme-strong bg-card">
+                        <div className="flex items-center gap-3">
+                          <div>
+                            <div className="font-medium">{item.name}</div>
+                            <div className="text-sm text-muted-foreground">{item.description}</div>
+                          </div>
+                        </div>
+                        <div className="font-semibold">{formatCurrency(item.value)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-muted-foreground mb-4">
+                  No earnings available yet. When users allocate tokens to your pages, they'll appear here.
                 </div>
               </div>
             )
@@ -786,8 +900,32 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
                         </span>
                       )}
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {allocation.tokens} tokens
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>{allocation.tokens} tokens</span>
+                      {allocation.fromUsername && (
+                        <>
+                          <span>•</span>
+                          <span>from</span>
+                          <PillLink
+                            href={`/users/${allocation.fromUserId}`}
+                            className="text-xs"
+                          >
+                            {allocation.fromUsername}
+                          </PillLink>
+                        </>
+                      )}
+                      {!allocation.fromUsername && allocation.fromUserId && (
+                        <>
+                          <span>•</span>
+                          <span>from</span>
+                          <PillLink
+                            href={`/users/${allocation.fromUserId}`}
+                            className="text-xs"
+                          >
+                            {allocation.fromUserId}
+                          </PillLink>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">

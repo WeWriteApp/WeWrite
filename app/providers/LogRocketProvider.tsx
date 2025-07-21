@@ -79,12 +79,19 @@ interface LogRocketProviderProps {
 export function LogRocketProvider({ children }: LogRocketProviderProps) {
   // Initialize LogRocket on mount (client-side only)
   useEffect(() => {
-    // Temporarily disabled LogRocket to fix initialization issues
-    // TODO: Re-enable after fixing the addSanitizedProperty error
-    console.log('LogRocket temporarily disabled for debugging');
-    // if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
-    //   logRocketService.init();
-    // }
+    console.log('🔍 LogRocketProvider: Initializing LogRocket...');
+
+    // Initialize LogRocket if we're on the client side
+    if (typeof window !== 'undefined') {
+      try {
+        logRocketService.init();
+        console.log('✅ LogRocketProvider: LogRocket initialization attempted');
+      } catch (error) {
+        console.error('❌ LogRocketProvider: Failed to initialize LogRocket:', error);
+      }
+    } else {
+      console.log('⏭️ LogRocketProvider: Skipping LogRocket init (server-side)');
+    }
   }, []);
 
   // WeWrite-specific tracking functions with data sanitization

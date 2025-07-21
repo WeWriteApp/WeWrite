@@ -28,6 +28,12 @@ class LogRocketService {
     // Initialize in production, or in development if explicitly enabled
     this.isProduction = process.env.NODE_ENV === 'production' ||
                        process.env.NEXT_PUBLIC_LOGROCKET_ENABLE_DEV === 'true';
+
+    console.log('🔍 LogRocketService constructor:', {
+      nodeEnv: process.env.NODE_ENV,
+      enableDev: process.env.NEXT_PUBLIC_LOGROCKET_ENABLE_DEV,
+      isProduction: this.isProduction
+    });
   }
 
   /**
@@ -132,6 +138,14 @@ class LogRocketService {
       // Log session URL for debugging
       LogRocket.getSessionURL((sessionURL) => {
         console.log('🔗 LogRocket session URL:', sessionURL);
+
+        // Test LogRocket functionality
+        LogRocket.log('🧪 LogRocket test message - initialization successful!');
+        LogRocket.track('logrocket_initialization', {
+          environment: process.env.NODE_ENV,
+          timestamp: new Date().toISOString(),
+          appId: process.env.NEXT_PUBLIC_LOGROCKET_APP_ID?.substring(0, 8) + '...'
+        });
       });
     } catch (error) {
       console.error('❌ Failed to initialize LogRocket:', error);
