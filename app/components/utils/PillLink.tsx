@@ -203,7 +203,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
         style={{ pointerEvents: 'none' }}
       >
         <Trash2 size={14} className="mr-1 flex-shrink-0" />
-        <span className="pill-text truncate">deleted page</span>
+        <span className="pill-text overflow-hidden text-ellipsis whitespace-nowrap">deleted page</span>
       </span>
     );
   }
@@ -316,7 +316,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
           data-pill-style={pillStyle}
           tabIndex={0}
         >
-          <span className="pill-text truncate">{formattedDisplayTitle}</span>
+          <span className="pill-text overflow-hidden text-ellipsis whitespace-nowrap">{formattedDisplayTitle}</span>
           <ExternalLink size={14} className="flex-shrink-0" />
           {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
         </a>
@@ -385,7 +385,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
         }}
       >
         {isGroupLinkType && <Users size={14} className="flex-shrink-0" />}
-        <span className="pill-text truncate">{formattedDisplayTitle}</span>
+        <span className="pill-text overflow-hidden text-ellipsis whitespace-nowrap">{formattedDisplayTitle}</span>
         {formattedByline && <span className="text-xs opacity-75 flex-shrink-0">{formattedByline}</span>}
       </a>
 

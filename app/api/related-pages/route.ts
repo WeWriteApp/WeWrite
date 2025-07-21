@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
     const pageContent = searchParams.get('pageContent') || '';
     const linkedPageIds = searchParams.get('linkedPageIds')?.split(',').filter(Boolean) || [];
     const excludeUsername = searchParams.get('excludeUsername');
+    const excludeUserId = searchParams.get('excludeUserId');
     const limit = parseInt(searchParams.get('limit') || '10');
 
     if (!pageId) {
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`📄 [RELATED_PAGES_API] Finding related pages for ${pageId}`);
     console.log(`📄 [RELATED_PAGES_API] Title: "${pageTitle}", Content length: ${pageContent.length}`);
-    console.log(`📄 [RELATED_PAGES_API] Excluding username: "${excludeUsername || 'none'}"`);
+    console.log(`📄 [RELATED_PAGES_API] Excluding username: "${excludeUsername || 'none'}", userId: "${excludeUserId || 'none'}"`);
 
     // Extract meaningful words from title and content
     const titleWords = extractMeaningfulWords(pageTitle);
@@ -96,12 +97,13 @@ export async function GET(request: NextRequest) {
     for (const doc of pagesSnapshot.docs) {
       const pageData = doc.data();
       
-      // Skip the current page, already linked pages, deleted pages, pages without titles, and excluded username's pages
+      // Skip the current page, already linked pages, deleted pages, pages without titles, and excluded user's pages
       if (doc.id === pageId ||
           linkedPageIds.includes(doc.id) ||
           !pageData.title ||
           pageData.deleted ||
-          (excludeUsername && pageData.username === excludeUsername)) {
+          (excludeUsername && pageData.username === excludeUsername) ||
+          (excludeUserId && pageData.userId === excludeUserId)) {
         continue;
       }
 
@@ -133,7 +135,7 @@ export async function GET(request: NextRequest) {
       .slice(0, limit)
       .map(({ similarity, ...page }) => page); // Remove similarity from final result
 
-    console.log(`📄 [RELATED_PAGES_API] Found ${relatedPages.length} related pages (excluding ${excludeUsername ? `pages by ${excludeUsername}` : 'no user filter'})`);
+    console.log(`📄 [RELATED_PAGES_API] Found ${relatedPages.length} related pages (excluding ${excludeUsername ? `username: ${excludeUsername}` : ''}${excludeUserId ? ` userId: ${excludeUserId}` : ''}${!excludeUsername && !excludeUserId ? 'no user filter' : ''})`);
 
     return NextResponse.json({
       relatedPages,

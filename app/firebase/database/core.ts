@@ -23,7 +23,7 @@ import {
   type QueryDocumentSnapshot
 } from "firebase/firestore";
 
-import { app } from "../config";
+import { getSafeFirebaseServices } from "../environmentAwareConfig";
 import { rtdb } from "../rtdb";
 import { get, ref } from "firebase/database";
 import { getCollectionName } from "../../utils/environmentConfig";
@@ -43,7 +43,16 @@ import type {
   LinkData
 } from "../../types/database";
 
-export const db: Firestore = getFirestore(app);
+// Get Firestore instance safely
+const getFirebaseDB = (): Firestore => {
+  const services = getSafeFirebaseServices();
+  if (!services) {
+    throw new Error('Firebase services not available. Please check your Firebase configuration.');
+  }
+  return services.db;
+};
+
+export const db: Firestore = getFirebaseDB();
 
 // Type definitions for database operations
 export interface PageAccessResult {

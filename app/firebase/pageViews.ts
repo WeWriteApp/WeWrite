@@ -21,10 +21,19 @@ import {
   type DocumentSnapshot,
   type QuerySnapshot
 } from "firebase/firestore";
-import { app } from "./config";
+import { getSafeFirebaseServices } from "./environmentAwareConfig";
 import { getCollectionName } from '../utils/environmentConfig';
 
-const db: Firestore = getFirestore(app);
+// Get Firestore instance safely
+const getFirebaseDB = (): Firestore => {
+  const services = getSafeFirebaseServices();
+  if (!services) {
+    throw new Error('Firebase services not available. Please check your Firebase configuration.');
+  }
+  return services.db;
+};
+
+const db: Firestore = getFirebaseDB();
 
 // Type definitions for page views
 interface PageViewData {

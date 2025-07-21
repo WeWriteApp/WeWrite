@@ -35,8 +35,7 @@ export default function AdminPage() {
   const { resetBannerState } = usePWA();
   const [activeTab, setActiveTab] = useState('features');
 
-  // State for state simulator
-  const [simulatorVisible, setSimulatorVisible] = useState(true);
+
 
   // Valid tab values for hash navigation
   const validTabs = ['features', 'users', 'tools'];
@@ -626,33 +625,7 @@ export default function AdminPage() {
     }
   };
 
-  // Check simulator visibility on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isHidden = sessionStorage.getItem('admin-state-simulator-hidden') === 'true';
-      setSimulatorVisible(!isHidden);
-    }
-  }, []);
 
-  // Function to show the simulator
-  const showSimulator = () => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('admin-state-simulator-hidden');
-      setSimulatorVisible(true);
-      // Refresh the page to re-mount the simulator
-      window.location.reload();
-    }
-  };
-
-  // Function to reset simulator state
-  const resetSimulatorState = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('admin-state-simulator');
-      sessionStorage.removeItem('admin-state-simulator-hidden');
-      setSimulatorVisible(true);
-      window.location.reload();
-    }
-  };
 
   // Feature flags have been removed
 
@@ -860,39 +833,7 @@ export default function AdminPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
 
-            {/* Admin State Simulator */}
-            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">Admin State Simulator</h3>
-                <span className="text-xs px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
-                  {simulatorVisible ? 'Visible' : 'Hidden'}
-                </span>
-              </div>
-              <span className="text-sm text-muted-foreground mb-3">
-                Floating UI for simulating auth, subscription, and token states for testing
-              </span>
-              <div className="mt-2 space-y-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={showSimulator}
-                  disabled={simulatorVisible}
-                >
-                  <Eye className="h-4 w-4" />
-                  {simulatorVisible ? 'Already Visible' : 'Show Simulator'}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={resetSimulatorState}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Reset State
-                </Button>
-              </div>
-            </div>
+
 
             <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">

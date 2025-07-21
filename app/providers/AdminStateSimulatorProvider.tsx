@@ -1,40 +1,20 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { ReactNode } from 'react';
 
-// Simplified admin state simulator - old complex system removed
-interface AdminStateSimulatorContextType {
-  // Default state - no simulation functionality
-  isSimulating: () => boolean;
-}
-
-const AdminStateSimulatorContext = createContext<AdminStateSimulatorContextType | null>(null);
+// Admin state simulator functionality completely removed
+// This file is kept only for backward compatibility with existing imports
 
 interface AdminStateSimulatorProviderProps {
   children: ReactNode;
 }
 
 export function AdminStateSimulatorProvider({ children }: AdminStateSimulatorProviderProps) {
-  const contextValue: AdminStateSimulatorContextType = {
-    isSimulating: () => false // No simulation functionality
-  };
-
-  return (
-    <AdminStateSimulatorContext.Provider value={contextValue}>
-      {children}
-    </AdminStateSimulatorContext.Provider>
-  );
+  // No simulation functionality - just pass through children
+  return <>{children}</>;
 }
 
-export function useAdminStateSimulatorContext() {
-  const context = useContext(AdminStateSimulatorContext);
-  if (!context) {
-    throw new Error('useAdminStateSimulatorContext must be used within AdminStateSimulatorProvider');
-  }
-  return context;
-}
-
-// Simplified hook that returns default state (no simulation)
+// Stub hooks for backward compatibility - return default state
 export function useSimulatedAppState() {
   return {
     auth: { isLoggedIn: true, isLoggedOut: false },
@@ -50,7 +30,11 @@ export function useSimulatedAppState() {
   };
 }
 
-// Simplified hook for backward compatibility
+// Backward compatibility hooks
 export function useSimulatedState() {
   return useSimulatedAppState();
+}
+
+export function useAdminStateSimulatorContext() {
+  return { isSimulating: () => false };
 }

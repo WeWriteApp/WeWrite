@@ -77,8 +77,16 @@ import {
 // Initialize error suppression early
 initializeErrorSuppression();
 
-// Get environment-aware Firebase services
-const firebaseServices = getEnvironmentAwareFirebase();
+// Get environment-aware Firebase services with error handling
+let firebaseServices;
+try {
+  firebaseServices = getEnvironmentAwareFirebase();
+  console.log('[Firebase Config] Successfully initialized Firebase services');
+} catch (error) {
+  console.error('[Firebase Config] Critical error initializing Firebase:', error);
+  // Re-throw the error to prevent the app from continuing with broken Firebase
+  throw new Error(`Firebase initialization failed: ${error.message}`);
+}
 
 
 

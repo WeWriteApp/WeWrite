@@ -116,10 +116,7 @@ export default function UserProfileTabs({ profile }) {
   const { session } = useCurrentAccount();
   const isCurrentUser = session && profile && session.uid === profile.uid;
   const [loadingError, setLoadingError] = useState(null);
-  const [touchStart, setTouchStart] = useState(null);
-  const [touchEnd, setTouchEnd] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragX, setDragX] = useState(0);
+
   const tabsRef = useRef(null);
 
   // Sorting state for pages tab with persistence
@@ -371,54 +368,9 @@ export default function UserProfileTabs({ profile }) {
     }
   };
 
-  // Handle touch events for swipe
-  const handleTouchStart = (e) => {
-    setTouchStart(e.targetTouches[0].clientX);
-    setIsDragging(true);
-    setDragX(0);
-  };
 
-  const handleTouchMove = (e) => {
-    if (!touchStart) return;
 
-    const currentX = e.targetTouches[0].clientX;
-    setTouchEnd(currentX);
 
-    // Calculate drag distance
-    const dragDistance = currentX - touchStart;
-    setDragX(dragDistance);
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) {
-      setIsDragging(false);
-      setDragX(0);
-      return;
-    }
-
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-
-    if (isLeftSwipe || isRightSwipe) {
-      const currentIndex = visibleTabs.indexOf(activeTab);
-
-      if (isLeftSwipe && currentIndex < visibleTabs.length - 1) {
-        // Swipe left to go to next tab
-        setDirection(1);
-        handleTabChange(visibleTabs[currentIndex + 1]);
-      } else if (isRightSwipe && currentIndex > 0) {
-        // Swipe right to go to previous tab
-        setDirection(-1);
-        handleTabChange(visibleTabs[currentIndex - 1]);
-      }
-    }
-
-    setTouchStart(null);
-    setTouchEnd(null);
-    setIsDragging(false);
-    setDragX(0);
-  };
 
   // 🚨 URGENT FIX: Load more temporarily disabled - simple API doesn't support pagination yet
   const loadMorePages = async () => {
@@ -567,9 +519,6 @@ export default function UserProfileTabs({ profile }) {
         <div
           id="tabs-content-container"
           className="mt-4"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
         >
           <TabsContent
             value="activity"

@@ -56,7 +56,12 @@ export const getEnvironmentAwareFirebase = (): FirebaseServices => {
 
   const envType = getEnvironmentType();
   const config = getFirebaseConfig();
-  
+
+  // Validate that we have all required configuration
+  if (!config.apiKey || !config.projectId || !config.authDomain) {
+    throw new Error('Missing required Firebase configuration. Please check your environment variables.');
+  }
+
   // Generate environment-specific app name for potential future multi-app support
   const appName = `wewrite-${envType}`;
   
@@ -183,6 +188,21 @@ export const getEnvironmentAwareStorage = (): FirebaseStorage => {
 export const getEnvironmentAwareAnalytics = (): Analytics | undefined => {
   const services = getEnvironmentAwareFirebase();
   return services.analytics;
+};
+
+/**
+ * Safely get Firebase services with error handling
+ * This function ensures Firebase is properly initialized before returning services
+ *
+ * @returns Firebase services object or null if initialization fails
+ */
+export const getSafeFirebaseServices = (): FirebaseServices | null => {
+  try {
+    return getEnvironmentAwareFirebase();
+  } catch (error) {
+    console.error('[Firebase] Failed to get Firebase services safely:', error);
+    return null;
+  }
 };
 
 /**

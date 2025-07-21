@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { getPageById } from "../firebase/database/pages";
 import { getDatabase, ref, get } from "firebase/database";
-import { app } from "../firebase/config";
+import { getSafeFirebaseServices } from "../firebase/environmentAwareConfig";
 import PageView from '../components/pages/PageView';
 import { SmartLoader } from '../components/ui/smart-loader';
 import { ErrorDisplay } from '../components/ui/error-display';
@@ -116,17 +116,32 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
         }
 
         // If not a page, check if it's a user ID
-        const rtdb = getDatabase(app);
-        const userRef = ref(rtdb, `users/${cleanId}`);
-        const userSnapshot = await get(userRef);
+        try {
+          const firebaseServices = getSafeFirebaseServices();
+          if (!firebaseServices) {
+            console.error('Firebase services not available, skipping user ID check');
+            setContentType('not-found');
+            setIsLoading(false);
+            return;
+          }
 
-        if (userSnapshot.exists()) {
-          window.location.href = `/user/${cleanId}`;
-          return;
+          const rtdb = getDatabase(firebaseServices.app);
+          const userRef = ref(rtdb, `users/${cleanId}`);
+          const userSnapshot = await get(userRef);
+
+          if (userSnapshot.exists()) {
+            window.location.href = `/user/${cleanId}`;
+            return;
+          }
+
+          setContentType('not-found');
+          setIsLoading(false);
+        } catch (firebaseError) {
+          console.error("Error checking user ID in RTDB:", firebaseError);
+          // If Firebase fails, assume it's not a user and show not found
+          setContentType('not-found');
+          setIsLoading(false);
         }
-
-        setContentType('not-found');
-        setIsLoading(false);
       } catch (error) {
         console.error("Error determining content type:", error);
         setContentType('error');

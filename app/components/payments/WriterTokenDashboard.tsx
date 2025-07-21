@@ -26,7 +26,7 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import EarningsChart from './EarningsChart';
 import { CompactAllocationTimer } from '../AllocationCountdownTimer';
 import { getLoggedOutTokenBalance } from '../../utils/simulatedTokens';
-import { useSimulatedState } from '../../providers/AdminStateSimulatorProvider';
+
 import PillLink from '../utils/PillLink';
 
 interface WriterTokenDashboardProps {
@@ -36,7 +36,7 @@ interface WriterTokenDashboardProps {
 export default function WriterTokenDashboard({ className }: WriterTokenDashboardProps) {
   const { session } = useCurrentAccount();
   const { toast } = useToast();
-  const simulatedState = useSimulatedState();
+
 
   const [balance, setBalance] = useState<WriterTokenBalance | null>(null);
   const [earnings, setEarnings] = useState<WriterTokenEarnings[]>([]);
@@ -78,189 +78,23 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
   }, [earnings]);
   const [unfundedMessage, setUnfundedMessage] = useState<string | null>(null);
 
-  // Generate simulated token data based on admin state simulator
-  const getSimulatedTokenData = () => {
-    const tokenEarnings = memoizedTokenEarnings;
-
-    // Check if any non-none states are active first
-    const hasActiveStates = tokenEarnings.unfundedLoggedOut ||
-                           tokenEarnings.unfundedNoSubscription ||
-                           tokenEarnings.fundedPending ||
-                           tokenEarnings.lockedAvailable;
-
-    // If no active states and none is true, show empty state
-    if (!hasActiveStates && tokenEarnings.none) {
-      return {
-        balance: null,
-        earnings: [],
-        isEmpty: true
-      };
-    }
-
-    // If no active states at all, don't use simulation
-    if (!hasActiveStates) {
-      return null;
-    }
-
-    // Handle ALL combinations of token states
-    const currentDate = new Date();
-    const lastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-    const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
-    const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-
-    // Calculate unfunded tokens
-    let unfundedTokens = 0;
-    const unfundedSources = [];
-    if (tokenEarnings.unfundedLoggedOut) {
-      unfundedTokens += 10;
-      unfundedSources.push('logged-out users');
-    }
-    if (tokenEarnings.unfundedNoSubscription) {
-      unfundedTokens += 10;
-      unfundedSources.push('users without subscriptions');
-    }
-
-    // Calculate funded tokens
-    const pendingTokens = tokenEarnings.fundedPending ? 10 : 0;
-    const availableTokens = tokenEarnings.lockedAvailable ? 10 : 0;
-    const totalFundedTokens = pendingTokens + availableTokens;
-
-    // Build earnings array for funded tokens
-    const earnings = [];
-    if (tokenEarnings.lockedAvailable) {
-      earnings.push({
-        id: 'sim-locked',
-        userId: session?.uid || 'simulated',
-        month: lastMonthStr,
-        totalTokensReceived: 10,
-        totalUsdValue: 1.0,
-        status: 'available' as const,
-        allocations: [
-          {
-            allocationId: 'sim-alloc-locked',
-            fromUserId: 'sim-user-1',
-            fromUsername: 'subscriber1',
-            resourceType: 'page' as const,
-            resourceId: 'sim-page-1',
-            resourceTitle: 'Popular Article',
-            tokens: 10,
-            usdValue: 1.0
-          }
-        ],
-        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-        updatedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-      });
-    }
-
-    if (tokenEarnings.fundedPending) {
-      earnings.push({
-        id: 'sim-pending',
-        userId: session?.uid || 'simulated',
-        month: currentMonthStr,
-        totalTokensReceived: 10,
-        totalUsdValue: 1.0,
-        status: 'pending' as const,
-        allocations: [
-          {
-            allocationId: 'sim-alloc-pending',
-            fromUserId: 'sim-user-2',
-            fromUsername: 'subscriber2',
-            resourceType: 'page' as const,
-            resourceId: 'sim-page-2',
-            resourceTitle: 'Recent Article',
-            tokens: 10,
-            usdValue: 1.0
-          }
-        ],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-    }
-
-    // Create unfunded message if there are unfunded tokens
-    let unfundedMessage = null;
-    if (unfundedTokens > 0) {
-      const sourceText = unfundedSources.length === 1 ? unfundedSources[0] : unfundedSources.join(' and ');
-      unfundedMessage = `You have ${unfundedTokens} unfunded tokens from ${sourceText}. These tokens will become funded when those users sign up and subscribe.`;
-    }
-
-    // If we have funded tokens, create a balance object
-    let balance = null;
-    if (totalFundedTokens > 0) {
-      balance = {
-        userId: session?.uid || 'simulated',
-        totalTokensEarned: totalFundedTokens,
-        totalUsdEarned: totalFundedTokens * 0.1,
-        pendingTokens,
-        pendingUsdValue: pendingTokens * 0.1,
-        availableTokens,
-        availableUsdValue: availableTokens * 0.1,
-        paidOutTokens: 0,
-        paidOutUsdValue: 0,
-        lastProcessedMonth: tokenEarnings.lockedAvailable ? lastMonthStr : '',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      } as WriterTokenBalance;
-    }
-
-    return {
-      balance,
-      earnings: earnings as WriterTokenEarnings[],
-      isEmpty: false,
-      unfundedMessage
-    };
 
 
-    return null;
-  };
 
-  // Memoize the tokenEarnings to prevent infinite re-renders
-  const memoizedTokenEarnings = useMemo(() => simulatedState.tokenEarnings, [
-    simulatedState.tokenEarnings.none,
-    simulatedState.tokenEarnings.unfundedLoggedOut,
-    simulatedState.tokenEarnings.unfundedNoSubscription,
-    simulatedState.tokenEarnings.fundedPending,
-    simulatedState.tokenEarnings.lockedAvailable
-  ]);
 
   useEffect(() => {
-    console.log('🎭 WriterTokenDashboard useEffect triggered, tokenEarnings:', memoizedTokenEarnings);
-
-    // Check if we should use simulated data from admin state simulator
-    // Only use simulated data if we have active states (not just the default "none" state)
-    const hasActiveSimulationStates = memoizedTokenEarnings.unfundedLoggedOut ||
-                                     memoizedTokenEarnings.unfundedNoSubscription ||
-                                     memoizedTokenEarnings.fundedPending ||
-                                     memoizedTokenEarnings.lockedAvailable;
-
-    if (hasActiveSimulationStates) {
-      const simulatedData = getSimulatedTokenData();
-      console.log('🎭 getSimulatedTokenData returned:', simulatedData);
-
-      if (simulatedData) {
-        // Use simulated data
-        setBalance(simulatedData.balance);
-        setEarnings(simulatedData.earnings);
-        setUnfundedMessage((simulatedData as any).unfundedMessage || null);
-        setLoading(false);
-        console.log('🎭 Using simulated token earnings data:', simulatedData);
-        return;
-      }
-    }
-
-    console.log('🎭 No active simulation states, using real data');
-    // Use real data
+    // Load real data
     if (session?.uid) {
       setUnfundedMessage(null);
       loadWriterData();
     } else {
-      // Show empty state for logged-out users (unless simulated)
+      // Show empty state for logged-out users
       setBalance(null);
       setEarnings([]);
       setUnfundedMessage(null);
       setLoading(false);
     }
-  }, [session?.uid, memoizedTokenEarnings]);
+  }, [session?.uid]);
 
 
 
@@ -624,15 +458,7 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
               </div>
 
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={loadWriterData}
-                  disabled={loading}
-                >
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  Refresh
-                </Button>
+
                 {canRequestPayout && (
                   <Button
                     onClick={handleRequestPayout}

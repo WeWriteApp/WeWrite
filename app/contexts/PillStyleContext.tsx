@@ -82,8 +82,8 @@ export function PillStyleProvider({ children }: PillStyleProviderProps) {
         text-indent-0
         float-none
         leading-tight
-        w-fit
-        min-w-0
+        w-auto
+        max-w-full
         my-0.5
         vertical-align-baseline
       `.trim().replace(/\s+/g, ' ');

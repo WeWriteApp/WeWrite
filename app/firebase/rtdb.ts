@@ -11,10 +11,19 @@ import {
   type DataSnapshot,
   type Unsubscribe
 } from "firebase/database";
-import { app } from "./config";
+import { getSafeFirebaseServices } from "./environmentAwareConfig";
 import type { User } from "../types/database";
 
-export const rtdb: Database = getDatabase(app);
+// Get RTDB instance safely
+const getFirebaseRTDB = (): Database => {
+  const services = getSafeFirebaseServices();
+  if (!services) {
+    throw new Error('Firebase services not available. Please check your Firebase configuration.');
+  }
+  return getDatabase(services.app);
+};
+
+export const rtdb: Database = getFirebaseRTDB();
 
 // Connection pooling and batching for cost optimization
 class RTDBConnectionManager {

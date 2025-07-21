@@ -16,14 +16,15 @@ import {
   DollarSign,
   ExternalLink,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  ArrowLeftCircle
 } from 'lucide-react';
 import { useToast } from '../ui/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 
 interface SubscriptionHistoryEvent {
   id: string;
-  type: 'subscription_created' | 'subscription_updated' | 'subscription_cancelled' | 'subscription_reactivated' | 'payment_succeeded' | 'payment_failed' | 'payment_recovered' | 'plan_changed';
+  type: 'subscription_created' | 'subscription_updated' | 'subscription_cancelled' | 'subscription_reactivated' | 'payment_succeeded' | 'payment_failed' | 'payment_recovered' | 'plan_changed' | 'refund_issued';
   timestamp: Date;
   description: string;
   details: {
@@ -36,6 +37,8 @@ interface SubscriptionHistoryEvent {
     failureCount?: number;
     failureType?: string;
     previousFailureCount?: number;
+    refundReason?: string;
+    refundStatus?: string;
     metadata?: Record<string, any>;
   };
   source: 'stripe' | 'system' | 'user';
@@ -106,6 +109,8 @@ export default function SubscriptionHistory({ className = '' }: SubscriptionHist
         return <XCircle className="h-4 w-4 text-red-500" />;
       case 'payment_recovered':
         return <CheckCircle className="h-4 w-4 text-orange-500" />;
+      case 'refund_issued':
+        return <ArrowLeftCircle className="h-4 w-4 text-orange-600" />;
       default:
         return <History className="h-4 w-4 text-gray-500" />;
     }
@@ -124,6 +129,8 @@ export default function SubscriptionHistory({ className = '' }: SubscriptionHist
         return 'secondary';
       case 'subscription_updated':
       case 'plan_changed':
+        return 'secondary';
+      case 'refund_issued':
         return 'secondary';
       default:
         return 'outline';
@@ -272,6 +279,30 @@ export default function SubscriptionHistory({ className = '' }: SubscriptionHist
                           {event.details.previousFailureCount && (
                             <p className="text-xs text-green-700">
                               Resolved after {event.details.previousFailureCount} failed attempt{event.details.previousFailureCount > 1 ? 's' : ''}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Refund details */}
+                  {event.type === 'refund_issued' && (
+                    <div className="mt-2 p-3 bg-orange-50 border border-orange-200 rounded-md">
+                      <div className="flex items-start gap-2">
+                        <ArrowLeftCircle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-orange-800 mb-1">
+                            Refund Issued by WeWrite
+                          </p>
+                          {event.details.refundReason && (
+                            <p className="text-xs text-orange-700 mb-2">
+                              <strong>Reason:</strong> {event.details.refundReason}
+                            </p>
+                          )}
+                          {event.details.refundStatus && (
+                            <p className="text-xs text-orange-700">
+                              <strong>Status:</strong> {event.details.refundStatus}
                             </p>
                           )}
                         </div>

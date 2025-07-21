@@ -1764,8 +1764,8 @@ select,
 .paragraph-with-number a {
   /* PillStyleContext now uses inline-flex with proper alignment */
   vertical-align: baseline !important; /* Ensure proper alignment with paragraph numbers */
-  /* Increase available space for links - only constrain when truly necessary */
-  max-width: calc(100vw - 6rem); /* Account for paragraph number and margins with generous space */
+  /* Only constrain when absolutely necessary - allow links to use most of the available space */
+  max-width: calc(100vw - 4rem); /* More generous space - only account for essential margins */
 }
 
 /* Text contrast is now handled by PillStyleContext - removed conflicting rules */

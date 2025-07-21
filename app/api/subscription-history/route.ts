@@ -22,7 +22,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 interface SubscriptionHistoryEvent {
   id: string;
-  type: 'subscription_created' | 'subscription_updated' | 'subscription_cancelled' | 'subscription_reactivated' | 'payment_succeeded' | 'payment_failed' | 'payment_recovered' | 'plan_changed';
+  type: 'subscription_created' | 'subscription_updated' | 'subscription_cancelled' | 'subscription_reactivated' | 'payment_succeeded' | 'payment_failed' | 'payment_recovered' | 'plan_changed' | 'refund_issued';
   timestamp: Date;
   description: string;
   details: {
@@ -35,6 +35,8 @@ interface SubscriptionHistoryEvent {
     failureCount?: number;
     failureType?: string;
     previousFailureCount?: number;
+    refundReason?: string;
+    refundStatus?: string;
     metadata?: Record<string, any>;
   };
   source: 'stripe' | 'system' | 'user';
@@ -189,6 +191,41 @@ async function getSubscriptionHistory(userId: string): Promise<SubscriptionHisto
             });
           }
         });
+
+        // 5. Get refunds from Stripe
+        try {
+          const refunds = await stripe.refunds.list({
+            customer: stripeCustomerId,
+            limit: 20
+          });
+
+          refunds.data.forEach((refund) => {
+            events.push({
+              id: `refund_${refund.id}`,
+              type: 'refund_issued',
+              timestamp: new Date(refund.created * 1000),
+              description: `Refund issued by WeWrite`,
+              details: {
+                amount: refund.amount / 100,
+                currency: refund.currency.toUpperCase(),
+                stripeEventId: refund.id,
+                refundReason: refund.reason || 'No reason provided',
+                refundStatus: refund.status,
+                metadata: {
+                  chargeId: refund.charge,
+                  receiptNumber: refund.receipt_number
+                }
+              },
+              source: 'stripe'
+            });
+          });
+
+          console.log(`[SUBSCRIPTION HISTORY] Found ${refunds.data.length} refunds for customer ${stripeCustomerId}`);
+        } catch (refundError) {
+          console.warn('[SUBSCRIPTION HISTORY] Error fetching refunds from Stripe:', refundError.message || refundError);
+          // Continue even if refund fetching fails
+        }
+
         } catch (stripeError) {
           console.warn('[SUBSCRIPTION HISTORY] Error fetching from Stripe:', stripeError.message || stripeError);
           // Continue even if Stripe API fails

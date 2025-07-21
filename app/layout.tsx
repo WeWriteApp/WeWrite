@@ -28,7 +28,7 @@ import { MobileProvider } from "./providers/MobileProvider"
 import { AdminStateSimulatorProvider } from "./providers/AdminStateSimulatorProvider"
 import { LogRocketProvider } from "./providers/LogRocketProvider"
 import GlobalNavigation from "./components/layout/GlobalNavigation"
-import AdminStateSimulatorGuard from "./components/admin/AdminStateSimulatorGuard"
+
 
 export default function RootLayout({
   children}: {
@@ -65,7 +65,6 @@ export default function RootLayout({
                                         <GlobalNavigation>
                                           {children}
                                         </GlobalNavigation>
-                                        <AdminStateSimulatorGuard />
                                           </ApiSessionInitializer>
                                         </TokenBalanceProvider>
                                       </TokenIncrementProvider>

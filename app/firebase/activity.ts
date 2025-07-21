@@ -16,7 +16,7 @@ import {
   type DocumentData,
   type QuerySnapshot
 } from "firebase/firestore";
-import { app } from "./config";
+import { getSafeFirebaseServices } from "./environmentAwareConfig";
 import { getBioAndAboutActivities } from "./bioActivity";
 import { getUsernameById } from "../utils/userUtils";
 import type { Page, User } from "../types/database";
@@ -71,7 +71,16 @@ function deduplicateActivitiesByPage(activities: ActivityData[]): ActivityData[]
   return deduplicatedActivities;
 }
 
-const db: Firestore = getFirestore(app);
+// Get Firestore instance safely
+const getFirebaseDB = (): Firestore => {
+  const services = getSafeFirebaseServices();
+  if (!services) {
+    throw new Error('Firebase services not available. Please check your Firebase configuration.');
+  }
+  return services.db;
+};
+
+const db: Firestore = getFirebaseDB();
 
 // Type definitions for activity operations
 interface ActivityData {

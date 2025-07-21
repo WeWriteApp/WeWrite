@@ -144,6 +144,10 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
           params.set('excludeUsername', currentAccount.username);
         }
 
+        if (currentAccount?.uid) {
+          params.set('excludeUserId', currentAccount.uid);
+        }
+
         const response = await fetch(`/api/related-pages?${params.toString()}`);
 
         if (!response.ok) {
@@ -161,7 +165,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
     };
 
     fetchRelatedPages();
-  }, [page?.id, page?.title, page?.content, linkedPageIds, mounted, currentAccount?.username]);
+  }, [page?.id, page?.title, page?.content, linkedPageIds, mounted, currentAccount?.username, currentAccount?.uid]);
 
   if (!mounted) {
     return null;
