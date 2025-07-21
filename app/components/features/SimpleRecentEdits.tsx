@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Clock, Eye, Edit, Users } from 'lucide-react';
+import { Clock, Eye, Edit, Users, RefreshCw } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
@@ -87,6 +87,17 @@ export default function SimpleRecentEdits() {
     fetchRecentEdits();
   }, [currentAccount?.uid, filters]);
 
+  // Auto-refresh every 2 minutes to ensure recent edits stay fresh
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!loading) {
+        fetchRecentEdits();
+      }
+    }, 2 * 60 * 1000); // 2 minutes
+
+    return () => clearInterval(interval);
+  }, [loading]);
+
   const updateFilter = (key: keyof Filters, value: boolean) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
@@ -128,6 +139,18 @@ export default function SimpleRecentEdits() {
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Refresh Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={fetchRecentEdits}
+            disabled={loading}
+            className="h-8 w-8 p-0"
+            title="Refresh recent edits"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+
           {/* Filter Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

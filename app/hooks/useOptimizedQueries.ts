@@ -187,10 +187,14 @@ export function useAnalytics(type: string, params?: any, enabled: boolean = true
 }
 
 /**
- * Optimized recent edits hook - simplified implementation
+ * Optimized recent edits hook - simplified implementation with short cache for real-time updates
  */
 export function useRecentEdits(userId?: string, enabled: boolean = true) {
-  const config = getCacheConfig('realtime');
+  // Use very short cache time for recent edits to ensure they update quickly
+  const shortCacheConfig = {
+    staleTime: 2 * 60 * 1000, // 2 minutes - much shorter than the 30 minute default
+    gcTime: 5 * 60 * 1000,    // 5 minutes garbage collection
+  };
 
   return useQuery({
     queryKey: ['recent-edits', userId],
@@ -210,9 +214,12 @@ export function useRecentEdits(userId?: string, enabled: boolean = true) {
       return response.json();
     },
     enabled,
-    staleTime: config.staleTime,
-    gcTime: config.gcTime,
-    retry: 1
+    staleTime: shortCacheConfig.staleTime,
+    gcTime: shortCacheConfig.gcTime,
+    retry: 1,
+    // Enable refetch on window focus for recent edits to ensure freshness
+    refetchOnWindowFocus: true,
+    refetchOnMount: true
   });
 }
 
