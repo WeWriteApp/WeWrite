@@ -54,15 +54,22 @@ export async function GET(request: NextRequest) {
     }
 
     if (!subscription) {
-      console.log(`[ACCOUNT SUBSCRIPTION] 🔴 No subscription data found for user ${targetUserId} - this indicates data corruption or sync issues`);
-      const errorResponse = {
+      console.log(`[ACCOUNT SUBSCRIPTION] 🔴 No subscription data found for user ${targetUserId} - treating as inactive user`);
+      // Instead of returning an error, treat this as an inactive user
+      // This handles cases where subscription data is corrupted or missing
+      const inactiveResponse = {
         hasSubscription: false,
-        status: null,
-        fullData: null,
-        error: 'No valid subscription data found'
+        status: 'inactive',
+        fullData: {
+          id: 'inactive',
+          status: 'inactive',
+          amount: 0,
+          tier: null,
+          stripeSubscriptionId: null
+        }
       };
-      console.log(`[ACCOUNT SUBSCRIPTION] 🔴 Returning error response:`, errorResponse);
-      return NextResponse.json(errorResponse);
+      console.log(`[ACCOUNT SUBSCRIPTION] 🟡 Returning inactive response for corrupted/missing data:`, inactiveResponse);
+      return NextResponse.json(inactiveResponse);
     }
 
     // Handle inactive state (no subscription) - this is normal for users without subscriptions

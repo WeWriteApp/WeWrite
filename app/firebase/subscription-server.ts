@@ -105,9 +105,20 @@ export const getUserSubscriptionServer = async (userId: string, options: Subscri
 
     // Validate that we have a proper status - null/undefined status indicates data corruption
     if (!rawData.status) {
-      if (verbose) {
-        console.error(`[getUserSubscriptionServer] Invalid subscription data for user ${userId}: missing status field`, rawData);
-      }
+      console.error(`[getUserSubscriptionServer] 🔴 CRITICAL: Invalid subscription data for user ${userId}: missing status field`, {
+        userId,
+        documentExists: true,
+        rawDataKeys: Object.keys(rawData || {}),
+        rawDataSample: {
+          status: rawData.status,
+          amount: rawData.amount,
+          tier: rawData.tier,
+          stripeSubscriptionId: rawData.stripeSubscriptionId,
+          createdAt: rawData.createdAt,
+          updatedAt: rawData.updatedAt
+        },
+        environment: process.env.VERCEL_ENV || process.env.NODE_ENV
+      });
       // Return null to indicate error state rather than defaulting to 'canceled'
       return null;
     }
