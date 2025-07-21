@@ -74,11 +74,11 @@ export function initializeErrorSuppression() {
   }
 
   /**
-   * Enhanced console.error that suppresses Firebase errors
+   * Enhanced console.error that suppresses Firebase errors and logs to LogRocket
    */
   console.error = (...args: any[]) => {
     const message = args.join(' ');
-    
+
     if (shouldSuppressMessage(message)) {
       // Optionally log to a different level for debugging
       if (process.env.DEBUG_FIREBASE_ERRORS === 'true') {
@@ -86,7 +86,27 @@ export function initializeErrorSuppression() {
       }
       return;
     }
-    
+
+    // Log to LogRocket for comprehensive error tracking
+    try {
+      // Dynamic import to avoid circular dependencies
+      import('../utils/logrocket').then(({ logRocketService }) => {
+        if (logRocketService.isReady) {
+          logRocketService.logError(new Error(message), {
+            source: 'console_error',
+            arguments: args.map(arg => typeof arg === 'object' ? JSON.stringify(arg).substring(0, 500) : String(arg)),
+            timestamp: new Date().toISOString(),
+            url: window.location.href,
+            userAgent: navigator.userAgent
+          });
+        }
+      }).catch(logRocketError => {
+        // Silently fail LogRocket logging to avoid infinite loops
+      });
+    } catch (logRocketError) {
+      // Silently fail LogRocket logging to avoid infinite loops
+    }
+
     originalConsoleError.apply(console, args);
   };
 
@@ -108,21 +128,40 @@ export function initializeErrorSuppression() {
   };
 
   /**
-   * Handle unhandled promise rejections
+   * Handle unhandled promise rejections with LogRocket logging
    */
   window.addEventListener('unhandledrejection', (event) => {
     if (event.reason && event.reason.message) {
       const message = event.reason.message;
-      
+
       if (shouldSuppressMessage(message)) {
         event.preventDefault();
         return false;
+      }
+
+      // Log unhandled promise rejections to LogRocket
+      try {
+        import('../utils/logrocket').then(({ logRocketService }) => {
+          if (logRocketService.isReady) {
+            logRocketService.logError(event.reason, {
+              source: 'unhandled_promise_rejection',
+              timestamp: new Date().toISOString(),
+              url: window.location.href,
+              userAgent: navigator.userAgent,
+              eventType: 'unhandledrejection'
+            });
+          }
+        }).catch(logRocketError => {
+          // Silently fail LogRocket logging
+        });
+      } catch (logRocketError) {
+        // Silently fail LogRocket logging
       }
     }
   });
 
   /**
-   * Handle regular window errors
+   * Handle regular window errors with LogRocket logging
    */
   window.addEventListener('error', (event) => {
     if (event.error && event.error.message) {
@@ -145,10 +184,33 @@ export function initializeErrorSuppression() {
         return false;
       }
     }
+
+    // Log global errors to LogRocket (if not suppressed)
+    try {
+      import('../utils/logrocket').then(({ logRocketService }) => {
+        if (logRocketService.isReady) {
+          const errorMessage = event.error?.message || event.message || 'Unknown error';
+          logRocketService.logError(event.error || new Error(errorMessage), {
+            source: 'global_error_handler',
+            filename: event.filename,
+            lineno: event.lineno,
+            colno: event.colno,
+            timestamp: new Date().toISOString(),
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            eventType: 'error'
+          });
+        }
+      }).catch(logRocketError => {
+        // Silently fail LogRocket logging
+      });
+    } catch (logRocketError) {
+      // Silently fail LogRocket logging
+    }
   });
 
   if (process.env.NODE_ENV === 'development') {
-    console.log('🔇 Firebase error suppression initialized');
+    console.log('🔇 Firebase error suppression and enhanced LogRocket error logging initialized');
   }
 }
 

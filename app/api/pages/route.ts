@@ -602,25 +602,70 @@ export async function PUT(request: NextRequest) {
     return createApiResponse(responseData);
 
   } catch (error: any) {
-    console.error('🔴 API: Page save failed with error', {
-      error: error.message,
-      stack: error.stack,
-      name: error.name,
-      pageId: body?.id
-    });
-    logger.critical('Page save failed with error', {
-      error: error.message,
-      stack: error.stack,
-      name: error.name,
-      pageId: body?.id
-    }, 'PAGE_SAVE');
+    // Enhanced error logging with comprehensive details
+    const errorDetails = {
+      error: {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code,
+        statusCode: error.statusCode,
+        cause: error.cause
+      },
+      request: {
+        pageId: body?.id,
+        title: body?.title,
+        hasContent: !!body?.content,
+        contentLength: body?.content ? JSON.stringify(body.content).length : 0,
+        hasLocation: !!body?.location,
+        customDate: body?.customDate,
+        userId: currentUserId
+      },
+      context: {
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV,
+        vercelRegion: process.env.VERCEL_REGION,
+        buildId: process.env.VERCEL_GIT_COMMIT_SHA,
+        headers: {
+          userAgent: request.headers.get('user-agent'),
+          referer: request.headers.get('referer'),
+          contentType: request.headers.get('content-type')
+        }
+      }
+    };
+
+    console.error('🔴 API: Page save failed with comprehensive error details', errorDetails);
+
+    logger.critical('Page save failed with comprehensive error details', errorDetails, 'PAGE_SAVE');
+
+    // Also log to external error tracking if available
+    try {
+      // Send to frontend error logging endpoint for centralized tracking
+      fetch('/api/errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: {
+            message: `Server-side page save error: ${error.message}`,
+            stack: error.stack,
+            timestamp: new Date().toISOString(),
+            url: '/api/pages',
+            context: errorDetails
+          }
+        })
+      }).catch(logError => {
+        console.error('Failed to send error to logging endpoint (non-fatal):', logError);
+      });
+    } catch (logError) {
+      console.error('Failed to send error to logging endpoint (non-fatal):', logError);
+    }
 
     // Don't expose internal errors that might cause session issues
     const userMessage = error.message?.includes('permission') || error.message?.includes('auth')
       ? 'Authentication error. Please refresh the page and try again.'
-      : 'Failed to update page. Please try again.';
+      : 'Failed to save page version';
 
-    console.error('🔴 API: Returning error response', { userMessage });
+    console.error('🔴 API: Returning error response', { userMessage, errorId: errorDetails.context.timestamp });
     return createErrorResponse('INTERNAL_ERROR', userMessage);
   }
 }
