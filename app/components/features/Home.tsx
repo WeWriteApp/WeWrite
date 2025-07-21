@@ -6,7 +6,7 @@ import Link from "next/link";
 import Header from "../layout/Header";
 // Removed useOptimizedHome - now using UnifiedRecentActivity
 import { Activity, Search } from "lucide-react";
-import UnifiedRecentActivity from "../activity/UnifiedRecentActivity";
+import SimpleRecentEdits from "./SimpleRecentEdits";
 import StickySection from "../utils/StickySection";
 import { SectionTitle } from "../ui/section-title";
 
@@ -83,15 +83,9 @@ const Home: React.FC = () => {
             {/* Daily Notes Section */}
             <DailyNotesSection />
 
-            {/* Recent Edits Section - Now using unified activity system */}
+            {/* Recent Edits Section - Simple implementation */}
             <StickySection sectionId="recent-edits">
-              <UnifiedRecentActivity
-                mode="edits"
-                limit={20}
-                showFilters={true}
-                isCarousel={false}
-                className="w-full"
-              />
+              <SimpleRecentEdits />
             </StickySection>
 
 
