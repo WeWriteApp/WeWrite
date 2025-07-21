@@ -99,8 +99,8 @@ class LogRocketService {
         dom: {
           // Only sanitize inputs that contain sensitive financial data
           inputSanitizer: (text: string, element: HTMLElement) => {
-            // Check if this is a sensitive financial input
-            const isSensitive = logRocketService.isSensitiveFinancialElement(element);
+            // Check if this is a sensitive financial input using the method directly
+            const isSensitive = this.isSensitiveFinancialElement(element);
 
             if (isSensitive) {
               console.log('🔒 LogRocket: Redacting sensitive financial input:', {

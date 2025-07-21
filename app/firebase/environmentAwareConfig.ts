@@ -65,12 +65,19 @@ export const getEnvironmentAwareFirebase = (): FirebaseServices => {
     let app: FirebaseApp;
     const existingApps = getApps();
     const existingApp = existingApps.find(a => a.name === appName);
-    
+
     if (existingApp) {
       app = existingApp;
     } else {
       // Initialize new app with environment-specific name
       app = initializeApp(config, appName);
+    }
+
+    // Also ensure a default app exists for backward compatibility
+    const defaultApp = existingApps.find(a => a.name === '[DEFAULT]');
+    if (!defaultApp) {
+      // Create default app with same config for backward compatibility
+      initializeApp(config);
     }
 
     // Initialize all Firebase services
