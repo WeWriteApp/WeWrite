@@ -79,8 +79,9 @@ export class ContentChangesTrackingService {
         newContentLength: newLength
       };
       
-      // Store in Firestore analytics collection
-      const analyticsRef = collection(db, 'analytics_events');
+      // Store in Firestore analytics collection using environment-aware naming
+      const { getCollectionName } = await import('../utils/environmentConfig');
+      const analyticsRef = collection(db, getCollectionName('analytics_events'));
       await addDoc(analyticsRef, {
         ...changeEvent,
         timestamp: Timestamp.fromDate(changeEvent.timestamp),
@@ -147,8 +148,9 @@ export class ContentChangesTrackingService {
         newContentLength: newText.length
       };
       
-      // Store in Firestore analytics collection
-      const analyticsRef = collection(db, 'analytics_events');
+      // Store in Firestore analytics collection using environment-aware naming
+      const { getCollectionName } = await import('../utils/environmentConfig');
+      const analyticsRef = collection(db, getCollectionName('analytics_events'));
       await addDoc(analyticsRef, {
         ...changeEvent,
         timestamp: Timestamp.fromDate(changeEvent.timestamp),

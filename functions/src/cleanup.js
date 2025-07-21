@@ -25,6 +25,7 @@ exports.cleanupTemporaryData = functions.pubsub
       const now = admin.firestore.Timestamp.now();
 
       // Get all documents with an expiry date in the past
+      // TODO: Add environment-aware collection naming for temporaryData
       const snapshot = await db.collection('temporaryData')
         .where('expiresAt', '<', now)
         .get();
@@ -77,6 +78,7 @@ exports.computeDailyStats = functions.pubsub
   .schedule('every 48 hours')
   .onRun(async (context) => {
     try {
+      // TODO: Add environment-aware collection naming for server-side functions
       // Get total user count
       const usersSnapshot = await db.collection('users').get();
       const userCount = usersSnapshot.size;
@@ -85,16 +87,17 @@ exports.computeDailyStats = functions.pubsub
       const pagesSnapshot = await db.collection('pages').get();
       const pageCount = pagesSnapshot.size;
 
-      // Get total page count
-      const pagesSnapshot = await db.collection('pages')
+      // Get public page count
+      const publicPagesSnapshot = await db.collection('pages')
         .where('isPublic', '==', true)
         .get();
-      const pageCount = pagesSnapshot.size;
+      const publicPageCount = publicPagesSnapshot.size;
 
       // Calculate average pages per user
       const avgPagesPerUser = userCount > 0 ? pageCount / userCount : 0;
 
       // Store the statistics
+      // TODO: Add environment-aware collection naming for statistics
       await db.collection('statistics').doc('daily').set({
         userCount,
         pageCount,
@@ -205,6 +208,7 @@ exports.optimizeDatabaseUsage = functions.pubsub
     try {
       // Find pages with large content stored directly in the document
       // These should be moved to a subcollection to reduce document size
+      // TODO: Add environment-aware collection naming for pages
       const largeContentPagesSnapshot = await db.collection('pages')
         .where('contentSize', '>', 100000) // 100KB
         .get();
