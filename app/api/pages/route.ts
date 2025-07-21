@@ -447,60 +447,93 @@ export async function PUT(request: NextRequest) {
     if (content !== undefined) {
       logger.info('Content update detected - using version saving system', { pageId: id }, 'PAGE_SAVE');
 
-      // Get current user data for version saving
-      logger.debug('Loading user profile for version save', { userId: currentUserId }, 'PAGE_SAVE');
-      const { getUserProfile } = await import('../../firebase/database/users');
-      const currentUser = await getUserProfile(currentUserId);
+      try {
+        // Get current user data for version saving
+        logger.debug('Loading user profile for version save', { userId: currentUserId }, 'PAGE_SAVE');
+        console.log('🔵 API: Loading user profile for version save', { userId: currentUserId });
 
-      // Import the saveNewVersion function
-      const { saveNewVersion } = await import('../../firebase/database/versions');
-
-      // Prepare data for version saving
-      const versionData = {
-        content,
-        userId: currentUserId,
-        username: currentUser?.username || 'Anonymous',
-        groupId: groupId
-      };
-
-      logger.debug('Calling saveNewVersion', {
-        pageId: id,
-        username: versionData.username,
-        hasContent: !!content,
-        contentLength: JSON.stringify(content).length
-      }, 'PAGE_SAVE');
-
-      // Save new version (this creates activity records and updates lastDiff)
-      console.log('🔵 API: Calling saveNewVersion', { pageId: id, versionDataKeys: Object.keys(versionData) });
-      const versionResult = await saveNewVersion(id, versionData);
-      console.log('🔵 API: saveNewVersion returned', {
-        versionResult,
-        success: versionResult?.success,
-        error: versionResult?.error
-      });
-
-      if (!versionResult || !versionResult.success) {
-        console.error('🔴 API: Version save failed', {
-          pageId: id,
-          error: versionResult?.error || 'Version save returned null',
-          versionResult
+        const { getUserProfile } = await import('../../firebase/database/users');
+        const currentUser = await getUserProfile(currentUserId);
+        console.log('🔵 API: User profile loaded', {
+          userId: currentUserId,
+          username: currentUser?.username,
+          hasUser: !!currentUser
         });
-        logger.error('Version save failed', {
+
+        // Import the saveNewVersion function
+        console.log('🔵 API: Importing saveNewVersion function');
+        const { saveNewVersion } = await import('../../firebase/database/versions');
+        console.log('🔵 API: saveNewVersion function imported successfully');
+
+        // Prepare data for version saving
+        const versionData = {
+          content,
+          userId: currentUserId,
+          username: currentUser?.username || 'Anonymous',
+          groupId: groupId
+        };
+
+        logger.debug('Calling saveNewVersion', {
           pageId: id,
-          error: versionResult?.error || 'Version save returned null',
-          versionResult
+          username: versionData.username,
+          hasContent: !!content,
+          contentLength: JSON.stringify(content).length
+        }, 'PAGE_SAVE');
+
+        // Save new version (this creates activity records and updates lastDiff)
+        console.log('🔵 API: Calling saveNewVersion', {
+          pageId: id,
+          versionDataKeys: Object.keys(versionData),
+          environment: process.env.NODE_ENV,
+          vercelEnv: process.env.VERCEL_ENV
+        });
+
+        const versionResult = await saveNewVersion(id, versionData);
+
+        console.log('🔵 API: saveNewVersion returned', {
+          versionResult,
+          success: versionResult?.success,
+          error: versionResult?.error
+        });
+
+        if (!versionResult || !versionResult.success) {
+          console.error('🔴 API: Version save failed', {
+            pageId: id,
+            error: versionResult?.error || 'Version save returned null',
+            versionResult
+          });
+          logger.error('Version save failed', {
+            pageId: id,
+            error: versionResult?.error || 'Version save returned null',
+            versionResult
+          }, 'PAGE_SAVE');
+          return createErrorResponse('INTERNAL_ERROR', 'Failed to save page version');
+        }
+
+        console.log('✅ API: Version saved successfully', {
+          pageId: id,
+          versionId: versionResult?.versionId
+        });
+        logger.info('Version saved successfully', {
+          pageId: id,
+          versionId: versionResult?.versionId
+        }, 'PAGE_SAVE');
+
+      } catch (versionError) {
+        console.error('🔴 API: Error in version saving process', {
+          error: versionError.message,
+          stack: versionError.stack,
+          pageId: id,
+          userId: currentUserId
+        });
+        logger.critical('Version saving process failed', {
+          error: versionError.message,
+          stack: versionError.stack,
+          pageId: id,
+          userId: currentUserId
         }, 'PAGE_SAVE');
         return createErrorResponse('INTERNAL_ERROR', 'Failed to save page version');
       }
-
-      console.log('✅ API: Version saved successfully', {
-        pageId: id,
-        versionId: versionResult?.versionId
-      });
-      logger.info('Version saved successfully', {
-        pageId: id,
-        versionId: versionResult?.versionId
-      }, 'PAGE_SAVE');
 
       // Update any additional metadata (title, location) that wasn't handled by saveNewVersion
       const metadataUpdate: any = {};
