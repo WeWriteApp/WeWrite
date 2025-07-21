@@ -26,7 +26,7 @@ import type { PageVersion } from "../../types/database";
  */
 export const getVersionsByPageId = async (pageId: string): Promise<PageVersion[] | Error> => {
   try {
-const pageRef = doc(db, getCollectionName("pages"), pageId);
+    const pageRef = doc(db, getCollectionName("pages"), pageId);
     const versionsRef = collection(pageRef, "versions");
     const versionsSnap = await getDocs(versionsRef);
 

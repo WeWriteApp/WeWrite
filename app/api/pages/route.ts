@@ -460,10 +460,10 @@ export async function PUT(request: NextRequest) {
           hasUser: !!currentUser
         });
 
-        // Import the saveNewVersion function
-        console.log('🔵 API: Importing saveNewVersion function');
-        const { saveNewVersion } = await import('../../firebase/database/versions');
-        console.log('🔵 API: saveNewVersion function imported successfully');
+        // Import the server-side saveNewVersion function
+        console.log('🔵 API: Importing saveNewVersionServer function');
+        const { saveNewVersionServer } = await import('../../firebase/database/versions-server');
+        console.log('🔵 API: saveNewVersionServer function imported successfully');
 
         // Prepare data for version saving
         const versionData = {
@@ -481,14 +481,14 @@ export async function PUT(request: NextRequest) {
         }, 'PAGE_SAVE');
 
         // Save new version (this creates activity records and updates lastDiff)
-        console.log('🔵 API: Calling saveNewVersion', {
+        console.log('🔵 API: Calling saveNewVersionServer', {
           pageId: id,
           versionDataKeys: Object.keys(versionData),
           environment: process.env.NODE_ENV,
           vercelEnv: process.env.VERCEL_ENV
         });
 
-        const versionResult = await saveNewVersion(id, versionData);
+        const versionResult = await saveNewVersionServer(id, versionData);
 
         console.log('🔵 API: saveNewVersion returned', {
           versionResult,
