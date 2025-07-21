@@ -431,9 +431,25 @@ const pageDoc = await getDoc(doc(db, getCollectionName("pages"), pageId));
     }
 
     // Create the new version document
-    console.log('🔵 VERSION: Creating new version document');
-const versionRef = await addDoc(collection(db, getCollectionName("pages"), pageId, "versions"), versionData);
-    console.log("✅ VERSION: Created new version with ID:", versionRef.id);
+    console.log('🔵 VERSION: Creating new version document', {
+      pageId,
+      collectionPath: `${getCollectionName("pages")}/${pageId}/versions`,
+      versionDataKeys: Object.keys(versionData)
+    });
+
+    let versionRef;
+    try {
+      versionRef = await addDoc(collection(db, getCollectionName("pages"), pageId, "versions"), versionData);
+      console.log("✅ VERSION: Created new version with ID:", versionRef.id);
+    } catch (versionError) {
+      console.error("🔴 VERSION: Failed to create version document:", {
+        error: versionError.message,
+        code: versionError.code,
+        pageId,
+        collectionPath: `${getCollectionName("pages")}/${pageId}/versions`
+      });
+      throw versionError;
+    }
 
     // Update the page document with the new current version and content
     const pageUpdateData = {
@@ -453,10 +469,22 @@ const versionRef = await addDoc(collection(db, getCollectionName("pages"), pageI
       currentVersion: versionRef.id,
       contentLength: contentString.length,
       lastModified: now,
-      hasDiff: !!diffResult
+      hasDiff: !!diffResult,
+      collectionPath: `${getCollectionName("pages")}/${pageId}`
     });
-await setDoc(doc(db, getCollectionName("pages"), pageId), pageUpdateData, { merge: true });
-    console.log("✅ VERSION: Page document updated successfully");
+
+    try {
+      await setDoc(doc(db, getCollectionName("pages"), pageId), pageUpdateData, { merge: true });
+      console.log("✅ VERSION: Page document updated successfully");
+    } catch (pageUpdateError) {
+      console.error("🔴 VERSION: Failed to update page document:", {
+        error: pageUpdateError.message,
+        code: pageUpdateError.code,
+        pageId,
+        collectionPath: `${getCollectionName("pages")}/${pageId}`
+      });
+      throw pageUpdateError;
+    }
 
     // Note: User activity for streak tracking is handled on the client side
 
@@ -469,38 +497,40 @@ await setDoc(doc(db, getCollectionName("pages"), pageId), pageUpdateData, { merg
     };
 
   } catch (error) {
-    // Enhanced error logging with comprehensive details
-    const errorDetails = {
+    // Enhanced error logging for production debugging
+    const errorContext = {
+      pageId,
+      userId: data.userId,
+      username: data.username,
+      hasContent: !!data.content,
+      contentType: typeof data.content,
+      contentLength: data.content ? JSON.stringify(data.content).length : 0,
+      groupId: data.groupId,
+      environment: process.env.NODE_ENV,
+      vercelEnv: process.env.VERCEL_ENV,
+      collectionName: getCollectionName("pages"),
+      timestamp: new Date().toISOString()
+    };
+
+    console.error("🔴 VERSION: Error saving new version:", {
       error: {
         message: error.message,
         stack: error.stack,
         name: error.name,
-        code: error.code,
-        cause: error.cause
+        code: error.code
       },
-      context: {
-        pageId,
-        userId: data.userId,
-        username: data.username,
-        hasContent: !!data.content,
-        contentType: typeof data.content,
-        contentLength: data.content ? JSON.stringify(data.content).length : 0,
-        groupId: data.groupId,
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV,
-        buildId: process.env.VERCEL_GIT_COMMIT_SHA
-      }
-    };
+      context: errorContext
+    });
 
-    console.error("🔴 VERSION: Error saving new version with comprehensive details:", errorDetails);
-    logger.critical("Version save failed with comprehensive details", errorDetails, 'VERSION_SAVE');
-
-    // REMOVED: Heavy error logging to prevent performance issues
+    logger.critical("Version save failed", {
+      error: error.message,
+      stack: error.stack,
+      context: errorContext
+    }, 'VERSION_SAVE');
 
     return {
       success: false,
-      error: error.message,
-      errorDetails: errorDetails // Include detailed error info for debugging
+      error: error.message
     };
   }
 };
