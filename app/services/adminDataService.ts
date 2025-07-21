@@ -1,189 +1,233 @@
 /**
  * Admin Data Service
- * 
+ *
  * Provides admin-specific data access that always uses production data,
  * regardless of the current environment. This ensures admin dashboards
  * show real production metrics and data.
+ *
+ * Updated to use API endpoints instead of direct Firebase calls.
  */
 
-import { collection, query, limit, getDocs, orderBy, where, doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
-
 /**
- * Get production collection name (no environment prefix)
- * Admin dashboards should always see production data
- */
-export const getProductionCollectionName = (baseName: string): string => {
-  // Always return base collection name for admin access (production data)
-  return baseName;
-};
-
-/**
- * Admin-specific data access methods that always use production collections
+ * Admin-specific data access methods that use API endpoints
  */
 export class AdminDataService {
-  
+
   /**
-   * Get analytics events from production data
+   * Get analytics events via API
    */
   static async getAnalyticsEvents(limitCount: number = 100) {
-    const eventsQuery = query(
-      collection(db, getProductionCollectionName('analytics_events')),
-      orderBy('timestamp', 'desc'),
-      limit(limitCount)
-    );
-    
-    return await getDocs(eventsQuery);
+    try {
+      const response = await fetch(`/api/admin/analytics-data?type=events&limit=${limitCount}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const result = await response.json();
+      return {
+        docs: result.data || [],
+        size: result.data?.length || 0
+      };
+    } catch (error) {
+      console.error('Error fetching analytics events:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get hourly aggregations from production data
+   * Get hourly aggregations via API
    */
   static async getHourlyAggregations(limitCount: number = 24) {
-    const hourlyQuery = query(
-      collection(db, getProductionCollectionName('analytics_hourly')),
-      orderBy('datetime', 'desc'),
-      limit(limitCount)
-    );
-    
-    return await getDocs(hourlyQuery);
+    try {
+      const response = await fetch(`/api/admin/analytics-data?type=hourly&limit=${limitCount}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const result = await response.json();
+      return {
+        docs: result.data || [],
+        size: result.data?.length || 0
+      };
+    } catch (error) {
+      console.error('Error fetching hourly aggregations:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get daily aggregations from production data
+   * Get daily aggregations via API
    */
   static async getDailyAggregations(limitCount: number = 30) {
-    const dailyQuery = query(
-      collection(db, getProductionCollectionName('analytics_daily')),
-      orderBy('date', 'desc'),
-      limit(limitCount)
-    );
-    
-    return await getDocs(dailyQuery);
+    try {
+      const response = await fetch(`/api/admin/analytics-data?type=daily&limit=${limitCount}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const result = await response.json();
+      return {
+        docs: result.data || [],
+        size: result.data?.length || 0
+      };
+    } catch (error) {
+      console.error('Error fetching daily aggregations:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get global counters from production data
+   * Get global counters via API
    */
   static async getGlobalCounters() {
-    const globalCountersRef = doc(db, getProductionCollectionName('analytics_counters'), 'global');
-    return await getDoc(globalCountersRef);
+    try {
+      const response = await fetch('/api/admin/analytics-data?type=global-counters');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const result = await response.json();
+      return {
+        exists: () => !!result.data,
+        data: () => result.data
+      };
+    } catch (error) {
+      console.error('Error fetching global counters:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get token balances from production data
+   * Get token balances via API
    */
   static async getTokenBalances(limitCount: number = 100) {
-    const balancesQuery = query(
-      collection(db, getProductionCollectionName('tokenBalances')),
-      limit(limitCount)
-    );
-    
-    return await getDocs(balancesQuery);
+    try {
+      const response = await fetch(`/api/admin/analytics-data?type=token-balances&limit=${limitCount}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const result = await response.json();
+      return {
+        docs: result.data || [],
+        size: result.data?.length || 0
+      };
+    } catch (error) {
+      console.error('Error fetching token balances:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get token allocations from production data
+   * Get token allocations via API
    */
   static async getTokenAllocations(limitCount: number = 100) {
-    const allocationsQuery = query(
-      collection(db, getProductionCollectionName('tokenAllocations')),
-      orderBy('createdAt', 'desc'),
-      limit(limitCount)
-    );
-    
-    return await getDocs(allocationsQuery);
+    try {
+      const response = await fetch(`/api/admin/analytics-data?type=token-allocations&limit=${limitCount}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const result = await response.json();
+      return {
+        docs: result.data || [],
+        size: result.data?.length || 0
+      };
+    } catch (error) {
+      console.error('Error fetching token allocations:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get recent token allocations from production data
+   * Get recent token allocations via API
    */
   static async getRecentTokenAllocations(daysBack: number = 30) {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
-    
-    const recentQuery = query(
-      collection(db, getProductionCollectionName('tokenAllocations')),
-      where('createdAt', '>=', cutoffDate),
-      orderBy('createdAt', 'desc')
-    );
-    
-    return await getDocs(recentQuery);
+    try {
+      const response = await fetch(`/api/admin/analytics-data?type=recent-token-allocations&days=${daysBack}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const result = await response.json();
+      return {
+        docs: result.data || [],
+        size: result.data?.length || 0
+      };
+    } catch (error) {
+      console.error('Error fetching recent token allocations:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get subscription conversion funnel events from production data
+   * Get subscription conversion funnel events via API
    */
   static async getSubscriptionFunnelEvents() {
-    const funnelActions = [
-      'subscription_flow_started',
-      'subscription_abandoned_before_payment',
-      'subscription_abandoned_during_payment',
-      'subscription_completed',
-      'first_token_allocation',
-      'ongoing_token_allocation'
-    ];
-
-    const results: Record<string, any> = {};
-
-    for (const action of funnelActions) {
-      const eventQuery = query(
-        collection(db, getProductionCollectionName('analytics_events')),
-        where('category', '==', 'subscription'),
-        where('action', '==', action),
-        orderBy('timestamp', 'desc'),
-        limit(50)
-      );
-
-      const snapshot = await getDocs(eventQuery);
-      results[action] = {
-        count: snapshot.size,
-        events: snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-      };
+    try {
+      const response = await fetch('/api/admin/analytics-data?type=subscription-funnel');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const result = await response.json();
+      return result.data || {};
+    } catch (error) {
+      console.error('Error fetching subscription funnel:', error);
+      throw error;
     }
-
-    return results;
   }
 
   /**
-   * Get production users data
+   * Get users data via API
    */
   static async getUsers(limitCount: number = 100) {
-    const usersQuery = query(
-      collection(db, getProductionCollectionName('users')),
-      limit(limitCount)
-    );
-    
-    return await getDocs(usersQuery);
+    try {
+      const response = await fetch(`/api/admin/analytics-data?type=users&limit=${limitCount}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const result = await response.json();
+      return {
+        docs: result.data || [],
+        size: result.data?.length || 0
+      };
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get production pages data
+   * Get pages data via API
    */
   static async getPages(limitCount: number = 100) {
-    const pagesQuery = query(
-      collection(db, getProductionCollectionName('pages')),
-      orderBy('createdAt', 'desc'),
-      limit(limitCount)
-    );
-    
-    return await getDocs(pagesQuery);
+    try {
+      const response = await fetch(`/api/admin/analytics-data?type=pages&limit=${limitCount}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const result = await response.json();
+      return {
+        docs: result.data || [],
+        size: result.data?.length || 0
+      };
+    } catch (error) {
+      console.error('Error fetching pages:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get production subscriptions data
+   * Get subscriptions data via API
    */
   static async getSubscriptions(limitCount: number = 100) {
-    const subscriptionsQuery = query(
-      collection(db, getProductionCollectionName('subscriptions')),
-      orderBy('createdAt', 'desc'),
-      limit(limitCount)
-    );
-    
-    return await getDocs(subscriptionsQuery);
+    try {
+      const response = await fetch(`/api/admin/analytics-data?type=subscriptions&limit=${limitCount}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const result = await response.json();
+      return {
+        docs: result.data || [],
+        size: result.data?.length || 0
+      };
+    } catch (error) {
+      console.error('Error fetching subscriptions:', error);
+      throw error;
+    }
   }
 
   /**
@@ -232,15 +276,15 @@ export class AdminDataService {
           total: subscriptions.size
         },
         collections: {
-          analytics_events: getProductionCollectionName('analytics_events'),
-          analytics_hourly: getProductionCollectionName('analytics_hourly'),
-          analytics_daily: getProductionCollectionName('analytics_daily'),
-          analytics_counters: getProductionCollectionName('analytics_counters'),
-          tokenBalances: getProductionCollectionName('tokenBalances'),
-          tokenAllocations: getProductionCollectionName('tokenAllocations'),
-          users: getProductionCollectionName('users'),
-          pages: getProductionCollectionName('pages'),
-          subscriptions: getProductionCollectionName('subscriptions')
+          analytics_events: 'analytics_events',
+          analytics_hourly: 'analytics_hourly',
+          analytics_daily: 'analytics_daily',
+          analytics_counters: 'analytics_counters',
+          tokenBalances: 'tokenBalances',
+          tokenAllocations: 'tokenAllocations',
+          users: 'users',
+          pages: 'pages',
+          subscriptions: 'subscriptions'
         }
       };
     } catch (error) {

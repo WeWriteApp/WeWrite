@@ -7,6 +7,25 @@ import {
 } from 'firebase-admin/firestore';
 import { format, eachDayOfInterval, eachHourOfInterval, startOfDay, endOfDay, startOfHour } from 'date-fns';
 
+// Helper function to safely parse date keys
+function safeParseDateKey(dateKey: string, granularity: string, context?: string): Date {
+  try {
+    // Handle different granularity formats
+    if (granularity === 'hour') {
+      // Format: YYYY-MM-DD-HH
+      const [year, month, day, hour] = dateKey.split('-').map(Number);
+      return new Date(year, month - 1, day, hour);
+    } else {
+      // Format: YYYY-MM-DD
+      const [year, month, day] = dateKey.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+  } catch (error) {
+    console.warn(`Error parsing date key "${dateKey}" in ${context || 'unknown context'}:`, error);
+    return new Date(); // Fallback to current date
+  }
+}
+
 interface DateRange {
   startDate: Date;
   endDate: Date;
@@ -56,37 +75,7 @@ function getTimeIntervals(dateRange: DateRange, granularity?: number) {
   return { buckets, formatLabel, granularity: granularityType };
 }
 
-// Helper function to safely parse date keys
-function safeParseDateKey(dateKey: string, granularity: string): Date {
-  try {
-    let date: Date;
 
-    if (granularity === 'hourly') {
-      // Handle hourly format like "2025-06-25-14"
-      const parts = dateKey.split('-');
-      if (parts.length === 4) {
-        const [year, month, day, hour] = parts.map(Number);
-        date = new Date(year, month - 1, day, hour);
-      } else {
-        throw new Error(`Invalid hourly date format: ${dateKey}`);
-      }
-    } else {
-      // Handle daily format like "2025-06-25"
-      date = new Date(dateKey + 'T00:00:00.000Z');
-    }
-
-    // Check if the date is valid
-    if (isNaN(date.getTime())) {
-      console.warn(`Invalid date key: ${dateKey} (granularity: ${granularity})`);
-      return new Date();
-    }
-
-    return date;
-  } catch (error) {
-    console.warn(`Error parsing date key: ${dateKey}`, error);
-    return new Date();
-  }
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -104,7 +93,7 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const granularity = searchParams.get('granularity');
-    const type = searchParams.get('type'); // 'revenue' or 'subscriptions'
+    const type = searchParams.get('type'); // 'revenue', 'subscriptions', 'conversion-funnel', or 'token-allocation'
 
     if (!startDate || !endDate || !type) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
@@ -314,6 +303,216 @@ export async function GET(request: NextRequest) {
       });
 
       return NextResponse.json(result);
+
+    } else if (type === 'conversion-funnel') {
+      // Get subscription conversion funnel data
+      try {
+        // Query analytics events for the funnel stages
+        const analyticsQuery = db.collection('analytics_events')
+          .where('timestamp', '>=', Timestamp.fromDate(dateRange.startDate))
+          .where('timestamp', '<=', Timestamp.fromDate(dateRange.endDate))
+          .where('category', '==', 'subscription')
+          .orderBy('timestamp', 'asc');
+
+        const analyticsSnapshot = await analyticsQuery.get();
+        const events = analyticsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        // Filter events by action
+        const funnelActions = [
+          'subscription_flow_started',
+          'subscription_abandoned_before_payment',
+          'subscription_abandoned_during_payment',
+          'subscription_completed',
+          'first_token_allocation',
+          'ongoing_token_allocation'
+        ];
+
+        const filteredEvents = events.filter(e => funnelActions.includes(e.action));
+
+        // Count events by stage
+        const stageCounts = {
+          initiated: filteredEvents.filter(e => e.action === 'subscription_flow_started').length,
+          abandoned_before_stripe: filteredEvents.filter(e => e.action === 'subscription_abandoned_before_payment').length,
+          abandoned_during_stripe: filteredEvents.filter(e => e.action === 'subscription_abandoned_during_payment').length,
+          completed: filteredEvents.filter(e => e.action === 'subscription_completed').length,
+          first_allocation: filteredEvents.filter(e => e.action === 'first_token_allocation').length,
+          ongoing_allocations: filteredEvents.filter(e => e.action === 'ongoing_token_allocation').length
+        };
+
+        // Calculate conversion rates and drop-offs
+        const totalInitiated = stageCounts.initiated || 1; // Avoid division by zero
+
+        const funnelData = [
+          {
+            stage: 'initiated',
+            stageName: 'Subscription Flow Initiated',
+            count: stageCounts.initiated,
+            conversionRate: 100,
+            dropOffRate: 0,
+            description: 'Users who clicked subscribe'
+          },
+          {
+            stage: 'abandoned_before_stripe',
+            stageName: 'Abandoned Before Stripe',
+            count: stageCounts.abandoned_before_stripe,
+            conversionRate: ((totalInitiated - stageCounts.abandoned_before_stripe) / totalInitiated) * 100,
+            dropOffRate: (stageCounts.abandoned_before_stripe / totalInitiated) * 100,
+            description: 'Users who left before payment'
+          },
+          {
+            stage: 'abandoned_during_stripe',
+            stageName: 'Abandoned During Stripe',
+            count: stageCounts.abandoned_during_stripe,
+            conversionRate: ((totalInitiated - stageCounts.abandoned_before_stripe - stageCounts.abandoned_during_stripe) / totalInitiated) * 100,
+            dropOffRate: (stageCounts.abandoned_during_stripe / totalInitiated) * 100,
+            description: 'Users who started but didn\'t complete payment'
+          },
+          {
+            stage: 'completed',
+            stageName: 'Subscription Activated',
+            count: stageCounts.completed,
+            conversionRate: (stageCounts.completed / totalInitiated) * 100,
+            dropOffRate: ((totalInitiated - stageCounts.completed) / totalInitiated) * 100,
+            description: 'Completed payments via Stripe'
+          },
+          {
+            stage: 'first_allocation',
+            stageName: 'First Token Allocation',
+            count: stageCounts.first_allocation,
+            conversionRate: stageCounts.completed > 0 ? (stageCounts.first_allocation / stageCounts.completed) * 100 : 0,
+            dropOffRate: stageCounts.completed > 0 ? ((stageCounts.completed - stageCounts.first_allocation) / stageCounts.completed) * 100 : 0,
+            description: 'Users who allocated tokens to pages'
+          },
+          {
+            stage: 'ongoing_allocations',
+            stageName: 'Ongoing Allocations',
+            count: stageCounts.ongoing_allocations,
+            conversionRate: stageCounts.first_allocation > 0 ? (stageCounts.ongoing_allocations / stageCounts.first_allocation) * 100 : 0,
+            dropOffRate: stageCounts.first_allocation > 0 ? ((stageCounts.first_allocation - stageCounts.ongoing_allocations) / stageCounts.first_allocation) * 100 : 0,
+            description: 'Users who continue allocating monthly'
+          }
+        ];
+
+        return NextResponse.json(funnelData);
+
+      } catch (error) {
+        console.error('Error fetching conversion funnel:', error);
+        // Return empty funnel data on error
+        return NextResponse.json([]);
+      }
+
+    } else if (type === 'token-allocation') {
+      // Get token allocation metrics
+      try {
+        const timeConfig = getTimeIntervals(dateRange, granularity ? parseInt(granularity) : undefined);
+
+        // Query token balances and allocations
+        const tokenBalancesQuery = db.collection('tokenBalances')
+          .where('lastAllocationDate', '>=', dateRange.startDate.toISOString())
+          .where('lastAllocationDate', '<=', dateRange.endDate.toISOString());
+
+        const tokenAllocationsQuery = db.collection('tokenAllocations')
+          .where('createdAt', '>=', Timestamp.fromDate(dateRange.startDate))
+          .where('createdAt', '<=', Timestamp.fromDate(dateRange.endDate))
+          .orderBy('createdAt', 'asc');
+
+        const [balancesSnapshot, allocationsSnapshot] = await Promise.all([
+          tokenBalancesQuery.get(),
+          tokenAllocationsQuery.get()
+        ]);
+
+        const balances = balancesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        const allocations = allocationsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        // Create date buckets for allocation tracking
+        const dateMap = new Map();
+
+        // Initialize all time buckets
+        for (const bucket of timeConfig.buckets) {
+          dateMap.set(bucket, {
+            totalSubscribers: new Set(),
+            subscribersWithAllocations: new Set(),
+            totalTokensAllocated: 0,
+            totalTokensAvailable: 0
+          });
+        }
+
+        // Process token balances by date bucket
+        balances.forEach(balance => {
+          if (!balance.lastAllocationDate) return;
+
+          let balanceDate;
+          try {
+            balanceDate = new Date(balance.lastAllocationDate);
+            if (isNaN(balanceDate.getTime())) return;
+          } catch (error) {
+            return;
+          }
+
+          const dateKey = timeConfig.formatKey(balanceDate);
+
+          if (dateMap.has(dateKey)) {
+            const current = dateMap.get(dateKey);
+            current.totalSubscribers.add(balance.userId);
+            current.totalTokensAvailable += balance.totalTokens || 0;
+          }
+        });
+
+        // Process token allocations by date bucket
+        allocations.forEach(allocation => {
+          const allocationDate = allocation.createdAt?.toDate() || new Date();
+          const dateKey = timeConfig.formatKey(allocationDate);
+
+          if (dateMap.has(dateKey)) {
+            const current = dateMap.get(dateKey);
+            current.subscribersWithAllocations.add(allocation.userId);
+            current.totalTokensAllocated += allocation.tokens || 0;
+          }
+        });
+
+        // Convert to chart data format
+        const result = Array.from(dateMap.entries()).map(([dateKey, metrics]) => {
+          const totalSubscribers = metrics.totalSubscribers.size;
+          const subscribersWithAllocations = metrics.subscribersWithAllocations.size;
+          const allocationPercentage = totalSubscribers > 0 ? (subscribersWithAllocations / totalSubscribers) * 100 : 0;
+          const averageAllocationPercentage = metrics.totalTokensAvailable > 0 ? (metrics.totalTokensAllocated / metrics.totalTokensAvailable) * 100 : 0;
+
+          const date = safeParseDateKey(dateKey, timeConfig.granularity);
+          let label;
+          try {
+            label = timeConfig.formatLabel(date);
+          } catch (error) {
+            label = dateKey;
+          }
+
+          return {
+            date: dateKey,
+            totalSubscribers,
+            subscribersWithAllocations,
+            allocationPercentage,
+            averageAllocationPercentage,
+            totalTokensAllocated: metrics.totalTokensAllocated,
+            totalTokensAvailable: metrics.totalTokensAvailable,
+            label
+          };
+        });
+
+        return NextResponse.json(result);
+
+      } catch (error) {
+        console.error('Error fetching token allocation metrics:', error);
+        return NextResponse.json([]);
+      }
     }
 
     return NextResponse.json({ error: 'Invalid type parameter' }, { status: 400 });
