@@ -157,11 +157,23 @@ export default function SubscriptionPage() {
         const response = await fetch('/api/account-subscription');
         if (response.ok) {
           const data = await response.json();
-          console.log('[SubscriptionPage] ✅ Retrieved subscription data:', data);
+          console.log('[SubscriptionPage] ✅ Retrieved subscription data:', {
+            hasSubscription: data.hasSubscription,
+            status: data.status,
+            error: data.error,
+            fullDataExists: !!data.fullData,
+            fullDataStatus: data.fullData?.status,
+            rawData: data
+          });
 
           // Check for error state (but not inactive state which is normal)
           if (data.error && data.status !== 'inactive') {
-            console.error('[SubscriptionPage] ❌ Subscription data error:', data.error);
+            console.error('[SubscriptionPage] ❌ Subscription data error:', {
+              error: data.error,
+              status: data.status,
+              hasSubscription: data.hasSubscription,
+              fullData: data.fullData
+            });
             setSubscriptionError(data.error);
             setCurrentSubscription(null);
             return;
@@ -169,6 +181,7 @@ export default function SubscriptionPage() {
 
           // Clear any previous errors
           setSubscriptionError(null);
+          console.log('[SubscriptionPage] 🔍 Error check passed, processing subscription data...');
 
           if (data.hasSubscription && data.fullData) {
             const transformedData = {

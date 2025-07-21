@@ -35,44 +35,53 @@ export async function GET(request: NextRequest) {
     // Get the user's subscription from Firestore using server-side function
     const subscription = await getUserSubscriptionServer(targetUserId, { verbose: true });
 
-    console.log(`[ACCOUNT SUBSCRIPTION] Subscription data for user ${targetUserId}:`, {
+    console.log(`[ACCOUNT SUBSCRIPTION] 🔍 VERBOSE: Subscription data for user ${targetUserId}:`, {
       hasSubscription: !!subscription,
       status: subscription?.status,
       amount: subscription?.amount,
       tokens: (subscription as any)?.tokens,
       cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd,
+      subscriptionExists: subscription !== null,
+      subscriptionType: typeof subscription,
+      subscriptionKeys: subscription ? Object.keys(subscription) : null,
       fullData: subscription
     });
 
     if (!subscription) {
-      console.log(`[ACCOUNT SUBSCRIPTION] No subscription data found for user ${targetUserId} - this indicates data corruption or sync issues`);
-      return NextResponse.json({
+      console.log(`[ACCOUNT SUBSCRIPTION] 🔴 No subscription data found for user ${targetUserId} - this indicates data corruption or sync issues`);
+      const errorResponse = {
         hasSubscription: false,
         status: null,
         fullData: null,
         error: 'No valid subscription data found'
-      });
+      };
+      console.log(`[ACCOUNT SUBSCRIPTION] 🔴 Returning error response:`, errorResponse);
+      return NextResponse.json(errorResponse);
     }
 
     // Handle inactive state (no subscription) - this is normal for users without subscriptions
     if (subscription.status === 'inactive') {
-      console.log(`[ACCOUNT SUBSCRIPTION] User ${targetUserId} has no active subscription (inactive state)`);
-      return NextResponse.json({
+      console.log(`[ACCOUNT SUBSCRIPTION] 🟡 User ${targetUserId} has no active subscription (inactive state)`);
+      const inactiveResponse = {
         hasSubscription: false,
         status: 'inactive',
         fullData: subscription
-      });
+      };
+      console.log(`[ACCOUNT SUBSCRIPTION] 🟡 Returning inactive response:`, inactiveResponse);
+      return NextResponse.json(inactiveResponse);
     }
 
     // Return the subscription data in the expected format
-    return NextResponse.json({
+    const activeResponse = {
       hasSubscription: true,
       status: subscription.status,
       amount: subscription.amount,
       tokens: (subscription as any).tokens,
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
       fullData: subscription
-    });
+    };
+    console.log(`[ACCOUNT SUBSCRIPTION] ✅ Returning active subscription response:`, activeResponse);
+    return NextResponse.json(activeResponse);
   } catch (error: unknown) {
     console.error('Error fetching user subscription data:', error);
     return NextResponse.json(
