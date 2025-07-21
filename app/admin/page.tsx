@@ -701,7 +701,7 @@ export default function AdminPage() {
           Admin Panel
         </h1>
         <p className="text-muted-foreground">
-          Manage feature flags and admin settings
+          Manage users and admin settings
         </p>
 
       </div>
@@ -717,13 +717,7 @@ export default function AdminPage() {
       >
         <SwipeableTabsList className="w-full border-b border-border/40 sticky top-0 bg-background z-10">
           <div className="flex w-max space-x-4 px-1">
-            <SwipeableTabsTrigger
-              value="features"
-              className="flex items-center gap-2 px-4 py-3 whitespace-nowrap border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary font-medium transition-all"
-            >
-              <Settings className="h-4 w-4" />
-              Feature Flags
-            </SwipeableTabsTrigger>
+
             <SwipeableTabsTrigger
               value="users"
               className="flex items-center gap-2 px-4 py-3 whitespace-nowrap border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary font-medium transition-all"
@@ -864,26 +858,7 @@ export default function AdminPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium">Feature Flags Management</h3>
-              </div>
-              <span className="text-sm text-muted-foreground mb-3">
-                Feature flags can be managed in the Feature Flags tab. Use the tools below for advanced operations like fixing database issues
-                or checking the raw state of feature flags.
-              </span>
-              <div className="mt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 w-full"
-                  onClick={() => handleTabChange('features')}
-                >
-                  <Settings className="h-4 w-4" />
-                  Go to Feature Flags Tab
-                </Button>
-              </div>
-            </div>
+
 
             {/* Admin State Simulator */}
             <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
