@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Calendar, List, ArrowLeft } from 'lucide-react';
+import { Calendar, List, ArrowLeft, Clock } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useCurrentAccount } from '../providers/CurrentAccountProvider';
 import { useAccentColor } from '../contexts/AccentColorContext';
@@ -81,6 +81,25 @@ function TimelineContent() {
     router.back();
   };
 
+  // Function to scroll to today's card
+  const scrollToToday = () => {
+    console.log('📅 Timeline Page: scrollToToday called');
+    // Use the globally exposed function from TimelineCarousel
+    if ((window as any).timelineScrollToToday) {
+      (window as any).timelineScrollToToday();
+    } else if ((window as any).dailyNotesScrollToToday) {
+      // For daily notes mode
+      (window as any).dailyNotesScrollToToday();
+    } else {
+      // Fallback: try to find today's card manually
+      const today = new Date().toISOString().split('T')[0];
+      const todayElement = document.querySelector(`[data-date="${today}"]`);
+      if (todayElement) {
+        todayElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  };
+
   const getTitle = () => {
     if (type === 'daily-notes') {
       return 'My Daily Notes';
@@ -134,6 +153,17 @@ function TimelineContent() {
               </h1>
               <p className="text-xs md:text-sm text-muted-foreground hidden md:block">{getDescription()}</p>
             </div>
+
+            {/* Today Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={scrollToToday}
+              className="rounded-2xl"
+            >
+              <Clock className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Today</span>
+            </Button>
           </div>
         </div>
       </div>

@@ -256,6 +256,24 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
     } else {
       // Disable zoom/pan in collapsed mode
       svg.on('.zoom', null);
+      // Allow pointer events for node clicks and background clicks in collapsed mode
+      svg.style("pointer-events", "auto");
+
+      // Add background click handler to open fullscreen when clicking non-node areas
+      svg.on("click", (event) => {
+        // Only trigger if clicking on the SVG background (not on nodes)
+        if (event.target === svg.node()) {
+          setIsFullscreen(true);
+        }
+      });
+    }
+
+    // Only enable zoom/pan in fullscreen mode
+    if (isFullscreen) {
+      svg.call(zoom);
+    } else {
+      // Disable zoom/pan in collapsed mode
+      svg.on('.zoom', null);
     }
 
     // Create main group
@@ -328,8 +346,11 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
       .selectAll("g")
       .data(nodes)
       .enter().append("g")
-      .style("cursor", "pointer")
-      .call(d3.drag<SVGGElement, GraphNode>()
+      .style("cursor", "pointer");
+
+    // Only enable drag behavior in fullscreen mode
+    if (isFullscreen) {
+      node.call(d3.drag<SVGGElement, GraphNode>()
         .on("start", (event, d) => {
           if (!event.active) simulation.alphaTarget(0.3).restart();
           d.fx = d.x;
@@ -344,6 +365,7 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
           d.fx = null;
           d.fy = null;
         }));
+    }
 
     // Add circles to nodes
     node.append("circle")
@@ -363,8 +385,10 @@ export default function UserGraphTab({ userId, username }: UserGraphTabProps) {
       .attr("fill", "hsl(var(--foreground))")
       .style("pointer-events", "none");
 
-    // Add click handler
+    // Add click handler for nodes in both fullscreen and collapsed modes
     node.on("click", (event, d) => {
+      // Prevent event bubbling to background click handler
+      event.stopPropagation();
       router.push(`/${d.id}`);
     });
 

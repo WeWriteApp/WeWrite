@@ -301,8 +301,16 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
     } else {
       // Disable zoom/pan in collapsed mode
       svg.on('.zoom', null);
-      // Make graph completely non-interactive when collapsed
-      svg.style("pointer-events", "none");
+      // Allow pointer events for node clicks and background clicks in collapsed mode
+      svg.style("pointer-events", "auto");
+
+      // Add background click handler to open fullscreen when clicking non-node areas
+      svg.on("click", (event) => {
+        // Only trigger if clicking on the SVG background (not on nodes)
+        if (event.target === svg.node()) {
+          setIsFullscreen(true);
+        }
+      });
     }
 
     // Create main group for zooming
@@ -454,7 +462,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       .selectAll("g")
       .data(nodes)
       .enter().append("g")
-      .style("cursor", isFullscreen ? "pointer" : "default");
+      .style("cursor", "pointer"); // Always show pointer cursor for nodes
 
     // Only enable drag behavior in fullscreen mode
     if (isFullscreen) {
@@ -513,15 +521,16 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       .attr("fill", d => d.nodeType === 'related' ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))")
       .style("pointer-events", "none");
 
-    // Add click handler only in fullscreen mode
-    if (isFullscreen) {
-      node.on("click", (event, d) => {
-        if (d.id !== pageId) {
-          console.log('🎯 PageGraphView: Navigating to page:', d.id, 'from current page:', pageId);
-          router.push(`/${d.id}`);
-        }
-      });
-    }
+    // Add click handler for nodes in both fullscreen and collapsed modes
+    node.on("click", (event, d) => {
+      // Prevent event bubbling to background click handler
+      event.stopPropagation();
+
+      if (d.id !== pageId) {
+        console.log('🎯 PageGraphView: Navigating to page:', d.id, 'from current page:', pageId);
+        router.push(`/${d.id}`);
+      }
+    });
 
     // Start simulation with strong centering
     simulation.alpha(0.8).restart();
