@@ -1,5 +1,10 @@
 packages:
-  # Root package (Next.js app)
-  - '.'
-  # Firebase Functions
-  - 'functions'
+  - .
+  - functions
+
+overrides:
+  esbuild@<=0.24.2: '>=0.25.0'
+  path-to-regexp@>=4.0.0 <6.3.0: '>=6.3.0'
+  tar@<6.2.1: '>=6.2.1'
+  undici@<5.29.0: '>=5.29.0'
+  undici@>=4.5.0 <5.28.5: '>=5.28.5'
