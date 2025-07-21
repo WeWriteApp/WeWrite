@@ -61,6 +61,7 @@ export default function SubscriptionPage() {
   const [selectedTier, setSelectedTier] = useState<string>('tier1');
   const [selectedAmount, setSelectedAmount] = useState<number>(10);
   const [previousCustomAmount, setPreviousCustomAmount] = useState<number | null>(null);
+  const [syncingStatus, setSyncingStatus] = useState(false);
   const [showInlineTierSelector, setShowInlineTierSelector] = useState(false);
   const [showReactivationFlow, setShowReactivationFlow] = useState(false);
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
@@ -86,6 +87,38 @@ export default function SubscriptionPage() {
     const diffTime = endDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
+  };
+
+  // Function to sync subscription status with Stripe
+  const syncSubscriptionStatus = async () => {
+    if (!currentSubscription) return;
+
+    try {
+      setSyncingStatus(true);
+      const response = await fetch('/api/subscription/sync-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.synced && data.changes) {
+          console.log('🔄 Subscription status synced:', data.changes);
+          toast({
+            title: "Subscription Updated",
+            description: "Your subscription status has been synchronized with Stripe.",
+          });
+          // Refresh the page to reload subscription data
+          window.location.reload();
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing subscription status:', error);
+    } finally {
+      setSyncingStatus(false);
+    }
   };
 
   // Real-time subscription management - no manual intervention needed
@@ -196,6 +229,13 @@ export default function SubscriptionPage() {
             };
             setCurrentSubscription(transformedData);
             console.log('[SubscriptionPage] Set currentSubscription:', transformedData);
+
+            // Check for data inconsistency and auto-sync if needed
+            if (transformedData.status === 'active' && !transformedData.stripeSubscriptionId) {
+              console.log('🔍 Detected subscription data inconsistency, auto-syncing...');
+              // Auto-sync in the background after a short delay
+              setTimeout(() => syncSubscriptionStatus(), 1000);
+            }
 
             // Set UI state based on current subscription
             if (data.fullData.amount) {
@@ -349,7 +389,6 @@ export default function SubscriptionPage() {
     // Check if this is a modification of an active subscription
     const isActiveModification = currentSubscription &&
                                 currentSubscription.status === 'active' &&
-                                currentSubscription.stripeSubscriptionId &&
                                 selectedAmount !== currentSubscription.amount;
 
     // Check if this is a reactivation (subscription exists and is set to cancel or is cancelled)
@@ -647,6 +686,21 @@ export default function SubscriptionPage() {
                       >
                         {currentSubscription.status}
                       </Badge>
+
+                      {/* Data inconsistency warning */}
+                      {currentSubscription.status === 'active' && !currentSubscription.stripeSubscriptionId && (
+                        <Badge variant="destructive" className="bg-orange-500 hover:bg-orange-600">
+                          ⚠️ Sync Issue
+                        </Badge>
+                      )}
+
+                      {/* Cancelled subscription warning */}
+                      {currentSubscription.status === 'cancelled' && (
+                        <Badge variant="destructive">
+                          Cancelled in Stripe
+                        </Badge>
+                      )}
+
                       {currentSubscription.cancelAtPeriodEnd && (currentSubscription.billingCycleEnd || currentSubscription.currentPeriodEnd) && (
                         <Badge variant="destructive">
                           {(() => {
@@ -673,6 +727,29 @@ export default function SubscriptionPage() {
 
                   {/* Action buttons - mobile optimized */}
                   <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                    {/* Sync button for data inconsistencies */}
+                    {currentSubscription.status === 'active' && !currentSubscription.stripeSubscriptionId && (
+                      <Button
+                        onClick={syncSubscriptionStatus}
+                        variant="outline"
+                        className="w-full sm:w-auto border-orange-500 text-orange-600 hover:bg-orange-50"
+                        disabled={syncingStatus}
+                        size="sm"
+                      >
+                        {syncingStatus ? (
+                          <>
+                            <div className="animate-spin h-4 w-4 mr-2 border-2 border-orange-600 border-t-transparent rounded-full" />
+                            Syncing...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Sync with Stripe
+                          </>
+                        )}
+                      </Button>
+                    )}
+
                     {(currentSubscription.cancelAtPeriodEnd || currentSubscription.status === 'cancelled') ? (
                       <Button
                         onClick={() => setShowReactivationFlow(true)}
