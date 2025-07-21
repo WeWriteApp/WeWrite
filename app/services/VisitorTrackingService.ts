@@ -58,7 +58,7 @@ class VisitorTrackingService {
 
   // Session management constants - OPTIMIZED for cost reduction
   private static readonly SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
-  private static readonly HEARTBEAT_INTERVAL = 60 * 1000; // 60 seconds (increased from 15s to reduce writes by 75%)
+  private static readonly HEARTBEAT_INTERVAL = 120 * 1000; // 120 seconds (increased from 60s to reduce writes by 50% more)
   private static readonly INTERACTION_DEBOUNCE = 5000; // 5 seconds (increased to reduce noise)
   private static readonly BATCH_UPDATE_THRESHOLD = 3; // Batch updates when we have 3+ changes
 

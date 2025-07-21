@@ -8,8 +8,11 @@
  * - Cache hit/miss statistics
  */
 
+// Import unified cache configuration
+import { UNIFIED_CACHE_TTL } from './unifiedCache.js';
+
 class SearchCache {
-  constructor(maxSize = 100, ttlMs = 5 * 60 * 1000) { // 5 minutes default TTL
+  constructor(maxSize = 500, ttlMs = UNIFIED_CACHE_TTL.SEARCH_DATA) { // Use unified search cache TTL
     this.cache = new Map();
     this.maxSize = maxSize;
     this.ttlMs = ttlMs;

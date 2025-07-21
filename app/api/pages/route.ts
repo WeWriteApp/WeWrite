@@ -8,6 +8,7 @@ import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '..
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
 import logger from '../../utils/unifiedLogger';
+import { cacheHelpers, invalidateCache, CACHE_TTL } from '../../utils/serverCache';
 
 interface PageData {
   id?: string;
@@ -32,19 +33,16 @@ interface PageQuery {
   orderDirection?: 'asc' | 'desc';
 }
 
-// GET endpoint - Get pages with filtering and pagination
+// GET endpoint - Get pages with filtering and pagination (with server-side caching)
 export async function GET(request: NextRequest) {
   try {
-    const admin = getFirebaseAdmin();
-    const db = admin.firestore();
-
     const currentUserId = await getUserIdFromRequest(request);
     if (!currentUserId) {
       return createErrorResponse('UNAUTHORIZED');
     }
 
     const { searchParams } = new URL(request.url);
-    
+
     // Parse query parameters
     const query: PageQuery = {
       userId: searchParams.get('userId') || undefined,
@@ -55,83 +53,92 @@ export async function GET(request: NextRequest) {
       orderDirection: (searchParams.get('orderDirection') as any) || 'desc'
     };
 
-    // Build simplified Firestore query to avoid composite index requirements
-    // We'll filter by userId and orderBy only, then filter other conditions client-side
-    let firestoreQuery = db.collection(getCollectionName('pages'))
-      .where('userId', '==', query.userId)
-      .orderBy(query.orderBy, query.orderDirection);
+    // Create cache key based on query parameters
+    const cacheKey = `pages_${currentUserId}_${JSON.stringify(query)}`;
 
-    // Add pagination
-    if (query.startAfter) {
-      const startAfterDoc = await db.collection(getCollectionName('pages')).doc(query.startAfter).get();
-      if (startAfterDoc.exists) {
-        firestoreQuery = firestoreQuery.startAfter(startAfterDoc);
-      }
-    }
+    // Use cached data if available
+    const cachedResult = await cacheHelpers.getApiData(cacheKey, async () => {
+      const admin = getFirebaseAdmin();
+      const db = admin.firestore();
 
-    // Apply limit (get extra to account for client-side filtering)
-    firestoreQuery = firestoreQuery.limit((query.limit || 20) + 10);
+      // Build simplified Firestore query to avoid composite index requirements
+      // We'll filter by userId and orderBy only, then filter other conditions client-side
+      let firestoreQuery = db.collection(getCollectionName('pages'))
+        .where('userId', '==', query.userId)
+        .orderBy(query.orderBy, query.orderDirection);
 
-    // Execute query
-    const snapshot = await firestoreQuery.get();
-
-    const pages: PageData[] = [];
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      
-      // Access control: only return pages user can access
-      const canAccess =
-        data.userId === currentUserId ||
-        data.userId === currentUserId;
-
-      if (!canAccess) {
-        return; // Skip pages user can't access
+      // Add pagination
+      if (query.startAfter) {
+        const startAfterDoc = await db.collection(getCollectionName('pages')).doc(query.startAfter).get();
+        if (startAfterDoc.exists) {
+          firestoreQuery = firestoreQuery.startAfter(startAfterDoc);
+        }
       }
 
-      // Apply additional filters
+      // Apply limit (get extra to account for client-side filtering)
+      firestoreQuery = firestoreQuery.limit((query.limit || 20) + 10);
 
-      // Filter deleted pages (exclude by default unless specifically requested)
-      if (!query.includeDeleted && data.deleted === true) {
-        return; // Skip deleted pages
-      }
+      // Execute query
+      const snapshot = await firestoreQuery.get();
 
-      // If specifically requesting deleted pages, only show deleted ones
-      if (query.includeDeleted && query.userId === currentUserId && data.deleted !== true) {
-        return; // Skip non-deleted pages when requesting deleted ones
-      }
+      const pages: PageData[] = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
 
+        // Access control: only return pages user can access
+        const canAccess =
+          data.userId === currentUserId ||
+          data.userId === currentUserId;
 
+        if (!canAccess) {
+          return; // Skip pages user can't access
+        }
 
-      // Page passes all filters, add it to results
-      pages.push({
-        id: doc.id,
-        title: data.title || 'Untitled',
-        userId: data.userId,
-        username: data.username,
-        groupId: data.groupId,
-        lastModified: data.lastModified,
-        createdAt: data.createdAt,
-        deleted: data.deleted || false,
-        deletedAt: data.deletedAt,
-        customDate: data.customDate || null // Include customDate for Timeline functionality
+        // Apply additional filters
+
+        // Filter deleted pages (exclude by default unless specifically requested)
+        if (!query.includeDeleted && data.deleted === true) {
+          return; // Skip deleted pages
+        }
+
+        // If specifically requesting deleted pages, only show deleted ones
+        if (query.includeDeleted && query.userId === currentUserId && data.deleted !== true) {
+          return; // Skip non-deleted pages when requesting deleted ones
+        }
+
+        // Page passes all filters, add it to results
+        pages.push({
+          id: doc.id,
+          title: data.title || 'Untitled',
+          userId: data.userId,
+          username: data.username,
+          groupId: data.groupId,
+          lastModified: data.lastModified,
+          createdAt: data.createdAt,
+          deleted: data.deleted || false,
+          deletedAt: data.deletedAt,
+          customDate: data.customDate || null // Include customDate for Timeline functionality
+        });
       });
+
+      // Trim results to requested limit (since we fetched extra for filtering)
+      const limitedPages = pages.slice(0, query.limit);
+
+      // Check if there are more pages (if we got more results than the limit, there are more)
+      const hasMore = pages.length > query.limit;
+      const lastPageId = limitedPages.length > 0 ? limitedPages[limitedPages.length - 1].id : null;
+
+      return {
+        pages: limitedPages,
+        pagination: {
+          hasMore,
+          lastPageId,
+          limit: query.limit
+        }
+      };
     });
 
-    // Trim results to requested limit (since we fetched extra for filtering)
-    const limitedPages = pages.slice(0, query.limit);
-
-    // Check if there are more pages (if we got more results than the limit, there are more)
-    const hasMore = pages.length > query.limit;
-    const lastPageId = limitedPages.length > 0 ? limitedPages[limitedPages.length - 1].id : null;
-
-    return createApiResponse({
-      pages: limitedPages,
-      pagination: {
-        hasMore,
-        lastPageId,
-        limit: query.limit
-      }
-    });
+    return createApiResponse(cachedResult);
 
   } catch (error) {
     console.error('Error fetching pages:', error);

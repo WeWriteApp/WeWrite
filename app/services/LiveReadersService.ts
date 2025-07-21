@@ -1,4 +1,5 @@
 import { getDatabase, ref, onValue, set, remove, onDisconnect, increment, serverTimestamp, Database, Unsubscribe } from 'firebase/database';
+import { batchUpdateData } from '../firebase/rtdb';
 
 interface ReaderTrackingEntry {
   pageId: string;
@@ -24,11 +25,11 @@ class LiveReadersService {
   private batchUpdates = new Map<string, BatchUpdate>();
   private updateInterval: NodeJS.Timeout | null = null;
 
-  // Enhanced cost optimization settings with smart throttling
-  private readonly BATCH_INTERVAL = 15000; // 15 seconds - increased for better cost efficiency
-  private readonly BASE_THROTTLE_INTERVAL = 10000; // 10 seconds base minimum between updates per user
-  private readonly MAX_READERS_PER_PAGE = 30; // Reduced limit to prevent excessive costs
-  private readonly CACHE_CLEANUP_INTERVAL = 120000; // 2 minutes - less frequent cleanup
+  // Enhanced cost optimization settings with smart throttling - OPTIMIZED FOR COST REDUCTION
+  private readonly BATCH_INTERVAL = 30000; // 30 seconds - doubled to reduce RTDB writes by 50%
+  private readonly BASE_THROTTLE_INTERVAL = 20000; // 20 seconds base minimum between updates per user
+  private readonly MAX_READERS_PER_PAGE = 20; // Reduced from 30 to control costs further
+  private readonly CACHE_CLEANUP_INTERVAL = 300000; // 5 minutes - less frequent cleanup to reduce overhead
 
   // Smart throttling based on page activity
   private getThrottleInterval(pageId: string): number {
@@ -41,11 +42,11 @@ class LiveReadersService {
       .length;
 
     if (isCurrentPage && recentActivity > 5) {
-      return this.BASE_THROTTLE_INTERVAL; // 10 seconds for active pages
+      return this.BASE_THROTTLE_INTERVAL; // 20 seconds for active pages (updated)
     } else if (isCurrentPage) {
-      return this.BASE_THROTTLE_INTERVAL * 2; // 20 seconds for current but less active pages
+      return this.BASE_THROTTLE_INTERVAL * 2; // 40 seconds for current but less active pages
     } else {
-      return this.BASE_THROTTLE_INTERVAL * 4; // 40 seconds for background pages
+      return this.BASE_THROTTLE_INTERVAL * 6; // 2 minutes for background pages (increased from 40s)
     }
   }
 
@@ -143,20 +144,18 @@ class LiveReadersService {
           // Update reader count
           updates[`liveReaders/${pageId}/count`] = batch.readers.size;
 
-          // Update individual reader timestamps
-          for (const userId of batch.readers) {
-            updates[`liveReaders/${pageId}/readers/${userId}`] = {
-              timestamp: serverTimestamp(),
-              lastSeen: Date.now()
-            };
+          // Use optimized batch updates to reduce RTDB costs
+          for (const [path, value] of Object.entries(updates)) {
+            batchUpdateData(path, value);
           }
 
-          // Perform batched update
-          await Promise.all(
-            Object.entries(updates).map(([path, value]) =>
-              set(ref(this.db, path), value)
-            )
-          );
+          // Also update individual reader timestamps using batch
+          for (const userId of batch.readers) {
+            batchUpdateData(`liveReaders/${pageId}/readers/${userId}`, {
+              timestamp: serverTimestamp(),
+              lastSeen: Date.now()
+            });
+          }
 
           console.log(`[LiveReaders] Updated ${batch.readers.size} readers for page ${pageId}`);
         }

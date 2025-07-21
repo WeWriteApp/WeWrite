@@ -21,6 +21,7 @@ import { useSubscriptionWarning } from '../../hooks/useSubscriptionWarning';
 import { CheckCircle } from 'lucide-react';
 import { useBankSetupStatus } from '../../hooks/useBankSetupStatus';
 import { useUserEarnings } from '../../hooks/useUserEarnings';
+import { ConfirmationModal } from '../utils/ConfirmationModal';
 
 // Context for sidebar state management
 interface SidebarContextType {
@@ -208,8 +209,35 @@ function UnifiedSidebarContent({
   // Map feature is now always enabled
   const mapFeatureEnabled = true;
 
+  // Logout confirmation modal state
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   // Check if account is admin
   const isAdmin = session?.email === 'jamiegray2234@gmail.com';
+
+  // Handle logout confirmation
+  const handleLogoutClick = () => {
+    setShowLogoutConfirmation(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    setIsLoggingOut(true);
+    try {
+      console.log('🔴 SIDEBAR: Logout confirmed, calling logoutUser function');
+      await logoutUser();
+      console.log('🔴 SIDEBAR: logoutUser completed successfully');
+    } catch (error) {
+      console.error('🔴 SIDEBAR: Error during logout:', error);
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutConfirmation(false);
+    }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutConfirmation(false);
+  };
 
   // Check if we're on admin dashboard (should hide sidebar)
   const isAdminDashboard = pathname === '/admin/dashboard';
@@ -480,7 +508,7 @@ function UnifiedSidebarContent({
               {showContent ? (
                 <Button
                   variant="ghost"
-                  onClick={() => logoutUser()}
+                  onClick={handleLogoutClick}
                   className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
@@ -489,16 +517,7 @@ function UnifiedSidebarContent({
               ) : (
                 <Button
                   variant="ghost"
-                  onClick={(e) => {
-                    console.log('🔴 SIDEBAR: Logout button clicked (collapsed)', e);
-                    console.log('🔴 SIDEBAR: About to call logoutUser function');
-                    try {
-                      logoutUser();
-                      console.log('🔴 SIDEBAR: logoutUser called successfully');
-                    } catch (error) {
-                      console.error('🔴 SIDEBAR: Error calling logoutUser:', error);
-                    }
-                  }}
+                  onClick={handleLogoutClick}
                   className={cn(
                     "relative flex items-center h-12 w-full text-foreground hover:bg-primary/10 hover:text-primary transition-all duration-300 sidebar-nav-button",
                     showContent && "sidebar-nav-button-expanded"
@@ -518,5 +537,23 @@ function UnifiedSidebarContent({
   );
 
   // Use portal to render sidebar at document root level
-  return createPortal(sidebarContent, document.body);
+  return (
+    <>
+      {createPortal(sidebarContent, document.body)}
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showLogoutConfirmation}
+        onClose={handleLogoutCancel}
+        onConfirm={handleLogoutConfirm}
+        title="Confirm Logout"
+        message="Are you sure you want to log out? You'll need to sign in again to access your account."
+        confirmText="Log Out"
+        cancelText="Cancel"
+        variant="default"
+        icon="logout"
+        isLoading={isLoggingOut}
+      />
+    </>
+  );
 }

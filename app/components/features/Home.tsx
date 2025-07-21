@@ -4,12 +4,11 @@ import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "../layout/Header";
-import { useOptimizedHome } from "../../hooks/useOptimizedHome";
+// Removed useOptimizedHome - now using UnifiedRecentActivity
 import { Activity, Search } from "lucide-react";
-import RecentEdits from "./RecentEdits";
+import UnifiedRecentActivity from "../activity/UnifiedRecentActivity";
 import StickySection from "../utils/StickySection";
 import { SectionTitle } from "../ui/section-title";
-import RecentEditsHeader from "./RecentEditsHeader";
 
 import { Input } from "../ui/input";
 import DailyNotesSection from "../daily-notes/DailyNotesSection";
@@ -25,11 +24,7 @@ const Home: React.FC = () => {
   const { currentAccount, isAuthenticated, isLoading } = useCurrentAccount();
   console.log('🏠 [HOME_COMPONENT] Auth state:', { isAuthenticated, isLoading, hasCurrentAccount: !!currentAccount });
   const router = useRouter();
-  const [recentEditsFilterState, setRecentEditsFilterState] = useState({
-    currentViewMode: 'all' as 'all' | 'following',
-    hideMyEdits: true,
-    isLoadingFollows: false
-  });
+  // Removed recentEditsFilterState - now handled by UnifiedRecentActivity component
 
   // Handle search functionality - navigate to search page
   const handleSearchFocus = () => {
@@ -88,35 +83,14 @@ const Home: React.FC = () => {
             {/* Daily Notes Section */}
             <DailyNotesSection />
 
-            {/* Recent Edits Section - Now using recent pages with diff data */}
-            <StickySection
-              sectionId="recent-edits"
-              headerContent={
-                <RecentEditsHeader
-                  currentViewMode={recentEditsFilterState.currentViewMode}
-                  hideMyEdits={recentEditsFilterState.hideMyEdits}
-                  isLoadingFollows={recentEditsFilterState.isLoadingFollows}
-                  onViewModeChange={(mode) =>
-                    setRecentEditsFilterState(prev => ({ ...prev, currentViewMode: mode }))
-                  }
-                  onHideMyEditsChange={(hide) =>
-                    setRecentEditsFilterState(prev => ({ ...prev, hideMyEdits: hide }))
-                  }
-                />
-              }
-            >
-              <RecentEdits
-                renderFilterInHeader={true}
+            {/* Recent Edits Section - Now using unified activity system */}
+            <StickySection sectionId="recent-edits">
+              <UnifiedRecentActivity
+                mode="edits"
+                limit={20}
+                showFilters={true}
                 isCarousel={false}
-                onFilterStateChange={setRecentEditsFilterState}
-                externalViewMode={recentEditsFilterState.currentViewMode}
-                externalHideMyEdits={recentEditsFilterState.hideMyEdits}
-                onExternalViewModeChange={(mode) =>
-                  setRecentEditsFilterState(prev => ({ ...prev, currentViewMode: mode }))
-                }
-                onExternalHideMyEditsChange={(hide) =>
-                  setRecentEditsFilterState(prev => ({ ...prev, hideMyEdits: hide }))
-                }
+                className="w-full"
               />
             </StickySection>
 

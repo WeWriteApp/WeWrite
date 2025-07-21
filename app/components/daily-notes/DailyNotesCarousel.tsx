@@ -346,6 +346,28 @@ export default function DailyNotesCarousel({
     }
   };
 
+  // Handle add new click - only for today's date since daily notes use createdAt
+  const handleAddNewClick = useCallback((date: Date) => {
+    try {
+      const today = new Date();
+      const isToday = format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
+
+      // Only allow creating new notes for today since daily notes are based on createdAt
+      if (!isToday) {
+        console.warn('📅 DailyNotesCarousel: Cannot create note for past/future dates in daily notes');
+        return;
+      }
+
+      // Navigate to new page creation - no customDate needed since it will use current createdAt
+      // The page will automatically be grouped under today's date in the daily notes carousel
+      router.push('/new?type=daily-note');
+    } catch (error) {
+      console.error('📅 DailyNotesCarousel: Error handling add new click:', error);
+      // Fallback to home page if navigation fails
+      router.push('/');
+    }
+  }, [router]);
+
 
 
   // Animated scroll to today's card for initial load
@@ -548,6 +570,7 @@ export default function DailyNotesCarousel({
               date={date}
               notes={notesForDate}
               onNoteClick={handleNoteClick}
+              onAddNewClick={isToday ? handleAddNewClick : undefined} // Only allow adding new notes for today
               accentColor={accentColor}
               isToday={isToday}
               maxNotesCount={maxNotesCount}

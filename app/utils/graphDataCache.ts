@@ -31,9 +31,9 @@ interface UserPagesData {
  */
 class GraphDataCache {
   private cache = new Map<string, CacheEntry<any>>();
-  private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
-  private readonly RELATED_PAGES_TTL = 10 * 60 * 1000; // 10 minutes
-  private readonly USER_PAGES_TTL = 2 * 60 * 1000; // 2 minutes
+  private readonly DEFAULT_TTL = 2 * 60 * 60 * 1000; // 2 hours (increased from 5m for cost optimization)
+  private readonly RELATED_PAGES_TTL = 4 * 60 * 60 * 1000; // 4 hours (increased from 10m)
+  private readonly USER_PAGES_TTL = 1 * 60 * 60 * 1000; // 1 hour (increased from 2m)
 
   /**
    * Get cached data if valid, otherwise return null

@@ -35,17 +35,23 @@ export async function GET(request: NextRequest) {
     // Get the user's subscription from Firestore using server-side function
     const subscription = await getUserSubscriptionServer(targetUserId, { verbose: true });
 
-    console.log(`[ACCOUNT SUBSCRIPTION] 🔍 VERBOSE: Subscription data for user ${targetUserId}:`, {
-      hasSubscription: !!subscription,
-      status: subscription?.status,
-      amount: subscription?.amount,
-      tokens: (subscription as any)?.tokens,
-      cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd,
-      subscriptionExists: subscription !== null,
-      subscriptionType: typeof subscription,
-      subscriptionKeys: subscription ? Object.keys(subscription) : null,
-      fullData: subscription
-    });
+    // Only log verbose subscription data when explicitly debugging
+    if (process.env.SUBSCRIPTION_DEBUG === 'true') {
+      console.log(`[ACCOUNT SUBSCRIPTION] 🔍 VERBOSE: Subscription data for user ${targetUserId}:`, {
+        hasSubscription: !!subscription,
+        status: subscription?.status,
+        amount: subscription?.amount,
+        tokens: (subscription as any)?.tokens,
+        cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd,
+        subscriptionExists: subscription !== null,
+        subscriptionType: typeof subscription,
+        subscriptionKeys: subscription ? Object.keys(subscription) : null,
+        fullData: subscription
+      });
+    } else {
+      // Minimal logging for normal operation
+      console.log(`[ACCOUNT SUBSCRIPTION] User ${targetUserId}: ${subscription?.status || 'no subscription'} (${subscription?.amount || 0} tokens)`);
+    }
 
     if (!subscription) {
       console.log(`[ACCOUNT SUBSCRIPTION] 🔴 No subscription data found for user ${targetUserId} - this indicates data corruption or sync issues`);
@@ -80,7 +86,10 @@ export async function GET(request: NextRequest) {
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
       fullData: subscription
     };
-    console.log(`[ACCOUNT SUBSCRIPTION] ✅ Returning active subscription response:`, activeResponse);
+    // Only log full response when debugging
+    if (process.env.SUBSCRIPTION_DEBUG === 'true') {
+      console.log(`[ACCOUNT SUBSCRIPTION] ✅ Returning active subscription response:`, activeResponse);
+    }
     return NextResponse.json(activeResponse);
   } catch (error: unknown) {
     console.error('Error fetching user subscription data:', error);

@@ -93,28 +93,14 @@ function ApiSessionInitializer({ children }: ApiSessionInitializerProps) {
       // Create session cookies
       createSessionCookies(sessionData);
 
-      // Add to session store
+      // Add to session store (now waits for session to be available)
       const newSession = await addSession(sessionData);
-      console.log('ApiSessionInitializer: Session created:', newSession.sessionId);
+      console.log('ApiSessionInitializer: Session created and available:', newSession.sessionId);
 
-      // Wait for session to be available in the session store
-      let retries = 0;
-      const maxRetries = 10;
-      let sessionFound = false;
-      while (retries < maxRetries) {
-        const session = getSessionByUid(userData.uid);
-        if (session) {
-          console.log('ApiSessionInitializer: Session found in store, switching to it');
-          sessionFound = true;
-          break;
-        }
-        console.log(`ApiSessionInitializer: Session not yet available, retrying... (${retries + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, 100));
-        retries++;
-      }
-
-      if (!sessionFound) {
-        throw new Error(`Session not found in store after ${maxRetries} retries`);
+      // Verify session is available in store
+      const session = getSessionByUid(userData.uid);
+      if (!session) {
+        throw new Error(`Session not found in store after creation: ${userData.uid}`);
       }
 
       // Switch to the new session
@@ -218,8 +204,8 @@ function ApiSessionInitializer({ children }: ApiSessionInitializerProps) {
     // Initial session check
     pollForSessionChanges();
 
-    // Poll every 30 seconds for session changes
-    pollInterval = setInterval(pollForSessionChanges, 30000);
+    // Poll every 5 minutes for session changes (further optimized for cost reduction)
+    pollInterval = setInterval(pollForSessionChanges, 300000);
 
     // Listen for storage events (when user logs in/out in another tab)
     const handleStorageChange = (event: StorageEvent) => {

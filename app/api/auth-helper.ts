@@ -120,12 +120,17 @@ export async function getUserIdFromRequest(request: NextRequest): Promise<string
     console.warn('[AUTH DEBUG] Error enumerating cookies:', cookieError.message);
   }
 
-  console.log('[AUTH DEBUG] Available cookies:', Object.keys(allCookies));
-  console.log('[AUTH DEBUG] Session cookie exists:', !!request.cookies.get('session')?.value);
-  console.log('[AUTH DEBUG] UserSession cookie exists:', !!request.cookies.get('userSession')?.value);
-  console.log('[AUTH DEBUG] DevUserSession cookie exists:', !!request.cookies.get('devUserSession')?.value);
-  console.log('[AUTH DEBUG] Environment:', process.env.NODE_ENV);
-  console.log('[AUTH DEBUG] Vercel Environment:', process.env.VERCEL_ENV);
+  // Only log auth debug info when explicitly needed (errors or first-time setup)
+  const shouldLogAuthDebug = process.env.AUTH_DEBUG === 'true' || process.env.NODE_ENV === 'development' && Math.random() < 0.01;
+
+  if (shouldLogAuthDebug) {
+    console.log('[AUTH DEBUG] Available cookies:', Object.keys(allCookies));
+    console.log('[AUTH DEBUG] Session cookie exists:', !!request.cookies.get('session')?.value);
+    console.log('[AUTH DEBUG] UserSession cookie exists:', !!request.cookies.get('userSession')?.value);
+    console.log('[AUTH DEBUG] DevUserSession cookie exists:', !!request.cookies.get('devUserSession')?.value);
+    console.log('[AUTH DEBUG] Environment:', process.env.NODE_ENV);
+    console.log('[AUTH DEBUG] Vercel Environment:', process.env.VERCEL_ENV);
+  }
 
   // SECURITY: Query parameter authentication has been permanently removed
   // to prevent authentication bypass vulnerabilities
@@ -151,8 +156,10 @@ export async function getUserIdFromRequest(request: NextRequest): Promise<string
     return authHeaderUserId;
   }
 
-  // No user ID found
-  console.log('[AUTH DEBUG] No valid authentication found, returning null');
+  // No user ID found - only log when debugging
+  if (shouldLogAuthDebug) {
+    console.log('[AUTH DEBUG] No valid authentication found, returning null');
+  }
   return null;
 }
 
@@ -203,25 +210,34 @@ async function trySessionCookie(request: NextRequest): Promise<string | null> {
  * Try to authenticate using userSession cookie (WeWrite format)
  */
 async function tryUserSessionCookie(request: NextRequest): Promise<string | null> {
+  const shouldLogAuthDebug = process.env.AUTH_DEBUG === 'true' || (process.env.NODE_ENV === 'development' && Math.random() < 0.01);
+
   const userSessionCookie = request.cookies.get('userSession')?.value;
   if (!userSessionCookie) {
-    console.log('[AUTH DEBUG] No userSession cookie found');
+    if (shouldLogAuthDebug) {
+      console.log('[AUTH DEBUG] No userSession cookie found');
+    }
     return null;
   }
 
-  console.log('[AUTH DEBUG] Found userSession cookie, length:', userSessionCookie.length);
+  // Only log userSession details when debugging
+  if (shouldLogAuthDebug) {
+    console.log('[AUTH DEBUG] Found userSession cookie, length:', userSessionCookie.length);
+  }
 
   try {
     // Try parsing as JSON first (new format)
     const userSession: UserSession = JSON.parse(userSessionCookie);
     if (userSession && userSession.uid) {
-      console.log('[AUTH DEBUG] Using userId from userSession cookie (JSON format):', userSession.uid);
-      console.log('[AUTH DEBUG] UserSession details:', {
-        uid: userSession.uid,
-        email: userSession.email,
-        username: userSession.username,
-        isDevelopment: userSession.isDevelopment
-      });
+      if (shouldLogAuthDebug) {
+        console.log('[AUTH DEBUG] Using userId from userSession cookie (JSON format):', userSession.uid);
+        console.log('[AUTH DEBUG] UserSession details:', {
+          uid: userSession.uid,
+          email: userSession.email,
+          username: userSession.username,
+          isDevelopment: userSession.isDevelopment
+        });
+      }
       return userSession.uid;
     } else {
       console.log('[AUTH DEBUG] userSession cookie missing uid:', userSession);
@@ -238,10 +254,14 @@ async function tryUserSessionCookie(request: NextRequest): Promise<string | null
     });
 
     if (userSessionCookie && typeof userSessionCookie === 'string' && userSessionCookie.trim()) {
-      console.log('[AUTH DEBUG] Using userId from userSession cookie (string format):', userSessionCookie);
+      if (shouldLogAuthDebug) {
+        console.log('[AUTH DEBUG] Using userId from userSession cookie (string format):', userSessionCookie);
+      }
       return userSessionCookie.trim();
     }
-    console.error('[AUTH DEBUG] Error parsing userSession cookie:', error);
+    if (shouldLogAuthDebug) {
+      console.error('[AUTH DEBUG] Error parsing userSession cookie:', error);
+    }
     return null;
   }
 }

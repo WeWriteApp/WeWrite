@@ -215,12 +215,39 @@ const botPatterns = [
 - **Client-Side Only**: Never runs on server
 - **Localhost Ignored**: Skips localhost and .local domains
 
-### Data Protection
+### Data Protection & Redaction Strategy
 
-- **No PII**: Personal identifiable information is sanitized
-- **No Financial Data**: Exact amounts are converted to ranges
-- **No Auth Data**: Tokens and keys are redacted
-- **GDPR Compliant**: Minimal data collection with user consent
+WeWrite uses a **selective redaction approach** since most content is public:
+
+#### ✅ **Not Redacted (Visible in LogRocket)**
+- Page content and text (since WeWrite pages are public)
+- Page titles and descriptions
+- User interface text and labels
+- Navigation and menu interactions
+- General form inputs (page creation, editing)
+- Search queries and results
+- Public user profiles and usernames
+
+#### 🔒 **Redacted (Hidden in LogRocket)**
+- **Payment Information**: Credit card numbers, CVV, expiration dates
+- **Bank Account Details**: Account numbers, routing numbers, IBAN, SWIFT codes
+- **Payout Information**: Withdrawal amounts, transfer details, bank connections
+- **Authentication Data**: Passwords, PINs, API tokens, secrets
+- **Personal Financial IDs**: SSN, tax IDs, EIN numbers
+- **Stripe/Plaid Forms**: Any input within payment or bank connection flows
+
+#### 🤖 **Smart Detection**
+The system automatically detects sensitive elements by:
+- Element IDs, names, classes, and types
+- Placeholder text and aria-labels
+- Parent container context (payment forms, bank modals)
+- Common financial keywords and patterns
+
+#### 📋 **Implementation Details**
+- **Input Sanitizer**: Custom function that checks each input element
+- **Context Aware**: Examines parent containers up to 3 levels
+- **Pattern Matching**: Uses comprehensive financial keyword detection
+- **Text Sanitizer**: Disabled for general content since pages are public
 
 ## Debugging
 
@@ -306,6 +333,46 @@ getSessionURL(url => console.log('Session:', url));
 
 // Test event tracking
 track('test_event', { test: true });
+
+// Test redaction logic (development only)
+import { testRedactionLogic } from '../utils/logrocket';
+testRedactionLogic(); // Shows which elements would be redacted
+```
+
+### Testing Redaction Logic
+
+To verify that the selective redaction is working correctly:
+
+```typescript
+import { testRedactionLogic } from '../utils/logrocket';
+
+// Run in browser console to test redaction patterns
+testRedactionLogic();
+```
+
+This will output:
+- ✅ Elements that should be redacted (financial inputs)
+- ❌ Elements that should NOT be redacted (public content)
+
+### Redaction Examples
+
+**Will be redacted:**
+```html
+<input id="card-number" name="cardNumber" type="text" />
+<input id="cvv" name="cvv" type="password" />
+<input id="bank-account" name="accountNumber" />
+<input class="stripe-input" name="payment" />
+<div class="payment-form">
+  <input name="amount" /> <!-- Redacted due to parent context -->
+</div>
+```
+
+**Will NOT be redacted:**
+```html
+<input id="page-title" name="title" type="text" />
+<textarea id="page-content" name="content"></textarea>
+<input id="username" name="username" type="text" />
+<input id="search-query" name="search" type="text" />
 ```
 
 ## Support

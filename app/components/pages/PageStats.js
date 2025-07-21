@@ -6,40 +6,65 @@ import { useRouter } from 'next/navigation';
 import SimpleSparkline from "../utils/SimpleSparkline";
 import { useAccentColor, ACCENT_COLOR_VALUES } from "../../contexts/AccentColorContext";
 import { useDateFormat } from "../../contexts/DateFormatContext";
+import { usePageStats } from "../../hooks/useUnifiedStats";
 
 /**
  * PageStats Component
  *
- * Displays page statistics in a card-based layout similar to the design reference.
- * Currently includes views, recent changes, and supporters.
+ * Displays page statistics using the unified stats service.
+ * Now automatically fetches all stats data and provides real-time updates.
  *
  * @param {Object} props
- * @param {number} props.viewCount - Total number of views
- * @param {Array} props.viewData - Hourly view data for sparkline
- * @param {number} props.changeCount - Number of recent changes
- * @param {Array} props.changeData - Hourly change data for sparkline
- * @param {number} props.supporterCount - Number of supporters pledging tokens
- * @param {Array} props.supporterData - Hourly supporter data for sparkline
- * @param {string} props.pageId - The ID of the page for navigation
+ * @param {string} props.pageId - The ID of the page for navigation (required)
  * @param {string} props.customDate - Custom date for the page (YYYY-MM-DD format)
  * @param {boolean} props.canEdit - Whether the user can edit the page
  * @param {Function} props.onCustomDateChange - Callback when custom date is changed
+ * @param {boolean} props.realTime - Enable real-time updates (default: false)
+ * @param {boolean} props.showSparklines - Show sparkline charts (default: true)
+ *
+ * Legacy props (deprecated but supported for backward compatibility):
+ * @param {number} props.viewCount - Will be overridden by unified stats
+ * @param {Array} props.viewData - Will be overridden by unified stats
+ * @param {number} props.changeCount - Will be overridden by unified stats
+ * @param {Array} props.changeData - Will be overridden by unified stats
+ * @param {number} props.supporterCount - Will be overridden by unified stats
+ * @param {Array} props.supporterData - Will be overridden by unified stats
  */
 export default function PageStats({
-  viewCount = 0,
-  viewData = [],
-  changeCount = 0,
-  changeData = [],
-  supporterCount = 0,
-  supporterData = [],
+  // New unified approach
   pageId,
   customDate,
   canEdit = false,
-  onCustomDateChange
+  onCustomDateChange,
+  realTime = false,
+  showSparklines = true,
+
+  // Legacy props (for backward compatibility)
+  viewCount: legacyViewCount = 0,
+  viewData: legacyViewData = [],
+  changeCount: legacyChangeCount = 0,
+  changeData: legacyChangeData = [],
+  supporterCount: legacySupporterCount = 0,
+  supporterData: legacySupporterData = []
 }) {
   const router = useRouter();
   const { accentColor, customColors } = useAccentColor();
   const { formatDateString } = useDateFormat();
+
+  // Use unified stats service
+  const { stats, loading, error } = usePageStats({
+    pageId,
+    realTime,
+    autoRefresh: !realTime // Auto-refresh if not real-time
+  });
+
+  // Use unified stats if available, fallback to legacy props
+  const viewCount = stats?.totalViews ?? legacyViewCount;
+  const viewData = stats?.viewData ?? legacyViewData;
+  const changeCount = stats?.recentChanges ?? legacyChangeCount;
+  const changeData = stats?.changeData ?? legacyChangeData;
+  const supporterCount = stats?.supporterCount ?? legacySupporterCount;
+  const supporterData = stats?.supporterData ?? legacySupporterData;
 
   // Get the actual color value based on the selected accent color
   const getAccentColorValue = () => {
@@ -54,6 +79,32 @@ export default function PageStats({
   const handleViewActivity = () => {
     router.push(`/${pageId}/activity`);
   };
+
+  // Handle loading state
+  if (loading && !stats) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="bg-muted/50 rounded-lg p-4 animate-pulse">
+            <div className="h-4 bg-muted rounded w-1/2 mb-2"></div>
+            <div className="h-8 bg-muted rounded w-3/4 mb-2"></div>
+            <div className="h-12 bg-muted rounded w-full"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-6">
+        <p className="text-destructive text-sm">
+          Failed to load page statistics: {error}
+        </p>
+      </div>
+    );
+  }
 
 
 

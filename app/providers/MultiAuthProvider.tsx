@@ -65,15 +65,24 @@ export const MultiAuthProvider: React.FC<MultiAuthProviderProps> = ({ children }
         createdAt: now,
         lastActiveAt: now,
         isActive: false,
-        isPersistent: true};
+        isPersistent: true
+      };
 
-      setSessions(prev => {
-        const updated = [...prev, newSession];
-        saveToStorage(updated);
-        return updated;
+      // Use a Promise to wait for the state update to complete
+      return new Promise((resolve, reject) => {
+        setSessions(prev => {
+          const updated = [...prev, newSession];
+          saveToStorage(updated);
+
+          // Use setTimeout to ensure the state update has been processed
+          setTimeout(() => {
+            console.log('MultiAuthProvider: Session added and available:', newSession.sessionId);
+            resolve(newSession);
+          }, 50); // Small delay to ensure React state update completes
+
+          return updated;
+        });
       });
-
-      return newSession;
     } catch (err) {
       const error = new SessionError('Failed to add session', SESSION_ERROR_CODES.STORAGE_ERROR);
       setError(error.message);

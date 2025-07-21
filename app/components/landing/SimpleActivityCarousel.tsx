@@ -5,18 +5,20 @@ import { Info } from 'lucide-react';
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import ContentCarousel from './ContentCarousel';
 import ActivityCard from '../activity/ActivityCard';
-// Removed useRecentActivity - now using RecentPagesActivity component
+import { useRecentEdits } from '../../hooks/useUnifiedActivity';
 
 /**
  * Simple client-side component that fetches and renders recent activity
- * Uses the same hook as the logged-in state
+ * Now using unified activity system
  */
 export default function SimpleActivityCarousel({ limit = 30 }: { limit?: number }) {
-  // TODO: Replace with RecentPagesActivity component
-  const activities = [];
-  const loading = false;
-  const error = null;
   const { currentAccount } = useCurrentAccount();
+
+  // Use unified activity hook for recent edits
+  const { activities, loading, error } = useRecentEdits({
+    limit,
+    autoRefresh: false // Don't auto-refresh on landing page
+  });
 
   // Removed console logs for better performance
 

@@ -808,20 +808,32 @@ export const getUserExternalLinksAggregated = async (
 
 /**
  * Get the global count of how many times an external URL is linked across all pages
+ * OPTIMIZED: Uses caching to reduce expensive full-collection scans
  */
 export const getGlobalExternalLinkCount = async (externalUrl: string): Promise<number> => {
   try {
+    // Import caching utilities
+    const { getCacheItem, setCacheItem, generateCacheKey } = await import('../../utils/cacheUtils');
+
+    // Check cache first (6 hour TTL for link counts)
+    const cacheKey = generateCacheKey('global_link_count', externalUrl);
+    const cached = getCacheItem<number>(cacheKey);
+    if (cached !== null) {
+      return cached;
+    }
+
     const { db } = await import('../config');
-    const { collection, query, where, getDocs } = await import('firebase/firestore');
+    const { collection, query, where, getDocs, limit } = await import('firebase/firestore');
 
     // Import environment config
     const { getCollectionName } = await import('../../utils/environmentConfig');
 
-    // Query pages only
+    // Optimized query with limit to reduce costs
     const pagesQuery = query(
       collection(db, getCollectionName('pages')),
       where('isPublic', '==', true),
-      where('deleted', '!=', true)
+      where('deleted', '!=', true),
+      limit(1000) // Limit to reduce read costs
     );
 
     const snapshot = await getDocs(pagesQuery);
@@ -849,6 +861,9 @@ export const getGlobalExternalLinkCount = async (externalUrl: string): Promise<n
         continue;
       }
     }
+
+    // Cache the result for 6 hours to reduce future reads
+    setCacheItem(cacheKey, count, 6 * 60 * 60 * 1000);
 
     return count;
   } catch (error) {

@@ -72,8 +72,8 @@ interface PendingPageView {
 class PageViewBatcher {
   private pendingViews: Map<string, PendingPageView> = new Map();
   private batchInterval: NodeJS.Timeout | null = null;
-  private readonly BATCH_DELAY = 30000; // 30 seconds
-  private readonly MAX_BATCH_SIZE = 10;
+  private readonly BATCH_DELAY = 60000; // 60 seconds (increased from 30s for cost optimization)
+  private readonly MAX_BATCH_SIZE = 20; // Increased from 10 to batch more efficiently
 
   constructor() {
     this.startBatchProcessor();

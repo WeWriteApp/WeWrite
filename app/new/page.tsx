@@ -9,7 +9,7 @@ import { auth } from "../firebase/config";
 // ReactGA removed - analytics now handled by UnifiedAnalyticsProvider
 // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
 // import { useWeWriteAnalytics } from "../hooks/useWeWriteAnalytics";
-import { ContentChangesTrackingService } from "../services/contentChangesTracking";
+// Removed ContentChangesTrackingService - now using unified diffService
 import { useRecentPages } from "../contexts/RecentPagesContext";
 // import { CONTENT_EVENTS } from "../constants/analytics-events";
 import { createReplyAttribution } from "../utils/linkUtils";
@@ -773,7 +773,8 @@ function NewPageContent() {
 
           // Track content changes for new page creation (non-blocking)
           console.log('🔵 Tracking content changes with pageId:', pageId);
-          ContentChangesTrackingService.trackContentChangeAdvanced(
+          const { trackContentChange } = await import("../utils/diffService");
+          trackContentChange(
             pageId,
             userId,
             username,

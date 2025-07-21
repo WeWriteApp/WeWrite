@@ -207,12 +207,82 @@ export function hasContentChangedSync(currentContent: any, previousContent: any)
   try {
     const current = typeof currentContent === 'string' ? currentContent : JSON.stringify(currentContent || '');
     const previous = typeof previousContent === 'string' ? previousContent : JSON.stringify(previousContent || '');
-    
+
     // Simple string comparison as fallback
     return current.trim() !== previous.trim();
   } catch (error) {
     console.error('Error in sync content comparison:', error);
     return true; // Assume changes if we can't determine
+  }
+}
+
+/**
+ * Track content changes for analytics
+ * Consolidates functionality from contentChangesTracking.ts
+ */
+export async function trackContentChange(
+  pageId: string,
+  userId: string,
+  username: string,
+  previousContent: any,
+  newContent: any
+): Promise<void> {
+  try {
+    // Check if there are meaningful changes
+    if (!hasContentChangedSync(newContent, previousContent)) {
+      console.log('Content tracking: No meaningful changes detected, skipping analytics recording');
+      return;
+    }
+
+    // Calculate diff using centralized service
+    const diffResult = await calculateDiff(newContent, previousContent);
+
+    // Only track if there are actual character changes
+    if (diffResult.added === 0 && diffResult.removed === 0) {
+      console.log('Content tracking: No character changes detected, skipping analytics recording');
+      return;
+    }
+
+    // Extract text content for length calculation
+    const { extractTextContent } = await import('./text-extraction');
+    const previousText = extractTextContent(previousContent);
+    const newText = extractTextContent(newContent);
+
+    // Create content change event
+    const changeEvent = {
+      pageId,
+      userId,
+      username,
+      charactersAdded: diffResult.added,
+      charactersDeleted: diffResult.removed,
+      netChange: diffResult.added - diffResult.removed,
+      timestamp: new Date(),
+      previousContentLength: previousText.length,
+      newContentLength: newText.length,
+      eventType: 'content_change'
+    };
+
+    // Store in Firestore analytics collection
+    const { collection, addDoc, Timestamp } = await import('firebase/firestore');
+    const { db } = await import('../firebase/database/core');
+    const { getCollectionName } = await import('./environmentConfig');
+
+    const analyticsRef = collection(db, getCollectionName('analytics_events'));
+    await addDoc(analyticsRef, {
+      ...changeEvent,
+      timestamp: Timestamp.fromDate(changeEvent.timestamp)
+    });
+
+    console.log('📊 Content change tracked:', {
+      pageId,
+      charactersAdded: diffResult.added,
+      charactersDeleted: diffResult.removed,
+      netChange: diffResult.added - diffResult.removed
+    });
+
+  } catch (error) {
+    console.error('Error tracking content change:', error);
+    // Don't throw error to avoid disrupting the save process
   }
 }
 

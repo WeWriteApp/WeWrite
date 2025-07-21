@@ -33,12 +33,18 @@ import { RotateCcw } from "lucide-react";
  * @param {boolean} compactLayout - Whether to use a more compact layout with less padding
  */
 const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) => {
+  // Early return if no activity data
+  if (!activity) {
+    console.error('ActivityCard: No activity data provided');
+    return null;
+  }
+
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const { currentAccount } = useCurrentAccount();
   const router = useRouter();
   const [pageData, setPageData] = useState(null);
-  const [currentPageName, setCurrentPageName] = useState(activity.pageName);
+  const [currentPageName, setCurrentPageName] = useState(activity?.pageName || 'Untitled');
   const { formatDate } = useDateFormat();
   const { toast } = useToast();
   const [isRestoring, setIsRestoring] = useState(false);
@@ -103,8 +109,8 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
   // Update currentPageName when activity changes
   useEffect(() => {
-    setCurrentPageName(activity.pageName);
-  }, [activity.pageName]);
+    setCurrentPageName(activity?.pageName || 'Untitled');
+  }, [activity?.pageName]);
 
   // Validate activity data
   useEffect(() => {

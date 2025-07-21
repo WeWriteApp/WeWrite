@@ -13,7 +13,10 @@ export async function GET(request, { params }) {
       );
     }
 
-    console.log(`API: Fetching page details for ID: ${id}`);
+    // Only log page fetching when debugging
+    if (process.env.PAGE_DEBUG === 'true') {
+      console.log(`API: Fetching page details for ID: ${id}`);
+    }
 
     // Get the current user ID for access control
     const userId = await getUserIdFromRequest(request);
@@ -93,12 +96,15 @@ export async function GET(request, { params }) {
       deleted: pageData.deleted || false
     };
 
-    console.log(`API: Successfully fetched page details for ${id}:`, {
-      title: response.title,
-      authorUsername: response.authorUsername,
-      userId: response.userId,
-      deleted: response.deleted
-    });
+    // Only log successful page fetches when debugging
+    if (process.env.PAGE_DEBUG === 'true') {
+      console.log(`API: Successfully fetched page details for ${id}:`, {
+        title: response.title,
+        authorUsername: response.authorUsername,
+        userId: response.userId,
+        deleted: response.deleted
+      });
+    }
 
     return NextResponse.json(response);
 

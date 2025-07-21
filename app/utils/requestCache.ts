@@ -1,7 +1,10 @@
 /**
  * Request caching and deduplication system for WeWrite
  * Prevents duplicate API calls and implements intelligent caching
+ * Now using unified cache configuration
  */
+
+import { UNIFIED_CACHE_TTL } from './unifiedCache';
 
 interface CacheEntry<T> {
   data: T;
@@ -19,8 +22,8 @@ interface RequestOptions {
 class RequestCache {
   private cache = new Map<string, CacheEntry<any>>();
   private pendingRequests = new Map<string, Promise<any>>();
-  private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
-  private readonly MAX_CACHE_SIZE = 1000;
+  private readonly DEFAULT_TTL = UNIFIED_CACHE_TTL.DEFAULT; // Use unified default TTL
+  private readonly MAX_CACHE_SIZE = 2000; // Increased from 1000 to cache more data
 
   /**
    * Get cached data or execute request with deduplication

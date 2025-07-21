@@ -15,8 +15,8 @@ import { ref, get } from "firebase/database";
 import { getCacheItem, setCacheItem, generateCacheKey } from "../utils/cacheUtils";
 import { getEffectiveTier } from "../utils/subscriptionTiers";
 
-// Cache TTL for user data (10 minutes)
-const USER_DATA_CACHE_TTL = 10 * 60 * 1000;
+// Ultra-aggressive cache TTL for user data cost optimization
+const USER_DATA_CACHE_TTL = 4 * 60 * 60 * 1000; // 4 hours (increased from 10m for massive cost reduction)
 
 // In-memory cache for frequently accessed user data
 const userDataMemoryCache = new Map<string, {

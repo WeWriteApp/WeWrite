@@ -476,13 +476,13 @@ export const createOptimizedPageListener = (
     const isEditMode = window.location.pathname.includes('/edit');
 
     if (isCurrentPage && isEditMode && isUserActive) {
-      return 20000; // 20 seconds for active editing (increased from 15s)
+      return 30000; // 30 seconds for active editing (increased from 20s for cost optimization)
     } else if (isCurrentPage && isUserActive) {
-      return 45000; // 45 seconds for active viewing (increased from 30s)
+      return 60000; // 1 minute for active viewing (increased from 45s)
     } else if (isUserActive) {
-      return 120000; // 2 minutes for background pages while user is active (increased from 1m)
+      return 180000; // 3 minutes for background pages while user is active (increased from 2m)
     } else {
-      return 600000; // 10 minutes for inactive users (increased from 5m)
+      return 900000; // 15 minutes for inactive users (increased from 10m)
     }
   };
 

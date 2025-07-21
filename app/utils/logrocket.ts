@@ -1,8 +1,14 @@
 /**
  * LogRocket Integration for WeWrite
- * 
- * Provides session replay, console logging, and error tracking
- * with proper data sanitization and production-only initialization
+ *
+ * Provides session replay, console logging, and error tracking with selective
+ * data sanitization. Since WeWrite pages are public, we only redact sensitive
+ * financial information (payments, bank connections, payouts) while allowing
+ * all other content to be visible for better debugging and user experience analysis.
+ *
+ * Redaction Strategy:
+ * - ✅ Page content, titles, UI text (public content)
+ * - 🔒 Payment forms, bank details, payout information (sensitive financial data)
  */
 
 import LogRocket from 'logrocket';
@@ -88,11 +94,29 @@ class LogRocketService {
       console.log('🚀 Initializing LogRocket with app ID:',
         `${process.env.NEXT_PUBLIC_LOGROCKET_APP_ID.substring(0, 8)}...`);
 
-      // Initialize LogRocket with app ID and sanitization config
+      // Initialize LogRocket with app ID and selective sanitization config
       LogRocket.init(process.env.NEXT_PUBLIC_LOGROCKET_APP_ID, {
         dom: {
-          inputSanitizer: true,
-          textSanitizer: true,
+          // Only sanitize inputs that contain sensitive financial data
+          inputSanitizer: (text: string, element: HTMLElement) => {
+            // Check if this is a sensitive financial input
+            const isSensitive = logRocketService.isSensitiveFinancialElement(element);
+
+            if (isSensitive) {
+              console.log('🔒 LogRocket: Redacting sensitive financial input:', {
+                elementId: element.id,
+                elementName: element.getAttribute('name'),
+                elementClass: element.className,
+                textLength: text.length
+              });
+              return '*'.repeat(text.length);
+            }
+
+            // For all other inputs (page content, titles, etc.), show actual text
+            return text;
+          },
+          // Disable general text sanitization since WeWrite pages are public
+          textSanitizer: false,
           baseHref: null
         },
         network: {
@@ -376,14 +400,139 @@ class LogRocketService {
    */
   private isSensitiveKey(key: string): boolean {
     const sensitivePatterns = [
-      'token', 'balance', 'payment', 'card', 'auth', 'secret', 
+      'token', 'balance', 'payment', 'card', 'auth', 'secret',
       'key', 'password', 'stripe', 'bank', 'account', 'ssn',
       'credit', 'debit', 'cvv', 'pin', 'routing'
     ];
 
-    return sensitivePatterns.some(pattern => 
+    return sensitivePatterns.some(pattern =>
       key.toLowerCase().includes(pattern)
     );
+  }
+
+  /**
+   * Check if an HTML element contains sensitive financial information
+   * Only redact inputs related to payments, bank connections, and payouts
+   */
+  public isSensitiveFinancialElement(element: HTMLElement): boolean {
+    // Check element attributes for sensitive patterns
+    const elementId = element.id?.toLowerCase() || '';
+    const elementName = element.getAttribute('name')?.toLowerCase() || '';
+    const elementClass = element.className?.toLowerCase() || '';
+    const elementType = element.getAttribute('type')?.toLowerCase() || '';
+    const elementPlaceholder = element.getAttribute('placeholder')?.toLowerCase() || '';
+    const elementAriaLabel = element.getAttribute('aria-label')?.toLowerCase() || '';
+
+    // Combine all attributes to check
+    const allAttributes = [
+      elementId, elementName, elementClass, elementType,
+      elementPlaceholder, elementAriaLabel
+    ].join(' ');
+
+    // Financial patterns that should be redacted
+    const sensitiveFinancialPatterns = [
+      // Payment information
+      'card', 'credit', 'debit', 'cvv', 'cvc', 'expiry', 'expiration',
+      'payment', 'billing', 'stripe',
+
+      // Bank information
+      'bank', 'routing', 'account', 'iban', 'swift', 'sort',
+      'plaid', 'institution',
+
+      // Payout information
+      'payout', 'withdraw', 'transfer', 'balance',
+
+      // Authentication (for financial flows)
+      'password', 'pin', 'token', 'secret', 'key',
+
+      // Personal financial identifiers
+      'ssn', 'tax', 'ein', 'social'
+    ];
+
+    // Check if any sensitive pattern matches
+    const hasSensitivePattern = sensitiveFinancialPatterns.some(pattern =>
+      allAttributes.includes(pattern)
+    );
+
+    // Additional checks for parent containers
+    let parent = element.parentElement;
+    let depth = 0;
+    while (parent && depth < 3) { // Check up to 3 levels up
+      const parentClass = parent.className?.toLowerCase() || '';
+      const parentId = parent.id?.toLowerCase() || '';
+
+      if (parentClass.includes('payment') ||
+          parentClass.includes('bank') ||
+          parentClass.includes('payout') ||
+          parentClass.includes('stripe') ||
+          parentClass.includes('plaid') ||
+          parentId.includes('payment') ||
+          parentId.includes('bank') ||
+          parentId.includes('payout')) {
+        return true;
+      }
+
+      parent = parent.parentElement;
+      depth++;
+    }
+
+    return hasSensitivePattern;
+  }
+
+  /**
+   * Test the redaction logic (for debugging)
+   * Call this in development to verify redaction patterns
+   */
+  testRedactionLogic(): void {
+    if (typeof window === 'undefined') return;
+
+    console.log('🧪 Testing LogRocket redaction logic...');
+
+    // Test cases for elements that SHOULD be redacted
+    const sensitiveTestCases = [
+      { id: 'card-number', name: 'cardNumber', type: 'text' },
+      { id: 'cvv-input', name: 'cvv', type: 'password' },
+      { id: 'bank-account', name: 'accountNumber', type: 'text' },
+      { id: 'routing-number', name: 'routingNumber', type: 'text' },
+      { id: 'payout-amount', name: 'payoutAmount', type: 'number' },
+      { className: 'stripe-input', name: 'payment', type: 'text' },
+      { className: 'plaid-input', name: 'bankConnection', type: 'text' }
+    ];
+
+    // Test cases for elements that should NOT be redacted
+    const publicTestCases = [
+      { id: 'page-title', name: 'title', type: 'text' },
+      { id: 'page-content', name: 'content', type: 'textarea' },
+      { id: 'username', name: 'username', type: 'text' },
+      { id: 'search-query', name: 'search', type: 'text' },
+      { id: 'page-description', name: 'description', type: 'text' }
+    ];
+
+    console.log('🔒 Elements that SHOULD be redacted:');
+    sensitiveTestCases.forEach(testCase => {
+      const mockElement = document.createElement('input');
+      Object.entries(testCase).forEach(([key, value]) => {
+        if (key === 'className') {
+          mockElement.className = value;
+        } else {
+          mockElement.setAttribute(key, value);
+        }
+      });
+
+      const shouldRedact = this.isSensitiveFinancialElement(mockElement);
+      console.log(`  ${JSON.stringify(testCase)} → ${shouldRedact ? '✅ REDACTED' : '❌ NOT REDACTED'}`);
+    });
+
+    console.log('✅ Elements that should NOT be redacted:');
+    publicTestCases.forEach(testCase => {
+      const mockElement = document.createElement('input');
+      Object.entries(testCase).forEach(([key, value]) => {
+        mockElement.setAttribute(key, value);
+      });
+
+      const shouldRedact = this.isSensitiveFinancialElement(mockElement);
+      console.log(`  ${JSON.stringify(testCase)} → ${shouldRedact ? '❌ REDACTED' : '✅ NOT REDACTED'}`);
+    });
   }
 
   /**
@@ -399,13 +548,14 @@ export const logRocketService = new LogRocketService();
 
 // Export convenience functions
 export const initLogRocket = () => logRocketService.init();
-export const identifyUser = (user: Parameters<typeof logRocketService.identify>[0]) => 
+export const identifyUser = (user: Parameters<typeof logRocketService.identify>[0]) =>
   logRocketService.identify(user);
-export const trackEvent = (name: string, properties?: Record<string, any>) => 
+export const trackEvent = (name: string, properties?: Record<string, any>) =>
   logRocketService.track(name, properties);
-export const captureMessage = (message: string, extra?: Record<string, any>) => 
+export const captureMessage = (message: string, extra?: Record<string, any>) =>
   logRocketService.captureMessage(message, extra);
-export const getSessionURL = (callback: (url: string) => void) => 
+export const getSessionURL = (callback: (url: string) => void) =>
   logRocketService.getSessionURL(callback);
+export const testRedactionLogic = () => logRocketService.testRedactionLogic();
 
 export default logRocketService;

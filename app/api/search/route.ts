@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { BigQuery } from "@google-cloud/bigquery";
 import { searchUsers, getUserGroupMemberships, getGroupsData } from "../../firebase/database";
 import { getCollectionName, COLLECTIONS } from "../../utils/environmentConfig";
+import { cacheHelpers, CACHE_TTL } from "../../utils/serverCache";
 
 // Add export for dynamic route handling to prevent static build errors
 export const dynamic = 'force-dynamic';

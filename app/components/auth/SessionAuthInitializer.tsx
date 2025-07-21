@@ -111,9 +111,9 @@ function SessionAuthInitializer({ children }: SessionAuthInitializerProps) {
       const newSession = await addSession(sessionData);
       console.log('SessionAuthInitializer: Session created:', newSession.sessionId);
 
-      // Wait for session to be available in the session store with retry logic
+      // Wait for session to be available in the session store with optimized retry logic
       let retries = 0;
-      const maxRetries = 10;
+      const maxRetries = 5; // Reduced from 10 to minimize auth overhead
       let sessionFound = false;
       while (retries < maxRetries) {
         const session = getSessionByUid(firebaseUser.uid);
@@ -123,7 +123,7 @@ function SessionAuthInitializer({ children }: SessionAuthInitializerProps) {
           break;
         }
         console.log(`SessionAuthInitializer: Session not yet available, retrying... (${retries + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200)); // Increased delay to reduce rapid retries
         retries++;
       }
 

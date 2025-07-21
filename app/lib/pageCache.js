@@ -1,9 +1,10 @@
 "use client";
 
 // Removed Firebase imports - now using API endpoints
+import { UNIFIED_CACHE_TTL } from '../utils/unifiedCache';
 
-// Cache configuration - RUTHLESS SIMPLIFICATION: Very short TTL
-const CACHE_EXPIRY = 0; // DISABLE CACHE - force fresh queries every time
+// Cache configuration - using unified cache TTL
+const CACHE_EXPIRY = UNIFIED_CACHE_TTL.PAGE_DATA; // Use unified page data TTL
 const CACHE_KEY_PREFIX = 'wewrite_pages_';
 
 /**

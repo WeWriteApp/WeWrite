@@ -4,9 +4,9 @@ import { initAdmin } from '../../firebase/admin';
 import { getSubCollectionPath, PAYMENT_COLLECTIONS, getCollectionName } from '../../utils/environmentConfig';
 import { getEffectiveTier } from '../../utils/subscriptionTiers';
 
-// Server-side cache for home data
+// Server-side cache for home data - reduced TTL for recent edits functionality
 const homeCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
-const HOME_CACHE_TTL = 5 * 60 * 1000; // 5 minutes server-side cache
+const HOME_CACHE_TTL = 2 * 60 * 1000; // 2 minutes server-side cache (reduced from 30m to show recent edits faster)
 
 interface HomeData {
   recentlyVisitedPages: any[]; // Renamed from recentPages for clarity
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const cacheKey = `home:${userId || 'anonymous'}`;
     const cached = homeCache.get(cacheKey);
 
-    if (false && cached && Date.now() - cached.timestamp < cached.ttl) { // Temporarily disable cache
+    if (cached && Date.now() - cached.timestamp < cached.ttl) { // Re-enabled cache for cost optimization
       console.log('🏠 HOME API: Returning cached data:', {
         recentlyVisitedPagesCount: cached.data.recentlyVisitedPages?.length || 0,
         hasUserStats: !!cached.data.userStats,
@@ -59,13 +59,13 @@ export async function GET(request: NextRequest) {
         'getRecentlyVisitedPages', // Renamed for clarity
         { limit: 40, userId },
         () => getRecentlyVisitedPagesOptimized(40, userId), // Renamed function
-        { cacheTTL: 10 * 1000 } // 10 seconds cache for recently visited pages (faster updates)
+        { cacheTTL: 30 * 1000 } // 30 seconds cache for recently visited pages (reduced from 5m to show recent edits faster)
       ),
       userId ? executeDeduplicatedOperation(
         'getUserStats',
         { userId },
         () => getUserStatsOptimized(userId),
-        { cacheTTL: 5 * 60 * 1000 } // 5 minutes cache for user stats
+        { cacheTTL: 15 * 60 * 1000 } // 15 minutes cache for user stats (increased from 5m for cost optimization)
       ) : Promise.resolve(null)
     ]);
 
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
           'getBatchUserData',
           { userIds: uniqueUserIds.sort() }, // Sort for consistent cache keys
           () => getBatchUserDataOptimized(uniqueUserIds),
-          { cacheTTL: 3 * 60 * 1000 } // 3 minutes cache for user data
+          { cacheTTL: 10 * 60 * 1000 } // 10 minutes cache for user data (increased from 3m for cost optimization)
         );
       } catch (error) {
         console.warn('Error fetching batch user data:', error);
@@ -158,9 +158,10 @@ async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: str
     const db = adminApp.firestore();
 
     // Define home page fields to reduce document size by 60-70%
+    // Include lastDiff for recent edits functionality
     const homePageFields = [
       'title', 'isPublic', 'userId', 'username', 'displayName',
-      'lastModified', 'createdAt', 'totalPledged', 'pledgeCount', 'deleted'
+      'lastModified', 'createdAt', 'totalPledged', 'pledgeCount', 'deleted', 'lastDiff'
     ];
 
     let pagesQuery;
@@ -195,7 +196,9 @@ async function getRecentlyVisitedPagesOptimized(limitCount: number, userId?: str
         isPublic: p.isPublic,
         deleted: p.deleted,
         userId: p.userId,
-        lastModified: p.lastModified
+        lastModified: p.lastModified,
+        hasLastDiff: !!p.lastDiff,
+        lastDiffHasChanges: p.lastDiff?.hasChanges
       }))
     });
 

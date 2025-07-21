@@ -15,11 +15,11 @@ const db = admin.firestore();
 
 /**
  * Scheduled function to clean up temporary data
- * Runs every 3 days to remove expired temporary data
- * Reduced frequency from daily to reduce function execution costs
+ * Runs every 7 days to remove expired temporary data
+ * Further reduced frequency for cost optimization
  */
 exports.cleanupTemporaryData = functions.pubsub
-  .schedule('every 72 hours')
+  .schedule('every 168 hours') // Weekly instead of every 3 days
   .onRun(async (context) => {
     try {
       const now = admin.firestore.Timestamp.now();
@@ -71,11 +71,11 @@ exports.cleanupTemporaryData = functions.pubsub
 
 /**
  * Scheduled function to pre-compute statistics
- * Runs every 48 hours to calculate and store frequently accessed statistics
- * Reduced frequency from daily to reduce function execution costs
+ * Runs every 72 hours to calculate and store frequently accessed statistics
+ * Further reduced frequency for cost optimization
  */
 exports.computeDailyStats = functions.pubsub
-  .schedule('every 48 hours')
+  .schedule('every 72 hours') // Every 3 days instead of 2 days
   .onRun(async (context) => {
     try {
       // TODO: Add environment-aware collection naming for server-side functions
@@ -199,11 +199,11 @@ exports.permanentlyDeleteExpiredPages = functions.pubsub
 
 /**
  * Scheduled function to optimize database usage
- * Runs every two weeks to identify and fix inefficient data structures
- * Reduced frequency from weekly to reduce function execution costs
+ * Runs every month to identify and fix inefficient data structures
+ * Further reduced frequency for cost optimization
  */
 exports.optimizeDatabaseUsage = functions.pubsub
-  .schedule('every 336 hours') // Bi-weekly (14 days)
+  .schedule('every 720 hours') // Monthly (30 days) instead of bi-weekly
   .onRun(async (context) => {
     try {
       // Find pages with large content stored directly in the document

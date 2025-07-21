@@ -16,6 +16,54 @@ import type { User } from "../types/database";
 
 export const rtdb: Database = getDatabase(app);
 
+// Connection pooling and batching for cost optimization
+class RTDBConnectionManager {
+  private static instance: RTDBConnectionManager;
+  private batchedWrites: Map<string, any> = new Map();
+  private batchTimeout: NodeJS.Timeout | null = null;
+  private readonly BATCH_DELAY = 2000; // 2 seconds batch delay
+
+  static getInstance(): RTDBConnectionManager {
+    if (!RTDBConnectionManager.instance) {
+      RTDBConnectionManager.instance = new RTDBConnectionManager();
+    }
+    return RTDBConnectionManager.instance;
+  }
+
+  // Batch multiple writes to reduce RTDB operations
+  batchWrite(path: string, data: any): void {
+    this.batchedWrites.set(path, data);
+
+    if (this.batchTimeout) {
+      clearTimeout(this.batchTimeout);
+    }
+
+    this.batchTimeout = setTimeout(() => {
+      this.flushBatchedWrites();
+    }, this.BATCH_DELAY);
+  }
+
+  private async flushBatchedWrites(): Promise<void> {
+    if (this.batchedWrites.size === 0) return;
+
+    try {
+      const updates: Record<string, any> = {};
+      for (const [path, data] of this.batchedWrites.entries()) {
+        updates[path] = data;
+      }
+
+      await update(ref(rtdb), updates);
+      console.log(`[RTDB] Batched ${this.batchedWrites.size} writes to reduce costs`);
+
+      this.batchedWrites.clear();
+    } catch (error) {
+      console.error('[RTDB] Error flushing batched writes:', error);
+    }
+  }
+}
+
+const connectionManager = RTDBConnectionManager.getInstance();
+
 export const add = async (path: string, data: any): Promise<DatabaseReference> => {
   const dbRef = ref(rtdb, path);
   const newRef = push(dbRef);
@@ -26,6 +74,11 @@ export const add = async (path: string, data: any): Promise<DatabaseReference> =
 export const updateData = async (path: string, data: any): Promise<void> => {
   const dbRef = ref(rtdb, path);
   await update(dbRef, data);
+};
+
+// Optimized batch update function for cost reduction
+export const batchUpdateData = (path: string, data: any): void => {
+  connectionManager.batchWrite(path, data);
 };
 
 export const getDoc = async (path: string): Promise<any> => {

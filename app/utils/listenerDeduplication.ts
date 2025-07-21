@@ -30,7 +30,7 @@ class ListenerDeduplicationManager {
     key: string,
     createListener: () => Unsubscribe,
     callback: Function,
-    throttleInterval: number = 45000
+    throttleInterval: number = 120000 // Increased from 45s to 2 minutes for cost optimization
   ): Unsubscribe {
     const existing = this.listeners.get(key);
 

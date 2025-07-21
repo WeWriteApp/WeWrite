@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getCollectionName } from "../utils/environmentConfig";
+import { batchUpdate, flushFirestoreBatch } from '../utils/firestoreBatchUtils';
 import {
   AnalyticsDataLayer,
   type GlobalCounters,
@@ -104,41 +105,42 @@ export class AnalyticsAggregationService {
   }
 
   /**
-   * Increment counters when a page is created
+   * Increment counters when a page is created - OPTIMIZED WITH BATCHING
    */
   static async incrementPageCreated(isPublic: boolean): Promise<void> {
     try {
-const globalRef = doc(db, getCollectionName("analytics_counters"), 'global');
-      
-      // Update global counters
-      batch.update(globalRef, {
+      const globalRef = doc(db, getCollectionName("analytics_counters"), 'global');
+
+      // Use optimized batch updates to reduce Firestore costs
+      batchUpdate(globalRef, {
         totalPagesEverCreated: increment(1),
         totalActivePages: increment(1),
         ...(isPublic ? { totalPublicPages: increment(1) } : { totalPrivatePages: increment(1) }),
         lastUpdated: Timestamp.now()
       });
 
-      // Update daily aggregation
-const dailyRef = doc(db, getCollectionName("analytics_daily"), today);
-      batch.set(dailyRef, {
+      // Update daily aggregation using batch operations
+      const today = new Date().toISOString().split('T')[0];
+      const dailyRef = doc(db, getCollectionName("analytics_daily"), today);
+      batchUpdate(dailyRef, {
         date: today,
         pagesCreated: increment(1),
         ...(isPublic ? { publicPagesCreated: increment(1) } : { privatePagesCreated: increment(1) }),
         netChange: increment(1),
         lastUpdated: Timestamp.now()
-      }, { merge: true });
+      });
 
-      // Update hourly aggregation
+      // Update hourly aggregation using batch operations
       const now = new Date();
       const hourKey = `${today}-${now.getHours().toString().padStart(2, '0')}`;
-      const hourlyRef = doc(db, 'analytics_hourly', hourKey);
-      batch.set(hourlyRef, {
+      const hourlyRef = doc(db, getCollectionName('analytics_hourly'), hourKey);
+      batchUpdate(hourlyRef, {
         datetime: hourKey,
         pagesCreated: increment(1),
         ...(isPublic ? { publicPagesCreated: increment(1) } : { privatePagesCreated: increment(1) }),
         netChange: increment(1),
         lastUpdated: Timestamp.now()
-      }, { merge: true });
+      });
 
       await batch.commit();
       console.log('📊 Page creation counters updated');

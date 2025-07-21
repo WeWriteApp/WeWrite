@@ -66,13 +66,15 @@ interface LegacyCacheItem<T = any> {
   expiry: number;
 }
 
-// AGGRESSIVE TTL values for different data types to maximize cost savings
-const DEFAULT_TTL = (2 * 60 * 60 * 1000); // 2 hours - general purpose (increased from 15m)
-const STATIC_DATA_TTL = (4 * 60 * 60 * 1000); // 4 hours - for rarely changing data (increased from 1h)
-const USER_DATA_TTL = (3 * 60 * 60 * 1000); // 3 hours - for user profiles (increased from 30m)
-const PAGE_METADATA_TTL = (2.5 * 60 * 60 * 1000); // 2.5 hours - for page metadata (increased from 45m)
-const SUBSCRIPTION_DATA_TTL = (2 * 60 * 60 * 1000); // 2 hours - for subscription data (increased from 20m)
-const ANALYTICS_DATA_TTL = (1 * 60 * 60 * 1000); // 1 hour - for analytics (increased from 10m)
+import { UNIFIED_CACHE_TTL } from './unifiedCache';
+
+// Use unified TTL values for consistency across all caching systems
+const DEFAULT_TTL = UNIFIED_CACHE_TTL.DEFAULT;
+const STATIC_DATA_TTL = UNIFIED_CACHE_TTL.STATIC_DATA;
+const USER_DATA_TTL = UNIFIED_CACHE_TTL.USER_DATA;
+const PAGE_METADATA_TTL = UNIFIED_CACHE_TTL.PAGE_DATA;
+const SUBSCRIPTION_DATA_TTL = UNIFIED_CACHE_TTL.USER_DATA; // Subscription is user data
+const ANALYTICS_DATA_TTL = UNIFIED_CACHE_TTL.ANALYTICS_DATA;
 
 // Smart TTL mapping based on data type
 const TTL_MAP: Record<string, number> = {

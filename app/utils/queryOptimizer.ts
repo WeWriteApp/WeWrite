@@ -17,7 +17,7 @@ class QueryOptimizer {
   };
 
   private readonly STATS_RESET_INTERVAL = 60000; // 1 minute
-  private readonly WARNING_THRESHOLD = 500; // Queries per minute (increased threshold)
+  private readonly WARNING_THRESHOLD = 200; // Queries per minute (reduced for better cost monitoring)
 
   /**
    * Track a query execution
@@ -87,15 +87,21 @@ class QueryOptimizer {
     const suggestions: string[] = [];
 
     for (const [pattern, count] of patterns) {
-      if (count > 20) {
+      if (count > 10) { // Reduced threshold for earlier optimization warnings
         if (pattern.includes('getPageById')) {
-          suggestions.push('Consider using batch page loading or caching for page queries');
+          suggestions.push('URGENT: Batch page loading needed - ' + count + ' individual page queries detected');
         }
         if (pattern.includes('pages:')) {
-          suggestions.push('Consider implementing pagination or virtual scrolling for page lists');
+          suggestions.push('URGENT: Implement pagination/virtual scrolling - ' + count + ' page list queries detected');
         }
         if (pattern.includes('user:')) {
-          suggestions.push('Consider caching user data or using batch user queries');
+          suggestions.push('URGENT: Cache user data or use batch queries - ' + count + ' user queries detected');
+        }
+        if (pattern.includes('search:')) {
+          suggestions.push('URGENT: Implement search result caching - ' + count + ' search queries detected');
+        }
+        if (pattern.includes('analytics:')) {
+          suggestions.push('URGENT: Cache analytics data - ' + count + ' analytics queries detected');
         }
       }
     }

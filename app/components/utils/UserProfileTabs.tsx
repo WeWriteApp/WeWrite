@@ -9,7 +9,7 @@ import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProfilePagesContext } from "../../providers/ProfilePageProvider";
-import RecentPagesActivity from "../features/RecentPagesActivity";
+import UnifiedRecentActivity from "../activity/UnifiedRecentActivity";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import useSimplePages from "../../hooks/useSimplePages";
 import UsernameHistory from "../auth/UsernameHistory";
@@ -19,7 +19,6 @@ import UserBioTab from './UserBioTab';
 
 import { useUnifiedSearch, SEARCH_CONTEXTS } from '../../hooks/useUnifiedSearch';
 import SearchResultsDisplay from '../search/SearchResultsDisplay';
-import FollowingTabContent from './FollowingTabContent';
 import ExternalLinksTab from './ExternalLinksTab';
 import UserGraphTab from './UserGraphTab';
 import TimelineSection from '../timeline/TimelineSection';
@@ -106,7 +105,7 @@ export default function UserProfileTabs({ profile }) {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.slice(1);
       // Define basic valid tabs (we'll validate against full list in useEffect)
-      const basicValidTabs = ["bio", "pages", "activity", "timeline", "graph", "groups", "following", "external-links"];
+      const basicValidTabs = ["bio", "pages", "activity", "timeline", "graph", "external-links"];
       if (hash && basicValidTabs.includes(hash)) {
         return hash;
       }
@@ -245,11 +244,7 @@ export default function UserProfileTabs({ profile }) {
     tabs.push("external-links");
 
     // Groups tab removed - groups feature has been completely removed
-
-    // Add following tab only for the current user (privacy restriction)
-    if (isCurrentUser) {
-      tabs.push("following");
-    }
+    // Following tab removed - now available in sidebar
 
     return tabs;
   }, [isCurrentUser]);
@@ -562,18 +557,7 @@ export default function UserProfileTabs({ profile }) {
               </TabsTrigger>
 
               {/* Groups tab removed - groups feature has been completely removed */}
-
-              {/* Following tab - only for current user */}
-              {isCurrentUser && (
-                <TabsTrigger
-                  value="following"
-                  data-value="following"
-                  className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
-                >
-                  <Heart className="h-4 w-4" />
-                  <span>Following</span>
-                </TabsTrigger>
-              )}
+              {/* Following tab removed - now available in sidebar */}
 
             </TabsList>
           </div>
@@ -595,7 +579,13 @@ export default function UserProfileTabs({ profile }) {
                 : "hidden"
             }`}
           >
-            <RecentPagesActivity limit={10} isCarousel={false} userId={profile?.uid} />
+            <UnifiedRecentActivity
+              mode="all"
+              limit={10}
+              showFilters={false}
+              isCarousel={false}
+              className="w-full"
+            />
           </TabsContent>
 
           <TabsContent
@@ -736,19 +726,7 @@ export default function UserProfileTabs({ profile }) {
             />
           </TabsContent>
 
-          {isCurrentUser && (
-            <TabsContent
-              value="following"
-              className={`mt-0 transition-all duration-300 ${
-                activeTab === "following"
-                  ? "block"
-                  : "hidden"
-              }`}
-            >
-              <FollowingTabContent userId={profile?.uid} isCurrentUser={isCurrentUser} />
-            </TabsContent>
-          )}
-
+          {/* Following tab content removed - now available in sidebar */}
           {/* Groups tab content removed - groups feature has been completely removed */}
 
         </div>

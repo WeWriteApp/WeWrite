@@ -16,10 +16,8 @@ const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
   ssr: false,
   loading: () => <div className="h-8 w-24 bg-muted animate-pulse rounded-md"></div>
 });
-import { getPageViewsLast24Hours, getPageTotalViews } from "../../firebase/pageViews";
-import { getPageVersions } from "../../services/versionService";
+// Removed old stats imports - now using UnifiedStatsService via PageStats component
 import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
-import { getPagePledgeStats, getSupporterSparklineData } from "../../services/pledgeStatsService";
 
 /**
  * PageFooter Component
@@ -63,86 +61,7 @@ export default function PageFooter({
   canEdit
 }) {
   const { currentAccount } = useCurrentAccount();
-  // Payments feature is now always enabled
-  const isPaymentsEnabled = true;
-  const [viewData, setViewData] = useState({ total: 0, hourly: [] });
-  const [changeData, setChangeData] = useState({ count: 0, hourly: [] });
-  const [supporterData, setSupporterData] = useState({ count: 0, hourly: [] });
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Use a ref to track if we've already fetched data for this page
-  const dataFetched = React.useRef(new Set());
-
-  useEffect(() => {
-    if (!page || !page.id) return;
-
-    // Skip if we've already fetched data for this page
-    if (dataFetched.current.has(page.id)) return;
-
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        // Mark that we're fetching data for this page
-        dataFetched.current.add(page.id);
-        // Fetch view data
-        const views = await getPageViewsLast24Hours(page.id);
-        if (views.total === 0) {
-          const totalViews = await getPageTotalViews(page.id);
-          setViewData({ total: totalViews, hourly: Array(24).fill(0) });
-        } else {
-          setViewData(views);
-        }
-
-        // Fetch version data
-        const versions = await getPageVersions(page.id);
-
-        // Generate hourly data for changes
-        const now = new Date();
-        const yesterday = new Date(now);
-        yesterday.setDate(yesterday.getDate() - 1);
-
-        // Create 24 hourly buckets
-        const hourlyBuckets = Array(24).fill(0);
-
-        // Count versions in each hourly bucket
-        versions.forEach(version => {
-          if (version.createdAt) {
-            const versionDate = version.createdAt instanceof Date ?
-              version.createdAt : new Date(version.createdAt);
-
-            if (versionDate >= yesterday && versionDate <= now) {
-              const hourDiff = 23 - Math.floor((now - versionDate) / (1000 * 60 * 60));
-              if (hourDiff >= 0 && hourDiff < 24) {
-                hourlyBuckets[hourDiff]++;
-              }
-            }
-          }
-        });
-
-        setChangeData({
-          count: versions.length,
-          hourly: hourlyBuckets
-        });
-
-        // Fetch supporter data (only if payments are enabled)
-        if (isPaymentsEnabled) {
-          const pledgeStats = await getPagePledgeStats(page.id);
-          const supporterSparkline = await getSupporterSparklineData(page.id);
-
-          setSupporterData({
-            count: pledgeStats.sponsorCount,
-            hourly: supporterSparkline
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching page stats:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [page]);
+  // Removed old stats fetching logic - now handled by UnifiedStatsService in PageStats component
 
   if (!page) return null;
 
@@ -192,7 +111,7 @@ export default function PageFooter({
           page={page}
           content={content}
           isOwner={isOwner}
-          isEditing={false} // Always pass false since we removed edit mode toggle
+          isEditing={isEditing} // Pass actual editing state for consistency
           setIsEditing={setIsEditing}
           className="action-buttons-container"
           showFollowButton={currentAccount && !isOwner}
@@ -271,16 +190,12 @@ export default function PageFooter({
 
 
 
-      {/* Page stats section - only in view mode */}
-      {!isEditing && (
+      {/* Page stats section - show in view mode OR for page owners (who are always in edit mode) */}
+      {(!isEditing || isOwner) && (
         <PageStats
-          viewCount={viewData.total}
-          viewData={viewData.hourly}
-          changeCount={changeData.count}
-          changeData={changeData.hourly}
-          supporterCount={isPaymentsEnabled ? supporterData.count : undefined}
-          supporterData={isPaymentsEnabled ? supporterData.hourly : undefined}
           pageId={page.id}
+          realTime={true}
+          showSparklines={true}
         />
       )}
 

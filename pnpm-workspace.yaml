@@ -1,0 +1,5 @@
+packages:
+  # Root package (Next.js app)
+  - '.'
+  # Firebase Functions
+  - 'functions'

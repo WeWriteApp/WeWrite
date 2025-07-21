@@ -384,16 +384,19 @@ const SearchPage = React.memo(() => {
           <h1 className="text-2xl font-bold">Search</h1>
         </div>
         <div className="flex items-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={shareSearchUrl}
-            className="flex items-center gap-2 rounded-2xl"
-            aria-label="Share search results"
-          >
-            <Share2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Share</span>
-          </Button>
+          {/* Only show share button when there's a search query */}
+          {currentQuery && currentQuery.trim() && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={shareSearchUrl}
+              className="flex items-center gap-2 rounded-2xl"
+              aria-label="Share search results"
+            >
+              <Share2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Share</span>
+            </Button>
+          )}
         </div>
       </div>
 
