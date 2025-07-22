@@ -31,16 +31,16 @@ export async function GET(request: NextRequest) {
       let authorUsername = 'Unknown Author';
       
       try {
-        const pageRef = db.collection('pages').doc(data.resourceId);
+        const pageRef = db.collection(getCollectionName('pages')).doc(data.resourceId);
         const pageDoc = await pageRef.get();
-        
+
         if (pageDoc.exists) {
           const pageData = pageDoc.data();
           pageTitle = pageData?.title || pageTitle;
-          
+
           // Get author username if available
           if (pageData?.userId) {
-            const authorRef = db.collection('users').doc(pageData.userId);
+            const authorRef = db.collection(getCollectionName('users')).doc(pageData.userId);
             const authorDoc = await authorRef.get();
             if (authorDoc.exists) {
               authorUsername = authorDoc.data()?.username || authorUsername;

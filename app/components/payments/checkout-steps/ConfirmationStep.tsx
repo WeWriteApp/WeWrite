@@ -9,7 +9,7 @@ import { CheckCircle, Zap, Calendar, CreditCard, ArrowRight, Home, Settings, Loa
 import { StatusIcon } from '../../ui/status-icon';
 import { SelectedPlan } from '../SubscriptionCheckout';
 import { useRouter } from 'next/navigation';
-import { useCurrentAccount } from '../../../providers/CurrentAccountProvider';
+import { useAuth } from '../../../providers/AuthProvider';
 import { EmbeddedCheckoutService } from '../../../services/embeddedCheckoutService';
 
 interface ConfirmationStepProps {
@@ -34,17 +34,17 @@ export function ConfirmationStep({
   onComplete
 }: ConfirmationStepProps) {
   const router = useRouter();
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isProcessingSuccess, setIsProcessingSuccess] = useState(true);
   const [successProcessingError, setSuccessProcessingError] = useState<string>('');
 
   // Handle subscription success processing
   useEffect(() => {
-    if (subscriptionId && currentAccount?.uid) {
+    if (subscriptionId && user?.uid) {
       handleSubscriptionSuccess();
     }
-  }, [subscriptionId, currentAccount]);
+  }, [subscriptionId, user]);
 
   // Auto-redirect after a delay (optional)
   useEffect(() => {
@@ -60,7 +60,7 @@ export function ConfirmationStep({
   }, [onComplete, isProcessingSuccess]);
 
   const handleSubscriptionSuccess = async () => {
-    if (!subscriptionId || !currentAccount?.uid) return;
+    if (!subscriptionId || !user?.uid) return;
 
     try {
       setIsProcessingSuccess(true);
@@ -68,7 +68,7 @@ export function ConfirmationStep({
 
       const result = await EmbeddedCheckoutService.handleSubscriptionSuccess(
         subscriptionId,
-        currentAccount.uid
+        user.uid
       );
 
       if (!result.success) {

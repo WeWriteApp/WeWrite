@@ -4,9 +4,9 @@ import { PortfolioContext } from "../../providers/PortfolioProvider";
 // Using API endpoints instead of direct Firebase calls
 import {PillLink} from "../utils/PillLink";
 
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from "../../providers/AuthProvider";
 const SubscriptionsTable = () => {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   // Payments feature is now always enabled - no conditional rendering needed
   const { subscriptions } = useContext(PortfolioContext);
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
-import { DEV_TEST_USERS } from '../../../firebase/developmentAuth';
+import { DEV_TEST_USERS } from "../../../utils/testUsers";
 
 /**
  * Development endpoint to migrate user data from old session IDs to proper Firebase-style UIDs

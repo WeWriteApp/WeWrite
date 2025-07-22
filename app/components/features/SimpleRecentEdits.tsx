@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Clock, Eye, Edit, Users, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Clock, Eye, Edit, Users, Loader2, Activity, Check } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
@@ -12,7 +12,9 @@ import {
   DropdownMenuCheckboxItem,
 } from '../ui/dropdown-menu';
 import ActivityCard from '../activity/ActivityCard';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
+import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
+import { SectionTitle } from '../ui/section-title';
 
 interface RecentEdit {
   id: string;
@@ -38,65 +40,94 @@ interface Filters {
 }
 
 export default function SimpleRecentEdits() {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const [edits, setEdits] = useState<RecentEdit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>({
     includeOwn: false, // Hide own edits by default
     followingOnly: false
   });
 
-  const fetchRecentEdits = async () => {
+  const fetchRecentEdits = useCallback(async (cursor?: string, append = false) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!append) {
+        setLoading(true);
+        setError(null);
+      } else {
+        setLoadingMore(true);
+      }
 
       const params = new URLSearchParams({
-        limit: '20',
+        limit: '50',
         includeOwn: filters.includeOwn.toString(),
         followingOnly: filters.followingOnly.toString()
       });
 
-      if (currentAccount?.uid) {
-        params.set('userId', currentAccount.uid);
+      if (user?.uid) {
+        params.set('userId', user.uid);
+      }
+
+      if (cursor) {
+        params.set('cursor', cursor);
       }
 
       const response = await fetch(`/api/recent-edits?${params}`);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch recent edits: ${response.status}`);
       }
 
       const data = await response.json();
-      
+
       if (data.error) {
         throw new Error(data.error);
       }
 
-      setEdits(data.edits || []);
+      if (append) {
+        setEdits(prev => [...prev, ...(data.edits || [])]);
+      } else {
+        setEdits(data.edits || []);
+      }
+
+      setHasMore(data.hasMore || false);
+      setNextCursor(data.nextCursor || null);
     } catch (err) {
       console.error('Error fetching recent edits:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch recent edits');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  };
+  }, [user?.uid, filters]);
+
+  // Load more items when scrolling near bottom
+  const loadMore = useCallback(() => {
+    if (!loadingMore && hasMore && nextCursor) {
+      fetchRecentEdits(nextCursor, true);
+    }
+  }, [loadingMore, hasMore, nextCursor, fetchRecentEdits]);
+
+  // Set up infinite scroll
+  const { targetRef } = useInfiniteScroll(loadMore, { threshold: 300 });
 
   useEffect(() => {
     fetchRecentEdits();
-  }, [currentAccount?.uid, filters]);
+  }, [fetchRecentEdits]);
 
-  // Auto-refresh every 2 minutes to ensure recent edits stay fresh
+  // Auto-refresh every 5 minutes to ensure recent edits stay fresh
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!loading) {
+      if (!loading && !loadingMore) {
         fetchRecentEdits();
       }
-    }, 2 * 60 * 1000); // 2 minutes
+    }, 5 * 60 * 1000); // 5 minutes
 
     return () => clearInterval(interval);
-  }, [loading]);
+  }, [loading, loadingMore, fetchRecentEdits]);
 
   const updateFilter = (key: keyof Filters, value: boolean) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -132,69 +163,70 @@ export default function SimpleRecentEdits() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold">Recent Edits</h2>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {/* Refresh Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={fetchRecentEdits}
-            disabled={loading}
-            className="h-8 w-8 p-0"
-            title="Refresh recent edits"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
+      {/* Static Section Header */}
+      <SectionTitle
+        icon={Activity}
+        title="Recent Edits"
+      >
+        {loading && (
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        )}
 
-          {/* Filter Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 h-8 px-3 rounded-2xl">
-                <Eye className="h-4 w-4" />
-                <span className="sr-only">Filter</span>
-              </Button>
-            </DropdownMenuTrigger>
-            
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem
-                onClick={() => updateFilter('followingOnly', false)}
-              >
+        {/* Filter Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2 h-8 px-3 rounded-2xl">
+              <Eye className="h-4 w-4" />
+              <span className="sr-only">Filter</span>
+            </Button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem
+              onClick={() => updateFilter('followingOnly', false)}
+              className="relative flex cursor-default select-none items-center justify-between rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground"
+            >
+              <div className="flex items-center">
                 <Eye className="h-4 w-4 mr-2" />
                 All Recent Edits
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem
-                onClick={() => updateFilter('followingOnly', true)}
-              >
+              </div>
+              {!filters.followingOnly && (
+                <Check className="h-4 w-4" />
+              )}
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              onClick={() => updateFilter('followingOnly', true)}
+              className="relative flex cursor-default select-none items-center justify-between rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground"
+            >
+              <div className="flex items-center">
                 <Users className="h-4 w-4 mr-2" />
                 Following Only
-              </DropdownMenuItem>
-              
-              <DropdownMenuSeparator />
-              
-              <DropdownMenuCheckboxItem
-                checked={!filters.includeOwn}
-                onCheckedChange={(checked) => updateFilter('includeOwn', !checked)}
-              >
-                Hide my own edits
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+              </div>
+              {filters.followingOnly && (
+                <Check className="h-4 w-4" />
+              )}
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuCheckboxItem
+              checked={!filters.includeOwn}
+              onCheckedChange={(checked) => updateFilter('includeOwn', !checked)}
+            >
+              Hide my own edits
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SectionTitle>
 
       {/* Content */}
-      {edits.length === 0 ? (
+      {edits.length === 0 && !loading ? (
         <div className="text-center py-8 text-muted-foreground">
           <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
           <p>No recent edits found</p>
           <p className="text-sm">
-            {filters.followingOnly 
+            {filters.followingOnly
               ? "Try following some pages to see their edits here"
               : "Recent page edits will appear here"
             }
@@ -229,6 +261,24 @@ export default function SimpleRecentEdits() {
               />
             );
           })}
+
+          {/* Load more trigger element */}
+          <div ref={targetRef} className="h-4" />
+
+          {/* Loading more indicator */}
+          {loadingMore && (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
+              <span className="text-sm text-muted-foreground">Loading more edits...</span>
+            </div>
+          )}
+
+          {/* End of results indicator */}
+          {!hasMore && edits.length > 0 && (
+            <div className="text-center py-4 text-sm text-muted-foreground">
+              No more edits to load
+            </div>
+          )}
         </div>
       )}
     </div>

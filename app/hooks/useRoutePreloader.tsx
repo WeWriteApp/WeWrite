@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 
 interface PreloadOptions {
   priority?: 'high' | 'medium' | 'low';
@@ -29,7 +29,7 @@ interface RoutePreloadConfig {
 export function useRoutePreloader() {
   const router = useRouter();
   const pathname = usePathname();
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const preloadedRoutesRef = useRef<Map<string, number>>(new Map());
   const preloadTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
@@ -115,10 +115,10 @@ export function useRoutePreloader() {
     }
     
     // User-specific routes
-    if (session?.uid) {
+    if (user?.uid) {
       // Always preload user's profile
       configs.push({
-        route: `/user/${session.uid}`,
+        route: `/user/${user.uid}`,
         options: { priority: 'high', delay: 200 }
       });
       
@@ -143,9 +143,9 @@ export function useRoutePreloader() {
         
       case '/notifications':
         // From notifications, likely to go back to home or profile
-        if (session?.uid) {
+        if (user?.uid) {
           configs.push({
-            route: `/user/${session.uid}`,
+            route: `/user/${user.uid}`,
             options: { priority: 'medium', delay: 500 }
           });
         }
@@ -170,7 +170,7 @@ export function useRoutePreloader() {
     }
     
     return configs;
-  }, [pathname, session?.uid]);
+  }, [pathname, user?.uid]);
 
   // Auto-preload likely targets when route changes
   useEffect(() => {
@@ -221,16 +221,16 @@ export function useRoutePreloader() {
  * Hook for mobile navigation specific preloading
  */
 export function useMobileNavigationPreloader() {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const { preloadCritical, preloadOnInteraction } = useRoutePreloader();
 
   // Preload critical mobile navigation routes
   useEffect(() => {
-    if (!session?.uid) return;
+    if (!user?.uid) return;
     
     const criticalRoutes = [
       '/',
-      `/user/${session.uid}`,
+      `/user/${user.uid}`,
       '/notifications',
       '/new',
     ];
@@ -241,7 +241,7 @@ export function useMobileNavigationPreloader() {
     }, 1000);
     
     return () => clearTimeout(timer);
-  }, [session?.uid, preloadCritical]);
+  }, [user?.uid, preloadCritical]);
 
   // Return preload function for navigation buttons
   return {

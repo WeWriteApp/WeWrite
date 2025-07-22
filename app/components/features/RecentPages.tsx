@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, FileText } from 'lucide-react';
 import { getRecentlyViewedPageIds } from "../../utils/recentSearches";
 // Removed direct Firebase imports - now using API endpoints
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { PillLink } from "../utils/PillLink";
 import { Skeleton } from "../ui/skeleton";
 
@@ -16,7 +16,7 @@ import { Skeleton } from "../ui/skeleton";
 const RecentPages = React.memo(function RecentPages() {
   const [recentPages, setRecentPages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
 
   // Function to fetch recent pages
   const fetchRecentPages = async () => {
@@ -56,7 +56,7 @@ const RecentPages = React.memo(function RecentPages() {
           if (!page) return null;
 
           // Only include pages the user has access to and that are not deleted
-          if (!page.isPublic && (!session || page.userId !== session.uid)) {
+          if (!page.isPublic && (!user || page.userId !== user.uid)) {
             return null;
           }
 
@@ -94,7 +94,7 @@ const RecentPages = React.memo(function RecentPages() {
   // Load recently viewed pages on mount
   useEffect(() => {
     fetchRecentPages();
-  }, [, session]);
+  }, [, user]);
 
   // If there are no recently viewed pages and not loading, don't render anything
   if (!loading && !recentPages.length) {

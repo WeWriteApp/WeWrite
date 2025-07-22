@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
-import { DEV_TEST_USERS } from '../../../firebase/developmentAuth';
+import { DEV_TEST_USERS } from "../../../utils/testUsers";
 
 const { db } = getFirebaseAdmin();
 

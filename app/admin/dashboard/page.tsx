@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './dashboard.css';
 import { useRouter } from 'next/navigation';
-import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
+import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
 import { ChevronLeft, Filter, GripVertical, Grid3X3, List } from 'lucide-react';
 import { isAdmin } from "../../utils/isAdmin";
@@ -113,7 +113,7 @@ const initialWidgets = [
 export default function AdminDashboardPage() {
   console.log('🚀🚀🚀 AdminDashboardPage component is rendering! 🚀🚀🚀');
 
-  const { session, isLoading: authLoading } = useCurrentAccount();
+  const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
   const [widgets, setWidgets] = useState(initialWidgets);
@@ -201,10 +201,10 @@ export default function AdminDashboardPage() {
 
   // Debug current user authentication
   console.log('🔐 [Admin Dashboard] Current user:', {
-    user: session?.user,
-    email: session?.user?.email,
-    uid: session?.user?.uid,
-    isAdmin: session?.user?.email ? isAdmin(session.user.email) : false
+    user: user?.user,
+    email: user?.user?.email,
+    uid: user?.user?.uid,
+    isAdmin: user?.user?.email ? isAdmin(user.user.email) : false
   });
 
   // Handle view mode toggle
@@ -288,8 +288,8 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (authLoading) return; // Wait for authentication to complete
 
-    if (session && session.email) {
-      const adminCheck = isAdmin(session.email);
+    if (user && user.email) {
+      const adminCheck = isAdmin(user.email);
       setIsAdminUser(adminCheck);
       if (!adminCheck) {
         console.log('❌ [Admin Dashboard] User is not admin, redirecting to home');
@@ -302,7 +302,7 @@ export default function AdminDashboardPage() {
       console.log('❌ [Admin Dashboard] No user, redirecting to login');
       router.push('/auth/login?redirect=/admin/dashboard');
     }
-  }, [session, authLoading, router]);
+  }, [user, authLoading, router]);
 
   // Prevent options bar from closing due to dashboard loading state changes
   useEffect(() => {
@@ -311,7 +311,7 @@ export default function AdminDashboardPage() {
   }, [dashboardLoading]);
 
   // Show loading while checking auth
-  if (authLoading || !session || !session.email || !isAdmin(session.email)) {
+  if (authLoading || !user || !user.email || !isAdmin(user.email)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="loader"></div>
@@ -413,7 +413,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Dashboard Content */}
-        <div className="px-6 py-6">
+        <div className={`py-6 ${viewMode === 'list' ? '' : 'px-6'}`}>
           <DashboardErrorBoundary>
             {(() => {
               if (dashboardLoading) {

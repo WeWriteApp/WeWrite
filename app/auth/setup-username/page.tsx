@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { addUsername, checkUsernameAvailability } from "../../firebase/auth";
+import { addUsername, checkUsernameAvailability } from "../../utils/apiClient";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";

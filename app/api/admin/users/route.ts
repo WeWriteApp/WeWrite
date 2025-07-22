@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     console.log('Loading users from Firestore via API...');
 
     // Query Firestore for user documents
-    let usersQuery = db.collection('users')
+    let usersQuery = db.collection(getCollectionName('users'))
       .orderBy('createdAt', 'desc')
       .limit(limit);
 

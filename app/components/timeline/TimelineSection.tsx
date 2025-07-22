@@ -6,7 +6,7 @@ import { Button } from '../ui/button';
 import { SectionTitle } from '../ui/section-title';
 import StickySection from "../utils/StickySection";
 import TimelineCarousel from './TimelineCarousel';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 import { useRouter } from 'next/navigation';
 
@@ -25,7 +25,7 @@ interface TimelineSectionProps {
 export default function TimelineSection({}: TimelineSectionProps) {
   console.log('📅 TimelineSection: Component function called');
 
-  const { currentAccount, isAuthenticated } = useCurrentAccount();
+  const { user, isAuthenticated } = useAuth();
   const { accentColor, customColors } = useAccentColor();
   const router = useRouter();
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -46,9 +46,9 @@ export default function TimelineSection({}: TimelineSectionProps) {
   };
 
   // Temporarily remove auth guard to debug Timeline data
-  console.log('📅 TimelineSection: Rendering with auth state:', { isAuthenticated, hasCurrentAccount: !!currentAccount });
+  console.log('📅 TimelineSection: Rendering with auth state:', { isAuthenticated, hasCurrentAccount: !!user });
 
-  if (!isAuthenticated || !currentAccount) {
+  if (!isAuthenticated || !user) {
     console.log('📅 TimelineSection: Auth not ready, but rendering anyway for debugging');
     // return null; // Temporarily disabled
   }

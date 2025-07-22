@@ -12,7 +12,7 @@ import { SubscriptionTierBadge } from "../ui/SubscriptionTierBadge";
 import { UsernameBadge } from "../ui/UsernameBadge";
 import { format } from "date-fns";
 import { getPageById } from "../../firebase/database/pages";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import DiffPreview, { DiffStats } from "./DiffPreview";
 
@@ -41,7 +41,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
   const [pageData, setPageData] = useState(null);
   const [currentPageName, setCurrentPageName] = useState(activity?.pageName || 'Untitled');
@@ -52,9 +52,9 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   // Check if user can restore this version (is page owner and in activity context)
   const canRestore = (activity.isActivityContext || activity.isHistoryContext) &&
                     !activity.isCurrentVersion &&
-                    currentAccount &&
+                    user &&
                     pageData &&
-                    currentAccount.uid === pageData.userId;
+                    user.uid === pageData.userId;
 
   // Handle version restoration
   const handleRestore = async (e) => {
@@ -127,7 +127,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   const maxAttempts = 3;
 
   useEffect(() => {
-    if (activity?.pageId && currentAccount &&
+    if (activity?.pageId && user &&
         activity.activityType !== "bio_edit" &&
         activity.activityType !== "group_about_edit" &&
         fetchAttempts < maxAttempts) {
@@ -135,7 +135,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
       const fetchPageData = async () => {
         try {
           // Use proper page access function instead of direct Firestore access
-          const result = await getPageById(activity.pageId, currentAccount?.uid);
+          const result = await getPageById(activity.pageId, user?.uid);
           if (result.pageData && !result.error) {
             setPageData(result.pageData);
             setLastError(null); // Clear error on success
@@ -169,7 +169,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
         fetchPageData();
       }
     }
-  }, [activity?.pageId, currentAccount, activity?.activityType, fetchAttempts]);
+  }, [activity?.pageId, user, activity?.activityType, fetchAttempts]);
 
   // Subscription feature is now always enabled
   const subscriptionEnabled = true;
@@ -386,12 +386,20 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="text-xs text-muted-foreground whitespace-nowrap cursor-pointer">
-                  {formatRelativeTime(activity.timestamp)}
+                  {activity.timestamp ? formatRelativeTime(activity.timestamp) : 'Unknown time'}
                 </span>
               </TooltipTrigger>
               <TooltipContent>
                 <span>
-                  {activity.timestamp ? formatDate(new Date(activity.timestamp)) : ""}
+                  {activity.timestamp ? (() => {
+                    try {
+                      const date = new Date(activity.timestamp);
+                      return isNaN(date.getTime()) ? 'Invalid date' : formatDate(date);
+                    } catch (error) {
+                      console.error('Error formatting tooltip date:', error);
+                      return 'Invalid date';
+                    }
+                  })() : "Unknown date"}
                 </span>
               </TooltipContent>
             </Tooltip>

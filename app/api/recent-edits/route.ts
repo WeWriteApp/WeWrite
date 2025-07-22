@@ -6,9 +6,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = parseInt(searchParams.get('limit') || '50');
     const includeOwn = searchParams.get('includeOwn') === 'true';
     const followingOnly = searchParams.get('followingOnly') === 'true';
+    const cursor = searchParams.get('cursor'); // For pagination
 
     // Initialize Firebase Admin
     const adminApp = initAdmin();
@@ -18,6 +19,16 @@ export async function GET(request: NextRequest) {
     let pagesQuery = db.collection(getCollectionName('pages'))
       .orderBy('lastModified', 'desc')
       .limit(limit * 3); // Get more to account for filtering
+
+    // Add cursor for pagination
+    if (cursor) {
+      try {
+        const cursorDate = new Date(cursor);
+        pagesQuery = pagesQuery.startAfter(cursorDate);
+      } catch (error) {
+        console.warn('Invalid cursor provided:', cursor);
+      }
+    }
 
     // Add visibility filter for non-authenticated users
     if (!userId) {
@@ -52,7 +63,7 @@ export async function GET(request: NextRequest) {
       filteredPages = [];
     }
 
-    // Transform to simple format
+    // Transform to simple format and limit to requested amount
     const edits = filteredPages
       .slice(0, limit)
       .map(page => ({
@@ -61,15 +72,23 @@ export async function GET(request: NextRequest) {
         userId: page.userId,
         username: page.username || 'Anonymous',
         displayName: page.displayName,
-        lastModified: page.lastModified,
+        lastModified: page.lastModified?.toDate ? page.lastModified.toDate().toISOString() : page.lastModified,
         isPublic: page.isPublic || false,
         totalPledged: page.totalPledged || 0,
         pledgeCount: page.pledgeCount || 0,
         lastDiff: page.lastDiff
       }));
 
+    // Determine if there are more items available
+    const hasMore = filteredPages.length >= limit;
+
+    // Get the cursor for the next page (last item's lastModified date)
+    const nextCursor = edits.length > 0 ? edits[edits.length - 1].lastModified : null;
+
     return NextResponse.json({
       edits,
+      hasMore,
+      nextCursor,
       total: edits.length,
       timestamp: new Date().toISOString()
     });

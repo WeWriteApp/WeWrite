@@ -1,14 +1,12 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
-import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
+import { useAuth } from '../../providers/AuthProvider';
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "../layout/Header";
 // Removed useOptimizedHome - now using UnifiedRecentActivity
 import { Activity, Search } from "lucide-react";
 import SimpleRecentEdits from "./SimpleRecentEdits";
-import StickySection from "../utils/StickySection";
-import { SectionTitle } from "../ui/section-title";
 
 import { Input } from "../ui/input";
 import DailyNotesSection from "../daily-notes/DailyNotesSection";
@@ -21,8 +19,8 @@ import { getEnvironmentType } from "../../utils/environmentConfig";
 
 const Home: React.FC = () => {
   console.log('🏠 [HOME_COMPONENT] Rendering - timestamp:', new Date().toISOString());
-  const { currentAccount, isAuthenticated, isLoading } = useCurrentAccount();
-  console.log('🏠 [HOME_COMPONENT] Auth state:', { isAuthenticated, isLoading, hasCurrentAccount: !!currentAccount });
+  const { user, isAuthenticated, isLoading } = useAuth();
+  console.log('🏠 [HOME_COMPONENT] Auth state:', { isAuthenticated, isLoading, hasCurrentAccount: !!user });
   const router = useRouter();
   // Removed recentEditsFilterState - now handled by UnifiedRecentActivity component
 
@@ -84,9 +82,7 @@ const Home: React.FC = () => {
             <DailyNotesSection />
 
             {/* Recent Edits Section - Simple implementation */}
-            <StickySection sectionId="recent-edits">
-              <SimpleRecentEdits />
-            </StickySection>
+            <SimpleRecentEdits />
 
 
 

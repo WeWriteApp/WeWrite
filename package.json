@@ -18,6 +18,8 @@
     "subscription:cleanup": "node scripts/subscription-cleanup.js",
     "subscription:cleanup:dry": "node scripts/subscription-cleanup.js --dry-run",
     "subscription:cleanup:execute": "node scripts/subscription-cleanup.js --execute",
+    "collections:fix": "node scripts/fix-collection-naming.js",
+    "collections:cleanup": "node scripts/delete-old-dev-collections.js",
     "backfill:diff": "node scripts/backfill-diff-data.js",
     "backfill:diff:test": "node scripts/backfill-diff-data.js --environment=test",
     "backfill:diff:dry": "node scripts/backfill-diff-data.js --dry-run",

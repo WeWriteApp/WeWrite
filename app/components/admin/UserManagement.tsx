@@ -2,11 +2,10 @@
  * WeWrite Admin Panel - User Management Component
  *
  * This component provides comprehensive user management functionality for WeWrite administrators.
- * It displays user information in a full-width table layout with feature flag management capabilities.
+ * It displays user information in a full-width table layout optimized for mobile and desktop.
  *
  * Key Features:
  * - User listing with email verification status from Firebase Auth
- * - Feature flag override management per user
  * - Search and filtering capabilities
  * - Real-time data loading with error handling
  * - Responsive design with mobile optimization
@@ -14,7 +13,6 @@
  * Technical Implementation:
  * - Fetches user data from Firestore users collection
  * - Retrieves email verification status from Firebase Auth
- * - Manages feature flag overrides in featureOverrides collection
  * - Uses three-state logic for feature flags: Global/Enabled/Disabled
  *
  * Database Schema:
@@ -40,7 +38,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Alert, AlertDescription } from '../ui/alert';
 
-// Feature flags have been removed - all features are now always enabled
+
 
 // Feature flags have been removed
 
@@ -276,7 +274,7 @@ export function UserManagement() {
         <div>
           <h2 className="text-2xl font-bold">User Management</h2>
           <p className="text-muted-foreground">
-            Manage users, email verification status, and feature flag overrides
+            Manage users and email verification status
           </p>
         </div>
         <Button
@@ -365,41 +363,47 @@ export function UserManagement() {
           <span>Loading users...</span>
         </div>
       ) : (
-        <div className="w-full border rounded-lg">
+        <div className="w-full border rounded-lg overflow-x-auto table-container">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[200px]">Email</TableHead>
-                <TableHead className="w-[120px]">Username</TableHead>
-                <TableHead className="w-[100px]">Status</TableHead>
-                <TableHead className="w-[120px]">Joined</TableHead>
-                {/* Feature flag columns removed - all features are now always enabled */}
+                <TableHead className="min-w-[180px] sm:w-[200px]">Email</TableHead>
+                <TableHead className="min-w-[100px] sm:w-[120px]">Username</TableHead>
+                <TableHead className="min-w-[80px] sm:w-[100px]">Status</TableHead>
+                <TableHead className="min-w-[100px] sm:w-[120px]">Joined</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredUsers.map((session) => (
-                <TableRow key={session.uid} className="hover:bg-muted/50">
-                  <TableCell className="font-medium">
+                <TableRow key={session.uid} className="hover:bg-muted/50 touch-manipulation">
+                  <TableCell className="font-medium text-sm sm:text-base py-3 sm:py-4">
                     <div className="truncate max-w-[180px]" title={session.email}>
                       {session.email}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-3 sm:py-4">
                     {session.username ? (
                       <span className="text-sm">@{session.username}</span>
                     ) : (
                       <span className="text-muted-foreground text-sm">-</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="py-3 sm:py-4">
                     {getVerificationBadge(session.emailVerified || false)}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="text-sm text-muted-foreground py-3 sm:py-4">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="cursor-help">
-                            {session.createdAt ? formatRelativeTime(session.createdAt) : 'Unknown'}
+                            {session.createdAt ? (() => {
+                              try {
+                                return formatRelativeTime(session.createdAt);
+                              } catch (error) {
+                                console.error('Error formatting user creation time:', error);
+                                return 'Unknown';
+                              }
+                            })() : 'Unknown'}
                           </span>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -408,7 +412,6 @@ export function UserManagement() {
                       </Tooltip>
                     </TooltipProvider>
                   </TableCell>
-                  {/* Feature flag cells removed - all features are now always enabled */}
                 </TableRow>
               ))}
             </TableBody>
@@ -421,6 +424,40 @@ export function UserManagement() {
           )}
         </div>
       )}
+
+      {/* Mobile optimization styles */}
+      <style jsx>{`
+        @media (max-width: 768px) {
+          .table-container {
+            font-size: 14px;
+          }
+
+          .table-container th,
+          .table-container td {
+            padding: 8px 12px;
+            min-height: 44px; /* Touch-friendly minimum height */
+          }
+
+          .table-container .truncate {
+            max-width: 120px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .table-container {
+            font-size: 13px;
+          }
+
+          .table-container th,
+          .table-container td {
+            padding: 6px 8px;
+          }
+
+          .table-container .truncate {
+            max-width: 100px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

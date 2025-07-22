@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Clock, Filter, Check } from 'lucide-react';
 import { SectionTitle } from '../ui/section-title';
 import { useActivityFilter } from '../../contexts/ActivityFilterContext';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { getFollowedPages } from '../../firebase/follows';
 import { Button } from '../ui/button';
 import {
@@ -26,14 +26,14 @@ import {
  * with sticky headers while preserving all interactive functionality.
  */
 const ActivitySectionHeader = () => {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const { viewMode, setViewMode } = useActivityFilter();
   const [followedPages, setFollowedPages] = useState([]);
   const [isLoadingFollows, setIsLoadingFollows] = useState(false);
 
   // Load followed pages when component mounts
   useEffect(() => {
-    if (!session) return;
+    if (!user) return;
 
     const fetchFollowedPages = async () => {
       setIsLoadingFollows(true);
@@ -58,11 +58,11 @@ const ActivitySectionHeader = () => {
     };
 
     fetchFollowedPages();
-  }, [, session, viewMode, setViewMode]);
+  }, [, user, viewMode, setViewMode]);
 
   // Function to render the filter dropdown button
   const renderFilterDropdown = () => {
-    if (!session) return null;
+    if (!user) return null;
 
     return (
       <div>

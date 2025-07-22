@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { TokenService } from '../../../services/tokenService';
 import { ServerTokenService } from '../../../services/tokenService.server';
-import { getOptimizedPageMetadata } from '../../../firebase/optimizedPages';
+// Removed optimizedPages import - using simplified system now
 import { getUsernameById } from '../../../utils/userUtils';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 interface PageAllocation {
   id: string;
@@ -107,11 +109,10 @@ export async function GET(request: NextRequest) {
     const enhancedAllocations: PageAllocation[] = await Promise.all(
       pageAllocations.map(async (allocation) => {
         try {
-          // Get page metadata (disable caching for server-side calls)
-          const pageData = await getOptimizedPageMetadata(allocation.resourceId, {
-            fieldsOnly: ['title', 'username', 'userId'],
-            useCache: false
-          });
+          // Get page metadata using direct Firebase call
+          const { adminDb } = getFirebaseAdmin();
+          const pageDoc = await adminDb.collection(getCollectionName('pages')).doc(allocation.resourceId).get();
+          const pageData = pageDoc.exists ? pageDoc.data() : null;
 
           if (!pageData) {
             // Page might be deleted, try to get username from recipient user ID as fallback

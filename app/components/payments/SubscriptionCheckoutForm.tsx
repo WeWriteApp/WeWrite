@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SubscriptionCheckout } from './SubscriptionCheckout';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { usePWA } from '../../providers/PWAProvider';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
@@ -37,7 +37,7 @@ export function SubscriptionCheckoutForm({
   onCancel
 }: SubscriptionCheckoutFormProps) {
   const router = useRouter();
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const { isPWA } = usePWA();
   
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -87,7 +87,7 @@ export function SubscriptionCheckoutForm({
   };
 
   // Check if user is authenticated
-  if (!currentAccount) {
+  if (!user) {
     return (
       <Card className="max-w-md mx-auto">
         <CardContent className="p-6 text-center space-y-4">

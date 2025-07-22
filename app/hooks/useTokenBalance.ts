@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 
 interface TokenBalance {
   totalTokens: number;
@@ -10,12 +10,12 @@ interface TokenBalance {
 }
 
 export function useTokenBalance(): TokenBalance | null {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null);
 
   useEffect(() => {
     const loadTokenBalance = async () => {
-      if (!currentAccount?.uid) {
+      if (!user?.uid) {
         setTokenBalance(null);
         return;
       }
@@ -56,7 +56,7 @@ export function useTokenBalance(): TokenBalance | null {
     };
 
     loadTokenBalance();
-  }, [currentAccount?.uid]);
+  }, [user?.uid]);
 
   return tokenBalance;
 }

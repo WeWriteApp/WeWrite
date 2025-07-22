@@ -8,7 +8,7 @@ import { Badge } from '../ui/badge';
 import { Plus, DollarSign, Coins, User } from 'lucide-react';
 import { SUBSCRIPTION_TIERS, TOKEN_ECONOMY } from '../../utils/subscriptionTiers';
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 
 interface SubscriptionTierSliderProps {
   selectedAmount: number;
@@ -40,7 +40,7 @@ export default function SubscriptionTierSlider({
   currentSubscription,
   showCurrentOption = false
 }: SubscriptionTierSliderProps) {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const [sliderNodes, setSliderNodes] = useState(INITIAL_NODES);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
@@ -219,12 +219,12 @@ export default function SubscriptionTierSlider({
 
             {/* Username Preview - Fixed height to prevent layout shift */}
             <div className="min-h-[76px]">
-              {currentAccount?.username && (
+              {user?.username && (
                 <div className="p-3 bg-card rounded-lg border-theme-medium shadow-sm">
                   <p className="text-xs text-muted-foreground mb-2">Your username will appear as:</p>
                   <div className="flex items-center gap-2">
                     <span className={`font-medium text-sm ${selectedAmount > 0 ? "text-accent-foreground" : "text-muted-foreground"}`}>
-                      {currentAccount.username}
+                      {user.username}
                     </span>
                     <SubscriptionTierBadge
                       tier={currentTierInfo.tier}

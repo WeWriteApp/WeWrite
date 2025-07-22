@@ -8,13 +8,14 @@ import { recordBioEditActivity } from "../../firebase/bioActivity";
 import dynamic from "next/dynamic";
 import { useUnsavedChanges } from "../../hooks/useUnsavedChanges";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
-import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
+import { useAuth } from '../../providers/AuthProvider';
 
 import EmptyContentState from './EmptyContentState';
 import { UserBioSkeleton } from "../ui/page-skeleton";
 
 import TextView from "../editor/TextView";
 import HoverEditContent from './HoverEditContent';
+import PageFooter from "../pages/PageFooter";
 import type { UserBioTabProps } from "../../types/components";
 import type { EditorContent, User } from "../../types/database";
 import { PageProvider } from "../../contexts/PageContext";
@@ -23,8 +24,10 @@ import { PageProvider } from "../../contexts/PageContext";
 const Editor = dynamic(() => import("../editor/Editor"), { ssr: false });
 
 const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
-  const { session } = useCurrentAccount();
-  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const { user } = useAuth();
+  // Always editing mode - bio is always editable for the owner
+  const isProfileOwner = user?.uid === profile.uid;
+  const [isEditing, setIsEditing] = useState<boolean>(isProfileOwner); // Always true for owner
   const [bioContent, setBioContent] = useState<EditorContent | string>("");
   const [originalContent, setOriginalContent] = useState<EditorContent | string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -33,15 +36,15 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
   const [lastEditTime, setLastEditTime] = useState<string | null>(null);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number; clientX: number; clientY: number } | null>(null);
 
-  // Check if current user is the profile owner
-  const isProfileOwner = session && profile && session.uid === profile.uid;
-
   // Track if content has changed
   const hasUnsavedChanges = isEditing && bioContent !== originalContent;
 
   // Enhanced setIsEditing function that captures click position
+  // For always-editing mode, this doesn't change the editing state for owners
   const handleSetIsEditing = (editing: boolean, position: { x: number; y: number; clientX: number; clientY: number } | null = null) => {
-    setIsEditing(editing);
+    if (!isProfileOwner) {
+      setIsEditing(editing); // Only change for non-owners (visitors)
+    }
     if (editing && position) {
       setClickPosition(position);
     } else if (!editing) {
@@ -112,7 +115,7 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
       // Ensure we're saving the content in the correct format
       // The Editor returns an array of nodes, which we want to preserve
       const contentToSave = bioContent;
-      const editorName = session?.username || session?.displayName || session?.email || "Unknown";
+      const editorName = user?.username || user?.displayName || user?.email || "Unknown";
 
       console.log("Saving bio content:", contentToSave);
 
@@ -136,11 +139,11 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
       const result = await response.json();
 
       // Record the bio edit activity for the activity feed
-      if (session) {
+      if (user) {
         try {
           await recordBioEditActivity(
             profile.uid,
-            session.uid,
+            user.uid,
             editorName,
             contentToSave,
             originalContent
@@ -153,7 +156,10 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
       }
 
       setOriginalContent(contentToSave);
-      handleSetIsEditing(false);
+      // Don't exit editing mode for owners (always-editing mode)
+      if (!isProfileOwner) {
+        handleSetIsEditing(false);
+      }
       setLastEditor(editorName);
       setLastEditTime(new Date().toISOString());
 
@@ -189,9 +195,11 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
       // Show confirmation dialog
       handleNavigation('/');
     } else {
-      // No changes, just exit edit mode
+      // No changes, just revert content (stay in editing mode for owners)
       setBioContent(originalContent);
-      handleSetIsEditing(false);
+      if (!isProfileOwner) {
+        handleSetIsEditing(false);
+      }
     }
   };
 
@@ -237,19 +245,42 @@ const UserBioTab: React.FC<UserBioTabProps> = ({ profile }) => {
 
       {/* Content display or editor - unified container structure */}
       <div className="page-content unified-editor relative rounded-lg bg-background w-full max-w-none">
-        {isEditing ? (
+        {isProfileOwner ? (
           <div className="animate-in fade-in-0 duration-300">
             <PageProvider>
               <Editor
                   initialContent={bioContent}
                   onChange={handleContentChange}
-                  onSave={handleSave}
-                  onCancel={handleCancel}
                   isSaving={isLoading}
                   error={error || ""}
                   placeholder="Write your bio..."
-                  showToolbar={true}
+                  showToolbar={false}
+                  // Remove onSave and onCancel - handled by bottom save bar
                 />
+
+              {/* Page Footer with bottom save bar */}
+              <PageFooter
+                page={null} // Bio doesn't have page data
+                content={bioContent}
+                linkedPageIds={[]} // Bio doesn't have linked pages
+                isEditing={isEditing}
+                canEdit={isProfileOwner}
+                isOwner={isProfileOwner}
+                title="" // Bio doesn't have a title
+                location={null} // Bio doesn't have location
+                onTitleChange={() => {}} // Bio doesn't have title
+                onLocationChange={() => {}} // Bio doesn't have location
+                onSave={async () => {
+                  const success = await handleSave();
+                  return success;
+                }}
+                onCancel={handleCancel}
+                onDelete={null} // Bio doesn't have delete
+                isSaving={isLoading}
+                error={error}
+                titleError={false}
+                hasUnsavedChanges={hasUnsavedChanges}
+              />
             </PageProvider>
           </div>
         ) : (

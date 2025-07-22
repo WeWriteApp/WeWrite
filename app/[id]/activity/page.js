@@ -11,11 +11,11 @@ import { Loader } from '../../components/utils/Loader';
 import ActivityCard from '../../components/activity/ActivityCard';
 import { getDiff } from '../../utils/diffService';
 import PageHeader from '../../components/pages/PageHeader';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 
 export default function PageActivityPage({ params }) {
   const { id } = use(params);
-  const { currentAccountUid, isLoading: authLoading } = useCurrentAccount();
+  const { user, isLoading: authLoading } = useAuth();
   const [page, setPage] = useState(null);
   const [versions, setVersions] = useState([]);
   const [activities, setActivities] = useState([]);
@@ -38,7 +38,7 @@ export default function PageActivityPage({ params }) {
         setLoading(true);
 
         // Fetch page details
-        const pageResult = await getPageById(id, currentAccountUid);
+        const pageResult = await getPageById(id, user?.uid);
         if (pageResult.error) {
           setError(pageResult.error);
           setLoading(false);
@@ -150,7 +150,7 @@ export default function PageActivityPage({ params }) {
     }
 
     fetchData();
-  }, [id, authLoading, currentAccountUid]);
+  }, [id, authLoading, user?.uid]);
 
   const handleBackToPage = () => {
     router.push('/' + id);

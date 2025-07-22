@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -25,7 +25,7 @@ interface Subscription {
 }
 
 export function SubscriptionOverview() {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   // Payments feature is now always enabled
   const isPaymentsEnabled = true;
 
@@ -54,10 +54,10 @@ export function SubscriptionOverview() {
       }
     };
 
-    if (currentAccount && isPaymentsEnabled) {
+    if (user && isPaymentsEnabled) {
       fetchSubscription();
     }
-  }, [currentAccount, isPaymentsEnabled]);
+  }, [user, isPaymentsEnabled]);
 
   // If payments feature flag is disabled, don't render anything
   if (!isPaymentsEnabled) {

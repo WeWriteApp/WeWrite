@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFo
 import { useUnifiedSearch, SEARCH_CONTEXTS } from '../../hooks/useUnifiedSearch';
 import SearchResultsDisplay from '../search/SearchResultsDisplay';
 
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { appendPageReference, getPageById } from '../../firebase/database';
 import { toast } from '../ui/use-toast';
 import { useRouter } from 'next/navigation';
@@ -141,7 +141,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
   const [selectedPage, setSelectedPage] = useState<SelectedPage | null>(null);
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
   const [successTargetPage, setSuccessTargetPage] = useState<SelectedPage | null>(null);
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
 
   // Determine which state to use
@@ -176,7 +176,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
 
     try {
       // 1. Check rate limiting
-      if (!checkRateLimit(session.uid)) {
+      if (!checkRateLimit(user.uid)) {
         toast.error(ERROR_MESSAGES.rate_limit_exceeded);
         return;
       }
@@ -190,7 +190,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
       }
 
       // 3. Check if user has permission to edit the target page
-      const canEdit = canUserEditPage(session, targetPageData);
+      const canEdit = canUserEditPage(user, targetPageData);
       if (!canEdit) {
         toast.error(ERROR_MESSAGES.permission_denied);
         return;
@@ -218,11 +218,11 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
       };
 
       // 6. Append the current page reference to the selected page
-      const result = await appendPageReference(selectedPage.id, sourcePageData, session.uid);
+      const result = await appendPageReference(selectedPage.id, sourcePageData, user.uid);
 
       if (result) {
         // Log successful operation
-        logAppendOperation(session.uid, page.id, selectedPage.id, true);
+        logAppendOperation(user.uid, page.id, selectedPage.id, true);
 
         // Show success state instead of redirecting immediately
         setSuccessTargetPage(selectedPage);
@@ -230,14 +230,14 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
         setSelectedPage(null);
       } else {
         // Log failed operation
-        logAppendOperation(session.uid, page.id, selectedPage.id, false, 'Append operation returned false');
+        logAppendOperation(user.uid, page.id, selectedPage.id, false, 'Append operation returned false');
         toast.error(ERROR_MESSAGES.unknown_error);
       }
     } catch (error: any) {
       console.error("Error adding page:", error);
 
       // Log failed operation with error details
-      logAppendOperation(session.uid, page.id, selectedPage.id, false, error.message || 'Unknown error');
+      logAppendOperation(user.uid, page.id, selectedPage.id, false, error.message || 'Unknown error');
 
       // Provide specific error messages based on error type
       let errorMessage = ERROR_MESSAGES.unknown_error;
@@ -268,7 +268,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
     }
   };
 
-  if (!session || !page) return null;
+  if (!user || !page) return null;
 
   // Always show the button, even for the page owner
 
@@ -390,8 +390,8 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
 
 // Search component for Add to Page functionality
 const AddToPageSearch = ({ onSelect }: { onSelect: (page: any) => void }) => {
-  const { session } = useCurrentAccount();
-  const userId = session?.uid;
+  const { user } = useAuth();
+  const userId = user?.uid;
   const [recentPages, setRecentPages] = useState<any[]>([]);
   const [recentPagesLoading, setRecentPagesLoading] = useState<boolean>(true);
 

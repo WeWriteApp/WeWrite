@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
-import { followUser, unfollowUser, isFollowingUser, getUserFollowing } from '../firebase/follows';
+import { useAuth } from '../providers/AuthProvider';
+import { followsApi } from '../utils/apiClient';
 
 interface UseUserFollowingReturn {
   isFollowing: boolean;
@@ -19,19 +19,19 @@ interface UseUserFollowingReturn {
  * Provides follow/unfollow actions and following status
  */
 export function useUserFollowing(targetUserId?: string): UseUserFollowingReturn {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [followingList, setFollowingList] = useState<string[]>([]);
 
   // Check if current user is following the target user
   const checkFollowStatus = async (userId: string): Promise<boolean> => {
-    if (!currentAccount?.uid || !userId || currentAccount.uid === userId) {
+    if (!user?.uid || !userId || user.uid === userId) {
       return false;
     }
 
     try {
-      const following = await isFollowingUser(currentAccount.uid, userId);
+      const following = await isFollowingUser(user.uid, userId);
       if (userId === targetUserId) {
         setIsFollowing(following);
       }
@@ -44,13 +44,13 @@ export function useUserFollowing(targetUserId?: string): UseUserFollowingReturn 
 
   // Get the list of users the current user is following
   const refreshFollowing = async () => {
-    if (!currentAccount?.uid) {
+    if (!user?.uid) {
       setFollowingList([]);
       return;
     }
 
     try {
-      const following = await getUserFollowing(currentAccount.uid);
+      const following = await getUserFollowing(user.uid);
       setFollowingList(following);
     } catch (error) {
       console.error('Error fetching following list:', error);
@@ -60,13 +60,13 @@ export function useUserFollowing(targetUserId?: string): UseUserFollowingReturn 
 
   // Follow a user
   const handleFollowUser = async (userId: string) => {
-    if (!currentAccount?.uid || !userId || currentAccount.uid === userId) {
+    if (!user?.uid || !userId || user.uid === userId) {
       throw new Error('Cannot follow this user');
     }
 
     try {
       setIsLoading(true);
-      await followUser(currentAccount.uid, userId);
+      await followUser(user.uid, userId);
       
       if (userId === targetUserId) {
         setIsFollowing(true);
@@ -84,13 +84,13 @@ export function useUserFollowing(targetUserId?: string): UseUserFollowingReturn 
 
   // Unfollow a user
   const handleUnfollowUser = async (userId: string) => {
-    if (!currentAccount?.uid || !userId) {
+    if (!user?.uid || !userId) {
       throw new Error('Cannot unfollow this user');
     }
 
     try {
       setIsLoading(true);
-      await unfollowUser(currentAccount.uid, userId);
+      await unfollowUser(user.uid, userId);
       
       if (userId === targetUserId) {
         setIsFollowing(false);
@@ -109,7 +109,7 @@ export function useUserFollowing(targetUserId?: string): UseUserFollowingReturn 
   // Initial load - check follow status and get following list
   useEffect(() => {
     const initialize = async () => {
-      if (!currentAccount?.uid) {
+      if (!user?.uid) {
         setIsLoading(false);
         return;
       }
@@ -119,7 +119,7 @@ export function useUserFollowing(targetUserId?: string): UseUserFollowingReturn 
         await refreshFollowing();
         
         // Check follow status for target user if provided
-        if (targetUserId && targetUserId !== currentAccount.uid) {
+        if (targetUserId && targetUserId !== user.uid) {
           await checkFollowStatus(targetUserId);
         }
       } catch (error) {
@@ -130,7 +130,7 @@ export function useUserFollowing(targetUserId?: string): UseUserFollowingReturn 
     };
 
     initialize();
-  }, [currentAccount?.uid, targetUserId]);
+  }, [user?.uid, targetUserId]);
 
   return {
     isFollowing,

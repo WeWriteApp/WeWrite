@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -52,7 +52,7 @@ interface BankAccountManagerProps {
 }
 
 export function BankAccountManager({ onUpdate, showTitle = true }: BankAccountManagerProps) {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,12 +69,12 @@ export function BankAccountManager({ onUpdate, showTitle = true }: BankAccountMa
   const loadBankAccounts = async () => {
     console.log('🔄 [LOAD BANK ACCOUNTS] Starting to load bank accounts...');
 
-    if (!currentAccount?.uid) {
+    if (!user?.uid) {
       console.log('❌ [LOAD BANK ACCOUNTS] No authenticated user');
       return;
     }
 
-    console.log('✅ [LOAD BANK ACCOUNTS] User authenticated:', currentAccount.uid);
+    console.log('✅ [LOAD BANK ACCOUNTS] User authenticated:', user.uid);
 
     try {
       setLoading(true);
@@ -260,7 +260,7 @@ export function BankAccountManager({ onUpdate, showTitle = true }: BankAccountMa
   const handleConnectBankAccount = async () => {
     console.log('🚀 [BANK CONNECT] Starting bank account connection flow');
 
-    if (!currentAccount?.uid) {
+    if (!user?.uid) {
       console.error('❌ [BANK CONNECT] No authenticated user found');
       toast({
         title: "Authentication Error",
@@ -270,20 +270,20 @@ export function BankAccountManager({ onUpdate, showTitle = true }: BankAccountMa
       return;
     }
 
-    console.log('✅ [BANK CONNECT] User authenticated:', currentAccount.uid);
+    console.log('✅ [BANK CONNECT] User authenticated:', user.uid);
     setIsConnecting(true);
 
     try {
-      console.log('📡 [BANK CONNECT] Creating Financial Connections session...');
+      console.log('📡 [BANK CONNECT] Creating Financial Connections user...');
 
-      // Create Financial Connections session
-      const response = await fetch('/api/stripe/financial-connections/create-session', {
+      // Create Financial Connections user
+      const response = await fetch('/api/stripe/financial-connections/create-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: currentAccount.uid,
+          userId: user.uid,
         }),
       });
 
@@ -292,7 +292,7 @@ export function BankAccountManager({ onUpdate, showTitle = true }: BankAccountMa
       if (!response.ok) {
         const errorData = await response.json();
         console.error('❌ [BANK CONNECT] Session creation failed:', errorData);
-        throw new Error(errorData.error || 'Failed to create Financial Connections session');
+        throw new Error(errorData.error || 'Failed to create Financial Connections user');
       }
 
       const { clientSecret, sessionId } = await response.json();
@@ -413,9 +413,9 @@ export function BankAccountManager({ onUpdate, showTitle = true }: BankAccountMa
 
   useEffect(() => {
     loadBankAccounts();
-  }, [currentAccount?.uid]);
+  }, [user?.uid]);
 
-  if (!currentAccount) {
+  if (!user) {
     return (
       <Alert>
         <AlertTriangle className="h-4 w-4" />

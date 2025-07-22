@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -50,7 +50,7 @@ interface Subscription {
 
 export default function SubscriptionPage() {
   console.log('🚀 SubscriptionPage component mounting...');
-  const { currentAccount, session, isAuthenticated } = useCurrentAccount();
+  const { user, isAuthenticated } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const { trackInteractionEvent } = useWeWriteAnalytics();
@@ -73,7 +73,7 @@ export default function SubscriptionPage() {
 
   // Debug current state
   console.log('[SubscriptionPage] Component rendering...', {
-    currentAccount: !!currentAccount,
+    user: !!user,
     isAuthenticated,
     currentSubscription: !!currentSubscription,
     subscriptionStatus: currentSubscription?.status,
@@ -129,7 +129,7 @@ export default function SubscriptionPage() {
 
   // Handle subscription cancellation
   const handleCancelSubscription = useCallback(async () => {
-    if (!currentAccount?.uid || !currentSubscription?.stripeSubscriptionId) return;
+    if (!user?.uid || !currentSubscription?.stripeSubscriptionId) return;
 
     setCancelling(true);
     try {
@@ -174,7 +174,7 @@ export default function SubscriptionPage() {
     } finally {
       setCancelling(false);
     }
-  }, [currentAccount, currentSubscription, toast]);
+  }, [user, currentSubscription, toast]);
 
   // Removed complex real-time listener - using reliable API-first approach instead
 
@@ -311,7 +311,7 @@ export default function SubscriptionPage() {
       // Clean up URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [toast, currentAccount]); // Removed fetchSubscription since we use real-time listeners
+  }, [toast, user]); // Removed fetchSubscription since we use real-time listeners
 
   const handleAmountSelect = (amount: number) => {
     setSelectedAmount(amount);
@@ -375,13 +375,13 @@ export default function SubscriptionPage() {
 
   const handleSubscribe = async () => {
     console.log('🔵 handleSubscribe called with:', {
-      currentAccount: !!currentAccount,
+      user: !!user,
       currentSubscription,
       selectedAmount,
       selectedTier
     });
 
-    if (!currentAccount) {
+    if (!user) {
       router.push('/auth/login');
       return;
     }
@@ -644,8 +644,7 @@ export default function SubscriptionPage() {
               subscriptionKeys: currentSubscription ? Object.keys(currentSubscription) : null,
               subscriptionStatus: currentSubscription?.status,
               subscriptionStatusType: typeof currentSubscription?.status,
-              currentAccount: currentAccount?.uid,
-              session: session?.uid,
+              user: user?.uid,
               isAuthenticated,
               showStatusCard: !!(currentSubscription && currentSubscription.status !== null && currentSubscription.status !== undefined)
             });

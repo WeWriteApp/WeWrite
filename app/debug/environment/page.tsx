@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { getUserProfile } from '../../firebase/database/users';
-import { DEV_TEST_USERS } from '../../firebase/developmentAuth';
+// Development auth removed - using auth now
+const DEV_TEST_USERS = {};
 
 export default function EnvironmentDebugPage() {
   const [environmentInfo, setEnvironmentInfo] = useState(null);

@@ -66,35 +66,22 @@ const newConfig: FirebaseConfig = {
 
 // Initialize Firebase using environment-aware configuration
 // This maintains backward compatibility while supporting future multi-project architecture
-import {
-  getEnvironmentAwareFirebase,
-  getDefaultFirebaseApp,
-  getEnvironmentAwareFirestore,
-  getEnvironmentAwareAuth,
-  getEnvironmentAwareRTDB
-} from './environmentAwareConfig';
+// Simplified Firebase config - no more environment-aware complexity
 
 // Initialize error suppression early
 initializeErrorSuppression();
 
-// Get environment-aware Firebase services with error handling
-let firebaseServices;
-try {
-  firebaseServices = getEnvironmentAwareFirebase();
-  console.log('[Firebase Config] Successfully initialized Firebase services');
-} catch (error) {
-  console.error('[Firebase Config] Critical error initializing Firebase:', error);
-  // Re-throw the error to prevent the app from continuing with broken Firebase
-  throw new Error(`Firebase initialization failed: ${error.message}`);
-}
+// Initialize Firebase with simple configuration
+console.log('[Firebase Config] Initializing Firebase with simple configuration');
+export const app: FirebaseApp = initializeApp(newConfig);
+export const auth: Auth = getAuth(app);
+export const firestore: Firestore = getFirestore(app);
+export const rtdb: Database = getDatabase(app);
 
+// Legacy exports for backward compatibility
+export const db: Firestore = firestore;
 
-
-// Export services for backward compatibility
-export const app: FirebaseApp = firebaseServices.app;
-export const auth: Auth = firebaseServices.auth;
-export const db: Firestore = firebaseServices.db;
-export const rtdb: Database = firebaseServices.rtdb;
+console.log('[Firebase Config] Successfully initialized Firebase services');
 
 /**
  * Initialize Firebase Analytics

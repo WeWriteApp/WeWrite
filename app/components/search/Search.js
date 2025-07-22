@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from "../../providers/AuthProvider";
 import CustomSearchAutocomplete from "./CustomSearchAutocomplete";
 import { useRouter } from "next/navigation";
 import { PillLink } from "../utils/PillLink";
@@ -61,7 +61,7 @@ class SearchCache {
 
 const Search = () => {
   const router = useRouter();
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -82,12 +82,12 @@ const Search = () => {
 
       console.log('Search component - Fetching results for:', {
         searchTerm,
-        userId: session.uid,
+        userId: user.uid,
         groups: user.groups
       });
 
       // Create a cache key based on the search term and user ID
-      const cacheKey = `${searchTerm}:${session.uid}`;
+      const cacheKey = `${searchTerm}:${user.uid}`;
 
       // Check if we have cached results, but allow retry if cache is empty
       const cachedResults = searchCache.get(cacheKey);
@@ -110,7 +110,7 @@ const Search = () => {
         }
 
         // Use unified search API for comprehensive results
-        const searchUrl = `/api/search-unified?userId=${session.uid}&searchTerm=${encodeURIComponent(searchTerm)}&context=main&maxResults=50&includeContent=true&includeUsers=true`;
+        const searchUrl = `/api/search-unified?userId=${user.uid}&searchTerm=${encodeURIComponent(searchTerm)}&context=main&maxResults=50&includeContent=true&includeUsers=true`;
 
         console.log('Making unified API request to:', searchUrl);
 
@@ -152,7 +152,7 @@ const Search = () => {
         // Add users to search results
         const formattedUsers = users.map(user => ({
           ...user,
-          name: session.username,
+          name: user.username,
           type: 'user',
           url: `/user/${user.id}`
         }));

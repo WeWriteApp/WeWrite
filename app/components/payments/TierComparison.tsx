@@ -7,7 +7,7 @@ import { Button } from '../ui/button';
 import { Check, Star, Zap, Crown } from 'lucide-react';
 import { SUBSCRIPTION_TIERS, CUSTOM_TIER_CONFIG } from '../../utils/subscriptionTiers';
 
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 interface TierComparisonProps {
   currentTier?: string;
   currentAmount?: number;
@@ -23,7 +23,7 @@ export function TierComparison({
   showActions = true,
   compact = false 
 }: TierComparisonProps) {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   // Payments feature is now always enabled - no conditional rendering needed
   const isPaymentsEnabled = true;
 

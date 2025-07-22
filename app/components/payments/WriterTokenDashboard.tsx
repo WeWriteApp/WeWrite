@@ -18,12 +18,13 @@ import {
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useToast } from '../ui/use-toast';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { logEnhancedFirebaseError, createUserFriendlyErrorMessage } from '../../utils/firebase-error-handler';
 import { TokenEarningsService } from '../../services/tokenEarningsService';
 import { WriterTokenBalance, WriterTokenEarnings } from '../../types/database';
 import { formatCurrency } from '../../utils/formatCurrency';
 import EarningsChart from './EarningsChart';
+import RecentAllocationsCard from './RecentAllocationsCard';
 import { CompactAllocationTimer } from '../AllocationCountdownTimer';
 import { getLoggedOutTokenBalance } from '../../utils/simulatedTokens';
 
@@ -34,7 +35,7 @@ interface WriterTokenDashboardProps {
 }
 
 export default function WriterTokenDashboard({ className }: WriterTokenDashboardProps) {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const { toast } = useToast();
 
 
@@ -84,7 +85,7 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
 
   useEffect(() => {
     // Load real data
-    if (session?.uid) {
+    if (user?.uid) {
       setUnfundedMessage(null);
       loadWriterData();
     } else {
@@ -94,12 +95,12 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
       setUnfundedMessage(null);
       setLoading(false);
     }
-  }, [session?.uid]);
+  }, [user?.uid]);
 
 
 
   const loadWriterData = async () => {
-    if (!session?.uid) return;
+    if (!user?.uid) return;
 
     try {
       setLoading(true);
@@ -125,7 +126,7 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
 
           // Convert the API response to the expected format
           const realBalance = {
-            userId: session.uid,
+            userId: user.uid,
             totalUsdEarned: data.earnings.totalEarnings,
             availableUsdValue: data.earnings.availableBalance,
             pendingUsdValue: data.earnings.pendingBalance,
@@ -177,12 +178,12 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
   };
 
   const handleRequestPayout = async () => {
-    if (!session?.uid || !balance) return;
+    if (!user?.uid || !balance) return;
     
     try {
       setRequesting(true);
       
-      const result = await TokenEarningsService.requestPayout(session.uid);
+      const result = await TokenEarningsService.requestPayout(user.uid);
       
       if (result.success) {
         toast({
@@ -697,76 +698,7 @@ export default function WriterTokenDashboard({ className }: WriterTokenDashboard
 
       {/* Recent Allocations */}
       {pendingAllocations && pendingAllocations.allocations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Recent Allocations
-            </CardTitle>
-            <CardDescription>
-              Latest token allocations from supporters
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {pendingAllocations.allocations.slice(0, 5).map((allocation, index) => (
-                <div key={index} className="flex items-center justify-between p-3 rounded-lg border-theme-strong">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      {allocation.resourceType === 'page' ? (
-                        <PillLink
-                          href={`/${allocation.resourceId}`}
-                          className="text-sm"
-                        >
-                          {allocation.resourceTitle || allocation.resourceId}
-                        </PillLink>
-                      ) : (
-                        <span className="font-medium text-sm">
-                          {allocation.resourceType}: {allocation.resourceId}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>{allocation.tokens} tokens</span>
-                      {allocation.fromUsername && (
-                        <>
-                          <span>•</span>
-                          <span>from</span>
-                          <PillLink
-                            href={`/users/${allocation.fromUserId}`}
-                            className="text-xs"
-                          >
-                            {allocation.fromUsername}
-                          </PillLink>
-                        </>
-                      )}
-                      {!allocation.fromUsername && allocation.fromUserId && (
-                        <>
-                          <span>•</span>
-                          <span>from</span>
-                          <PillLink
-                            href={`/users/${allocation.fromUserId}`}
-                            className="text-xs"
-                          >
-                            {allocation.fromUserId}
-                          </PillLink>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-semibold">{formatCurrency(allocation.usdValue || (allocation.tokens * 0.1))}</div>
-                  </div>
-                </div>
-              ))}
-              {pendingAllocations.allocations.length > 5 && (
-                <div className="text-center text-sm text-muted-foreground py-2">
-                  +{pendingAllocations.allocations.length - 5} more allocations
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <RecentAllocationsCard allocations={pendingAllocations.allocations} />
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -11,10 +11,10 @@ import WriterTokenDashboard from '../../components/payments/WriterTokenDashboard
 import { PayoutsManager } from '../../components/payments/PayoutsManager';
 
 export default function EarningsPage() {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
 
-  if (!session) {
+  if (!user) {
     return null;
   }
 

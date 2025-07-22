@@ -1,6 +1,6 @@
 'use client';
 
-import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
+import { useAuth } from '../../providers/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button } from "../../components/ui/button";
@@ -9,7 +9,7 @@ import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader
 import RecentlyDeletedPages from '../../components/settings/RecentlyDeletedPages';
 
 export default function RecentlyDeletedPage() {
-  const { currentAccount, isAuthenticated } = useCurrentAccount();
+  const { user, isAuthenticated } = useAuth();
   const router = useRouter();
 
   useEffect(() => {

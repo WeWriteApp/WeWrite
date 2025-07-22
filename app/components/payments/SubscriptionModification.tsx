@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { 
   ArrowUpCircle, 
   ArrowDownCircle, 
@@ -40,7 +40,7 @@ interface ProrationPreview {
 }
 
 export function SubscriptionModification({ subscription, onModificationSuccess }: SubscriptionModificationProps) {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   // Payments feature is now always enabled
   const isPaymentsEnabled = true;
   

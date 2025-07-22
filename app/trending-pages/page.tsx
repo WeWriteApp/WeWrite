@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 import Header from '../components/layout/Header';
 import TrendingPages from '../components/features/TrendingPages';
 import { TrendingUp, BarChart3, Flame } from 'lucide-react';
@@ -18,7 +18,7 @@ import MobileBottomNav from '../components/layout/MobileBottomNav';
  * - Better discovery experience for popular content
  */
 export default function TrendingPagesPage() {
-  const { currentAccount, isAuthenticated } = useCurrentAccount();
+  const { user, isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

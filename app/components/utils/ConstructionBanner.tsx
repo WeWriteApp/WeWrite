@@ -1,6 +1,6 @@
 "use client";
 
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { AlertTriangle, Heart } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -11,12 +11,12 @@ import { openExternalLink } from "../../utils/pwa-detection";
  * to inform users that WeWrite is still under development and encourage donations.
  */
 export default function ConstructionBanner() {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   // Payments feature is now always enabled
   const isPaymentsEnabled = true;
 
   // Only show for logged-in users
-  if (!session) {
+  if (!user) {
     return null;
   }
 

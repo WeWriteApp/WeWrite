@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { useTheme } from '../../providers/ThemeProvider';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { getStripePublishableKey } from '../../utils/stripeConfig';
 import { SUBSCRIPTION_TIERS, getTierById, calculateTokensForAmount } from '../../utils/subscriptionTiers';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -61,7 +61,7 @@ export function SubscriptionCheckout({
   cancelUrl
 }: SubscriptionCheckoutProps) {
   const { theme } = useTheme();
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   
   // Checkout flow state
   const [currentStep, setCurrentStep] = useState<'payment' | 'confirmation'>('payment');
@@ -85,7 +85,7 @@ export function SubscriptionCheckout({
 
   // Initialize selected plan from props and auto-advance to payment step
   useEffect(() => {
-    if (initialTier && !selectedPlan && currentAccount?.uid) {
+    if (initialTier && !selectedPlan && user?.uid) {
       const tier = getTierById(initialTier);
       if (tier) {
         const plan = {
@@ -100,11 +100,11 @@ export function SubscriptionCheckout({
         handlePlanSelection(plan);
       }
     }
-  }, [initialTier, initialAmount, selectedPlan, currentAccount?.uid]);
+  }, [initialTier, initialAmount, selectedPlan, user?.uid]);
 
   // Create setup intent for payment processing
   const createSetupIntent = async (plan: SelectedPlan) => {
-    if (!currentAccount?.uid) {
+    if (!user?.uid) {
       setError('User not authenticated');
       return false;
     }
@@ -119,7 +119,7 @@ export function SubscriptionCheckout({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: currentAccount.uid,
+          userId: user.uid,
           tier: plan.tier,
           amount: plan.amount,
           tierName: plan.name,
@@ -233,7 +233,7 @@ export function SubscriptionCheckout({
     }
   };
 
-  if (!currentAccount) {
+  if (!user) {
     return (
       <Card className="max-w-md mx-auto">
         <CardContent className="p-6 text-center">

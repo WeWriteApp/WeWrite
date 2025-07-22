@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 import Header from '../components/layout/Header';
 import RandomPages from '../components/features/RandomPages';
 import { Shuffle, MoreHorizontal, Grid3X3, UserX } from 'lucide-react';
@@ -26,7 +26,7 @@ import MobileBottomNav from '../components/layout/MobileBottomNav';
  * - Better discovery experience
  */
 export default function RandomPagesPage() {
-  const { currentAccount, isAuthenticated } = useCurrentAccount();
+  const { user, isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [denseMode, setDenseMode] = useState(false);
   const [excludeOwnPages, setExcludeOwnPages] = useState(false);

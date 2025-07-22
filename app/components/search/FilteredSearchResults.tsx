@@ -6,7 +6,7 @@ import React, {
   useEffect,
   forwardRef} from "react";
 import { useRouter } from "next/navigation";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 // Removed unused Firebase imports - component already uses API endpoints
 import { navigateToPage } from "../../utils/pagePermissions";
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
@@ -49,7 +49,7 @@ const FilteredSearchResults = forwardRef(({
   className = "",
   autoFocus = false,
   onFocus = null}, ref) => {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
   const { formatDate: formatDateString } = useDateFormat();
 
@@ -87,7 +87,7 @@ const FilteredSearchResults = forwardRef(({
 
   // Fetch comprehensive search results and apply filtering client-side
   const fetchFilteredResults = useCallback(async (searchTerm, filter, searchMode = false) => {
-    if (!session) {
+    if (!user) {
       console.log('[FilteredSearchResults] No user, skipping fetch');
       return;
     }
@@ -100,7 +100,7 @@ const FilteredSearchResults = forwardRef(({
     }
 
     // Create request signature for deduplication
-    const requestSignature = `${searchTerm}-${filter}-${searchMode}-${session.uid}`;
+    const requestSignature = `${searchTerm}-${filter}-${searchMode}-${user.uid}`;
 
     // IMPROVED: Only skip if the exact same request is in progress AND we haven't cleared it
     if (lastRequestRef.current === requestSignature && abortControllerRef.current) {
@@ -117,7 +117,7 @@ const FilteredSearchResults = forwardRef(({
     abortControllerRef.current = new AbortController();
     lastRequestRef.current = requestSignature;
 
-    console.log('[FilteredSearchResults] Fetching results - filter:', filter, 'searchTerm:', searchTerm, 'searchMode:', searchMode, 'userId:', session.uid);
+    console.log('[FilteredSearchResults] Fetching results - filter:', filter, 'searchTerm:', searchTerm, 'searchMode:', searchMode, 'userId:', user.uid);
 
     // CRITICAL FIX: Always set loading state immediately
     setIsSearching(true);
@@ -133,7 +133,7 @@ const FilteredSearchResults = forwardRef(({
       let queryUrl;
       if (isLinkEditor) {
         // Use unified search API for link editor context
-        queryUrl = `/api/search-unified?searchTerm=${encodedSearch}&userId=${session.uid}&context=link_editor&maxResults=25&titleOnly=true&includeUsers=false`;
+        queryUrl = `/api/search-unified?searchTerm=${encodedSearch}&userId=${user.uid}&context=link_editor&maxResults=25&titleOnly=true&includeUsers=false`;
 
         // Add current page ID to exclude it from results if available
         const currentPageId = new URLSearchParams(window.location.search).get('currentPageId');
@@ -142,7 +142,7 @@ const FilteredSearchResults = forwardRef(({
         }
       } else {
         // Use unified search API for general search
-        queryUrl = `/api/search-unified?searchTerm=${encodedSearch}&userId=${session.uid}&context=main&titleOnly=false&maxResults=50&includeContent=true&includeUsers=true`;
+        queryUrl = `/api/search-unified?searchTerm=${encodedSearch}&userId=${user.uid}&context=main&titleOnly=false&maxResults=50&includeContent=true&includeUsers=true`;
       }
 
       console.log('[FilteredSearchResults] Making API request to:', queryUrl, 'for searchMode:', searchMode);
@@ -210,11 +210,11 @@ const FilteredSearchResults = forwardRef(({
         // Apply client-side filtering for enhanced results
         let filteredPages = pageResults;
         if (!searchMode && filter === 'my-pages') {
-          filteredPages = pageResults.filter(page => page.userId === session.uid);
+          filteredPages = pageResults.filter(page => page.userId === user.uid);
         } else if (!searchMode && filter === 'recent') {
           filteredPages = pageResults.sort((a, b) => {
-            if (a.userId === session.uid && b.userId !== session.uid) return -1;
-            if (b.userId === session.uid && a.userId !== session.uid) return 1;
+            if (a.userId === user.uid && b.userId !== user.uid) return -1;
+            if (b.userId === user.uid && a.userId !== user.uid) return 1;
             const aTime = new Date(a.lastModified || 0).getTime();
             const bTime = new Date(b.lastModified || 0).getTime();
             return bTime - aTime;
@@ -243,14 +243,14 @@ const FilteredSearchResults = forwardRef(({
 
         if (!searchMode && filter === 'my-pages') {
           // Filter to only show user's own pages (only for non-link editor mode)
-          filteredPages = safeAllPages.filter(page => page.userId === session.uid);
+          filteredPages = safeAllPages.filter(page => page.userId === user.uid);
           console.log('[FilteredSearchResults] Filtered to my pages:', filteredPages.length);
         } else if (!searchMode && filter === 'recent') {
           // For recent filter in non-link editor mode, sort by recency
           filteredPages = safeAllPages.sort((a, b) => {
             // Prioritize user's own pages
-            if (a.userId === session.uid && b.userId !== session.uid) return -1;
-            if (b.userId === session.uid && a.userId !== session.uid) return 1;
+            if (a.userId === user.uid && b.userId !== user.uid) return -1;
+            if (b.userId === user.uid && a.userId !== user.uid) return 1;
 
             // Then sort by last modified
             const aTime = new Date(a.lastModified || 0).getTime();
@@ -284,12 +284,12 @@ const FilteredSearchResults = forwardRef(({
         lastRequestRef.current = null;
       }
     }
-  }, [session, resetSearchResults]);
+  }, [user, resetSearchResults]);
 
   // Debounced search function with improved reliability to prevent race conditions
   const debouncedSearch = useCallback(
     debounce(async (searchTerm, searchMode = false) => {
-      if (!session) {
+      if (!user) {
         console.log('[FilteredSearchResults] No user available for search');
         return;
       }
@@ -311,7 +311,7 @@ const FilteredSearchResults = forwardRef(({
         // Don't reset results on error - let the user retry
       }
     }, 500), // Standardized to 500ms for better responsiveness while preventing excessive requests
-    [session, isLinkEditor, resetSearchResults, fetchFilteredResults, activeFilter]
+    [user, isLinkEditor, resetSearchResults, fetchFilteredResults, activeFilter]
   );
 
   // Handle search input changes
@@ -403,19 +403,19 @@ const FilteredSearchResults = forwardRef(({
         };
 
         // Use click-to-edit navigation with search result data
-        navigateToPage(item.id, session, pageData, session?.groups, router);
+        navigateToPage(item.id, user, pageData, user?.groups, router);
       } catch (error) {
         console.error('Error with page navigation:', error);
         // Fallback to regular navigation
         router.push(`/${item.id}`);
       }
     }
-  }, [onSelect, isLinkEditor, preventRedirect, router, session, pageDataCache]);
+  }, [onSelect, isLinkEditor, preventRedirect, router, user, pageDataCache]);
 
   // Initialize search on mount and when filter changes
   useEffect(() => {
-    console.log('[FilteredSearchResults] useEffect triggered - user:', !!session, 'isLinkEditor:', isLinkEditor, 'activeFilter:', activeFilter, 'initialSearch:', initialSearch);
-    if (!session) return; // Wait for user to be available
+    console.log('[FilteredSearchResults] useEffect triggered - user:', !!user, 'isLinkEditor:', isLinkEditor, 'activeFilter:', activeFilter, 'initialSearch:', initialSearch);
+    if (!user) return; // Wait for user to be available
 
     if (initialSearch) {
       console.log('[FilteredSearchResults] Running initial search:', initialSearch);
@@ -431,7 +431,7 @@ const FilteredSearchResults = forwardRef(({
 
       return () => clearTimeout(timer);
     }
-  }, [initialSearch, debouncedSearch, isLinkEditor, fetchFilteredResults, activeFilter, session]);
+  }, [initialSearch, debouncedSearch, isLinkEditor, fetchFilteredResults, activeFilter, user]);
 
   // Auto-focus effect for link editor mode
   useEffect(() => {
@@ -478,7 +478,7 @@ const FilteredSearchResults = forwardRef(({
     };
   }, []);
 
-  if (!session) return null;
+  if (!user) return null;
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
@@ -576,7 +576,7 @@ const FilteredSearchResults = forwardRef(({
                           <PillLink
                             href={`/${page.id}`}
                             isPublic={page.isPublic}
-                            isOwned={page.userId === session?.uid}
+                            isOwned={page.userId === user?.uid}
                             clickable={false}
                           >
                             {page.title && isExactDateFormat(page.title)
@@ -608,24 +608,24 @@ const FilteredSearchResults = forwardRef(({
                   User Profiles
                 </h3>
                 <div className="space-y-1">
-                  {users.map((session) => (
+                  {users.map((user) => (
                     <button
-                      key={session.id}
-                      onClick={() => handleSelect(session)}
+                      key={user.id}
+                      onClick={() => handleSelect(user)}
                       className={`w-full text-left p-2 hover:bg-muted rounded-md transition-colors ${
-                        selectedId === session.id ? 'bg-muted' : ''
+                        selectedId === user.id ? 'bg-muted' : ''
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        {session.photoURL && (
+                        {user.photoURL && (
                           <img
-                            src={session.photoURL}
-                            alt={session.title}
+                            src={user.photoURL}
+                            alt={user.title}
                             className="w-5 h-5 rounded-full"
                           />
                         )}
                         <span className="text-sm font-medium text-foreground">
-                          @{session.title}
+                          @{user.title}
                         </span>
                         <span className="text-xs text-muted-foreground">
                           (User Profile)
@@ -660,7 +660,7 @@ const FilteredSearchResults = forwardRef(({
                         title: search,
                         isNew: true, // Flag to indicate this is a new page
                         isPublic: false, // Default to private
-                        userId: session?.uid
+                        userId: user?.uid
                       };
 
                       if (onSelect) {

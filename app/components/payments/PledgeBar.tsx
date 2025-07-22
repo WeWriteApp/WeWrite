@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Button } from "../ui/button";
 import { Plus, Minus } from "lucide-react";
 import { cn } from "../../lib/utils";
@@ -48,7 +48,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   visible = true,
   className,
 }, ref) => {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const { incrementAmount } = useTokenIncrement();
@@ -61,7 +61,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   const pageId = propPageId || (pathname ? pathname.substring(1) : '');
 
   // Check if current user is the page owner
-  const isPageOwner = !!(currentAccount && authorId && currentAccount.uid === authorId);
+  const isPageOwner = !!(user && authorId && user.uid === authorId);
 
   // Subscription feature is now always enabled
   const isSubscriptionEnabled = true;
@@ -115,7 +115,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     const loadTokenData = async () => {
       setIsLoading(true);
       try {
-        if (currentAccount && currentAccount.uid && isSubscriptionEnabled) {
+        if (user && user.uid && isSubscriptionEnabled) {
           // Use fast optimized endpoint for immediate UI response
           const pledgeBarResponse = await fetch(`/api/tokens/pledge-bar-data?pageId=${pageId}`);
 
@@ -228,7 +228,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     };
 
     loadTokenData();
-  }, [currentAccount, pageId, isSubscriptionEnabled]);
+  }, [user, pageId, isSubscriptionEnabled]);
 
   // Handle token allocation changes
   const handleTokenChange = async (change: number) => {
@@ -289,11 +289,11 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
     setAllocationsData(filteredAllocationsData);
 
     try {
-      if (currentAccount && currentAccount.uid && isSubscriptionEnabled) {
+      if (user && user.uid && isSubscriptionEnabled) {
         // Debug authentication state
         console.log('[PledgeBar] Making API call with auth state:', {
-          hasCurrentAccount: !!currentAccount,
-          currentAccountUid: currentAccount?.uid,
+          hasCurrentAccount: !!user,
+          currentAccountUid: user?.uid,
           isSubscriptionEnabled,
           pageId,
           tokenChange: change
@@ -519,7 +519,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
   // Handle pledge bar click - redirect to landing page if not logged in
   const handlePledgeBarClick = () => {
-    if (!currentAccount) {
+    if (!user) {
       // Redirect to landing page for logged-out users
       router.push('/');
     } else if (availableTokens <= 0) {
@@ -574,8 +574,8 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
 
   // Determine user state for notices
   const hasSubscription = subscription && isActiveSubscription(subscription.status);
-  const showSubscriptionNotice = currentAccount && !hasSubscription && isSubscriptionEnabled;
-  const showLoginNotice = !currentAccount;
+  const showSubscriptionNotice = user && !hasSubscription && isSubscriptionEnabled;
+  const showLoginNotice = !user;
 
   return createPortal(
     <div
@@ -747,7 +747,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         userState={
-          !currentAccount
+          !user
             ? 'logged-out'
             : !hasSubscription
               ? 'no-subscription'

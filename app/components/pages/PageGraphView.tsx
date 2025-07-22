@@ -11,7 +11,7 @@ import { usePageConnectionsGraph, getLinkDirection } from '../../hooks/usePageCo
 import { useRelatedPages } from '../../hooks/useRelatedPages';
 import { graphDataCache } from '../../utils/graphDataCache';
 import GraphSettingsPanel from './GraphSettingsPanel';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 
 interface GraphNode {
   id: string;
@@ -59,7 +59,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
   const [isViewSettingsOpen, setIsViewSettingsOpen] = useState(false);
   const router = useRouter();
   const { getPillStyleClasses } = usePillStyle();
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   // const { settings, openDrawer } = useGraphSettings();
   const [settings, setSettings] = useState({
     chargeStrength: -400,
@@ -134,7 +134,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
   } = usePageConnectionsGraph(pageId, pageTitle);
 
   // Use related pages hook - exclude current user's pages
-  const { relatedPages, loading: relatedLoading } = useRelatedPages(pageId, pageTitle, undefined, currentAccount?.username);
+  const { relatedPages, loading: relatedLoading } = useRelatedPages(pageId, pageTitle, undefined, user?.username);
 
   // Expose refresh function to parent component
   useEffect(() => {
@@ -195,7 +195,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
         !allConnections.some(conn => conn.id === page.id) &&
         !secondHopConnections.some(conn => conn.id === page.id) &&
         // Only show related pages by other people (exclude current user's pages)
-        page.username !== currentAccount?.username
+        page.username !== user?.username
       )
       .map(page => ({
         id: page.id,

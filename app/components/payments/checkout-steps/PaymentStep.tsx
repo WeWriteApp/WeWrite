@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '../../ui/alert';
 import { Loader2, CreditCard, Shield, CheckCircle, ChevronDown, ChevronUp, Plus, Check, Trash2, Smartphone, Building2 } from 'lucide-react';
 import { SelectedPlan } from '../SubscriptionCheckout';
 import { PricingDisplay } from '../PricingDisplay';
-import { useCurrentAccount } from '../../../providers/CurrentAccountProvider';
+import { useAuth } from '../../../providers/AuthProvider';
 
 interface PaymentMethod {
   id: string;
@@ -57,7 +57,7 @@ export function PaymentStep({
 }: PaymentStepProps) {
   const stripe = useStripe();
   const elements = useElements();
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
 
   const [paymentError, setPaymentError] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -90,7 +90,7 @@ export function PaymentStep({
   // Fetch existing payment methods
   useEffect(() => {
     const fetchPaymentMethods = async () => {
-      if (!currentAccount?.uid) {
+      if (!user?.uid) {
         setLoadingPaymentMethods(false);
         return;
       }
@@ -138,7 +138,7 @@ export function PaymentStep({
     };
 
     fetchPaymentMethods();
-  }, [currentAccount?.uid]);
+  }, [user?.uid]);
 
   // Handle address changes for tax calculation
   const handleAddressChange = (event: any) => {
@@ -339,7 +339,7 @@ export function PaymentStep({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: currentAccount?.uid,
+          userId: user?.uid,
           paymentMethodId: paymentMethodId,
           tier: selectedPlan.tier,
           amount: selectedPlan.amount,

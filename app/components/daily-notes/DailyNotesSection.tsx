@@ -4,9 +4,8 @@ import React from 'react';
 import { Calendar } from 'lucide-react';
 import { Button } from '../ui/button';
 import { SectionTitle } from '../ui/section-title';
-import StickySection from "../utils/StickySection";
 import DailyNotesCarousel from './DailyNotesCarousel';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { useAccentColor } from '../../contexts/AccentColorContext';
 
 interface DailyNotesSectionProps {
@@ -23,7 +22,7 @@ interface DailyNotesSectionProps {
  * Uses accent color from context and respects pill style settings.
  */
 export default function DailyNotesSection({}: DailyNotesSectionProps) {
-  const { currentAccount, isAuthenticated } = useCurrentAccount();
+  const { user, isAuthenticated } = useAuth();
   const { accentColor, customColors } = useAccentColor();
 
   // Get the actual color value from the accent color system
@@ -40,7 +39,7 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
     return '#1768FF'; // fallback
   };
 
-  if (!isAuthenticated || !currentAccount) {
+  if (!isAuthenticated || !user) {
     return null; // Don't show for non-authenticated users
   }
 
@@ -61,24 +60,22 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
   };
 
   return (
-    <StickySection
-      sectionId="daily_notes"
-      headerContent={
-        <SectionTitle
-          icon={Calendar}
-          title="My Daily Notes"
+    <div className="space-y-4">
+      {/* Static Section Header */}
+      <SectionTitle
+        icon={Calendar}
+        title="My Daily Notes"
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={scrollToToday}
+          className="rounded-2xl"
         >
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={scrollToToday}
-            className="rounded-2xl"
-          >
-            Today
-          </Button>
-        </SectionTitle>
-      }
-    >
+          Today
+        </Button>
+      </SectionTitle>
+
       {/* Content container */}
       <div className="relative">
         <DailyNotesCarousel accentColor={getAccentColorValue()} />
@@ -86,7 +83,6 @@ export default function DailyNotesSection({}: DailyNotesSectionProps) {
         <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none" />
       </div>
-
-    </StickySection>
+    </div>
   );
 }

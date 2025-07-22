@@ -16,7 +16,7 @@ import {
 } from "../ui/table";
 import { interactiveCard, cn } from "../../lib/utils";
 import { PillLink } from "../utils/PillLink";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 export interface Page {
   id: string;
   title: string;
@@ -109,7 +109,7 @@ export default function PageList({
   groupId
 }: PageListProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
 
   if (loading) {
     return <div style={{ minHeight: '200px' }}>
@@ -175,7 +175,7 @@ export default function PageList({
                   href={`/${page.id}`}
                   isPublic={page.isPublic}
                   byline={page.authorName}
-                  isOwned={page.userId === session?.uid}
+                  isOwned={page.userId === user?.uid}
                   isLoading={false}
                   label=""
                 >

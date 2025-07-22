@@ -9,7 +9,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { CopyErrorButton } from '../ui/CopyErrorButton';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { 
   CreditCard, 
   TrendingUp, 
@@ -56,7 +56,7 @@ interface TransactionVolume {
 }
 
 export function PaymentSystemMonitor() {
-  const { currentAccount, isAuthenticated } = useCurrentAccount();
+  const { user, isAuthenticated } = useAuth();
   const [metrics, setMetrics] = useState<PaymentMetrics | null>(null);
   const [alerts, setAlerts] = useState<PaymentAlert[]>([]);
   const [transactionVolume, setTransactionVolume] = useState<TransactionVolume[]>([]);
@@ -66,7 +66,7 @@ export function PaymentSystemMonitor() {
 
   const refreshData = async () => {
     // Don't fetch data if user is not authenticated
-    if (!isAuthenticated || !currentAccount) {
+    if (!isAuthenticated || !user) {
       setLoading(false);
       setRefreshing(false);
       return;
@@ -165,7 +165,7 @@ export function PaymentSystemMonitor() {
 
   useEffect(() => {
     // Only start monitoring if user is authenticated
-    if (isAuthenticated && currentAccount) {
+    if (isAuthenticated && user) {
       refreshData();
 
       // Set up auto-refresh every 30 seconds
@@ -174,7 +174,7 @@ export function PaymentSystemMonitor() {
     } else {
       setLoading(false);
     }
-  }, [isAuthenticated, currentAccount]);
+  }, [isAuthenticated, user]);
 
   const getAlertIcon = (type: string) => {
     switch (type) {
@@ -211,7 +211,7 @@ export function PaymentSystemMonitor() {
     return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
   };
 
-  if (!isAuthenticated || !currentAccount) {
+  if (!isAuthenticated || !user) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">

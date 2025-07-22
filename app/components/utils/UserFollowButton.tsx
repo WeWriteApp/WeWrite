@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Button } from "../ui/button";
 import { Check, Plus, UserPlus, UserMinus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import {
   Dialog,
   DialogContent,
@@ -37,7 +37,7 @@ export function UserFollowButton({
   size = "sm",
   variant = "outline"
 }: UserFollowButtonProps) {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [showUnfollowDialog, setShowUnfollowDialog] = useState(false);
   const [animateCheck, setAnimateCheck] = useState(false);
@@ -50,7 +50,7 @@ export function UserFollowButton({
   } = useUserFollowing(userId);
 
   // Don't show button if not authenticated or trying to follow self
-  if (!currentAccount || currentAccount.uid === userId) {
+  if (!user || user.uid === userId) {
     return null;
   }
 

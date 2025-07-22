@@ -5,17 +5,17 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { getPageById } from "../firebase/database/pages";
 import { getDatabase, ref, get } from "firebase/database";
-import { getSafeFirebaseServices } from "../firebase/environmentAwareConfig";
+import { rtdb } from "../firebase/config";
 import PageView from '../components/pages/PageView';
 import { SmartLoader } from '../components/ui/smart-loader';
 import { ErrorDisplay } from '../components/ui/error-display';
 import { Button } from '../components/ui/button';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 
 export default function ContentPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
   const router = useRouter();
-  const { currentAccount, isLoading: authLoading } = useCurrentAccount();
-  const currentAccountUid = currentAccount?.uid;
+  const { user, isLoading: authLoading } = useAuth();
+  const currentAccountUid = user?.uid;
   const [contentType, setContentType] = useState<'page' | 'not-found' | 'error' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [id, setId] = useState('');
@@ -117,15 +117,6 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
 
         // If not a page, check if it's a user ID
         try {
-          const firebaseServices = getSafeFirebaseServices();
-          if (!firebaseServices) {
-            console.error('Firebase services not available, skipping user ID check');
-            setContentType('not-found');
-            setIsLoading(false);
-            return;
-          }
-
-          const rtdb = getDatabase(firebaseServices.app);
           const userRef = ref(rtdb, `users/${cleanId}`);
           const userSnapshot = await get(userRef);
 

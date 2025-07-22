@@ -54,6 +54,8 @@ const nextConfig = {
     config.plugins.push(
       new webpack.DefinePlugin({
         'process.env.ENABLE_VERBOSE_LOGGING': JSON.stringify('true'),
+        'process.env.USE_DEV_AUTH': JSON.stringify(process.env.USE_DEV_AUTH || 'false'),
+        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
       })
     );
 

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/admin';
-import { DEV_TEST_USERS } from '../../../firebase/developmentAuth';
-// Check if development auth is active by checking environment
-const isDevelopmentAuthActive = () => {
-  return process.env.USE_DEV_AUTH === 'true' && process.env.NODE_ENV === 'development';
+import { DEV_TEST_USERS } from "../../../utils/testUsers";
+// Check if development environment
+const isDevelopmentEnvironment = () => {
+  return process.env.NODE_ENV === 'development';
 };
 import { getCollectionName } from '../../../utils/environmentConfig';
 
@@ -13,10 +13,10 @@ import { getCollectionName } from '../../../utils/environmentConfig';
 export async function POST(request: NextRequest) {
   try {
     // Only allow in development
-    if (!isDevelopmentAuthActive()) {
+    if (!isDevelopmentEnvironment()) {
       return NextResponse.json({
-        error: 'Development auth not active'
-      }, { status: 400 });
+        error: 'This endpoint is only available in development'
+      }, { status: 403 });
     }
 
     const admin = getFirebaseAdmin();

@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { SidebarProvider } from './UnifiedSidebar';
 import MobileBottomNav from './MobileBottomNav';
 import SidebarLayout from './SidebarLayout';
@@ -16,10 +16,10 @@ import UsernameEnforcementModal from '../auth/UsernameEnforcementModal';
  * handle their own visibility logic based on the current route.
  */
 export default function GlobalNavigation({ children }: { children: React.ReactNode }) {
-  const { session, isAuthenticated } = useCurrentAccount();
+  const { user, isAuthenticated } = useAuth();
 
   // Only render navigation for authenticated users
-  if (!isAuthenticated || !session) {
+  if (!isAuthenticated || !user) {
     return <>{children}</>;
   }
 

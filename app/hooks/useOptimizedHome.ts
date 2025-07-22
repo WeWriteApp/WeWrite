@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useCurrentAccount } from "../providers/CurrentAccountProvider";
+import { useAuth } from '../providers/AuthProvider';
 
 interface HomeData {
   recentlyVisitedPages: any[];
@@ -14,22 +14,22 @@ interface HomeData {
  * Simple home data hook - no bullshit
  */
 export function useOptimizedHome() {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const [data, setData] = useState<HomeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!currentAccount?.uid) {
+    if (!user?.uid) {
       setLoading(false);
       return;
     }
 
     const fetchHomeData = async () => {
       try {
-        console.log('[useOptimizedHome] Fetching data for user:', currentAccount.uid);
+        console.log('[useOptimizedHome] Fetching data for user:', user.uid);
 
-        const response = await fetch(`/api/home?userId=${currentAccount.uid}`);
+        const response = await fetch(`/api/home?userId=${user.uid}`);
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -58,7 +58,7 @@ export function useOptimizedHome() {
     };
 
     fetchHomeData();
-  }, [currentAccount?.uid]);
+  }, [user?.uid]);
 
   return { data, loading, error };
 }

@@ -3,9 +3,9 @@ import React, { useEffect, useState, useContext } from "react";
 import { PortfolioContext } from "../../providers/PortfolioProvider";
 import DataTable from "react-data-table-component";
 
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from "../../providers/AuthProvider";
 const PayoutsTable = () => {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   // Payments feature is now always enabled - no conditional rendering needed
   const {
     payouts} = useContext(PortfolioContext);

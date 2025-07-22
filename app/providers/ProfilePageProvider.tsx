@@ -1,6 +1,6 @@
 import React, { createContext, ReactNode } from "react";
 import useSimplePages from "../hooks/useSimplePages";
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from "./AuthProvider";
 // Types
 interface ProfilePagesProviderProps {
   userId: string;
@@ -11,9 +11,9 @@ interface ProfilePagesProviderProps {
 export const ProfilePagesContext = createContext<any>(undefined);
 
 export const ProfilePagesProvider = ({ userId, children }: ProfilePagesProviderProps) => {
-  const { session } = useCurrentAccount();
-  // 🚨 URGENT PRODUCTION FIX: Use simple API-based hook instead of broken Firestore queries
-  const pagesData = useSimplePages(userId, session?.uid || null, true);
+  const { user } = useAuth();
+  // Use simple API-based hook instead of broken Firestore queries
+  const pagesData = useSimplePages(userId, user?.uid || null, true);
 
   return (
     <ProfilePagesContext.Provider value={pagesData}>

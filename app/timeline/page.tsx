@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Calendar, List, ArrowLeft, Clock } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 import { useAccentColor } from '../contexts/AccentColorContext';
 import DailyNotesCarousel from '../components/daily-notes/DailyNotesCarousel';
 import DailyNotesCalendar from '../components/daily-notes/DailyNotesCalendar';
@@ -16,7 +16,7 @@ import TimelineCarousel from '../components/timeline/TimelineCarousel';
 function TimelineContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { currentAccount, isAuthenticated } = useCurrentAccount();
+  const { user, isAuthenticated } = useAuth();
   const { accentColor } = useAccentColor();
   
   const type = searchParams.get('type') || 'daily-notes';
@@ -114,7 +114,7 @@ function TimelineContent() {
     return 'Pages organized by custom date';
   };
 
-  if (!isAuthenticated || !currentAccount) {
+  if (!isAuthenticated || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

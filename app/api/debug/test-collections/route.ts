@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCollectionName, COLLECTIONS } from '../../../utils/environmentConfig';
-import { getEnvironmentAwareFirestore } from '../../../firebase/environmentAwareConfig';
+import { firestore } from '../../../firebase/config';
 
 // GET endpoint - Test collection references
 export async function GET(request: NextRequest) {
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     console.log('🧪 Testing environment-aware collection references...');
     
     // Get environment-aware Firestore instance
-    const db = getEnvironmentAwareFirestore();
+    const db = firestore;
     
     // Test collection naming
     const collectionTests = Object.entries(COLLECTIONS).map(([key, baseName]) => {

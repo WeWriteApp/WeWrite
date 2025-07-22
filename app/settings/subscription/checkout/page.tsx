@@ -4,7 +4,7 @@ import React, { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { SubscriptionCheckoutForm } from '../../../components/payments/SubscriptionCheckoutForm';
 
-import { useCurrentAccount } from '../../../providers/CurrentAccountProvider';
+import { useAuth } from '../../../providers/AuthProvider';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { ArrowLeft, CreditCard } from 'lucide-react';
@@ -19,7 +19,7 @@ import Link from 'next/link';
 function CheckoutPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   // Payments feature is now always enabled
   const paymentsEnabled = true;
 
@@ -27,8 +27,8 @@ function CheckoutPageContent() {
   if (process.env.NODE_ENV === 'development') {
     console.log('[CheckoutPage] Debug Info:', {
       paymentsEnabled,
-      currentAccount: currentAccount?.email,
-      currentAccountUid: currentAccount?.uid
+      user: user?.email,
+      currentAccountUid: user?.uid
     });
   }
 

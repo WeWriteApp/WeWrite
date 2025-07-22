@@ -3,7 +3,7 @@
 import React from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 
 import { getEffectiveTier, SUBSCRIPTION_TIERS } from '../../utils/subscriptionTiers';
 
@@ -16,7 +16,7 @@ interface SupporterBadgeProps {
 }
 
 export default function SupporterBadge({ tier, className = '', showLabel = false, status = 'active', amount }: SupporterBadgeProps) {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   // Payments feature is now always enabled - no conditional rendering needed
 
   // Use centralized tier determination logic with safety fallback

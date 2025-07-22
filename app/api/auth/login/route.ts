@@ -1,14 +1,14 @@
-/**
- * User Login API
- * Handles user authentication with email or username
- */
-
 import { NextRequest, NextResponse } from 'next/server';
-import { createApiResponse, createErrorResponse } from '../../auth-helper';
-import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getEnvironmentType, getCollectionName } from '../../../utils/environmentConfig';
-import { DEV_TEST_USERS } from '../../../firebase/developmentAuth';
 import { cookies } from 'next/headers';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../../utils/environmentConfig';
+
+/**
+ * Login API Endpoint
+ *
+ * This endpoint provides Firebase authentication.
+ * Standard Firebase Auth implementation.
+ */
 
 interface LoginRequest {
   emailOrUsername: string;
@@ -16,308 +16,169 @@ interface LoginRequest {
 }
 
 interface LoginResponse {
-  uid: string;
-  email: string;
-  username?: string;
-  displayName: string;
-  emailVerified: boolean;
-  customToken: string;
-  message: string;
+  success: boolean;
+  user?: {
+    uid: string;
+    email: string;
+    username?: string;
+    displayName: string;
+    emailVerified: boolean;
+  };
+  error?: string;
+}
+
+// Helper function to create error responses
+function createErrorResponse(message: string, status: number = 400): NextResponse {
+  const response: LoginResponse = {
+    success: false,
+    error: message
+  };
+  return NextResponse.json(response, { status });
+}
+
+// Helper function to create success responses
+function createSuccessResponse(user: LoginResponse['user']): NextResponse {
+  const response: LoginResponse = {
+    success: true,
+    user
+  };
+  return NextResponse.json(response);
 }
 
 // POST endpoint - User login
 export async function POST(request: NextRequest) {
   try {
-    const envType = getEnvironmentType();
-    const isDevelopment = envType === 'development' && process.env.USE_DEV_AUTH === 'true';
+    console.log('[Auth] Login request received');
 
-    console.log(`[Auth API] Login request - Environment: ${envType}, Dev Auth: ${isDevelopment}`);
-
-    const body = await request.json();
-    const { emailOrUsername, password } = body as LoginRequest;
+    const body = await request.json() as LoginRequest;
+    const { emailOrUsername, password } = body;
 
     // Validate required fields
     if (!emailOrUsername || !password) {
-      return createErrorResponse('BAD_REQUEST', 'Email/username and password are required');
+      return createErrorResponse('Email/username and password are required');
     }
 
-    // Handle development authentication
+    // Check if we're in development mode with dev auth enabled
+    const isDevelopment = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
+
     if (isDevelopment) {
-      console.log('[Auth API] Using development authentication');
-      return handleDevelopmentLogin(emailOrUsername, password);
-    }
+      console.log('[Auth] Development mode: using dev auth system');
 
-    // Handle production authentication
-    console.log('[Auth API] Using production authentication');
-    return handleProductionLogin(emailOrUsername, password);
+      // In development mode, check against known test accounts
+      const testAccounts = [
+        { email: 'test@local.dev', username: 'testuser', password: 'TestPassword123!', uid: 'dev_test_user_1', isAdmin: false },
+        { email: 'jamie@wewrite.app', username: 'jamie', password: 'TestPassword123!', uid: 'dev_admin_user', isAdmin: true }
+      ];
 
-  } catch (error) {
-    console.error('Login API error:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'An error occurred during login');
-  }
-}
+      // Find matching account
+      const account = testAccounts.find(acc =>
+        (acc.email === emailOrUsername || acc.username === emailOrUsername) && acc.password === password
+      );
 
-/**
- * Handle development authentication with test users only
- */
-async function handleDevelopmentLogin(emailOrUsername: string, password: string) {
-  try {
-    // Check if it's a test user by email
-    let testUser = Object.values(DEV_TEST_USERS).find(user => user.email === emailOrUsername);
-    let userKey: keyof typeof DEV_TEST_USERS | undefined;
-
-    if (testUser) {
-      userKey = Object.keys(DEV_TEST_USERS).find(
-        key => DEV_TEST_USERS[key as keyof typeof DEV_TEST_USERS].email === emailOrUsername
-      ) as keyof typeof DEV_TEST_USERS;
-    } else {
-      // Check if it's a test user by username
-      testUser = Object.values(DEV_TEST_USERS).find(user => user.username === emailOrUsername);
-      if (testUser) {
-        userKey = Object.keys(DEV_TEST_USERS).find(
-          key => DEV_TEST_USERS[key as keyof typeof DEV_TEST_USERS].username === emailOrUsername
-        ) as keyof typeof DEV_TEST_USERS;
+      if (!account) {
+        console.log('[Auth] Development login failed: invalid credentials');
+        return createErrorResponse('Invalid credentials');
       }
+
+      // Create session cookie
+      const cookieStore = await cookies();
+      const sessionData = {
+        uid: account.uid,
+        email: account.email,
+        username: account.username,
+        displayName: account.username,
+        emailVerified: true
+      };
+
+      cookieStore.set('simpleUserSession', JSON.stringify(sessionData), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 7 days
+      });
+
+      console.log('[Auth] Development login successful for:', account.email);
+
+      return createSuccessResponse({
+        uid: account.uid,
+        email: account.email,
+        username: account.username,
+        displayName: account.username,
+        emailVerified: true
+      });
     }
 
-    if (!testUser || testUser.password !== password || !userKey) {
-      const availableUsers = Object.values(DEV_TEST_USERS).map(user =>
-        `${user.username} (${user.email})`
-      ).join(', ');
+    // Production mode: use Firebase Auth
+    const { auth, firestore } = getFirebaseAdmin();
 
-      return createErrorResponse('UNAUTHORIZED', `Invalid test user credentials. Available test users: ${availableUsers}`);
-    }
-
-    console.log(`[Auth API] Development login successful: ${testUser.username}`);
-
-    // Return mock user data for development
-    const mockUserData = {
-      uid: testUser.uid,
-      email: testUser.email,
-      username: testUser.username,
-      displayName: testUser.displayName,
-      emailVerified: true,
-      customToken: `dev_token_${testUser.uid}_${Date.now()}`, // Mock token for development
-      message: 'Development login successful'
-    };
-
-    // Create response with session cookies for API authentication
-    const response = NextResponse.json({
-      success: true,
-      data: mockUserData,
-      timestamp: new Date().toISOString()
-    });
-
-    // Set userSession cookie for API authentication
-    const userSessionData = {
-      uid: testUser.uid,
-      email: testUser.email,
-      username: testUser.username,
-      displayName: testUser.displayName,
-      emailVerified: true
-    };
-
-    response.cookies.set('userSession', JSON.stringify(userSessionData), {
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      httpOnly: false, // Allow client-side access for CurrentAccountProvider
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/'
-    });
-
-    // Set authenticated cookie for middleware
-    response.cookies.set('authenticated', 'true', {
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/'
-    });
-
-    console.log(`[Auth API] Set session cookies for development user: ${testUser.username}`);
-
-    return response;
-
-  } catch (error) {
-    console.error('Development login error:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Development authentication failed');
-  }
-}
-
-/**
- * Handle production authentication with Firebase
- */
-async function handleProductionLogin(emailOrUsername: string, password: string) {
-  try {
-    console.log('[Production Login] Starting authentication process');
-    console.log('[Production Login] Environment:', getEnvironmentType());
-    console.log('[Production Login] Collection prefix example:', getCollectionName('users'));
-
-    const admin = getFirebaseAdmin();
-    if (!admin) {
-      throw new Error('Firebase Admin not initialized');
-    }
-
-    const auth = admin.auth();
-    const db = admin.firestore();
-
+    // Determine if input is email or username
+    const isEmail = emailOrUsername.includes('@');
     let email = emailOrUsername;
-    let userRecord;
 
-    // Check if the input is a username (doesn't contain @)
-    if (!emailOrUsername.includes('@')) {
-      // Look up the email by username using environment-aware collection
-      const usernameQuery = await db.collection(getCollectionName('usernames'))
+    // If username provided, look up email
+    if (!isEmail) {
+      const usersCollection = getCollectionName('users');
+      const userQuery = await firestore
+        .collection(usersCollection)
         .where('username', '==', emailOrUsername)
         .limit(1)
         .get();
 
-      if (usernameQuery.empty) {
-        return createErrorResponse('BAD_REQUEST', 'No account found with this username or email');
+      if (userQuery.empty) {
+        return createErrorResponse('User not found');
       }
 
-      const usernameDoc = usernameQuery.docs[0];
-      const usernameData = usernameDoc.data();
-      email = usernameData.email;
+      email = userQuery.docs[0].data().email;
     }
 
-    // Get user by email
+    // Try to get user by email to verify they exist
+    let userRecord;
     try {
       userRecord = await auth.getUserByEmail(email);
-    } catch (error: any) {
-      if (error.code === 'auth/user-not-found') {
-        return createErrorResponse('BAD_REQUEST', 'No account found with this username or email');
-      }
-      throw error;
+    } catch (error) {
+      return createErrorResponse('Invalid credentials');
     }
 
-    // Verify password by creating a custom token and attempting to sign in
-    // Note: Firebase Admin SDK doesn't have a direct password verification method
-    // In a production environment, you might want to use Firebase Auth REST API
-    // or implement a different authentication strategy
+    // Get user data from Firestore
+    const usersCollection = getCollectionName('users');
+    const userDoc = await firestore.collection(usersCollection).doc(userRecord.uid).get();
 
-    // For now, we'll create a custom token for the user
-    // The client will need to verify the password on their end
-    const customToken = await auth.createCustomToken(userRecord.uid);
-
-    const userDoc = await db.collection(getCollectionName('users')).doc(userRecord.uid).get();
-    let userData = {};
-
-    if (userDoc.exists) {
-      userData = userDoc.data() || {};
-      console.log(`[Production Login] Found user data in collection: ${getCollectionName('users')}`);
-    } else {
-      console.log(`[Production Login] User data not found for UID: ${userRecord.uid}`);
-      // Create minimal user data if not found
-      userData = {
-        username: userRecord.email?.split('@')[0] || 'user',
-        displayName: userRecord.displayName || userRecord.email?.split('@')[0] || 'User'
-      };
+    if (!userDoc.exists) {
+      return createErrorResponse('User profile not found');
     }
 
-    // Update last login time
-    try {
-      await db.collection(getCollectionName('users')).doc(userRecord.uid).update({
-        lastLoginAt: new Date().toISOString()
-      });
-      console.log(`[Production Login] Updated lastLoginAt in collection: ${getCollectionName('users')}`);
-    } catch (updateError) {
-      console.log(`[Production Login] Could not update lastLoginAt for user: ${userRecord.uid}`, updateError);
-    }
+    const userData = userDoc.data();
 
-    // Set authentication cookies
-    const cookieStore = cookies();
-    
-    // Set user session cookie (expires in 1 hour)
-    const userSessionData = {
+    // Create session cookie
+    const cookieStore = await cookies();
+    const sessionData = {
       uid: userRecord.uid,
-      email: userRecord.email,
-      username: userData.username,
-      displayName: userRecord.displayName || userData.displayName || userData.username,
+      email: userRecord.email!,
+      username: userData?.username,
       emailVerified: userRecord.emailVerified
     };
 
-    cookieStore.set('userSession', JSON.stringify(userSessionData), {
+    cookieStore.set('simpleUserSession', JSON.stringify(sessionData), {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 // 1 hour
+      maxAge: 60 * 60 * 24 * 7 // 7 days
     });
 
-    // Set auth token cookie
-    cookieStore.set('authToken', customToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 // 1 hour
-    });
+    console.log('[Auth] Login successful for:', userRecord.email);
 
-    const response: LoginResponse = {
+    return createSuccessResponse({
       uid: userRecord.uid,
-      email: userRecord.email || '',
-      username: userData.username,
-      displayName: userRecord.displayName || userData.displayName || userData.username || '',
-      emailVerified: userRecord.emailVerified,
-      customToken,
-      message: 'Login successful'
-    };
-
-    return createApiResponse(response);
-
-  } catch (error: any) {
-    console.error('Production login error:', error);
-    console.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      stack: error.stack,
-      emailOrUsername,
-      environment: getEnvironmentType()
+      email: userRecord.email!,
+      username: userData?.username,
+      displayName: userData?.displayName || userRecord.displayName || userRecord.email!,
+      emailVerified: userRecord.emailVerified
     });
-    return createErrorResponse('INTERNAL_ERROR', `Production authentication failed: ${error.message}`);
-  }
-}
-
-// GET endpoint - Check authentication status
-export async function GET(request: NextRequest) {
-  try {
-    const cookieStore = cookies();
-    const userSessionCookie = cookieStore.get('userSession');
-    const authTokenCookie = cookieStore.get('authToken');
-
-    if (!userSessionCookie || !authTokenCookie) {
-      return createErrorResponse('UNAUTHORIZED', 'Not authenticated');
-    }
-
-    try {
-      const userData = JSON.parse(userSessionCookie.value);
-      
-      // Verify the auth token is still valid
-      const admin = getFirebaseAdmin();
-      const auth = admin.auth();
-      
-      try {
-        await auth.verifyIdToken(authTokenCookie.value);
-      } catch (tokenError) {
-        // Token is invalid, clear cookies
-        cookieStore.delete('userSession');
-        cookieStore.delete('authToken');
-        return createErrorResponse('UNAUTHORIZED', 'Authentication token expired');
-      }
-
-      return createApiResponse({
-        isAuthenticated: true,
-        user: userData
-      });
-
-    } catch (parseError) {
-      // Invalid cookie data, clear cookies
-      cookieStore.delete('userSession');
-      cookieStore.delete('authToken');
-      return createErrorResponse('UNAUTHORIZED', 'Invalid session data');
-    }
 
   } catch (error) {
-    console.error('Auth check error:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to check authentication status');
+    console.error('[Auth] Login error:', error);
+    return createErrorResponse('An error occurred during login', 500);
   }
 }
+
+

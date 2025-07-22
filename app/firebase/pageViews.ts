@@ -21,16 +21,12 @@ import {
   type DocumentSnapshot,
   type QuerySnapshot
 } from "firebase/firestore";
-import { getSafeFirebaseServices } from "./environmentAwareConfig";
+import { firestore } from "./config";
 import { getCollectionName } from '../utils/environmentConfig';
 
-// Get Firestore instance safely
+// Get Firestore instance
 const getFirebaseDB = (): Firestore => {
-  const services = getSafeFirebaseServices();
-  if (!services) {
-    throw new Error('Firebase services not available. Please check your Firebase configuration.');
-  }
-  return services.db;
+  return firestore;
 };
 
 const db: Firestore = getFirebaseDB();

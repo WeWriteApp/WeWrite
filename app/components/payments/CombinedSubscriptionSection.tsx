@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -60,7 +60,7 @@ interface Pledge {
 }
 
 function CombinedSubscriptionSectionInner() {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   // Payments feature is now always enabled
   const isPaymentsEnabled = true;
 
@@ -166,7 +166,7 @@ function CombinedSubscriptionSectionInner() {
   // CRITICAL: All hooks must be called before any early returns
   useEffect(() => {
     return trackEffect('subscriptionAndPaymentSetup', () => {
-      if (currentAccount?.uid && isPaymentsEnabled) {
+      if (user?.uid && isPaymentsEnabled) {
         const unsubscribeSubscription = setupSubscriptionListener();
         fetchPaymentMethods();
         fetchPledges();
@@ -179,7 +179,7 @@ function CombinedSubscriptionSectionInner() {
         };
       }
     });
-  }, [currentAccount, isPaymentsEnabled, trackEffect]);
+  }, [user, isPaymentsEnabled, trackEffect]);
 
   // If payments feature flag is disabled, don't render anything
   // But do this AFTER all hooks are declared

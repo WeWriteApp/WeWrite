@@ -4,7 +4,7 @@ import { useState, useContext, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../components/ui/button";
 import { ChevronLeft, Clock, Filter, Check } from "lucide-react";
-import { useCurrentAccount } from "../providers/CurrentAccountProvider";
+import { useAuth } from '../providers/AuthProvider';
 import { useActivityFilter } from "../contexts/ActivityFilterContext";
 import SimpleRecentEdits from "../components/features/SimpleRecentEdits";
 import {
@@ -30,7 +30,7 @@ export default function ActivityPageClient({
   initialError: string | null
 }) {
   const router = useRouter();
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const { viewMode, setViewMode } = useActivityFilter();
 
   const handleBackToHome = () => {

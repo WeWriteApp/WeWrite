@@ -1,6 +1,6 @@
 'use client';
 
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { useTheme } from "../../providers/ThemeProvider";
 import { useRouter } from 'next/navigation';
 import { Button } from "../../components/ui/button";
@@ -11,11 +11,11 @@ import { cn } from "../../lib/utils";
 import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 
 export default function AppearancePage() {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
 
-  if (!session) {
+  if (!user) {
     return null;
   }
 

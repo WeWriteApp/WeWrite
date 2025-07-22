@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Share2, Search, X, Pin } from 'lucide-react';
@@ -182,11 +182,11 @@ IsolatedSearchInput.displayName = 'IsolatedSearchInput';
 
 // Memoize the entire SearchPage component to prevent unnecessary re-renders
 const SearchPage = React.memo(() => {
-  const { session, isAuthenticated } = useCurrentAccount();
+  const { user, isAuthenticated } = useAuth();
 
   // Memoize user data to prevent unnecessary re-renders
-  const userId = useMemo(() => session?.uid || null, [session?.uid]);
-  const userEmail = useMemo(() => session?.email || null, [session?.email]);
+  const userId = useMemo(() => user?.uid || null, [user?.uid]);
+  const userEmail = useMemo(() => user?.email || null, [user?.email]);
   // Groups functionality removed
 
   // Use unified search system - single source of truth

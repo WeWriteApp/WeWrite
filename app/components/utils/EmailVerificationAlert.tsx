@@ -4,15 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Mail, AlertCircle, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
-import { auth } from '../../firebase/config';
-import { sendEmailVerification } from 'firebase/auth';
+import { useAuth } from '../../providers/AuthProvider';
 import { toast } from '../ui/use-toast';
-import {
-  getResendCooldownRemaining,
-  canResendVerificationEmail,
-  startResendCooldown
-} from '../../services/emailVerificationNotifications';
 
 interface EmailVerificationAlertProps {
   className?: string;
@@ -34,10 +27,12 @@ function EmailVerificationAlert({
   variant = "alert",
   onDismiss
 }: EmailVerificationAlertProps) {
-  const { session, isAuthenticated } = useCurrentAccount();
+  const { user, isAuthenticated } = useAuth();
   const [isResending, setIsResending] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [lastResendTime, setLastResendTime] = useState<number>(0);
+  const RESEND_COOLDOWN = 60000; // 60 seconds
 
   // Optimistic verification state management
   const [shouldShowAlert, setShouldShowAlert] = useState(false);
@@ -46,18 +41,18 @@ function EmailVerificationAlert({
 
   // Optimistic verification check - only show alert if actually unverified
   useEffect(() => {
-    if (!isAuthenticated || !session || isDismissed) {
+    if (!isAuthenticated || !user || isDismissed) {
       return;
     }
 
-    // Optimistically assume verified, then check
+    // Check if user is unverified
     const checkVerificationStatus = async () => {
       try {
         // Wait a bit for auth state to settle
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Check if user is actually unverified
-        const isUnverified = auth.currentUser && !auth.currentUser.emailVerified;
+        // Check if user is actually unverified using auth
+        const isUnverified = user && !user.emailVerified;
 
         if (isUnverified) {
           // User is actually unverified, show alert with animation
@@ -69,9 +64,11 @@ function EmailVerificationAlert({
         setHasCheckedVerification(true);
       } catch (error) {
         console.warn('Error checking email verification status:', error);
-        // On error, assume unverified for safety
-        setShouldShowAlert(true);
-        setTimeout(() => setIsAnimatingIn(true), 50);
+        // On error, assume unverified for safety if user exists
+        if (user) {
+          setShouldShowAlert(true);
+          setTimeout(() => setIsAnimatingIn(true), 50);
+        }
         setHasCheckedVerification(true);
       }
     };
@@ -79,12 +76,15 @@ function EmailVerificationAlert({
     if (!hasCheckedVerification) {
       checkVerificationStatus();
     }
-  }, [isAuthenticated, session, isDismissed, hasCheckedVerification]);
+  }, [isAuthenticated, user, isDismissed, hasCheckedVerification]);
 
   // Update cooldown timer
   useEffect(() => {
     const updateCooldown = () => {
-      setCooldownRemaining(getResendCooldownRemaining());
+      const now = Date.now();
+      const timeSinceLastResend = now - lastResendTime;
+      const remaining = Math.max(0, RESEND_COOLDOWN - timeSinceLastResend);
+      setCooldownRemaining(Math.ceil(remaining / 1000));
     };
 
     // Initial update
@@ -94,7 +94,7 @@ function EmailVerificationAlert({
     const interval = setInterval(updateCooldown, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [lastResendTime]);
 
   // Only show alert if we've confirmed the user is unverified
   if (!shouldShowAlert || isDismissed) {
@@ -112,7 +112,7 @@ function EmailVerificationAlert({
   };
 
   const handleResendVerification = async () => {
-    if (!auth.currentUser) {
+    if (!user?.email) {
       toast({
         title: "Error",
         description: "No user found. Please log in again.",
@@ -121,26 +121,43 @@ function EmailVerificationAlert({
       return;
     }
 
-    if (!canResendVerificationEmail()) {
+    // Check cooldown
+    const now = Date.now();
+    const timeSinceLastResend = now - lastResendTime;
+    if (timeSinceLastResend < RESEND_COOLDOWN) {
       return;
     }
 
     setIsResending(true);
     try {
-      await sendEmailVerification(auth.currentUser);
-      startResendCooldown();
-      setCooldownRemaining(getResendCooldownRemaining());
-
-      toast({
-        title: "Verification email sent",
-        description: "Please check your email and click the verification link.",
-        variant: "default"
+      const response = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: user.email
+        })
       });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setLastResendTime(now);
+        toast({
+          title: "Verification email sent",
+          description: "Please check your email and click the verification link.",
+          variant: "default"
+        });
+      } else {
+        throw new Error(result.error || 'Failed to send verification email');
+      }
     } catch (error: any) {
       console.error("Error sending verification email:", error);
       toast({
         title: "Error",
-        description: "Failed to send verification email. Please try again.",
+        description: error.message || "Failed to send verification email. Please try again.",
         variant: "destructive",
       });
     } finally {

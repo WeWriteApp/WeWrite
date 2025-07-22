@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 
 
 interface UserEarnings {
@@ -12,7 +12,7 @@ interface UserEarnings {
 }
 
 export function useUserEarnings(): { earnings: UserEarnings | null; loading: boolean; error: string | null } {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const [earnings, setEarnings] = useState<UserEarnings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +21,7 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
 
   useEffect(() => {
     const fetchEarnings = async () => {
-      if (!currentAccount?.uid || !paymentsEnabled) {
+      if (!user?.uid || !paymentsEnabled) {
         setEarnings(null);
         setLoading(false);
         return;
@@ -79,7 +79,7 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
     };
 
     fetchEarnings();
-  }, [currentAccount?.uid, paymentsEnabled]);
+  }, [user?.uid, paymentsEnabled]);
 
   return { earnings, loading, error };
 }

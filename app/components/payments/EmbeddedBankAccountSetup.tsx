@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -34,7 +34,7 @@ export const EmbeddedBankAccountSetup: React.FC<EmbeddedBankAccountSetupProps> =
   onCancel,
   showTitle = true
 }) => {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,14 +87,14 @@ export const EmbeddedBankAccountSetup: React.FC<EmbeddedBankAccountSetupProps> =
 
   // Create Account Session when component mounts
   useEffect(() => {
-    if (!currentAccount?.uid || !stripeConnect) return;
+    if (!user?.uid || !stripeConnect) return;
 
     const createAccountSession = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        const response = await fetch('/api/stripe/account-session', {
+        const response = await fetch('/api/stripe/account-user', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -119,7 +119,7 @@ export const EmbeddedBankAccountSetup: React.FC<EmbeddedBankAccountSetupProps> =
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to create account session');
+          throw new Error(errorData.error || 'Failed to create account user');
         }
 
         const sessionData = await response.json();
@@ -134,15 +134,15 @@ export const EmbeddedBankAccountSetup: React.FC<EmbeddedBankAccountSetupProps> =
     };
 
     createAccountSession();
-  }, [currentAccount?.uid, stripeConnect]);
+  }, [user?.uid, stripeConnect]);
 
-  // Mount Stripe Connect components when account session is ready
+  // Mount Stripe Connect components when account user is ready
   useEffect(() => {
     if (!stripeConnect || !accountSession || componentMounted) return;
 
     const mountComponents = async () => {
       try {
-        // Initialize Stripe Connect with the account session
+        // Initialize Stripe Connect with the account user
         await stripeConnect.initialize({
           clientSecret: accountSession.client_secret
         });
@@ -199,7 +199,7 @@ export const EmbeddedBankAccountSetup: React.FC<EmbeddedBankAccountSetupProps> =
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId: currentAccount?.uid })
+        body: JSON.stringify({ userId: user?.uid })
       });
 
       if (response.ok) {
@@ -224,7 +224,7 @@ export const EmbeddedBankAccountSetup: React.FC<EmbeddedBankAccountSetupProps> =
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ userId: currentAccount?.uid })
+          body: JSON.stringify({ userId: user?.uid })
         });
 
         if (response.ok) {
@@ -256,7 +256,7 @@ export const EmbeddedBankAccountSetup: React.FC<EmbeddedBankAccountSetupProps> =
     }, 300000);
   };
 
-  if (!currentAccount) {
+  if (!user) {
     return (
       <Alert>
         <AlertTriangle className="h-4 w-4" />

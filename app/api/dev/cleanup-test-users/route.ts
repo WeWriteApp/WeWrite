@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
-import { DEV_TEST_USERS } from '../../../firebase/developmentAuth';
+import { DEV_TEST_USERS } from "../../../utils/testUsers";
 
 /**
  * API route to clean up old test users before recreating them

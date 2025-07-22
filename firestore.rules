@@ -66,8 +66,9 @@ service cloud.firestore {
     // Development environment helper - allows operations for test users
     function isDevelopmentTestUser(userId) {
       return userId != null && (
-        userId == 'kJ8xQz2mN5fR7vB3wC9dE1gH6i4L' || // testUser1
-        userId == 'mP9yRa3nO6gS8wD4xE2hF5jK7m9N' || // testUser2
+        userId == 'kJ8xQz2mN5fR7vB3wC9dE1gH6i4L' || // jamie@wewrite.app
+        userId == 'mP9yRa3nO6gS8wD4xE2hF5jK7m9N' || // test@wewrite.app
+        userId == 'gW5eR8iT3eA9pP2mN6oQ4sT7uV1X' || // getwewrite@gmail.com
         userId == 'qT1uVb4oQ7hU9xF5yG3iH6kL8n0P' || // testAdmin
         userId == 'sW2vXc5pR8iV0yH6zI4jJ7lM9o1Q' || // testWriter
         userId == 'uY3wZd6qS9jW1zJ7aK5kL8mN0p2R'    // testReader

@@ -5,7 +5,7 @@ import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Trash2, RotateCcw, Calendar, AlertTriangle } from 'lucide-react'
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import PillLink from '../utils/PillLink'
 
 interface DeletedPage {
@@ -19,7 +19,7 @@ interface DeletedPage {
 }
 
 export default function RecentlyDeletedPages() {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const [deletedPages, setDeletedPages] = useState<DeletedPage[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -29,16 +29,16 @@ export default function RecentlyDeletedPages() {
 
   // Fetch recently deleted pages (within last 30 days)
   const fetchDeletedPages = async () => {
-    if (!currentAccount?.uid) return
+    if (!user?.uid) return
 
     try {
       setLoading(true)
       setError(null)
 
-      console.log('Fetching deleted pages for user:', currentAccount.uid)
+      console.log('Fetching deleted pages for user:', user.uid)
 
       // Call API endpoint to get deleted pages
-      const response = await fetch(`/api/pages?userId=${currentAccount.uid}&includeDeleted=true&orderBy=deletedAt&orderDirection=desc&limit=100`)
+      const response = await fetch(`/api/pages?userId=${user.uid}&includeDeleted=true&orderBy=deletedAt&orderDirection=desc&limit=100`)
 
       if (!response.ok) {
         throw new Error(`Failed to fetch deleted pages: ${response.status}`)
@@ -272,7 +272,7 @@ export default function RecentlyDeletedPages() {
 
   useEffect(() => {
     fetchDeletedPages()
-  }, [currentAccount?.uid])
+  }, [user?.uid])
 
   if (loading) {
     return (

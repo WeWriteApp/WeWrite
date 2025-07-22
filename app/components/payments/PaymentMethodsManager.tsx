@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { CreditCard, Plus, Trash2, Check, AlertTriangle, Copy } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -33,7 +33,7 @@ interface PaymentMethodFormProps {
 }
 
 const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCancel }) => {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -43,7 +43,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!stripe || !elements || !currentAccount) {
+    if (!stripe || !elements || !user) {
       setError('Payment system not ready. Please try again.');
       return;
     }
@@ -170,7 +170,7 @@ const PaymentMethodForm: React.FC<PaymentMethodFormProps> = ({ onSuccess, onCanc
 };
 
 export function PaymentMethodsManager() {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   // Payments feature is now always enabled
   const isPaymentsEnabled = true;
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -182,7 +182,7 @@ export function PaymentMethodsManager() {
 
   // Fetch payment methods
   const fetchPaymentMethods = async (abortSignal?: AbortSignal) => {
-    if (!session) {
+    if (!user) {
       setLoading(false);
       return;
     }
@@ -237,7 +237,7 @@ export function PaymentMethodsManager() {
 
   // Delete a payment method
   const handleDeletePaymentMethod = async (paymentMethodId: string) => {
-    if (!session) return;
+    if (!user) return;
 
     try {
       setLoading(true);
@@ -273,7 +273,7 @@ export function PaymentMethodsManager() {
 
   // Set a payment method as primary
   const handleSetPrimaryPaymentMethod = async (paymentMethodId: string) => {
-    if (!session) return;
+    if (!user) return;
 
     try {
       setLoading(true);
@@ -309,7 +309,7 @@ export function PaymentMethodsManager() {
 
   // Load payment methods on component mount
   useEffect(() => {
-    if (session && isPaymentsEnabled) {
+    if (user && isPaymentsEnabled) {
       const controller = new AbortController();
       fetchPaymentMethods(controller.signal);
 
@@ -318,7 +318,7 @@ export function PaymentMethodsManager() {
         controller.abort();
       };
     }
-  }, [, session, isPaymentsEnabled]);
+  }, [, user, isPaymentsEnabled]);
 
   // Don't render if payments feature is disabled
   if (!isPaymentsEnabled) {

@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     // Payments feature is now always enabled - no feature flag check needed
 
     // Get the user's customer ID from Firestore
-    const userDoc = await db.collection('users').doc(userId).get();
+    const userDoc = await db.collection(getCollectionName('users')).doc(userId).get();
     const userData = userDoc.data();
 
     console.log('[PAYMENT METHODS] User data:', { userId, hasUserData: !!userData, stripeCustomerId: userData?.stripeCustomerId });

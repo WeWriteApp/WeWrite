@@ -5,12 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Button } from "../ui/button";
-import { Heart, DollarSign } from "lucide-react";
+import { Heart, DollarSign, Coins } from "lucide-react";
 import { TokenPieChart } from "../ui/TokenPieChart";
 import Logo from "../ui/Logo";
 import { openExternalLink } from "../../utils/pwa-detection";
 import { useSidebarContext } from "./UnifiedSidebar";
-import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
+import { useAuth } from '../../providers/AuthProvider';
+import { useUserEarnings } from '../../hooks/useUserEarnings';
 
 // Removed old optimized subscription import - using API-first approach
 import { getSubscriptionButtonText, getSubscriptionNavigationPath, isActiveSubscription } from "../../utils/subscriptionStatus";
@@ -21,19 +22,40 @@ import { useTokenBalanceContext } from "../../contexts/TokenBalanceContext";
 
 export default function Header() {
   const router = useRouter();
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
   const [isScrolled, setIsScrolled] = React.useState(false);
-  const [scrollProgress, setScrollProgress] = React.useState(0);
   const [headerHeight, setHeaderHeight] = React.useState(80); // Start at 80px (h-20)
 
   const [subscription, setSubscription] = React.useState(null);
   const { tokenBalance: contextTokenBalance } = useTokenBalanceContext();
   const [simulatedTokenBalance, setSimulatedTokenBalance] = React.useState<any>(null);
   const headerRef = React.useRef<HTMLDivElement>(null);
+  const { earnings } = useUserEarnings();
 
   // Payments feature is now always enabled
   const isPaymentsEnabled = true;
+
+  // Helper function to render earnings display
+  const renderEarningsDisplay = () => {
+    // Only show if user is authenticated and has earnings
+    if (!user?.uid || !earnings || !earnings.hasEarnings) return null;
+
+    const totalTokensEarned = Math.floor(earnings.totalEarnings * 10); // Convert USD to tokens (1 USD = 10 tokens)
+
+    return (
+      <div
+        className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+        onClick={() => router.push('/settings/earnings')}
+        title={`${totalTokensEarned} tokens earned`}
+      >
+        <Coins className="h-4 w-4 text-green-600" />
+        <span className="text-sm font-medium text-foreground">
+          {totalTokensEarned}
+        </span>
+      </div>
+    );
+  };
 
   // Helper function to render token allocation display
   const renderTokenAllocationDisplay = () => {
@@ -71,18 +93,18 @@ export default function Header() {
   // Listen to user subscription changes
   React.useEffect(() => {
     console.log('🎯 Header: Subscription effect triggered', {
-      currentAccount: !!currentAccount,
+      user: !!user,
       isPaymentsEnabled,
-      currentAccountUid: currentAccount?.uid
+      currentAccountUid: user?.uid
     });
 
-    if (!currentAccount || !isPaymentsEnabled) {
-      console.log('🎯 Header: No currentAccount or payments disabled, clearing subscription');
+    if (!user || !isPaymentsEnabled) {
+      console.log('🎯 Header: No user or payments disabled, clearing subscription');
       setSubscription(null);
       return;
     }
 
-    console.log('🎯 Header: Fetching subscription data for user:', currentAccount.uid);
+    console.log('🎯 Header: Fetching subscription data for user:', user.uid);
 
     // Use API-first approach instead of complex optimized subscription
     const fetchSubscription = async () => {
@@ -105,7 +127,7 @@ export default function Header() {
     return () => {
       console.log('🎯 Header: No cleanup needed for API calls');
     };
-  }, [currentAccount, isPaymentsEnabled]);
+  }, [user, isPaymentsEnabled]);
 
   // Token balance is now provided by context - no need to fetch separately
 
@@ -121,13 +143,13 @@ export default function Header() {
 
     const loadUnfundedTokens = () => {
       // Load unfunded tokens for logged-out users or users without subscriptions
-      if (!currentAccount) {
+      if (!user) {
         // Logged-out user - load from localStorage
         const balance = getLoggedOutTokenBalance();
         setSimulatedTokenBalance(balance);
       } else {
         // Logged-in user without subscription - load user-specific unfunded tokens
-        const balance = getUserTokenBalance(currentAccount.uid);
+        const balance = getUserTokenBalance(user.uid);
         setSimulatedTokenBalance(balance);
       }
     };
@@ -147,7 +169,7 @@ export default function Header() {
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [currentAccount, isPaymentsEnabled, subscription]);
+  }, [user, isPaymentsEnabled, subscription]);
 
   // Calculate and update header height
   React.useEffect(() => {
@@ -165,25 +187,7 @@ export default function Header() {
       const newHeight = maxHeight - (maxHeight - minHeight) * scrollRatio;
       setHeaderHeight(newHeight);
 
-      // Calculate scroll progress for the progress bar based on main content area only
-      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
 
-      // Find the main content area (exclude footer sections)
-      const mainContentElement = document.querySelector('[data-page-content]');
-      let contentHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-
-      if (mainContentElement) {
-        // Calculate the height up to the end of main content
-        const mainContentRect = mainContentElement.getBoundingClientRect();
-        const mainContentBottom = mainContentRect.bottom + window.scrollY;
-        const viewportHeight = window.innerHeight;
-
-        // Use the main content bottom as the effective scroll height
-        contentHeight = Math.max(0, mainContentBottom - viewportHeight);
-      }
-
-      const scrolled = contentHeight > 0 ? (winScroll / contentHeight) * 100 : 0;
-      setScrollProgress(Math.min(scrolled, 100));
     };
 
     // Initial update
@@ -241,8 +245,9 @@ export default function Header() {
 
             {/* Header content area - matches editor content area */}
             <div className={`flex-1 min-w-0 flex items-center h-full px-3 sm:px-4 md:px-6 header-padding-mobile transition-all duration-300 ease-in-out`}>
-              <div className="flex-1 flex items-center">
-                {/* Auth navigation removed - functionality moved to UnifiedSidebar */}
+              {/* Earnings Display (left side) */}
+              <div className="flex-1 flex justify-start">
+                {isPaymentsEnabled && renderEarningsDisplay()}
               </div>
 
               {/* Logo/Title (centered) - clickable to go home */}

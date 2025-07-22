@@ -83,10 +83,7 @@ export const createErrorResponse = (
 
 /**
  * Helper function to get the user ID from a request
- * Tries multiple authentication methods:
- * 1. Session cookie (Firebase session)
- * 2. userSession cookie (WeWrite session)
- * 3. Authorization header (Bearer token)
+ * Updated for auth system using simpleUserSession cookie
  *
  * @param request - The Next.js request object
  * @returns The user ID or null if not authenticated
@@ -98,69 +95,72 @@ export async function getUserIdFromRequest(request: NextRequest): Promise<string
     return null;
   }
 
-  // Debug: Log all available cookies
-  const allCookies: Record<string, string> = {};
-  try {
-    // Next.js App Router: request.cookies is a RequestCookies object
-    // Handle different cookie implementations between environments
-    if (request.cookies && typeof request.cookies.entries === 'function') {
-      for (const [name, value] of request.cookies.entries()) {
-        allCookies[name] = value;
-      }
-    } else if (request.cookies && typeof request.cookies.getAll === 'function') {
-      // Alternative method for some environments
-      const cookieArray = request.cookies.getAll();
-      for (const cookie of cookieArray) {
-        allCookies[cookie.name] = cookie.value;
-      }
-    } else {
-      console.log('[AUTH DEBUG] Unable to enumerate cookies, using direct access only');
+  const shouldLogAuthDebug = process.env.AUTH_DEBUG === 'true' || process.env.NODE_ENV === 'development';
+
+  // Try to get from simpleUserSession cookie (auth system)
+  const simpleSessionUserId = await trySimpleUserSessionCookie(request);
+  if (simpleSessionUserId) {
+    if (shouldLogAuthDebug) {
+      console.log('[AUTH DEBUG] Using userId from simpleUserSession:', simpleSessionUserId);
     }
-  } catch (cookieError: any) {
-    console.warn('[AUTH DEBUG] Error enumerating cookies:', cookieError.message);
+    return simpleSessionUserId;
   }
 
-  // Only log auth debug info when explicitly needed (errors or first-time setup)
-  const shouldLogAuthDebug = process.env.AUTH_DEBUG === 'true' || process.env.NODE_ENV === 'development' && Math.random() < 0.01;
-
-  if (shouldLogAuthDebug) {
-    console.log('[AUTH DEBUG] Available cookies:', Object.keys(allCookies));
-    console.log('[AUTH DEBUG] Session cookie exists:', !!request.cookies.get('session')?.value);
-    console.log('[AUTH DEBUG] UserSession cookie exists:', !!request.cookies.get('userSession')?.value);
-    console.log('[AUTH DEBUG] DevUserSession cookie exists:', !!request.cookies.get('devUserSession')?.value);
-    console.log('[AUTH DEBUG] Environment:', process.env.NODE_ENV);
-    console.log('[AUTH DEBUG] Vercel Environment:', process.env.VERCEL_ENV);
-  }
-
-  // SECURITY: Query parameter authentication has been permanently removed
-  // to prevent authentication bypass vulnerabilities
-
-  // Check for development mode
-  const isDevelopment = process.env.NODE_ENV === 'development';
-
-  // Try to get from session cookie (Firebase session)
+  // Fallback: Try legacy session cookie (Firebase session) for backward compatibility
   const userId = await trySessionCookie(request);
   if (userId) {
+    if (shouldLogAuthDebug) {
+      console.log('[AUTH DEBUG] Using userId from legacy session cookie:', userId);
+    }
     return userId;
   }
 
-  // If still no userId, try userSession cookie (standard WeWrite auth)
+  // Fallback: Try legacy userSession cookie for backward compatibility
   const userSessionUserId = await tryUserSessionCookie(request);
   if (userSessionUserId) {
+    if (shouldLogAuthDebug) {
+      console.log('[AUTH DEBUG] Using userId from legacy userSession cookie:', userSessionUserId);
+    }
     return userSessionUserId;
   }
 
   // Try to get from Authorization header (Bearer token)
   const authHeaderUserId = await tryAuthorizationHeader(request);
   if (authHeaderUserId) {
+    if (shouldLogAuthDebug) {
+      console.log('[AUTH DEBUG] Using userId from Authorization header:', authHeaderUserId);
+    }
     return authHeaderUserId;
   }
 
-  // No user ID found - only log when debugging
+  // No user ID found
   if (shouldLogAuthDebug) {
     console.log('[AUTH DEBUG] No valid authentication found, returning null');
   }
   return null;
+}
+
+/**
+ * Try to authenticate using simpleUserSession cookie (auth system)
+ */
+async function trySimpleUserSessionCookie(request: NextRequest): Promise<string | null> {
+  const simpleSessionCookie = request.cookies.get('simpleUserSession')?.value;
+  if (!simpleSessionCookie) {
+    return null;
+  }
+
+  try {
+    const sessionData = JSON.parse(simpleSessionCookie);
+    if (sessionData && sessionData.uid) {
+      return sessionData.uid;
+    } else {
+      console.log('[AUTH DEBUG] simpleUserSession cookie missing uid:', sessionData);
+      return null;
+    }
+  } catch (error: any) {
+    console.error('[AUTH DEBUG] Error parsing simpleUserSession cookie:', error);
+    return null;
+  }
 }
 
 /**

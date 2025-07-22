@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Shield, AlertTriangle, Loader2, CheckCircle } from 'lucide-react';
 
@@ -28,14 +28,14 @@ export const EmbeddedStripeSecurityWrapper: React.FC<EmbeddedStripeSecurityWrapp
   requiresVerification = false,
   onSecurityCheck
 }) => {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const [securityChecks, setSecurityChecks] = useState<SecurityCheck[]>([]);
   const [isSecurityPassed, setIsSecurityPassed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     performSecurityChecks();
-  }, [currentAccount, requiresAuth, requiresVerification]);
+  }, [user, requiresAuth, requiresVerification]);
 
   const performSecurityChecks = async () => {
     setIsLoading(true);
@@ -45,8 +45,8 @@ export const EmbeddedStripeSecurityWrapper: React.FC<EmbeddedStripeSecurityWrapp
     if (requiresAuth) {
       checks.push({
         name: 'Authentication',
-        status: currentAccount?.uid ? 'passed' : 'failed',
-        message: currentAccount?.uid ? 'User authenticated' : 'Authentication required'
+        status: user?.uid ? 'passed' : 'failed',
+        message: user?.uid ? 'User authenticated' : 'Authentication required'
       });
     }
 
@@ -98,14 +98,14 @@ export const EmbeddedStripeSecurityWrapper: React.FC<EmbeddedStripeSecurityWrapp
     }
 
     // Check 5: User Verification (if required)
-    if (requiresVerification && currentAccount?.uid) {
+    if (requiresVerification && user?.uid) {
       try {
         const verificationCheck = await fetch('/api/user/verification-status', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ userId: currentAccount.uid })
+          body: JSON.stringify({ userId: user.uid })
         });
 
         if (verificationCheck.ok) {

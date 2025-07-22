@@ -4,7 +4,7 @@ import React, { useState, forwardRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ExternalLink, Users, Trash2 } from "lucide-react";
 import { ShimmerEffect } from "../ui/skeleton";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { formatPageTitle, formatUsername, isUserLink, isPageLink, isExternalLink, isGroupLink } from "../../utils/linkFormatters";
 import Modal from "../ui/modal";
 import ExternalLinkPreviewModal from "../ui/ExternalLinkPreviewModal";
@@ -12,7 +12,7 @@ import { Button } from "../ui/button";
 import { usePillStyle } from "../../contexts/PillStyleContext";
 import { navigateToPage, canUserEditPage } from "../../utils/pagePermissions";
 import PillLinkContextMenu from "./PillLinkContextMenu";
-import { getCachedPageById } from "../../utils/requestCache";
+import { getPageById } from "../../firebase/database/pages";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
 
 // Simple skeleton loader
@@ -64,7 +64,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   ...otherProps
 }, ref) => {
   // Hooks
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const { getPillStyleClasses, pillStyle } = usePillStyle();
   const [showExternalLinkModal, setShowExternalLinkModal] = useState(false);
   const [showContextMenu, setShowContextMenu] = useState(false);
@@ -113,7 +113,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
       // Handle page links with click-to-edit functionality
       if (isPageLinkType && pageId) {
         console.log('🔵 PillLink: Navigating to page', { pageId, effectiveHref });
-        navigateToPage(pageId, session, pageData, session?.groups, router);
+        navigateToPage(pageId, user, pageData, user?.groups, router);
         return;
       }
 
@@ -215,11 +215,11 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   const maxAttempts = 2; // Lower for PillLink since it's more frequent
 
   useEffect(() => {
-    if (isPageLinkType && pageId && session && fetchAttempts < maxAttempts) {
+    if (isPageLinkType && pageId && user && fetchAttempts < maxAttempts) {
       const fetchPageData = async () => {
         try {
-          // Use cached page access with deduplication
-          const result = await getCachedPageById(pageId, session?.uid);
+          // Use direct page access
+          const result = await getPageById(pageId, user?.uid);
           if (result.pageData && !result.error) {
             setPageData(result.pageData);
             setLastError(null); // Clear error on success
@@ -245,7 +245,7 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
         fetchPageData();
       }
     }
-  }, [isPageLinkType, pageId, session, fetchAttempts]);
+  }, [isPageLinkType, pageId, user, fetchAttempts]);
 
   // Format byline based on whether the page belongs to a group or user
   let formattedByline = null;

@@ -7,7 +7,7 @@ import { listenToPageById, getPageById } from "../../firebase/database";
 import { getPageVersions, getPageVersionById } from "../../services/versionService";
 import { recordPageView } from "../../firebase/pageViews";
 import { trackPageViewWhenReady } from "../../utils/analytics-page-titles";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { DataContext } from "../../providers/DataProvider";
 import { TextSelectionProvider } from "../../providers/TextSelectionProvider";
 import { PageProvider } from "../../contexts/PageContext";
@@ -143,7 +143,7 @@ export default function PageView({
   // Hooks
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const { addRecentPage } = useRecentPages();
 
   // Logger
@@ -162,7 +162,7 @@ export default function PageView({
   const tryApiFallback = useCallback(async () => {
     try {
       pageLogger.debug('Trying API fallback for page load', { pageId });
-      const result = await getPageById(pageId, currentAccount?.uid);
+      const result = await getPageById(pageId, user?.uid);
 
       if (result.error) {
         pageLogger.warn('API fallback failed', { error: result.error, pageId });
@@ -199,7 +199,7 @@ export default function PageView({
 
             // Record page view
             if (!viewRecorded.current && pageData.id) {
-              recordPageView(pageData.id, currentAccount?.uid || null);
+              recordPageView(pageData.id, user?.uid || null);
               viewRecorded.current = true;
             }
           } catch (parseError) {
@@ -223,7 +223,7 @@ export default function PageView({
       setError('Failed to load page');
       setIsLoading(false);
     }
-  }, [pageId, currentAccount?.uid]);
+  }, [pageId, user?.uid]);
 
   // Handle params Promise
   useEffect(() => {
@@ -246,7 +246,7 @@ export default function PageView({
       return;
     }
 
-    pageLogger.debug('Starting page load', { pageId, userId: currentAccount?.uid });
+    pageLogger.debug('Starting page load', { pageId, userId: user?.uid });
     setIsLoading(true);
     setError(null);
 
@@ -382,7 +382,7 @@ export default function PageView({
 
           setIsLoading(false);
         }
-      }, currentAccount?.uid || null);
+      }, user?.uid || null);
 
       unsubscribeRef.current = unsubscribe;
 
@@ -401,16 +401,16 @@ export default function PageView({
       }
       clearTimeout(fallbackTimeout);
     };
-  }, [pageId, currentAccount?.uid, showVersion, versionId, showDiff, compareVersionId]);
+  }, [pageId, user?.uid, showVersion, versionId, showDiff, compareVersionId]);
 
   // Record page view and add to recent pages
   useEffect(() => {
     if (!viewRecorded.current && !isLoading && page && pageId) {
       viewRecorded.current = true;
-      recordPageView(pageId, currentAccount?.uid);
+      recordPageView(pageId, user?.uid);
 
       // Add to recent pages if user is logged in
-      if (currentAccount && page) {
+      if (user && page) {
         // Get the correct username - prefer page.username, fallback to fetching from user profile
         const getCorrectUsername = async () => {
           // If we have a valid username that's not "Anonymous", use it
@@ -419,8 +419,8 @@ export default function PageView({
           }
 
           // If it's the current user's page, use their username
-          if (page.userId === currentAccount.uid && currentAccount.username) {
-            return currentAccount.username;
+          if (page.userId === user.uid && user.username) {
+            return user.username;
           }
 
           // Otherwise, try to fetch from Firebase Realtime Database
@@ -455,7 +455,7 @@ export default function PageView({
         });
       }
     }
-  }, [isLoading, page, pageId, currentAccount?.uid, currentAccount, addRecentPage]);
+  }, [isLoading, page, pageId, user?.uid, user, addRecentPage]);
 
 
 
@@ -543,7 +543,7 @@ export default function PageView({
   };
 
   // Computed values
-  const canEdit = currentAccount?.uid && !isPreviewingDeleted && !showVersion && !showDiff && (currentAccount.uid === page?.userId);
+  const canEdit = user?.uid && !isPreviewingDeleted && !showVersion && !showDiff && (user.uid === page?.userId);
   const memoizedPage = useMemo(() => page, [page?.id, page?.title, page?.updatedAt]);
   const memoizedLinkedPageIds = useMemo(() => [], [editorState]); // TODO: Extract linked page IDs
 
@@ -771,14 +771,14 @@ export default function PageView({
 
         // Handle authentication errors specifically
         if (response.status === 401) {
-          console.error('🔴 PAGE SAVE: Authentication error - attempting to refresh session');
+          console.error('🔴 PAGE SAVE: Authentication error - attempting to refresh user');
 
-          // Try to refresh the session using the API-based approach
+          // Try to refresh the user using the API-based approach
           try {
-            console.log('🔄 PAGE SAVE: Attempting session refresh via API');
+            console.log('🔄 PAGE SAVE: Attempting user refresh via API');
 
-            // First, try to refresh the session using the session API
-            const sessionRefreshResponse = await fetch('/api/auth/session', {
+            // First, try to refresh the user using the user API
+            const sessionRefreshResponse = await fetch('/api/auth/user', {
               method: 'GET',
               credentials: 'include'
             });
@@ -795,15 +795,15 @@ export default function PageView({
               });
 
               if (retryResponse.ok) {
-                console.log('✅ PAGE SAVE: Retry successful after session refresh');
+                console.log('✅ PAGE SAVE: Retry successful after user refresh');
                 const responseData = await retryResponse.json();
-                console.log('✅ PAGE SAVE: Page saved successfully via API (after session refresh)', { pageId });
+                console.log('✅ PAGE SAVE: Page saved successfully via API (after user refresh)', { pageId });
                 // Skip to success handling
                 setHasUnsavedChanges(false);
                 setError(null);
                 return;
               } else {
-                console.error('🔴 PAGE SAVE: Retry failed after session refresh:', retryResponse.status);
+                console.error('🔴 PAGE SAVE: Retry failed after user refresh:', retryResponse.status);
               }
             } else {
               console.log('🔄 PAGE SAVE: Session API refresh failed, trying Firebase token refresh');
@@ -817,8 +817,8 @@ export default function PageView({
                 console.log('🔄 PAGE SAVE: Refreshing Firebase auth token');
                 const newToken = await user.getIdToken(true); // Force refresh
 
-                // Create new session cookie
-                const sessionResponse = await fetch('/api/create-session-cookie', {
+                // Create new user cookie
+                const sessionResponse = await fetch('/api/create-user-cookie', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ idToken: newToken }),
@@ -853,7 +853,7 @@ export default function PageView({
             console.error('🔴 PAGE SAVE: Session/auth refresh failed:', refreshError);
           }
 
-          setError("Your session has expired. Please refresh the page and log in again.");
+          setError("Your user has expired. Please refresh the page and log in again.");
           return; // Don't throw, just show error message
         }
 
@@ -1123,7 +1123,7 @@ export default function PageView({
               enableCopy={true}
               enableShare={true}
               enableAddToPage={true}
-              username={currentAccount?.username}
+              username={user?.username}
             >
               <div ref={contentRef}>
                 <TextViewErrorBoundary fallbackContent={

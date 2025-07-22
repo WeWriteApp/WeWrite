@@ -5,7 +5,7 @@ import { MapPin, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { useAccentColor } from '../../contexts/AccentColorContext';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import OpenStreetMapPicker from '../map/OpenStreetMapPicker';
 
 interface Location {
@@ -34,7 +34,7 @@ export default function LocationField({
   className = ""
 }: LocationFieldProps) {
   const { accentColor, customColors } = useAccentColor();
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   // Map feature is now always enabled
   const mapFeatureEnabled = true;
   const router = useRouter();

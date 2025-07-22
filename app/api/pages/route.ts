@@ -166,9 +166,25 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('BAD_REQUEST', 'Page title is required');
     }
 
-    // Get user information
-    const userRecord = await admin.auth().getUser(currentUserId);
-    const username = userRecord.email?.split('@')[0] || 'Anonymous';
+    // Get user information - handle development vs production
+    const isDevelopment = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
+    let username = 'Anonymous';
+
+    if (isDevelopment) {
+      // In development mode, use the session data directly
+      // Development users don't exist in Firebase Auth
+      if (currentUserId === 'dev_test_user_1') {
+        username = 'testuser';
+      } else if (currentUserId === 'dev_admin_user') {
+        username = 'jamie';
+      } else {
+        username = currentUserId.replace('dev_', '').replace('_user', '');
+      }
+    } else {
+      // In production, get user info from Firebase Auth
+      const userRecord = await admin.auth().getUser(currentUserId);
+      username = userRecord.email?.split('@')[0] || 'Anonymous';
+    }
 
     // Create page data - ensure content is properly stringified
     const contentString = content ?

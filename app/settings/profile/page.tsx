@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { doc, getDoc } from "firebase/firestore";
 import { addUsername, updateEmail as updateFirebaseEmail, updatePassword, checkUsernameAvailability } from "../../firebase/auth";
 import { db } from "../../firebase/database";
@@ -21,7 +21,7 @@ import { ChevronLeft, Edit3, Save, X, AlertCircle, Eye, EyeOff, Lock } from 'luc
 import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 
 export default function ProfilePage() {
-  const { currentAccount, isAuthenticated, isLoading } = useCurrentAccount();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
   // Custom modal hooks
@@ -55,20 +55,20 @@ export default function ProfilePage() {
     }
 
     loadUserData();
-  }, [isAuthenticated, currentAccount, router]);
+  }, [isAuthenticated, user, router]);
 
   const loadUserData = async () => {
-    if (!currentAccount) return;
+    if (!user) return;
 
     try {
       // Load user profile data
-      const userDocRef = doc(db, 'users', currentAccount.uid);
+      const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
         const currentUsername = userData.username || '';
-        const currentEmail = currentAccount.email || '';
+        const currentEmail = user.email || '';
         setUsername(currentUsername);
         setEmail(currentEmail);
         setTempUsername(currentUsername);
@@ -189,7 +189,7 @@ export default function ProfilePage() {
   };
 
   const handleUsernameChange = async (newUsername: string) => {
-    if (!currentAccount) return;
+    if (!user) return;
     if (!newUsername || newUsername === username) return;
 
     // Validate username format first
@@ -214,7 +214,7 @@ export default function ProfilePage() {
       }
 
       // Add username to user profile
-      await addUsername(currentAccount.uid, newUsername);
+      await addUsername(user.uid, newUsername);
 
       // Update local state
       setUsername(newUsername);
@@ -230,7 +230,7 @@ export default function ProfilePage() {
   };
 
   const handleEmailChange = async (newEmail: string) => {
-    if (!currentAccount) return;
+    if (!user) return;
     if (!newEmail || newEmail === email) return;
 
     try {

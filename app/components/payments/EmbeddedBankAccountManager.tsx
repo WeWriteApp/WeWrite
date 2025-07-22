@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -38,7 +38,7 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
   onUpdate,
   showTitle = true
 }) => {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,8 +99,8 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
         const connectInstance = StripeConnect.init({
           publishableKey,
           fetchClientSecret: async () => {
-            console.log('Fetching client secret for account session...');
-            const response = await fetch('/api/stripe/account-session', {
+            console.log('Fetching client secret for account user...');
+            const response = await fetch('/api/stripe/account-user', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -122,7 +122,7 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
             }
 
             const data = await response.json();
-            console.log('Account session created successfully');
+            console.log('Account user created successfully');
             return data.client_secret;
           }
         });
@@ -139,7 +139,7 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
 
   // Load bank account status
   useEffect(() => {
-    if (!currentAccount?.uid) return;
+    if (!user?.uid) return;
 
     const loadBankStatus = async () => {
       try {
@@ -148,7 +148,7 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ userId: currentAccount.uid })
+          body: JSON.stringify({ userId: user.uid })
         });
 
         if (response.ok) {
@@ -173,11 +173,11 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
     };
 
     loadBankStatus();
-  }, [currentAccount?.uid]);
+  }, [user?.uid]);
 
-  // Create account session and mount component
+  // Create account user and mount component
   useEffect(() => {
-    if (!stripeConnect || !containerRef.current || !currentAccount?.uid) return;
+    if (!stripeConnect || !containerRef.current || !user?.uid) return;
 
     const container = containerRef.current;
 
@@ -189,8 +189,8 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
 
     const mountComponent = async () => {
       try {
-        // Create account session
-        const response = await fetch('/api/stripe/account-session', {
+        // Create account user
+        const response = await fetch('/api/stripe/account-user', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -212,13 +212,13 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
         }
 
         const sessionData = await response.json();
-        console.log('Account session created successfully');
+        console.log('Account user created successfully');
 
         // Debug what methods are available on stripeConnect
         console.log('StripeConnect instance methods:', Object.getOwnPropertyNames(stripeConnect));
         console.log('StripeConnect instance type:', typeof stripeConnect);
 
-        // Initialize Stripe Connect with the account session
+        // Initialize Stripe Connect with the account user
         console.log('Calling stripeConnect.initialize...');
         await stripeConnect.initialize({
           clientSecret: sessionData.client_secret
@@ -256,13 +256,13 @@ export const EmbeddedBankAccountManager: React.FC<EmbeddedBankAccountManagerProp
         if (cleanupFn) cleanupFn();
       });
     };
-  }, [stripeConnect, currentAccount?.uid]);
+  }, [stripeConnect, user?.uid]);
 
 
 
 
 
-  if (!currentAccount) {
+  if (!user) {
     return (
       <Alert>
         <AlertTriangle className="h-4 w-4" />

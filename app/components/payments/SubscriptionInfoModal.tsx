@@ -13,7 +13,7 @@ import { X } from "lucide-react";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 
 import { SUBSCRIPTION_TIERS } from '../../utils/subscriptionTiers';
 
@@ -27,7 +27,7 @@ interface TierModalProps {
 }
 
 export function SubscriptionInfoModal({ children, trigger, currentTier = null, currentStatus = null, userId = null, username = null }: TierModalProps) {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   // Payments feature is now always enabled
   const isPaymentsEnabled = true;
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Button } from "../../components/ui/button";
@@ -9,17 +9,17 @@ import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader
 import PWAInstallationCard from '../../components/utils/PWAInstallationCard';
 
 export default function AdvancedPage() {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!session) {
+    if (!user) {
       router.push('/auth/login');
       return;
     }
-  }, [, session, router]);
+  }, [, user, router]);
 
-  if (!session) {
+  if (!user) {
     return null;
   }
 

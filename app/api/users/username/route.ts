@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
     const db = admin.firestore();
 
     // Check if username exists in Firestore users collection
-    const usersQuery = await db.collection('users')
+    const usersQuery = await db.collection(getCollectionName('users'))
       .where('username', '==', username)
       .limit(1)
       .get();
@@ -262,7 +262,7 @@ export async function PUT(request: NextRequest) {
       }
 
       // Check availability
-      const usersQuery = await db.collection('users')
+      const usersQuery = await db.collection(getCollectionName('users'))
         .where('username', '==', suggestion)
         .limit(1)
         .get();

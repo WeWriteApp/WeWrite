@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Badge } from '../ui/badge';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { 
   AlertTriangle, 
   CreditCard, 
@@ -24,7 +24,7 @@ interface FailedPaymentRecoveryProps {
 }
 
 export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: FailedPaymentRecoveryProps) {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -40,7 +40,7 @@ export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: Failed
   const amount = subscription.amount || 0;
 
   const handleRetryPayment = async () => {
-    if (!session) {
+    if (!user) {
       setError('User not authenticated');
       return;
     }

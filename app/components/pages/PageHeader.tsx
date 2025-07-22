@@ -12,7 +12,7 @@ import dynamic from 'next/dynamic';
 import { UsernameBadge } from "../ui/UsernameBadge";
 
 import ClickableByline from "../utils/ClickableByline";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { useDateFormat } from '../../contexts/DateFormatContext';
 import { handleAddToPage, handleReply, handleShare } from "../../utils/pageActionHandlers";
 
@@ -139,7 +139,7 @@ export default function PageHeader({
   }>({});
 
   const router = useRouter();
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const { sidebarWidth, isExpanded, isHovering } = useSidebarContext();
 
   // State for scroll behavior - only used in view mode
@@ -224,13 +224,13 @@ export default function PageHeader({
     // Use prop value if provided, otherwise calculate
     if (propCanEdit !== undefined) return propCanEdit;
 
-    if (!session) return false;
+    if (!user) return false;
 
     // User is the page owner
-    if (userId && session.uid === userId) return true;
+    if (userId && user.uid === userId) return true;
 
     return false;
-  }, [propCanEdit, session, session?.uid]);
+  }, [propCanEdit, user, user?.uid]);
 
   // Update editing title when title prop changes
   React.useEffect(() => {
@@ -323,7 +323,7 @@ export default function PageHeader({
 
   // Handle daily note navigation
   const handleDailyNoteNavigation = async (direction: 'previous' | 'next') => {
-    if (!session?.uid || !title || !isExactDateFormat(title) || isNavigating) {
+    if (!user?.uid || !title || !isExactDateFormat(title) || isNavigating) {
       return;
     }
 
@@ -334,13 +334,13 @@ export default function PageHeader({
       direction: direction,
       current_date: title,
       is_editing: isEditing,
-      user_id: session.uid
+      user_id: user.uid
     });
 
     try {
       const navigationResult = direction === 'previous'
-        ? await navigateToPreviousDailyNote(session.uid, title, isEditing)
-        : await navigateToNextDailyNote(session.uid, title, isEditing);
+        ? await navigateToPreviousDailyNote(user.uid, title, isEditing)
+        : await navigateToNextDailyNote(user.uid, title, isEditing);
 
       if (navigationResult) {
         if (navigationResult.exists && navigationResult.pageId) {
@@ -422,16 +422,16 @@ export default function PageHeader({
 
     // The page ID is the first segment if it's not empty and not a special route
     if (pathSegments.length > 1 && pathSegments[1] &&
-        ![', session', 'group', 'admin', 'search', 'new', 'settings'].includes(pathSegments[1])) {
+        ![', user', 'group', 'admin', 'search', 'new', 'settings'].includes(pathSegments[1])) {
       const extractedPageId = pathSegments[1];
       setPageId(extractedPageId);
 
       // Check if the current user can change ownership (is the page owner)
-      if (session && userId && session.uid === userId) {
+      if (user && userId && user.uid === userId) {
         console.log("User can change page ownership");
       }
     }
-  }, [session, session?.uid]);
+  }, [user, user?.uid]);
 
   // Groups functionality removed
 
@@ -510,7 +510,7 @@ export default function PageHeader({
       userId: userId,
       username: username
     };
-  }, [pageId, title, session?.uid, username]);
+  }, [pageId, title, user?.uid, username]);
 
   // Handler functions using shared utilities
   const handleAddToPageClick = () => {
@@ -521,13 +521,13 @@ export default function PageHeader({
 
   const handleReplyClick = async () => {
     if (pageObject) {
-      await handleReply(pageObject, session, router);
+      await handleReply(pageObject, user, router);
     }
   };
 
   const handleShareClick = () => {
     if (pageObject) {
-      handleShare(pageObject, title, session);
+      handleShare(pageObject, title, user);
     }
   };
 

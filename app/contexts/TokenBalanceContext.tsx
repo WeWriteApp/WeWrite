@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 import { useFeatureFlag } from '../utils/feature-flags';
 
 interface TokenBalance {
@@ -20,7 +20,7 @@ interface TokenBalanceContextType {
 const TokenBalanceContext = createContext<TokenBalanceContextType | undefined>(undefined);
 
 export function TokenBalanceProvider({ children }: { children: React.ReactNode }) {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const [tokenBalance, setTokenBalance] = useState<TokenBalance | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -28,9 +28,9 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
   const paymentsEnabled = true;
 
   const fetchTokenBalance = useCallback(async () => {
-    if (!currentAccount?.uid || !paymentsEnabled) {
+    if (!user?.uid || !paymentsEnabled) {
       console.log('[TokenBalanceContext] Skipping token balance fetch:', {
-        hasAccount: !!currentAccount?.uid,
+        hasAccount: !!user?.uid,
         paymentsEnabled
       });
       setTokenBalance(null);
@@ -48,7 +48,7 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
       return;
     }
 
-    console.log('[TokenBalanceContext] Fetching token balance for user:', currentAccount.uid);
+    console.log('[TokenBalanceContext] Fetching token balance for user:', user.uid);
     setIsLoading(true);
     try {
       const response = await fetch('/api/tokens/balance');
@@ -107,7 +107,7 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
     } finally {
       setIsLoading(false);
     }
-  }, [currentAccount?.uid, paymentsEnabled]);
+  }, [user?.uid, paymentsEnabled]);
 
   // Initial load
   useEffect(() => {

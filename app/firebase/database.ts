@@ -1,18 +1,21 @@
 /**
- * Database Module - Modular Structure
+ * Database Module - DEPRECATED
  *
- * This file has been refactored from a single 2,385-line file into a modular structure
- * for better maintainability and organization. The original large file has been split into:
+ * ⚠️  MIGRATION NOTICE: This module is deprecated in favor of API routes.
  *
- * - core.ts: Core database setup, types, and generic utilities
- * - access.ts: Access control and permission checking
- * - pages.ts: Page CRUD operations and listeners
- * - versions.ts: Version management and history
- * - links.ts: Link extraction and management
- * - search.ts: Search functionality for users and pages
- * - users.ts: User-related operations and profile management
+ * All database operations should now use the API client from utils/apiClient.ts
+ * instead of direct Firebase calls. This ensures:
+ * - Environment-aware collection naming
+ * - Consistent authentication handling
+ * - Better error handling and logging
+ * - Centralized data access patterns
  *
- * All functions are re-exported here to maintain backward compatibility.
+ * Migration Guide:
+ * - Replace direct Firebase imports with API client calls
+ * - Use followsApi, pageApi, userProfileApi, etc. from utils/apiClient.ts
+ * - Update components to use the new API patterns
+ *
+ * This file is kept for backward compatibility but should not be used for new code.
  */
 
 // Re-export all database functions from modular structure
@@ -370,24 +373,8 @@ export const appendPageReference = async (
       lastModified: new Date().toISOString()
     });
 
-    // CRITICAL FIX: Invalidate caches after content update
-    try {
-      // Invalidate request cache
-      const { invalidatePageCache } = await import('../utils/requestCache');
-      invalidatePageCache(targetPageId);
-
-      // Clear page cache
-      const { clearPagesCache } = await import('../lib/pageCache');
-      clearPagesCache(pageData.userId);
-
-      // Clear optimized pages cache
-      const { clearPageCaches } = await import('./optimizedPages');
-      clearPageCaches();
-
-      console.log('✅ Caches invalidated after page content append');
-    } catch (cacheError) {
-      console.error('⚠️ Error invalidating caches after append (non-fatal):', cacheError);
-    }
+    // Cache invalidation is now handled by useSimplePages automatically
+    console.log('✅ Page content appended successfully');
 
     // Notifications functionality removed
 

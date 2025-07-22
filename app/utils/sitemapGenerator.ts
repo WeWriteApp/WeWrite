@@ -1,7 +1,6 @@
-import { db } from '../firebase/config'
+import { firestore, rtdb } from '../firebase/config'
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore'
 import { ref, get } from 'firebase/database'
-import { rtdb } from '../firebase/rtdb'
 import { getCollectionName } from "../utils/environmentConfig";
 
 interface SitemapOptions {
@@ -22,7 +21,7 @@ export async function generatePagesSitemap(options: SitemapOptions = {}): Promis
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
   
   try {
-    const pagesRef = collection(db, getCollectionName('pages'))
+    const pagesRef = collection(firestore, getCollectionName('pages'))
     let pagesQuery = query(
       pagesRef,
       where('isPublic', '==', true),
@@ -99,7 +98,7 @@ export async function generateUsersSitemap(options: SitemapOptions = {}): Promis
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://getwewrite.app'
   
   try {
-    const usersRef = collection(db, getCollectionName('users'))
+    const usersRef = collection(firestore, getCollectionName('users'))
     const usersQuery = query(
       usersRef,
       orderBy('lastActive', 'desc'),
@@ -218,7 +217,7 @@ export async function generateNewsSitemap(options: SitemapOptions = {}): Promise
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://wewrite.app'
 
   try {
-    const pagesRef = collection(db, getCollectionName('pages'))
+    const pagesRef = collection(firestore, getCollectionName('pages'))
     const recentDate = new Date()
     recentDate.setDate(recentDate.getDate() - 2) // Last 2 days for news
 

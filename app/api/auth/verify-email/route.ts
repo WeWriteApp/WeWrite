@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiResponse, createErrorResponse, getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../../utils/environmentConfig';
 
 interface ResendVerificationRequest {
   email?: string;
@@ -124,7 +125,7 @@ export async function PUT(request: NextRequest) {
       });
 
       // Update user document in Firestore
-      await db.collection('users').doc(userRecord.uid).update({
+      await db.collection(getCollectionName('users')).doc(userRecord.uid).update({
         emailVerified: true,
         emailVerifiedAt: new Date().toISOString()
       });

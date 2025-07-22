@@ -1,16 +1,6 @@
-// Use environment-aware authentication wrapper for proper environment separation
+// Firebase auth - clean implementation
+import { auth, firestore } from './config';
 import {
-  getGlobalAuthWrapper,
-  getAuthEnvironmentInfo,
-  isDevelopmentAuthActive,
-  devAuthHelpers
-} from './authWrapper';
-import {
-  getEnvironmentAwareAuth,
-  getEnvironmentAwareFirestore
-} from './environmentAwareConfig';
-import {
-  type Auth,
   type User as FirebaseUser,
   type UserCredential,
   updateProfile,
@@ -18,10 +8,11 @@ import {
   updatePassword as firebaseUpdatePassword,
   reauthenticateWithCredential,
   EmailAuthProvider,
-  signInAnonymously
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut
 } from 'firebase/auth';
 import {
-  type Firestore,
   doc,
   getDoc,
   updateDoc,
@@ -29,29 +20,13 @@ import {
 } from 'firebase/firestore';
 import Cookies from 'js-cookie';
 import type { User } from '../types/database';
-import { getAnalyticsService } from '../utils/analytics-service';
-import { getCollectionName, getEnvironmentType } from '../utils/environmentConfig';
+import { getCollectionName } from '../utils/environmentConfig';
 
-// Get environment-aware authentication wrapper
-const authWrapper = getGlobalAuthWrapper();
+// Firebase auth - clean and simple
+console.log('[Firebase Auth] Using authentication system');
 
-// Get Firebase services (still needed for some operations)
-export const auth: Auth = getEnvironmentAwareAuth();
-const db: Firestore = getEnvironmentAwareFirestore();
-
-// Log authentication environment information
-const authInfo = getAuthEnvironmentInfo();
-console.log(`[Firebase Auth] Environment: ${authInfo.environment}`);
-console.log(`[Firebase Auth] Auth Type: ${authInfo.authType}`);
-console.log(`[Firebase Auth] Environment Separated: ${authInfo.isEnvironmentSeparated}`);
-
-if (authInfo.isDevelopmentAuth) {
-  console.warn('[Firebase Auth] 🧪 Development authentication active - using test users');
-  console.log('[Firebase Auth] Available test users:', authInfo.availableTestUsers);
-}
-
-// Export development auth helpers for easy access
-export { devAuthHelpers };
+// Export auth instance for backward compatibility
+export { auth } from './config';
 
 // Auth result interfaces
 interface AuthResult {
@@ -69,10 +44,10 @@ interface UsernameAvailabilityResult {
   suggestions: string[];
 }
 
-// firebase database service - now uses environment-aware authentication
+// Simple user creation
 export const createUser = async (email: string, password: string): Promise<UserCredential | Error> => {
   try {
-    const userCredential = await authWrapper.signUp(email, password);
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     return userCredential;
   } catch (error) {
     return error as Error;
@@ -81,23 +56,12 @@ export const createUser = async (email: string, password: string): Promise<UserC
 
 export const loginUser = async (emailOrUsername: string, password: string): Promise<AuthResult> => {
   try {
-    // Check if we're in development auth mode
-    if (isDevelopmentAuthActive()) {
-      // In development mode, only allow predefined test users
-      console.log('[Dev Auth] Development authentication active - checking test users only');
-
-      // Use the auth wrapper directly for development auth
-      const userCredential = await authWrapper.signIn(emailOrUsername, password);
-      return { user: userCredential.user };
-    }
-
-    // Production mode - handle username/email lookup
     let email = emailOrUsername;
 
     // Check if the input is a username (doesn't contain @)
     if (!emailOrUsername.includes('@')) {
-      // Look up the email by username using environment-specific collection
-      const usernameDoc = await getDoc(doc(db, getCollectionName('usernames'), emailOrUsername.toLowerCase()));
+      // Look up the email by username
+      const usernameDoc = await getDoc(doc(firestore, getCollectionName('usernames'), emailOrUsername.toLowerCase()));
 
       if (!usernameDoc.exists()) {
         return {
@@ -106,12 +70,9 @@ export const loginUser = async (emailOrUsername: string, password: string): Prom
         };
       }
 
-      // Get the user ID from the username document
+      // Get the user's email from the users collection
       const userData = usernameDoc.data();
-      const userId = userData.uid;
-
-      // Get the user's email from the users collection using environment-specific collection
-      const userDoc = await getDoc(doc(db, getCollectionName('users'), userId));
+      const userDoc = await getDoc(doc(firestore, getCollectionName('users'), userData.uid));
       if (!userDoc.exists()) {
         return {
           code: "auth/user-not-found",
@@ -122,7 +83,7 @@ export const loginUser = async (emailOrUsername: string, password: string): Prom
       email = userDoc.data().email;
     }
 
-    const userCredential = await authWrapper.signIn(email, password);
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return { user: userCredential.user };
   } catch (error: any) {
     console.error("Login error:", error);
@@ -152,168 +113,34 @@ interface LogoutResult {
   error?: any;
 }
 
-interface SavedAccount {
-  uid: string;
-  email: string;
-  username?: string;
-  isCurrent?: boolean;
-  lastUsed?: string;
-}
+// Removed SavedAccount interface - no longer supporting account switching
 
-export const logoutUser = async (keepPreviousSession: boolean = false, returnToPreviousAccount: boolean = false): Promise<LogoutResult> => {
-  console.log('🔴 LOGOUT: Function called with params:', { keepPreviousSession, returnToPreviousAccount });
+export const logoutUser = async (): Promise<LogoutResult> => {
   try {
-    // Check if we should return to a previous account
-    if (returnToPreviousAccount) {
-      console.log('🔴 LOGOUT: Attempting to return to previous account');
+    console.log('🔴 LOGOUT: Logout started');
 
-      // Get saved accounts to find the previous account
-      const savedAccountsJson = localStorage.getItem('savedAccounts');
-      if (savedAccountsJson) {
-        try {
-          const savedAccounts: SavedAccount[] = JSON.parse(savedAccountsJson);
+    // Sign out from Firebase
+    await firebaseSignOut(auth);
 
-          // Find the account that was previously current (not the current one)
-          // Sort by lastUsed to get the most recently used non-current account
-          const nonCurrentAccounts = savedAccounts
-            .filter(account => !account.isCurrent)
-            .sort((a, b) => new Date(b.lastUsed || 0).getTime() - new Date(a.lastUsed || 0).getTime());
+    // Clear cookies
+    Cookies.remove('session');
+    Cookies.remove('authenticated');
+    Cookies.remove('userSession');
 
-          if (nonCurrentAccounts.length > 0) {
-            const previousAccount = nonCurrentAccounts[0];
-            console.log('Logout: Found previous account to return to:', previousAccount.email);
-
-            // Store the account to switch to
-            localStorage.setItem('switchToAccount', JSON.stringify(previousAccount));
-            localStorage.setItem('accountSwitchInProgress', 'true');
-
-            // Update saved accounts to mark the previous account as current
-            const updatedAccounts = savedAccounts.map(account => ({
-              ...account,
-              isCurrent: account.uid === previousAccount.uid,
-              lastUsed: account.uid === previousAccount.uid ? new Date().toISOString() : account.lastUsed
-            }));
-            localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts));
-
-            // Sign out from Firebase using environment-aware auth
-            await authWrapper.signOut();
-
-            // Redirect to switch account page
-            if (typeof window !== 'undefined') {
-              setTimeout(() => {
-                window.location.href = '/auth/switch-account';
-              }, 100);
-            }
-
-            return { success: true, returnedToPrevious: true };
-          } else {
-            console.log('Logout: No previous account found, proceeding with normal logout');
-          }
-        } catch (parseError) {
-          console.error('Logout: Error parsing saved accounts:', parseError);
-        }
-      }
-    }
-
-    // Only clear previous user account if not explicitly keeping it
-    if (!keepPreviousSession) {
-      localStorage.removeItem('previousUserSession');
-      localStorage.removeItem('wewrite_accounts');
-      localStorage.removeItem('wewrite_current_account');
-      localStorage.removeItem('wewrite_auth_state');
-      localStorage.removeItem('authState');
-      localStorage.removeItem('accountSwitchInProgress');
-      localStorage.removeItem('switchToAccount');
-
-      // Clear cookies
-      Cookies.remove('session');
-      Cookies.remove('authenticated');
-      Cookies.remove('userSession');
-      Cookies.remove('wewrite_authenticated');
-      Cookies.remove('wewrite_user_id');
-    }
-
-    // We'll no longer try to get the token directly to avoid browser extension issues
-    // Instead, we'll just mark that we're in the process of switching accounts
-    if (keepPreviousSession) {
-      // Set a flag to indicate we're in the process of switching accounts
-      localStorage.setItem('accountSwitchInProgress', 'true');
-    }
-
-    // Sign out from Firebase using environment-aware auth
-    console.log('🔴 LOGOUT: Calling authWrapper.signOut()...');
-    await authWrapper.signOut();
-    console.log('🔴 LOGOUT: authWrapper.signOut() completed');
-
-    // Clear all client-side state
-    console.log('🔴 LOGOUT: Clearing client-side state...');
-    if (typeof window !== 'undefined') {
-      // Clear all localStorage items related to authentication
-      const authKeys = [
-        'wewrite_active_session_id',
-        'wewrite_accounts',
-        'wewrite_current_account',
-        'currentUser',
-        'userSession',
-        'savedAccounts',
-        'previousUserSession',
-        'accountSwitchInProgress',
-        'switchToAccount'
-      ];
-
-      authKeys.forEach(key => {
-        try {
-          localStorage.removeItem(key);
-        } catch (error) {
-          console.warn(`Failed to remove localStorage key ${key}:`, error);
-        }
-      });
-
-      // Clear all cookies
-      const cookies = ['session', 'authenticated', 'userSession', 'devUserSession', 'currentUser'];
-      cookies.forEach(cookieName => {
-        document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-        document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=localhost;`;
-      });
-
-      console.log('🔴 LOGOUT: Client-side state cleared');
-    }
-
-    // Clear server-side session data by calling logout API
-    console.log('🔴 LOGOUT: Clearing server-side session...');
+    // Clear server-side session
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include'
       });
-      console.log('🔴 LOGOUT: Server-side session cleared');
     } catch (error) {
-      console.warn('🔴 LOGOUT: Failed to clear server-side session:', error);
+      console.warn('Failed to clear server-side session:', error);
     }
 
-    // Force a page reload to ensure clean state and redirect to landing page
-    if (!keepPreviousSession && typeof window !== 'undefined') {
-      console.log('🔴 LOGOUT: Redirecting to landing page...');
-      // Use a small timeout to ensure the signOut completes
-      setTimeout(() => {
-        // Force a full page reload to ensure all state is cleared
-        window.location.replace('/');
-      }, 200);
-    }
-
-    console.log('🔴 LOGOUT: Logout completed successfully');
+    console.log('🔴 LOGOUT: Logout completed');
     return { success: true };
   } catch (error) {
     console.error("🔴 LOGOUT: Logout error:", error);
-
-    // Even if there's an error, try to clear cookies and redirect
-    if (!keepPreviousSession && typeof window !== 'undefined') {
-      console.log('🔴 LOGOUT: Error occurred, still redirecting to landing page...');
-      setTimeout(() => {
-        window.location.replace('/');
-      }, 200);
-    }
-
     return { success: false, error };
   }
 }
@@ -326,8 +153,8 @@ export const addUsername = async (userId: string, username: string): Promise<Aut
       throw new Error('Username is already taken');
     }
 
-    // Update the username in Firestore users collection using environment-specific collection
-    const userDocRef = doc(db, getCollectionName('users'), userId);
+    // Update the username in Firestore users collection
+    const userDocRef = doc(firestore, getCollectionName('users'), userId);
     await updateDoc(userDocRef, {
       username: username
     });
@@ -344,8 +171,8 @@ export const addUsername = async (userId: string, username: string): Promise<Aut
       }
     }
 
-    // Reserve the username in the usernames collection using environment-specific collection
-    const usernameDocRef = doc(db, getCollectionName('usernames'), username.toLowerCase());
+    // Reserve the username in the usernames collection
+    const usernameDocRef = doc(firestore, getCollectionName('usernames'), username.toLowerCase());
     await setDoc(usernameDocRef, {
       uid: userId,
       createdAt: new Date().toISOString()
@@ -362,8 +189,8 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
   if (!userId) return null;
 
   try {
-    // Try to get user from Firestore users collection using environment-specific collection
-    const userDocRef = doc(db, getCollectionName('users'), userId);
+    // Try to get user from Firestore users collection
+    const userDocRef = doc(firestore, getCollectionName('users'), userId);
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {
@@ -383,7 +210,7 @@ export const updateEmail = async (user: FirebaseUser, newEmail: string): Promise
     await firebaseUpdateEmail(user, newEmail);
 
     // Update the email in Firestore users collection
-    const userDocRef = doc(db, getCollectionName("users"), user.uid);
+    const userDocRef = doc(firestore, getCollectionName("users"), user.uid);
     await updateDoc(userDocRef, {
       email: newEmail
     });
@@ -416,7 +243,7 @@ export const updatePassword = async (currentPassword: string, newPassword: strin
     await firebaseUpdatePassword(user, newPassword);
 
     // Update last password change time in Firestore
-    const userDocRef = doc(db, getCollectionName("users"), user.uid);
+    const userDocRef = doc(firestore, getCollectionName("users"), user.uid);
     await updateDoc(userDocRef, {
       lastPasswordChange: new Date().toISOString(),
       lastModified: new Date().toISOString()
@@ -474,7 +301,7 @@ export const checkUsernameAvailability = async (username: string): Promise<Usern
       };
     }
 
-    const userDoc = doc(db, getCollectionName('usernames'), username.toLowerCase());
+    const userDoc = doc(firestore, getCollectionName('usernames'), username.toLowerCase());
     const docSnap = await getDoc(userDoc);
 
     const isAvailable = !docSnap.exists();
@@ -545,7 +372,7 @@ const checkSuggestionsAvailability = async (suggestions: string[]): Promise<stri
 
   for (const suggestion of suggestions) {
     try {
-      const userDoc = doc(db, getCollectionName('usernames'), suggestion.toLowerCase());
+      const userDoc = doc(firestore, getCollectionName('usernames'), suggestion.toLowerCase());
       const docSnap = await getDoc(userDoc);
 
       if (!docSnap.exists()) {
@@ -574,7 +401,7 @@ export const loginAnonymously = async (): Promise<AuthResult> => {
     const userCredential = await signInAnonymously(auth);
 
     // Create a basic profile for the anonymous user
-const userDocRef = doc(db, getCollectionName("users"), userCredential.session.uid);
+const userDocRef = doc(firestore, getCollectionName("users"), userCredential.user.uid);
     // Use crypto-secure random ID for anonymous users
     const anonymousId = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
     await setDoc(userDocRef, {

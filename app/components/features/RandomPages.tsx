@@ -5,7 +5,7 @@ import { RandomPagesSkeleton } from '../ui/skeleton-loaders';
 import { SectionTitle } from '../ui/section-title';
 import { Button } from '../ui/button';
 import { Shuffle } from 'lucide-react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import RandomPagesTable from '../pages/RandomPagesTable';
 import { wewriteCard } from '../../lib/utils';
 
@@ -36,7 +36,7 @@ const RandomPages = React.memo(function RandomPages({
   limit = 10,
   priority = 'low'
 }: RandomPagesProps) {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const [randomPages, setRandomPages] = useState<RandomPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [shuffling, setShuffling] = useState(false);
@@ -69,7 +69,7 @@ const RandomPages = React.memo(function RandomPages({
     try {
       // Prevent excessive API calls - throttle to max once per 2 seconds
       const now = Date.now();
-      const lastFetchKey = `randomPages_${session?.uid || 'anonymous'}`;
+      const lastFetchKey = `randomPages_${user?.uid || 'anonymous'}`;
       const lastFetch = parseInt(localStorage.getItem(lastFetchKey) || '0');
 
       if (!isShuffling && (now - lastFetch) < 2000) {
@@ -93,8 +93,8 @@ const RandomPages = React.memo(function RandomPages({
         limit: effectiveLimit.toString()});
 
       // Add user ID for access control if user is authenticated
-      if (session?.uid) {
-        params.append('userId', session.uid);
+      if (user?.uid) {
+        params.append('userId', user.uid);
       }
 
       // Add "Not mine" filter preference
@@ -138,7 +138,7 @@ const RandomPages = React.memo(function RandomPages({
       setLoading(false);
       setShuffling(false);
     }
-  }, [limit, session?.uid, denseMode, excludeOwnPages]);
+  }, [limit, user?.uid, denseMode, excludeOwnPages]);
 
   // Handle shuffle button click
   const handleShuffle = useCallback((excludeOwn = excludeOwnPages) => {

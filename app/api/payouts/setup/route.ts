@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create default revenue splits for user's existing pages
-    const pagesSnapshot = await db.collection('pages')
+    const pagesSnapshot = await db.collection(getCollectionName('pages'))
       .where('userId', '==', userId)
       .get();
 

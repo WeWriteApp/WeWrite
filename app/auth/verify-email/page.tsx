@@ -2,19 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-// Removed direct Firebase imports - now using API endpoints
 import { Button } from "../../components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { CheckCircle, AlertCircle, Mail, RefreshCw, Loader2, Settings, Clock } from "lucide-react";
 import { ModernAuthLayout } from "../../components/layout/modern-auth-layout";
-import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
-import { auth } from "../../firebase/config";
-import { sendEmailVerification, reload } from 'firebase/auth';
-import {
-  getResendCooldownRemaining,
-  canResendVerificationEmail,
-  startResendCooldown
-} from '../../services/emailVerificationNotifications';
+import { useAuth } from '../../providers/AuthProvider';
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -26,7 +18,7 @@ export default function VerifyEmailPage() {
   const [success, setSuccess] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
 
-  const { currentAccount, isAuthenticated, isLoading } = useCurrentAccount();
+  const { user, isAuthenticated, isLoading, refreshUser } = useAuth();
 
   // Check authentication state and send initial verification email
   useEffect(() => {
@@ -34,20 +26,20 @@ export default function VerifyEmailPage() {
       // Wait for auth state to be determined
       if (isLoading) return;
 
-      if (!isAuthenticated || !currentAccount) {
+      if (!isAuthenticated || !user) {
         // No authenticated user, redirect to login
         router.push('/auth/login');
         return;
       }
 
       // Check if user is already verified
-      if (currentAccount.emailVerified) {
+      if (user.emailVerified) {
         // User is already verified, redirect to home
         router.push('/');
         return;
       }
 
-      setUserEmail(currentAccount.email || "");
+      setUserEmail(user.email || "");
 
       // Send initial verification email using API
       try {
@@ -57,7 +49,7 @@ export default function VerifyEmailPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            email: currentAccount.email
+            email: user.email
           })
         });
 
@@ -78,12 +70,19 @@ export default function VerifyEmailPage() {
     };
 
     initializeVerification();
-  }, [router, isAuthenticated, currentAccount, isLoading]);
+  }, [router, isAuthenticated, user, isLoading]);
+
+  // Simple cooldown management (60 seconds)
+  const [lastResendTime, setLastResendTime] = useState<number>(0);
+  const RESEND_COOLDOWN = 60000; // 60 seconds
 
   // Update cooldown timer
   useEffect(() => {
     const updateCooldown = () => {
-      setCooldownRemaining(getResendCooldownRemaining());
+      const now = Date.now();
+      const timeSinceLastResend = now - lastResendTime;
+      const remaining = Math.max(0, RESEND_COOLDOWN - timeSinceLastResend);
+      setCooldownRemaining(Math.ceil(remaining / 1000));
     };
 
     // Initial update
@@ -93,63 +92,88 @@ export default function VerifyEmailPage() {
     const interval = setInterval(updateCooldown, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [lastResendTime]);
 
   const handleResendEmail = async () => {
-    if (!auth.currentUser || !canResendVerificationEmail()) return;
+    // Check cooldown
+    const now = Date.now();
+    const timeSinceLastResend = now - lastResendTime;
+    if (timeSinceLastResend < RESEND_COOLDOWN) {
+      return;
+    }
+
+    if (!user?.email) return;
 
     setIsResending(true);
     setError("");
     setSuccess(false);
 
     try {
-      await sendEmailVerification(auth.currentUser);
-      startResendCooldown();
-      setCooldownRemaining(getResendCooldownRemaining());
+      const response = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: user.email
+        })
+      });
 
-      console.log("Verification email resent");
-      setSuccess(true);
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setLastResendTime(now);
+        setSuccess(true);
+        console.log("Verification email resent successfully");
+      } else {
+        throw new Error(result.error || 'Failed to resend verification email');
+      }
     } catch (error: any) {
       console.error("Error resending verification email:", error);
-
-      let errorMessage = "Failed to resend verification email";
-      if (error.code === 'auth/too-many-requests') {
-        errorMessage = "Too many requests. Please wait before trying again";
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      setError(errorMessage);
+      setError(error.message || "Failed to resend verification email");
     } finally {
       setIsResending(false);
     }
   };
 
   const checkEmailVerification = async () => {
-    if (!auth.currentUser) return;
+    if (!user) return;
 
     setIsCheckingVerification(true);
     setError("");
 
     try {
-      // Reload the user to get the latest email verification status
-      await reload(auth.currentUser);
+      // Check verification status via API
+      const response = await fetch('/api/auth/verify-email', {
+        method: 'GET',
+        credentials: 'include'
+      });
 
-      if (auth.currentUser.emailVerified) {
-        console.log("Email verified successfully!");
+      const result = await response.json();
 
-        // Redirect to home page with success message
-        localStorage.setItem('authRedirectPending', 'true');
-        setTimeout(() => {
-          localStorage.removeItem('authRedirectPending');
-          window.location.href = "/";
-        }, 1500);
+      if (response.ok && result.success) {
+        if (result.data.emailVerified) {
+          console.log("Email verified successfully!");
+
+          // Refresh user data to get updated verification status
+          await refreshUser();
+
+          // Redirect to home page with success message
+          localStorage.setItem('authRedirectPending', 'true');
+          setTimeout(() => {
+            localStorage.removeItem('authRedirectPending');
+            window.location.href = "/";
+          }, 1500);
+        } else {
+          setError("Email not yet verified. Please check your email and click the verification link.");
+        }
       } else {
-        setError("Email not yet verified. Please check your email and click the verification link.");
+        throw new Error(result.error || 'Failed to check verification status');
       }
     } catch (error: any) {
       console.error("Error checking email verification:", error);
-      setError("Failed to check verification status. Please try again.");
+      setError(error.message || "Failed to check verification status. Please try again.");
     } finally {
       setIsCheckingVerification(false);
     }

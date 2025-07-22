@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from '../ui/use-toast';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from "../../providers/AuthProvider";
 import {
   getDraftReply,
   getPendingReplyAction,
@@ -62,7 +62,7 @@ export default function PendingReplyHandler() {
   const handlePendingReply = async (draftReply, pendingAction, session) => {
     try {
       // Get the username from the user object
-      const username = session.username || session.displayName || 'Missing username';
+      const username = user.username || user.displayName || 'Missing username';
 
       // Encode the parameters for the reply URL
       const params = encodeReplyParams({

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
+import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
 import { ChevronLeft, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react';
 import { isAdmin } from "../../utils/isAdmin";
@@ -21,7 +21,7 @@ interface SystemHealthStatus {
 }
 
 export default function PaymentsAdminPage() {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [systemHealth, setSystemHealth] = useState<SystemHealthStatus>({
@@ -33,16 +33,16 @@ export default function PaymentsAdminPage() {
   const [lastHealthCheck, setLastHealthCheck] = useState<Date | null>(null);
 
   useEffect(() => {
-    if (session && session.email && !isAdmin(session.email)) {
+    if (user && user.email && !isAdmin(user.email)) {
       router.push('/');
       return;
     }
     
-    if (session) {
+    if (user) {
       setLoading(false);
       checkSystemHealth();
     }
-  }, [, session, router]);
+  }, [, user, router]);
 
   const checkSystemHealth = async () => {
     try {
@@ -179,7 +179,7 @@ export default function PaymentsAdminPage() {
     );
   }
 
-  if (!session || !session.email || !isAdmin(session.email)) {
+  if (!user || !user.email || !isAdmin(user.email)) {
     return null;
   }
 

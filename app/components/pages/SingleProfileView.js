@@ -8,7 +8,7 @@ import { DataContext } from "../../providers/DataProvider";
 import {
   ProfilePagesProvider,
   ProfilePagesContext} from "../../providers/ProfilePageProvider";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { ChevronLeft, Share2 } from "lucide-react";
 import { UsernameBadge } from "../ui/UsernameBadge";
 import { Button } from "../ui/button";
@@ -17,11 +17,11 @@ import { UserFollowButton } from "../utils/UserFollowButton";
 import UserProfileTabs from '../utils/UserProfileTabs';
 
 const SingleProfileView = ({ profile }) => {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
 
   // Check if this profile belongs to the current user
-  const isCurrentUser = currentAccount && currentAccount.uid === profile.uid;
+  const isCurrentUser = user && user.uid === profile.uid;
 
   // UsernameBadge handles all data fetching automatically
 

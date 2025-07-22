@@ -7,7 +7,7 @@ import { Loader } from '../../components/utils/Loader';
 import SingleProfileView from '../../components/pages/SingleProfileView';
 
 
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { PageProvider } from '../../contexts/PageContext';
 import { getUserSubscriptionTier } from '../../utils/userUtils';
 
@@ -30,7 +30,7 @@ export default function UserPage({ params }: UserPageProps) {
 
   const { id } = unwrappedParams;
   const router = useRouter();
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   // Payments feature is now always enabled
   const isPaymentsEnabled = true;
 
@@ -55,8 +55,8 @@ export default function UserPage({ params }: UserPageProps) {
         console.warn('🔍 User page: Fetching user data', {
           id,
           isPaymentsEnabled,
-          currentAccountEmail: currentAccount?.email,
-          currentAccountUid: currentAccount?.uid,
+          currentAccountEmail: user?.email,
+          currentAccountUid: user?.uid,
           timestamp: new Date().toISOString()
         });
 

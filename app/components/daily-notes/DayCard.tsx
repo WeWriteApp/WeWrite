@@ -4,7 +4,7 @@ import React from 'react';
 import { cn } from '../../lib/utils';
 import { useTheme } from 'next-themes';
 import { Check } from 'lucide-react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 // TODO: Migrate PillStyle to global store
 import { usePillStyle, PILL_STYLES } from '../../contexts/PillStyleContext';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';

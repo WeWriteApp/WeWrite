@@ -9,7 +9,7 @@ import { Switch } from '../ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Link, ExternalLink, Users, FileText } from 'lucide-react';
 import FilteredSearchResults from '../search/FilteredSearchResults';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { toast } from '../ui/use-toast';
 
 interface LinkEditorModalProps {
@@ -29,7 +29,7 @@ export default function LinkEditorModal({
   onInsertLink,
   editingLink = null
 }: LinkEditorModalProps) {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('pages');
   const [externalUrl, setExternalUrl] = useState('');
   const [displayText, setDisplayText] = useState('');
@@ -210,7 +210,7 @@ export default function LinkEditorModal({
               <FilteredSearchResults
                 ref={searchInputRef}
                 onSelect={handlePageSelect}
-                userId={session?.uid}
+                userId={user?.uid}
                 placeholder="Search for pages..."
                 autoFocus={true}
                 className="h-full p-3"

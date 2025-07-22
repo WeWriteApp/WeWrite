@@ -19,14 +19,16 @@ jest.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock current account provider
-jest.mock('../providers/CurrentAccountProvider', () => ({
-  useCurrentAccount: () => ({
-    currentAccount: {
+// Mock auth provider
+jest.mock('../providers/AuthProvider', () => ({
+  useAuth: () => ({
+    user: {
       uid: 'test-user-123',
       email: 'test@example.com',
       username: 'testuser'
-    }
+    },
+    isAuthenticated: true,
+    isLoading: false
   })
 }));
 
@@ -67,7 +69,7 @@ describe('Embedded Bank Account Components', () => {
     
     // Mock successful API responses
     (global.fetch as jest.Mock).mockImplementation((url: string) => {
-      if (url.includes('/api/stripe/account-session')) {
+      if (url.includes('/api/stripe/account-user')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({
@@ -205,7 +207,7 @@ describe('Embedded Bank Account Components', () => {
       
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
-          '/api/stripe/account-session',
+          '/api/stripe/account-user',
           expect.objectContaining({
             method: 'POST',
             headers: {

@@ -14,17 +14,17 @@ import { useTheme } from "next-themes";
 import { PillLink } from "../utils/PillLink";
 import { useSwipeable } from 'react-swipeable';
 import { AnimatePresence, motion } from 'framer-motion';
-import { getPageById } from '../../firebase/database';
+import { getPageById } from '../../utils/apiClient';
 // Import server components for activity and trending data
 import dynamic from 'next/dynamic';
 // Import analytics hooks and constants
 import { useWeWriteAnalytics } from '../../hooks/useWeWriteAnalytics';
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../../constants/analytics-events';
 import { openExternalLink } from '../../utils/pwa-detection';
-import { auth } from '../../firebase/config';
+import { useAuth } from '../../providers/AuthProvider';
 
-// Import simple client-side components instead of server components
-import SimpleActivityCarousel from './SimpleActivityCarousel';
+// Import client-side components instead of server components
+import ActivityCarousel from './ActivityCarousel';
 import SimpleTrendingCarousel from './SimpleTrendingCarousel';
 import HeroSection from './HeroSection';
 
@@ -695,7 +695,7 @@ const LandingPage = () => {
           <div className={`${fadeInClass}`} style={{ animationDelay: '0.1s' }}>
             {/* Only render carousel when section is visible */}
             {activityVisible ? (
-              <SimpleActivityCarousel />
+              <ActivityCarousel />
             ) : (
               <div style={{ height: '220px' }} className="flex items-center justify-center">
                 <p className="text-muted-foreground">Loading activity...</p>

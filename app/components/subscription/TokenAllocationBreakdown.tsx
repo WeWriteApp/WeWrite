@@ -9,7 +9,7 @@ import { Badge } from '../ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Plus, Minus, ExternalLink, DollarSign, ArrowUpDown, Trash2, Clock, RotateCcw, X } from 'lucide-react';
 import { TokenBalance } from '../../types/database';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../ui/use-toast';
 import { useTokenIncrement } from '../../contexts/TokenIncrementContext';
@@ -67,7 +67,7 @@ interface TokenAllocationBreakdownProps {
 type SortOption = 'tokens-desc' | 'tokens-asc' | 'title-asc' | 'title-desc' | 'author-asc' | 'author-desc';
 
 export default function TokenAllocationBreakdown({ className = "", onAllocationUpdate }: TokenAllocationBreakdownProps) {
-  const { currentAccount, isAuthenticated } = useCurrentAccount();
+  const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const { incrementAmount } = useTokenIncrement();
   const [allocationData, setAllocationData] = useState<AllocationData | null>(null);
@@ -87,10 +87,10 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (currentAccount?.uid) {
+    if (user?.uid) {
       loadAllocations();
     }
-  }, [currentAccount?.uid]);
+  }, [user?.uid]);
 
   // Remove periodic sync to prevent jarring reloads
   // Data will be refreshed only when user performs actions or navigates back to page
@@ -254,7 +254,7 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
   }, [allocationData?.summary.balance, sortedAllocations]);
 
   const loadAllocations = async (loadMore = false) => {
-    if (!currentAccount?.uid) {
+    if (!user?.uid) {
       setLoading(false);
       return;
     }
@@ -631,7 +631,7 @@ export default function TokenAllocationBreakdown({ className = "", onAllocationU
 
   // Never hide the breakdown once we have any data - always show the interface
   // Only show "no data" message on initial load when we truly have no data
-  const shouldShowNoDataMessage = !loading && (!allocationData || allocationData.allocations.length === 0) && !currentAccount?.uid;
+  const shouldShowNoDataMessage = !loading && (!allocationData || allocationData.allocations.length === 0) && !user?.uid;
 
   if (shouldShowNoDataMessage) {
     return (

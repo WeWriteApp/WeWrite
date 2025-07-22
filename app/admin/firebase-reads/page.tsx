@@ -1,23 +1,23 @@
 "use client";
 
 import React from 'react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { FirebaseReadMonitor } from '../../components/admin/FirebaseReadMonitor';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Shield, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function FirebaseReadsAdminPage() {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
 
   // Simple admin check - in a real app, you'd want proper role-based access control
-  const isAdmin = session?.email && (
-    session.email.includes('admin') ||
-    session.email.includes('jamiegray') ||
-    session.email === 'contact@jamiegray.net'
+  const isAdmin = user?.email && (
+    user.email.includes('admin') ||
+    user.email.includes('jamiegray') ||
+    user.email === 'contact@jamiegray.net'
   );
 
-  if (!session) {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">

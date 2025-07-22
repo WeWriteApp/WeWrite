@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -61,7 +61,7 @@ interface PayoutsHistoryTableProps {
 }
 
 export function PayoutsHistoryTable({ showTitle = true }: PayoutsHistoryTableProps) {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const [payouts, setPayouts] = useState<PayoutRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +70,7 @@ export function PayoutsHistoryTable({ showTitle = true }: PayoutsHistoryTablePro
 
   // Load payout history
   const loadPayoutHistory = async () => {
-    if (!currentAccount?.uid) return;
+    if (!user?.uid) return;
 
     try {
       setLoading(true);
@@ -99,7 +99,7 @@ export function PayoutsHistoryTable({ showTitle = true }: PayoutsHistoryTablePro
 
   // Download CSV
   const downloadCsv = async () => {
-    if (!currentAccount?.uid) return;
+    if (!user?.uid) return;
 
     try {
       setDownloadingCsv(true);
@@ -142,7 +142,7 @@ export function PayoutsHistoryTable({ showTitle = true }: PayoutsHistoryTablePro
 
   useEffect(() => {
     loadPayoutHistory();
-  }, [currentAccount?.uid]);
+  }, [user?.uid]);
 
   // Filter payouts based on status
   const filteredPayouts = payouts.filter(payout => 
@@ -204,7 +204,7 @@ export function PayoutsHistoryTable({ showTitle = true }: PayoutsHistoryTablePro
     pendingPayouts: filteredPayouts.filter(p => p.status === 'pending' || p.status === 'in_transit').length
   };
 
-  if (!currentAccount) {
+  if (!user) {
     return (
       <Alert>
         <AlertTriangle className="h-4 w-4" />

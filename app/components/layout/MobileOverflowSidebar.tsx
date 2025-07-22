@@ -4,13 +4,13 @@ import * as React from "react"
 import { useState, useEffect } from "react"
 import { X, ChevronLeft, Settings, Check, Users, Shield, Link as LinkIcon, Trash2, Clock, Shuffle, LogOut, Search, TrendingUp, Heart } from "lucide-react"
 import { useRouter } from "next/navigation"
-// Removed direct Firebase auth imports - using session management system
+// Removed direct Firebase auth imports - using user management system
 import { cn } from "../../lib/utils"
 import { Button } from "../ui/button"
 import { Switch } from "../ui/switch"
 import { logoutUser } from "../../firebase/auth"
 
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 
 import MapEditor from "../editor/MapEditor"
 import { navigateToRandomPage, RandomPageFilters } from "../../utils/randomPageNavigation"
@@ -43,7 +43,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
   const router = useRouter()
   const [currentSection, setCurrentSection] = useState<string | null>(null)
   const [isRandomMenuOpen, setIsRandomMenuOpen] = useState(false)
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription, paymentsEnabled } = useSubscriptionWarning();
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
@@ -217,7 +217,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
               </button>
 
               {/* Admin Dashboard - Only visible for admins */}
-              {session && session.email && isAdmin(session.email) && (
+              {user && user.email && isAdmin(user.email) && (
                 <button
                   onClick={() => {
                     onClose();
@@ -341,15 +341,15 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
           </div>
 
           {/* User info and logout at bottom */}
-          {session && (
+          {user && (
             <div className="mt-auto pt-4 border-t border-border">
               {/* User Information */}
               <div className="mb-3 px-3 py-2">
                 <div className="text-sm font-medium text-foreground truncate">
-                  {session.username || 'User'}
+                  {user.username || 'User'}
                 </div>
                 <div className="text-xs text-muted-foreground truncate">
-                  {session.email}
+                  {user.email}
                 </div>
               </div>
 

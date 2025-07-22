@@ -1,176 +1,249 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
+import { getCollectionName } from '../../../utils/environmentConfig';
+import { User, SessionResponse, AuthErrorCode } from '../../../types/auth';
+
 /**
- * Session Management API
- * 
- * This endpoint handles session creation for both development and production
- * authentication, ensuring proper environment separation.
+ * Session API Endpoint
+ *
+ * This endpoint provides session management for the auth system.
+ * It handles both GET (check session) and POST (create session) requests.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createApiResponse, createErrorResponse } from '../../auth-helper';
-import { getEnvironmentType } from '../../../utils/environmentConfig';
-import { cookies } from 'next/headers';
-
-interface SessionRequest {
-  user: {
-    uid: string;
-    email: string;
-    username?: string;
-    emailVerified: boolean;
+// Helper function to create error responses
+function createErrorResponse(code: AuthErrorCode, message: string, status: number = 401): NextResponse {
+  const response: SessionResponse = {
+    isAuthenticated: false,
+    error: message
   };
-  isDevelopment?: boolean;
+  return NextResponse.json(response, { status });
 }
 
-// POST endpoint - Create user session
-export async function POST(request: NextRequest) {
-  try {
-    const envType = getEnvironmentType();
-    const isDevelopment = envType === 'development' && process.env.USE_DEV_AUTH === 'true';
-    
-    console.log(`[Session API] Creating session - Environment: ${envType}, Dev Auth: ${isDevelopment}`);
-
-    const body = await request.json();
-    const { user, isDevelopment: requestIsDev } = body as SessionRequest;
-
-    // Validate required fields
-    if (!user || !user.uid || !user.email) {
-      return createErrorResponse('BAD_REQUEST', 'User data is required');
-    }
-
-    // Ensure development sessions are only created in development environment
-    if (requestIsDev && !isDevelopment) {
-      return createErrorResponse('FORBIDDEN', 'Development sessions not allowed in production');
-    }
-
-    // Ensure production sessions are not created with development auth active
-    if (!requestIsDev && isDevelopment) {
-      return createErrorResponse('FORBIDDEN', 'Production sessions not allowed with development auth active');
-    }
-
-    const cookieStore = await cookies();
-    
-    // Create session data
-    const sessionData = {
-      uid: user.uid,
-      email: user.email,
-      username: user.username,
-      displayName: user.displayName,
-      emailVerified: user.emailVerified,
-      isDevelopment: requestIsDev || false,
-      createdAt: new Date().toISOString()
-    };
-
-    // Set session cookies with 30-day expiry for optimal content creation UX
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      maxAge: 60 * 60 * 24 * 30 // 30 days - industry standard for content creation apps
-    };
-
-    if (isDevelopment) {
-      // Development session - 30 days for uninterrupted development workflow
-      cookieStore.set('devUserSession', JSON.stringify(sessionData), {
-        ...cookieOptions,
-        maxAge: 60 * 60 * 24 * 30 // 30 days
-      });
-
-      console.log(`[Session API] Development session created for: ${user.username} (${user.email}) - expires in 30 days`);
-    } else {
-      // Production session - 30 days to match industry standards for content apps
-      cookieStore.set('userSession', JSON.stringify(sessionData), {
-        ...cookieOptions,
-        maxAge: 60 * 60 * 24 * 30 // 30 days - optimal for content creation
-      });
-
-      console.log(`[Session API] Production session created for: ${user.email} - expires in 30 days`);
-    }
-
-    return createApiResponse({
-      success: true,
-      session: {
-        uid: user.uid,
-        email: user.email,
-        username: user.username,
-        displayName: user.displayName,
-        isDevelopment: requestIsDev || false
-      },
-      message: isDevelopment ? 'Development session created' : 'Production session created'
-    });
-    
-  } catch (error) {
-    console.error('Session creation error:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to create session');
-  }
+// Helper function to create success responses
+function createSuccessResponse(user: User): NextResponse {
+  const response: SessionResponse = {
+    isAuthenticated: true,
+    user
+  };
+  return NextResponse.json(response);
 }
 
-// GET endpoint - Get current session
+// GET endpoint - Check current session
 export async function GET(request: NextRequest) {
   try {
-    const envType = getEnvironmentType();
-    const isDevelopment = envType === 'development' && process.env.USE_DEV_AUTH === 'true';
-    
     const cookieStore = await cookies();
-
-    let sessionCookie;
-    if (isDevelopment) {
-      sessionCookie = cookieStore.get('devUserSession');
-    } else {
-      sessionCookie = cookieStore.get('userSession');
-    }
+    const sessionCookie = cookieStore.get('simpleUserSession');
 
     if (!sessionCookie) {
-      return createErrorResponse('UNAUTHORIZED', 'No active session');
+      console.log('[Session] No session cookie found');
+      return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'No active session');
     }
 
     try {
       const sessionData = JSON.parse(sessionCookie.value);
       
-      return createApiResponse({
-        isAuthenticated: true,
-        session: sessionData,
-        environment: envType,
-        isDevelopment
-      });
-      
-    } catch (parseError) {
-      // Invalid session data, clear cookie
-      if (isDevelopment) {
-        cookieStore.delete('devUserSession');
-      } else {
-        cookieStore.delete('userSession');
+      // Validate session data
+      if (!sessionData.uid || !sessionData.email) {
+        console.log('[Session] Invalid session data');
+        return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Invalid session data');
       }
+
+      // For development mode, return session data directly
+      const isDevelopment = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
       
-      return createErrorResponse('UNAUTHORIZED', 'Invalid session data');
+      if (isDevelopment) {
+        const user: User = {
+          uid: sessionData.uid,
+          email: sessionData.email,
+          username: sessionData.username || '',
+          displayName: sessionData.displayName || '',
+          photoURL: sessionData.photoURL,
+          emailVerified: sessionData.emailVerified || false,
+          createdAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString()
+        };
+
+        console.log(`[Session] Development session valid for: ${user.email}`);
+        return createSuccessResponse(user);
+      }
+
+      // For production, verify with Firebase and get latest user data
+      const { adminDb, adminAuth } = getFirebaseAdmin();
+
+      try {
+        // Verify user still exists in Firebase
+        const userRecord = await adminAuth.getUser(sessionData.uid);
+
+        // Get latest user data from Firestore
+        const userDoc = await adminDb.collection(getCollectionName('users')).doc(sessionData.uid).get();
+        const userData = userDoc.data() || {};
+
+        const user: User = {
+          uid: userRecord.uid,
+          email: userRecord.email || '',
+          username: userData.username || '',
+          displayName: userData.displayName || userRecord.displayName || '',
+          photoURL: userData.photoURL || userRecord.photoURL || undefined,
+          emailVerified: userRecord.emailVerified,
+          createdAt: userData.createdAt || new Date().toISOString(),
+          lastLoginAt: userData.lastLoginAt || new Date().toISOString()
+        };
+
+        console.log(`[Session] Production session valid for: ${user.email}`);
+        return createSuccessResponse(user);
+
+      } catch (firebaseError) {
+        console.log('[Session] Firebase verification failed:', firebaseError);
+        // Clear invalid session cookie
+        cookieStore.delete('simpleUserSession');
+        return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Session expired');
+      }
+
+    } catch (parseError) {
+      console.log('[Session] Failed to parse session cookie:', parseError);
+      // Clear invalid session cookie
+      cookieStore.delete('simpleUserSession');
+      return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Invalid session format');
     }
-    
+
   } catch (error) {
-    console.error('Session retrieval error:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve session');
+    console.error('[Session] Session check error:', error);
+    return createErrorResponse(AuthErrorCode.UNKNOWN_ERROR, 'Session check failed', 500);
   }
 }
 
-// DELETE endpoint - Clear session
-export async function DELETE(request: NextRequest) {
+// POST endpoint - Create session from ID token (called after login)
+export async function POST(request: NextRequest) {
   try {
-    const envType = getEnvironmentType();
-    const isDevelopment = envType === 'development' && process.env.USE_DEV_AUTH === 'true';
-    
-    const cookieStore = await cookies();
-    
-    // Clear both development and production session cookies
-    cookieStore.delete('devUserSession');
-    cookieStore.delete('userSession');
-    cookieStore.delete('authToken');
-    
-    console.log(`[Session API] Session cleared - Environment: ${envType}`);
-    
-    return createApiResponse({
-      success: true,
-      message: 'Session cleared successfully'
-    });
-    
+    const body = await request.json();
+    const { idToken } = body;
+
+    if (!idToken) {
+      return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'ID token is required');
+    }
+
+    // Check if we're in development mode with dev auth enabled
+    const isDevelopment = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
+
+    if (isDevelopment) {
+      console.log('[Session] Development mode: bypassing Firebase ID token verification');
+
+      try {
+        // In development mode, decode the token without verification
+        // The token should contain the user info from Firebase Auth
+        const tokenParts = idToken.split('.');
+        if (tokenParts.length !== 3) {
+          return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'Invalid token format');
+        }
+
+        const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+
+        // Get user data from Firestore using the UID from the token
+        const { adminDb } = getFirebaseAdmin();
+        const userDoc = await adminDb.collection(getCollectionName('users')).doc(payload.user_id || payload.sub).get();
+        const userData = userDoc.data() || {};
+
+        const user: User = {
+          uid: payload.user_id || payload.sub,
+          email: payload.email || userData.email || '',
+          username: userData.username || '',
+          displayName: userData.displayName || payload.name || '',
+          photoURL: userData.photoURL || payload.picture || undefined,
+          emailVerified: payload.email_verified || userData.emailVerified || false,
+          createdAt: userData.createdAt || new Date().toISOString(),
+          lastLoginAt: new Date().toISOString()
+        };
+
+        // Create session cookie
+        const cookieStore = await cookies();
+        const sessionData = {
+          uid: user.uid,
+          email: user.email,
+          username: user.username,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          emailVerified: user.emailVerified
+        };
+
+        cookieStore.set('simpleUserSession', JSON.stringify(sessionData), {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 7 // 7 days
+        });
+
+        // Update last login time
+        await adminDb.collection(getCollectionName('users')).doc(user.uid).update({
+          lastLoginAt: new Date().toISOString(),
+          lastActiveAt: new Date().toISOString()
+        });
+
+        console.log(`[Session] Development session created for: ${user.email}`);
+        return createSuccessResponse(user);
+
+      } catch (devError) {
+        console.error('[Session] Development session creation failed:', devError);
+        return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'Development session creation failed');
+      }
+    }
+
+    // Production mode: verify ID token with Firebase Admin
+    const { adminDb, adminAuth } = getFirebaseAdmin();
+
+    try {
+      // Verify the ID token
+      const decodedToken = await adminAuth.verifyIdToken(idToken);
+
+      // Get user data from Firestore
+      const userDoc = await adminDb.collection(getCollectionName('users')).doc(decodedToken.uid).get();
+      const userData = userDoc.data() || {};
+
+      const user: User = {
+        uid: decodedToken.uid,
+        email: decodedToken.email || '',
+        username: userData.username || '',
+        displayName: userData.displayName || decodedToken.name || '',
+        photoURL: userData.photoURL || decodedToken.picture || undefined,
+        emailVerified: decodedToken.email_verified || false,
+        createdAt: userData.createdAt || new Date().toISOString(),
+        lastLoginAt: new Date().toISOString()
+      };
+
+      // Create session cookie
+      const cookieStore = await cookies();
+      const sessionData = {
+        uid: user.uid,
+        email: user.email,
+        username: user.username,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        emailVerified: user.emailVerified
+      };
+
+      cookieStore.set('simpleUserSession', JSON.stringify(sessionData), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 7 days
+      });
+
+      // Update last login time
+      await adminDb.collection(getCollectionName('users')).doc(user.uid).update({
+        lastLoginAt: new Date().toISOString(),
+        lastActiveAt: new Date().toISOString()
+      });
+
+      console.log(`[Session] Session created for: ${user.email}`);
+      return createSuccessResponse(user);
+
+    } catch (firebaseError) {
+      console.error('[Session] ID token verification failed:', firebaseError);
+      return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'Invalid ID token');
+    }
+
   } catch (error) {
-    console.error('Session clearing error:', error);
-    return createErrorResponse('INTERNAL_ERROR', 'Failed to clear session');
+    console.error('[Session] Session creation error:', error);
+    return createErrorResponse(AuthErrorCode.UNKNOWN_ERROR, 'Session creation failed', 500);
   }
 }

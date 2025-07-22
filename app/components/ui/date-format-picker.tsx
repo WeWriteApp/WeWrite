@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import { Button } from './button';
 import { cn } from '../../lib/utils';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 // TODO: Move these constants to global store or utils
 import {
   DATE_FORMATS,

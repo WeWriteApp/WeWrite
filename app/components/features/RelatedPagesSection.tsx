@@ -9,7 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "../ui/tooltip";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 
 // Import related pages function with working algorithm
 const getRelatedPagesAsync = async (pageId: string, pageTitle: string, pageContent: string, linkedPageIds: string[] = [], limit: number = 10) => {
@@ -107,7 +107,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
   const [relatedPages, setRelatedPages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
 
   // Set mounted state
   useEffect(() => {
@@ -140,12 +140,12 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
           params.set('linkedPageIds', linkedPageIds.join(','));
         }
 
-        if (currentAccount?.username) {
-          params.set('excludeUsername', currentAccount.username);
+        if (user?.username) {
+          params.set('excludeUsername', user.username);
         }
 
-        if (currentAccount?.uid) {
-          params.set('excludeUserId', currentAccount.uid);
+        if (user?.uid) {
+          params.set('excludeUserId', user.uid);
         }
 
         const response = await fetch(`/api/related-pages?${params.toString()}`);
@@ -165,7 +165,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
     };
 
     fetchRelatedPages();
-  }, [page?.id, page?.title, page?.content, linkedPageIds, mounted, currentAccount?.username, currentAccount?.uid]);
+  }, [page?.id, page?.title, page?.content, linkedPageIds, mounted, user?.username, user?.uid]);
 
   if (!mounted) {
     return null;

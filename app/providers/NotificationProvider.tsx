@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, createContext, useContext, ReactNode } from "react";
-import { useCurrentAccount } from "./CurrentAccountProvider";
+import { useAuth } from "./AuthProvider";
 // Import notification types and API service
 import {
   type Notification,
@@ -44,25 +44,25 @@ export const NotificationContext = createContext<NotificationContextType | undef
  * @param props.children - Child components to render
  */
 export const NotificationProvider = ({ children }: NotificationProviderProps) => {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [lastVisible, setLastVisible] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState<boolean>(true);
 
-  // Fetch notifications when session changes
+  // Fetch notifications when user changes
   useEffect(() => {
-    console.log('🟣 NOTIFICATION_PROVIDER EFFECT: Effect triggered, session:', { uid: session?.uid, exists: !!session });
-    if (!session) {
-      console.log('🟣 NOTIFICATION_PROVIDER EFFECT: No session, clearing notifications');
+    console.log('🟣 NOTIFICATION_PROVIDER EFFECT: Effect triggered, user:', { uid: user?.uid, exists: !!user });
+    if (!user) {
+      console.log('🟣 NOTIFICATION_PROVIDER EFFECT: No user, clearing notifications');
       setNotifications([]);
       setUnreadCount(0);
       setLastVisible(null);
       setHasMore(true);
       return;
     }
-    console.log('🟣 NOTIFICATION_PROVIDER EFFECT: Session exists, fetching notifications');
+    console.log('🟣 NOTIFICATION_PROVIDER EFFECT: User exists, fetching notifications');
 
     const fetchNotifications = async () => {
       try {
@@ -112,13 +112,13 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     };
 
     fetchNotifications();
-  }, [session]);
+  }, [user]);
 
   /**
    * Function to load more notifications
    */
   const loadMoreNotifications = async (): Promise<void> => {
-    if (!session || loading || !hasMore) return;
+    if (!user || loading || !hasMore) return;
 
     try {
       setLoading(true);
@@ -163,7 +163,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
    * @param notificationId - The ID of the notification to mark as read
    */
   const markAsRead = async (notificationId: string): Promise<void> => {
-    if (!session) return;
+    if (!user) return;
 
     try {
       // Find the notification BEFORE updating local state to check if it was unread
@@ -199,7 +199,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
    * @param notificationId - The ID of the notification to mark as unread
    */
   const markAsUnread = async (notificationId: string): Promise<void> => {
-    if (!session) return;
+    if (!user) return;
 
     try {
       // Find the notification BEFORE updating local state to check if it was read
@@ -233,7 +233,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
    * Function to mark all notifications as read
    */
   const markAllAsRead = async (): Promise<void> => {
-    if (!session) return;
+    if (!user) return;
 
     try {
       console.log('markAllAsRead called - current unreadCount:', unreadCount);

@@ -5,7 +5,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isTod
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { useDateFormat } from '../../contexts/DateFormatContext';
 
 interface Note {
@@ -32,7 +32,7 @@ interface DailyNotesCalendarProps {
  * - Navigation between months
  */
 export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSelect }: DailyNotesCalendarProps) {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
   const { formatDateString } = useDateFormat();
   
@@ -44,7 +44,7 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
 
   // Fetch notes for the current month
   const fetchNotesForMonth = useCallback(async (date: Date) => {
-    if (!currentAccount?.uid) {
+    if (!user?.uid) {
       console.log('📅 DailyNotesCalendar: No current account, skipping fetch');
       return;
     }
@@ -59,12 +59,12 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
         month: format(date, 'yyyy-MM'),
         startDate: format(startDate, 'yyyy-MM-dd'),
         endDate: format(endDate, 'yyyy-MM-dd'),
-        userId: currentAccount.uid
+        userId: user.uid
       });
 
       // Use the same API endpoint as the carousel
       const apiUrl = '/api/daily-notes?' + new URLSearchParams({
-        userId: currentAccount.uid,
+        userId: user.uid,
         startDate: format(startDate, 'yyyy-MM-dd'),
         endDate: format(endDate, 'yyyy-MM-dd')
       });
@@ -108,7 +108,7 @@ export default function DailyNotesCalendar({ accentColor = '#1768FF', onPageSele
     } finally {
       setLoading(false);
     }
-  }, [currentAccount?.uid]);
+  }, [user?.uid]);
 
   // Fetch notes when month changes
   useEffect(() => {

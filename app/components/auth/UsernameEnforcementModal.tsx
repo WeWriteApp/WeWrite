@@ -6,12 +6,12 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Loader, Check, X } from 'lucide-react';
 // Using API endpoints instead of direct Firebase calls
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { cn } from '../../lib/utils';
 import { validateUsernameFormat, getUsernameErrorMessage, suggestCleanUsername, userNeedsUsername } from '../../utils/usernameValidation';
 
 export default function UsernameEnforcementModal() {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
@@ -24,12 +24,12 @@ export default function UsernameEnforcementModal() {
 
   // Check if the user has a username using centralized logic
   useEffect(() => {
-    if (userNeedsUsername(session)) {
+    if (userNeedsUsername(user)) {
       setOpen(true);
     } else {
       setOpen(false);
     }
-  }, [session]);
+  }, [user]);
 
   // Check username availability with debounce
   useEffect(() => {
@@ -115,7 +115,7 @@ export default function UsernameEnforcementModal() {
   };
 
   const handleSave = async () => {
-    if (!session || !username || !isAvailable) return;
+    if (!user || !username || !isAvailable) return;
 
     setIsSaving(true);
     setError(null);
@@ -137,9 +137,9 @@ export default function UsernameEnforcementModal() {
       const result = await response.json();
 
       if (result.success) {
-        // Success - close modal and let the auth system refresh the session
+        // Success - close modal and let the auth system refresh the user
         setOpen(false);
-        // The session will be updated automatically by the auth system
+        // The user will be updated automatically by the auth system
       } else {
         setError(result.error || 'Failed to save username. Please try again.');
       }

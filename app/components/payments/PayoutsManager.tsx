@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
@@ -55,7 +55,7 @@ function BankSetup({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: (
   const updateAutoPayoutSettings = async (newSettings: AutoPayoutSettings) => {
     setUpdatingSettings(true);
     try {
-      localStorage.setItem(`autopayout_${currentAccount?.uid}`, JSON.stringify(newSettings));
+      localStorage.setItem(`autopayout_${user?.uid}`, JSON.stringify(newSettings));
       setAutoPayoutSettings(newSettings);
 
       toast({
@@ -77,7 +77,7 @@ function BankSetup({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: (
 
 
 export function PayoutsManager() {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const { toast } = useToast();
   // Payments feature is now always enabled
   const isPaymentsEnabled = true;
@@ -99,19 +99,19 @@ export function PayoutsManager() {
   const [updatingSettings, setUpdatingSettings] = useState(false);
 
   useEffect(() => {
-    if (currentAccount && isPaymentsEnabled) {
+    if (user && isPaymentsEnabled) {
       loadPayoutData();
       loadBankAccountStatus();
       loadAutoPayoutSettings();
       loadPayoutHistory();
     }
-  }, [currentAccount, isPaymentsEnabled]);
+  }, [user, isPaymentsEnabled]);
 
   const loadPayoutData = async () => {
-    if (!currentAccount?.uid) return;
+    if (!user?.uid) return;
 
     try {
-      const tokenBalance = await TokenEarningsService.getWriterTokenBalance(currentAccount.uid);
+      const tokenBalance = await TokenEarningsService.getWriterTokenBalance(user.uid);
       if (tokenBalance) {
         setPayoutData({
           totalEarnings: tokenBalance.totalUsdEarned,
@@ -127,13 +127,13 @@ export function PayoutsManager() {
   };
 
   const loadBankAccountStatus = async () => {
-    if (!currentAccount?.uid) return;
+    if (!user?.uid) return;
 
     try {
       const response = await fetch('/api/stripe/account-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentAccount.uid })
+        body: JSON.stringify({ userId: user.uid })
       });
 
       if (response.ok) {
@@ -155,7 +155,7 @@ export function PayoutsManager() {
   const loadAutoPayoutSettings = async () => {
     // Load auto payout settings from API or localStorage
     try {
-      const saved = localStorage.getItem(`autopayout_${currentAccount?.uid}`);
+      const saved = localStorage.getItem(`autopayout_${user?.uid}`);
       if (saved) {
         setAutoPayoutSettings(JSON.parse(saved));
       }
@@ -165,10 +165,10 @@ export function PayoutsManager() {
   };
 
   const loadPayoutHistory = async () => {
-    if (!currentAccount?.uid) return;
+    if (!user?.uid) return;
 
     try {
-      const payoutHistory = await TokenEarningsService.getPayoutHistory(currentAccount.uid, 10);
+      const payoutHistory = await TokenEarningsService.getPayoutHistory(user.uid, 10);
       setPayouts(payoutHistory);
     } catch (error) {
       console.error('Error loading payout history:', error);
@@ -181,7 +181,7 @@ export function PayoutsManager() {
     setUpdatingSettings(true);
     try {
       // Save to localStorage for now (could be API endpoint later)
-      localStorage.setItem(`autopayout_${currentAccount?.uid}`, JSON.stringify(newSettings));
+      localStorage.setItem(`autopayout_${user?.uid}`, JSON.stringify(newSettings));
       setAutoPayoutSettings(newSettings);
 
       toast({

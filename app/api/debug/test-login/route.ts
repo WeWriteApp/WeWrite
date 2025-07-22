@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { loginUser } from '../../../firebase/auth';
-import { isDevelopmentAuthActive } from '../../../firebase/authWrapper';
+// Auth wrapper removed - using auth
 
 // POST endpoint - Test login functionality
 export async function POST(request: NextRequest) {
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     
     console.log(`🧪 Testing login: ${testType} with ${emailOrUsername}`);
     
-    const isDev = isDevelopmentAuthActive();
+    const isDev = false; // Development auth removed
     
     if (!isDev) {
       return NextResponse.json({
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 // GET endpoint - Get test scenarios
 export async function GET(request: NextRequest) {
   try {
-    const isDev = isDevelopmentAuthActive();
+    const isDev = false; // Development auth removed
     
     if (!isDev) {
       return NextResponse.json({

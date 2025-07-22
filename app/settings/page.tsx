@@ -1,6 +1,6 @@
 'use client';
 
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import {
@@ -36,7 +36,7 @@ interface SettingsSection {
 }
 
 export default function SettingsIndexPage() {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
   const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant } = useSubscriptionWarning();
@@ -101,7 +101,7 @@ export default function SettingsIndexPage() {
 
   // Check subscription status when payments are enabled and user is available
   useEffect(() => {
-    if (!session || !paymentsEnabled) {
+    if (!user || !paymentsEnabled) {
       setHasActiveSubscription(null);
       return;
     }
@@ -130,10 +130,10 @@ export default function SettingsIndexPage() {
     };
 
     checkSubscriptionStatus();
-  }, [session, paymentsEnabled]);
+  }, [user, paymentsEnabled]);
 
   useEffect(() => {
-    if (!session) {
+    if (!user) {
       router.push('/auth/login');
       return;
     }
@@ -169,7 +169,7 @@ export default function SettingsIndexPage() {
       window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);
     }
-  }, [, session, router, paymentsEnabled, tokenSystemEnabled]);
+  }, [, user, router, paymentsEnabled, tokenSystemEnabled]);
 
 
 
@@ -188,7 +188,7 @@ export default function SettingsIndexPage() {
     router.push(href);
   };
 
-  if (!session) {
+  if (!user) {
     return null;
   }
 

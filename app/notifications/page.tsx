@@ -2,7 +2,7 @@
 
 import React, { useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCurrentAccount } from "../providers/CurrentAccountProvider";
+import { useAuth } from '../providers/AuthProvider';
 import { useNotifications } from "../providers/NotificationProvider";
 import NavHeader from '../components/layout/NavHeader';
 import NotificationItem from '../components/utils/NotificationItem';
@@ -13,7 +13,7 @@ import { useWeWriteAnalytics } from '../hooks/useWeWriteAnalytics';
 
 function NotificationsContent() {
   const router = useRouter();
-  const { session, isAuthenticated } = useCurrentAccount();
+  const { user, isAuthenticated } = useAuth();
   const {
     notifications,
     loading,
@@ -30,7 +30,7 @@ function NotificationsContent() {
     }
   }, [isAuthenticated, router]);
 
-  // Notifications are automatically loaded by the NotificationProvider when session changes
+  // Notifications are automatically loaded by the NotificationProvider when user changes
 
   // Handle "Mark all as read" button click
   const handleMarkAllAsRead = async () => {
@@ -64,7 +64,7 @@ function NotificationsContent() {
   }
 
   // Show loading state while fetching notifications
-  if (!session) {
+  if (!user) {
     return null;
   }
 

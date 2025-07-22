@@ -2,9 +2,8 @@
 
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ModernLoginForm } from "../../components/forms/modern-login-form"
+import { LoginForm } from "../../components/forms/login-form"
 import { ModernAuthLayout } from "../../components/layout/modern-auth-layout"
-import ReturnToPreviousAccount from "./ReturnToPreviousAccount"
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
@@ -15,8 +14,6 @@ function LoginContent() {
 
   return (
     <ModernAuthLayout>
-      <ReturnToPreviousAccount />
-
       {isPostingReply && (
         <Alert className="mb-4 bg-primary/10 border-theme-medium">
           <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -26,7 +23,7 @@ function LoginContent() {
         </Alert>
       )}
 
-      <ModernLoginForm />
+      <LoginForm />
     </ModernAuthLayout>
   )
 }

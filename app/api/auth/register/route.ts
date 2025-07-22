@@ -86,10 +86,10 @@ export async function POST(request: NextRequest) {
       viewCount: 0
     };
 
-    await db.collection('users').doc(userRecord.uid).set(userData);
+    await db.collection(getCollectionName('users')).doc(userRecord.uid).set(userData);
 
     // Create username mapping for login by username
-    await db.collection('usernames').doc(username.toLowerCase()).set({
+    await db.collection(getCollectionName('usernames')).doc(username.toLowerCase()).set({
       uid: userRecord.uid,
       username,
       email,

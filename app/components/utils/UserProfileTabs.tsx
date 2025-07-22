@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import SupporterBadge from "../payments/SupporterBadge";
 import { User, Clock, FileText, Plus, Loader, Info, Users, BookText, Heart, ArrowUpDown, Check, ChevronUp, ChevronDown, ExternalLink, Link as LinkIcon, Network, Calendar } from "lucide-react";
 import { useWeWriteAnalytics } from "../../hooks/useWeWriteAnalytics";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProfilePagesContext } from "../../providers/ProfilePageProvider";
@@ -113,8 +113,8 @@ export default function UserProfileTabs({ profile }) {
     return "bio"; // Default tab
   });
   const [direction, setDirection] = useState(0); // -1 for right, 1 for left
-  const { session } = useCurrentAccount();
-  const isCurrentUser = session && profile && session.uid === profile.uid;
+  const { user } = useAuth();
+  const isCurrentUser = user && profile && user.uid === profile.uid;
   const [loadingError, setLoadingError] = useState(null);
 
   const tabsRef = useRef(null);
@@ -134,7 +134,7 @@ export default function UserProfileTabs({ profile }) {
   });
 
   // Groups feature has been removed - no longer needed
-  // const groupsEnabled = useFeatureFlag('groups', session?.email);
+  // const groupsEnabled = useFeatureFlag('groups', user?.email);
 
   // Analytics tracking
   const { trackSortingInteraction, trackInteractionEvent, events } = useWeWriteAnalytics();
@@ -146,7 +146,7 @@ export default function UserProfileTabs({ profile }) {
     loading: isLoading,
     error: pagesError,
     fetchWithSort
-  } = useSimplePages(profile?.uid, session?.uid, true, sortBy, sortDirection);
+  } = useSimplePages(profile?.uid, user?.uid, true, sortBy, sortDirection);
 
   // 🚨 CRITICAL FIX: No local sorting needed - pages come pre-sorted from database
   // The API now handles sorting at the database level for the entire dataset
@@ -665,7 +665,7 @@ export default function UserProfileTabs({ profile }) {
             <ExternalLinksTab
               userId={profile?.uid}
               username={profile?.username || 'this user'}
-              currentUserId={session?.uid}
+              currentUserId={user?.uid}
             />
           </TabsContent>
 

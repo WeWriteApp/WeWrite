@@ -9,11 +9,11 @@ import {
   Link as LinkIcon, X, Check, Trash2, MapPin, Shield,
   Clock, Shuffle, LogOut, TrendingUp, Heart
 } from "lucide-react";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { useRouter, usePathname } from "next/navigation";
 
 import MapEditor from "../editor/MapEditor";
-import { logoutUser } from "../../firebase/auth";
+
 import { cn } from "../../lib/utils";
 import { WarningDot } from '../ui/warning-dot';
 import { StatusIcon } from '../ui/status-icon';
@@ -71,7 +71,7 @@ export const EditorProvider: React.FC<{ children: React.ReactNode } & EditorCont
  * Provides sidebar state to the entire app
  */
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -94,7 +94,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Calculate sidebar width based on state - only for authenticated users
-  const sidebarWidth = session && (isExpanded || isHovering) ? 256 : session ? 64 : 0;
+  const sidebarWidth = user && (isExpanded || isHovering) ? 256 : user ? 64 : 0;
 
   const contextValue: SidebarContextType = {
     isExpanded,
@@ -106,7 +106,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   return (
     <SidebarContext.Provider value={contextValue}>
       {/* Only render sidebar for authenticated users and not on admin dashboard */}
-      {isMounted && session && <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} />}
+      {isMounted && user && <UnifiedSidebarContent isExpanded={isExpanded} setIsExpanded={setIsExpanded} isHovering={isHovering} setIsHovering={setIsHovering} toggleExpanded={toggleExpanded} />}
       {children}
     </SidebarContext.Provider>
   );
@@ -161,7 +161,7 @@ function UnifiedSidebarContent({
   setIsHovering: (value: boolean) => void;
   toggleExpanded: () => void;
 }) {
-  const { session } = useCurrentAccount();
+  const { user, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const editorContext = useContext(EditorContext);
@@ -214,7 +214,7 @@ function UnifiedSidebarContent({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Check if account is admin
-  const isAdmin = session?.email === 'jamiegray2234@gmail.com';
+  const isAdmin = user?.email === 'jamiegray2234@gmail.com';
 
   // Handle logout confirmation
   const handleLogoutClick = () => {
@@ -224,9 +224,9 @@ function UnifiedSidebarContent({
   const handleLogoutConfirm = async () => {
     setIsLoggingOut(true);
     try {
-      console.log('🔴 SIDEBAR: Logout confirmed, calling logoutUser function');
-      await logoutUser();
-      console.log('🔴 SIDEBAR: logoutUser completed successfully');
+      console.log('🔴 SIDEBAR: Logout confirmed, calling signOut function');
+      await signOut();
+      console.log('🔴 SIDEBAR: signOut completed successfully');
     } catch (error) {
       console.error('🔴 SIDEBAR: Error during logout:', error);
     } finally {
@@ -264,7 +264,7 @@ function UnifiedSidebarContent({
     { icon: Heart, label: 'Following', href: '/following' },
     { icon: Plus, label: 'New Page', href: '/new' },
     { icon: Bell, label: 'Notifications', href: '/notifications' },
-    { icon: User, label: 'Profile', href: session ? `/user/${session.uid}` : '/auth/login' },
+    { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/auth/login' },
     { icon: Settings, label: 'Settings', href: '/settings' },
     // Admin Dashboard - only for admin users
     ...(isAdmin ? [{ icon: Shield, label: 'Admin Dashboard', href: '/admin' }] : []),
@@ -278,7 +278,7 @@ function UnifiedSidebarContent({
     if (pathname === item.href) return true;
 
     // Special case for profile - match account profile pages
-    if (item.label === 'Profile' && session && pathname.startsWith(`/user/${session.uid}`)) {
+    if (item.label === 'Profile' && user && pathname.startsWith(`/user/${user.uid}`)) {
       return true;
     }
 
@@ -490,16 +490,16 @@ function UnifiedSidebarContent({
           )}
 
           {/* User info and logout at bottom for non-edit mode */}
-          {!isEditMode && session && (
+          {!isEditMode && user && (
             <div className="mt-auto pt-4 border-t border-border">
               {/* User Information - only show when expanded */}
               {showContent && (
                 <div className="mb-3 px-3 py-2">
                   <div className="text-sm font-medium text-foreground truncate">
-                    {session.username || 'User'}
+                    {user.username || 'User'}
                   </div>
                   <div className="text-xs text-muted-foreground truncate">
-                    {session.email}
+                    {user.email}
                   </div>
                 </div>
               )}

@@ -4,7 +4,7 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { LogOut, User, Settings } from "lucide-react"
 import { logoutUser } from "../../firebase/auth"
-import { useCurrentAccount } from "../../providers/CurrentAccountProvider"
+import { useAuth } from '../../providers/AuthProvider';
 
 import {
   DropdownMenu,
@@ -15,35 +15,15 @@ import { Button } from "./button"
 
 export function UserMenu() {
   const router = useRouter()
-  const { currentAccount } = useCurrentAccount()
+  const { user, signOut } = useAuth();
 
   const handleLogout = async () => {
     try {
-      // Check if there are multiple accounts to determine logout behavior
-      const savedAccountsJson = localStorage.getItem('savedAccounts');
-      let hasMultipleAccounts = false;
+      // Use the auth signOut method
+      await signOut();
 
-      if (savedAccountsJson) {
-        try {
-          const savedAccounts = JSON.parse(savedAccountsJson);
-          hasMultipleAccounts = savedAccounts.length > 1;
-        } catch (e) {
-          console.error('Error parsing saved accounts:', e);
-        }
-      }
-
-      // Import the enhanced logout function
-      const { logoutUser } = await import('../../firebase/auth');
-
-      // If multiple accounts, try to return to previous account
-      // Otherwise, do a normal logout
-      const result = await logoutUser(false, hasMultipleAccounts);
-
-      if (!result.returnedToPrevious) {
-        // If we didn't return to a previous account, redirect to home
-        router.push("/");
-      }
-      // If we returned to previous account, the redirect is handled by logoutUser
+      // Redirect to home page after sign out
+      router.push("/");
     } catch (error) {
       console.error("Error signing out:", error)
       // Fallback to home page on error
@@ -51,7 +31,7 @@ export function UserMenu() {
     }
   }
 
-  if (!currentAccount) {
+  if (!user) {
     return null
   }
 

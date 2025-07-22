@@ -38,7 +38,7 @@ SUBSCRIPTION_ENV=production
 ### Firestore Collections
 ```typescript
 // Development
-dev_users/{userId}/dev_subscriptions/current
+DEV_users/{userId}/DEV_subscriptions/current
 
 // Production  
 users/{userId}/subscriptions/current

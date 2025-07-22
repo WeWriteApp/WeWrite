@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { PillLink } from "../utils/PillLink";
 import PerformanceMonitor from '../utils/PerformanceMonitor';
 import { Pin } from 'lucide-react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import { useDateFormat } from '../../contexts/DateFormatContext';
 import { wewriteCard } from '../../lib/utils';
@@ -35,10 +35,10 @@ const SearchResultsDisplay = React.memo(({
   searchStats = {}
 }) => {
   const { formatDate: formatDateString } = useDateFormat();
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
 
   // Check if user is admin for debug features
-  const isAdmin = session?.email === 'jamiegray2234@gmail.com';
+  const isAdmin = user?.email === 'jamiegray2234@gmail.com';
   // Memoize the combined results to prevent unnecessary recalculations
   const combinedResults = useMemo(() => {
     if (!results) {
@@ -50,7 +50,7 @@ const SearchResultsDisplay = React.memo(({
       ...(results.users || []).map(user => ({
         ...user,
         type: 'user',
-        displayName: session.username,
+        displayName: user?.username,
         url: `/user/${user.id}`
       })),
       ...(results.pages || []).map(page => ({
@@ -157,7 +157,7 @@ const SearchResultsDisplay = React.memo(({
               <div key={`user-${user.id}`} className="flex items-start gap-2 min-w-0">
                 <div className="flex-shrink-0 min-w-0 max-w-[calc(100%-60px)]">
                   <PillLink href={`/user/${user.id}`} className="max-w-full truncate">
-                    {session.username}
+                    {user?.username}
                   </PillLink>
                 </div>
                 <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">

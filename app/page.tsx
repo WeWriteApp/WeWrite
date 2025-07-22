@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useCurrentAccount } from './providers/CurrentAccountProvider';
+import { useAuth } from './providers/AuthProvider';
 import { ActivityFilterProvider } from './contexts/ActivityFilterContext';
 import LandingPage from './components/landing/LandingPage';
 import Home from './components/features/Home';
 
 export default function HomePage() {
   console.log('🔴 HomePage: Component rendering');
-  const { currentAccount, isAuthenticated, isLoading } = useCurrentAccount();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [authRedirectPending, setAuthRedirectPending] = useState(false);
 
@@ -48,8 +48,8 @@ export default function HomePage() {
     mounted,
     isLoading,
     isAuthenticated,
-    hasCurrentAccount: !!currentAccount,
-    currentAccountUid: currentAccount?.uid,
+    hasCurrentAccount: !!user,
+    currentAccountUid: user?.uid,
     authRedirectPending
   });
 
@@ -58,11 +58,11 @@ export default function HomePage() {
       mounted,
       isLoading,
       isAuthenticated,
-      hasCurrentAccount: !!currentAccount,
-      currentAccountUid: currentAccount?.uid,
+      hasCurrentAccount: !!user,
+      currentAccountUid: user?.uid,
       authRedirectPending
     });
-  }, [mounted, isLoading, isAuthenticated, currentAccount, authRedirectPending]);
+  }, [mounted, isLoading, isAuthenticated, user, authRedirectPending]);
 
   // Show loading state during hydration, authentication loading, or pending redirect
   if (!mounted || isLoading || authRedirectPending) {

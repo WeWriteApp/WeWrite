@@ -17,7 +17,7 @@ const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
   loading: () => <div className="h-8 w-24 bg-muted animate-pulse rounded-md"></div>
 });
 // Removed old stats imports - now using UnifiedStatsService via PageStats component
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 
 /**
  * PageFooter Component
@@ -60,10 +60,12 @@ export default function PageFooter({
   hasUnsavedChanges,
   canEdit
 }) {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   // Removed old stats fetching logic - now handled by UnifiedStatsService in PageStats component
 
-  if (!page) return null;
+  // Allow PageFooter to render for new pages and bios (where page is null)
+  // Only return null if we're missing essential props
+  if (!canEdit && !hasUnsavedChanges) return null;
 
   return (
     <div className="mt-10 border-t-only pt-6 pb-6">
@@ -105,93 +107,95 @@ export default function PageFooter({
         </div>
       )}
 
-      {/* Show PageActions - always visible now since pages are always editable */}
-      <div className="mb-6 flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
-        <PageActions
-          page={page}
-          content={content}
-          isOwner={isOwner}
-          isEditing={isEditing} // Pass actual editing state for consistency
-          setIsEditing={setIsEditing}
-          className="action-buttons-container"
-          showFollowButton={currentAccount && !isOwner}
-        />
-      </div>
+      {/* Show PageActions only for existing pages (not for new pages or bios) */}
+      {page && (
+        <div className="mb-6 flex flex-col w-full md:flex-row md:flex-wrap md:items-center md:justify-between gap-4">
+          <PageActions
+            page={page}
+            content={content}
+            isOwner={isOwner}
+            isEditing={isEditing} // Pass actual editing state for consistency
+            setIsEditing={setIsEditing}
+            className="action-buttons-container"
+            showFollowButton={user && !isOwner}
+          />
+        </div>
+      )}
 
       {/* Similar pages section removed to conserve resources */}
 
-      {/* Custom Date Field - show in both edit and view modes for all pages */}
-      <div className="mb-6">
-        <CustomDateField
-          customDate={page.customDate}
-          canEdit={isOwner}
-          onCustomDateChange={async (newDate) => {
-            try {
-              const response = await fetch(`/api/pages/${page.id}/custom-date`, {
-                method: 'PATCH',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ customDate: newDate }),
-              });
+      {/* Custom Date Field - show in both edit and view modes for existing pages only */}
+      {page && (
+        <div className="mb-6">
+          <CustomDateField
+            customDate={page.customDate}
+            canEdit={isOwner}
+            onCustomDateChange={async (newDate) => {
+              try {
+                const response = await fetch(`/api/pages/${page.id}/custom-date`, {
+                  method: 'PATCH',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ customDate: newDate }),
+                });
 
-              if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to update custom date');
-              }
+                if (!response.ok) {
+                  const errorData = await response.json();
+                  throw new Error(errorData.error || 'Failed to update custom date');
+                }
 
-              // Update the page object to reflect the change
-              if (page) {
+                // Update the page object to reflect the change
                 page.customDate = newDate;
+
+                console.log('Custom date updated successfully to:', newDate);
+              } catch (error) {
+                console.error('Error updating custom date:', error);
+                // TODO: Show user-friendly error message
               }
+            }}
+          />
+        </div>
+      )}
 
-              console.log('Custom date updated successfully to:', newDate);
-            } catch (error) {
-              console.error('Error updating custom date:', error);
-              // TODO: Show user-friendly error message
-            }
-          }}
-        />
-      </div>
+      {/* Location Field - show in both edit and view modes for existing pages only */}
+      {page && (
+        <div className="mb-6">
+          <LocationField
+            location={page.location}
+            canEdit={isOwner}
+            onLocationChange={async (newLocation) => {
+              try {
+                const response = await fetch(`/api/pages/${page.id}/location`, {
+                  method: 'PATCH',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ location: newLocation }),
+                });
 
-      {/* Location Field - show in both edit and view modes for all pages */}
-      <div className="mb-6">
-        <LocationField
-          location={page.location}
-          canEdit={isOwner}
-          onLocationChange={async (newLocation) => {
-            try {
-              const response = await fetch(`/api/pages/${page.id}/location`, {
-                method: 'PATCH',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ location: newLocation }),
-              });
+                if (!response.ok) {
+                  const errorData = await response.json();
+                  throw new Error(errorData.error || 'Failed to update location');
+                }
 
-              if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to update location');
-              }
-
-              // Update the page object to reflect the change
-              if (page) {
+                // Update the page object to reflect the change
                 page.location = newLocation;
+
+                console.log('Location updated successfully');
+              } catch (error) {
+                console.error('Error updating location:', error);
+                // TODO: Show user-friendly error message
               }
-
-              console.log('Location updated successfully');
-            } catch (error) {
-              console.error('Error updating location:', error);
-              // TODO: Show user-friendly error message
-            }
-          }}
-        />
-      </div>
+            }}
+          />
+        </div>
+      )}
 
 
 
-      {/* Page stats section - show in view mode OR for page owners (who are always in edit mode) */}
-      {(!isEditing || isOwner) && (
+      {/* Page stats section - show in view mode OR for page owners (who are always in edit mode) - existing pages only */}
+      {page && (!isEditing || isOwner) && (
         <PageStats
           pageId={page.id}
           realTime={true}

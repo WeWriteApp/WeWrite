@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCurrentAccount } from '../../../providers/CurrentAccountProvider';
+import { useAuth } from '../../../providers/AuthProvider';
 import { SubscriptionSuccessModal } from '../../../components/payments/SubscriptionSuccessModal';
 
 import Link from 'next/link';
@@ -10,7 +10,7 @@ import { ArrowLeft } from 'lucide-react';
 import OpenCollectiveSupport from '../../../components/payments/OpenCollectiveSupport';
 
 export default function SubscriptionSuccessPage() {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   // Payments feature is now always enabled
@@ -44,7 +44,7 @@ export default function SubscriptionSuccessPage() {
   }
 
   useEffect(() => {
-    if (!session) {
+    if (!user) {
       router.push('/auth/login?redirect=/settings');
       return;
     }
@@ -52,7 +52,7 @@ export default function SubscriptionSuccessPage() {
     const sessionId = searchParams?.get('session_id');
 
     if (!sessionId) {
-      setError('No session ID provided');
+      setError('No user ID provided');
       setIsLoading(false);
       return;
     }
@@ -90,7 +90,7 @@ export default function SubscriptionSuccessPage() {
     };
 
     handleSubscriptionSuccess();
-  }, [, session, router, searchParams]);
+  }, [, user, router, searchParams]);
 
   // If the modal is closed, redirect to the original page or settings
   const handleModalClose = () => {

@@ -78,19 +78,19 @@ VERCEL_ENV=production
 
 ## 📊 Collection Mapping
 
-### Development Collections (dev_ prefix)
+### Development Collections (DEV_ prefix)
 ```
-users -> dev_users
-subscriptions -> dev_subscriptions
-tokenBalances -> dev_tokenBalances
-tokenAllocations -> dev_tokenAllocations
-writerTokenBalances -> dev_writerTokenBalances
-writerTokenEarnings -> dev_writerTokenEarnings
-tokenPayouts -> dev_tokenPayouts
-payouts -> dev_payouts
-payout_requests -> dev_payoutRequests
-transactions -> dev_transactions
-paymentRecovery -> dev_paymentRecovery
+users -> DEV_users
+subscriptions -> DEV_subscriptions
+tokenBalances -> DEV_tokenBalances
+tokenAllocations -> DEV_tokenAllocations
+writerTokenBalances -> DEV_writerTokenBalances
+writerTokenEarnings -> DEV_writerTokenEarnings
+tokenPayouts -> DEV_tokenPayouts
+payouts -> DEV_payouts
+payout_requests -> DEV_payoutRequests
+transactions -> DEV_transactions
+paymentRecovery -> DEV_paymentRecovery
 ```
 
 ### Production Collections (no prefix)
@@ -116,7 +116,7 @@ The system supports **dual deployments** from the `dev` branch:
 
 1. **Development Deployment**
    - URL: `dev-wewrite.vercel.app`
-   - Uses development data (`dev_` collections)
+   - Uses development data (`DEV_` collections)
    - Uses Stripe test keys
    - Safe for feature testing
 

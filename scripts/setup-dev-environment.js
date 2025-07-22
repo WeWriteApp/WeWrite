@@ -127,11 +127,11 @@ async function setupDevUsers() {
   
   for (const user of TEST_USERS) {
     try {
-      await db.collection('dev_users').doc(user.id).set(user);
+      await db.collection('DEV_users').doc(user.id).set(user);
       console.log(`✅ Created dev user: ${user.username}`);
-      
+
       // Also create username reservation
-      await db.collection('dev_usernames').doc(user.username).set({
+      await db.collection('DEV_usernames').doc(user.username).set({
         uid: user.uid,
         createdAt: admin.firestore.Timestamp.now()
       });
@@ -270,14 +270,14 @@ async function main() {
     console.log('🎉 Development environment setup complete!');
     console.log('');
     console.log('📋 What was created:');
-    console.log('  • dev_users collection with test users');
-    console.log('  • dev_pages collection with test pages');
-    console.log('  • dev_activities collection with test activities');
-    console.log('  • dev_subscriptions subcollection with test subscriptions');
-    console.log('  • dev_usernames collection with username reservations');
+    console.log('  • DEV_users collection with test users');
+    console.log('  • DEV_pages collection with test pages');
+    console.log('  • DEV_activities collection with test activities');
+    console.log('  • DEV_subscriptions subcollection with test subscriptions');
+    console.log('  • DEV_usernames collection with username reservations');
     console.log('');
     console.log('🔒 Environment separation verified:');
-    console.log('  • Development data is in dev_ prefixed collections');
+    console.log('  • Development data is in DEV_ prefixed collections');
     console.log('  • Production data remains untouched');
     console.log('  • Safe to test editing and subscription features');
     

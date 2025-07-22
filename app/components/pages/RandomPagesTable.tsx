@@ -8,7 +8,7 @@ import { formatRelativeTime } from "../../utils/formatRelativeTime";
 import { format } from 'date-fns';
 import { cn, wewriteCard } from '../../lib/utils';
 
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { isExactDateFormat } from "../../utils/dailyNoteNavigation";
 import { useDateFormat } from '../../contexts/DateFormatContext';
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
@@ -44,7 +44,7 @@ interface RandomPagesTableProps {
 export default function RandomPagesTable({ pages, loading = false, denseMode = false }: RandomPagesTableProps) {
   const { formatDateString } = useDateFormat();
 
-  // Note: Batch page data preloading was removed with session management cleanup
+  // Note: Batch page data preloading was removed with user management cleanup
 
   // Calculate minimum height based on expected content to prevent layout shifts
   const minHeight = pages.length > 0 ? `${Math.max(400, pages.length * 60 + 100)}px` : '400px';
@@ -169,7 +169,15 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
                 {/* Last Edited Column - Fixed width */}
                 <div className="min-w-0 overflow-hidden">
                   <span className="text-sm text-muted-foreground truncate block">
-                    {formatRelativeTime(page.lastModified || page.createdAt)}
+                    {(() => {
+                      try {
+                        const timestamp = page.lastModified || page.createdAt;
+                        return timestamp ? formatRelativeTime(timestamp) : 'Unknown';
+                      } catch (error) {
+                        console.error('Error formatting page time:', error);
+                        return 'Unknown';
+                      }
+                    })()}
                   </span>
                 </div>
               </div>
@@ -217,7 +225,15 @@ export default function RandomPagesTable({ pages, loading = false, denseMode = f
               </div>
               <div>
                 <span className="text-sm text-muted-foreground">
-                  Last edited {formatRelativeTime(page.lastModified || page.createdAt)}
+                  Last edited {(() => {
+                    try {
+                      const timestamp = page.lastModified || page.createdAt;
+                      return timestamp ? formatRelativeTime(timestamp) : 'unknown time';
+                    } catch (error) {
+                      console.error('Error formatting page time:', error);
+                      return 'unknown time';
+                    }
+                  })()}
                 </span>
               </div>
             </div>

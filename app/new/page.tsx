@@ -13,9 +13,10 @@ import { auth } from "../firebase/config";
 import { useRecentPages } from "../contexts/RecentPagesContext";
 // import { CONTENT_EVENTS } from "../constants/analytics-events";
 import { createReplyAttribution } from "../utils/linkUtils";
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 import { useDateFormat } from '../contexts/DateFormatContext';
 import PageHeader from "../components/pages/PageHeader";
+import PageFooter from "../components/pages/PageFooter";
 import Editor from "../components/editor/Editor";
 
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
@@ -78,7 +79,8 @@ interface PageData {
 function NewPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { currentAccount, isAuthenticated, isEmailVerified, isLoading: authLoading } = useCurrentAccount();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const isEmailVerified = user?.emailVerified ?? false;
   // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
   // const { trackPageCreationFlow, trackEditingFlow } = useWeWriteAnalytics();
 
@@ -208,14 +210,14 @@ function NewPageContent() {
       title: title,
 
       location: location,
-      userId: currentAccount?.uid || 'anonymous',
-      username: currentAccount?.username || currentAccount?.displayName || 'Anonymous',
+      userId: user?.uid || 'anonymous',
+      username: user?.username || user?.displayName || 'Anonymous',
       content: JSON.stringify(editorState),
       lastModified: new Date().toISOString(),
       isReply: isReply
     };
     setPage(mockPage);
-  }, [title, location, currentAccount, editorState, isReply]);
+  }, [title, location, user, editorState, isReply]);
 
   // Initialize content based on page type
   useEffect(() => {
@@ -244,7 +246,7 @@ function NewPageContent() {
       const attribution = createReplyAttribution({
         pageId: replyToId,
         pageTitle: pageTitle,
-        userId: currentAccount?.uid || '',
+        userId: user?.uid || '',
         username: username
       });
 
@@ -346,7 +348,7 @@ function NewPageContent() {
       hasTitle: !!(title && title.trim()),
       hasContent: !!(content && content.length),
       isReply,
-      userId: currentAccount?.uid
+      userId: user?.uid
     });
 
     // CRITICAL FIX: Enhanced title validation with visual feedback - NOW APPLIES TO ALL PAGES INCLUDING REPLIES
@@ -366,7 +368,7 @@ function NewPageContent() {
     setTitleError(false);
 
     // Validate user authentication
-    if (!currentAccount || !currentAccount.uid) {
+    if (!user || !user.uid) {
       console.error('🔴 DEBUG: Save failed - user not authenticated');
       const errorMsg = "You must be logged in to create a page";
       setError(errorMsg);
@@ -377,7 +379,7 @@ function NewPageContent() {
       return false;
     }
 
-    // CRITICAL FIX: Handle both Firebase Auth and session-based auth
+    // CRITICAL FIX: Handle both Firebase Auth and user-based auth
     try {
       // Check if Firebase app is initialized before trying to use it
       const { getApps, getApp } = await import('firebase/app');
@@ -387,39 +389,39 @@ function NewPageContent() {
         const { getAuth } = await import('firebase/auth');
         const auth = getAuth();
 
-        // For session-based auth (after account switching), Firebase Auth might not be ready
-        // In this case, we trust the currentAccount from our session system
+        // For user-based auth (after account switching), Firebase Auth might not be ready
+        // In this case, we trust the user from our user system
         if (auth.currentUser) {
-          // Firebase Auth is available - verify it matches our currentAccount
-          if (auth.currentUser.uid !== currentAccount.uid) {
-            console.warn('🟡 DEBUG: Auth user mismatch - using session-based auth', {
+          // Firebase Auth is available - verify it matches our user
+          if (auth.currentUser.uid !== user.uid) {
+            console.warn('🟡 DEBUG: Auth user mismatch - using user-based auth', {
               authUid: auth.currentUser.uid,
-              currentAccountUid: currentAccount.uid
+              currentAccountUid: user.uid
             });
-            // Don't fail - session-based auth takes precedence after account switching
+            // Don't fail - user-based auth takes precedence after account switching
           } else {
             console.log('🔵 DEBUG: Firebase Auth verified:', {
               authUid: auth.currentUser.uid,
-              currentAccountUid: currentAccount.uid,
+              currentAccountUid: user.uid,
               emailVerified: auth.currentUser.emailVerified
             });
           }
         } else {
-          // Firebase Auth not ready - use session-based auth
-          console.log('🔵 DEBUG: Using session-based auth (Firebase Auth not ready):', {
-            currentAccountUid: currentAccount.uid,
-            authMethod: 'session-based'
+          // Firebase Auth not ready - use user-based auth
+          console.log('🔵 DEBUG: Using user-based auth (Firebase Auth not ready):', {
+            currentAccountUid: user.uid,
+            authMethod: 'user-based'
           });
         }
       } else {
-        console.log('🔵 DEBUG: Firebase app not initialized, using session-based auth:', {
-          currentAccountUid: currentAccount.uid,
-          authMethod: 'session-based'
+        console.log('🔵 DEBUG: Firebase app not initialized, using user-based auth:', {
+          currentAccountUid: user.uid,
+          authMethod: 'user-based'
         });
       }
     } catch (authError) {
-      console.warn('🟡 DEBUG: Firebase Auth check failed, using session-based auth:', authError);
-      // Don't fail - session-based auth is sufficient
+      console.warn('🟡 DEBUG: Firebase Auth check failed, using user-based auth:', authError);
+      // Don't fail - user-based auth is sufficient
     }
 
     console.log('🔵 DEBUG: Starting save process...');
@@ -427,8 +429,8 @@ function NewPageContent() {
     setError(null);
 
     try {
-      const username = currentAccount?.username || currentAccount?.displayName || 'Anonymous';
-      const userId = currentAccount.uid;
+      const username = user?.username || user?.displayName || 'Anonymous';
+      const userId = user.uid;
 
       // CRITICAL FIX: Add detailed logging for content validation debugging
       console.log('🔵 DEBUG: Content validation check:', {
@@ -551,7 +553,7 @@ function NewPageContent() {
       }
 
       // Check if we should use the sync queue (only for unverified email users)
-      // For session-based auth, assume email is verified (since they successfully switched accounts)
+      // For user-based auth, assume email is verified (since they successfully switched accounts)
       const useQueue = auth.currentUser ? !auth.currentUser.emailVerified : false;
 
       if (useQueue) {
@@ -611,10 +613,10 @@ function NewPageContent() {
               authRetryAttempted = true;
 
               try {
-                console.log('🔄 DEBUG: Attempting session refresh via API');
+                console.log('🔄 DEBUG: Attempting user refresh via API');
 
-                // First, try to refresh the session using the session API
-                const sessionRefreshResponse = await fetch('/api/auth/session', {
+                // First, try to refresh the user using the user API
+                const sessionRefreshResponse = await fetch('/api/auth/user', {
                   method: 'GET',
                   credentials: 'include'
                 });
@@ -634,8 +636,8 @@ function NewPageContent() {
                     console.log('🔄 DEBUG: Refreshing Firebase auth token');
                     const newToken = await user.getIdToken(true); // Force refresh
 
-                    // Create new session cookie
-                    const sessionResponse = await fetch('/api/create-session-cookie', {
+                    // Create new user cookie
+                    const sessionResponse = await fetch('/api/create-user-cookie', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ idToken: newToken }),
@@ -879,12 +881,12 @@ function NewPageContent() {
   // Memoized save function for unsaved changes hook
   const saveChanges = useCallback(async (): Promise<void> => {
     await handleSave(editorContent || editorState, 'button');
-  }, [editorContent, editorState, title, location, currentAccount, isReply]);
+  }, [editorContent, editorState, title, location, user, isReply]);
 
   // Keyboard save handler
   const handleKeyboardSave = useCallback(() => {
     handleSave(editorContent || editorState, 'keyboard');
-  }, [editorContent, editorState, title, location, currentAccount, isReply]);
+  }, [editorContent, editorState, title, location, user, isReply]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -947,10 +949,10 @@ function NewPageContent() {
   };
 
   // Determine the layout to use (same as SinglePageView)
-  const Layout = currentAccount ? React.Fragment : PublicLayout;
+  const Layout = user ? React.Fragment : PublicLayout;
 
   // Get username for display
-  const username = currentAccount?.username || currentAccount?.displayName || 'Anonymous';
+  const username = user?.username || user?.displayName || 'Anonymous';
 
   // Show loading state while checking authentication
   if (authLoading) {
@@ -990,7 +992,7 @@ function NewPageContent() {
         <PageHeader
           title={title}
           username={username}
-          userId={currentAccount?.uid}
+          userId={user?.uid}
           isLoading={isLoading}
           scrollDirection="none"
 
@@ -1017,31 +1019,14 @@ function NewPageContent() {
                     setTitle={handleTitleChange}
                     initialContent={editorState}
                     onChange={handleContentChange}
-
                     location={location}
                     setLocation={setLocation}
                     isSaving={isSaving}
                     error={error || ""}
                     isNewPage={true}
                     placeholder="Start typing..."
-                    showToolbar={true}
-                    onSave={(capturedContent) => {
-                      console.log('🔵 DEBUG: Save button clicked, calling handleSave');
-                      console.log('🔵 DEBUG: Current state:', {
-                        title,
-                        hasContent: !!(capturedContent || editorContent || editorState),
-                        userId: currentAccount?.uid,
-                        isReply
-                      });
-
-                      // Add a simple test to see if this function is being called
-                      if (typeof window !== 'undefined') {
-                        console.log('🔵 DEBUG: About to call handleSave...');
-                      }
-
-                      return handleSave(capturedContent || editorContent || editorState, 'button');
-                    }}
-                    onCancel={handleBackWithCheck}
+                    showToolbar={false}
+                    // Remove onSave and onCancel - handled by bottom save bar
                   />
 
                   {/* Custom Date Field */}
@@ -1062,6 +1047,32 @@ function NewPageContent() {
                     />
                   </div>
 
+                  {/* Page Footer with bottom save bar */}
+                  <PageFooter
+                    page={null} // New page doesn't have existing page data
+                    content={editorState}
+                    linkedPageIds={[]} // New page doesn't have linked pages yet
+                    isEditing={true} // Always editing for new pages
+                    canEdit={true} // User can always edit their new page
+                    isOwner={true} // User owns their new page
+                    title={title}
+                    location={location}
+                    onTitleChange={handleTitleChange}
+                    onLocationChange={setLocation}
+                    onSave={async () => {
+                      const success = await handleSave(editorState, 'button');
+                      if (success) {
+                        // Navigation will be handled by handleSave
+                      }
+                    }}
+                    onCancel={handleBackWithCheck}
+                    onDelete={null} // No delete for new pages
+                    isSaving={isSaving}
+                    error={error}
+                    titleError={titleError}
+                    hasUnsavedChanges={hasUnsavedChanges}
+                  />
+
                   {/* Unsaved Changes Dialog */}
                   <UnsavedChangesDialog
                     isOpen={showUnsavedChangesDialog}
@@ -1080,7 +1091,7 @@ function NewPageContent() {
           <PledgeBar
             pageId="new-page"
             pageTitle="New Page"
-            authorId={currentAccount?.uid}
+            authorId={user?.uid}
             visible={false}
           />
         )}

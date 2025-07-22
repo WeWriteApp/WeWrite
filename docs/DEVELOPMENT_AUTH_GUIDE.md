@@ -1,187 +1,152 @@
-# Development Authentication Guide
+# Authentication Guide
 
 ## Overview
 
-The development authentication system provides isolated test users that prevent mixing test data with production accounts. This ensures safe development and testing without affecting real user data.
+WeWrite uses a clean Firebase authentication system. The complex development auth wrapper has been removed in favor of standard Firebase Auth for better maintainability and reliability.
 
-## Test Users
+## Authentication System
 
-### Available Test Users
+### Firebase Auth
+- **Provider:** Firebase Authentication
+- **Features:** Email/password, user registration, password reset
+- **Environment:** Uses standard Firebase project configuration
+- **Session Management:** Firebase Auth tokens with session cookies
 
-| User | Email | Username | Role | Purpose |
-|------|-------|----------|------|---------|
-| **Test User 1** | test1@wewrite.dev | testuser1 | Regular User | Primary testing account |
-| **Test User 2** | test2@wewrite.dev | testuser2 | Regular User | Secondary user for interactions |
-| **Test Admin** | admin@wewrite.dev | testadmin | Admin | Testing admin features |
-| **Test Writer** | writer@wewrite.dev | testwriter | Writer | Testing content creation |
-| **Test Reader** | reader@wewrite.dev | testreader | Reader | Testing consumption features |
+### Test Users (Development)
 
-**Password for all test users:** `testpass123`
+For development testing, you can create test accounts using standard Firebase Auth:
 
-### User Roles & Use Cases
+| Purpose | Suggested Email | Notes |
+|---------|----------------|-------|
+| **Primary Testing** | test@wewrite.app | Main development account |
+| **Secondary Testing** | test2@wewrite.app | For testing interactions |
+| **Admin Testing** | jamie@wewrite.app | Admin features (jamie@wewrite.app has admin privileges) |
 
-#### Test User 1 (Primary)
-- **Use for:** Main development and testing
-- **Features:** Full user functionality
-- **Data:** Can have pages, subscriptions, tokens
+**Note:** Create these accounts through the normal registration flow or Firebase console.
 
-#### Test User 2 (Secondary)
-- **Use for:** Testing user interactions
-- **Features:** Following, collaboration, comments
-- **Data:** Separate from Test User 1
+### Admin Access
 
-#### Test Admin
-- **Use for:** Admin panel testing
-- **Features:** Admin dashboard, user management
-- **Permissions:** Full admin access
-
-#### Test Writer
-- **Use for:** Content creation workflows
-- **Features:** Page creation, editing, publishing
-- **Focus:** Writing and publishing features
-
-#### Test Reader
-- **Use for:** Content consumption
-- **Features:** Reading, following, notifications
-- **Focus:** Reader experience
+Admin functionality is available to:
+- **Email:** `jamiegray2234@gmail.com` (hardcoded admin)
+- **Features:** Admin dashboard, user management, analytics
+- **Access:** Automatic based on email address
 
 ## Authentication Flow
 
-### Development Mode
-1. **Automatic Detection:** System detects `USE_DEV_AUTH=true` in environment
-2. **Isolated Authentication:** Only predefined test users can log in
-3. **Mock Firebase:** No real Firebase Auth calls
-4. **Separate Data:** Uses DEV_ prefixed collections
+### Firebase Auth Flow
+1. **Registration:** Users register with email/password through `/auth/register`
+2. **Login:** Users login with email/username and password through `/auth/login`
+3. **Session:** Firebase Auth token is used for authentication
+4. **Logout:** Standard Firebase signOut through `/auth/logout`
 
 ### Login Methods
-- **Email:** `test1@wewrite.dev`
-- **Username:** `testuser1`
-- **Password:** `testpass123`
+- **Email:** Any valid email address
+- **Username:** Username lookup via Firestore
+- **Password:** User-defined password
 
-## User Management Best Practices
+## Development Best Practices
 
-### 1. **When to Use Multiple Users**
-- ✅ Testing user interactions (following, collaboration)
-- ✅ Testing permission systems
-- ✅ Testing subscription states
-- ✅ Testing admin vs regular user features
-- ✅ Testing multi-user scenarios
+### 1. **Testing with Multiple Users**
+- Create separate test accounts for different scenarios
+- Use different browsers/incognito for multi-user testing
+- Test user interactions (following, collaboration)
+- Test permission systems and admin features
 
-### 2. **User Switching Strategy**
-- **Quick Development:** Use Test User 1 for most work
-- **Feature Testing:** Switch to appropriate role-based user
-- **Integration Testing:** Use multiple users for workflows
-- **Admin Testing:** Switch to Test Admin
+### 2. **Environment Configuration**
+- **Development:** Uses development Firebase project
+- **Production:** Uses production Firebase project
+- **Collections:** Environment-aware collection names
+- **Data Isolation:** Separate data per environment
 
-### 3. **Data Isolation**
-- Each test user has separate data
-- No cross-contamination with production
-- Safe to reset/clear test data
-- Environment-specific collections (DEV_ prefix)
+### 3. **Session Management**
+- Firebase Auth handles session persistence
+- Simple session cookies for middleware compatibility
+- Automatic token refresh
+- Clean logout clears all session data
 
-### 4. **Logout Behavior**
-- ✅ **Allow logout:** Enables testing logged-out states
-- ✅ **Quick switching:** Easy to switch between users
-- ✅ **Session management:** Test session persistence
-- ✅ **Auth flows:** Test login/logout workflows
-
-## Development Auth Panel
-
-### Features
-- **Current User Display:** Shows who's logged in
-- **Quick Sign Out:** One-click logout
-- **User Switching:** Switch between test users without logout
-- **User Descriptions:** Clear purpose for each test user
-- **Admin Indicators:** Visual badges for admin users
-
-### Usage
-1. **Panel Location:** Appears automatically in development
-2. **Expand/Collapse:** Click to show/hide user list
-3. **Quick Switch:** Click any user to switch instantly
-4. **Sign Out:** Red button to logout completely
-
+### 4. **Admin Access**
+- Admin features available to `jamiegray2234@gmail.com`
+- Admin status checked on each request
+- No special admin registration required
 ## Environment Configuration
 
-### Required Environment Variables
+### Firebase Configuration
 ```bash
 # .env.local
-USE_DEV_AUTH=true
-NODE_ENV=development
+NEXT_PUBLIC_FIREBASE_PID=your-project-id
+NEXT_PUBLIC_FIREBASE_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
+# ... other Firebase config
 ```
 
-### Disabling Development Auth
-Remove or set to false:
-```bash
-USE_DEV_AUTH=false
-```
+### Environment Types
+- **Development:** Uses development Firebase project
+- **Production:** Uses production Firebase project
+- **Collections:** Environment-aware collection names (DEV_ prefix in dev)
 
 ## Security Features
 
 ### Production Protection
-- ✅ **Environment Checks:** Only works in development
-- ✅ **Predefined Users:** No arbitrary user creation
-- ✅ **Isolated Data:** Separate from production collections
-- ✅ **Mock Authentication:** No real Firebase Auth calls
+- ✅ **Environment Separation:** Dev and prod use different Firebase projects
+- ✅ **Collection Isolation:** DEV_ prefixed collections in development
+- ✅ **Admin Controls:** Admin access restricted to specific email
+- ✅ **Standard Firebase Security:** Uses Firebase Auth security rules
 
 ### Development Safety
-- ✅ **Clear Indicators:** Visual warnings about dev mode
-- ✅ **Separate Collections:** DEV_ prefixed data
-- ✅ **No Production Access:** Cannot access real user data
-- ✅ **Reset Safe:** Can clear all test data safely
+- ✅ **Separate Data:** Development data isolated from production
+- ✅ **Test Accounts:** Safe to create and delete test accounts
+- ✅ **Reset Safe:** Can clear development data without affecting production
 
 ## Testing Scenarios
 
 ### Single User Testing
+- Account registration and login
 - Page creation and editing
 - Subscription management
-- Token allocation
 - Profile management
 
 ### Multi-User Testing
-- User following/unfollowing
-- Page collaboration
-- Comment interactions
-- Activity feeds
-
-### Admin Testing
-- User management
-- System administration
-- Analytics and reporting
-- Content moderation
+- Create multiple test accounts
+- Test user interactions (following, collaboration)
+- Test different permission levels
+- Test admin vs regular user features
 
 ### Auth Flow Testing
+- Registration flow
 - Login/logout cycles
+- Password reset
 - Session persistence
-- Account switching
 - Error handling
 
 ## Troubleshooting
 
 ### Common Issues
-1. **"Development auth not enabled"**
-   - Check `USE_DEV_AUTH=true` in .env.local
-   - Restart development server
+1. **"Authentication failed"**
+   - Check Firebase configuration
+   - Verify email/password combination
+   - Check browser console for errors
 
-2. **"Invalid test user credentials"**
-   - Use exact email/username from test users
-   - Password is `testpass123` for all users
+2. **"User not found"**
+   - Ensure user is registered
+   - Check username spelling
+   - Try using email instead of username
 
-3. **"Session not found"**
-   - Clear browser storage
+3. **"Session expired"**
+   - Refresh the page
    - Sign out and sign in again
+   - Clear browser storage if needed
 
 ### Debug Tools
-- Development auth panel
 - Browser console logs
-- API debug endpoints
-- Session storage inspection
+- Firebase Auth console
+- Network tab for API calls
+- Simple auth test page at `/simple-auth-test`
 
 ## Best Practices Summary
 
-1. **Use multiple test users** for comprehensive testing
-2. **Allow logout** to test all auth states
-3. **Switch users frequently** to test interactions
-4. **Use role-specific users** for targeted testing
-5. **Keep test data separate** from production
-6. **Reset test data regularly** for clean testing
-7. **Test auth flows** including login/logout cycles
+1. **Use separate test accounts** for different testing scenarios
+2. **Test auth flows regularly** including registration and password reset
+3. **Use environment-specific data** to avoid production contamination
+4. **Clear test data regularly** for clean testing environments
+5. **Test admin features** with the designated admin account
+6. **Monitor Firebase Auth console** for user management

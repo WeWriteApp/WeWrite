@@ -14,7 +14,7 @@ import { Button } from "../ui/button";
 import Link from "next/link";
 import { SubscriptionTierBadge } from '../ui/SubscriptionTierBadge';
 
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 interface TierModalProps {
   children: React.ReactNode;
   trigger?: React.ReactNode;
@@ -25,7 +25,7 @@ interface TierModalProps {
 }
 
 export function SubscriptionInfoModal({ children, trigger, currentTier = null, currentStatus = null, userId = null, username = null }: TierModalProps) {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   // Payments feature is now always enabled
   const paymentsEnabled = true;
 

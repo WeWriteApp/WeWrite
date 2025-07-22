@@ -25,6 +25,9 @@ export function TokenPieChart({
   const availableTokens = totalTokens - allocatedTokens;
   const isOverspent = availableTokens < 0;
 
+  // Check if user is completely out of tokens (same logic as pledge bar)
+  const isOutOfTokens = availableTokens <= 0 && totalTokens > 0;
+
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
@@ -67,14 +70,19 @@ export function TokenPieChart({
   const singleStrokeDashoffset = circumference - (singlePercentage / 100) * circumference;
 
   // Determine colors and title text
-  const progressColor = isOverspent ? 'text-orange-500' : 'text-primary';
+  const progressColor = (isOverspent || isOutOfTokens) ? 'text-orange-500' : 'text-primary';
   const titleText = isOverspent
     ? `${allocatedTokens} tokens allocated out of ${totalTokens} total monthly tokens (${unfundedTokens} tokens unfunded)`
     : `${allocatedTokens} tokens allocated out of ${totalTokens} total monthly tokens`;
 
+  // Determine container classes - add pulsing when out of tokens
+  const containerClasses = isOutOfTokens
+    ? 'pulse-brightness-orange'
+    : '';
+
   return (
     <div
-      className={`flex items-center gap-2 ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      className={`flex items-center gap-2 ${onClick ? 'cursor-pointer' : ''} ${className} ${containerClasses}`}
       onClick={onClick}
       title={titleText}
     >
@@ -154,10 +162,13 @@ export function TokenPieChart({
 
       {/* Fraction text - only show if showFraction is true */}
       {showFraction && (
-        <span className={`text-sm font-medium ${isOverspent ? 'text-orange-600' : 'text-foreground'}`}>
+        <span className={`text-sm font-medium ${(isOverspent || isOutOfTokens) ? 'text-orange-600' : 'text-foreground'}`}>
           {isOverspent ? (
             // Show overage amount when overspent
             `+${unfundedTokens} over`
+          ) : isOutOfTokens ? (
+            // Show out of tokens message
+            'Out of tokens'
           ) : (
             // Normal display
             `${allocatedTokens}/${totalTokens}`

@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { getFollowedPages, unfollowPage } from "../../firebase/follows";
-import { db } from "../../firebase/database";
-import { getPageById } from '../../firebase/database/pages';
+import { followsApi } from "../../utils/apiClient";
+import { getPageById } from "../../utils/apiClient";
 import { PillLink } from "../utils/PillLink";
 import { Loader, Heart, X, Plus, RefreshCw } from 'lucide-react';
 import { Button } from "../ui/button";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { toast } from "../ui/use-toast";
 import UnfollowConfirmationDialog from '../utils/UnfollowConfirmationDialog';
 import { ErrorDisplay } from "../ui/error-display";
@@ -42,7 +41,7 @@ export default function FollowedPages({
   className = "",
   onPageUnfollowed
 }: FollowedPagesProps) {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const [pages, setPages] = useState<Page[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +66,7 @@ export default function FollowedPages({
     }
 
     loadFollowedPages();
-  }, [userId, currentAccount?.uid, isCurrentUser]);
+  }, [userId, user?.uid, isCurrentUser]);
 
   const loadFollowedPages = async (loadMore = false) => {
     try {
@@ -110,7 +109,7 @@ export default function FollowedPages({
         try {
           // Use cached version to reduce database calls
           const { getCachedPageById } = await import('../../utils/requestCache');
-          const result = await getCachedPageById(pageId, currentAccount?.uid);
+          const result = await getCachedPageById(pageId, user?.uid);
           if (result.pageData && !result.error) {
             return result.pageData;
           }
@@ -145,13 +144,13 @@ export default function FollowedPages({
   };
 
   const handleUnfollow = async () => {
-    if (!session || !pageToUnfollow) return;
+    if (!user || !pageToUnfollow) return;
 
     try {
       setUnfollowingId(pageToUnfollow.id);
 
       // Call the unfollow function
-      await unfollowPage(currentAccount?.uid || '', pageToUnfollow.id);
+      await unfollowPage(user?.uid || '', pageToUnfollow.id);
 
       // Update the local state
       setPages(prev => prev.filter(p => p.id !== pageToUnfollow.id));

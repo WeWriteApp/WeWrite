@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { format, addDays, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, X, Info } from 'lucide-react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { useRouter } from 'next/navigation';
 import DayContainer from '../daily-notes/DayContainer';
 import { Button } from '../ui/button';
@@ -42,7 +42,7 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
 }) => {
   console.log('📅 TimelineCarousel: Component rendering');
 
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -74,7 +74,7 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
   const checkExistingNotes = useCallback(async () => {
     console.log('📅 TimelineCarousel: checkExistingNotes called');
 
-    if (!currentAccount?.uid) {
+    if (!user?.uid) {
       console.log('📅 TimelineCarousel: No current account UID, skipping load');
       setLoading(false);
       return;
@@ -84,7 +84,7 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
 
     try {
       // Use existing pages API
-      const response = await fetch(`/api/pages?userId=${currentAccount?.uid}&limit=1000&orderBy=lastModified&orderDirection=desc`);
+      const response = await fetch(`/api/pages?userId=${user?.uid}&limit=1000&orderBy=lastModified&orderDirection=desc`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch pages');
@@ -181,7 +181,7 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [currentAccount?.uid]);
+  }, [user?.uid]);
 
   // Load notes when component mounts or user changes
   useEffect(() => {
@@ -289,7 +289,7 @@ const TimelineCarousel: React.FC<TimelineCarouselProps> = ({
     }, 300); // Match the animation duration
   }, []);
 
-  if (!currentAccount) {
+  if (!user) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         Please sign in to view your timeline

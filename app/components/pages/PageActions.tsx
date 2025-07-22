@@ -7,9 +7,9 @@ import { Reply, Edit, Trash2, LayoutPanelLeft, AlignJustify, AlignLeft, X } from
 import dynamic from 'next/dynamic';
 import { useRouter } from "next/navigation";
 import { useToast } from "../ui/use-toast";
-// deletePage now uses API instead of direct Firebase calls
-import { getUserProfile } from "../../firebase/auth";
-import { auth } from "../../firebase/auth";
+// Using API client instead of direct Firebase calls
+import { getUserProfile } from "../../utils/apiClient";
+import { useAuth } from "../../providers/AuthProvider";
 
 import {
   DropdownMenu,
@@ -31,7 +31,6 @@ import {
   DialogClose
 } from "../ui/dialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
 import { getDatabase, ref, onValue, set, get, update } from "firebase/database";
 import { app } from "../../firebase/config";
 
@@ -101,7 +100,7 @@ export function PageActions({
   showFollowButton = false
 }: PageActionsProps) {
   const router = useRouter();
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [isLayoutDialogOpen, setIsLayoutDialogOpen] = useState(false);
 
@@ -141,7 +140,7 @@ export function PageActions({
       try {
         // CRITICAL: Navigate IMMEDIATELY before deletion to prevent 404
         // Use graceful navigation with proper browser history handling
-        await navigateAfterPageDeletion(page, session, router);
+        await navigateAfterPageDeletion(page, user, router);
 
         // Delete the page after navigation has started - use API instead of direct Firebase
         const response = await fetch(`/api/pages?id=${page.id}`, {
@@ -180,7 +179,7 @@ export function PageActions({
    */
   const handleReply = async () => {
     // Check if user is authenticated
-    if (!session) {
+    if (!user) {
       // User is not authenticated, store draft reply and redirect to login
       try {
         // Create standardized reply content
@@ -259,10 +258,10 @@ export function PageActions({
           const wewriteAccounts = sessionStorage.getItem('wewrite_accounts');
           if (wewriteAccounts) {
             const accounts = JSON.parse(wewriteAccounts);
-            const currentAccount = accounts.find(acc => acc.isCurrent);
+            const user = accounts.find(acc => acc.isCurrent);
 
-            if (currentAccount && currentAccount.username) {
-              username = currentAccount.username;
+            if (user && user.username) {
+              username = user.username;
               console.log("Found username in wewrite_accounts:", username);
             }
           }
@@ -329,7 +328,7 @@ export function PageActions({
         {/* Main action buttons - horizontal on desktop, vertical on mobile */}
         <div className="flex flex-col items-stretch gap-3 w-full md:flex-row md:flex-wrap md:items-center md:justify-center">
           {/* Follow button - available to non-owners when logged in */}
-          {showFollowButton && session && !isOwner && (
+          {showFollowButton && user && !isOwner && (
             <FollowButton
               pageId={page.id}
               pageTitle={page.title}

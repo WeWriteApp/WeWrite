@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 
 
 interface UseSubscriptionWarningReturn {
@@ -18,7 +18,7 @@ interface UseSubscriptionWarningReturn {
 }
 
 export function useSubscriptionWarning(): UseSubscriptionWarningReturn {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,7 +27,7 @@ export function useSubscriptionWarning(): UseSubscriptionWarningReturn {
   const paymentsEnabled = true;
 
   useEffect(() => {
-    if (!session?.uid || !paymentsEnabled) {
+    if (!user?.uid || !paymentsEnabled) {
       setIsLoading(false);
       setHasActiveSubscription(null);
       setSubscriptionStatus(null);
@@ -73,7 +73,7 @@ export function useSubscriptionWarning(): UseSubscriptionWarningReturn {
     };
 
     checkSubscriptionStatus();
-  }, [session?.uid, paymentsEnabled]);
+  }, [user?.uid, paymentsEnabled]);
 
   // Determine if we should show a warning
   const shouldShowWarning = paymentsEnabled && 

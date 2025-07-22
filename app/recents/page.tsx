@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 import { useOptimizedHome } from '../hooks/useOptimizedHome';
 
 import Header from '../components/layout/Header';
@@ -15,17 +15,17 @@ import EmptyState from '../components/ui/EmptyState';
  * Uses the same implementation as the homepage's recently viewed section.
  */
 export default function RecentsPage() {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const { data, loading, error } = useOptimizedHome();
   const [pagesWithSubscriptions, setPagesWithSubscriptions] = useState([]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!currentAccount) {
+    if (!user) {
       window.location.href = '/auth/login';
       return;
     }
-  }, [currentAccount]);
+  }, [user]);
 
   // Process pages with subscription data from the home API
   useEffect(() => {
@@ -54,7 +54,7 @@ export default function RecentsPage() {
     setPagesWithSubscriptions(pagesWithSubs);
   }, [data?.recentlyVisitedPages, data?.batchUserData]);
 
-  if (!currentAccount) {
+  if (!user) {
     return null; // Will redirect to login
   }
 

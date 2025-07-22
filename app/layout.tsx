@@ -21,12 +21,9 @@ import { TokenIncrementProvider } from "./contexts/TokenIncrementContext"
 import { TokenBalanceProvider } from "./contexts/TokenBalanceContext"
 
 import { ThemeProvider } from "./providers/ThemeProvider"
-import { MultiAuthProvider } from "./providers/MultiAuthProvider"
-import { CurrentAccountProvider } from "./providers/CurrentAccountProvider"
-import { SimpleAuthProvider } from "./providers/SimpleAuthProvider"
+import { AuthProvider } from "./providers/AuthProvider"
 import { NotificationProvider } from "./providers/NotificationProvider"
 import { MobileProvider } from "./providers/MobileProvider"
-import { AdminStateSimulatorProvider } from "./providers/AdminStateSimulatorProvider"
 import { LogRocketProvider } from "./providers/LogRocketProvider"
 import GlobalNavigation from "./components/layout/GlobalNavigation"
 
@@ -48,41 +45,35 @@ export default function RootLayout({
           <ErrorBoundary name="root">
             <GlobalErrorHandler />
             <ThemeProvider>
-              <SimpleAuthProvider>
+              <AuthProvider>
                 <LogRocketProvider>
-                  <MultiAuthProvider>
-                    <CurrentAccountProvider>
-                    <AdminStateSimulatorProvider>
-                      <NotificationProvider>
-                        <MobileProvider>
-                          <DataProvider>
-                            <DateFormatProvider>
-                              <AccentColorProvider>
-                                <PillStyleProvider>
-                                  <LineSettingsProvider>
-                                    <RecentPagesProvider>
-                                      <TokenIncrementProvider>
-                                        <TokenBalanceProvider>
-                                          <ApiSessionInitializer>
-                                        <GlobalNavigation>
-                                          {children}
-                                        </GlobalNavigation>
-                                          </ApiSessionInitializer>
-                                        </TokenBalanceProvider>
-                                      </TokenIncrementProvider>
-                                    </RecentPagesProvider>
-                                  </LineSettingsProvider>
-                                </PillStyleProvider>
-                              </AccentColorProvider>
-                            </DateFormatProvider>
-                          </DataProvider>
-                        </MobileProvider>
-                      </NotificationProvider>
-                    </AdminStateSimulatorProvider>
-                  </CurrentAccountProvider>
-                  </MultiAuthProvider>
+                  <NotificationProvider>
+                    <MobileProvider>
+                      <DataProvider>
+                        <DateFormatProvider>
+                          <AccentColorProvider>
+                            <PillStyleProvider>
+                              <LineSettingsProvider>
+                                <RecentPagesProvider>
+                                  <TokenIncrementProvider>
+                                    <TokenBalanceProvider>
+                                      <ApiSessionInitializer>
+                                    <GlobalNavigation>
+                                      {children}
+                                    </GlobalNavigation>
+                                      </ApiSessionInitializer>
+                                    </TokenBalanceProvider>
+                                  </TokenIncrementProvider>
+                                </RecentPagesProvider>
+                              </LineSettingsProvider>
+                            </PillStyleProvider>
+                          </AccentColorProvider>
+                        </DateFormatProvider>
+                      </DataProvider>
+                    </MobileProvider>
+                  </NotificationProvider>
                 </LogRocketProvider>
-              </SimpleAuthProvider>
+              </AuthProvider>
             </ThemeProvider>
           </ErrorBoundary>
         </NextJSErrorBoundary>

@@ -2,9 +2,8 @@
 import { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { ref, onValue } from "firebase/database";
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
-import { db } from "../firebase/config";
-import { rtdb } from "../firebase/rtdb";
+import { useAuth } from '../providers/AuthProvider';
+import { firestore, rtdb } from "../firebase/config";
 import { getCollectionName } from "../utils/environmentConfig";
 import {
   Trophy,
@@ -52,7 +51,7 @@ interface PageCountsByUser {
 }
 
 export default function LeaderboardPage() {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const [loading, setLoading] = useState<boolean>(true);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [displayedUsers, setDisplayedUsers] = useState<User[]>([]);
@@ -99,7 +98,7 @@ export default function LeaderboardPage() {
     const fetchUsersAndPages = async (): Promise<void> => {
       try {
         // First, let's check if user auth state is available
-        console.log("Leaderboard: Current auth user state:", session ? `Logged in as ${session.email}` : "Not logged in");
+        console.log("Leaderboard: Current auth user state:", user ? `Logged in as ${user.email}` : "Not logged in");
 
         // Try to fetch users from RTDB
         console.log("Leaderboard: Attempting to fetch users from RTDB");
@@ -132,7 +131,7 @@ export default function LeaderboardPage() {
                 // Use an async IIFE to be able to use await inside the onValue callback
                 (async () => {
                   try {
-                    const pagesRef = collection(db, getCollectionName('pages'));
+                    const pagesRef = collection(firestore, getCollectionName('pages'));
                     // No limit here as we want to get all pages for accurate counts
                     const pagesSnapshot = await getDocs(pagesRef);
 
@@ -209,7 +208,7 @@ export default function LeaderboardPage() {
     };
 
     fetchUsersAndPages();
-  }, [session]);
+  }, [user]);
 
   return (
     <main className="p-4 md:p-6 space-y-6 max-w-full overflow-hidden">
@@ -232,7 +231,7 @@ export default function LeaderboardPage() {
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
             <span className="ml-2">Loading users...</span>
           </div>
-        ) : error && !session ? (
+        ) : error && !user ? (
           <div className="flex items-center gap-2 p-4 text-sm bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400">
             <Info className="h-4 w-4 flex-shrink-0" />
             <p>Sign in to see the leaderboard</p>

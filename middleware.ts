@@ -25,18 +25,28 @@ interface PathChecks {
  * Extract authentication state from request cookies
  */
 function getAuthenticationState(request: NextRequest): AuthenticationState {
-  // Get authentication status from standard cookies
-  // Primary: Firebase session cookie (for Firebase auth users)
-  // Secondary: authenticated cookie (for session-based auth)
+  // Get authentication status from simplified auth system
+  const simpleSessionCookie = request.cookies.get("simpleUserSession")?.value;
+
+  // Fallback to legacy cookies for backward compatibility
   const sessionToken = request.cookies.get("session")?.value;
   const authenticatedCookie = request.cookies.get("authenticated")?.value === 'true';
   const userSessionCookie = request.cookies.get("userSession")?.value;
 
-  // Check email verification status from userSession cookie
+  // Check email verification status from simpleUserSession cookie (new system)
   let isEmailVerified = true; // Default to true for backward compatibility
   let userEmail: string | undefined;
 
-  if (userSessionCookie) {
+  if (simpleSessionCookie) {
+    try {
+      const userSession: UserSession = JSON.parse(simpleSessionCookie);
+      isEmailVerified = userSession.emailVerified !== false; // Default to true if not specified
+      userEmail = userSession.email;
+    } catch (error) {
+      console.log('[Middleware] Error parsing simpleUserSession cookie:', error);
+    }
+  } else if (userSessionCookie) {
+    // Fallback to legacy userSession cookie
     try {
       const userSession: UserSession = JSON.parse(userSessionCookie);
       isEmailVerified = userSession.emailVerified !== false; // Default to true if not specified
@@ -46,8 +56,8 @@ function getAuthenticationState(request: NextRequest): AuthenticationState {
     }
   }
 
-  // User is authenticated if they have either a Firebase session or authenticated cookie
-  const isAuthenticated = !!(sessionToken || authenticatedCookie);
+  // User is authenticated if they have any valid session cookie
+  const isAuthenticated = !!(simpleSessionCookie || sessionToken || authenticatedCookie);
 
   return {
     isAuthenticated,
@@ -175,8 +185,8 @@ function handleAuthenticationRedirects(
   request: NextRequest
 ): NextResponse | null {
   // Redirect authenticated users away from auth pages (except verify-email)
-  // TEMPORARY: Allow login page access for debugging stale sessions
-  if (path.startsWith("/auth/") && path !== "/auth/verify-email" && path !== "/auth/login" && auth.isAuthenticated) {
+  // TEMPORARY: Allow login and register page access for debugging and test account creation
+  if (path.startsWith("/auth/") && path !== "/auth/verify-email" && path !== "/auth/login" && path !== "/auth/register" && auth.isAuthenticated) {
     // If user is authenticated but not verified, redirect to verification
     if (!auth.isEmailVerified) {
       return NextResponse.redirect(new URL("/auth/verify-email", request.url));
@@ -184,8 +194,17 @@ function handleAuthenticationRedirects(
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Redirect unverified users to email verification page (except for homepage)
-  if (auth.isAuthenticated && !auth.isEmailVerified && path !== "/auth/verify-email" && path !== "/") {
+  // Allow unverified users to access most of the app, but redirect to verification for sensitive actions
+  // Only redirect to verification page for specific sensitive paths
+  const sensitivePathsRequiringVerification = [
+    "/subscription",
+    "/subscription/",
+    "/new"
+  ];
+
+  if (auth.isAuthenticated && !auth.isEmailVerified &&
+      sensitivePathsRequiringVerification.some(sensitivePath => path.startsWith(sensitivePath)) &&
+      path !== "/auth/verify-email") {
     return NextResponse.redirect(new URL("/auth/verify-email", request.url));
   }
 
@@ -196,10 +215,8 @@ function handleAuthenticationRedirects(
     return NextResponse.redirect(loginUrl);
   }
 
-  // Block unverified users from protected routes
-  if (pathChecks.requiresAuth && auth.isAuthenticated && !auth.isEmailVerified) {
-    return NextResponse.redirect(new URL("/auth/verify-email", request.url));
-  }
+  // Allow unverified users to access protected routes, but they'll see verification alerts
+  // Only block from very sensitive operations (handled above)
 
   return null;
 }

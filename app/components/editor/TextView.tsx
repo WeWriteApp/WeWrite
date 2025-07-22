@@ -55,7 +55,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/
 import { getPageById } from "../../firebase/database";
 import { LINE_MODES } from '../../contexts/LineSettingsContext';
 import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform } from "framer-motion";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { isExternalLink } from "../../utils/linkFormatters";
 import { validateLink, getLinkDisplayText, extractPageIdFromUrl } from '../../utils/linkValidator';
 import { Button } from "../ui/button";
@@ -169,7 +169,7 @@ const TextView: React.FC<TextViewProps> = ({
   const [isHovering, setIsHovering] = useState<boolean>(false);
   const [showEditTooltip, setShowEditTooltip] = useState<boolean>(false);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number; clientX: number; clientY: number } | null>(null);
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const { page } = usePage();
 
   // Debug: Check if context is working (disabled to prevent spam)
@@ -179,11 +179,11 @@ const TextView: React.FC<TextViewProps> = ({
   // Use prop value if provided, otherwise calculate
   const canEdit = propCanEdit !== undefined ? propCanEdit : Boolean(
     setIsEditing &&
-    session?.uid &&
+    user?.uid &&
     page &&
     (
       // User is the page owner
-      (page.userId && session.uid === page.userId) ||
+      (page.userId && user.uid === page.userId) ||
       // OR page belongs to a group and user is a member of that group
       (page.groupId && page.hasGroupAccess)
     )

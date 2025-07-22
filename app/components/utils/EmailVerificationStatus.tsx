@@ -3,15 +3,15 @@
 import React from 'react';
 import { CheckCircle, XCircle, Clock } from 'lucide-react';
 import { StatusIcon } from '../ui/status-icon';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 
 interface EmailVerificationStatusProps {
   className?: string;
 }
 
 export function EmailVerificationStatus({ className = "" }: EmailVerificationStatusProps) {
-  const { currentAccount } = useCurrentAccount();
-  const isEmailVerified = currentAccount?.emailVerified || false;
+  const { user } = useAuth();
+  const isEmailVerified = user?.emailVerified || false;
 
   const getStatusConfig = () => {
     if (isEmailVerified) {

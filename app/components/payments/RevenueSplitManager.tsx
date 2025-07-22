@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -61,7 +61,7 @@ export default function RevenueSplitManager({
   resourceTitle,
   onUpdate
 }: RevenueSplitManagerProps) {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const { toast } = useToast();
   // Payments feature is now always enabled
   const isPaymentsEnabled = true;
@@ -77,10 +77,10 @@ export default function RevenueSplitManager({
   });
 
   useEffect(() => {
-    if (currentAccount && isPaymentsEnabled) {
+    if (user && isPaymentsEnabled) {
       loadRevenueSplit();
     }
-  }, [currentAccount, isPaymentsEnabled, resourceType, resourceId]);
+  }, [user, isPaymentsEnabled, resourceType, resourceId]);
 
   const loadRevenueSplit = async () => {
     try {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -61,7 +61,7 @@ interface PayoutSetup {
 }
 
 export default function PayoutDashboard() {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const { toast } = useToast();
   // Payments feature is now always enabled
   const isPaymentsEnabled = true;
@@ -82,10 +82,10 @@ export default function PayoutDashboard() {
   const [riskAssessment, setRiskAssessment] = useState<PayoutRiskAssessment | null>(null);
 
   useEffect(() => {
-    if (session && isPaymentsEnabled) {
+    if (user && isPaymentsEnabled) {
       loadPayoutData();
     }
-  }, [, session, isPaymentsEnabled]);
+  }, [, user, isPaymentsEnabled]);
 
   // Calculate fee breakdown and risk assessment when earnings change
   const updateFeeBreakdown = async (availableBalance: number) => {
@@ -138,7 +138,7 @@ export default function PayoutDashboard() {
   };
 
   const loadBankAccountStatus = async () => {
-    if (!session?.stripeConnectedAccountId) {
+    if (!user?.stripeConnectedAccountId) {
       setStripeAccountStatus(null);
       return;
     }
@@ -164,7 +164,7 @@ export default function PayoutDashboard() {
     try {
       setLoading(true);
 
-      if (!session?.uid) return;
+      if (!user?.uid) return;
 
       // Load payout setup
       const setupResponse = await fetch('/api/payouts/setup');
@@ -180,7 +180,7 @@ export default function PayoutDashboard() {
       await loadBankAccountStatus();
 
       // Load token earnings data
-      const tokenBalance = await TokenEarningsService.getWriterTokenBalance(currentAccount.uid);
+      const tokenBalance = await TokenEarningsService.getWriterTokenBalance(user.uid);
       if (tokenBalance) {
         const earnings = {
           totalEarnings: tokenBalance.totalUsdEarned,
@@ -196,7 +196,7 @@ export default function PayoutDashboard() {
       }
 
       // Load token earnings history
-      const tokenEarnings = await TokenEarningsService.getWriterTokenEarnings(session.uid);
+      const tokenEarnings = await TokenEarningsService.getWriterTokenEarnings(user.uid);
       setEarnings(tokenEarnings.map(earning => ({
         id: earning.id,
         amount: earning.totalUsdValue,

@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { Loader, UserX, Users } from 'lucide-react';
-import { unfollowUser, getFollowedUsers } from "../../firebase/follows";
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { followsApi } from "../../utils/apiClient";
+import { useAuth } from '../../providers/AuthProvider';
 import Link from 'next/link';
 import { UsernameBadge } from '../ui/UsernameBadge';
 
@@ -18,7 +18,7 @@ interface UserFollowingListProps {
 }
 
 export default function UserFollowingList({ userId, isCurrentUser = false }: UserFollowingListProps) {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const [followedUsers, setFollowedUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +38,7 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
     if (!isCurrentUser) return;
 
     loadFollowedUsers();
-  }, [session, isCurrentUser]);
+  }, [user, isCurrentUser]);
 
   const loadFollowedUsers = async (loadMore = false) => {
     try {
@@ -113,13 +113,13 @@ export default function UserFollowingList({ userId, isCurrentUser = false }: Use
   };
 
   const handleUnfollow = async (followedId: string) => {
-    if (!session || !isCurrentUser) return;
+    if (!user || !isCurrentUser) return;
 
     try {
       setUnfollowingId(followedId);
 
       // Call the unfollow function
-      await unfollowUser(session.uid, followedId);
+      await unfollowUser(user.uid, followedId);
 
       // Update the local state
       setFollowedUsers(prev => prev.filter(u => u.id !== followedId));

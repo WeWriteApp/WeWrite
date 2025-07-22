@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 import Header from '../components/layout/Header';
 import MobileBottomNav from '../components/layout/MobileBottomNav';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
@@ -21,7 +21,7 @@ import { useRouter } from 'next/navigation';
  * - Better management interface for following relationships
  */
 export default function FollowingPage() {
-  const { currentAccount, isAuthenticated } = useCurrentAccount();
+  const { user, isAuthenticated } = useAuth();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
@@ -125,7 +125,7 @@ export default function FollowingPage() {
                     <h2 className="text-xl font-semibold">Users You Follow</h2>
                   </div>
                   <UserFollowingList 
-                    userId={currentAccount.uid} 
+                    userId={user.uid} 
                     isCurrentUser={true} 
                   />
                 </div>
@@ -137,7 +137,7 @@ export default function FollowingPage() {
                     <h2 className="text-xl font-semibold">Pages You Follow</h2>
                   </div>
                   <FollowedPages
-                    userId={currentAccount.uid}
+                    userId={user.uid}
                     isCurrentUser={true}
                     showHeader={false}
                     limit={100}

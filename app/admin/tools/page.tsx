@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -26,7 +26,7 @@ import FeeManagementSection from '../../components/admin/FeeManagementSection';
 import ComprehensiveFeeManagement from '../../components/admin/ComprehensiveFeeManagement';
 
 export default function AdminToolsPage() {
-  const { session, isAuthenticated } = useCurrentAccount();
+  const { user, isAuthenticated } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('streaks');
 
@@ -53,15 +53,15 @@ export default function AdminToolsPage() {
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/auth/login?redirect=/admin/tools');
-    } else if (session) {
+    } else if (user) {
       // Check if user is admin
       const checkAdmin = async () => {
         try {
           // Only jamiegray2234@gmail.com has admin access
           const adminEmails = ['jamiegray2234@gmail.com'];
-          setIsAdmin(adminEmails.includes(session.email));
+          setIsAdmin(adminEmails.includes(user.email));
 
-          if (!adminEmails.includes(session.email)) {
+          if (!adminEmails.includes(user.email)) {
             router.push('/');
           }
         } catch (error) {
@@ -72,7 +72,7 @@ export default function AdminToolsPage() {
 
       checkAdmin();
     }
-  }, [, session, isAuthenticated, router]);
+  }, [, user, isAuthenticated, router]);
 
   // Handle streak calculation
   const handleCalculateStreaks = async () => {
@@ -156,7 +156,7 @@ export default function AdminToolsPage() {
   }
 
   // Show nothing if not authenticated or not admin
-  if (!session || !isAdmin) {
+  if (!user || !isAdmin) {
     return null;
   }
 

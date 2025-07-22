@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 interface FailedPaymentNotificationProps {
   notification: {
     id: string;
@@ -37,7 +37,7 @@ export function FailedPaymentNotification({
   onMarkAsRead,
   onDismiss
 }: FailedPaymentNotificationProps) {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const [retrying, setRetrying] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   // Payments feature is now always enabled - no conditional rendering needed
@@ -58,7 +58,7 @@ export function FailedPaymentNotification({
   const dueDate = notification.metadata?.dueDate ? new Date(notification.metadata.dueDate) : null;
 
   const handleRetryPayment = async () => {
-    if (!session) {
+    if (!user) {
       toast.error('User not authenticated');
       return;
     }

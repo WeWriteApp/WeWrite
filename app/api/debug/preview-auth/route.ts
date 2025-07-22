@@ -7,13 +7,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getEnvironmentType, getEnvironmentPrefix } from '../../../utils/environmentConfig';
 import { getEnvironmentContext } from '../../../utils/environmentDetection';
-import { getAuthEnvironmentInfo } from '../../../firebase/authWrapper';
+// Auth wrapper removed - using auth
 
 export async function GET(request: NextRequest) {
   try {
     const envType = getEnvironmentType();
     const envContext = getEnvironmentContext();
-    const authInfo = getAuthEnvironmentInfo();
+    const authInfo = { environment: envType, authType: 'Simple Firebase Auth' };
     const envPrefix = getEnvironmentPrefix();
 
     // Get Firebase configuration (without sensitive data)

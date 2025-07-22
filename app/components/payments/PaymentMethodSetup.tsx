@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -21,7 +21,7 @@ interface PaymentMethodSetupProps {
 }
 
 const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCancel }) => {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const { theme } = useTheme();
   const stripe = useStripe();
   const elements = useElements();
@@ -32,7 +32,7 @@ const PaymentMethodForm: React.FC<PaymentMethodSetupProps> = ({ onSuccess, onCan
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!stripe || !elements || !session) {
+    if (!stripe || !elements || !user) {
       setError('Payment system not ready. Please try again.');
       return;
     }
@@ -187,10 +187,10 @@ export const PaymentMethodSetup: React.FC<PaymentMethodSetupProps> = ({
   onCancel,
   showTitle = true
 }) => {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const { theme } = useTheme();
 
-  if (!currentAccount) {
+  if (!user) {
     return (
       <Alert>
         <AlertTriangle className="h-4 w-4" />

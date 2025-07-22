@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
 import { SettingsPageHeader } from '../../components/settings/SettingsPageHeader';
 import TokenAllocationDisplay from '../../components/subscription/TokenAllocationDisplay';
@@ -43,7 +43,7 @@ interface TokenBalance {
 }
 
 export default function SpendTokensPage() {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
   const { trackInteractionEvent } = useWeWriteAnalytics();
 
@@ -75,7 +75,7 @@ export default function SpendTokensPage() {
 
   // Fetch current subscription and token balance
   const fetchData = useCallback(async () => {
-    if (!currentAccount || !paymentsEnabled) return;
+    if (!user || !paymentsEnabled) return;
 
     try {
       // Fetch subscription
@@ -134,11 +134,11 @@ export default function SpendTokensPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentAccount, paymentsEnabled]);
+  }, [user, paymentsEnabled]);
 
   // Convert simulated allocations to real database allocations
   const convertSimulatedAllocations = async (simBalance: SimulatedTokenBalance) => {
-    if (!currentAccount?.uid || simBalance.allocations.length === 0) {
+    if (!user?.uid || simBalance.allocations.length === 0) {
       return;
     }
 
@@ -176,7 +176,7 @@ export default function SpendTokensPage() {
       if (convertedCount > 0) {
         console.log(`🎯 Spend Tokens: Successfully converted ${convertedCount} simulated allocations to real allocations`);
         // Clear simulated tokens after successful conversion
-        clearUserTokens(currentAccount.uid);
+        clearUserTokens(user.uid);
         // Refresh the data to show the new real allocations
         await fetchData();
       }
@@ -197,17 +197,17 @@ export default function SpendTokensPage() {
   // OR convert simulated allocations to real allocations for users with active subscriptions
   useEffect(() => {
     console.log('🎯 Spend Tokens: Loading simulated balance', {
-      hasCurrentAccount: !!currentAccount,
-      currentAccountUid: currentAccount?.uid,
+      hasCurrentAccount: !!user,
+      currentAccountUid: user?.uid,
       hasSubscription: !!currentSubscription,
       subscriptionStatus: currentSubscription?.status
     });
 
-    if (currentAccount) {
+    if (user) {
       if (currentSubscription && currentSubscription.status === 'active') {
         // User has active subscription - check if we need to convert simulated allocations
         try {
-          const simBalance = getUserTokenBalance(currentAccount.uid);
+          const simBalance = getUserTokenBalance(user.uid);
           console.log('🎯 Spend Tokens: Checking for simulated allocations to convert', simBalance);
 
           if (simBalance.allocations.length > 0) {
@@ -220,7 +220,7 @@ export default function SpendTokensPage() {
       } else {
         // User doesn't have active subscription - show simulated balance
         try {
-          const simBalance = getUserTokenBalance(currentAccount.uid);
+          const simBalance = getUserTokenBalance(user.uid);
           console.log('🎯 Spend Tokens: Loaded simulated balance', simBalance);
           setSimulatedTokenBalance(simBalance);
         } catch (error) {
@@ -228,12 +228,12 @@ export default function SpendTokensPage() {
         }
       }
     }
-  }, [currentAccount, currentSubscription]);
+  }, [user, currentSubscription]);
 
   console.log('🎯 Spend Tokens: Auth check', {
-    hasCurrentAccount: !!currentAccount,
+    hasCurrentAccount: !!user,
     paymentsEnabled,
-    shouldShowAuthMessage: !currentAccount || !paymentsEnabled
+    shouldShowAuthMessage: !user || !paymentsEnabled
   });
 
   // Add debug display for spend tokens page
@@ -249,13 +249,13 @@ export default function SpendTokensPage() {
 
 
 
-  if (!currentAccount || !paymentsEnabled) {
+  if (!user || !paymentsEnabled) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Spend Tokens</h1>
           <p className="text-muted-foreground">
-            {!currentAccount ? 'Please sign in to manage your token allocation.' : 'Payments are not available at this time.'}
+            {!user ? 'Please sign in to manage your token allocation.' : 'Payments are not available at this time.'}
           </p>
         </div>
       </div>
@@ -274,8 +274,8 @@ export default function SpendTokensPage() {
       {/* Debug info moved to console */}
       {process.env.NODE_ENV === 'development' && (() => {
         console.log('[SpendTokensPage] Debug Info:', {
-          hasCurrentAccount: !!currentAccount,
-          currentAccountUid: currentAccount?.uid,
+          hasCurrentAccount: !!user,
+          currentAccountUid: user?.uid,
           paymentsEnabled,
           loading,
           hasCurrentSubscription: !!currentSubscription,

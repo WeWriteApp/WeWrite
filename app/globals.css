@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import pledge bar animations */
+@import './styles/pledge-bar-animations.css';
+
 /* Slate Editor Styles */
 .slate-editor-container {
   border: 1px solid hsl(var(--border) / 0.4);

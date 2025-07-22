@@ -39,6 +39,22 @@
   100% { filter: brightness(1); }
 }
 
+/* Orange pulse animation for out-of-tokens state */
+@keyframes pulse-brightness-orange {
+  0% {
+    filter: brightness(1) hue-rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    filter: brightness(1.15) hue-rotate(5deg);
+    opacity: 0.9;
+  }
+  100% {
+    filter: brightness(1) hue-rotate(0deg);
+    opacity: 1;
+  }
+}
+
 .spring-up {
   animation: spring-up 0.7s ease-out;
 }
@@ -53,6 +69,10 @@
 
 .pulse-brightness {
   animation: pulse-brightness 1.2s ease-in-out;
+}
+
+.pulse-brightness-orange {
+  animation: pulse-brightness-orange 1.5s ease-in-out infinite;
 }
 
 /* Combined animation class */

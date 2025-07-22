@@ -1,3 +1,16 @@
+/**
+ * Real-time Database Module - DEPRECATED
+ *
+ * ⚠️  MIGRATION NOTICE: This module is deprecated in favor of API routes.
+ *
+ * Use rtdbApi from utils/apiClient.ts instead of direct Firebase RTDB calls.
+ * The API route provides environment-aware access and better error handling.
+ *
+ * Migration:
+ * - Replace direct RTDB calls with rtdbApi.read(), rtdbApi.write(), etc.
+ * - Use /api/rtdb endpoint for all real-time database operations
+ */
+
 import {
   getDatabase,
   type Database,
@@ -11,19 +24,13 @@ import {
   type DataSnapshot,
   type Unsubscribe
 } from "firebase/database";
-import { getSafeFirebaseServices } from "./environmentAwareConfig";
+import { rtdb as firebaseRTDB } from "./config";
 import type { User } from "../types/database";
 
-// Get RTDB instance safely
+// Get RTDB instance
 const getFirebaseRTDB = (): Database => {
-  const services = getSafeFirebaseServices();
-  if (!services) {
-    throw new Error('Firebase services not available. Please check your Firebase configuration.');
-  }
-  return getDatabase(services.app);
+  return firebaseRTDB;
 };
-
-export const rtdb: Database = getFirebaseRTDB();
 
 // Connection pooling and batching for cost optimization
 class RTDBConnectionManager {
@@ -61,7 +68,7 @@ class RTDBConnectionManager {
         updates[path] = data;
       }
 
-      await update(ref(rtdb), updates);
+      await update(ref(getFirebaseRTDB()), updates);
       console.log(`[RTDB] Batched ${this.batchedWrites.size} writes to reduce costs`);
 
       this.batchedWrites.clear();
@@ -74,14 +81,14 @@ class RTDBConnectionManager {
 const connectionManager = RTDBConnectionManager.getInstance();
 
 export const add = async (path: string, data: any): Promise<DatabaseReference> => {
-  const dbRef = ref(rtdb, path);
+  const dbRef = ref(getFirebaseRTDB(), path);
   const newRef = push(dbRef);
   await set(newRef, data);
   return newRef;
 };
 
 export const updateData = async (path: string, data: any): Promise<void> => {
-  const dbRef = ref(rtdb, path);
+  const dbRef = ref(getFirebaseRTDB(), path);
   await update(dbRef, data);
 };
 
@@ -91,29 +98,29 @@ export const batchUpdateData = (path: string, data: any): void => {
 };
 
 export const getDoc = async (path: string): Promise<any> => {
-  const dbRef = ref(rtdb, path);
+  const dbRef = ref(getFirebaseRTDB(), path);
   const snapshot = await get(dbRef);
   return snapshot.val();
 };
 
 export const setDoc = async (path: string, data: any): Promise<void> => {
-  const dbRef = ref(rtdb, path);
+  const dbRef = ref(getFirebaseRTDB(), path);
   await set(dbRef, data);
 };
 
 export const removeDoc = async (path: string): Promise<void> => {
-  const dbRef = ref(rtdb, path);
+  const dbRef = ref(getFirebaseRTDB(), path);
   await set(dbRef, null);
 };
 
 export const listen = (path: string, callback: (snapshot: DataSnapshot) => void): Unsubscribe => {
-  const dbRef = ref(rtdb, path);
+  const dbRef = ref(getFirebaseRTDB(), path);
   return onValue(dbRef, callback);
 };
 
 export const fetchProfileFromFirebase = async (userId: string): Promise<User | null> => {
   try {
-    const profileRef = ref(rtdb, `users/${userId}`);
+    const profileRef = ref(getFirebaseRTDB(), `users/${userId}`);
     const snapshot = await get(profileRef);
     if (!snapshot.exists()) {
       return null;
@@ -126,3 +133,6 @@ export const fetchProfileFromFirebase = async (userId: string): Promise<User | n
     return null;
   }
 }
+
+// Export the RTDB instance for backward compatibility
+export const rtdb = getFirebaseRTDB();

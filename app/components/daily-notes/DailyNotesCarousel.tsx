@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import DayContainer from './DayContainer';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 // Removed direct Firebase imports - now using API endpoints
 import { format, subDays, addDays } from 'date-fns';
 import { Button } from '../ui/button';
@@ -48,7 +48,7 @@ export default function DailyNotesCarousel({
   isFullPage = false,
   focusDate = null
 }: DailyNotesCarouselProps) {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
   const carouselRef = useRef<HTMLDivElement>(null);
   const { formatDateString } = useDateFormat();
@@ -156,7 +156,7 @@ export default function DailyNotesCarousel({
 
   // Check for existing notes with exact YYYY-MM-DD format titles only
   const checkExistingNotes = useCallback(async (dateRange: Date[]) => {
-    if (!currentAccount?.uid) return;
+    if (!user?.uid) return;
 
     try {
       // Removed excessive cache invalidation that was causing infinite loops
@@ -169,7 +169,7 @@ export default function DailyNotesCarousel({
       // console.log(`Daily notes: querying date range ${startDate} to ${endDate} (${dateRange.length} days)`);
 
       // Call efficient daily notes API that groups pages by creation date
-      const response = await fetch(`/api/daily-notes?userId=${currentAccount?.uid}&startDate=${startDate}&endDate=${endDate}`)
+      const response = await fetch(`/api/daily-notes?userId=${user?.uid}&startDate=${startDate}&endDate=${endDate}`)
 
       if (!response.ok) {
         throw new Error(`Failed to fetch daily notes: ${response.status}`)
@@ -265,12 +265,12 @@ export default function DailyNotesCarousel({
     } catch (error) {
       console.error('Error checking existing notes:', error);
     }
-  }, [currentAccount?.uid]);
+  }, [user?.uid]);
 
   // Check for existing notes when dates change
   useEffect(() => {
     const loadNotes = async () => {
-      if (!currentAccount?.uid) {
+      if (!user?.uid) {
         setLoading(false);
         return;
       }
@@ -281,11 +281,11 @@ export default function DailyNotesCarousel({
     };
 
     loadNotes();
-  }, [currentAccount?.uid, daysBefore, daysAfter]); // Removed dates and checkExistingNotes to prevent infinite loop
+  }, [user?.uid, daysBefore, daysAfter]); // Removed dates and checkExistingNotes to prevent infinite loop
 
   // Listen for page updates to refresh daily notes data
   useEffect(() => {
-    if (!currentAccount?.uid) return;
+    if (!user?.uid) return;
 
     // Debounce cache invalidation to prevent excessive API calls
     let debounceTimer: NodeJS.Timeout | null = null;
@@ -300,8 +300,8 @@ export default function DailyNotesCarousel({
     const handleUserPagesInvalidation = (event: CustomEvent) => {
       const eventUserId = event.detail?.userId;
       // Refresh if no specific user ID or if it matches current user
-      if (!eventUserId || eventUserId === currentAccount.uid) {
-        // Reduced logging: console.log('🔄 DailyNotesCarousel: Debounced refresh due to page update for user:', currentAccount.uid);
+      if (!eventUserId || eventUserId === user.uid) {
+        // Reduced logging: console.log('🔄 DailyNotesCarousel: Debounced refresh due to page update for user:', user.uid);
         debouncedRefresh();
       }
     };
@@ -315,8 +315,8 @@ export default function DailyNotesCarousel({
       const { registerUserPagesInvalidation } = require('../../utils/globalCacheInvalidation');
       unregisterGlobal = registerUserPagesInvalidation((data: any) => {
         // Only refresh if this invalidation is for our user or if no specific user is mentioned
-        if (!data?.userId || data.userId === currentAccount.uid) {
-          // Reduced logging: console.log('🔄 DailyNotesCarousel: Debounced refresh due to global cache invalidation for user:', currentAccount.uid);
+        if (!data?.userId || data.userId === user.uid) {
+          // Reduced logging: console.log('🔄 DailyNotesCarousel: Debounced refresh due to global cache invalidation for user:', user.uid);
           debouncedRefresh();
         }
       });
@@ -333,7 +333,7 @@ export default function DailyNotesCarousel({
         unregisterGlobal();
       }
     };
-  }, [currentAccount?.uid]); // Removed dates and checkExistingNotes to prevent infinite re-registration
+  }, [user?.uid]); // Removed dates and checkExistingNotes to prevent infinite re-registration
 
   // Handle note pill click - navigate to specific note
   const handleNoteClick = (noteId: string) => {

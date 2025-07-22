@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCurrentAccount } from '../../../providers/CurrentAccountProvider';
+import { useAuth } from '../../../providers/AuthProvider';
 import { ArrowLeft, DollarSign, CreditCard, Settings, Trash2, Plus, Minus } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '../../../components/ui/button';
@@ -36,7 +36,7 @@ interface TokenBalance {
 }
 
 export default function SubscriptionManagePage() {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const { incrementAmount } = useTokenIncrement();
@@ -49,7 +49,7 @@ export default function SubscriptionManagePage() {
   const { confirmationState, showConfirmation, closeConfirmation } = useConfirmation();
 
   useEffect(() => {
-    if (!currentAccount) {
+    if (!user) {
       router.push('/auth/login');
       return;
     }
@@ -68,7 +68,7 @@ export default function SubscriptionManagePage() {
         unsubscribe();
       }
     };
-  }, [currentAccount, router]);
+  }, [user, router]);
 
   const fetchData = async () => {
     try {
@@ -133,7 +133,7 @@ export default function SubscriptionManagePage() {
       setUpdatingAllocation(allocationId);
 
       const result = await TokenService.allocateTokens(
-        session.uid,
+        user.uid,
         allocation.recipientUserId,
         allocation.resourceType,
         allocation.resourceId,
@@ -192,7 +192,7 @@ export default function SubscriptionManagePage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: session.uid
+          userId: user.uid
         })
       });
 

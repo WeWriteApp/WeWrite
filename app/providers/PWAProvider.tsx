@@ -5,7 +5,7 @@ import { isPWA, shouldShowPWABanner } from "../utils/pwa-detection";
 import { getAnalyticsService } from "../utils/analytics-service";
 import { ANALYTICS_EVENTS, EVENT_CATEGORIES } from '../constants/analytics-events';
 import { PWAInstallTrackingService } from '../services/pwaInstallTracking';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from './AuthProvider';
 // Define the context type
 interface PWAContextType {
   isPWA: boolean;
@@ -27,7 +27,7 @@ export const usePWA = () => useContext(PWAContext);
 export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isPWAApp, setIsPWAApp] = useState<boolean>(false);
   const [showBanner, setShowBanner] = useState<boolean>(false);
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
 
   // Initialize PWA detection on mount
   useEffect(() => {
@@ -42,8 +42,8 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Initialize PWA installation tracking with user context
       try {
-        PWAInstallTrackingService.initialize(session?.uid, session?.username);
-        console.log('PWA installation tracking initialized', session ? `for user: ${session.username}` : 'anonymously');
+        PWAInstallTrackingService.initialize(user?.uid, user?.username);
+        console.log('PWA installation tracking initialized', user ? `for user: ${user.username}` : 'anonymously');
       } catch (error) {
         console.error('Error initializing PWA installation tracking:', error);
       }
@@ -109,13 +109,13 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (typeof window !== 'undefined') {
       try {
         // Reinitialize with updated user context
-        PWAInstallTrackingService.initialize(session?.uid, session?.username);
-        console.log('PWA tracking updated for user context:', session?.username || 'anonymous');
+        PWAInstallTrackingService.initialize(user?.uid, user?.username);
+        console.log('PWA tracking updated for user context:', user?.username || 'anonymous');
       } catch (error) {
         console.error('Error updating PWA tracking user context:', error);
       }
     }
-  }, [session?.uid, session?.username]);
+  }, [user?.uid, user?.username]);
 
   // Function to reset banner state for testing
   const resetBannerState = () => {

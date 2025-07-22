@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { Menu, Home, User, Plus, Bell } from 'lucide-react';
 import { Button } from '../ui/button';
-import { useCurrentAccount } from '../../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { MobileOverflowSidebar } from './MobileOverflowSidebar';
 import { useEditorContext } from './UnifiedSidebar';
 import { cn } from '../../lib/utils';
@@ -48,7 +48,7 @@ const getPWABottomSpacing = (isPWAMode: boolean): string => {
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const editorContext = useEditorContext();
 
   const bankSetupStatus = useBankSetupStatus();
@@ -197,7 +197,7 @@ export default function MobileBottomNav() {
   }, [lastScrollY]);
 
   // Don't render if no user
-  if (!session) {
+  if (!user) {
     return null;
   }
 
@@ -221,8 +221,8 @@ export default function MobileBottomNav() {
   };
 
   const handleProfileClick = () => {
-    if (session?.uid) {
-      handleButtonPress('profile', `/user/${session.uid}`);
+    if (user?.uid) {
+      handleButtonPress('profile', `/user/${user.uid}`);
     }
   };
 
@@ -236,7 +236,7 @@ export default function MobileBottomNav() {
 
   // Determine active states for navigation buttons
   const isHomeActive = pathname === '/';
-  const isProfileActive = pathname === `/user/${session?.uid}`;
+  const isProfileActive = pathname === `/user/${user?.uid}`;
   const isNewPageActive = pathname === '/new';
   const isNotificationsActive = pathname === '/notifications';
   const isMenuActive = sidebarOpen;
@@ -388,7 +388,7 @@ export default function MobileBottomNav() {
             id="profile"
             icon={User}
             onClick={handleProfileClick}
-            onHover={() => session?.uid && handleButtonHover(`/user/${session.uid}`)}
+            onHover={() => user?.uid && handleButtonHover(`/user/${user.uid}`)}
             isActive={isProfileActive}
             ariaLabel="Profile"
             label="Profile"

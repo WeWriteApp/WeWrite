@@ -2,7 +2,7 @@
 import React, { useState, useContext, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { DataContext } from "../../providers/DataProvider";
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../../providers/AuthProvider';
 import { useRouter } from "next/navigation";
 import { PillLink, PillLinkSkeleton } from "../utils/PillLink";
 import Link from "next/link";
@@ -108,16 +108,16 @@ function AnimatedTabsContent({ children }) {
 
 const PageTabs = () => {
   const { pages, loading, loadMorePages, isMoreLoading, hasMorePages } = useContext(DataContext);
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const router = useRouter();
   const [recentPages, setRecentPages] = useState([]);
   const [favoritePages, setFavoritePages] = useState([]);
 
   useEffect(() => {
-    if (!loading && !session) {
+    if (!loading && !user) {
       router.push('/auth/login');
     }
-  }, [session, loading, router]);
+  }, [user, loading, router]);
 
   useEffect(() => {
     if (pages && pages.length > 0) {
@@ -138,7 +138,7 @@ const PageTabs = () => {
     return <PageSkeletons />;
   }
 
-  if (!session) {
+  if (!user) {
     return null;
   }
 

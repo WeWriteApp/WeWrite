@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { useCurrentAccount } from "../../providers/CurrentAccountProvider";
+import { useAuth } from '../../providers/AuthProvider';
 import { ProfileTabsSkeleton } from "../skeletons/UserProfileSkeleton";
 import { Button } from "../ui/button";
 import { ChevronLeft, Settings, Share2, Loader } from "lucide-react";
@@ -49,11 +49,11 @@ interface OptimizedSingleProfileViewProps {
 export default function OptimizedSingleProfileView({
   profile
 }: OptimizedSingleProfileViewProps) {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const [supporterTier, setSupporterTier] = useState(profile.tier || null);
   const [isLoadingTier, setIsLoadingTier] = useState(false);
 
-  const isCurrentUser = session?.uid === profile.uid;
+  const isCurrentUser = user?.uid === profile.uid;
 
 
 

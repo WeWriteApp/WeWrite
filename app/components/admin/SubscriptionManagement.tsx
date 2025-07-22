@@ -27,7 +27,7 @@ interface CleanupSummary {
 }
 
 export default function SubscriptionManagement() {
-  const { session } = useCurrentAccount();
+  const { user } = useAuth();
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [monitoringReport, setMonitoringReport] = useState<MonitoringReport | null>(null);
@@ -35,7 +35,7 @@ export default function SubscriptionManagement() {
   const [error, setError] = useState<string | null>(null);
 
   const runMonitoring = async () => {
-    if (!session) return;
+    if (!user) return;
     
     setIsMonitoring(true);
     setError(null);
@@ -60,7 +60,7 @@ export default function SubscriptionManagement() {
   };
 
   const runCleanup = async (dryRun: boolean = true) => {
-    if (!session) return;
+    if (!user) return;
     
     setIsCleaningUp(true);
     setError(null);

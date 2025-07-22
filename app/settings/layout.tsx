@@ -2,7 +2,7 @@
 
 import { useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from 'next/navigation';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 import { PageLoader } from "../components/ui/page-loader";
 import { Button } from "../components/ui/button";
 import {
@@ -42,7 +42,7 @@ interface SettingsLayoutProps {
 }
 
 export default function SettingsLayout({ children }: SettingsLayoutProps) {
-  const { session, isAuthenticated, isLoading } = useCurrentAccount();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean | null>(null);
@@ -60,8 +60,8 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
     console.log('🎯 Settings Layout: Auth check', {
       isAuthenticated,
       isLoading,
-      hasSession: !!session,
-      sessionUid: session?.uid
+      hasUser: !!user,
+      userUid: user?.uid
     });
 
     // Don't redirect while still loading authentication state
@@ -75,11 +75,11 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
       router.push('/auth/login');
       return;
     }
-  }, [isAuthenticated, isLoading, router, session]);
+  }, [isAuthenticated, isLoading, router, user]);
 
   // Check subscription status when payments are enabled and user is available
   useEffect(() => {
-    if (!session || !paymentsEnabled) {
+    if (!user || !paymentsEnabled) {
       setHasActiveSubscription(null);
       return;
     }
@@ -115,13 +115,13 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
     };
 
     checkSubscriptionStatus();
-  }, [, session, paymentsEnabled]);
+  }, [user, paymentsEnabled]);
 
   if (!isAuthenticated) {
     return <PageLoader message="Loading settings..." />;
   }
 
-  if (!session) {
+  if (!user) {
     return null;
   }
 

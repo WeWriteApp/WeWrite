@@ -6,12 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  getAuthEnvironmentInfo,
-  isDevelopmentAuthActive,
-  getGlobalAuthWrapper
-} from '../../../firebase/authWrapper';
-import { DEV_TEST_USERS } from '../../../firebase/developmentAuth';
+// Auth debug - complex auth wrapper removed
+import { DEV_TEST_USERS } from "../../../utils/testUsers";
 import { getEnvironmentType } from '../../../utils/environmentConfig';
 
 // GET endpoint - Get authentication environment information
@@ -21,17 +17,13 @@ export async function GET(request: NextRequest) {
     
     // Get environment information
     const envType = getEnvironmentType();
-    const authInfo = getAuthEnvironmentInfo();
-    const isDev = isDevelopmentAuthActive();
-    const authWrapper = getGlobalAuthWrapper();
-    
-    // Get current user info (safely)
-    let currentUser = null;
-    try {
-      currentUser = authWrapper.currentUser;
-    } catch (error) {
-      console.warn('Could not get current user:', error);
-    }
+
+    // Auth info
+    const authInfo = {
+      environment: envType,
+      authType: 'Simple Firebase Auth',
+      isDevelopmentAuth: false
+    };
     
     // Prepare response data
     const responseData = {
@@ -108,77 +100,16 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST endpoint - Test authentication operations
+// POST endpoint - Auth testing (complex auth wrapper removed)
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { action, userKey } = body;
-    
-    console.log(`🧪 Testing auth action: ${action}`);
-    
-    const authWrapper = getGlobalAuthWrapper();
-    const isDev = isDevelopmentAuthActive();
-    
-    if (!isDev) {
-      return NextResponse.json({
-        error: 'Development auth not active',
-        message: 'Cannot perform test operations without development authentication enabled'
-      }, { status: 400 });
-    }
-    
-    let result;
-    
-    switch (action) {
-      case 'signInTestUser':
-        if (!userKey || !DEV_TEST_USERS[userKey as keyof typeof DEV_TEST_USERS]) {
-          throw new Error(`Invalid test user key: ${userKey}`);
-        }
-        
-        if (authWrapper.signInWithTestUser) {
-          result = await authWrapper.signInWithTestUser(userKey);
-          result = {
-            success: true,
-            user: {
-              uid: result.user.uid,
-              email: result.user.email,
-              displayName: result.user.displayName
-            }
-          };
-        } else {
-          throw new Error('Test user sign in not available');
-        }
-        break;
-        
-      case 'signOut':
-        await authWrapper.signOut();
-        result = { success: true, message: 'Signed out successfully' };
-        break;
-        
-      case 'getCurrentUser':
-        const currentUser = authWrapper.currentUser;
-        result = {
-          success: true,
-          user: currentUser ? {
-            uid: currentUser.uid,
-            email: currentUser.email,
-            isTestUser: currentUser.uid?.startsWith('dev_')
-          } : null
-        };
-        break;
-        
-      default:
-        throw new Error(`Unknown action: ${action}`);
-    }
-    
     return NextResponse.json({
-      action,
-      result,
-      timestamp: new Date().toISOString()
-    });
-    
+      error: 'Complex auth testing disabled',
+      message: 'Auth wrapper functionality has been simplified. Use simple Firebase auth instead.'
+    }, { status: 400 });
   } catch (error) {
     console.error('Error in auth test operation:', error);
-    
+
     return NextResponse.json({
       error: 'Test operation failed',
       message: error instanceof Error ? error.message : 'Unknown error',

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useCurrentAccount } from '../providers/CurrentAccountProvider';
+import { useAuth } from '../providers/AuthProvider';
 
 interface BankSetupStatus {
   isSetup: boolean;
@@ -10,7 +10,7 @@ interface BankSetupStatus {
 }
 
 export function useBankSetupStatus(): BankSetupStatus {
-  const { currentAccount } = useCurrentAccount();
+  const { user } = useAuth();
   const [status, setStatus] = useState<BankSetupStatus>({
     isSetup: false,
     loading: true,
@@ -19,13 +19,13 @@ export function useBankSetupStatus(): BankSetupStatus {
 
   useEffect(() => {
     const checkBankSetupStatus = async () => {
-      if (!currentAccount?.uid) {
+      if (!user?.uid) {
         setStatus({ isSetup: false, loading: false, error: null });
         return;
       }
 
       // If no stripe connected account ID, bank is not set up
-      if (!currentAccount.stripeConnectedAccountId) {
+      if (!user.stripeConnectedAccountId) {
         setStatus({ isSetup: false, loading: false, error: null });
         return;
       }
@@ -37,7 +37,7 @@ export function useBankSetupStatus(): BankSetupStatus {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            stripeConnectedAccountId: currentAccount.stripeConnectedAccountId
+            stripeConnectedAccountId: user.stripeConnectedAccountId
           })
         });
 
@@ -55,7 +55,7 @@ export function useBankSetupStatus(): BankSetupStatus {
     };
 
     checkBankSetupStatus();
-  }, [currentAccount?.uid, currentAccount?.stripeConnectedAccountId]);
+  }, [user?.uid, user?.stripeConnectedAccountId]);
 
   return status;
 }
