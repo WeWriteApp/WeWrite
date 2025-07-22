@@ -463,23 +463,19 @@ export class DashboardAnalyticsService {
 
       const pagesRef = collection(db, getCollectionName('pages'));
 
-      // Optimized query approach - avoid complex compound queries
-      // Use simpler query without the deleted field to avoid index complexity
+      // Simplified approach: fetch all pages and filter in memory (like accounts analytics)
+      // This avoids Firestore index issues with compound queries
       const q = query(
         pagesRef,
-        where('createdAt', '>=', Timestamp.fromDate(startDate)),
-        where('createdAt', '<=', Timestamp.fromDate(endDate)),
-        orderBy('createdAt', 'asc'),
         limit(1000) // Add limit to prevent excessive reads
       );
 
-      console.log('🔍 [Analytics Service] Executing optimized pages query...');
+      console.log('🔍 [Analytics Service] Executing simplified pages query (fetch all, filter in memory)...');
       console.log('🔍 [Analytics Service] Query details:', {
         collection: getCollectionName('pages'),
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        startTimestamp: Timestamp.fromDate(startDate),
-        endTimestamp: Timestamp.fromDate(endDate)
+        approach: 'fetch-all-filter-in-memory'
       });
 
       await throttleQuery(); // Throttle query execution
@@ -563,7 +559,7 @@ export class DashboardAnalyticsService {
           return;
         }
 
-        // Validate the date is within our expected range
+        // Filter by date range in memory (like accounts analytics)
         console.log(`🔍 [Analytics] Checking date range:`, {
           pageDate: date.toISOString(),
           startDate: startDate.toISOString(),
@@ -573,20 +569,29 @@ export class DashboardAnalyticsService {
           isInRange: date >= startDate && date <= endDate
         });
 
-        if (date >= startDate && date <= endDate) {
-          // Round to appropriate time interval
-          const intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(date) : startOfDay(date);
-          const dateKey = timeConfig.formatKey(intervalDate);
-          const currentCount = dateMap.get(dateKey) || 0;
-
-          // Increment the counter
-          dateMap.set(dateKey, currentCount + 1);
-          addedToResults++;
-          console.log(`✅ [Analytics] Added page to results! Date: ${dateKey}, Count: ${currentCount + 1}`);
-        } else {
+        if (date < startDate || date > endDate) {
           console.log(`⏭️ [Analytics] Page ${doc.id} created outside date range: ${date.toISOString()}`);
           skippedOutOfRange++;
+          return; // Skip pages outside the date range
         }
+        // Find the appropriate interval bucket for this date (like accounts analytics)
+        let intervalDate: Date;
+        if (timeConfig.customGranularity && timeConfig.intervalDuration) {
+          // For custom granularity, find which bucket this date belongs to
+          const timeSinceStart = date.getTime() - startDate.getTime();
+          const bucketIndex = Math.floor(timeSinceStart / timeConfig.intervalDuration);
+          const clampedIndex = Math.max(0, Math.min(bucketIndex, timeConfig.intervals.length - 1));
+          intervalDate = timeConfig.intervals[clampedIndex];
+        } else {
+          // Use standard rounding for automatic granularity
+          intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(date) : startOfDay(date);
+        }
+
+        const dateKey = timeConfig.formatKey(intervalDate);
+        const currentCount = dateMap.get(dateKey) || 0;
+        dateMap.set(dateKey, currentCount + 1);
+        addedToResults++;
+        console.log(`✅ [Analytics] Added page to results! Date: ${dateKey}, Count: ${currentCount + 1}`);
       });
 
       console.log('📊 [Analytics Service] Processing summary:', {
