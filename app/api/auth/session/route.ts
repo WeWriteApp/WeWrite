@@ -126,11 +126,14 @@ export async function POST(request: NextRequest) {
       return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'ID token is required');
     }
 
-    // Check if we're in development mode with dev auth enabled
-    const isDevelopment = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
+    // Check if we should use dev auth system (same logic as other auth routes)
+    const environmentType = getEnvironmentType();
+    const isLocalDev = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
+    const isPreviewEnv = environmentType === 'preview';
+    const useDevAuth = isLocalDev || isPreviewEnv;
 
-    if (isDevelopment) {
-      console.log('[Session] Development mode: bypassing Firebase ID token verification');
+    if (useDevAuth) {
+      console.log(`[Session] Dev auth mode: bypassing Firebase ID token verification (environment: ${environmentType})`);
 
       try {
         // In development mode, decode the token without verification
@@ -182,12 +185,12 @@ export async function POST(request: NextRequest) {
           lastActiveAt: new Date().toISOString()
         });
 
-        console.log(`[Session] Development session created for: ${user.email}`);
+        console.log(`[Session] Dev auth session created for: ${user.email} (environment: ${environmentType})`);
         return createSuccessResponse(user);
 
       } catch (devError) {
-        console.error('[Session] Development session creation failed:', devError);
-        return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'Development session creation failed');
+        console.error('[Session] Dev auth session creation failed:', devError);
+        return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'Dev auth session creation failed');
       }
     }
 
