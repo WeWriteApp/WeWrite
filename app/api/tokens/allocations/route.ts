@@ -110,8 +110,11 @@ export async function GET(request: NextRequest) {
       pageAllocations.map(async (allocation) => {
         try {
           // Get page metadata using direct Firebase call
-          const { adminDb } = getFirebaseAdmin();
-          const pageDoc = await adminDb.collection(getCollectionName('pages')).doc(allocation.resourceId).get();
+          const admin = getFirebaseAdmin();
+          if (!admin) {
+            throw new Error('Firebase Admin not initialized');
+          }
+          const pageDoc = await admin.firestore().collection(getCollectionName('pages')).doc(allocation.resourceId).get();
           const pageData = pageDoc.exists ? pageDoc.data() : null;
 
           if (!pageData) {
