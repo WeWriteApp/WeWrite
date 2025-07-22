@@ -18,9 +18,9 @@ export async function GET(request: NextRequest) {
     const environmentContext = getEnvironmentContext();
 
     // Check auth configuration (same logic as login/session routes)
-    const isLocalDev = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
-    const isPreviewEnv = environmentType === 'preview';
-    const useDevAuth = isLocalDev || isPreviewEnv;
+    // ONLY use dev auth for local development with USE_DEV_AUTH=true
+    // Preview and production environments should use Firebase Auth with real credentials
+    const useDevAuth = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
 
     // Log environment config for server logs
     logEnvironmentConfig();
@@ -36,10 +36,9 @@ export async function GET(request: NextRequest) {
         useDevAuth: process.env.USE_DEV_AUTH
       },
       authConfiguration: {
-        isLocalDev,
-        isPreviewEnv,
         useDevAuth,
-        authSystem: useDevAuth ? 'dev-auth' : 'firebase-auth'
+        authSystem: useDevAuth ? 'dev-auth' : 'firebase-auth',
+        description: useDevAuth ? 'Local development with test accounts' : 'Production Firebase Auth with real credentials'
       },
       testCredentials: useDevAuth ? {
         available: [
@@ -54,24 +53,24 @@ export async function GET(request: NextRequest) {
       troubleshooting: {
         expectedBehavior: {
           'local development': 'Should use dev auth when USE_DEV_AUTH=true',
-          'vercel preview': 'Should use dev auth for testing with production data',
-          'vercel production': 'Should use Firebase auth with real credentials'
+          'vercel preview': 'Should use Firebase auth with your production credentials',
+          'vercel production': 'Should use Firebase auth with your production credentials'
         },
         commonIssues: {
-          '401 on preview': 'Check that VERCEL_ENV=preview is set correctly',
-          'wrong auth system': 'Verify environment detection logic',
-          'missing credentials': 'Ensure test accounts exist in dev auth system'
+          '401 on preview/production': 'Use your real Firebase Auth credentials (jamiegray2234@gmail.com)',
+          'wrong auth system': 'Only local development should use dev auth',
+          'missing credentials': 'Preview/production need real user accounts, not test accounts'
         }
       },
       recommendations: [
         ...(useDevAuth ? [
           'Dev authentication is active - test users are available',
-          'Use the provided test credentials for testing',
+          'Use the provided test credentials for local development',
           'Production user accounts are protected from development access'
         ] : [
-          'Firebase Auth is active - use your production credentials',
-          'Be careful when testing - you may be using real user accounts',
-          'Consider using preview environment for safer testing'
+          'Firebase Auth is active - use your real production credentials',
+          'Use jamiegray2234@gmail.com or other real Firebase Auth accounts',
+          'Preview environments test with production data using real credentials'
         ])
       ]
     };

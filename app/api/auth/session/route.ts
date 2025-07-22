@@ -49,11 +49,10 @@ export async function GET(request: NextRequest) {
         return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Invalid session data');
       }
 
-      // Check if we should use dev auth system (same logic as login)
-      const environmentType = getEnvironmentType();
-      const isLocalDev = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
-      const isPreviewEnv = environmentType === 'preview';
-      const useDevAuth = isLocalDev || isPreviewEnv;
+      // Check if we should use dev auth system
+      // ONLY use dev auth for local development with USE_DEV_AUTH=true
+      // Preview and production environments should use Firebase Auth with real credentials
+      const useDevAuth = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
 
       if (useDevAuth) {
         const user: User = {
@@ -67,7 +66,7 @@ export async function GET(request: NextRequest) {
           lastLoginAt: new Date().toISOString()
         };
 
-        console.log(`[Session] Dev auth session valid for: ${user.email} (environment: ${environmentType})`);
+        console.log('[Session] Dev auth session valid for:', user.email);
         return createSuccessResponse(user);
       }
 
@@ -126,14 +125,13 @@ export async function POST(request: NextRequest) {
       return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'ID token is required');
     }
 
-    // Check if we should use dev auth system (same logic as other auth routes)
-    const environmentType = getEnvironmentType();
-    const isLocalDev = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
-    const isPreviewEnv = environmentType === 'preview';
-    const useDevAuth = isLocalDev || isPreviewEnv;
+    // Check if we should use dev auth system
+    // ONLY use dev auth for local development with USE_DEV_AUTH=true
+    // Preview and production environments should use Firebase Auth with real credentials
+    const useDevAuth = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
 
     if (useDevAuth) {
-      console.log(`[Session] Dev auth mode: bypassing Firebase ID token verification (environment: ${environmentType})`);
+      console.log('[Session] Dev auth mode: bypassing Firebase ID token verification (local development only)');
 
       try {
         // In development mode, decode the token without verification
@@ -185,7 +183,7 @@ export async function POST(request: NextRequest) {
           lastActiveAt: new Date().toISOString()
         });
 
-        console.log(`[Session] Dev auth session created for: ${user.email} (environment: ${environmentType})`);
+        console.log('[Session] Dev auth session created for:', user.email);
         return createSuccessResponse(user);
 
       } catch (devError) {

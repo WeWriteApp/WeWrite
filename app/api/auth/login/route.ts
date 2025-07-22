@@ -49,26 +49,28 @@ function createSuccessResponse(user: LoginResponse['user']): NextResponse {
 export async function POST(request: NextRequest) {
   try {
     console.log('[Auth] Login request received');
+    console.log('[Auth] Request headers:', Object.fromEntries(request.headers.entries()));
+    console.log('[Auth] Request URL:', request.url);
 
     const body = await request.json() as LoginRequest;
     const { emailOrUsername, password } = body;
 
+    console.log('[Auth] Login attempt for:', emailOrUsername);
+    console.log('[Auth] Password provided:', password ? 'YES' : 'NO');
+
     // Validate required fields
     if (!emailOrUsername || !password) {
+      console.log('[Auth] Missing required fields');
       return createErrorResponse('Email/username and password are required');
     }
 
     // Check if we should use dev auth system
-    // Use dev auth for:
-    // 1. Local development (NODE_ENV=development + USE_DEV_AUTH=true)
-    // 2. Preview environments (VERCEL_ENV=preview) - for testing with production data
-    const environmentType = getEnvironmentType();
-    const isLocalDev = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
-    const isPreviewEnv = environmentType === 'preview';
-    const useDevAuth = isLocalDev || isPreviewEnv;
+    // ONLY use dev auth for local development with USE_DEV_AUTH=true
+    // Preview and production environments should use Firebase Auth with real credentials
+    const useDevAuth = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
 
     if (useDevAuth) {
-      console.log(`[Auth] Using dev auth system (environment: ${environmentType}, local dev: ${isLocalDev}, preview: ${isPreviewEnv})`);
+      console.log('[Auth] Using dev auth system (local development only)');
 
       // In development mode, check against known test accounts
       const testAccounts = [
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest) {
       );
 
       if (!account) {
-        console.log(`[Auth] Dev auth login failed: invalid credentials (environment: ${environmentType})`);
+        console.log('[Auth] Dev auth login failed: invalid credentials');
         return createErrorResponse('Invalid credentials');
       }
 
@@ -103,7 +105,7 @@ export async function POST(request: NextRequest) {
         maxAge: 60 * 60 * 24 * 7 // 7 days
       });
 
-      console.log(`[Auth] Dev auth login successful for: ${account.email} (environment: ${environmentType})`);
+      console.log('[Auth] Dev auth login successful for:', account.email);
 
       return createSuccessResponse({
         uid: account.uid,

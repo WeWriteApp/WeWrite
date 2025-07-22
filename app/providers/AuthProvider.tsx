@@ -103,15 +103,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(true);
       clearError();
 
-      // Check if we should use dev auth system (client-side environment detection)
-      // Note: Client-side can't access server-only env vars, so we use NEXT_PUBLIC_ vars and URL detection
-      const isLocalDev = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_DEV_AUTH === 'true';
-      const isPreviewEnv = typeof window !== 'undefined' &&
-        (window.location.hostname.includes('vercel.app') || window.location.hostname.includes('preview'));
-      const useDevAuth = isLocalDev || isPreviewEnv;
+      // Check if we should use dev auth system
+      // ONLY use dev auth for local development with NEXT_PUBLIC_USE_DEV_AUTH=true
+      // Preview and production environments should use Firebase Auth with real credentials
+      const useDevAuth = process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_DEV_AUTH === 'true';
 
       if (useDevAuth) {
-        console.log(`[Auth] Using dev auth system (local dev: ${isLocalDev}, preview: ${isPreviewEnv}, hostname: ${typeof window !== 'undefined' ? window.location.hostname : 'server'})`);
+        console.log('[Auth] Using dev auth system (local development only)');
 
         // Use server-side login endpoint for development
         const loginResponse = await fetch('/api/auth/login', {
@@ -127,7 +125,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const loginData = await loginResponse.json();
           if (loginData.success && loginData.user) {
             setUser(loginData.user);
-            console.log(`[Auth] Dev auth sign in successful for user: ${loginData.user.email} (preview: ${isPreviewEnv})`);
+            console.log('[Auth] Dev auth sign in successful for user:', loginData.user.email);
           } else {
             throw new AuthError(loginData.error || 'Login failed', AuthErrorCode.INVALID_CREDENTIALS);
           }

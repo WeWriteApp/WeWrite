@@ -6,12 +6,23 @@ This document provides a comprehensive overview of WeWrite's environment configu
 
 WeWrite uses a **four-environment architecture** with strict data separation to ensure safe development and testing:
 
-| Environment | Data Source | Stripe Keys | Collections | Purpose |
-|-------------|-------------|-------------|-------------|---------|
-| **Local Development** | Dev Data | Test Keys | `dev_*` | Local development and testing |
-| **Vercel Dev** | Dev Data | Test Keys | `dev_*` | Development branch testing |
-| **Vercel Preview** | **Production Data** | Live Keys | No prefix | Pre-production testing with real data |
-| **Vercel Production** | Production Data | Live Keys | No prefix | Live production environment |
+| Environment | Data Source | Auth System | Collections | Credentials | Purpose |
+|-------------|-------------|-------------|-------------|-------------|---------|
+| **Local Development** | Dev Data | **Dev Auth** | `DEV_*` | Test accounts | Local development and testing |
+| **Vercel Preview** | **Production Data** | **Firebase Auth** | No prefix | Real accounts | Pre-production testing with real data |
+| **Vercel Production** | Production Data | **Firebase Auth** | No prefix | Real accounts | Live production environment |
+
+## 🔐 Authentication Architecture
+
+### Local Development
+- **Auth System**: Dev Auth (test accounts)
+- **Credentials**: `jamie@wewrite.app`, `test@wewrite.app` with `TestPassword123!`
+- **Data**: Isolated dev collections (`DEV_users`, `DEV_pages`, etc.)
+
+### Preview & Production
+- **Auth System**: Firebase Auth (real accounts)
+- **Credentials**: `jamiegray2234@gmail.com` and other real Firebase users
+- **Data**: Production collections (`users`, `pages`, etc.)
 
 ## 🎯 Key Design Principles
 
