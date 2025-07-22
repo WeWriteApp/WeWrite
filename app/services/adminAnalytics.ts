@@ -1,0 +1,277 @@
+/**
+ * Admin Analytics Service - Uses Firebase Admin SDK for admin dashboard
+ * This service bypasses Firestore security rules and is only for admin use
+ */
+
+import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
+import { getCollectionName } from '../utils/environmentConfig';
+
+// Helper function to get Firestore instance from Firebase Admin
+function getAdminFirestore() {
+  const admin = getFirebaseAdmin();
+  return admin.firestore();
+}
+
+export interface DateRange {
+  startDate: Date;
+  endDate: Date;
+}
+
+export interface ChartDataPoint {
+  date: string;
+  count: number;
+  label: string;
+}
+
+export interface PagesDataPoint {
+  date: string;
+  publicPages: number;
+  privatePages: number;
+  totalPages: number;
+  label: string;
+}
+
+/**
+ * Simple Admin Analytics Service - Reliable and bulletproof
+ */
+export class AdminAnalyticsService {
+
+  /**
+   * Get new accounts created within date range
+   */
+  static async getNewAccountsCreated(dateRange: DateRange): Promise<ChartDataPoint[]> {
+    console.log('🔍 [Admin Analytics] Getting new accounts created...');
+    
+    try {
+      const db = getAdminFirestore();
+      const usersRef = db.collection(getCollectionName('users'));
+      
+      // Fetch all users and filter in memory (simple and reliable)
+      const snapshot = await usersRef.limit(1000).get();
+      console.log(`✅ [Admin Analytics] Found ${snapshot.size} users`);
+      
+      // Group by day
+      const dailyCounts = new Map<string, number>();
+      
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const createdAt = data.createdAt;
+        
+        if (createdAt) {
+          let date: Date;
+          if (createdAt.toDate) {
+            date = createdAt.toDate();
+          } else if (typeof createdAt === 'string') {
+            date = new Date(createdAt);
+          } else {
+            return; // Skip invalid dates
+          }
+          
+          // Filter by date range
+          if (date >= dateRange.startDate && date <= dateRange.endDate) {
+            const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+            dailyCounts.set(dayKey, (dailyCounts.get(dayKey) || 0) + 1);
+          }
+        }
+      });
+      
+      // Convert to chart data
+      const result: ChartDataPoint[] = [];
+      const currentDate = new Date(dateRange.startDate);
+      
+      while (currentDate <= dateRange.endDate) {
+        const dayKey = currentDate.toISOString().split('T')[0];
+        const count = dailyCounts.get(dayKey) || 0;
+        
+        result.push({
+          date: dayKey,
+          count,
+          label: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        });
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      console.log(`📊 [Admin Analytics] Accounts result: ${result.length} days, ${result.reduce((sum, item) => sum + item.count, 0)} total accounts`);
+      return result;
+      
+    } catch (error) {
+      console.error('❌ [Admin Analytics] Error fetching accounts:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get new pages created within date range
+   */
+  static async getNewPagesCreated(dateRange: DateRange): Promise<PagesDataPoint[]> {
+    console.log('🔍 [Admin Analytics] Getting new pages created...');
+    
+    try {
+      const db = getAdminFirestore();
+      const pagesRef = db.collection(getCollectionName('pages'));
+      
+      // Fetch all pages and filter in memory (simple and reliable)
+      const snapshot = await pagesRef.limit(1000).get();
+      console.log(`✅ [Admin Analytics] Found ${snapshot.size} pages`);
+      
+      // Group by day
+      const dailyCounts = new Map<string, number>();
+      
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const createdAt = data.createdAt;
+        const deleted = data.deleted;
+        
+        // Skip deleted pages
+        if (deleted === true) {
+          return;
+        }
+        
+        if (createdAt) {
+          let date: Date;
+          if (createdAt.toDate) {
+            date = createdAt.toDate();
+          } else if (typeof createdAt === 'string') {
+            date = new Date(createdAt);
+          } else {
+            return; // Skip invalid dates
+          }
+          
+          // Filter by date range
+          if (date >= dateRange.startDate && date <= dateRange.endDate) {
+            const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+            dailyCounts.set(dayKey, (dailyCounts.get(dayKey) || 0) + 1);
+          }
+        }
+      });
+      
+      // Convert to chart data
+      const result: PagesDataPoint[] = [];
+      const currentDate = new Date(dateRange.startDate);
+      
+      while (currentDate <= dateRange.endDate) {
+        const dayKey = currentDate.toISOString().split('T')[0];
+        const totalPages = dailyCounts.get(dayKey) || 0;
+        
+        result.push({
+          date: dayKey,
+          publicPages: 0, // Legacy field
+          privatePages: 0, // Legacy field
+          totalPages,
+          label: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        });
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      console.log(`📊 [Admin Analytics] Pages result: ${result.length} days, ${result.reduce((sum, item) => sum + item.totalPages, 0)} total pages`);
+      return result;
+      
+    } catch (error) {
+      console.error('❌ [Admin Analytics] Error fetching pages:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get analytics events (shares, content changes, etc.)
+   */
+  static async getAnalyticsEvents(dateRange: DateRange, eventType?: string): Promise<ChartDataPoint[]> {
+    console.log('🔍 [Admin Analytics] Getting analytics events...', { eventType });
+    
+    try {
+      const db = getAdminFirestore();
+      const eventsRef = db.collection(getCollectionName('analytics_events'));
+      
+      // Fetch all events and filter in memory (simple and reliable)
+      const snapshot = await eventsRef.limit(1000).get();
+      console.log(`✅ [Admin Analytics] Found ${snapshot.size} analytics events`);
+      
+      // Group by day
+      const dailyCounts = new Map<string, number>();
+      
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const timestamp = data.timestamp;
+        const event = data.event;
+        
+        // Filter by event type if specified
+        if (eventType && event !== eventType) {
+          return;
+        }
+        
+        if (timestamp) {
+          let date: Date;
+          if (timestamp.toDate) {
+            date = timestamp.toDate();
+          } else if (typeof timestamp === 'string') {
+            date = new Date(timestamp);
+          } else {
+            return; // Skip invalid dates
+          }
+          
+          // Filter by date range
+          if (date >= dateRange.startDate && date <= dateRange.endDate) {
+            const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+            dailyCounts.set(dayKey, (dailyCounts.get(dayKey) || 0) + 1);
+          }
+        }
+      });
+      
+      // Convert to chart data
+      const result: ChartDataPoint[] = [];
+      const currentDate = new Date(dateRange.startDate);
+      
+      while (currentDate <= dateRange.endDate) {
+        const dayKey = currentDate.toISOString().split('T')[0];
+        const count = dailyCounts.get(dayKey) || 0;
+        
+        result.push({
+          date: dayKey,
+          count,
+          label: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        });
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      console.log(`📊 [Admin Analytics] Events result: ${result.length} days, ${result.reduce((sum, item) => sum + item.count, 0)} total events`);
+      return result;
+      
+    } catch (error) {
+      console.error('❌ [Admin Analytics] Error fetching analytics events:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all dashboard analytics in one call
+   */
+  static async getAllDashboardAnalytics(dateRange: DateRange) {
+    console.log('🔍 [Admin Analytics] Getting all dashboard analytics...');
+    
+    try {
+      const [accounts, pages, shares, contentChanges] = await Promise.all([
+        this.getNewAccountsCreated(dateRange),
+        this.getNewPagesCreated(dateRange),
+        this.getAnalyticsEvents(dateRange, 'share_event'),
+        this.getAnalyticsEvents(dateRange, 'content_change')
+      ]);
+      
+      return {
+        newAccountsCreated: accounts,
+        newPagesCreated: pages,
+        sharesAnalytics: shares,
+        editsAnalytics: contentChanges,
+        contentChangesAnalytics: contentChanges,
+        pwaInstallsAnalytics: [], // Not implemented yet
+        liveVisitorsCount: 0 // Not implemented yet
+      };
+      
+    } catch (error) {
+      console.error('❌ [Admin Analytics] Error fetching all analytics:', error);
+      throw error;
+    }
+  }
+}

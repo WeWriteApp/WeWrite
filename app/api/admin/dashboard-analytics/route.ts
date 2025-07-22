@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions } from '../../admin-auth-helper';
 import { createApiResponse, createErrorResponse } from '../../auth-helper';
-import { DashboardAnalyticsService } from '../../../services/dashboardAnalytics';
+import { AdminAnalyticsService } from '../../../services/adminAnalytics';
 
 /**
  * Admin Dashboard Analytics API
@@ -44,47 +44,29 @@ export async function GET(request: NextRequest) {
     // Route to appropriate analytics method based on type
     switch (type) {
       case 'accounts':
-        data = await DashboardAnalyticsService.getNewAccountsCreated(dateRange, granularity);
+        data = await AdminAnalyticsService.getNewAccountsCreated(dateRange);
         break;
       case 'pages':
-        data = await DashboardAnalyticsService.getNewPagesCreated(dateRange, granularity);
+        data = await AdminAnalyticsService.getNewPagesCreated(dateRange);
         break;
       case 'shares':
-        data = await DashboardAnalyticsService.getSharesAnalytics(dateRange, granularity);
+        data = await AdminAnalyticsService.getAnalyticsEvents(dateRange, 'share_event');
         break;
       case 'edits':
-        data = await DashboardAnalyticsService.getEditsAnalytics(dateRange, granularity);
+        data = await AdminAnalyticsService.getAnalyticsEvents(dateRange, 'edit_event');
         break;
       case 'contentChanges':
-        data = await DashboardAnalyticsService.getContentChangesAnalytics(dateRange, granularity);
+        data = await AdminAnalyticsService.getAnalyticsEvents(dateRange, 'content_change');
         break;
       case 'pwaInstalls':
-        data = await DashboardAnalyticsService.getPWAInstallsAnalytics(dateRange, granularity);
+        data = await AdminAnalyticsService.getAnalyticsEvents(dateRange, 'pwa_install');
         break;
       case 'visitors':
-        data = await DashboardAnalyticsService.getVisitorAnalytics(dateRange, granularity);
+        data = []; // Not implemented yet
         break;
       case 'all':
-        // Get all metrics
-        const [accounts, pages, shares, edits, contentChanges, pwaInstalls, visitors] = await Promise.all([
-          DashboardAnalyticsService.getNewAccountsCreated(dateRange, granularity),
-          DashboardAnalyticsService.getNewPagesCreated(dateRange, granularity),
-          DashboardAnalyticsService.getSharesAnalytics(dateRange, granularity),
-          DashboardAnalyticsService.getEditsAnalytics(dateRange, granularity),
-          DashboardAnalyticsService.getContentChangesAnalytics(dateRange, granularity),
-          DashboardAnalyticsService.getPWAInstallsAnalytics(dateRange, granularity),
-          DashboardAnalyticsService.getVisitorAnalytics(dateRange, granularity)
-        ]);
-
-        data = {
-          accounts,
-          pages,
-          shares,
-          edits,
-          contentChanges,
-          pwaInstalls,
-          visitors
-        };
+        // Get all metrics using the new simplified service
+        data = await AdminAnalyticsService.getAllDashboardAnalytics(dateRange);
         break;
       default:
         return createErrorResponse('BAD_REQUEST', 'Invalid analytics type. Must be one of: accounts, pages, shares, edits, contentChanges, pwaInstalls, visitors, all');
