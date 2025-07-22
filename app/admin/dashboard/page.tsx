@@ -5,7 +5,7 @@ import './dashboard.css';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { Button } from '../../components/ui/button';
-import { ChevronLeft, Filter, GripVertical, Grid3X3, List } from 'lucide-react';
+import { ChevronLeft, Filter } from 'lucide-react';
 import { isAdmin } from "../../utils/isAdmin";
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -22,12 +22,12 @@ import {
 import { NewAccountsWidget } from "../../components/admin/NewAccountsWidget";
 import { NewPagesWidget } from "../../components/admin/NewPagesWidget";
 import { SharesAnalyticsWidget } from "../../components/admin/SharesAnalyticsWidget";
-import { EditsAnalyticsWidget } from "../../components/admin/EditsAnalyticsWidget";
+
 import { ContentChangesAnalyticsWidget } from "../../components/admin/ContentChangesAnalyticsWidget";
 import { PWAInstallsAnalyticsWidget } from "../../components/admin/PWAInstallsAnalyticsWidget";
 import { LiveVisitorsWidget } from "../../components/admin/LiveVisitorsWidget";
 import { VisitorAnalyticsWidget } from "../../components/admin/VisitorAnalyticsWidget";
-import { DashboardListMode, createDefaultListItems, type DashboardListItem } from "../../components/admin/DashboardListMode";
+import { DesktopOptimizedDashboard } from "../../components/admin/DesktopOptimizedDashboard";
 
 // Payment Analytics Widgets
 import { SubscriptionConversionFunnelWidget } from "../../components/admin/SubscriptionConversionFunnelWidget";
@@ -101,7 +101,7 @@ const initialWidgets = [
   { id: 'new-pages', component: NewPagesWidget },
   { id: 'visitor-analytics', component: VisitorAnalyticsWidget },
   { id: 'shares-analytics', component: SharesAnalyticsWidget },
-  { id: 'edits-analytics', component: EditsAnalyticsWidget },
+
   { id: 'content-changes-analytics', component: ContentChangesAnalyticsWidget },
   { id: 'pwa-installs-analytics', component: PWAInstallsAnalyticsWidget },
   { id: 'subscription-conversion-funnel', component: SubscriptionConversionFunnelWidget },
@@ -175,19 +175,7 @@ export default function AdminDashboardPage() {
   // Global analytics filters state
   const [globalFilters, setGlobalFilters] = useState<GlobalAnalyticsFiltersType>(defaultGlobalAnalyticsFilters);
 
-  // View mode state - 'grid' or 'list'
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('wewrite-admin-view-mode');
-      return (stored === 'list' || stored === 'grid') ? stored : 'grid';
-    }
-    return 'grid';
-  });
-
-  // List mode items state
-  const [listItems, setListItems] = useState<DashboardListItem[]>(() => {
-    return createDefaultListItems(dateRange, granularity);
-  });
+  // Removed view mode state - now only desktop-optimized mode
 
   // Debug logging for admin dashboard state
   console.log('📊 [Admin Dashboard] Current state:', {
@@ -195,8 +183,7 @@ export default function AdminDashboardPage() {
     granularity,
     globalFilters,
     dashboardLoading,
-    isOptionsBarExpanded,
-    viewMode
+    isOptionsBarExpanded
   });
 
   // Debug current user authentication
@@ -207,32 +194,7 @@ export default function AdminDashboardPage() {
     isAdmin: user?.user?.email ? isAdmin(user.user.email) : false
   });
 
-  // Handle view mode toggle
-  const handleViewModeToggle = () => {
-    const newMode = viewMode === 'grid' ? 'list' : 'grid';
-    setViewMode(newMode);
-
-    // Persist to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('wewrite-admin-view-mode', newMode);
-    }
-  };
-
-  // Handle list items reorder
-  const handleListItemsReorder = (newItems: DashboardListItem[]) => {
-    setListItems(newItems);
-
-    // Persist order to localStorage
-    if (typeof window !== 'undefined') {
-      const itemIds = newItems.map(item => item.id);
-      localStorage.setItem('wewrite-admin-list-order', JSON.stringify(itemIds));
-    }
-  };
-
-  // Update list items when date range or granularity changes
-  useEffect(() => {
-    setListItems(createDefaultListItems(dateRange, granularity));
-  }, [dateRange, granularity]);
+  // Removed view mode and list items handlers - now using desktop-optimized component
 
   // Handle options bar toggle with persistence
   const handleToggleOptionsBar = () => {
@@ -337,29 +299,9 @@ export default function AdminDashboardPage() {
 
               <h1 className="text-2xl font-bold">WeWrite Dashboard</h1>
 
-              {/* View Mode and Options Controls */}
+              {/* Options Controls */}
               {!dashboardLoading && (
                 <div className="flex items-center gap-2">
-                  {/* View Mode Toggle */}
-                  <Button
-                    variant="outline"
-                    onClick={handleViewModeToggle}
-                    className="gap-2"
-                    title={`Switch to ${viewMode === 'grid' ? 'list' : 'grid'} view`}
-                  >
-                    {viewMode === 'grid' ? (
-                      <>
-                        <List className="h-4 w-4" />
-                        List
-                      </>
-                    ) : (
-                      <>
-                        <Grid3X3 className="h-4 w-4" />
-                        Grid
-                      </>
-                    )}
-                  </Button>
-
                   {/* Options Button - toggle options bar */}
                   <Button
                     variant={isOptionsBarExpanded ? "default" : "outline"}
@@ -413,7 +355,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Dashboard Content */}
-        <div className={`py-6 ${viewMode === 'list' ? '' : 'px-6'}`}>
+        <div className="py-6 px-6">
           <DashboardErrorBoundary>
             {(() => {
               if (dashboardLoading) {
@@ -424,28 +366,26 @@ export default function AdminDashboardPage() {
                   </>
                 );
               } else {
-                console.log('🎯🎯🎯 Dashboard loaded, rendering in', viewMode, 'mode! 🎯🎯🎯');
-                console.log('🎯 Dashboard widgets available:', widgets.length);
-                console.log('🎯 List items available:', listItems.length);
+                console.log('🎯🎯🎯 Dashboard loaded, rendering desktop-optimized mode! 🎯🎯🎯');
 
-                if (viewMode === 'list') {
-                  return (
-                    <>
-                      {/* List Mode Layout - Full Width */}
-                      <div className="w-full">
-                        <DashboardErrorBoundary>
-                          <DashboardListMode
-                            dateRange={dateRange}
-                            granularity={granularity}
-                            globalFilters={globalFilters}
-                            items={listItems}
-                            onItemsReorder={handleListItemsReorder}
-                          />
-                        </DashboardErrorBoundary>
-                      </div>
-                    </>
-                  );
-                } else {
+                // Always use desktop-optimized dashboard (no grid mode)
+                return (
+                  <>
+                    {/* Desktop-Optimized Dashboard - Full Width */}
+                    <div className="w-full">
+                      <DashboardErrorBoundary>
+                        <DesktopOptimizedDashboard
+                          dateRange={dateRange}
+                          granularity={granularity}
+                          globalFilters={globalFilters}
+                        />
+                      </DashboardErrorBoundary>
+                    </div>
+                  </>
+                );
+
+                // Remove old grid/list mode logic
+                if (false) {
                   return (
                     <>
                       {/* Grid Mode Layout - Responsive Grid optimized for large displays */}

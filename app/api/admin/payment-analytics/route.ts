@@ -72,7 +72,16 @@ function getTimeIntervals(dateRange: DateRange, granularity?: number) {
     formatLabel = (date: Date) => format(date, 'MMM d');
   }
 
-  return { buckets, formatLabel, granularity: granularityType };
+  // Add formatKey function for date formatting
+  const formatKey = (date: Date) => {
+    if (granularityType === 'hourly') {
+      return format(date, 'yyyy-MM-dd-HH');
+    } else {
+      return format(date, 'yyyy-MM-dd');
+    }
+  };
+
+  return { buckets, formatLabel, formatKey, granularity: granularityType };
 }
 
 

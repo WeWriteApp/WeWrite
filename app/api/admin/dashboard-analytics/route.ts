@@ -64,12 +64,18 @@ export async function GET(request: NextRequest) {
       case 'visitors':
         data = []; // Not implemented yet
         break;
+      case 'subscriptions':
+        data = await AdminAnalyticsService.getSubscriptionsCreated(dateRange);
+        break;
+      case 'revenue':
+        data = await AdminAnalyticsService.getSubscriptionRevenue(dateRange);
+        break;
       case 'all':
         // Get all metrics using the new simplified service
         data = await AdminAnalyticsService.getAllDashboardAnalytics(dateRange);
         break;
       default:
-        return createErrorResponse('BAD_REQUEST', 'Invalid analytics type. Must be one of: accounts, pages, shares, edits, contentChanges, pwaInstalls, visitors, all');
+        return createErrorResponse('BAD_REQUEST', 'Invalid analytics type. Must be one of: accounts, pages, shares, edits, contentChanges, pwaInstalls, visitors, subscriptions, revenue, all');
     }
 
     return createApiResponse({

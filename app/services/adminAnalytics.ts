@@ -307,29 +307,174 @@ export class AdminAnalyticsService {
   }
 
   /**
+   * Get subscriptions created within date range
+   */
+  static async getSubscriptionsCreated(dateRange: DateRange): Promise<ChartDataPoint[]> {
+    console.log('🔍 [Admin Analytics] Getting subscriptions created...');
+
+    try {
+      const db = getAdminFirestore();
+      const subscriptionsRef = db.collection(getCollectionName('subscriptions'));
+
+      // Fetch all subscriptions and filter in memory
+      const snapshot = await subscriptionsRef.limit(1000).get();
+      console.log(`✅ [Admin Analytics] Found ${snapshot.size} subscriptions`);
+
+      // Group by day
+      const dailyCounts = new Map<string, number>();
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const createdAt = data.createdAt;
+
+        if (createdAt) {
+          let date: Date;
+          if (createdAt.toDate) {
+            date = createdAt.toDate();
+          } else if (typeof createdAt === 'string') {
+            date = new Date(createdAt);
+          } else {
+            return; // Skip invalid dates
+          }
+
+          // Filter by date range
+          if (date >= dateRange.startDate && date <= dateRange.endDate) {
+            const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+            dailyCounts.set(dayKey, (dailyCounts.get(dayKey) || 0) + 1);
+          }
+        }
+      });
+
+      // Convert to chart data
+      const result: ChartDataPoint[] = [];
+      const currentDate = new Date(dateRange.startDate);
+
+      while (currentDate <= dateRange.endDate) {
+        const dayKey = currentDate.toISOString().split('T')[0];
+        const count = dailyCounts.get(dayKey) || 0;
+
+        result.push({
+          date: dayKey,
+          count,
+          label: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        });
+
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      console.log(`📊 [Admin Analytics] Subscriptions result: ${result.length} days, ${result.reduce((sum, item) => sum + item.count, 0)} total subscriptions`);
+      return result;
+
+    } catch (error) {
+      console.error('❌ [Admin Analytics] Error fetching subscriptions:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get subscription revenue within date range (including refunds)
+   */
+  static async getSubscriptionRevenue(dateRange: DateRange): Promise<ChartDataPoint[]> {
+    console.log('🔍 [Admin Analytics] Getting subscription revenue...');
+
+    try {
+      const db = getAdminFirestore();
+      const subscriptionsRef = db.collection(getCollectionName('subscriptions'));
+
+      // Fetch all subscriptions and filter in memory
+      const snapshot = await subscriptionsRef.limit(1000).get();
+      console.log(`✅ [Admin Analytics] Found ${snapshot.size} subscriptions for revenue calculation`);
+
+      // Group by day and calculate revenue
+      const dailyRevenue = new Map<string, number>();
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const createdAt = data.createdAt;
+        const amount = data.amount || 0; // Revenue amount
+        const refunded = data.refunded || false;
+        const refundAmount = data.refundAmount || 0;
+
+        if (createdAt) {
+          let date: Date;
+          if (createdAt.toDate) {
+            date = createdAt.toDate();
+          } else if (typeof createdAt === 'string') {
+            date = new Date(createdAt);
+          } else {
+            return; // Skip invalid dates
+          }
+
+          // Filter by date range
+          if (date >= dateRange.startDate && date <= dateRange.endDate) {
+            const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+            let revenue = amount;
+
+            // Subtract refunds (making revenue negative if refunded)
+            if (refunded) {
+              revenue = -Math.abs(refundAmount || amount);
+            }
+
+            dailyRevenue.set(dayKey, (dailyRevenue.get(dayKey) || 0) + revenue);
+          }
+        }
+      });
+
+      // Convert to chart data
+      const result: ChartDataPoint[] = [];
+      const currentDate = new Date(dateRange.startDate);
+
+      while (currentDate <= dateRange.endDate) {
+        const dayKey = currentDate.toISOString().split('T')[0];
+        const count = dailyRevenue.get(dayKey) || 0;
+
+        result.push({
+          date: dayKey,
+          count, // Revenue amount (can be negative)
+          label: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        });
+
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      const totalRevenue = result.reduce((sum, item) => sum + item.count, 0);
+      console.log(`📊 [Admin Analytics] Revenue result: ${result.length} days, $${totalRevenue.toFixed(2)} total revenue`);
+      return result;
+
+    } catch (error) {
+      console.error('❌ [Admin Analytics] Error fetching subscription revenue:', error);
+      return [];
+    }
+  }
+
+  /**
    * Get all dashboard analytics in one call
    */
   static async getAllDashboardAnalytics(dateRange: DateRange) {
     console.log('🔍 [Admin Analytics] Getting all dashboard analytics...');
-    
+
     try {
-      const [accounts, pages, shares, contentChanges] = await Promise.all([
+      const [accounts, pages, shares, contentChanges, subscriptions, revenue] = await Promise.all([
         this.getNewAccountsCreated(dateRange),
         this.getNewPagesCreated(dateRange),
         this.getAnalyticsEvents(dateRange, 'share_event'),
-        this.getAnalyticsEvents(dateRange, 'content_change')
+        this.getAnalyticsEvents(dateRange, 'content_change'),
+        this.getSubscriptionsCreated(dateRange),
+        this.getSubscriptionRevenue(dateRange)
       ]);
-      
+
       return {
         newAccountsCreated: accounts,
         newPagesCreated: pages,
         sharesAnalytics: shares,
         editsAnalytics: contentChanges,
         contentChangesAnalytics: contentChanges,
+        subscriptionsCreated: subscriptions,
+        subscriptionRevenue: revenue,
         pwaInstallsAnalytics: [], // Not implemented yet
         liveVisitorsCount: 0 // Not implemented yet
       };
-      
+
     } catch (error) {
       console.error('❌ [Admin Analytics] Error fetching all analytics:', error);
       throw error;

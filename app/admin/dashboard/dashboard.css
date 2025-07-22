@@ -249,7 +249,57 @@ input[type="date"] {
   }
 }
 
-/* List Mode Styles */
+/* Desktop-Optimized Dashboard Styles */
+.desktop-optimized-dashboard {
+  max-width: 100%;
+  width: 100%;
+}
+
+.desktop-optimized-dashboard .wewrite-card {
+  transition: all 0.2s ease-in-out;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+}
+
+.desktop-optimized-dashboard .wewrite-card:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: hsl(var(--primary) / 0.2);
+}
+
+/* Keyboard shortcut styling */
+.desktop-optimized-dashboard kbd {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: 3px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2), 0 2px 0 0 rgba(255, 255, 255, 0.7) inset;
+  color: hsl(var(--foreground));
+  display: inline-block;
+  font-size: 0.85em;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 4px;
+  white-space: nowrap;
+}
+
+/* Chart container optimizations */
+.desktop-optimized-dashboard .recharts-wrapper {
+  width: 100% !important;
+}
+
+/* Ensure all X-axes are aligned */
+.desktop-optimized-dashboard .recharts-cartesian-axis-tick-value {
+  font-size: 10px;
+}
+
+/* Status indicators */
+.desktop-optimized-dashboard .status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* List Mode Styles (Legacy - can be removed) */
 .dashboard-list-mode {
   max-width: 100%;
 }
