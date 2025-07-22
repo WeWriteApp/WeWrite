@@ -14,7 +14,11 @@ import {
   TokenAllocationMetrics,
   PaymentAnalyticsData
 } from '../types/database';
-import { DateRange } from '../services/dashboardAnalytics';
+// Define DateRange type locally to avoid importing Firebase Admin SDK
+export interface DateRange {
+  startDate: Date;
+  endDate: Date;
+}
 
 // Debounce utility
 function useDebounce<T>(value: T, delay: number): T {

@@ -4,7 +4,7 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Share2, TrendingUp, TrendingDown, CheckCircle, XCircle } from 'lucide-react';
 import { useSharesMetrics } from '../../hooks/useDashboardAnalytics';
-import { type DateRange } from '../../services/dashboardAnalytics';
+import { type DateRange } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface SharesAnalyticsWidgetProps {

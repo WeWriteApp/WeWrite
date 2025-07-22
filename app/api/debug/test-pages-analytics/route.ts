@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions } from '../../admin-auth-helper';
-import { DashboardAnalyticsService } from '../../../services/dashboardAnalytics';
+import { AdminAnalyticsService } from '../../../services/adminAnalytics';
 
 /**
  * Debug endpoint to test pages analytics with real data
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       };
       
       console.log('[Test Pages Analytics] Testing 7-day range:', dateRange7Days);
-      const pages7Days = await DashboardAnalyticsService.getNewPagesCreated(dateRange7Days, 10);
+      const pages7Days = await AdminAnalyticsService.getNewPagesCreated(dateRange7Days);
       
       testResults.tests.push({
         name: 'Last 7 Days Pages Analytics',
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
       };
       
       console.log('[Test Pages Analytics] Testing July 22nd range:', dateRangeJuly22);
-      const pagesJuly22 = await DashboardAnalyticsService.getNewPagesCreated(dateRangeJuly22, 5);
+      const pagesJuly22 = await AdminAnalyticsService.getNewPagesCreated(dateRangeJuly22);
       
       testResults.tests.push({
         name: 'July 22nd Pages Analytics',
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
         endDate: new Date()
       };
       
-      const accounts7Days = await DashboardAnalyticsService.getNewAccountsCreated(dateRange7Days, 10);
+      const accounts7Days = await AdminAnalyticsService.getNewAccountsCreated(dateRange7Days);
       
       testResults.tests.push({
         name: 'Last 7 Days Accounts Analytics (for comparison)',

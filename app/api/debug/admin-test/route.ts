@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminPermissions } from '../../admin-auth-helper';
-import { DashboardAnalyticsService } from '../../../services/dashboardAnalytics';
+import { AdminAnalyticsService } from '../../../services/adminAnalytics';
 import { getCollectionName } from '../../../utils/environmentConfig';
 
 /**
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       };
       
       console.log('[Admin Test] Testing accounts analytics with date range:', dateRange);
-      const accountsData = await DashboardAnalyticsService.getNewAccountsCreated(dateRange, 10);
+      const accountsData = await AdminAnalyticsService.getNewAccountsCreated(dateRange);
       
       testResults.steps.push({
         step: 3,
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
         endDate: new Date()
       };
       
-      const pagesData = await DashboardAnalyticsService.getNewPagesCreated(dateRange, 10);
+      const pagesData = await AdminAnalyticsService.getNewPagesCreated(dateRange);
       
       testResults.steps.push({
         step: 4,

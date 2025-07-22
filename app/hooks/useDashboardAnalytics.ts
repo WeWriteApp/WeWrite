@@ -1,9 +1,34 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  DashboardAnalyticsService,
-  type DashboardMetrics,
-  type DateRange
-} from '../services/dashboardAnalytics';
+
+// Types for analytics data
+export interface DateRange {
+  startDate: Date;
+  endDate: Date;
+}
+
+export interface ChartDataPoint {
+  date: string;
+  count: number;
+  label: string;
+}
+
+export interface PagesDataPoint {
+  date: string;
+  publicPages: number;
+  privatePages: number;
+  totalPages: number;
+  label: string;
+}
+
+export interface DashboardMetrics {
+  newAccountsCreated: ChartDataPoint[];
+  newPagesCreated: PagesDataPoint[];
+  sharesAnalytics: ChartDataPoint[];
+  editsAnalytics: ChartDataPoint[];
+  contentChangesAnalytics: ChartDataPoint[];
+  pwaInstallsAnalytics: ChartDataPoint[];
+  liveVisitorsCount: number;
+}
 
 // Debounce utility
 function useDebounce<T>(value: T, delay: number): T {
@@ -606,7 +631,27 @@ export function useCompositePagesMetrics(dateRange: DateRange, granularity?: num
     try {
       setLoading(true);
       setError(null);
-      const result = await DashboardAnalyticsService.getCompositePagesData(debouncedDateRange, granularity);
+      // Use API endpoint instead of direct service call
+      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString(),
+        type: 'pages',
+        granularity: granularity.toString()
+      }), {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch pages data: ${response.status}`);
+      }
+
+      const apiResult = await response.json();
+      if (!apiResult.success) {
+        throw new Error(apiResult.error || 'Failed to fetch pages data');
+      }
+
+      const result = apiResult.data;
       setData(result);
     } catch (err) {
       console.error('Error fetching composite pages metrics:', err);
@@ -643,7 +688,27 @@ export function useCumulativePagesMetrics(dateRange: DateRange, granularity?: nu
     try {
       setLoading(true);
       setError(null);
-      const result = await DashboardAnalyticsService.getCumulativePagesData(debouncedDateRange, granularity);
+      // Use API endpoint instead of direct service call
+      const response = await fetch(`/api/admin/dashboard-analytics?` + new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString(),
+        type: 'pages',
+        granularity: granularity.toString()
+      }), {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch cumulative pages data: ${response.status}`);
+      }
+
+      const apiResult = await response.json();
+      if (!apiResult.success) {
+        throw new Error(apiResult.error || 'Failed to fetch cumulative pages data');
+      }
+
+      const result = apiResult.data;
       setData(result);
     } catch (err) {
       console.error('Error fetching cumulative pages metrics:', err);
@@ -669,7 +734,27 @@ export function useTotalPagesEverCreated() {
     try {
       setLoading(true);
       setError(null);
-      const result = await DashboardAnalyticsService.getTotalPagesEverCreated();
+      // Use API endpoint instead of direct service call
+      const response = await fetch('/api/admin/dashboard-analytics?' + new URLSearchParams({
+        type: 'pages',
+        startDate: new Date('2020-01-01').toISOString(), // Get all pages ever
+        endDate: new Date().toISOString()
+      }), {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch total pages count: ${response.status}`);
+      }
+
+      const apiResult = await response.json();
+      if (!apiResult.success) {
+        throw new Error(apiResult.error || 'Failed to fetch total pages count');
+      }
+
+      // Sum up all pages from the API result
+      const result = apiResult.data?.reduce((sum: number, item: any) => sum + (item.totalPages || 0), 0) || 0;
       setData(result);
     } catch (err) {
       console.error('Error fetching total pages count:', err);
