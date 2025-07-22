@@ -8,7 +8,7 @@ import CustomDateField from "./CustomDateField";
 import LocationField from "./LocationField";
 import dynamic from "next/dynamic";
 import { Button } from "../ui/button";
-import { Reply, Save, RotateCcw, Trash2, Check } from "lucide-react";
+import { Reply, Save, RotateCcw, Trash2, Check, Link } from "lucide-react";
 
 
 // Dynamically import AddToPageButton to avoid SSR issues
@@ -69,6 +69,22 @@ export default function PageFooter({
 
   return (
     <div className="mt-10 border-t-only pt-6 pb-6">
+      {/* Insert Link button - shown when editing */}
+      {canEdit && isEditing && onInsertLink && (
+        <div className="mb-4 flex justify-center w-full">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={onInsertLink}
+            disabled={isSaving}
+          >
+            <Link className="h-4 w-4" />
+            Insert Link
+          </Button>
+        </div>
+      )}
+
       {/* Save/Revert buttons - shown at top when there are unsaved changes */}
       {canEdit && hasUnsavedChanges && (
         <div className="mb-6 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
@@ -97,13 +113,6 @@ export default function PageFooter({
           <p className="text-sm text-green-700 dark:text-green-300 mt-2 text-center">
             You have unsaved changes. Save them or revert to the last saved version.
           </p>
-        </div>
-      )}
-
-      {/* Word and character count - centered above action buttons */}
-      {content && (
-        <div className="mb-4 flex justify-center w-full">
-          <WordCounter content={content} />
         </div>
       )}
 

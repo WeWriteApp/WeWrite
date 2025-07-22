@@ -113,6 +113,9 @@ function NewPageContent() {
   // Groups functionality removed - but keep selectedGroupId for compatibility
   const selectedGroupId = null;
 
+  // Link insertion trigger function
+  const [linkInsertionTrigger, setLinkInsertionTrigger] = useState<(() => void) | null>(null);
+
   // Determine page type
   const isReply = searchParams?.has('replyTo') || false;
 
@@ -1026,6 +1029,7 @@ function NewPageContent() {
                     isNewPage={true}
                     placeholder="Start typing..."
                     showToolbar={false}
+                    onInsertLinkRequest={(triggerFn) => setLinkInsertionTrigger(() => triggerFn)}
                     // Remove onSave and onCancel - handled by bottom save bar
                   />
 
@@ -1067,6 +1071,7 @@ function NewPageContent() {
                     }}
                     onCancel={handleBackWithCheck}
                     onDelete={null} // No delete for new pages
+                    onInsertLink={() => linkInsertionTrigger && linkInsertionTrigger()}
                     isSaving={isSaving}
                     error={error}
                     titleError={titleError}

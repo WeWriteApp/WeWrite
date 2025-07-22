@@ -133,6 +133,9 @@ export default function PageView({
   // Empty lines tracking for alert banner
   const [emptyLinesCount, setEmptyLinesCount] = useState(0);
 
+  // Link insertion trigger function
+  const [linkInsertionTrigger, setLinkInsertionTrigger] = useState<(() => void) | null>(null);
+
   // Refs
   const editorRef = useRef<any>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -1154,6 +1157,7 @@ export default function PageView({
                       placeholder="Start typing..."
                       showToolbar={false}
                       readOnly={false}
+                      onInsertLinkRequest={(triggerFn) => setLinkInsertionTrigger(() => triggerFn)}
                     />
                   ) : (
                     /* Use TextView for viewing content (other users' pages or when not editing) */
@@ -1195,6 +1199,7 @@ export default function PageView({
               onSave={handleSave}
               onCancel={handleCancel}
               onDelete={handleDelete}
+              onInsertLink={() => linkInsertionTrigger && linkInsertionTrigger()}
               // setIsEditing removed - no manual edit mode toggling allowed
               isSaving={isSaving}
               error={error}

@@ -34,6 +34,7 @@ interface EditorProps {
   error?: string;
   isNewPage?: boolean;
   showToolbar?: boolean;
+  onInsertLinkRequest?: (triggerFn: () => void) => void;
 
   [key: string]: any;
 }

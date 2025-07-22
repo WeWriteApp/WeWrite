@@ -248,6 +248,7 @@ interface SlateEditorProps {
   error?: string;
   isNewPage?: boolean;
   showToolbar?: boolean;
+  onInsertLinkRequest?: (triggerFn: () => void) => void; // Callback to register link insertion trigger
 }
 
 const SlateEditor: React.FC<SlateEditorProps> = ({
@@ -264,7 +265,8 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
   isSaving = false,
   error,
   isNewPage = false,
-  showToolbar = true
+  showToolbar = true,
+  onInsertLinkRequest
 }) => {
   const editor = useMemo(() => createSlateEditor(), []);
   // Create safe initial value for Slate
@@ -650,6 +652,15 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
   const handleDragEnd = useCallback(() => {
     setDropIndicator(prev => ({ ...prev, visible: false }));
   }, []);
+
+  // Handle external link insertion request
+  useEffect(() => {
+    if (onInsertLinkRequest) {
+      onInsertLinkRequest(() => {
+        setShowLinkModal(true);
+      });
+    }
+  }, [onInsertLinkRequest]);
 
   return (
     <div className="slate-editor-container w-full">
