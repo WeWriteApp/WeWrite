@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getCollectionName } from '../../../utils/environmentConfig';
+import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 
 /**
  * Login API Endpoint
@@ -58,11 +58,17 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Email/username and password are required');
     }
 
-    // Check if we're in development mode with dev auth enabled
-    const isDevelopment = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
+    // Check if we should use dev auth system
+    // Use dev auth for:
+    // 1. Local development (NODE_ENV=development + USE_DEV_AUTH=true)
+    // 2. Preview environments (VERCEL_ENV=preview) - for testing with production data
+    const environmentType = getEnvironmentType();
+    const isLocalDev = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
+    const isPreviewEnv = environmentType === 'preview';
+    const useDevAuth = isLocalDev || isPreviewEnv;
 
-    if (isDevelopment) {
-      console.log('[Auth] Development mode: using dev auth system');
+    if (useDevAuth) {
+      console.log(`[Auth] Using dev auth system (environment: ${environmentType}, local dev: ${isLocalDev}, preview: ${isPreviewEnv})`);
 
       // In development mode, check against known test accounts
       const testAccounts = [
@@ -76,7 +82,7 @@ export async function POST(request: NextRequest) {
       );
 
       if (!account) {
-        console.log('[Auth] Development login failed: invalid credentials');
+        console.log(`[Auth] Dev auth login failed: invalid credentials (environment: ${environmentType})`);
         return createErrorResponse('Invalid credentials');
       }
 
@@ -97,7 +103,7 @@ export async function POST(request: NextRequest) {
         maxAge: 60 * 60 * 24 * 7 // 7 days
       });
 
-      console.log('[Auth] Development login successful for:', account.email);
+      console.log(`[Auth] Dev auth login successful for: ${account.email} (environment: ${environmentType})`);
 
       return createSuccessResponse({
         uid: account.uid,

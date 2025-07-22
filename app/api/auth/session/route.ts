@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { getCollectionName } from '../../../utils/environmentConfig';
+import { getCollectionName, getEnvironmentType } from '../../../utils/environmentConfig';
 import { User, SessionResponse, AuthErrorCode } from '../../../types/auth';
 
 /**
@@ -49,10 +49,13 @@ export async function GET(request: NextRequest) {
         return createErrorResponse(AuthErrorCode.SESSION_EXPIRED, 'Invalid session data');
       }
 
-      // For development mode, return session data directly
-      const isDevelopment = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
-      
-      if (isDevelopment) {
+      // Check if we should use dev auth system (same logic as login)
+      const environmentType = getEnvironmentType();
+      const isLocalDev = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
+      const isPreviewEnv = environmentType === 'preview';
+      const useDevAuth = isLocalDev || isPreviewEnv;
+
+      if (useDevAuth) {
         const user: User = {
           uid: sessionData.uid,
           email: sessionData.email,
@@ -64,7 +67,7 @@ export async function GET(request: NextRequest) {
           lastLoginAt: new Date().toISOString()
         };
 
-        console.log(`[Session] Development session valid for: ${user.email}`);
+        console.log(`[Session] Dev auth session valid for: ${user.email} (environment: ${environmentType})`);
         return createSuccessResponse(user);
       }
 
