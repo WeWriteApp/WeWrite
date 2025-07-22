@@ -1,18 +1,13 @@
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  orderBy,
-  Timestamp,
-  limit,
-  type QuerySnapshot,
-  type DocumentData
-} from 'firebase/firestore';
-import { db } from '../firebase/database/core';
+import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { format, eachDayOfInterval, eachHourOfInterval, startOfDay, endOfDay, startOfHour } from 'date-fns';
 import { AnalyticsAggregationService } from './analyticsAggregation';
 import { getCollectionName } from "../utils/environmentConfig";
+
+// Helper function to get Firestore instance from Firebase Admin
+function getAdminFirestore() {
+  const admin = getFirebaseAdmin();
+  return admin.firestore();
+}
 
 // Cache configuration
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -226,7 +221,8 @@ export class DashboardAnalyticsService {
       const { startDate, endDate } = dateRange;
       const timeConfig = getTimeIntervals(dateRange, granularity);
 
-      const usersRef = collection(db, getCollectionName('users'));
+      const db = getAdminFirestore();
+      const usersRef = db.collection(getCollectionName('users'));
 
       // Since we may not have the right indexes and createdAt can be stored as either
       // ISO string or Timestamp, let's use a simpler approach: get all users and filter in memory
@@ -235,8 +231,7 @@ export class DashboardAnalyticsService {
       console.log('🔍 [Analytics Service] Fetching users for analytics (limited to 1000)...');
       await throttleQuery();
 
-      const simpleQuery = query(usersRef, limit(1000));
-      const snapshot = await getDocs(simpleQuery);
+      const snapshot = await usersRef.limit(1000).get();
 
       console.log(`✅ [Analytics Service] Users query successful, found ${snapshot.size} documents, will filter by date in memory`);
 
