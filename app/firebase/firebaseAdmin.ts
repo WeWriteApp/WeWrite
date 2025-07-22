@@ -28,12 +28,23 @@ let firebaseAdmin: typeof admin | null = null;
 
 export function getFirebaseAdmin(): typeof admin | null {
   if (firebaseAdmin) {
+    console.log('[Firebase Admin] Returning existing Firebase Admin instance');
     return firebaseAdmin;
   }
 
+  console.log('[Firebase Admin] Initializing Firebase Admin...');
+  console.log('[Firebase Admin] Environment check:', {
+    nodeEnv: process.env.NODE_ENV,
+    vercelEnv: process.env.VERCEL_ENV,
+    hasGoogleCloudKey: !!process.env.GOOGLE_CLOUD_KEY_JSON,
+    hasLoggingCloudKey: !!process.env.LOGGING_CLOUD_KEY_JSON,
+    hasFirebaseProjectId: !!process.env.FIREBASE_PROJECT_ID,
+    hasNextPublicFirebasePid: !!process.env.NEXT_PUBLIC_FIREBASE_PID
+  });
+
   // Skip initialization during build time
   if (typeof window === 'undefined' && process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV) {
-    console.log('Skipping Firebase Admin initialization during build time');
+    console.log('[Firebase Admin] Skipping Firebase Admin initialization during build time');
     return null;
   }
 

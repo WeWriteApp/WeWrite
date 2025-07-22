@@ -215,8 +215,16 @@ export async function POST(request: NextRequest) {
     try {
       // Verify the ID token
       console.log('[Session POST] Verifying ID token...');
+      console.log('[Session POST] ID token preview:', idToken.substring(0, 50) + '...');
       const decodedToken = await adminAuth.verifyIdToken(idToken);
       console.log('[Session POST] ID token verified successfully for user:', decodedToken.uid);
+      console.log('[Session POST] Decoded token details:', {
+        uid: decodedToken.uid,
+        email: decodedToken.email,
+        emailVerified: decodedToken.email_verified,
+        iss: decodedToken.iss,
+        aud: decodedToken.aud
+      });
 
       // Get user data from Firestore
       const userDoc = await adminDb.collection(getCollectionName('users')).doc(decodedToken.uid).get();
@@ -261,7 +269,16 @@ export async function POST(request: NextRequest) {
       return createSuccessResponse(user);
 
     } catch (firebaseError) {
-      console.error('[Session] ID token verification failed:', firebaseError);
+      console.error('[Session POST] Firebase ID token verification failed:', firebaseError);
+      console.error('[Session POST] Error details:', {
+        code: firebaseError.code,
+        message: firebaseError.message,
+        stack: firebaseError.stack
+      });
+      console.error('[Session POST] Firebase Admin Auth instance:', {
+        hasAdminAuth: !!adminAuth,
+        adminAuthType: typeof adminAuth
+      });
       return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'Invalid ID token');
     }
 
