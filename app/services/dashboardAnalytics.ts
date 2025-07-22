@@ -474,9 +474,32 @@ export class DashboardAnalyticsService {
       );
 
       console.log('🔍 [Analytics Service] Executing optimized pages query...');
+      console.log('🔍 [Analytics Service] Query details:', {
+        collection: getCollectionName('pages'),
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        startTimestamp: Timestamp.fromDate(startDate),
+        endTimestamp: Timestamp.fromDate(endDate)
+      });
+
       await throttleQuery(); // Throttle query execution
       const snapshot = await getDocs(q);
       console.log(`✅ [Analytics Service] Pages query successful, found ${snapshot.size} documents`);
+
+      // Log all documents found for debugging
+      console.log('🔍 [Analytics Service] All documents found:');
+      snapshot.forEach((doc, index) => {
+        const data = doc.data();
+        console.log(`  Document ${index + 1}:`, {
+          id: doc.id,
+          title: data.title,
+          createdAt: data.createdAt,
+          createdAtType: typeof data.createdAt,
+          createdAtToString: data.createdAt?.toString?.(),
+          deleted: data.deleted,
+          hasCreatedAt: !!data.createdAt
+        });
+      });
 
       // Group by time interval - simplified without public/private breakdown
       const dateMap = new Map<string, number>();
@@ -488,41 +511,93 @@ export class DashboardAnalyticsService {
       });
 
       // Count pages by creation date, filtering out deleted pages in memory
-      snapshot.forEach(doc => {
+      console.log('🔍 [Analytics Service] Processing documents...');
+      let processedCount = 0;
+      let skippedDeleted = 0;
+      let skippedNoCreatedAt = 0;
+      let skippedInvalidDate = 0;
+      let skippedOutOfRange = 0;
+      let addedToResults = 0;
+
+      snapshot.forEach((doc, index) => {
         const data = doc.data();
         const createdAt = data.createdAt;
         const deleted = data.deleted;
+        processedCount++;
+
+        console.log(`🔍 [Analytics] Processing document ${index + 1}/${snapshot.size}:`, {
+          id: doc.id,
+          title: data.title,
+          deleted: deleted,
+          createdAt: createdAt,
+          createdAtType: typeof createdAt
+        });
 
         // Skip soft-deleted pages (filter in memory to avoid complex query)
         if (deleted === true) {
+          console.log(`⏭️ [Analytics] Skipping deleted page: ${doc.id}`);
+          skippedDeleted++;
           return;
         }
 
-        if (createdAt) {
-          let date: Date;
-          if (createdAt instanceof Timestamp) {
-            date = createdAt.toDate();
-          } else if (typeof createdAt === 'string') {
-            date = new Date(createdAt);
-          } else {
-            console.warn('Invalid createdAt format:', createdAt, 'for page:', doc.id);
-            return; // Skip invalid dates
-          }
-
-          // Validate the date is within our expected range
-          if (date >= startDate && date <= endDate) {
-            // Round to appropriate time interval
-            const intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(date) : startOfDay(date);
-            const dateKey = timeConfig.formatKey(intervalDate);
-            const currentCount = dateMap.get(dateKey) || 0;
-
-            // Increment the counter
-            dateMap.set(dateKey, currentCount + 1);
-            console.log(`📊 [Analytics] Found page created on ${dateKey}, count now: ${currentCount + 1}`);
-          } else {
-            console.log(`📊 [Analytics] Page ${doc.id} created outside date range: ${date.toISOString()}`);
-          }
+        if (!createdAt) {
+          console.log(`⏭️ [Analytics] Skipping page with no createdAt: ${doc.id}`);
+          skippedNoCreatedAt++;
+          return;
         }
+
+        let date: Date;
+        if (createdAt instanceof Timestamp) {
+          date = createdAt.toDate();
+          console.log(`📅 [Analytics] Converted Timestamp to Date: ${date.toISOString()}`);
+        } else if (typeof createdAt === 'string') {
+          date = new Date(createdAt);
+          console.log(`📅 [Analytics] Parsed string to Date: ${date.toISOString()}`);
+        } else if (createdAt && typeof createdAt === 'object' && createdAt.seconds) {
+          // Handle Firestore timestamp object
+          date = new Date(createdAt.seconds * 1000);
+          console.log(`📅 [Analytics] Converted Firestore timestamp to Date: ${date.toISOString()}`);
+        } else {
+          console.warn(`❌ [Analytics] Invalid createdAt format:`, createdAt, 'for page:', doc.id);
+          skippedInvalidDate++;
+          return;
+        }
+
+        // Validate the date is within our expected range
+        console.log(`🔍 [Analytics] Checking date range:`, {
+          pageDate: date.toISOString(),
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          isAfterStart: date >= startDate,
+          isBeforeEnd: date <= endDate,
+          isInRange: date >= startDate && date <= endDate
+        });
+
+        if (date >= startDate && date <= endDate) {
+          // Round to appropriate time interval
+          const intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(date) : startOfDay(date);
+          const dateKey = timeConfig.formatKey(intervalDate);
+          const currentCount = dateMap.get(dateKey) || 0;
+
+          // Increment the counter
+          dateMap.set(dateKey, currentCount + 1);
+          addedToResults++;
+          console.log(`✅ [Analytics] Added page to results! Date: ${dateKey}, Count: ${currentCount + 1}`);
+        } else {
+          console.log(`⏭️ [Analytics] Page ${doc.id} created outside date range: ${date.toISOString()}`);
+          skippedOutOfRange++;
+        }
+      });
+
+      console.log('📊 [Analytics Service] Processing summary:', {
+        totalDocuments: snapshot.size,
+        processedCount,
+        skippedDeleted,
+        skippedNoCreatedAt,
+        skippedInvalidDate,
+        skippedOutOfRange,
+        addedToResults,
+        finalDateMapSize: dateMap.size
       });
 
       // Convert to chart data format - simplified without public/private breakdown
