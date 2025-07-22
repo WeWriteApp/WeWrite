@@ -216,10 +216,15 @@ export function useAccountsMetrics(dateRange: DateRange, granularity?: number) {
         throw new Error(result.error || 'Failed to fetch accounts metrics');
       }
 
-      // Ensure data is always an array
-      const responseData = result.data;
+      // Fix: API returns nested structure {data: {data: [array]}}
+      const responseData = result.data?.data || result.data;
       const safeData = Array.isArray(responseData) ? responseData : [];
-      console.log('🔍 [useAccountsMetrics] API Response:', { responseData, safeData });
+      console.log('🔍 [useAccountsMetrics] API Response:', {
+        fullResult: result,
+        extractedData: responseData,
+        safeData,
+        dataLength: safeData.length
+      });
       setData(safeData);
     } catch (err) {
       console.error('Error fetching accounts metrics:', err);
@@ -279,9 +284,15 @@ export function usePagesMetrics(dateRange: DateRange, granularity?: number) {
         throw new Error(result.error || 'Failed to fetch pages metrics');
       }
 
-      // Ensure data is always an array
-      const responseData = result.data;
+      // Fix: API returns nested structure {data: {data: [array]}}
+      const responseData = result.data?.data || result.data;
       const safeData = Array.isArray(responseData) ? responseData : [];
+      console.log('🔍 [usePagesMetrics] API Response:', {
+        fullResult: result,
+        extractedData: responseData,
+        safeData,
+        dataLength: safeData.length
+      });
       setData(safeData);
     } catch (err) {
       console.error('Error fetching pages metrics:', err);
@@ -341,8 +352,8 @@ export function useSharesMetrics(dateRange: DateRange, granularity?: number) {
         throw new Error(result.error || 'Failed to fetch shares metrics');
       }
 
-      // Ensure data is always an array
-      const responseData = result.data;
+      // Fix: API returns nested structure {data: {data: [array]}}
+      const responseData = result.data?.data || result.data;
       const safeData = Array.isArray(responseData) ? responseData : [];
       setData(safeData);
     } catch (err) {
@@ -403,8 +414,8 @@ export function useEditsMetrics(dateRange: DateRange, granularity?: number) {
         throw new Error(result.error || 'Failed to fetch edits metrics');
       }
 
-      // Ensure data is always an array
-      const responseData = result.data;
+      // Fix: API returns nested structure {data: {data: [array]}}
+      const responseData = result.data?.data || result.data;
       const safeData = Array.isArray(responseData) ? responseData : [];
       setData(safeData);
     } catch (err) {
@@ -465,8 +476,8 @@ export function useContentChangesMetrics(dateRange: DateRange, granularity?: num
         throw new Error(result.error || 'Failed to fetch content changes metrics');
       }
 
-      // Ensure data is always an array
-      const responseData = result.data;
+      // Fix: API returns nested structure {data: {data: [array]}}
+      const responseData = result.data?.data || result.data;
       const safeData = Array.isArray(responseData) ? responseData : [];
       setData(safeData);
     } catch (err) {
@@ -527,8 +538,8 @@ export function usePWAInstallsMetrics(dateRange: DateRange, granularity?: number
         throw new Error(result.error || 'Failed to fetch PWA installs metrics');
       }
 
-      // Ensure data is always an array
-      const responseData = result.data;
+      // Fix: API returns nested structure {data: {data: [array]}}
+      const responseData = result.data?.data || result.data;
       const safeData = Array.isArray(responseData) ? responseData : [];
       setData(safeData);
     } catch (err) {
@@ -592,8 +603,8 @@ export function useVisitorMetrics(dateRange: DateRange, granularity?: number) {
         throw new Error(result.error || 'Failed to fetch visitor metrics');
       }
 
-      // Ensure data is always an array
-      const responseData = result.data;
+      // Fix: API returns nested structure {data: {data: [array]}}
+      const responseData = result.data?.data || result.data;
       const safeData = Array.isArray(responseData) ? responseData : [];
       setData(safeData);
     } catch (err) {
@@ -651,7 +662,8 @@ export function useCompositePagesMetrics(dateRange: DateRange, granularity?: num
         throw new Error(apiResult.error || 'Failed to fetch pages data');
       }
 
-      const result = apiResult.data;
+      // Fix: API returns nested structure {data: {data: [array]}}
+      const result = apiResult.data?.data || apiResult.data;
       setData(result);
     } catch (err) {
       console.error('Error fetching composite pages metrics:', err);
@@ -708,7 +720,8 @@ export function useCumulativePagesMetrics(dateRange: DateRange, granularity?: nu
         throw new Error(apiResult.error || 'Failed to fetch cumulative pages data');
       }
 
-      const result = apiResult.data;
+      // Fix: API returns nested structure {data: {data: [array]}}
+      const result = apiResult.data?.data || apiResult.data;
       setData(result);
     } catch (err) {
       console.error('Error fetching cumulative pages metrics:', err);
@@ -753,8 +766,9 @@ export function useTotalPagesEverCreated() {
         throw new Error(apiResult.error || 'Failed to fetch total pages count');
       }
 
-      // Sum up all pages from the API result
-      const result = apiResult.data?.reduce((sum: number, item: any) => sum + (item.totalPages || 0), 0) || 0;
+      // Fix: API returns nested structure {data: {data: [array]}}
+      const pagesData = apiResult.data?.data || apiResult.data;
+      const result = Array.isArray(pagesData) ? pagesData.reduce((sum: number, item: any) => sum + (item.totalPages || 0), 0) : 0;
       setData(result);
     } catch (err) {
       console.error('Error fetching total pages count:', err);
