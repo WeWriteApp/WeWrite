@@ -300,7 +300,7 @@ const Search = () => {
                 <span className="truncate text-foreground">{item.name}</span>
                 {item.section !== "Your Pages" && (
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    by {item.username || "NULL"}
+                    by {item.username || "Missing username"}
                   </span>
                 )}
               </div>

@@ -38,8 +38,9 @@ export const getCurrentUser = (): UserData | null => {
       return {
         uid: auth.currentUser.uid,
         email: auth.currentUser.email,
-        username: auth.currentUser.displayName,
-        displayName: auth.currentUser.displayName,
+        // SECURITY: Never use displayName as username fallback - could contain email
+        username: auth.currentUser.displayName?.includes('@') ? "Missing username" : auth.currentUser.displayName,
+        displayName: auth.currentUser.displayName?.includes('@') ? "Missing username" : auth.currentUser.displayName,
         // This is a Firebase auth user
         isFirebaseUser: true
       };

@@ -196,8 +196,7 @@ async function fetchBatchUserDataInternal(
                 const userData = userSnapshot.val();
                 const user: UserData = {
                   uid: userId,
-                  username: userData.username ||
-                           (userData.email ? userData.email.split('@')[0] : undefined),
+                  username: userData.username || "Missing username", // SECURITY: Never expose email
                   email: userData.email,
                   pageCount: userData.pageCount || 0,
                   followerCount: userData.followerCount || 0,

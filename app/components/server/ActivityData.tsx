@@ -125,7 +125,7 @@ async function getUsernameById(db, rtdb, userId) {
 
         if (snapshot.exists()) {
           const userData = snapshot.val();
-          username = userData.username || (userData.email ? userData.email.split('@')[0] : null);
+          username = userData.username || null; // SECURITY: Never expose email addresses
         }
       } catch (error) {
         console.warn(`RTDB not available for user lookup: ${error.message}`);

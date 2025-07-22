@@ -254,8 +254,8 @@ export const checkUserHasUsername = (user: UserData | null): UsernameCheckResult
     };
   }
 
-  // Check displayName field (medium priority)
-  if (isValidUsernameString(user.displayName)) {
+  // Check displayName field (medium priority) - but never use if it contains @
+  if (isValidUsernameString(user.displayName) && !user.displayName!.includes('@')) {
     return {
       hasUsername: true,
       username: user.displayName!.trim(),
@@ -264,23 +264,7 @@ export const checkUserHasUsername = (user: UserData | null): UsernameCheckResult
     };
   }
 
-  // Check email prefix as last resort (low priority)
-  // Only use email prefix if user has NO username/displayName set at all
-  // Don't use it if they have invalid usernames set (they need to fix those)
-  const hasExplicitUsernameFields = (user.username && user.username.trim() !== '') ||
-                                   (user.displayName && user.displayName.trim() !== '');
-
-  if (!hasExplicitUsernameFields && user.email && typeof user.email === 'string' && user.email.includes('@')) {
-    const emailPrefix = user.email.split('@')[0];
-    if (isValidUsernameString(emailPrefix)) {
-      return {
-        hasUsername: true,
-        username: emailPrefix.trim(),
-        source: 'email',
-        needsUsername: false
-      };
-    }
-  }
+  // SECURITY: Never use email prefix as username fallback - always require explicit username
 
   // No valid username found
   return {

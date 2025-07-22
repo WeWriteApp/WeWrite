@@ -65,9 +65,9 @@ export const setAnalyticsUserInfo = (session: UserSession | null): void => {
 
     // Set user properties for better segmentation
     const userProperties: UserProperties = {
-      username: session.username || 'Anonymous',
+      username: session.username || 'Missing username',
       user_id: session.uid,
-      email_domain: session.email ? session.email.split('@')[1] : null,
+      // SECURITY: Never expose email domains in analytics
       has_username: !!session.username
     };
 

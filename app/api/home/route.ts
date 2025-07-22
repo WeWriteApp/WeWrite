@@ -379,8 +379,7 @@ async function getBatchUserDataOptimized(userIds: string[]): Promise<Record<stri
                 const userData = userSnapshot.val();
                 const user = {
                   uid: userId,
-                  username: userData.username ||
-                           (userData.email ? userData.email.split('@')[0] : undefined),
+                  username: userData.username || "Missing username", // SECURITY: Never expose email
                   email: userData.email,
                   tier: '0', // No subscription data in RTDB
                   subscriptionStatus: null,

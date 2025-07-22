@@ -163,7 +163,7 @@ const AccountDrawer = ({
       // First update the username in Firebase and record the change in history
       // We need to get the actual userId from the auth context, but since we don't have it directly,
       // we'll use the email as a fallback. In a real implementation, you would pass the actual userId.
-      const userId = localStorage.getItem('userId') || email.split('@')[0];
+      const userId = localStorage.getItem('userId') || 'unknown-user'; // SECURITY: Never expose email
       await updateUsername(userId, editedUsername);
 
       // Then call the parent's onUsernameChange handler

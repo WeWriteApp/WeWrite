@@ -37,13 +37,7 @@ export const getUsernameById = async (userId: string): Promise<string> => {
         return userData.username.trim();
       }
 
-      // Fallback to email prefix if username is invalid
-      if (userData.email && userData.email.includes('@')) {
-        const emailPrefix = userData.email.split('@')[0];
-        if (emailPrefix && emailPrefix.trim() !== "") {
-          return emailPrefix.trim();
-        }
-      }
+      // SECURITY: Never expose email addresses - always return "Missing username"
     }
 
     // Try to get from RTDB as a fallback
@@ -65,13 +59,7 @@ export const getUsernameById = async (userId: string): Promise<string> => {
           return rtdbData.username.trim();
         }
 
-        // Fallback to email prefix
-        if (rtdbData.email && rtdbData.email.includes('@')) {
-          const emailPrefix = rtdbData.email.split('@')[0];
-          if (emailPrefix && emailPrefix.trim() !== "") {
-            return emailPrefix.trim();
-          }
-        }
+        // SECURITY: Never expose email addresses - always return "Missing username"
       }
     } catch (rtdbError) {
       console.error("Error fetching username from RTDB:", rtdbError);
