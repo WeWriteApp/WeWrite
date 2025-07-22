@@ -117,14 +117,21 @@ export class AdminAnalyticsService {
       
       // Group by day
       const dailyCounts = new Map<string, number>();
-      
+      let processedCount = 0;
+      let skippedDeleted = 0;
+      let skippedNoCreatedAt = 0;
+      let skippedOutOfRange = 0;
+      let addedToResults = 0;
+
       snapshot.forEach(doc => {
         const data = doc.data();
         const createdAt = data.createdAt;
         const deleted = data.deleted;
-        
+        processedCount++;
+
         // Skip deleted pages
         if (deleted === true) {
+          skippedDeleted++;
           return;
         }
         
@@ -135,14 +142,20 @@ export class AdminAnalyticsService {
           } else if (typeof createdAt === 'string') {
             date = new Date(createdAt);
           } else {
+            skippedNoCreatedAt++;
             return; // Skip invalid dates
           }
-          
+
           // Filter by date range
           if (date >= dateRange.startDate && date <= dateRange.endDate) {
             const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
             dailyCounts.set(dayKey, (dailyCounts.get(dayKey) || 0) + 1);
+            addedToResults++;
+          } else {
+            skippedOutOfRange++;
           }
+        } else {
+          skippedNoCreatedAt++;
         }
       });
       
@@ -165,6 +178,21 @@ export class AdminAnalyticsService {
         currentDate.setDate(currentDate.getDate() + 1);
       }
       
+      console.log(`📊 [Admin Analytics] Pages processing summary:`, {
+        totalDocuments: snapshot.size,
+        processedCount,
+        skippedDeleted,
+        skippedNoCreatedAt,
+        skippedOutOfRange,
+        addedToResults,
+        dateRange: {
+          start: dateRange.startDate.toISOString(),
+          end: dateRange.endDate.toISOString()
+        },
+        resultDays: result.length,
+        totalPagesInResult: result.reduce((sum, item) => sum + item.totalPages, 0)
+      });
+
       console.log(`📊 [Admin Analytics] Pages result: ${result.length} days, ${result.reduce((sum, item) => sum + item.totalPages, 0)} total pages`);
       return result;
       
@@ -190,16 +218,26 @@ export class AdminAnalyticsService {
       
       // Group by day
       const dailyCounts = new Map<string, number>();
-      
+      let processedEvents = 0;
+      let matchedEvents = 0;
+      let skippedWrongType = 0;
+      let skippedNoTimestamp = 0;
+      let skippedOutOfRange = 0;
+      let addedToResults = 0;
+
       snapshot.forEach(doc => {
         const data = doc.data();
         const timestamp = data.timestamp;
-        const event = data.event;
-        
+        const event = data.event || data.eventType; // CRITICAL FIX: Check both field names
+        processedEvents++;
+
         // Filter by event type if specified
         if (eventType && event !== eventType) {
+          skippedWrongType++;
           return;
         }
+
+        matchedEvents++;
         
         if (timestamp) {
           let date: Date;
@@ -208,14 +246,20 @@ export class AdminAnalyticsService {
           } else if (typeof timestamp === 'string') {
             date = new Date(timestamp);
           } else {
+            skippedNoTimestamp++;
             return; // Skip invalid dates
           }
-          
+
           // Filter by date range
           if (date >= dateRange.startDate && date <= dateRange.endDate) {
             const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
             dailyCounts.set(dayKey, (dailyCounts.get(dayKey) || 0) + 1);
+            addedToResults++;
+          } else {
+            skippedOutOfRange++;
           }
+        } else {
+          skippedNoTimestamp++;
         }
       });
       
@@ -236,6 +280,23 @@ export class AdminAnalyticsService {
         currentDate.setDate(currentDate.getDate() + 1);
       }
       
+      console.log(`📊 [Admin Analytics] Events processing summary:`, {
+        eventType,
+        totalDocuments: snapshot.size,
+        processedEvents,
+        matchedEvents,
+        skippedWrongType,
+        skippedNoTimestamp,
+        skippedOutOfRange,
+        addedToResults,
+        dateRange: {
+          start: dateRange.startDate.toISOString(),
+          end: dateRange.endDate.toISOString()
+        },
+        resultDays: result.length,
+        totalEventsInResult: result.reduce((sum, item) => sum + item.count, 0)
+      });
+
       console.log(`📊 [Admin Analytics] Events result: ${result.length} days, ${result.reduce((sum, item) => sum + item.count, 0)} total events`);
       return result;
       
