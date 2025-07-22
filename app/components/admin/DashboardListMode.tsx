@@ -129,7 +129,9 @@ function DraggableListItem({ item, index, moveItem, dateRange, granularity, glob
     if (item.valueFormatter) {
       currentValue = item.valueFormatter(data);
     } else {
-      const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
+      // Use the sparklineValueKey to determine which field to sum
+      const valueKey = item.sparklineValueKey || 'value';
+      const total = data.reduce((sum, dataItem) => sum + (dataItem[valueKey] || 0), 0);
       currentValue = formatSparklineValue(total, item.sparklineType);
     }
   } else if (loading) {
@@ -221,20 +223,20 @@ export function createDefaultListItems(dateRange: DateRange, granularity: number
       id: 'new-accounts',
       label: 'New Accounts',
       valueFormatter: (data) => {
-        const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
+        const total = data.reduce((sum, item) => sum + (item.count || 0), 0);
         return total.toLocaleString();
       },
-      sparklineValueKey: 'value',
+      sparklineValueKey: 'count',
       sparklineType: 'number'
     },
     {
       id: 'new-pages',
       label: 'New Pages',
       valueFormatter: (data) => {
-        const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
+        const total = data.reduce((sum, item) => sum + (item.totalPages || 0), 0);
         return total.toLocaleString();
       },
-      sparklineValueKey: 'value',
+      sparklineValueKey: 'totalPages',
       sparklineType: 'number'
     },
     {

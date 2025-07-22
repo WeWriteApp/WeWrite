@@ -4,7 +4,7 @@ import React from 'react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { FileText } from 'lucide-react';
 import { useContentChangesMetrics } from '../../hooks/useDashboardAnalytics';
-import type { DateRange } from '../../services/dashboardAnalytics';
+import type { DateRange } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 interface ContentChangesAnalyticsWidgetProps {

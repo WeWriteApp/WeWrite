@@ -4,7 +4,7 @@ import React from 'react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { FileText, TrendingUp, TrendingDown, Plus, Minus } from 'lucide-react';
 import { useCompositePagesMetrics, useTotalPagesEverCreated } from '../../hooks/useDashboardAnalytics';
-import { type DateRange } from '../../services/dashboardAnalytics';
+import { type DateRange } from '../../hooks/useDashboardAnalytics';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 import { ErrorCard } from '../ui/ErrorCard';
 
