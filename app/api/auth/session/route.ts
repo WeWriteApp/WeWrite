@@ -71,7 +71,9 @@ export async function GET(request: NextRequest) {
       }
 
       // For production, verify with Firebase and get latest user data
-      const { adminDb, adminAuth } = getFirebaseAdmin();
+      const admin = getFirebaseAdmin();
+      const adminAuth = admin.auth();
+      const adminDb = admin.firestore();
 
       try {
         // Verify user still exists in Firebase
@@ -156,7 +158,8 @@ export async function POST(request: NextRequest) {
         const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
 
         // Get user data from Firestore using the UID from the token
-        const { adminDb } = getFirebaseAdmin();
+        const admin = getFirebaseAdmin();
+        const adminDb = admin.firestore();
         const userDoc = await adminDb.collection(getCollectionName('users')).doc(payload.user_id || payload.sub).get();
         const userData = userDoc.data() || {};
 
@@ -206,8 +209,11 @@ export async function POST(request: NextRequest) {
 
     // Production mode: verify ID token with Firebase Admin
     console.log('[Session POST] Production mode: verifying ID token with Firebase Admin');
-    const { adminDb, adminAuth } = getFirebaseAdmin();
+    const admin = getFirebaseAdmin();
+    const adminAuth = admin.auth();
+    const adminDb = admin.firestore();
     console.log('[Session POST] Firebase Admin initialized:', {
+      hasAdmin: !!admin,
       hasAdminDb: !!adminDb,
       hasAdminAuth: !!adminAuth
     });
