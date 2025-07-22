@@ -478,21 +478,20 @@ export class DashboardAnalyticsService {
       const snapshot = await getDocs(q);
       console.log(`✅ [Analytics Service] Pages query successful, found ${snapshot.size} documents`);
 
-      // Group by time interval with public/private breakdown
-      const dateMap = new Map<string, { publicPages: number; privatePages: number }>();
+      // Group by time interval - simplified without public/private breakdown
+      const dateMap = new Map<string, number>();
 
       // Initialize all time intervals in range with 0
       timeConfig.intervals.forEach(interval => {
         const dateKey = timeConfig.formatKey(interval);
-        dateMap.set(dateKey, { publicPages: 0, privatePages: 0 });
+        dateMap.set(dateKey, 0);
       });
 
-      // Count pages by creation date with public/private breakdown, filtering out deleted pages in memory
+      // Count pages by creation date, filtering out deleted pages in memory
       snapshot.forEach(doc => {
         const data = doc.data();
         const createdAt = data.createdAt;
         const deleted = data.deleted;
-        const isPublic = data.isPublic;
 
         // Skip soft-deleted pages (filter in memory to avoid complex query)
         if (deleted === true) {
@@ -515,37 +514,28 @@ export class DashboardAnalyticsService {
             // Round to appropriate time interval
             const intervalDate = timeConfig.granularity === 'hourly' ? startOfHour(date) : startOfDay(date);
             const dateKey = timeConfig.formatKey(intervalDate);
-            const currentCounts = dateMap.get(dateKey) || { publicPages: 0, privatePages: 0 };
+            const currentCount = dateMap.get(dateKey) || 0;
 
-            // Increment the appropriate counter based on page visibility
-            if (isPublic === true) {
-              currentCounts.publicPages += 1;
-              console.log(`📊 [Analytics] Found public page created on ${dateKey}, public count now: ${currentCounts.publicPages}`);
-            } else {
-              currentCounts.privatePages += 1;
-              console.log(`📊 [Analytics] Found private page created on ${dateKey}, private count now: ${currentCounts.privatePages}`);
-            }
-
-            dateMap.set(dateKey, currentCounts);
+            // Increment the counter
+            dateMap.set(dateKey, currentCount + 1);
+            console.log(`📊 [Analytics] Found page created on ${dateKey}, count now: ${currentCount + 1}`);
           } else {
             console.log(`📊 [Analytics] Page ${doc.id} created outside date range: ${date.toISOString()}`);
           }
         }
       });
 
-      // Convert to chart data format with public/private breakdown
-      const result = Array.from(dateMap.entries()).map(([dateKey, counts]) => {
+      // Convert to chart data format - simplified without public/private breakdown
+      const result = Array.from(dateMap.entries()).map(([dateKey, totalPages]) => {
         // Parse the date key back to a Date object for formatting
         const date = timeConfig.granularity === 'hourly'
           ? new Date(dateKey.replace(/-(\d{2})$/, ':$1:00'))
           : new Date(dateKey);
 
-        const totalPages = counts.publicPages + counts.privatePages;
-
         return {
           date: dateKey,
-          publicPages: counts.publicPages,
-          privatePages: counts.privatePages,
+          publicPages: 0, // Legacy field - always 0 now
+          privatePages: 0, // Legacy field - always 0 now
           totalPages,
           label: timeConfig.formatLabel(date)
         };
@@ -554,8 +544,6 @@ export class DashboardAnalyticsService {
       console.log('📊 [Analytics Service] New pages result summary:', {
         totalDays: result.length,
         totalPages: result.reduce((sum, item) => sum + item.totalPages, 0),
-        totalPublicPages: result.reduce((sum, item) => sum + item.publicPages, 0),
-        totalPrivatePages: result.reduce((sum, item) => sum + item.privatePages, 0),
         daysWithData: result.filter(item => item.totalPages > 0).length,
         sampleData: result.slice(0, 5)
       });
