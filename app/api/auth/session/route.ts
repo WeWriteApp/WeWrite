@@ -118,10 +118,16 @@ export async function GET(request: NextRequest) {
 // POST endpoint - Create session from ID token (called after login)
 export async function POST(request: NextRequest) {
   try {
+    console.log('[Session POST] Session creation request received');
+    console.log('[Session POST] Request headers:', Object.fromEntries(request.headers.entries()));
+
     const body = await request.json();
     const { idToken } = body;
 
+    console.log('[Session POST] ID token received, length:', idToken ? idToken.length : 0);
+
     if (!idToken) {
+      console.log('[Session POST] No ID token provided');
       return createErrorResponse(AuthErrorCode.INVALID_CREDENTIALS, 'ID token is required');
     }
 
@@ -130,8 +136,14 @@ export async function POST(request: NextRequest) {
     // Preview and production environments should use Firebase Auth with real credentials
     const useDevAuth = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
 
+    console.log('[Session POST] Environment check:', {
+      nodeEnv: process.env.NODE_ENV,
+      useDevAuth: process.env.USE_DEV_AUTH,
+      useDevAuthResult: useDevAuth
+    });
+
     if (useDevAuth) {
-      console.log('[Session] Dev auth mode: bypassing Firebase ID token verification (local development only)');
+      console.log('[Session POST] Dev auth mode: bypassing Firebase ID token verification (local development only)');
 
       try {
         // In development mode, decode the token without verification
@@ -193,11 +205,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Production mode: verify ID token with Firebase Admin
+    console.log('[Session POST] Production mode: verifying ID token with Firebase Admin');
     const { adminDb, adminAuth } = getFirebaseAdmin();
+    console.log('[Session POST] Firebase Admin initialized:', {
+      hasAdminDb: !!adminDb,
+      hasAdminAuth: !!adminAuth
+    });
 
     try {
       // Verify the ID token
+      console.log('[Session POST] Verifying ID token...');
       const decodedToken = await adminAuth.verifyIdToken(idToken);
+      console.log('[Session POST] ID token verified successfully for user:', decodedToken.uid);
 
       // Get user data from Firestore
       const userDoc = await adminDb.collection(getCollectionName('users')).doc(decodedToken.uid).get();

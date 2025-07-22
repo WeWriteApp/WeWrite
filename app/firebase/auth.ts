@@ -56,14 +56,26 @@ export const createUser = async (email: string, password: string): Promise<UserC
 
 export const loginUser = async (emailOrUsername: string, password: string): Promise<AuthResult> => {
   try {
+    console.log('[Firebase Auth] Starting login process for:', emailOrUsername);
+    console.log('[Firebase Auth] Firebase config check:', {
+      hasAuth: !!auth,
+      hasFirestore: !!firestore,
+      authCurrentUser: auth?.currentUser?.email || 'none'
+    });
+
     let email = emailOrUsername;
 
     // Check if the input is a username (doesn't contain @)
     if (!emailOrUsername.includes('@')) {
+      console.log('[Firebase Auth] Looking up email for username:', emailOrUsername);
+      const usernameCollection = getCollectionName('usernames');
+      console.log('[Firebase Auth] Username collection:', usernameCollection);
+
       // Look up the email by username
-      const usernameDoc = await getDoc(doc(firestore, getCollectionName('usernames'), emailOrUsername.toLowerCase()));
+      const usernameDoc = await getDoc(doc(firestore, usernameCollection, emailOrUsername.toLowerCase()));
 
       if (!usernameDoc.exists()) {
+        console.log('[Firebase Auth] Username not found in collection:', usernameCollection);
         return {
           code: "auth/user-not-found",
           message: "No account found with this username or email."
@@ -72,8 +84,13 @@ export const loginUser = async (emailOrUsername: string, password: string): Prom
 
       // Get the user's email from the users collection
       const userData = usernameDoc.data();
-      const userDoc = await getDoc(doc(firestore, getCollectionName('users'), userData.uid));
+      console.log('[Firebase Auth] Found UID for username:', userData.uid);
+
+      const userCollection = getCollectionName('users');
+      console.log('[Firebase Auth] User collection:', userCollection);
+      const userDoc = await getDoc(doc(firestore, userCollection, userData.uid));
       if (!userDoc.exists()) {
+        console.log('[Firebase Auth] User document not found for UID:', userData.uid);
         return {
           code: "auth/user-not-found",
           message: "No account found with this username or email."
@@ -81,12 +98,20 @@ export const loginUser = async (emailOrUsername: string, password: string): Prom
       }
 
       email = userDoc.data().email;
+      console.log('[Firebase Auth] Resolved email for username:', email);
     }
 
+    console.log('[Firebase Auth] Attempting Firebase signInWithEmailAndPassword for:', email);
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    console.log('[Firebase Auth] Firebase login successful for:', userCredential.user.email);
     return { user: userCredential.user };
   } catch (error: any) {
-    console.error("Login error:", error);
+    console.error("[Firebase Auth] Login error:", error);
+    console.error("[Firebase Auth] Error details:", {
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
 
     // Convert Firebase error codes to user-friendly messages
     let message = "An error occurred during login. Please try again.";

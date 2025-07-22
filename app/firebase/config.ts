@@ -48,7 +48,8 @@ const missingVars = Object.entries(requiredEnvVars)
   .map(([key]) => key);
 
 if (missingVars.length > 0) {
-  console.error('Missing required Firebase environment variables:', missingVars);
+  console.error('[Firebase Config] Missing required environment variables:', missingVars);
+  console.error('[Firebase Config] Available env vars:', Object.keys(process.env).filter(key => key.startsWith('NEXT_PUBLIC_FIREBASE')));
   throw new Error(`Missing Firebase configuration: ${missingVars.join(', ')}`);
 }
 

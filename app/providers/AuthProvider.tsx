@@ -135,14 +135,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       } else {
         // Use client-side Firebase Auth for production
+        console.log('[Auth] Using Firebase Auth for production/preview environment');
+        console.log('[Auth] Attempting Firebase login for:', emailOrUsername);
+        console.log('[Auth] Environment details:', {
+          nodeEnv: process.env.NODE_ENV,
+          hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
+          isClient: typeof window !== 'undefined'
+        });
+
         const { loginUser } = await import('../firebase/auth');
+        console.log('[Auth] Firebase auth module loaded, attempting login...');
         const result = await loginUser(emailOrUsername, password);
 
         if (result.user) {
+          console.log('[Auth] Firebase login successful, user:', {
+            uid: result.user.uid,
+            email: result.user.email,
+            emailVerified: result.user.emailVerified
+          });
+
           // Get ID token for server-side session
+          console.log('[Auth] Getting ID token for session creation...');
           const idToken = await result.user.getIdToken();
+          console.log('[Auth] ID token obtained, length:', idToken.length);
 
           // Create server-side session
+          console.log('[Auth] Creating server-side session...');
           const sessionResponse = await fetch('/api/auth/session', {
             method: 'POST',
             headers: {
@@ -152,20 +170,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
             body: JSON.stringify({ idToken })
           });
 
+          console.log('[Auth] Session response status:', sessionResponse.status);
+          console.log('[Auth] Session response ok:', sessionResponse.ok);
+
           if (sessionResponse.ok) {
             const sessionData = await sessionResponse.json();
+            console.log('[Auth] Session data received:', sessionData);
             if (sessionData.user) {
               setUser(sessionData.user);
-              console.log('[Auth] Sign in successful for user:', sessionData.user.email);
+              console.log('[Auth] Firebase Auth sign in successful for user:', sessionData.user.email);
             } else {
+              console.error('[Auth] Session response missing user data:', sessionData);
               throw new AuthError('Session creation failed', AuthErrorCode.UNKNOWN_ERROR);
             }
           } else {
+            const errorData = await sessionResponse.text();
+            console.error('[Auth] Session creation failed:', {
+              status: sessionResponse.status,
+              statusText: sessionResponse.statusText,
+              error: errorData
+            });
             throw new AuthError('Session creation failed', AuthErrorCode.UNKNOWN_ERROR);
           }
         } else {
+          console.error('[Auth] Firebase login failed:', result);
           const errorCode = result.code || AuthErrorCode.INVALID_CREDENTIALS;
           const errorMessage = result.message || 'Sign in failed';
+          console.error('[Auth] Firebase error details:', { errorCode, errorMessage });
           throw new AuthError(errorMessage, errorCode);
         }
       }
