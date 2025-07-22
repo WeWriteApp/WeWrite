@@ -121,7 +121,7 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
           const userSnapshot = await get(userRef);
 
           if (userSnapshot.exists()) {
-            window.location.href = `/user/${cleanId}`;
+            router.replace(`/user/${cleanId}`);
             return;
           }
 
@@ -175,12 +175,17 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
   }
 
   if (contentType === 'not-found') {
-    // Temporarily disable dynamic import
+    // Log the not-found case for debugging
+    console.log('🔍 ContentPage: Rendering not-found for ID:', id);
+
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] p-4">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Page Not Found</h1>
           <p className="text-muted-foreground">The page you're looking for doesn't exist.</p>
+          <Button onClick={() => router.push('/')} className="mt-4">
+            Go Home
+          </Button>
         </div>
       </div>
     );
