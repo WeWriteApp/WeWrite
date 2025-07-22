@@ -6,75 +6,80 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-// Auth debug - complex auth wrapper removed
-import { DEV_TEST_USERS } from "../../../utils/testUsers";
-import { getEnvironmentType } from '../../../utils/environmentConfig';
+import { getEnvironmentType, getEnvironmentContext, logEnvironmentConfig } from '../../../utils/environmentConfig';
 
 // GET endpoint - Get authentication environment information
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 Authentication Environment Debug API called');
-    
-    // Get environment information
-    const envType = getEnvironmentType();
 
-    // Auth info
-    const authInfo = {
-      environment: envType,
-      authType: 'Simple Firebase Auth',
-      isDevelopmentAuth: false
-    };
-    
+    // Get environment information
+    const environmentType = getEnvironmentType();
+    const environmentContext = getEnvironmentContext();
+
+    // Check auth configuration (same logic as login/session routes)
+    const isLocalDev = process.env.NODE_ENV === 'development' && process.env.USE_DEV_AUTH === 'true';
+    const isPreviewEnv = environmentType === 'preview';
+    const useDevAuth = isLocalDev || isPreviewEnv;
+
+    // Log environment config for server logs
+    logEnvironmentConfig();
+
     // Prepare response data
     const responseData = {
       timestamp: new Date().toISOString(),
       environment: {
-        type: envType,
+        type: environmentType,
+        context: environmentContext,
         nodeEnv: process.env.NODE_ENV,
         vercelEnv: process.env.VERCEL_ENV,
         useDevAuth: process.env.USE_DEV_AUTH
       },
-      authentication: {
-        ...authInfo,
-        isDevelopmentAuthActive: isDev,
-        currentUser: currentUser ? {
-          uid: currentUser.uid,
-          email: currentUser.email,
-          isTestUser: currentUser.uid?.startsWith('dev_')
-        } : null
+      authConfiguration: {
+        isLocalDev,
+        isPreviewEnv,
+        useDevAuth,
+        authSystem: useDevAuth ? 'dev-auth' : 'firebase-auth'
       },
-      testUsers: isDev ? {
-        available: Object.keys(DEV_TEST_USERS),
-        details: Object.entries(DEV_TEST_USERS).map(([key, user]) => ({
-          key,
-          email: user.email,
-          username: user.username,
-          isAdmin: user.isAdmin || false
-        }))
-      } : null,
-      security: {
-        environmentSeparated: isDev,
-        productionDataProtected: isDev,
-        testDataIsolated: isDev,
-        authSystemType: isDev ? 'Mock Development Auth' : 'Firebase Production Auth'
+      testCredentials: useDevAuth ? {
+        available: [
+          'jamie@wewrite.app / TestPassword123! (admin)',
+          'test@wewrite.app / TestPassword123! (regular)',
+          'getwewrite@gmail.com / TestPassword123! (regular)',
+          'test@local.dev / TestPassword123! (local dev)'
+        ]
+      } : {
+        note: 'Using Firebase Auth - use your production credentials'
+      },
+      troubleshooting: {
+        expectedBehavior: {
+          'local development': 'Should use dev auth when USE_DEV_AUTH=true',
+          'vercel preview': 'Should use dev auth for testing with production data',
+          'vercel production': 'Should use Firebase auth with real credentials'
+        },
+        commonIssues: {
+          '401 on preview': 'Check that VERCEL_ENV=preview is set correctly',
+          'wrong auth system': 'Verify environment detection logic',
+          'missing credentials': 'Ensure test accounts exist in dev auth system'
+        }
       },
       recommendations: [
-        ...(isDev ? [
-          'Development authentication is active - test users are isolated from production',
-          'Use the provided test users for development and testing',
+        ...(useDevAuth ? [
+          'Dev authentication is active - test users are available',
+          'Use the provided test credentials for testing',
           'Production user accounts are protected from development access'
         ] : [
-          'Production Firebase Auth is active',
+          'Firebase Auth is active - use your production credentials',
           'Be careful when testing - you may be using real user accounts',
-          'Consider enabling USE_DEV_AUTH=true for safer development'
+          'Consider using preview environment for safer testing'
         ])
       ]
     };
-    
+
     // Log to server console
-    console.log('[Auth Environment] Type:', authInfo.authType);
-    console.log('[Auth Environment] Environment Separated:', authInfo.isEnvironmentSeparated);
-    console.log('[Auth Environment] Current User:', currentUser?.email || 'None');
+    console.log('[Auth Environment] Type:', environmentType);
+    console.log('[Auth Environment] Auth System:', useDevAuth ? 'dev-auth' : 'firebase-auth');
+    console.log('[Auth Environment] Environment Context:', environmentContext);
     
     return NextResponse.json(responseData, {
       status: 200,
