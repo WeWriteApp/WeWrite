@@ -60,7 +60,7 @@ const getRelatedPagesAsync = async (pageId: string, pageTitle: string, pageConte
     });
 
     // Score candidates based on word overlap
-    const scoredCandidates = candidates.map(candidate => {
+    const scoredCandidates = Array.isArray(candidates) ? candidates.map(candidate => {
       const candidateTitle = candidate.title || '';
       const candidateContent = candidate.content || '';
 
@@ -79,7 +79,7 @@ const getRelatedPagesAsync = async (pageId: string, pageTitle: string, pageConte
         similarity: Math.min(score / Math.max(allWords.length, 1), 1),
         score
       };
-    });
+    }) : [];
 
     return scoredCandidates
       .filter(candidate => candidate.score > 0)
@@ -199,7 +199,7 @@ export default function RelatedPagesSection({ page, linkedPageIds = [] }: Relate
             <Loader2 className="h-3 w-3 animate-spin" />
             <span>Loading related pages by others...</span>
           </div>
-        ) : relatedPages.length > 0 ? (
+        ) : Array.isArray(relatedPages) && relatedPages.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {relatedPages.map((relatedPage, index) => (
               <div key={relatedPage.id} className="flex items-center">

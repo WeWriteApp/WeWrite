@@ -103,6 +103,12 @@ const contentToSlate = (content: any[]): Descendant[] => {
   return content.map((node, index) => {
     console.log(`🔍 contentToSlate: Processing node ${index}:`, { node, type: typeof node });
 
+    // Safety check to prevent hydration mismatches
+    if (!node || typeof node !== 'object') {
+      console.warn(`🔍 contentToSlate: Invalid node at index ${index}, creating default paragraph`);
+      return { type: 'paragraph', children: [{ text: '' }] };
+    }
+
     if (node.type === 'paragraph') {
       const children: Descendant[] = [];
 
@@ -110,6 +116,12 @@ const contentToSlate = (content: any[]): Descendant[] => {
       if (node.children && Array.isArray(node.children) && node.children.length > 0) {
         node.children.forEach((child: any, childIndex: number) => {
           console.log(`🔍 contentToSlate: Processing child ${childIndex}:`, { child });
+
+          // Safety check for child objects
+          if (!child || typeof child !== 'object') {
+            console.warn(`🔍 contentToSlate: Invalid child at index ${childIndex}, skipping`);
+            return;
+          }
 
           if (child.type === 'link') {
             children.push({
@@ -268,6 +280,12 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
   showToolbar = true,
   onInsertLinkRequest
 }) => {
+  // Prevent hydration mismatches by ensuring client-side rendering
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
   const editor = useMemo(() => createSlateEditor(), []);
   // Create safe initial value for Slate
   const safeInitialValue = useMemo(() => {
@@ -661,6 +679,17 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
       });
     }
   }, [onInsertLinkRequest]);
+
+  // Prevent hydration mismatches by only rendering on client
+  if (!isClient) {
+    return (
+      <div className="slate-editor-container w-full">
+        <div className="p-4 text-center text-muted-foreground">
+          Loading editor...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="slate-editor-container w-full">
