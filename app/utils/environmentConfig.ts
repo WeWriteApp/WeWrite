@@ -77,7 +77,7 @@ export const getEnvironmentPrefix = (): string => {
     case 'production':
       return ''; // No prefix for production (base collection names)
     case 'preview':
-      return ''; // Preview uses actual production data (base collection names)
+      return 'DEV_'; // TEMP FIX: Preview uses dev data for testing recent edits
     case 'development':
       return 'DEV_'; // Development uses dev data with DEV_ prefix
     default:
@@ -95,7 +95,7 @@ export const getSubscriptionEnvironmentPrefix = (): string => {
     case 'production':
       return ''; // No prefix for production (base collection names)
     case 'preview':
-      return ''; // Preview uses actual production data (base collection names)
+      return 'DEV_'; // TEMP FIX: Preview uses dev data for testing recent edits
     case 'development':
       return 'DEV_'; // Development uses dev data with DEV_ prefix
     default:
@@ -115,7 +115,7 @@ export const getSubscriptionEnvironmentPrefix = (): string => {
  *
  * Current behavior (single Firebase project):
  * - Production: 'users' -> 'users' (base collection names)
- * - Preview: 'users' -> 'users' (actual production data)
+ * - Preview: 'users' -> 'DEV_users' (dev data for testing - TEMP FIX)
  * - Development: 'users' -> 'DEV_users' (isolated dev data with DEV_ prefix)
  *
  * Future behavior (separate Firebase projects):
