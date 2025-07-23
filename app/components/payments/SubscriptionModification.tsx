@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { SubscriptionUpgradeFlow } from './SubscriptionUpgradeFlow';
 import { useAuth } from '../../providers/AuthProvider';
 import { 
   ArrowUpCircle, 
@@ -47,6 +48,7 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
   const [selectedTier, setSelectedTier] = useState<string>('');
   const [customAmount, setCustomAmount] = useState<number>(60);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showUpgradeFlow, setShowUpgradeFlow] = useState(false);
   const [showCustomAmountDialog, setShowCustomAmountDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +81,9 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
 
     // Get proration preview
     await getProrationPreview(tierId, tierId === 'custom' ? customAmount : undefined);
+
+    // Show the upgrade flow with payment method selection
+    setShowUpgradeFlow(true);
   };
 
   const handleCustomAmountSelect = () => {
@@ -467,6 +472,32 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Subscription Upgrade Flow Modal */}
+      <Dialog open={showUpgradeFlow} onOpenChange={setShowUpgradeFlow}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Upgrade Subscription</DialogTitle>
+            <DialogDescription>
+              Review your upgrade and confirm payment method
+            </DialogDescription>
+          </DialogHeader>
+          <SubscriptionUpgradeFlow
+            currentSubscription={subscription}
+            newTier={selectedTier}
+            newAmount={selectedTier === 'custom' ? customAmount : getTierById(selectedTier)?.amount || 0}
+            onSuccess={() => {
+              setShowUpgradeFlow(false);
+              setSelectedTier('');
+              onModificationSuccess?.();
+            }}
+            onCancel={() => {
+              setShowUpgradeFlow(false);
+              setSelectedTier('');
+            }}
+          />
         </DialogContent>
       </Dialog>
     </>

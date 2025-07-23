@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { subscriptionId, newTier, newAmount } = body;
+    const { subscriptionId, newTier, newAmount, paymentMethodId } = body;
 
     if (!subscriptionId || !newAmount) {
       return NextResponse.json({ 
@@ -83,6 +83,19 @@ export async function POST(request: NextRequest) {
           }],
           proration_behavior: 'create_prorations',
         });
+
+        // Update payment method if provided
+        if (paymentMethodId) {
+          try {
+            await stripe.subscriptions.update(subscriptionId, {
+              default_payment_method: paymentMethodId,
+            });
+            console.log(`[SUBSCRIPTION UPDATE] Updated payment method to ${paymentMethodId}`);
+          } catch (paymentMethodError) {
+            console.error('[SUBSCRIPTION UPDATE] Failed to update payment method:', paymentMethodError);
+            // Don't fail the entire update if payment method update fails
+          }
+        }
 
         console.log(`[SUBSCRIPTION UPDATE] Successfully updated Stripe subscription ${subscriptionId}`);
       } catch (stripeError) {
