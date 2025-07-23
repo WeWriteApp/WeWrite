@@ -567,7 +567,11 @@ export async function PUT(request: NextRequest) {
         metadataUpdate.location = location;
       }
 
+      // Always ensure lastModified is updated for recent edits tracking
+      metadataUpdate.lastModified = new Date().toISOString();
+
       if (Object.keys(metadataUpdate).length > 0) {
+        console.log('🔵 API: Updating page metadata', { pageId: id, metadataUpdate });
         await pageRef.update(metadataUpdate);
       }
 

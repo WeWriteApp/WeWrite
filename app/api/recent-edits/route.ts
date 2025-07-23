@@ -48,34 +48,56 @@ export async function GET(request: NextRequest) {
       ...doc.data()
     }));
 
-    // Debug logging
-    console.log(`🔍 Recent edits query: Found ${pages.length} pages`);
+    // Enhanced debug logging
+    console.log(`🔍 Recent edits query: Found ${pages.length} pages from collection: ${getCollectionName('pages')}`);
     if (filterToUser) {
       console.log(`🔍 Filtering to user: ${filterToUser}`);
     }
 
-    // Log first few pages for debugging
-    const debugPages = pages.slice(0, 3).map(p => ({
-      id: p.id,
-      title: p.title,
-      userId: p.userId,
-      lastModified: p.lastModified?.toDate ? p.lastModified.toDate().toISOString() : p.lastModified,
-      hasLastDiff: !!p.lastDiff,
-      lastDiffHasChanges: p.lastDiff?.hasChanges
-    }));
-    console.log('🔍 Sample pages:', debugPages);
+    // Log first few pages for debugging with more detail
+    const debugPages = pages.slice(0, 5).map(p => {
+      const lastModifiedDate = p.lastModified?.toDate ? p.lastModified.toDate() : new Date(p.lastModified);
+      const daysSinceModified = p.lastModified ? (new Date().getTime() - lastModifiedDate.getTime()) / (24 * 60 * 60 * 1000) : null;
+
+      return {
+        id: p.id,
+        title: p.title,
+        userId: p.userId,
+        lastModified: p.lastModified?.toDate ? p.lastModified.toDate().toISOString() : p.lastModified,
+        daysSinceModified: daysSinceModified?.toFixed(2),
+        hasLastDiff: !!p.lastDiff,
+        lastDiffHasChanges: p.lastDiff?.hasChanges,
+        deleted: p.deleted
+      };
+    });
+    console.log('🔍 Sample pages with timing:', debugPages);
 
     // Filter pages to only include those with actual edits
     let filteredPages = pages
       .filter(page => page.deleted !== true) // Remove deleted pages
       .filter(page => {
         // For recent edits, we want pages that have been modified recently
-        // Check if page has lastDiff with changes OR if it's been recently modified
-        const hasRecentChanges = page.lastDiff?.hasChanges === true;
-        const hasRecentModification = page.lastModified &&
-          (new Date().getTime() - new Date(page.lastModified.toDate ? page.lastModified.toDate() : page.lastModified).getTime()) < (30 * 24 * 60 * 60 * 1000); // 30 days
+        // Be more inclusive - show pages that have been modified in the last 7 days
+        if (!page.lastModified) return false;
 
-        return hasRecentChanges || hasRecentModification;
+        const lastModifiedDate = page.lastModified.toDate ? page.lastModified.toDate() : new Date(page.lastModified);
+        const daysSinceModified = (new Date().getTime() - lastModifiedDate.getTime()) / (24 * 60 * 60 * 1000);
+
+        // Show pages modified in the last 7 days, regardless of lastDiff status
+        const isRecentlyModified = daysSinceModified <= 7;
+
+        // Also include pages with explicit change tracking
+        const hasTrackedChanges = page.lastDiff?.hasChanges === true;
+
+        console.log(`🔍 Recent edits filter: ${page.id} - ${page.title}`, {
+          lastModified: lastModifiedDate.toISOString(),
+          daysSinceModified: daysSinceModified.toFixed(2),
+          isRecentlyModified,
+          hasTrackedChanges,
+          included: isRecentlyModified || hasTrackedChanges
+        });
+
+        return isRecentlyModified || hasTrackedChanges;
       })
       .filter(page => {
         // Apply visibility filter

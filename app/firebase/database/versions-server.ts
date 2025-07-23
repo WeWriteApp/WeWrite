@@ -76,8 +76,8 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
       }
     }
 
-    // Create timestamp
-    const now = admin.firestore.Timestamp.now();
+    // Create timestamp - use ISO string for consistency with client-side
+    const now = new Date().toISOString();
 
     // Prepare version data
     const versionData = {

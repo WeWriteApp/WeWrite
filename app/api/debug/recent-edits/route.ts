@@ -57,18 +57,29 @@ export async function GET(request: NextRequest) {
         lastDiffHasChanges: p.lastDiff?.hasChanges
       })),
 
-      // Pages that would show in recent edits
+      // Pages that would show in recent edits (using same logic as main API)
       recentEditsPages: filteredPages
-        .filter(p => p.lastDiff?.hasChanges)
+        .filter(p => {
+          if (!p.lastModified) return false;
+          const lastModifiedDate = p.lastModified.toDate ? p.lastModified.toDate() : new Date(p.lastModified);
+          const daysSinceModified = (new Date().getTime() - lastModifiedDate.getTime()) / (24 * 60 * 60 * 1000);
+          return daysSinceModified <= 7 || p.lastDiff?.hasChanges === true;
+        })
         .slice(0, 8)
-        .map(p => ({
-          id: p.id,
-          title: p.title,
-          userId: p.userId,
-          username: p.username,
-          lastModified: p.lastModified,
-          lastDiff: p.lastDiff
-        }))
+        .map(p => {
+          const lastModifiedDate = p.lastModified?.toDate ? p.lastModified.toDate() : new Date(p.lastModified);
+          const daysSinceModified = p.lastModified ? (new Date().getTime() - lastModifiedDate.getTime()) / (24 * 60 * 60 * 1000) : null;
+
+          return {
+            id: p.id,
+            title: p.title,
+            userId: p.userId,
+            username: p.username,
+            lastModified: p.lastModified,
+            daysSinceModified: daysSinceModified?.toFixed(2),
+            lastDiff: p.lastDiff
+          };
+        })
     };
 
     return NextResponse.json({
