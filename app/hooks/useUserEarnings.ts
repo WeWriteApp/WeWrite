@@ -35,12 +35,12 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
         
         if (!response.ok) {
           if (response.status === 404) {
-            // No earnings data found - user has no earnings
+            // No earnings data found - user has no earnings, but still show counter
             setEarnings({
               totalEarnings: 0,
               availableBalance: 0,
               pendingBalance: 0,
-              hasEarnings: false
+              hasEarnings: true // Always show earnings counter, even when zero
             });
           } else {
             throw new Error('Failed to fetch earnings');
@@ -60,12 +60,12 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
               hasEarnings: totalEarnings > 0 || availableBalance > 0 || pendingBalance > 0
             });
           } else {
-            // No earnings data
+            // No earnings data, but still show counter
             setEarnings({
               totalEarnings: 0,
               availableBalance: 0,
               pendingBalance: 0,
-              hasEarnings: false
+              hasEarnings: true // Always show earnings counter, even when zero
             });
           }
         }

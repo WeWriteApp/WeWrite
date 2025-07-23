@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "../ui/button";
 import { Heart, DollarSign, Coins } from "lucide-react";
-import { TokenPieChart } from "../ui/TokenPieChart";
+import { RemainingTokensCounter } from "../ui/RemainingTokensCounter";
 import Logo from "../ui/Logo";
 import { openExternalLink } from "../../utils/pwa-detection";
 import { useSidebarContext } from "./UnifiedSidebar";
@@ -38,8 +38,8 @@ export default function Header() {
 
   // Helper function to render earnings display
   const renderEarningsDisplay = () => {
-    // Only show if user is authenticated and has earnings
-    if (!user?.uid || !earnings || !earnings.hasEarnings) return null;
+    // Show if user is authenticated and earnings data is loaded (even if zero)
+    if (!user?.uid || !earnings) return null;
 
     const totalTokensEarned = Math.floor(earnings.totalEarnings * 10); // Convert USD to tokens (1 USD = 10 tokens)
 
@@ -57,19 +57,16 @@ export default function Header() {
     );
   };
 
-  // Helper function to render token allocation display
-  const renderTokenAllocationDisplay = () => {
+  // Helper function to render remaining tokens display
+  const renderRemainingTokensDisplay = () => {
     // Use real token balance if available, otherwise use unfunded tokens
     const balance = contextTokenBalance || simulatedTokenBalance;
     if (!balance) return null;
 
     return (
-      <TokenPieChart
+      <RemainingTokensCounter
         allocatedTokens={balance.allocatedTokens}
         totalTokens={balance.totalTokens}
-        size={28}
-        strokeWidth={2.5}
-        className="hover:opacity-80 transition-opacity"
         onClick={() => router.push('/settings/spend-tokens')}
       />
     );
@@ -257,11 +254,11 @@ export default function Header() {
                 </Link>
               </div>
 
-              {/* Token Allocation Pie Chart (right side) */}
+              {/* Remaining Tokens Counter (right side) */}
               <div className="flex-1 flex justify-end">
                 {isPaymentsEnabled ? (
-                  // Show token allocation pie chart if user has any token allocations (funded or unfunded)
-                  renderTokenAllocationDisplay()
+                  // Show remaining tokens counter if user has any token allocations (funded or unfunded)
+                  renderRemainingTokensDisplay()
                 ) : (
                   <Button
                     variant="outline"
