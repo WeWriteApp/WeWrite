@@ -21,7 +21,13 @@ export async function POST(request: NextRequest) {
 
     console.log(`[SUBSCRIPTION SYNC] Syncing subscription status for user ${userId}`);
 
-    const { adminDb } = getFirebaseAdmin();
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      console.error('[SUBSCRIPTION SYNC] Firebase Admin not available');
+      return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 500 });
+    }
+
+    const adminDb = admin.firestore();
     const { parentPath, subCollectionName } = getSubCollectionPath(
       PAYMENT_COLLECTIONS.USERS,
       userId,

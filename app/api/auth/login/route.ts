@@ -117,7 +117,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Production mode: use Firebase Auth
-    const { auth, firestore } = getFirebaseAdmin();
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 500 });
+    }
+    const auth = admin.auth();
+    const firestore = admin.firestore();
 
     // Determine if input is email or username
     const isEmail = emailOrUsername.includes('@');

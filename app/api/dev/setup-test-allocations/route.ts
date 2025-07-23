@@ -10,7 +10,11 @@ import { getFirebaseAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 import { DEV_TEST_USERS } from "../../../utils/testUsers";
 
-const { db } = getFirebaseAdmin();
+const admin = getFirebaseAdmin();
+if (!admin) {
+  throw new Error('Firebase Admin not available');
+}
+const db = admin.firestore();
 
 // Check if development auth is active
 const isDevelopmentAuthActive = () => {

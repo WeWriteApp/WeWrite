@@ -10,7 +10,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: permissionCheck.error }, { status: 401 });
     }
 
-    const { adminDb } = getFirebaseAdmin();
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 500 });
+    }
+    const adminDb = admin.firestore();
 
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
