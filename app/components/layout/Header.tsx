@@ -61,12 +61,34 @@ export default function Header() {
   const renderRemainingTokensDisplay = () => {
     // Use real token balance if available, otherwise use unfunded tokens
     const balance = contextTokenBalance || simulatedTokenBalance;
-    if (!balance) return null;
+
+    // Debug logging
+    console.log('🎯 Header: Token balance check', {
+      hasContextBalance: !!contextTokenBalance,
+      hasSimulatedBalance: !!simulatedTokenBalance,
+      finalBalance: balance,
+      user: !!user
+    });
+
+    // If no balance data, show default state for authenticated users
+    if (!balance) {
+      if (user) {
+        // Show loading state or default for authenticated users
+        return (
+          <RemainingTokensCounter
+            allocatedTokens={0}
+            totalTokens={0}
+            onClick={() => router.push('/settings/spend-tokens')}
+          />
+        );
+      }
+      return null; // Don't show for unauthenticated users
+    }
 
     return (
       <RemainingTokensCounter
-        allocatedTokens={balance.allocatedTokens}
-        totalTokens={balance.totalTokens}
+        allocatedTokens={balance.allocatedTokens || 0}
+        totalTokens={balance.totalTokens || 0}
         onClick={() => router.push('/settings/spend-tokens')}
       />
     );
@@ -132,26 +154,25 @@ export default function Header() {
   React.useEffect(() => {
     if (!isPaymentsEnabled) return;
 
-    // If user has any subscription (active or canceled), don't load unfunded tokens
-    if (subscription) {
-      setSimulatedTokenBalance(null);
-      return;
-    }
-
     const loadUnfundedTokens = () => {
       // Load unfunded tokens for logged-out users or users without subscriptions
       if (!user) {
-        // Logged-out user - load from localStorage
+        // Logged-out user - load from localStorage immediately
         const balance = getLoggedOutTokenBalance();
+        console.log('🎯 Header: Loaded logged-out balance:', balance);
         setSimulatedTokenBalance(balance);
-      } else {
+      } else if (!subscription) {
         // Logged-in user without subscription - load user-specific unfunded tokens
         const balance = getUserTokenBalance(user.uid);
+        console.log('🎯 Header: Loaded user unfunded balance:', balance);
         setSimulatedTokenBalance(balance);
+      } else {
+        // User has subscription, clear simulated balance
+        setSimulatedTokenBalance(null);
       }
     };
 
-    // Initial load
+    // Initial load (immediate)
     loadUnfundedTokens();
 
     // Listen for localStorage changes to update in real-time

@@ -11,25 +11,15 @@ import { ServerTokenService } from '../../../services/tokenService.server';
 
 export async function GET(request: NextRequest) {
   try {
-    // Log environment info for debugging
-    console.log('[TOKEN BALANCE] Environment info:', {
-      VERCEL_ENV: process.env.VERCEL_ENV,
-      NODE_ENV: process.env.NODE_ENV,
-      url: request.url
-    });
-
     // Get authenticated user
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
-      console.log('[TOKEN BALANCE] No userId found, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('[TOKEN BALANCE] Authenticated user:', userId);
-
     console.log(`🎯 Token Balance API: Getting balance for user ${userId}`);
 
-    // Get token balance
+    // Get token balance (fast path - no heavy operations)
     const balance = await ServerTokenService.getUserTokenBalance(userId);
 
     console.log(`🎯 Token Balance API: Retrieved balance:`, balance);
@@ -37,100 +27,24 @@ export async function GET(request: NextRequest) {
     if (!balance) {
       console.log(`🎯 Token Balance API: No balance found for user ${userId}`);
 
-      // CRITICAL FIX: Auto-initialize token balance if user has active subscription
-      try {
-        const { getUserSubscriptionServer } = await import('../../../firebase/subscription-server');
-        const subscription = await getUserSubscriptionServer(userId, { verbose: false });
-
-        if (subscription && subscription.status === 'active' && subscription.amount > 0) {
-          console.log(`🎯 Token Balance API: Found active subscription ($${subscription.amount}/mo), auto-initializing token balance`);
-
-          // Initialize token balance
-          await ServerTokenService.updateMonthlyTokenAllocation(userId, subscription.amount);
-
-          // Fetch the newly created balance
-          const newBalance = await ServerTokenService.getUserTokenBalance(userId);
-
-          if (newBalance) {
-            console.log(`🎯 Token Balance API: Successfully initialized token balance:`, {
-              totalTokens: newBalance.totalTokens,
-              allocatedTokens: newBalance.allocatedTokens,
-              availableTokens: newBalance.availableTokens
-            });
-
-            // Get allocations for the newly initialized balance
-            const allocations = await ServerTokenService.getUserTokenAllocations(userId);
-
-            return NextResponse.json({
-              balance: newBalance,
-              allocations,
-              summary: {
-                totalTokens: newBalance.totalTokens,
-                allocatedTokens: newBalance.allocatedTokens,
-                availableTokens: newBalance.availableTokens,
-                allocationCount: allocations.length
-              },
-              message: 'Token balance initialized successfully'
-            });
-          }
-        }
-      } catch (initError) {
-        console.error('🎯 Token Balance API: Failed to auto-initialize token balance:', initError);
-      }
-
+      // Fast path: Return empty balance instead of heavy auto-initialization
       return NextResponse.json({
         balance: null,
         allocations: [],
+        summary: {
+          totalTokens: 0,
+          allocatedTokens: 0,
+          availableTokens: 0,
+          allocationCount: 0
+        },
         message: 'No token balance found. Subscribe to start allocating tokens.'
       });
     }
 
-    // CRITICAL FIX: Verify token balance matches current subscription
+    // Fast path: Use existing balance without heavy sync operations
     let finalBalance = balance;
-    try {
-      const { getUserSubscriptionServer } = await import('../../../firebase/subscription-server');
-      const subscription = await getUserSubscriptionServer(userId, { verbose: false });
 
-      if (subscription && subscription.status === 'active') {
-        const { calculateTokensForAmount } = await import('../../../utils/subscriptionTiers');
-        const expectedTokens = calculateTokensForAmount(subscription.amount);
-
-        // If token balance doesn't match subscription, sync it
-        if (balance.totalTokens !== expectedTokens) {
-          console.log('🎯 Token Balance API: MISMATCH DETECTED - Syncing token balance with subscription', {
-            currentTokens: balance.totalTokens,
-            expectedTokens,
-            subscriptionAmount: subscription.amount,
-            userSubscription: subscription
-          });
-
-          // Update the token balance to match subscription
-          await ServerTokenService.updateMonthlyTokenAllocation(userId, subscription.amount);
-
-          // Fetch the updated balance
-          const updatedBalance = await ServerTokenService.getUserTokenBalance(userId);
-          if (updatedBalance) {
-            console.log('🎯 Token Balance API: Token balance synced successfully', {
-              oldTokens: balance.totalTokens,
-              newTokens: updatedBalance.totalTokens
-            });
-            finalBalance = updatedBalance;
-          }
-        } else {
-          console.log('🎯 Token Balance API: Token balance matches subscription', {
-            tokens: balance.totalTokens,
-            subscriptionAmount: subscription.amount
-          });
-        }
-      } else {
-        console.log('🎯 Token Balance API: No active subscription found for sync check');
-      }
-    } catch (syncError) {
-      console.error('🎯 Token Balance API: Error syncing token balance:', syncError);
-      // Continue with existing balance if sync fails
-    }
-
-    // Get current allocations
+    // Get current allocations (fast path - only essential data)
     const allocations = await ServerTokenService.getUserTokenAllocations(userId);
 
     const response = {
