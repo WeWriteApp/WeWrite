@@ -20,6 +20,8 @@ import { useTokenIncrement } from '../../contexts/TokenIncrementContext';
 import { EmbeddedCheckoutService } from '../../services/embeddedCheckoutService';
 import { TokenParticleEffect } from '../effects/TokenParticleEffect';
 import { useTokenParticleEffect } from '../../hooks/useTokenParticleEffect';
+import { PulsingButtonEffect } from '../effects/PulsingButtonEffect';
+import { useDelayedLoginBanner } from '../../hooks/useDelayedLoginBanner';
 
 interface PledgeBarProps {
   pageId?: string;
@@ -55,6 +57,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   const router = useRouter();
   const { incrementAmount } = useTokenIncrement();
   const { triggerEffect, originElement, triggerParticleEffect, resetEffect } = useTokenParticleEffect();
+  const { showDelayedBanner, triggerDelayedBanner, resetDelayedBanner, isDelayActive } = useDelayedLoginBanner();
 
   // Scroll detection state
   const [isHidden, setIsHidden] = useState(false);
@@ -63,8 +66,23 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   // Ref for the accent color section (current page token display)
   const accentSectionRef = useRef<HTMLDivElement>(null);
 
+  // Ref for the plus button (for pulsing effect)
+  const plusButtonRef = useRef<HTMLButtonElement>(null);
+
   // Auto-detect pageId from URL if not provided
   const pageId = propPageId || (pathname ? pathname.substring(1) : '');
+
+  // Reset delayed banner when user logs in or navigates away
+  useEffect(() => {
+    if (user) {
+      resetDelayedBanner();
+    }
+  }, [user, resetDelayedBanner]);
+
+  // Reset delayed banner on page navigation
+  useEffect(() => {
+    resetDelayedBanner();
+  }, [pathname, resetDelayedBanner]);
 
   // Check if current user is the page owner
   const isPageOwner = !!(user && authorId && user.uid === authorId);
@@ -686,6 +704,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
               </div>
 
                   <Button
+                    ref={plusButtonRef}
                     size="sm"
                     variant="outline"
                     onClick={(e) => {
@@ -693,8 +712,18 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                       if (isOutOfTokens) {
                         // Redirect to subscription page when out of tokens
                         router.push('/settings/subscription');
+                      } else if (!user) {
+                        // Enhanced logged-out user experience
+                        // 1. Trigger particle effect to show visual feedback
+                        if (accentSectionRef.current) {
+                          triggerParticleEffect(accentSectionRef.current);
+                        }
+                        // 2. Allow simulated token allocation to appear to work
+                        handleTokenChange(incrementAmount);
+                        // 3. Trigger delayed login banner after particle effect completes
+                        triggerDelayedBanner();
                       } else {
-                        // Trigger particle effect from the accent color section
+                        // Normal authenticated user flow
                         if (accentSectionRef.current) {
                           triggerParticleEffect(accentSectionRef.current);
                         }
@@ -725,10 +754,10 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
         </div>
 
         {/* Warning Banners - MOVED TO BOTTOM */}
-        {/* Login Notice */}
-        {showLoginNotice && (
+        {/* Enhanced Login Notice - Only show delayed banner, not initial notice */}
+        {showDelayedBanner && !user && (
           <div
-            className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 rounded-b-2xl cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-all duration-200"
+            className="bg-gradient-to-r from-green-500 to-green-600 text-white p-3 rounded-b-2xl cursor-pointer hover:from-green-600 hover:to-green-700 transition-all duration-200 login-banner-slide-up"
             onClick={handlePledgeBarClick}
           >
             <p className="text-sm font-medium text-center">
@@ -786,6 +815,12 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
         particleCount={10}
         duration={900}
         maxDistance={60}
+      />
+
+      {/* Pulsing Button Effect for Logged-Out Users */}
+      <PulsingButtonEffect
+        targetElement={plusButtonRef.current}
+        isActive={!user && !isDelayActive && !showDelayedBanner}
       />
     </div>,
     document.body
