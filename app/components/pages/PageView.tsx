@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 // Firebase imports removed - using Firestore instead of Realtime Database
 import { listenToPageById, getPageById } from "../../firebase/database";
 import { getPageVersions, getPageVersionById } from "../../services/versionService";
@@ -32,8 +33,15 @@ import { SmartLoader } from "../ui/smart-loader";
 import { ErrorDisplay } from "../ui/error-display";
 import { LineSettingsMenu } from "../utils/LineSettingsMenu";
 
-// Editor Components
-import Editor from "../editor/Editor";
+// Editor Components - Dynamic import to prevent hydration mismatches
+const Editor = dynamic(() => import("../editor/Editor"), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4 text-center">
+      <div className="animate-pulse">Loading editor...</div>
+    </div>
+  )
+});
 import EmptyLinesAlert from "../editor/EmptyLinesAlert";
 // CustomDateField and LocationField are now handled by PageFooter
 

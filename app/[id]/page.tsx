@@ -6,7 +6,18 @@ import dynamic from 'next/dynamic';
 import { getPageById } from "../firebase/database/pages";
 import { getDatabase, ref, get } from "firebase/database";
 import { rtdb } from "../firebase/config";
-import PageView from '../components/pages/PageView';
+// Dynamic import to prevent hydration mismatches
+const PageView = dynamic(() => import('../components/pages/PageView'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center min-h-[50vh] p-4">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+        <p>Loading page...</p>
+      </div>
+    </div>
+  )
+});
 import { SmartLoader } from '../components/ui/smart-loader';
 import { ErrorDisplay } from '../components/ui/error-display';
 import { Button } from '../components/ui/button';
