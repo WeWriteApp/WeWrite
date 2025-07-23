@@ -183,7 +183,10 @@ export default function AdminToolsPage() {
             <DollarSign className="h-4 w-4 mr-2" />
             Fee Management
           </TabsTrigger>
-
+          <TabsTrigger value="ui-test">
+            <Eye className="h-4 w-4 mr-2" />
+            UI Test
+          </TabsTrigger>
         </TabsList>
 
         {/* Streak Calculation Tab */}
@@ -404,6 +407,41 @@ export default function AdminToolsPage() {
           <ComprehensiveFeeManagement />
         </TabsContent>
 
+        {/* UI Test Tab */}
+        <TabsContent value="ui-test" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>UI Design System Test</CardTitle>
+              <CardDescription>
+                Comprehensive analysis and testing of the UI design system components, usage patterns, and health metrics.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  This tool provides:
+                </p>
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-4">
+                  <li>Complete inventory of all UI components</li>
+                  <li>Usage count analysis across the codebase</li>
+                  <li>Component categorization and type classification</li>
+                  <li>Interactive component showcase with all variants</li>
+                  <li>Design system health recommendations</li>
+                  <li>Cleanup and consolidation opportunities</li>
+                </ul>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button
+                onClick={() => window.open('/admin/ui-test', '_blank')}
+                className="w-full"
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Open UI Test Tool
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
 
       </Tabs>
 
