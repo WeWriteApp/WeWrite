@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from '../../providers/AuthProvider';
@@ -18,6 +18,8 @@ import {
 import { TokenAllocationModal } from './TokenAllocationModal';
 import { useTokenIncrement } from '../../contexts/TokenIncrementContext';
 import { EmbeddedCheckoutService } from '../../services/embeddedCheckoutService';
+import { TokenParticleEffect } from '../effects/TokenParticleEffect';
+import { useTokenParticleEffect } from '../../hooks/useTokenParticleEffect';
 
 interface PledgeBarProps {
   pageId?: string;
@@ -52,10 +54,14 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
   const pathname = usePathname();
   const router = useRouter();
   const { incrementAmount } = useTokenIncrement();
+  const { triggerEffect, originElement, triggerParticleEffect, resetEffect } = useTokenParticleEffect();
 
   // Scroll detection state
   const [isHidden, setIsHidden] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
+
+  // Ref for the accent color section (current page token display)
+  const accentSectionRef = useRef<HTMLDivElement>(null);
 
   // Auto-detect pageId from URL if not provided
   const pageId = propPageId || (pathname ? pathname.substring(1) : '');
@@ -654,6 +660,7 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                     {/* Current page */}
                     {currentPagePercentage > 0 && (
                       <div
+                        ref={accentSectionRef}
                         className="h-full bg-primary rounded-md flex items-center justify-center"
                         style={{ width: `${currentPagePercentage}%`, minWidth: '20px' }}
                       >
@@ -687,6 +694,10 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
                         // Redirect to subscription page when out of tokens
                         router.push('/settings/subscription');
                       } else {
+                        // Trigger particle effect from the accent color section
+                        if (accentSectionRef.current) {
+                          triggerParticleEffect(accentSectionRef.current);
+                        }
                         handleTokenChange(incrementAmount);
                       }
                     }}
@@ -765,6 +776,16 @@ const PledgeBar = React.forwardRef<HTMLDivElement, PledgeBarProps>(({
         onTokenChange={handleTokenChange}
         isPageOwner={isPageOwner}
         pageId={pageId}
+      />
+
+      {/* Particle Effect */}
+      <TokenParticleEffect
+        trigger={triggerEffect}
+        originElement={originElement}
+        onComplete={resetEffect}
+        particleCount={10}
+        duration={900}
+        maxDistance={60}
       />
     </div>,
     document.body
