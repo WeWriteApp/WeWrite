@@ -30,17 +30,15 @@ const nextConfig = {
   // Minimal webpack logging for development
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
 
-    // FORCE FULL ERROR MESSAGES: Configure React to always show unminified errors
-    console.log('🔧 Webpack: Configuring React for full error messages in all environments');
+    // FORCE FULL ERROR MESSAGES: Configure React for better error messages
+    console.log('🔧 Webpack: Configuring enhanced error messages');
 
-    // The most reliable way: Force React to always use development mode for error messages
-    // This replaces minified error codes with full error messages
+    // Use DefinePlugin to improve error messages without breaking the build
     config.plugins.push(
       new webpack.DefinePlugin({
-        // Force React to think it's in development mode for error messages
-        '__DEV__': JSON.stringify(true),
-        // Keep the actual NODE_ENV for other optimizations
-        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+        // Keep React in production mode but enhance our error logging
+        '__REACT_ERROR_OVERLAY__': JSON.stringify(true),
+        'process.env.REACT_APP_FULL_ERRORS': JSON.stringify('true'),
       })
     );
 

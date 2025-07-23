@@ -1143,7 +1143,6 @@ export default function PageView({
                     <p className="text-sm mt-2">Page ID: {page.id}</p>
                   </div>
                 }>
-                  {console.log('🔍 PageView: Rendering content - canEdit:', canEdit, 'isEditing:', isEditing, 'showVersion:', showVersion, 'showDiff:', showDiff)}
 
                   {/* Use Editor only when user is actively editing their own content */}
                   {canEdit && isEditing ? (

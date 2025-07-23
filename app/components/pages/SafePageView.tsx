@@ -135,29 +135,15 @@ class SafePageViewErrorBoundary extends React.Component<
 }
 
 export default function SafePageView({ params }: SafePageViewProps) {
-  const [isMounted, setIsMounted] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const router = useRouter();
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const handleRetry = () => {
     setRetryKey(prev => prev + 1);
   };
 
-  // Don't render anything until mounted to prevent hydration issues
-  if (!isMounted) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh] p-4">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Initializing page...</p>
-        </div>
-      </div>
-    );
-  }
+  // Use a simpler approach: always render the same structure but use dynamic imports
+  // This prevents hydration mismatches while still providing safety
 
   return (
     <SafePageViewErrorBoundary pageId={params.id} onRetry={handleRetry}>
