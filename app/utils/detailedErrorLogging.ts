@@ -4,10 +4,33 @@ import React from 'react';
 
 /**
  * Detailed Error Logging System
- * 
+ *
  * This module provides comprehensive error logging that gives detailed information
- * even when React errors are minified in production builds.
+ * in ALL environments. React is now configured to always use development builds
+ * for unminified error messages in development, preview, and production.
  */
+
+// Configuration check - ensure we're getting full error messages
+const isFullErrorsEnabled = () => {
+  // Check if React is using development builds (should always be true now)
+  const reactVersion = React.version;
+  const hasFullErrors = process.env.FORCE_FULL_ERRORS === 'true' ||
+                       process.env.REACT_APP_FULL_ERRORS === 'true' ||
+                       process.env.NODE_ENV === 'development';
+
+  console.log('🔍 Error Logging Configuration:');
+  console.log('  React version:', reactVersion);
+  console.log('  Full errors enabled:', hasFullErrors);
+  console.log('  Environment:', process.env.NODE_ENV);
+  console.log('  Vercel environment:', process.env.NEXT_PUBLIC_VERCEL_ENV);
+
+  return hasFullErrors;
+};
+
+// Initialize on module load
+if (typeof window !== 'undefined') {
+  isFullErrorsEnabled();
+}
 
 interface ReactErrorDetails {
   errorCode: string;

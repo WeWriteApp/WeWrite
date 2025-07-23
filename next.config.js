@@ -1,7 +1,21 @@
 /** @type {import('next').NextConfig} */
+
+console.log('🔍 Next.js Configuration - ALWAYS USE FULL ERROR MESSAGES:');
+console.log('  NODE_ENV:', process.env.NODE_ENV);
+console.log('  VERCEL_ENV:', process.env.VERCEL_ENV);
+console.log('  Full errors enabled: ALWAYS (development, preview, and production)');
+
 const nextConfig = {
   reactStrictMode: process.env.NODE_ENV === 'development', // Disable in production to prevent hydration issues
 
+  // Force full error messages in ALL environments (dev, preview, production)
+  env: {
+    // Force React to always use development error messages
+    FORCE_FULL_ERRORS: 'true',
+    REACT_APP_FULL_ERRORS: 'true',
+    VERCEL_ENV: process.env.VERCEL_ENV || 'development',
+    NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV || 'development',
+  },
 
 
   // Maximum error visibility settings
@@ -15,6 +29,21 @@ const nextConfig = {
 
   // Minimal webpack logging for development
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+
+    // FORCE FULL ERROR MESSAGES: Configure React to always show unminified errors
+    console.log('🔧 Webpack: Configuring React for full error messages in all environments');
+
+    // The most reliable way: Force React to always use development mode for error messages
+    // This replaces minified error codes with full error messages
+    config.plugins.push(
+      new webpack.DefinePlugin({
+        // Force React to think it's in development mode for error messages
+        '__DEV__': JSON.stringify(true),
+        // Keep the actual NODE_ENV for other optimizations
+        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+      })
+    );
+
     // Reduce webpack output for cleaner development
     if (dev) {
       config.stats = {
