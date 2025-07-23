@@ -1,214 +1,106 @@
 "use client"
 
 import * as React from "react"
-import * as TabsPrimitive from "@radix-ui/react-tabs"
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-
 import { cn } from "../../lib/utils"
 
-// Enhanced Tabs component with automatic URL navigation support
-interface TabsProps extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root> {
-  /**
-   * Enable URL-based navigation for tabs
-   * - 'hash': Use hash-based navigation (#tab) for same-page contexts
-   * - 'query': Use query parameter (?tab=value) for complex scenarios
-   * - false: Disable URL navigation (default behavior)
-   */
-  urlNavigation?: 'hash' | 'query' | false;
+// SIMPLE tabs - no Radix UI, no complex URL navigation
+const TabsContext = React.createContext<{
+  value: string;
+  setValue: (value: string) => void;
+}>({ value: '', setValue: () => {} });
 
-  /**
-   * Query parameter name for 'query' strategy (default: 'tab')
-   */
-  urlParam?: string;
-
-  /**
-   * Whether to replace history instead of pushing new entries (default: true)
-   */
-  replaceHistory?: boolean;
+interface TabsProps {
+  value?: string;
+  onValueChange?: (value: string) => void;
+  defaultValue?: string;
+  children: React.ReactNode;
+  className?: string;
+  urlNavigation?: string; // Support for legacy prop (ignored)
 }
 
-const Tabs = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Root>,
-  TabsProps
->(({
-  urlNavigation = false,
-  urlParam = 'tab',
-  replaceHistory = true,
-  value: controlledValue,
-  onValueChange: controlledOnValueChange,
-  defaultValue,
-  children,
-  ...props
-}, ref) => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-
-  // Internal state for URL navigation
-  const [internalValue, setInternalValue] = React.useState<string>(() => {
-    if (!urlNavigation || typeof window === 'undefined') {
-      return defaultValue || '';
-    }
-
-    // Parse initial value from URL
-    let urlValue: string | null = null;
-
-    if (urlNavigation === 'hash') {
-      urlValue = window.location.hash.slice(1) || null;
-    } else if (urlNavigation === 'query') {
-      urlValue = searchParams?.get(urlParam) || null;
-    }
-
-    return urlValue || defaultValue || '';
-  });
-
-  // Determine if we're using controlled or uncontrolled mode
+const Tabs = ({ value: controlledValue, onValueChange, defaultValue, children, className, urlNavigation }: TabsProps) => {
+  const [internalValue, setInternalValue] = React.useState(defaultValue || '');
   const isControlled = controlledValue !== undefined;
-  const currentValue = isControlled ? controlledValue : internalValue;
+  const value = isControlled ? controlledValue : internalValue;
 
-  // Function to update URL based on strategy
-  const updateUrl = React.useCallback((tabValue: string) => {
-    if (!urlNavigation || typeof window === 'undefined') return;
-
-    if (urlNavigation === 'hash') {
-      const newHash = tabValue ? `#${tabValue}` : '';
-      if (replaceHistory) {
-        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${newHash}`);
-      } else {
-        window.location.hash = newHash;
-      }
-    } else if (urlNavigation === 'query') {
-      const url = new URL(window.location.href);
-      if (tabValue) {
-        url.searchParams.set(urlParam, tabValue);
-      } else {
-        url.searchParams.delete(urlParam);
-      }
-
-      if (replaceHistory) {
-        window.history.replaceState(null, '', url.toString());
-      } else {
-        window.history.pushState(null, '', url.toString());
-      }
-    }
-  }, [urlNavigation, urlParam, replaceHistory]);
-
-  // Handle value changes
-  const handleValueChange = React.useCallback((newValue: string) => {
-    // Update internal state if uncontrolled
+  const setValue = (newValue: string) => {
     if (!isControlled) {
       setInternalValue(newValue);
     }
-
-    // Update URL if URL navigation is enabled
-    if (urlNavigation) {
-      updateUrl(newValue);
-    }
-
-    // Call the original onValueChange if provided
-    if (controlledOnValueChange) {
-      controlledOnValueChange(newValue);
-    }
-  }, [isControlled, urlNavigation, updateUrl, controlledOnValueChange]);
-
-  // Set initial hash if none exists and ensure URL is updated on mount
-  React.useEffect(() => {
-    if (urlNavigation === 'hash' && typeof window !== 'undefined') {
-      const currentHash = window.location.hash.slice(1);
-      const valueToUse = currentHash || defaultValue || '';
-
-      // If no hash exists, set the default value as hash
-      if (!currentHash && valueToUse) {
-        updateUrl(valueToUse);
-      }
-
-      // Update internal state if uncontrolled and value differs
-      if (!isControlled && valueToUse !== internalValue) {
-        setInternalValue(valueToUse);
-      }
-    }
-  }, []); // Run only on mount
-
-  // Listen for browser navigation (back/forward) for hash strategy
-  React.useEffect(() => {
-    if (urlNavigation === 'hash' && !isControlled) {
-      const handleHashChange = () => {
-        const newValue = window.location.hash.slice(1) || defaultValue || '';
-        setInternalValue(newValue);
-      };
-
-      window.addEventListener('hashchange', handleHashChange);
-      return () => window.removeEventListener('hashchange', handleHashChange);
-    }
-  }, [urlNavigation, isControlled, defaultValue]);
-
-  // Listen for URL parameter changes for query strategy
-  React.useEffect(() => {
-    if (urlNavigation === 'query' && !isControlled) {
-      const urlValue = searchParams?.get(urlParam);
-      if (urlValue && urlValue !== internalValue) {
-        setInternalValue(urlValue);
-      }
-    }
-  }, [urlNavigation, urlParam, searchParams, isControlled, internalValue]);
+    onValueChange?.(newValue);
+  };
 
   return (
-    <TabsPrimitive.Root
-      ref={ref}
-      value={currentValue}
-      onValueChange={handleValueChange}
-      {...props}
-    >
-      {children}
-    </TabsPrimitive.Root>
+    <TabsContext.Provider value={{ value, setValue }}>
+      <div className={className}>
+        {children}
+      </div>
+    </TabsContext.Provider>
   );
-});
+};
 
-Tabs.displayName = "Tabs"
-
-const TabsList = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.List
-    ref={ref}
-    className={cn(
-      "inline-flex items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
-      className
-    )}
-    {...props}
-  />
-))
-TabsList.displayName = TabsPrimitive.List.displayName
+const TabsList = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
+        className
+      )}
+      {...props}
+    />
+  )
+);
+TabsList.displayName = "TabsList";
 
 const TabsTrigger = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Trigger
-    ref={ref}
-    className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 text-foreground/70 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
-      className
-    )}
-    {...props}
-  />
-))
-TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement> & { value: string }
+>(({ className, value: triggerValue, onClick, ...props }, ref) => {
+  const { value, setValue } = React.useContext(TabsContext);
+  const isActive = value === triggerValue;
+
+  return (
+    <button
+      ref={ref}
+      className={cn(
+        "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+        isActive
+          ? "text-black border-b-2 border-blue-500"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted",
+        className
+      )}
+      onClick={(e) => {
+        setValue(triggerValue);
+        onClick?.(e);
+      }}
+      {...props}
+    />
+  );
+});
+TabsTrigger.displayName = "TabsTrigger";
 
 const TabsContent = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Content
-    ref={ref}
-    className={cn(
-      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-      className
-    )}
-    {...props}
-  />
-))
-TabsContent.displayName = TabsPrimitive.Content.displayName
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & { value: string }
+>(({ className, value: contentValue, ...props }, ref) => {
+  const { value } = React.useContext(TabsContext);
+
+  if (value !== contentValue) {
+    return null;
+  }
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        className
+      )}
+      {...props}
+    />
+  );
+});
+TabsContent.displayName = "TabsContent";
 
 export { Tabs, TabsList, TabsTrigger, TabsContent }

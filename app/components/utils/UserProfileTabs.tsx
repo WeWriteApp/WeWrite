@@ -105,7 +105,7 @@ export default function UserProfileTabs({ profile }) {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.slice(1);
       // Define basic valid tabs (we'll validate against full list in useEffect)
-      const basicValidTabs = ["bio", "pages", "activity", "timeline", "graph", "external-links"];
+      const basicValidTabs = ["bio", "pages", "recent-edits", "timeline", "graph", "external-links"];
       if (hash && basicValidTabs.includes(hash)) {
         return hash;
       }
@@ -229,7 +229,7 @@ export default function UserProfileTabs({ profile }) {
 
   // Determine which tabs to show in the requested order
   const visibleTabs = React.useMemo(() => {
-    const tabs = ["bio", "pages", "activity"];
+    const tabs = ["bio", "pages", "recent-edits"];
 
     // Add timeline tab for all users
     tabs.push("timeline");
@@ -317,9 +317,6 @@ export default function UserProfileTabs({ profile }) {
 
   // Handle tab changes with enhanced slide animation
   const handleTabChange = (newTab) => {
-    const currentIndex = visibleTabs.indexOf(activeTab);
-    const newIndex = visibleTabs.indexOf(newTab);
-
     // Track tab switching
     if (newTab !== activeTab) {
       trackInteractionEvent(events.TAB_CHANGED, {
@@ -331,41 +328,14 @@ export default function UserProfileTabs({ profile }) {
       });
     }
 
-    // Set direction for animation
-    let animationDirection = 0;
-    if (newIndex > currentIndex) {
-      animationDirection = 1; // Moving right
-    } else if (newIndex < currentIndex) {
-      animationDirection = -1; // Moving left
+    // Update URL hash
+    if (typeof window !== 'undefined') {
+      window.location.hash = newTab;
     }
-    setDirection(animationDirection);
 
-    // Apply enhanced slide animation
-    const contentContainer = document.getElementById('tabs-content-container');
-    if (contentContainer && animationDirection !== 0) {
-      // Start the slide animation
-      contentContainer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-      contentContainer.style.transform = `translateX(${animationDirection * -20}px)`;
-      contentContainer.style.opacity = '0.8';
-
-      // Scroll the tab into view
-      scrollTabIntoView(newTab);
-
-      setTimeout(() => {
-        setActiveTab(newTab);
-        // Slide back to center with new content
-        contentContainer.style.transform = 'translateX(0)';
-        contentContainer.style.opacity = '1';
-
-        // Clean up transition after animation
-        setTimeout(() => {
-          contentContainer.style.transition = '';
-        }, 300);
-      }, 150);
-    } else {
-      setActiveTab(newTab);
-      scrollTabIntoView(newTab);
-    }
+    // Set active tab immediately
+    setActiveTab(newTab);
+    scrollTabIntoView(newTab);
   };
 
 
@@ -470,8 +440,8 @@ export default function UserProfileTabs({ profile }) {
 
               {/* Recent Edits tab */}
               <TabsTrigger
-                value="activity"
-                data-value="activity"
+                value="recent-edits"
+                data-value="recent-edits"
                 className="flex items-center gap-1.5 rounded-none px-4 py-3 font-medium text-muted-foreground data-[state=active]:text-primary relative data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary"
               >
                 <Clock className="h-4 w-4" />
@@ -521,9 +491,9 @@ export default function UserProfileTabs({ profile }) {
           className="mt-4"
         >
           <TabsContent
-            value="activity"
+            value="recent-edits"
             className={`mt-0 transition-all duration-300 ${
-              activeTab === "activity"
+              activeTab === "recent-edits"
                 ? "block"
                 : "hidden"
             }`}

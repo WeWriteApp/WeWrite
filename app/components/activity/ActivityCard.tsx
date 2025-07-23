@@ -273,10 +273,10 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
 
     // For regular page activities, determine navigation based on context and version status
     if ((activity.isActivityContext || activity.isHistoryContext) && activity.versionId) {
-      // From activity page - always go to version page to view that specific version
+      // From versions page - always go to version page to view that specific version
       const url = `/${activity.pageId}/version/${activity.versionId}`;
       if (process.env.NODE_ENV === 'development') {
-        console.log('ActivityCard: Activity context detected, navigating to version page:', url);
+        console.log('ActivityCard: Versions context detected, navigating to version page:', url);
       }
       window.location.href = url;
     } else {
@@ -304,7 +304,7 @@ const ActivityCard = ({ activity, isCarousel = false, compactLayout = false }) =
   } else {
     // Regular page edits - determine URL based on context
     if ((activity.isActivityContext || activity.isHistoryContext) && activity.versionId) {
-      // From activity page - always link to version page
+      // From versions page - always link to version page
       activityUrl = `/${activity.pageId}/version/${activity.versionId}`;
     } else {
       // For home page and other contexts - always go to current page

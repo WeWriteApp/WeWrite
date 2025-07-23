@@ -49,16 +49,27 @@ export function Logo({
   styled = false
 }: LogoProps) {
   const { theme, resolvedTheme } = useTheme();
-  
+  const [mounted, setMounted] = React.useState(false);
+
+  // Ensure component is mounted before using theme
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Determine which logo to use based on resolved theme
   const logoSrc = React.useMemo(() => {
+    // During SSR or before mounting, always use light logo to prevent hydration mismatch
+    if (!mounted) {
+      return '/images/logos/logo-light.svg';
+    }
+
     // resolvedTheme gives us the actual theme being used (light/dark)
     // even when theme is set to "system"
     const currentTheme = resolvedTheme || theme;
-    return currentTheme === 'dark' 
+    return currentTheme === 'dark'
       ? '/images/logos/logo-dark.svg'
       : '/images/logos/logo-light.svg';
-  }, [theme, resolvedTheme]);
+  }, [theme, resolvedTheme, mounted]);
 
   // Get dimensions
   const dimensions = React.useMemo(() => {

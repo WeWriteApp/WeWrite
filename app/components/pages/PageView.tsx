@@ -23,6 +23,7 @@ import PageFooter from "./PageFooter";
 import PledgeBar from "../payments/PledgeBar";
 import RelatedPagesSection from "../features/RelatedPagesSection";
 import PageGraphView from "./PageGraphView";
+
 import DeletedPageBanner from "../utils/DeletedPageBanner";
 import { Button } from "../ui/button";
 import { Trash2 } from "lucide-react";
@@ -119,6 +120,7 @@ export default function PageView({
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false); // MY page = always true, NOT my page = always false
   const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [titleError, setTitleError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -473,35 +475,58 @@ export default function PageView({
   // Version loading functions
   const loadVersionData = async () => {
     try {
-      const versions = await getPageVersions(pageId);
-      const version = versions.find(v => v.id === versionId);
+      console.log('Loading version data for pageId:', pageId, 'versionId:', versionId);
 
-      if (version) {
-        setVersionData(version);
-        setPage({
-          id: pageId,
-          title: version.title || 'Untitled',
-          userId: version.userId,
+      // Use the new API-based version service
+      const response = await fetch(`/api/pages/${pageId}/versions?limit=50&includeNoOp=false`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-        });
-        setTitle(version.title || 'Untitled');
+      if (response.ok) {
+        const result = await response.json();
+        const versions = result.data?.versions || result.versions || [];
+        console.log('Found versions:', versions.length);
+        const version = versions.find(v => v.id === versionId);
 
-        // Parse version content
-        if (version.content) {
-          try {
-            const parsedContent = typeof version.content === 'string'
-              ? JSON.parse(version.content)
-              : version.content;
-            setEditorState(parsedContent);
-          } catch (error) {
-            console.error("Error parsing version content:", error);
-            setEditorState([{ type: "paragraph", children: [{ text: "Error loading version content." }] }]);
+        if (version) {
+          console.log('Found version:', version);
+          setVersionData(version);
+          setPage({
+            id: pageId,
+            title: version.title || 'Untitled',
+            userId: version.userId,
+            username: version.username,
+            createdAt: version.createdAt,
+            lastModified: version.createdAt,
+            isPublic: false, // Assume private for versions
+            deleted: false
+          });
+          setTitle(version.title || 'Untitled');
+
+          // Parse version content
+          if (version.content) {
+            try {
+              const parsedContent = typeof version.content === 'string'
+                ? JSON.parse(version.content)
+                : version.content;
+              setEditorState(parsedContent);
+            } catch (error) {
+              console.error("Error parsing version content:", error);
+              setEditorState([{ type: "paragraph", children: [{ text: "Error loading version content." }] }]);
+            }
+          } else {
+            setEditorState([{ type: "paragraph", children: [{ text: "This version has no content" }] }]);
           }
         } else {
-          setEditorState([{ type: "paragraph", children: [{ text: "This version has no content" }] }]);
+          console.error("Version not found in versions list");
+          setError("Version not found");
         }
       } else {
-        setError("Version not found");
+        console.error("API response not ok:", response.status);
+        setError("Failed to load version");
       }
 
       setIsLoading(false);
@@ -514,35 +539,54 @@ export default function PageView({
 
   const loadDiffData = async () => {
     try {
-      const versions = await getPageVersions(pageId);
-      const currentVersion = versions.find(v => v.id === versionId);
-      const compareVersion = compareVersionId ? versions.find(v => v.id === compareVersionId) : null;
+      console.log('Loading diff data for pageId:', pageId, 'versionId:', versionId, 'compareVersionId:', compareVersionId);
 
-      if (currentVersion) {
-        setVersionData(currentVersion);
-        if (compareVersion) {
-          setCompareVersionData(compareVersion);
+      // Use the new API-based version service
+      const response = await fetch(`/api/pages/${pageId}/versions?limit=50&includeNoOp=false`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const versions = result.data?.versions || result.versions || [];
+        const currentVersion = versions.find(v => v.id === versionId);
+        const compareVersion = compareVersionId ? versions.find(v => v.id === compareVersionId) : null;
+
+        if (currentVersion) {
+          setVersionData(currentVersion);
+          if (compareVersion) {
+            setCompareVersionData(compareVersion);
+          }
+
+          // Generate diff content using centralized diff service
+          const { calculateDiff } = await import('../../utils/diffService');
+          const diffResult = await calculateDiff(
+            currentVersion.content || '',
+            compareVersion?.content || ''
+          );
+
+          setDiffContent(diffResult);
+          setEditorState(diffResult);
+
+          setPage({
+            id: pageId,
+            title: `Diff: ${currentVersion.title || 'Untitled'}`,
+            userId: currentVersion.userId,
+            username: currentVersion.username,
+            createdAt: currentVersion.createdAt,
+            lastModified: currentVersion.createdAt,
+            isPublic: false,
+            deleted: false
+          });
+          setTitle(`Diff: ${currentVersion.title || 'Untitled'}`);
+        } else {
+          setError("Version not found for comparison");
         }
-
-        // Generate diff content using centralized diff service
-        const { calculateDiff } = await import('../../utils/diffService');
-        const diffResult = await calculateDiff(
-          currentVersion.content || '',
-          compareVersion?.content || ''
-        );
-
-        setDiffContent(diffResult);
-        setEditorState(diffResult);
-
-        setPage({
-          id: pageId,
-          title: `Diff: ${currentVersion.title || 'Untitled'}`,
-          userId: currentVersion.userId,
-
-        });
-        setTitle(`Diff: ${currentVersion.title || 'Untitled'}`);
       } else {
-        setError("Version not found for comparison");
+        setError("Failed to load versions for comparison");
       }
 
       setIsLoading(false);
@@ -570,6 +614,11 @@ export default function PageView({
       setIsEditing(false);
     }
   }, [canEdit, showVersion, showDiff]);
+
+  // Handle link insertion request - memoized to prevent infinite loops
+  const handleInsertLinkRequest = useCallback((triggerFn) => {
+    setLinkInsertionTrigger(() => triggerFn);
+  }, []);
 
   // Content padding: none for edit mode (static header), fixed for view mode (fixed header)
   useEffect(() => {
@@ -919,6 +968,11 @@ export default function PageView({
 
       console.log('🔍 PAGE SAVE: Resetting hasUnsavedChanges to false');
       setHasUnsavedChanges(false);
+
+      // Trigger save success animation
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 500); // Reset after animation
+
       // Keep isEditing true - ALWAYS edit mode
 
       // Show success feedback to user
@@ -1164,7 +1218,7 @@ export default function PageView({
                       placeholder="Start typing..."
                       showToolbar={false}
                       readOnly={false}
-                      onInsertLinkRequest={(triggerFn) => setLinkInsertionTrigger(() => triggerFn)}
+                      onInsertLinkRequest={handleInsertLinkRequest}
                     />
                   ) : (
                     /* Use TextView for viewing content (other users' pages or when not editing) */
@@ -1209,6 +1263,7 @@ export default function PageView({
               onInsertLink={() => linkInsertionTrigger && linkInsertionTrigger()}
               // setIsEditing removed - no manual edit mode toggling allowed
               isSaving={isSaving}
+              saveSuccess={saveSuccess}
               error={error}
               titleError={titleError}
               hasUnsavedChanges={hasUnsavedChanges}

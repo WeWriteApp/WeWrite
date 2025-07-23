@@ -87,14 +87,57 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
     // Create timestamp - use ISO string for consistency with client-side
     const now = new Date().toISOString();
 
-    // Prepare version data
+    // Calculate diff data BEFORE creating version
+    let diffResult = null;
+    try {
+      const { calculateDiff } = await import('../../utils/diffService');
+      const currentPageContent = pageData?.content || '';
+      const currentContentString = typeof currentPageContent === 'string' ? currentPageContent : JSON.stringify(currentPageContent);
+
+      diffResult = await calculateDiff(contentString, currentContentString);
+      console.log("✅ VERSION SERVER: Diff calculated:", {
+        added: diffResult.added,
+        removed: diffResult.removed,
+        hasChanges: diffResult.added > 0 || diffResult.removed > 0
+      });
+    } catch (diffError) {
+      console.error("🔴 VERSION SERVER: Error calculating diff (non-fatal):", diffError);
+    }
+
+    // Prepare version data with diff information
     const versionData = {
       content: contentString,
+      title: pageData?.title || 'Untitled',
       createdAt: now,
       userId: data.userId,
       username: data.username,
       previousVersionId: currentVersionId || null,
-      groupId: data.groupId || null
+      groupId: data.groupId || null,
+
+      // UNIFIED VERSION SYSTEM: Include diff data in version
+      diff: diffResult ? {
+        added: diffResult.added || 0,
+        removed: diffResult.removed || 0,
+        hasChanges: (diffResult.added > 0 || diffResult.removed > 0) || isNewPage
+      } : {
+        added: 0,
+        removed: 0,
+        hasChanges: isNewPage
+      },
+
+      // Rich diff preview for UI display
+      diffPreview: diffResult?.preview || {
+        beforeContext: '',
+        addedText: isNewPage ? contentString.substring(0, 200) : '',
+        removedText: '',
+        afterContext: '',
+        hasAdditions: isNewPage || (diffResult?.added > 0),
+        hasRemovals: diffResult?.removed > 0
+      },
+
+      // Metadata
+      isNewPage: isNewPage,
+      isNoOp: false
     };
 
     console.log('🔵 VERSION SERVER: Creating new version document', {
@@ -107,24 +150,7 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
     const versionsRef = pageRef.collection("versions");
     const versionRef = await versionsRef.add(versionData);
     
-    console.log("✅ VERSION SERVER: Created new version with ID:", versionRef.id);
-
-    // Calculate diff data BEFORE updating the page
-    let diffResult = null;
-    try {
-      const { calculateDiff } = await import('../../utils/diffService');
-      const currentPageContent = pageData?.content || '';
-      const currentContentString = typeof currentPageContent === 'string' ? currentPageContent : JSON.stringify(currentPageContent);
-      
-      diffResult = await calculateDiff(contentString, currentContentString);
-      console.log("✅ VERSION SERVER: Diff calculated:", {
-        added: diffResult.added,
-        removed: diffResult.removed,
-        hasChanges: diffResult.added > 0 || diffResult.removed > 0
-      });
-    } catch (diffError) {
-      console.error("🔴 VERSION SERVER: Error calculating diff (non-fatal):", diffError);
-    }
+    console.log("✅ VERSION SERVER: Created new version with ID:", versionRef.id, "with diff data");
 
     // Update the page document with the new current version and content
     const pageUpdateData = {

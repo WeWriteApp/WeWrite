@@ -1,7 +1,7 @@
 "use client";
 
 import React, { use } from 'react';
-import PageView from '../../../components/pages/PageView';
+import VersionDetailView from '../../../components/pages/VersionDetailView';
 
 export default function PageVersionView({ params }: { params: Promise<{ id: string, versionId: string }> | { id: string, versionId: string } }) {
   // Handle both Promise and object params
@@ -17,9 +17,8 @@ export default function PageVersionView({ params }: { params: Promise<{ id: stri
   const { id, versionId } = unwrappedParams;
 
   return (
-    <PageView
-      params={{ id }}
-      showVersion={true}
+    <VersionDetailView
+      pageId={id}
       versionId={versionId}
     />
   );

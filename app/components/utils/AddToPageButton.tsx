@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Plus, X, Quote } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '../ui/dialog';
+import Modal from '../ui/modal';
 import { useUnifiedSearch, SEARCH_CONTEXTS } from '../../hooks/useUnifiedSearch';
 import SearchResultsDisplay from '../search/SearchResultsDisplay';
 
@@ -298,23 +298,13 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
         </Button>
       )}
 
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent
-          className="sm:max-w-md max-h-[80vh] w-[95vw] sm:w-full overflow-hidden flex flex-col rounded-lg border-theme-strong bg-card animate-in fade-in-0 zoom-in-95 duration-300 px-4 sm:px-6 py-4 sm:py-6"
-          onKeyDown={handleKeyDown}
-          aria-describedby="add-to-page-description"
-        >
-          <DialogClose asChild>
-            <Button variant="outline" size="icon" className="absolute right-4 top-4">
-              <X className="h-4 w-4" />
-              <span className="sr-only">Close</span>
-            </Button>
-          </DialogClose>
-          <DialogHeader>
-            <DialogTitle>
-              {showSuccess ? 'Page Added Successfully' : 'Add this page to another page'}
-            </DialogTitle>
-          </DialogHeader>
+      <Modal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title={showSuccess ? 'Page Added Successfully' : 'Add this page to another page'}
+        className="sm:max-w-md max-h-[80vh] w-[95vw] sm:w-full overflow-hidden flex flex-col rounded-lg border-theme-strong bg-card"
+        showCloseButton={true}
+      >
 
           {showSuccess ? (
             // Success state
@@ -361,7 +351,7 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
                 <AddToPageSearch onSelect={handleAddToPage} />
               </div>
 
-              <DialogFooter className="mt-4 pt-4 border-t border-border dark:border-neutral-700">
+              <div className="mt-4 pt-4 border-t border-border dark:border-neutral-700">
                 <Button
                   onClick={handleInsert}
                   disabled={!selectedPage || isAdding}
@@ -379,11 +369,10 @@ const AddToPageButton: React.FC<AddToPageButtonProps> = ({
                     'Add Content'
                   )}
                 </Button>
-              </DialogFooter>
+              </div>
             </>
           )}
-        </DialogContent>
-      </Dialog>
+      </Modal>
     </>
   );
 };

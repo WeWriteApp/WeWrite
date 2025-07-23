@@ -1,31 +1,98 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initAdmin } from '../../firebase/admin';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import { getCollectionName } from '../../utils/environmentConfig';
+
+// Initialize Firebase Admin SDK with unique app name for recent edits
+let recentEditsApp;
+try {
+  // Try to get existing app first
+  recentEditsApp = getApps().find(app => app.name === 'recent-edits-app');
+
+  if (!recentEditsApp) {
+    // Parse the service account JSON from environment (it's base64 encoded)
+    const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
+    const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
+    const serviceAccount = JSON.parse(decodedJson);
+    console.log('[Recent Edits Admin SDK] Initializing with project:', serviceAccount.project_id);
+    console.log('[Recent Edits Admin SDK] Client email:', serviceAccount.client_email);
+
+    recentEditsApp = initializeApp({
+      credential: cert({
+        projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
+        clientEmail: serviceAccount.client_email,
+        privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')})}, 'recent-edits-app');
+    console.log('[Recent Edits Admin SDK] Initialized successfully');
+  } else {
+    console.log('[Recent Edits Admin SDK] Using existing app');
+  }
+} catch (error) {
+  console.error('[Recent Edits Admin SDK] Initialization failed:', error);
+  throw error;
+}
+
+const adminDb = getFirestore(recentEditsApp);
+
+// Simple in-memory cache for recent edits to reduce Firebase costs
+const recentEditsCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 5000; // 5 second cache for debugging
+
+/**
+ * UNIFIED VERSION SYSTEM: Recent Edits API
+ *
+ * This API now uses the unified version system instead of activities.
+ * It queries versions from pages/{pageId}/versions subcollections to get recent edits.
+ */
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 20); // REDUCED LIMIT FOR COST OPTIMIZATION
     const includeOwn = searchParams.get('includeOwn') === 'true';
     const followingOnly = searchParams.get('followingOnly') === 'true';
-    const filterToUser = searchParams.get('filterToUser'); // NEW: Filter to specific user
-    const cursor = searchParams.get('cursor'); // For pagination
+    const filterToUser = searchParams.get('filterToUser');
+    const cursor = searchParams.get('cursor');
 
-    // Initialize Firebase Admin
-    const adminApp = initAdmin();
-    const db = adminApp.firestore();
+    // Create cache key with version to force cache invalidation
+    const cacheKey = `recent-edits-v2:${userId}:${limit}:${includeOwn}:${followingOnly}:${filterToUser}:${cursor}`;
 
-    // Build query for recently modified pages
-    let pagesQuery = db.collection(getCollectionName('pages'))
-      .orderBy('lastModified', 'desc');
+    // TEMPORARILY DISABLE CACHE FOR DEBUGGING
+    console.log('🔍 [RECENT_EDITS] Cache disabled for debugging');
+    // const cached = recentEditsCache.get(cacheKey);
+    // if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+    //   console.log('🚀 COST OPTIMIZATION: Returning cached recent edits');
+    //   return NextResponse.json(cached.data);
+    // }
 
-    // If filtering to a specific user, add that filter
+    // Use the same Firebase Admin instance as my-pages API
+    const db = adminDb;
+
+    console.log('🔄 UNIFIED VERSION SYSTEM: Fetching recent edits from pages with versions');
+
+    // UNIFIED VERSION SYSTEM: First get recently modified pages, then get their latest versions
+    // This avoids the need for complex collectionGroup indexes
+    let pagesQuery;
+
+    // Use the EXACT same query structure as my-pages API
     if (filterToUser) {
-      pagesQuery = pagesQuery.where('userId', '==', filterToUser);
-    }
+      console.log(`🔍 [RECENT_EDITS] Filtering to user: ${filterToUser}`);
+      console.log(`🔍 [RECENT_EDITS] Collection name: ${getCollectionName('pages')}`);
+      console.log(`🔍 [RECENT_EDITS] Limit: ${limit * 3}`);
 
-    pagesQuery = pagesQuery.limit(limit * 3); // Get more to account for filtering
+      // EXACT same query as my-pages API that works
+      pagesQuery = db.collection(getCollectionName('pages'))
+        .where('userId', '==', filterToUser)
+        .where('deleted', '!=', true) // Filter out deleted pages (includes pages without deleted field)
+        .orderBy('deleted') // Required for != queries
+        .orderBy('lastModified', 'desc')
+        .limit(limit * 3); // Get more to account for filtering
+    } else {
+      // For general recent edits, use a simpler query
+      pagesQuery = db.collection(getCollectionName('pages'))
+        .orderBy('lastModified', 'desc')
+        .limit(limit * 3); // Get more to account for filtering
+    }
 
     // Add cursor for pagination
     if (cursor) {
@@ -42,110 +109,203 @@ export async function GET(request: NextRequest) {
       pagesQuery = pagesQuery.where('isPublic', '==', true);
     }
 
-    const snapshot = await pagesQuery.get();
-    const pages = snapshot.docs.map(doc => ({
+    console.log(`🔍 [RECENT_EDITS] Executing query...`);
+    const pagesSnapshot = await pagesQuery.get();
+    console.log(`🔍 [RECENT_EDITS] Query returned ${pagesSnapshot.size} pages`);
+
+    if (pagesSnapshot.empty) {
+      console.log(`📊 UNIFIED VERSION SYSTEM: No pages found${filterToUser ? ` for user ${filterToUser}` : ''}`);
+
+      // If filtering by user and no pages found, let's check if any pages exist for this user
+      if (filterToUser) {
+        const debugQuery = db.collection(getCollectionName('pages')).where('userId', '==', filterToUser).limit(1);
+        const debugSnapshot = await debugQuery.get();
+        console.log(`🔍 [DEBUG] User ${filterToUser} has ${debugSnapshot.size} pages in database`);
+
+        if (!debugSnapshot.empty) {
+          const samplePage = debugSnapshot.docs[0].data();
+          console.log(`🔍 [DEBUG] Sample page data:`, {
+            id: debugSnapshot.docs[0].id,
+            userId: samplePage.userId,
+            title: samplePage.title,
+            lastModified: samplePage.lastModified
+          });
+        }
+      }
+
+      return NextResponse.json({
+        edits: [],
+        hasMore: false,
+        nextCursor: null,
+        total: 0,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const pages = pagesSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
 
+    console.log(`📊 UNIFIED VERSION SYSTEM: Found ${pages.length} pages, fetching their latest versions`);
+
     // Enhanced debug logging
-    console.log(`🔍 Recent edits query: Found ${pages.length} pages from collection: ${getCollectionName('pages')}`);
+    console.log(`📊 UNIFIED VERSION SYSTEM: Found ${pages.length} pages`);
     if (filterToUser) {
-      console.log(`🔍 Filtering to user: ${filterToUser}`);
+      console.log(`🔍 Filtering to user: ${filterToUser} (already applied at DB level)`);
     }
 
-    // Log first 10 pages for debugging with more detail
-    const debugPages = pages.slice(0, 10).map(p => {
-      const lastModifiedDate = p.lastModified?.toDate ? p.lastModified.toDate() : new Date(p.lastModified);
-      const daysSinceModified = p.lastModified ? (new Date().getTime() - lastModifiedDate.getTime()) / (24 * 60 * 60 * 1000) : null;
+    // UNIFIED VERSION SYSTEM: Process pages and get their latest versions
+    const validEdits: any[] = [];
 
-      return {
-        id: p.id,
-        title: p.title,
-        userId: p.userId,
-        lastModified: p.lastModified?.toDate ? p.lastModified.toDate().toISOString() : p.lastModified,
-        daysSinceModified: daysSinceModified?.toFixed(2),
-        hasLastDiff: !!p.lastDiff,
-        lastDiffHasChanges: p.lastDiff?.hasChanges,
-        deleted: p.deleted
-      };
-    });
-    console.log('🔍 Top 10 pages by lastModified:', debugPages);
+    for (const page of pages) {
+      // Filter out deleted pages
+      if (page.deleted === true) {
+        continue;
+      }
 
-    // Filter pages to only include those with actual edits
-    let filteredPages = pages
-      .filter(page => page.deleted !== true) // Remove deleted pages
-      .filter(page => {
-        // For recent edits, we want pages that have been modified recently
-        // Be more inclusive - show pages that have been modified in the last 7 days
-        if (!page.lastModified) return false;
+      // User filter already applied at DB level when filterToUser is set
 
-        const lastModifiedDate = page.lastModified.toDate ? page.lastModified.toDate() : new Date(page.lastModified);
-        const daysSinceModified = (new Date().getTime() - lastModifiedDate.getTime()) / (24 * 60 * 60 * 1000);
+      // Apply visibility filter
+      if (!userId && !page.isPublic) {
+        continue;
+      }
 
-        // Show pages modified in the last 30 days (more lenient for debugging)
-        const isRecentlyModified = daysSinceModified <= 30;
+      if (userId && !page.isPublic && page.userId !== userId) {
+        continue;
+      }
 
-        // Also include pages with explicit change tracking
-        const hasTrackedChanges = page.lastDiff?.hasChanges === true;
+      // Apply own edits filter
+      if (!includeOwn && userId && page.userId === userId && !filterToUser) {
+        continue;
+      }
 
-        console.log(`🔍 Recent edits filter: ${page.id} - ${page.title}`, {
-          lastModified: lastModifiedDate.toISOString(),
-          daysSinceModified: daysSinceModified.toFixed(2),
-          isRecentlyModified,
-          hasTrackedChanges,
-          included: isRecentlyModified || hasTrackedChanges
-        });
+      // Check if page is recent (within 7 days)
+      const lastModifiedDate = page.lastModified?.toDate ? page.lastModified.toDate() : new Date(page.lastModified);
+      const daysSinceModified = (new Date().getTime() - lastModifiedDate.getTime()) / (24 * 60 * 60 * 1000);
 
-        return isRecentlyModified || hasTrackedChanges;
-      })
-      .filter(page => {
-        // Apply visibility filter
-        if (!userId) return page.isPublic;
-        return page.isPublic || page.userId === userId;
-      });
+      if (daysSinceModified <= 7) {
+        // Try to get the latest version for this page
+        try {
+          const versionsQuery = db.collection(getCollectionName('pages'))
+            .doc(page.id)
+            .collection('versions')
+            .orderBy('createdAt', 'desc')
+            .limit(1);
 
-    // Apply own edits filter (skip if filtering to specific user)
-    if (!includeOwn && userId && !filterToUser) {
-      filteredPages = filteredPages.filter(page => page.userId !== userId);
+          const versionSnapshot = await versionsQuery.get();
+
+          if (!versionSnapshot.empty) {
+            const latestVersion = versionSnapshot.docs[0];
+            const versionData = latestVersion.data();
+
+            validEdits.push({
+              id: page.id,
+              title: page.title || versionData.title || 'Untitled',
+              userId: page.userId || versionData.userId,
+              username: page.username || versionData.username || 'Anonymous',
+              displayName: page.displayName,
+              lastModified: versionData.createdAt || page.lastModified,
+              isPublic: page.isPublic || false,
+              totalPledged: page.totalPledged || 0,
+              pledgeCount: page.pledgeCount || 0,
+
+              // Version-specific data (replaces lastDiff)
+              lastDiff: versionData.diff || {
+                added: 0,
+                removed: 0,
+                hasChanges: false
+              },
+              diffPreview: versionData.diffPreview,
+              versionId: latestVersion.id,
+              isNewPage: versionData.isNewPage || false,
+              source: 'version'
+            });
+          } else {
+            // Fallback to page data if no versions found
+            validEdits.push({
+              id: page.id,
+              title: page.title || 'Untitled',
+              userId: page.userId,
+              username: page.username || 'Anonymous',
+              displayName: page.displayName,
+              lastModified: page.lastModified?.toDate ? page.lastModified.toDate().toISOString() : page.lastModified,
+              isPublic: page.isPublic || false,
+              totalPledged: page.totalPledged || 0,
+              pledgeCount: page.pledgeCount || 0,
+
+              // Fallback to page lastDiff
+              lastDiff: page.lastDiff || {
+                added: 0,
+                removed: 0,
+                hasChanges: false
+              },
+              source: 'page_fallback'
+            });
+          }
+        } catch (error) {
+          console.warn(`Error fetching versions for page ${page.id}:`, error);
+          // Continue with page data as fallback
+          validEdits.push({
+            id: page.id,
+            title: page.title || 'Untitled',
+            userId: page.userId,
+            username: page.username || 'Anonymous',
+            displayName: page.displayName,
+            lastModified: page.lastModified?.toDate ? page.lastModified.toDate().toISOString() : page.lastModified,
+            isPublic: page.isPublic || false,
+            totalPledged: page.totalPledged || 0,
+            pledgeCount: page.pledgeCount || 0,
+            lastDiff: page.lastDiff || {
+              added: 0,
+              removed: 0,
+              hasChanges: false
+            },
+            source: 'page_error_fallback'
+          });
+        }
+      }
     }
 
     // Apply following filter (placeholder - would need to fetch followed pages)
     if (followingOnly && userId) {
       // TODO: Implement following filter when needed
       // For now, just return empty array
-      filteredPages = [];
+      validEdits.length = 0;
     }
 
-    // Transform to simple format and limit to requested amount
-    const edits = filteredPages
-      .slice(0, limit)
-      .map(page => ({
-        id: page.id,
-        title: page.title || 'Untitled',
-        userId: page.userId,
-        username: page.username || 'Anonymous',
-        displayName: page.displayName,
-        lastModified: page.lastModified?.toDate ? page.lastModified.toDate().toISOString() : page.lastModified,
-        isPublic: page.isPublic || false,
-        totalPledged: page.totalPledged || 0,
-        pledgeCount: page.pledgeCount || 0,
-        lastDiff: page.lastDiff
-      }));
+    // Sort by last modified date and limit
+    const sortedEdits = validEdits
+      .sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime())
+      .slice(0, limit);
 
     // Determine if there are more items available
-    const hasMore = filteredPages.length >= limit;
+    const hasMore = validEdits.length >= limit;
 
     // Get the cursor for the next page (last item's lastModified date)
-    const nextCursor = edits.length > 0 ? edits[edits.length - 1].lastModified : null;
+    const nextCursor = sortedEdits.length > 0 ? sortedEdits[sortedEdits.length - 1].lastModified : null;
 
-    return NextResponse.json({
-      edits,
+    console.log(`📊 UNIFIED VERSION SYSTEM: Returning ${sortedEdits.length} recent edits from versions`);
+
+    const result = {
+      edits: sortedEdits,
       hasMore,
       nextCursor,
-      total: edits.length,
-      timestamp: new Date().toISOString()
-    });
+      total: sortedEdits.length,
+      timestamp: new Date().toISOString(),
+      source: 'unified_version_system' // Indicate this is using the new system
+    };
+
+    // TEMPORARILY DISABLE CACHE STORAGE FOR DEBUGGING
+    // recentEditsCache.set(cacheKey, { data: result, timestamp: Date.now() });
+
+    // Clean up old cache entries to prevent memory leaks
+    if (recentEditsCache.size > 100) {
+      const oldestKey = recentEditsCache.keys().next().value;
+      recentEditsCache.delete(oldestKey);
+    }
+
+    return NextResponse.json(result);
 
   } catch (error) {
     console.error('Error fetching recent edits:', error);

@@ -45,6 +45,7 @@ import { useAuth } from '../../providers/AuthProvider';
  * @param {Function} onInsertLink - Function to insert link (for edit mode)
  * @param {boolean} isSaving - Whether page is currently being saved
  * @param {boolean} hasUnsavedChanges - Whether there are unsaved changes
+ * @param {boolean} saveSuccess - Whether save was successful (for animation)
  */
 export default function PageFooter({
   page,
@@ -58,9 +59,30 @@ export default function PageFooter({
   onInsertLink,
   isSaving,
   hasUnsavedChanges,
+  saveSuccess = false,
   canEdit
 }) {
   const { user } = useAuth();
+
+  // Animation state for save card
+  const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+
+  // Handle save success animation
+  useEffect(() => {
+    if (saveSuccess && !hasUnsavedChanges) {
+      // Start the minimize animation
+      setIsAnimatingOut(true);
+
+      // Reset animation state after animation completes
+      const timer = setTimeout(() => {
+        setIsAnimatingOut(false);
+      }, 300); // Match the animation duration
+
+      return () => clearTimeout(timer);
+    } else {
+      setIsAnimatingOut(false);
+    }
+  }, [saveSuccess, hasUnsavedChanges]);
   // Removed old stats fetching logic - now handled by UnifiedStatsService in PageStats component
 
   // Allow PageFooter to render for new pages and bios (where page is null)
@@ -86,8 +108,10 @@ export default function PageFooter({
       )}
 
       {/* Save/Revert buttons - shown at top when there are unsaved changes */}
-      {canEdit && hasUnsavedChanges && (
-        <div className="mb-6 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+      {canEdit && (hasUnsavedChanges || isAnimatingOut) && (
+        <div className={`mb-6 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg transition-all duration-300 ease-out ${
+          isAnimatingOut ? 'opacity-0 scale-95 transform -translate-y-2' : 'opacity-100 scale-100 transform translate-y-0'
+        }`}>
           <div className="flex flex-col gap-3 w-full md:flex-row md:justify-center">
             <Button
               variant="default"

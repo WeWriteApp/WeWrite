@@ -113,11 +113,11 @@ const nextConfig = {
   // External packages for server components
   serverExternalPackages: [],
 
-  // Minimal logging for development - reduce HTTP request spam
+  // Enhanced logging for development - increase verbosity for debugging
   logging: {
     fetches: {
-      fullUrl: false,
-      hmrRefreshes: false,
+      fullUrl: true,
+      hmrRefreshes: true,
     },
   },
 
@@ -126,10 +126,10 @@ const nextConfig = {
     return [];
   },
 
-  // Custom server configuration to reduce request logging
+  // Custom server configuration for enhanced development logging
   serverRuntimeConfig: {
-    // Reduce server logging verbosity
-    logLevel: 'warn'
+    // Increase server logging verbosity for development
+    logLevel: process.env.NODE_ENV === 'development' ? 'debug' : 'warn'
   },
 
   // Security headers for Stripe Connect embedded components

@@ -17,7 +17,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../../providers/AuthProvider';
-import { toast } from 'sonner';
+import { toast } from '../ui/use-toast';
 
 interface PaymentMethod {
   id: string;

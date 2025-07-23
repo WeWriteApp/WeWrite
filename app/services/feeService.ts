@@ -30,9 +30,19 @@ class FeeService {
   }
 
   /**
-   * Initialize real-time listener for fee structure changes
+   * Initialize real-time listener for fee structure changes - DISABLED FOR COST OPTIMIZATION
    */
   private initializeListener() {
+    console.warn('🚨 COST OPTIMIZATION: Fee structure real-time listener disabled. Using static defaults.');
+
+    // Use static default instead of real-time listener
+    this.currentFeeStructure = {
+      platformFeePercentage: 0.0,
+      lastUpdated: new Date(),
+      updatedBy: 'system'
+    };
+
+    /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING FIREBASE COSTS
     const feeDocRef = doc(db, 'systemConfig', 'feeStructure');
 
     this.unsubscribe = onSnapshot(feeDocRef, (doc) => {

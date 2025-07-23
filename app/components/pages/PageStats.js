@@ -77,7 +77,7 @@ export default function PageStats({
   const accentColorValue = getAccentColorValue();
 
   const handleViewActivity = () => {
-    router.push(`/${pageId}/activity`);
+    router.push(`/${pageId}/versions`);
   };
 
   // Handle loading state
@@ -149,7 +149,7 @@ export default function PageStats({
       >
         <div className="flex items-center gap-2">
           <Clock className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm font-medium">Page activity</span>
+          <span className="text-sm font-medium">Recent Edits</span>
         </div>
 
         <div className="flex items-center gap-2">

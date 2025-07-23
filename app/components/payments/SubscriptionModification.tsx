@@ -22,7 +22,7 @@ import {
   TrendingDown,
   Edit3
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '../ui/use-toast';
 
 import { SUBSCRIPTION_TIERS, CUSTOM_TIER_CONFIG, getTierById, calculateTokensForAmount, validateCustomAmount } from '../../utils/subscriptionTiers';
 

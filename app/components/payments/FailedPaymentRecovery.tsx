@@ -15,7 +15,7 @@ import {
   CheckCircle,
   Copy
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '../ui/use-toast';
 
 
 interface FailedPaymentRecoveryProps {

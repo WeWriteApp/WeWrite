@@ -34,6 +34,20 @@ import LocationField from "../components/pages/LocationField";
 import { isExactDateFormat } from "../utils/dateUtils";
 
 /**
+ * Loading state component for new page creation
+ */
+function NewPageLoadingState({ title, isReply }: { title: string; isReply: boolean }) {
+  return (
+    <SlideUpPage>
+      <Head>
+        <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
+      </Head>
+      <NewPageSkeleton />
+    </SlideUpPage>
+  );
+}
+
+/**
  * Editor content node interface
  */
 interface EditorNode {
@@ -77,9 +91,15 @@ interface PageData {
  * This component emulates the exact same architecture as editing an existing page
  */
 function NewPageContent() {
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+
+  // CRITICAL: Check loading states BEFORE calling any other hooks to prevent hooks rule violations
+  if (authLoading) {
+    return <NewPageLoadingState title="" isReply={false} />;
+  }
+
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const isEmailVerified = user?.emailVerified ?? false;
   // Disabled to prevent duplicate analytics tracking - UnifiedAnalyticsProvider handles this
   // const { trackPageCreationFlow, trackEditingFlow } = useWeWriteAnalytics();
@@ -121,6 +141,9 @@ function NewPageContent() {
 
   // Track intended custom date from daily notes carousel
   const [intendedCustomDate, setIntendedCustomDate] = useState<string | null>(null);
+
+  // REMOVED: This was causing the component to get stuck in loading state
+  // The early return prevented useEffect from running to set isInitializing to false
 
   // Initialize custom date from URL parameters (for daily notes carousel)
   useEffect(() => {
@@ -891,6 +914,11 @@ function NewPageContent() {
     handleSave(editorContent || editorState, 'keyboard');
   }, [editorContent, editorState, title, location, user, isReply]);
 
+  // Handle link insertion request
+  const handleInsertLinkRequest = useCallback((triggerFn: () => void) => {
+    setLinkInsertionTrigger(() => triggerFn);
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -957,32 +985,9 @@ function NewPageContent() {
   // Get username for display
   const username = user?.username || user?.displayName || 'Anonymous';
 
-  // Show loading state while checking authentication
-  if (authLoading) {
-    return (
-      <SlideUpPage>
-        <Layout>
-          <Head>
-            <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
-          </Head>
-          <NewPageSkeleton />
-        </Layout>
-      </SlideUpPage>
-    );
-  }
-
-  // Show skeleton during initialization to prevent layout shift
+  // Show loading state if still initializing
   if (isInitializing) {
-    return (
-      <SlideUpPage>
-        <Layout>
-          <Head>
-            <title>{title || (isReply ? "New Reply" : "New Page")} - WeWrite</title>
-          </Head>
-          <NewPageSkeleton />
-        </Layout>
-      </SlideUpPage>
-    );
+    return <NewPageLoadingState title={title} isReply={isReply} />;
   }
 
   // Render using the exact same structure as SinglePageView
@@ -1029,7 +1034,7 @@ function NewPageContent() {
                     isNewPage={true}
                     placeholder="Start typing..."
                     showToolbar={false}
-                    onInsertLinkRequest={(triggerFn) => setLinkInsertionTrigger(() => triggerFn)}
+                    onInsertLinkRequest={handleInsertLinkRequest}
                     // Remove onSave and onCancel - handled by bottom save bar
                   />
 

@@ -18,9 +18,16 @@ interface RecentEdit {
   pledgeCount?: number;
   lastDiff?: {
     hasChanges: boolean;
-    preview?: string;
-    addedChars?: number;
-    removedChars?: number;
+    added?: number;
+    removed?: number;
+  };
+  diffPreview?: {
+    beforeContext: string;
+    addedText: string;
+    removedText: string;
+    afterContext: string;
+    hasAdditions: boolean;
+    hasRemovals: boolean;
   };
 }
 
@@ -59,6 +66,7 @@ export default function UserRecentEdits({
 
       // Fetch recent edits filtered to this specific user
       const params = new URLSearchParams({
+        userId: userId, // Pass userId for authentication context
         limit: limit.toString(),
         includeOwn: 'true', // Always include this user's edits
         followingOnly: 'false',
@@ -174,7 +182,7 @@ export default function UserRecentEdits({
               timestamp: edit.lastModified,
               lastModified: edit.lastModified,
               diff: edit.lastDiff,
-              diffPreview: edit.lastDiff?.preview,
+              diffPreview: edit.diffPreview, // Fixed: use edit.diffPreview directly
               isNewPage: !edit.lastDiff?.hasChanges,
               isPublic: edit.isPublic,
               totalPledged: edit.totalPledged,

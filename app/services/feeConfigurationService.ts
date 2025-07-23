@@ -109,11 +109,20 @@ export class FeeConfigurationService {
   }
 
   /**
-   * Subscribe to real-time fee structure changes
+   * Subscribe to real-time fee structure changes - DISABLED FOR COST OPTIMIZATION
    */
   static subscribeFeeChanges(
     callback: (feeStructure: ComprehensiveFeeStructure) => void
   ): Unsubscribe {
+    console.warn('🚨 COST OPTIMIZATION: Fee structure real-time subscription disabled. Using static defaults.');
+
+    // Immediately call with default structure
+    callback(DEFAULT_FEE_STRUCTURE);
+
+    // Return no-op unsubscribe
+    return () => {};
+
+    /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING FIREBASE COSTS
     return onSnapshot(
       doc(db, getCollectionName(this.COLLECTION_NAME), this.CONFIG_DOC_ID),
       (doc) => {
@@ -129,6 +138,7 @@ export class FeeConfigurationService {
         callback(DEFAULT_FEE_STRUCTURE);
       }
     );
+    */
   }
 
   /**

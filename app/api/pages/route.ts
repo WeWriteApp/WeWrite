@@ -8,6 +8,7 @@ import { getUserIdFromRequest, createApiResponse, createErrorResponse } from '..
 import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
 import logger from '../../utils/unifiedLogger';
+import { cachedQuery } from '../../utils/globalCache';
 import { cacheHelpers, invalidateCache, CACHE_TTL } from '../../utils/serverCache';
 
 interface PageData {
@@ -148,8 +149,12 @@ export async function GET(request: NextRequest) {
 
 // POST endpoint - Create a new page
 export async function POST(request: NextRequest) {
+  console.log('🔵 PAGE CREATION: POST endpoint called');
   try {
     const admin = getFirebaseAdmin();
+    if (!admin) {
+      return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin not initialized');
+    }
     const db = admin.firestore();
 
     const currentUserId = await getUserIdFromRequest(request);
@@ -211,6 +216,7 @@ export async function POST(request: NextRequest) {
     const pageRef = await db.collection(collectionName).add(pageData);
 
     // Create activity record with pre-computed diff data for new page
+    console.log('🔵 PAGE CREATION: Starting activity/version creation section');
     try {
       // Import the diff service
       const { calculateDiff } = await import('../../utils/diffService');
@@ -263,110 +269,95 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Create activity record directly in Firestore
-      const activityData = {
+      // UNIFIED VERSION SYSTEM: Create initial version for new page
+      console.log('🔵 PAGE CREATION: Starting version creation for new page', {
         pageId: pageRef.id,
-        pageName: pageData.title || 'Untitled',
+        contentLength: (contentString || '').length,
+        diffAdded: diffResult.added,
+        diffRemoved: diffResult.removed
+      });
+
+      const versionData = {
+        content: contentString || '',
+        title: pageData.title || 'Untitled',
+        createdAt: new Date().toISOString(),
         userId: currentUserId,
         username: username || 'Anonymous',
-        timestamp: admin.firestore.Timestamp.now(),
+        previousVersionId: null, // First version has no previous
+        groupId: groupId || null,
         diff: {
           added: diffResult.added,
           removed: diffResult.removed,
-          hasChanges: diffResult.added > 0 || diffResult.removed > 0 || true // Always true for new pages
+          hasChanges: true // Always true for new pages
         },
-        // Store the diff preview for rich activity display
-        diffPreview: diffResult.preview,
-        isNewPage: true
+        diffPreview: diffResult.preview || {
+          beforeContext: '',
+          addedText: (contentString || '').substring(0, 200),
+          removedText: '',
+          afterContext: '',
+          hasAdditions: true,
+          hasRemovals: false
+        },
+        isNewPage: true,
+        isNoOp: false
       };
 
-      // Store in activities collection
-      const activitiesCollectionName = getCollectionName('activities');
-      const activityRef = await db.collection(activitiesCollectionName).add(activityData);
+      console.log('🔵 PAGE CREATION: Version data prepared', {
+        hasContent: !!versionData.content,
+        hasTitle: !!versionData.title,
+        hasDiff: !!versionData.diff,
+        isNewPage: versionData.isNewPage
+      });
 
-      console.log("Created activity record for new page via API", {
-        activityId: activityRef.id,
+      // Create version in pages/{pageId}/versions subcollection
+      const pageVersionsRef = db.collection(getCollectionName('pages')).doc(pageRef.id).collection('versions');
+      console.log('🔵 PAGE CREATION: Creating version in subcollection', {
+        collectionPath: `${getCollectionName('pages')}/${pageRef.id}/versions`
+      });
+
+      const versionRef = await pageVersionsRef.add(versionData);
+
+      console.log("✅ UNIFIED VERSION: Created initial version for new page", {
+        versionId: versionRef.id,
         pageId: pageRef.id,
         added: diffResult.added,
         removed: diffResult.removed,
-        hasChanges: activityData.diff.hasChanges
+        hasChanges: versionData.diff.hasChanges
       });
-    } catch (activityError) {
-      console.error("Error creating activity record (non-fatal):", activityError);
-      // Don't fail page creation if activity recording fails
-    }
 
-    // Update backlinks index for new page
-    if (content) {
-      try {
-        console.log('🔗 Updating backlinks index for new page:', pageRef.id);
-        const { updateBacklinksIndex } = await import('../../firebase/database/backlinks');
-
-        // Parse content to extract links
-        let contentNodes = [];
-        if (contentString) {
-          try {
-            contentNodes = JSON.parse(contentString);
-          } catch (parseError) {
-            console.warn('Could not parse content for backlinks indexing:', parseError);
-          }
-        }
-
-        await updateBacklinksIndex(
-          pageRef.id,
-          pageData.title,
-          pageData.username,
-          contentNodes,
-          pageData.isPublic || false,
-          pageData.lastModified
-        );
-
-        console.log('✅ Backlinks index updated for new page:', pageRef.id);
-      } catch (backlinkError) {
-        console.error('⚠️ Error updating backlinks index for new page (non-fatal):', backlinkError);
-        // Don't fail page creation if backlinks update fails
-      }
+    } catch (error: any) {
+      console.error('❌ PAGE CREATION: Error creating new page or version:', error);
+      console.error('❌ PAGE CREATION: Error details:', {
+        message: error?.message || 'Unknown error',
+        stack: error?.stack || 'No stack trace',
+        pageId: pageRef?.id,
+        hasPageRef: !!pageRef
+      });
+      return createErrorResponse('INTERNAL_ERROR', 'Failed to create page');
     }
 
     return createApiResponse({
       id: pageRef.id,
-      ...pageData,
       message: 'Page created successfully'
-    }, null, 201);
+    });
 
-  } catch (error) {
-    console.error('Error creating page:', error);
+  } catch (error: any) {
+    console.error('Error in POST endpoint:', error);
     return createErrorResponse('INTERNAL_ERROR', 'Failed to create page');
   }
 }
 
 // PUT endpoint - Update an existing page
 export async function PUT(request: NextRequest) {
-  console.log('🔵 API: PUT /api/pages endpoint called');
-  logger.apiRequest('PUT', '/api/pages');
-
   try {
-    console.log('🔵 API: Initializing Firebase Admin');
-    logger.debug('Initializing Firebase Admin', undefined, 'PAGE_SAVE');
     const admin = getFirebaseAdmin();
     const db = admin.firestore();
 
-    console.log('🔵 API: Getting authenticated user');
-    logger.debug('Getting authenticated user', undefined, 'PAGE_SAVE');
     const currentUserId = await getUserIdFromRequest(request);
-
     if (!currentUserId) {
-      console.error('🔴 API: Authentication failed - no user found');
-      logger.error('Authentication failed - no user found', {
-        headers: Object.fromEntries(request.headers.entries()),
-        cookies: request.cookies.getAll()
-      }, 'PAGE_SAVE');
-      return createErrorResponse('UNAUTHORIZED', 'Authentication required. Please log in again.');
+      return createErrorResponse('UNAUTHORIZED', 'Authentication required');
     }
-    console.log('🔵 API: User authenticated', { userId: currentUserId });
 
-    console.log('🔵 API: Parsing request body');
-    logger.debug('Parsing request body', undefined, 'PAGE_SAVE');
     const body = await request.json();
     const { id, title, content, location, groupId, customDate } = body;
 
@@ -466,6 +457,9 @@ export async function PUT(request: NextRequest) {
       updateData.customDate = customDate;
     }
 
+    // Declare versionResult outside all blocks so it's accessible throughout the function
+    let versionResult;
+
     // If content is being updated, use the version saving system to create activity records
     if (content !== undefined) {
       logger.info('Content update detected - using version saving system', { pageId: id }, 'PAGE_SAVE');
@@ -511,7 +505,7 @@ export async function PUT(request: NextRequest) {
           vercelEnv: process.env.VERCEL_ENV
         });
 
-        const versionResult = await saveNewVersionServer(id, versionData);
+        versionResult = await saveNewVersionServer(id, versionData);
 
         console.log('🔵 API: saveNewVersion returned', {
           versionResult,

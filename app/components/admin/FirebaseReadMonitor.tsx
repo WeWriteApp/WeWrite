@@ -103,11 +103,17 @@ export const FirebaseReadMonitor: React.FC = () => {
   };
 
   useEffect(() => {
+    // DISABLED FOR COST OPTIMIZATION - was causing excessive Firebase reads
+    console.warn('🚨 COST OPTIMIZATION: Firebase read monitor auto-refresh disabled');
+
+    // Only refresh once on mount, no auto-refresh
     refreshStats();
-    
+
+    /* DISABLED FOR COST OPTIMIZATION
     // Auto-refresh every 30 seconds
     const interval = setInterval(refreshStats, 30000);
     return () => clearInterval(interval);
+    */
   }, []);
 
   const totalFirestoreReads = (subscriptionStats?.firestoreReads || 0) + (pageStats?.firestoreReads || 0);

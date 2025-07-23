@@ -10,7 +10,7 @@ import {
   ExternalLink,
   X
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '../ui/use-toast';
 
 import { useAuth } from '../../providers/AuthProvider';
 interface FailedPaymentNotificationProps {

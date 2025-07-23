@@ -3,11 +3,16 @@ import { createApiResponse, createErrorResponse } from '../../auth-helper';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
 
+// AGGRESSIVE CACHING FOR USER PROFILES - MAJOR COST OPTIMIZATION
+const userProfileCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 300000; // 5 minutes cache for user profiles
+
 /**
  * GET /api/users/profile?id=userId&username=username
- * 
+ *
  * Get user profile by ID or username
  * Supports both direct ID lookup and username lookup
+ * NOW WITH AGGRESSIVE CACHING TO REDUCE FIREBASE COSTS
  */
 export async function GET(request: NextRequest) {
   try {
@@ -17,6 +22,16 @@ export async function GET(request: NextRequest) {
 
     if (!id && !username) {
       return createErrorResponse('BAD_REQUEST', 'Either id or username parameter is required');
+    }
+
+    // Create cache key
+    const cacheKey = `profile:${id || username}`;
+
+    // Check cache first - MAJOR COST OPTIMIZATION
+    const cached = userProfileCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+      console.log('🚀 COST OPTIMIZATION: Returning cached user profile for', id || username);
+      return createApiResponse(cached.data);
     }
 
     const admin = initAdmin();
@@ -56,8 +71,8 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('NOT_FOUND', 'User not found');
     }
 
-    // Return user profile data
-    return createApiResponse({
+    // Prepare user profile data
+    const profileData = {
       uid: userId,
       id: userId,
       username: userData.username,
@@ -71,7 +86,19 @@ export async function GET(request: NextRequest) {
       profilePicture: userData.profilePicture || null,
       location: userData.location || null,
       website: userData.website || null,
-    });
+    };
+
+    // Cache the result - MAJOR COST OPTIMIZATION
+    userProfileCache.set(cacheKey, { data: profileData, timestamp: Date.now() });
+
+    // Clean up old cache entries to prevent memory leaks
+    if (userProfileCache.size > 200) {
+      const oldestKey = userProfileCache.keys().next().value;
+      userProfileCache.delete(oldestKey);
+    }
+
+    // Return user profile data
+    return createApiResponse(profileData);
 
   } catch (error) {
     console.error('Error fetching user profile:', error);

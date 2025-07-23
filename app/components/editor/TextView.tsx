@@ -51,7 +51,7 @@ import { usePage } from "../../contexts/PageContext";
 import { useLineSettings } from "../../contexts/LineSettingsContext";
 import { CONTENT_TYPES } from "../../utils/constants";
 import { PillLink } from "../utils/PillLink";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+// Removed Tooltip imports to avoid Radix UI ref composition issues
 import { getPageById } from "../../firebase/database";
 import { LINE_MODES } from '../../contexts/LineSettingsContext';
 import { motion, AnimatePresence, useScroll, useSpring, useInView, useTransform } from "framer-motion";

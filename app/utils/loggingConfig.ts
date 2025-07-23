@@ -8,32 +8,32 @@
 // Environment-based logging configuration
 export const LOGGING_CONFIG = {
   // Authentication debugging (very verbose)
-  AUTH_DEBUG: process.env.AUTH_DEBUG === 'true',
-  
+  AUTH_DEBUG: process.env.AUTH_DEBUG === 'true' || process.env.NODE_ENV === 'development',
+
   // Subscription debugging (verbose object dumps)
-  SUBSCRIPTION_DEBUG: process.env.SUBSCRIPTION_DEBUG === 'true',
-  
+  SUBSCRIPTION_DEBUG: process.env.SUBSCRIPTION_DEBUG === 'true' || process.env.NODE_ENV === 'development',
+
   // Activity API debugging
-  ACTIVITY_DEBUG: process.env.ACTIVITY_DEBUG === 'true',
-  
+  ACTIVITY_DEBUG: process.env.ACTIVITY_DEBUG === 'true' || process.env.NODE_ENV === 'development',
+
   // Page API debugging
-  PAGE_DEBUG: process.env.PAGE_DEBUG === 'true',
-  
+  PAGE_DEBUG: process.env.PAGE_DEBUG === 'true' || process.env.NODE_ENV === 'development',
+
   // General API debugging
-  API_DEBUG: process.env.API_DEBUG === 'true',
-  
+  API_DEBUG: process.env.API_DEBUG === 'true' || process.env.NODE_ENV === 'development',
+
   // Firebase operations debugging
-  FIREBASE_DEBUG: process.env.FIREBASE_DEBUG === 'true',
-  
+  FIREBASE_DEBUG: process.env.FIREBASE_DEBUG === 'true' || process.env.NODE_ENV === 'development',
+
   // Cache operations debugging
-  CACHE_DEBUG: process.env.CACHE_DEBUG === 'true',
-  
+  CACHE_DEBUG: process.env.CACHE_DEBUG === 'true' || process.env.NODE_ENV === 'development',
+
   // Performance monitoring
-  PERFORMANCE_DEBUG: process.env.PERFORMANCE_DEBUG === 'true',
-  
+  PERFORMANCE_DEBUG: process.env.PERFORMANCE_DEBUG === 'true' || process.env.NODE_ENV === 'development',
+
   // Development mode (enables some random sampling)
   IS_DEVELOPMENT: process.env.NODE_ENV === 'development',
-  
+
   // Production mode (minimal logging)
   IS_PRODUCTION: process.env.NODE_ENV === 'production'
 } as const;
@@ -52,9 +52,10 @@ export const CURRENT_LOG_LEVEL = (() => {
   if (LOGGING_CONFIG.IS_PRODUCTION) return LogLevel.WARN;
   if (process.env.LOG_LEVEL) {
     const level = process.env.LOG_LEVEL.toUpperCase();
-    return LogLevel[level as keyof typeof LogLevel] ?? LogLevel.INFO;
+    return LogLevel[level as keyof typeof LogLevel] ?? LogLevel.DEBUG;
   }
-  return LogLevel.INFO;
+  // Default to DEBUG for local development to increase verbosity
+  return LOGGING_CONFIG.IS_DEVELOPMENT ? LogLevel.DEBUG : LogLevel.INFO;
 })();
 
 /**

@@ -470,7 +470,13 @@ export const listenToPageById = (
   // Variables to store unsubscribe functions
   let unsubscribeVersion: Unsubscribe | null = null;
 
-  // Listen for changes to the page document
+  // DISABLED FOR COST OPTIMIZATION - Listen for changes to the page document
+  console.warn('🚨 COST OPTIMIZATION: Page real-time listener disabled. Use API polling instead.');
+
+  // Return no-op unsubscribe function
+  return () => {};
+
+  /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING MASSIVE FIREBASE COSTS
   const unsubscribe = onSnapshot(pageRef, async (docSnap) => {
     if (docSnap.exists()) {
       const pageData = { id: docSnap.id, ...docSnap.data() } as PageData;
@@ -615,6 +621,18 @@ export const listenToPageById = (
           return;
         }
 
+        // DISABLED FOR COST OPTIMIZATION - Listener for the version document
+        console.warn('🚨 COST OPTIMIZATION: Version real-time listener disabled.');
+
+        // Instead of real-time listener, just return static data or use API polling
+        onPageUpdate({
+          pageData,
+          versionData: null,
+          links: [],
+          message: "Real-time updates disabled for cost optimization. Refresh page to see latest content."
+        });
+
+        /* DISABLED FOR COST OPTIMIZATION - VERSION LISTENER SETUP
         // If we don't have content in the page document or parsing failed, get it from the version
         const versionCollectionRef = collection(db, getCollectionName("pages"), pageId, "versions");
         const versionRef = doc(versionCollectionRef, currentVersionId);
@@ -623,8 +641,9 @@ export const listenToPageById = (
         if (unsubscribeVersion) {
           unsubscribeVersion();
         }
+        */
 
-        // Listener for the version document - only set up if needed
+        /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING FIREBASE COSTS
         unsubscribeVersion = onSnapshot(versionRef, { includeMetadataChanges: true }, async (versionSnap) => {
           if (versionSnap.exists()) {
             const rawVersionData = versionSnap.data();
@@ -658,6 +677,9 @@ export const listenToPageById = (
             onPageUpdate({ error: "Error loading page content" });
           }
         });
+        */
+
+      /* DISABLED FOR COST OPTIMIZATION - REST OF THE FUNCTION
       } catch (error) {
         // Handle permission denied errors gracefully - this is expected for private pages
         if (error?.code === 'permission-denied') {
@@ -714,6 +736,7 @@ export const listenToPageById = (
       unsubscribeVersion();
     }
   };
+  */
 };
 
 /**

@@ -242,7 +242,10 @@ class UnifiedStatsService {
         () => off(liveReadersRef, 'value', liveReadersUnsub)
       );
 
-      // Firestore listener for pledge stats
+      // DISABLED FOR COST OPTIMIZATION - Firestore listener for pledge stats
+      console.warn('🚨 COST OPTIMIZATION: Pledge stats real-time listener disabled.');
+
+      /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING FIREBASE COSTS
       const pledgesQuery = query(
         collection(db, getCollectionName('pledges')),
         where('pageId', '==', pageId),
@@ -251,6 +254,7 @@ class UnifiedStatsService {
 
       const pledgesUnsub = onSnapshot(pledgesQuery, () => this.handleStatsUpdate(pageId, callback));
       unsubscribers.push(pledgesUnsub);
+      */
 
     } catch (error) {
       console.error('Error setting up page stats subscription:', error);
@@ -452,7 +456,7 @@ class UnifiedStatsService {
   }
 
   /**
-   * Fetch RTDB page stats
+   * Fetch page activity stats using unified version system
    */
   private async fetchRTDBPageStats(pageId: string): Promise<{
     recentChanges: number;
@@ -462,38 +466,120 @@ class UnifiedStatsService {
     totalReaders: number;
   }> {
     try {
-      const [
-        recentChangesSnapshot,
-        editorsSnapshot,
-        totalReadersSnapshot,
-        liveReadersSnapshot
-      ] = await Promise.all([
-        get(ref(this.rtdb, `pageStats/${pageId}/recentChanges`)),
-        get(ref(this.rtdb, `pageStats/${pageId}/editors`)),
-        get(ref(this.rtdb, `pageStats/${pageId}/totalReaders`)),
-        get(ref(this.rtdb, `liveReaders/${pageId}/count`))
-      ]);
+      // Use unified version system for recent changes data
+      const recentChangesData = await this.fetchRecentChangesFromVersions(pageId);
 
-      // Generate mock hourly data for sparklines (replace with real data if available)
-      const changeData = Array.from({ length: 24 }, () => Math.floor(Math.random() * 5));
+      // Still fetch live reader data from RTDB if available
+      let liveReaders = 0;
+      let totalReaders = 0;
+
+      if (this.rtdb) {
+        try {
+          const [
+            totalReadersSnapshot,
+            liveReadersSnapshot
+          ] = await Promise.all([
+            get(ref(this.rtdb, `pageStats/${pageId}/totalReaders`)),
+            get(ref(this.rtdb, `liveReaders/${pageId}/count`))
+          ]);
+
+          liveReaders = liveReadersSnapshot.exists() ? liveReadersSnapshot.val() : 0;
+          totalReaders = totalReadersSnapshot.exists() ? totalReadersSnapshot.val() : 0;
+        } catch (rtdbError) {
+          console.warn('🟡 RTDB not available for live reader stats, using fallback');
+        }
+      }
 
       return {
-        recentChanges: recentChangesSnapshot.exists() ? recentChangesSnapshot.val() : 0,
-        changeData,
-        editorsCount: editorsSnapshot.exists() ? editorsSnapshot.val() : 0,
-        liveReaders: liveReadersSnapshot.exists() ? liveReadersSnapshot.val() : 0,
-        totalReaders: totalReadersSnapshot.exists() ? totalReadersSnapshot.val() : 0
+        recentChanges: recentChangesData.recentChanges,
+        changeData: recentChangesData.changeData,
+        editorsCount: recentChangesData.editorsCount,
+        liveReaders,
+        totalReaders
       };
     } catch (error) {
-      console.error('Error fetching RTDB page stats:', error);
+      console.error('🔴 Error fetching page activity stats:', error);
+      return this.getFallbackRTDBStats();
+    }
+  }
+
+  /**
+   * Fetch recent changes data from unified version system
+   */
+  private async fetchRecentChangesFromVersions(pageId: string): Promise<{
+    recentChanges: number;
+    changeData: number[];
+    editorsCount: number;
+  }> {
+    try {
+      // Fetch recent edits for this specific page using the same API as homepage/user profile
+      const response = await fetch(`/api/recent-edits?pageId=${pageId}&limit=50&includeOwn=true&followingOnly=false`);
+
+      if (!response.ok) {
+        throw new Error(`Recent edits API failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const edits = data.edits || [];
+
+      // Filter edits for this specific page
+      const pageEdits = edits.filter(edit => edit.id === pageId);
+
+      // Count recent changes (last 24 hours)
+      const now = new Date();
+      const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+
+      const recentEdits = pageEdits.filter(edit => {
+        const editDate = new Date(edit.lastModified);
+        return editDate >= twentyFourHoursAgo;
+      });
+
+      // Generate hourly data for sparkline (last 24 hours)
+      const changeData = Array(24).fill(0);
+      recentEdits.forEach(edit => {
+        const editDate = new Date(edit.lastModified);
+        const hoursAgo = Math.floor((now.getTime() - editDate.getTime()) / (1000 * 60 * 60));
+        if (hoursAgo >= 0 && hoursAgo < 24) {
+          changeData[23 - hoursAgo]++; // Most recent hour at the end
+        }
+      });
+
+      // Count unique editors
+      const uniqueEditors = new Set(pageEdits.map(edit => edit.userId));
+
+      console.log(`📊 [UnifiedStats] Fetched recent changes for page ${pageId}:`, {
+        totalEdits: pageEdits.length,
+        recentEdits: recentEdits.length,
+        uniqueEditors: uniqueEditors.size,
+        changeData
+      });
+
+      return {
+        recentChanges: recentEdits.length,
+        changeData,
+        editorsCount: uniqueEditors.size
+      };
+    } catch (error) {
+      console.error('Error fetching recent changes from versions:', error);
       return {
         recentChanges: 0,
         changeData: Array(24).fill(0),
-        editorsCount: 0,
-        liveReaders: 0,
-        totalReaders: 0
+        editorsCount: 0
       };
     }
+  }
+
+  /**
+   * Fallback RTDB stats for when RTDB is unavailable or permission denied
+   */
+  private getFallbackRTDBStats() {
+    return {
+      recentChanges: 0,
+      changeData: Array(24).fill(0),
+      editorsCount: 0,
+      liveReaders: 0,
+      totalReaders: 0
+    };
   }
 
   /**
@@ -563,7 +649,7 @@ class UnifiedStatsService {
   }
 
   /**
-   * Fetch view stats (placeholder - integrate with existing view tracking)
+   * Fetch view stats using real database data
    */
   private async fetchViewStats(pageId: string): Promise<{
     totalViews: number;
@@ -571,12 +657,19 @@ class UnifiedStatsService {
     viewData: number[];
   }> {
     try {
-      // This would integrate with existing view tracking systems
-      // For now, return mock data
+      // Import the real view tracking functions
+      const { getPageViewsLast24Hours, getPageTotalViews } = await import('../firebase/pageViews');
+
+      // Get real view data from database
+      const [totalViews, viewsData] = await Promise.all([
+        getPageTotalViews(pageId),
+        getPageViewsLast24Hours(pageId)
+      ]);
+
       return {
-        totalViews: Math.floor(Math.random() * 1000),
-        viewsLast24h: Math.floor(Math.random() * 50),
-        viewData: Array.from({ length: 24 }, () => Math.floor(Math.random() * 10))
+        totalViews: totalViews || 0,
+        viewsLast24h: viewsData.total || 0,
+        viewData: viewsData.hourly || Array(24).fill(0)
       };
     } catch (error) {
       console.error('Error fetching view stats:', error);

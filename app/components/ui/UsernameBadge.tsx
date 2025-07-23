@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SubscriptionTierBadge } from './SubscriptionTierBadge';
 import { PillLink } from '../utils/PillLink';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
+// Simple tooltips using title attribute
 import { SubscriptionTiersModal } from '../modals/SubscriptionTiersModal';
 import { cn } from '../../lib/utils';
 
@@ -190,32 +190,26 @@ export function UsernameBadge({
   };
 
   const wrappedContent = (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="inline-flex items-center gap-1">
-            <span className={cn(
-              isInactive
-                ? "text-muted-foreground"
-                : "text-primary"
-            )}>
-              {isLoadingUsername ? 'Loading...' : displayUsername}
-            </span>
-            {showBadge && (
-              <SubscriptionTierBadge
-                tier={tier}
-                status={subscriptionStatus}
-                amount={subscriptionAmount}
-                size={size}
-              />
-            )}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{getTooltipText()}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <span
+      className="inline-flex items-center gap-1"
+      title={getTooltipText()}
+    >
+      <span className={cn(
+        isInactive
+          ? "text-muted-foreground"
+          : "text-primary"
+      )}>
+        {isLoadingUsername ? 'Loading...' : displayUsername}
+      </span>
+      {showBadge && (
+        <SubscriptionTierBadge
+          tier={tier}
+          status={subscriptionStatus}
+          amount={subscriptionAmount}
+          size={size}
+        />
+      )}
+    </span>
   );
 
   if (variant === 'pill') {

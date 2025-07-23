@@ -76,14 +76,21 @@ export class TokenService {
   }
 
   /**
-   * Listen to real-time token balance changes
+   * Listen to real-time token balance changes - DISABLED FOR COST OPTIMIZATION
+   * Use API polling instead of real-time listeners
    */
   static listenToTokenBalance(
     userId: string,
     callback: (balance: TokenBalance | null) => void
   ): Unsubscribe {
+    console.warn('🚨 COST OPTIMIZATION: Real-time token balance listener disabled. Use API polling instead.');
+
+    // Return a no-op unsubscribe function
+    return () => {};
+
+    /* DISABLED FOR COST OPTIMIZATION - WAS CAUSING MASSIVE FIREBASE COSTS
     const balanceRef = doc(db, getCollectionName(PAYMENT_COLLECTIONS.TOKEN_BALANCES), userId);
-const subscriptionRef = doc(db, getCollectionName("users"), userId, 'subscription', 'current');
+    const subscriptionRef = doc(db, getCollectionName("users"), userId, 'subscription', 'current');
 
     // Listen to both balance and subscription changes
     const unsubscribeBalance = onSnapshot(balanceRef, async (balanceDoc) => {
@@ -124,6 +131,7 @@ const subscriptionRef = doc(db, getCollectionName("users"), userId, 'subscriptio
     });
 
     return unsubscribeBalance;
+    */
   }
 
   /**

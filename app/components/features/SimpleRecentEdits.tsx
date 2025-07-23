@@ -10,7 +10,11 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuCheckboxItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
 } from '../ui/dropdown-menu';
+import { Switch } from '../ui/switch';
 import ActivityCard from '../activity/ActivityCard';
 import { useAuth } from '../../providers/AuthProvider';
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll';
@@ -48,7 +52,7 @@ export default function SimpleRecentEdits() {
   const [hasMore, setHasMore] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>({
-    includeOwn: false, // Hide own edits by default
+    includeOwn: true, // TEMPORARILY show own edits by default for debugging
     followingOnly: false
   });
 
@@ -181,41 +185,51 @@ export default function SimpleRecentEdits() {
             </Button>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem
-              onClick={() => updateFilter('followingOnly', false)}
-              className="relative flex cursor-default select-none items-center justify-between rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground"
-            >
-              <div className="flex items-center">
-                <Eye className="h-4 w-4 mr-2" />
-                All Recent Edits
-              </div>
-              {!filters.followingOnly && (
-                <Check className="h-4 w-4" />
-              )}
-            </DropdownMenuItem>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuLabel className="text-left">View Options</DropdownMenuLabel>
+            <DropdownMenuSeparator />
 
-            <DropdownMenuItem
-              onClick={() => updateFilter('followingOnly', true)}
-              className="relative flex cursor-default select-none items-center justify-between rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground"
-            >
-              <div className="flex items-center">
-                <Users className="h-4 w-4 mr-2" />
-                Following Only
+            <div className="space-y-2">
+              <div
+                className="flex items-center justify-between px-2 py-2 cursor-pointer hover:bg-accent rounded-sm"
+                onClick={() => updateFilter('followingOnly', false)}
+              >
+                <div className="flex items-center">
+                  <Eye className="h-4 w-4 mr-2" />
+                  <span className="text-sm">All Recent Edits</span>
+                </div>
+                <div className="h-4 w-4 rounded-full border-2 border-primary flex items-center justify-center">
+                  {!filters.followingOnly && (
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                  )}
+                </div>
               </div>
-              {filters.followingOnly && (
-                <Check className="h-4 w-4" />
-              )}
-            </DropdownMenuItem>
+
+              <div
+                className="flex items-center justify-between px-2 py-2 cursor-pointer hover:bg-accent rounded-sm"
+                onClick={() => updateFilter('followingOnly', true)}
+              >
+                <div className="flex items-center">
+                  <Users className="h-4 w-4 mr-2" />
+                  <span className="text-sm">Following Only</span>
+                </div>
+                <div className="h-4 w-4 rounded-full border-2 border-primary flex items-center justify-center">
+                  {filters.followingOnly && (
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                  )}
+                </div>
+              </div>
+            </div>
 
             <DropdownMenuSeparator />
 
-            <DropdownMenuCheckboxItem
-              checked={!filters.includeOwn}
-              onCheckedChange={(checked) => updateFilter('includeOwn', !checked)}
-            >
-              Hide my own edits
-            </DropdownMenuCheckboxItem>
+            <div className="flex items-center justify-between px-2 py-2">
+              <span className="text-sm">Hide my own edits</span>
+              <Switch
+                checked={!filters.includeOwn}
+                onCheckedChange={(checked) => updateFilter('includeOwn', !checked)}
+              />
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
       </SectionTitle>
@@ -244,7 +258,7 @@ export default function SimpleRecentEdits() {
               timestamp: edit.lastModified,
               lastModified: edit.lastModified,
               diff: edit.lastDiff,
-              diffPreview: edit.lastDiff?.preview,
+              diffPreview: edit.diffPreview, // Fixed: use edit.diffPreview directly
               isNewPage: !edit.lastDiff?.hasChanges,
               isPublic: edit.isPublic,
               totalPledged: edit.totalPledged,

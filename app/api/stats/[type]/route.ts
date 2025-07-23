@@ -17,14 +17,13 @@ import { unifiedStatsService } from '../../../services/UnifiedStatsService';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { type: string } }
+  { params }: { params: Promise<{ type: string }> }
 ) {
   const startTime = performance.now();
-  
-  try {
-    const { searchParams } = new URL(request.url);
-    const { type } = params;
+  const { searchParams } = new URL(request.url);
+  const { type } = await params;
 
+  try {
     console.log(`📊 [STATS_API] ${type.toUpperCase()} request:`, Object.fromEntries(searchParams));
 
     switch (type) {
@@ -121,8 +120,9 @@ export async function GET(
 
   } catch (error) {
     const loadTime = performance.now() - startTime;
-    
-    console.error(`📊 [STATS_API] Error in ${params.type}:`, error);
+
+    // Force recompilation - removing type from error message to fix scope issue
+    console.error(`📊 [STATS_API] Error:`, error);
     
     return NextResponse.json(
       {

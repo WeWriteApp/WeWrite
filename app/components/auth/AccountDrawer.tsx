@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Drawer } from 'vaul';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet';
 import { UserCircle, CreditCard, Settings, Plus, Minus, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import TokenAllocationBar from '../editor/TokenAllocationBar';
@@ -245,24 +245,21 @@ const AccountDrawer = ({
         </button>
       )}
 
-      <Drawer.Root
+      <Sheet
         open={isOpen}
         onOpenChange={(isOpen) => {
           setIsOpen(isOpen);
         }}
-        dismissible={true}
-        shouldScaleBackground={true}
       >
-        <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
-          <Drawer.Content
-            className="bg-background flex flex-col rounded-t-[10px] h-[90%] mt-24 fixed bottom-0 left-0 right-0 z-50 overscroll-contain"
-          >
-            {/* Interactive pull handle for dismiss */}
-            <div
-              className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted my-4 cursor-grab active:cursor-grabbing"
-              onTouchStart={(e) => e.stopPropagation()}
-            />
+        <SheetContent side="bottom" className="h-[90%] rounded-t-[10px]">
+          <SheetHeader>
+            <SheetTitle className="sr-only">Account Settings</SheetTitle>
+          </SheetHeader>
+
+          {/* Interactive pull handle for dismiss */}
+          <div
+            className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted mb-4 cursor-grab active:cursor-grabbing"
+          />
 
             <div className="p-4 bg-background flex-shrink-0">
               <div className="flex justify-between items-center mb-4">
@@ -604,9 +601,8 @@ const AccountDrawer = ({
                 </div>
               </section>
             </div>
-          </Drawer.Content>
-        </Drawer.Portal>
-      </Drawer.Root>
+        </SheetContent>
+      </Sheet>
 
       {/* Alert Modal */}
       <AlertModal

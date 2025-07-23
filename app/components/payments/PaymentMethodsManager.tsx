@@ -11,7 +11,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Badge } from '../ui/badge';
 import { useTheme } from '../../providers/ThemeProvider';
-import { toast } from 'sonner';
+import { toast } from '../ui/use-toast';
 
 import { getStripePublishableKey } from '../../utils/stripeConfig';
 

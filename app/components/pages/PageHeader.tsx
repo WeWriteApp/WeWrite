@@ -535,9 +535,9 @@ export default function PageHeader({
   const handleBackClick = (e: React.MouseEvent) => {
     e.preventDefault();
 
-    // Check if we're on an activity page
+    // Check if we're on a versions page (formerly activity page)
     const pathname = window.location.pathname;
-    if (pathname.includes('/activity')) {
+    if (pathname.includes('/versions') || pathname.includes('/activity')) {
       // Extract the page ID from the URL
       const pageId = pathname.split('/')[1];
       if (pageId) {
