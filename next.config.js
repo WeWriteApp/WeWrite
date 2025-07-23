@@ -76,7 +76,9 @@ const nextConfig = {
   experimental: {
     forceSwcTransforms: false,
     // Disable optimizations that can cause hydration issues in production
-    optimizePackageImports: process.env.NODE_ENV === 'development' ? ['slate', 'slate-react'] : false,
+    ...(process.env.NODE_ENV === 'development' && {
+      optimizePackageImports: ['slate', 'slate-react']
+    }),
   },
 
   // External packages for server components

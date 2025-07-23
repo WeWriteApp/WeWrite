@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAdminPermissions } from '../admin-auth-helper';
+import { checkAdminPermissions } from '../../admin-auth-helper';
 import { promises as fs } from 'fs';
 import path from 'path';
 
