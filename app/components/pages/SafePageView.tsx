@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { logDetailedError } from '../../utils/detailedErrorLogging';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { AlertCircle, RefreshCw } from 'lucide-react';
@@ -48,14 +49,15 @@ class SafePageViewErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('SafePageView Error Details:', {
-      error: error.message,
-      stack: error.stack,
-      errorInfo,
-      pageId: this.props.pageId,
-      errorCount: this.state.errorCount + 1
-    });
-    
+    // Use detailed error logging for comprehensive error information
+    logDetailedError(error, {
+      component: 'SafePageView',
+      props: { pageId: this.props.pageId },
+      state: { errorCount: this.state.errorCount + 1 },
+      location: typeof window !== 'undefined' ? window.location.pathname : 'unknown',
+      errorInfo
+    }, 'SafePageViewErrorBoundary');
+
     this.setState(prevState => ({
       errorCount: prevState.errorCount + 1
     }));

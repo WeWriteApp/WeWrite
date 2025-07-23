@@ -3,6 +3,8 @@ import "./globals.css"
 import "leaflet/dist/leaflet.css" // Leaflet CSS for maps
 import "./utils/init-logger" // Initialize logging system early
 import "./utils/errorSuppression" // Initialize error suppression early
+import "./utils/detailedErrorLogging" // Initialize detailed error logging
+import "./utils/developmentErrorOverride" // Initialize enhanced React error messages
 import Script from 'next/script'
 import ErrorBoundary from "./components/utils/ErrorBoundary"
 import NextJSErrorBoundary, { GlobalErrorHandler } from "./components/utils/NextJSErrorHandler"
