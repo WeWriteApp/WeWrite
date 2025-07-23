@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const includeOwn = searchParams.get('includeOwn') === 'true';
     const followingOnly = searchParams.get('followingOnly') === 'true';
+    const filterToUser = searchParams.get('filterToUser'); // NEW: Filter to specific user
     const cursor = searchParams.get('cursor'); // For pagination
 
     // Initialize Firebase Admin
@@ -17,8 +18,14 @@ export async function GET(request: NextRequest) {
 
     // Build query for recently modified pages
     let pagesQuery = db.collection(getCollectionName('pages'))
-      .orderBy('lastModified', 'desc')
-      .limit(limit * 3); // Get more to account for filtering
+      .orderBy('lastModified', 'desc');
+
+    // If filtering to a specific user, add that filter
+    if (filterToUser) {
+      pagesQuery = pagesQuery.where('userId', '==', filterToUser);
+    }
+
+    pagesQuery = pagesQuery.limit(limit * 3); // Get more to account for filtering
 
     // Add cursor for pagination
     if (cursor) {
@@ -41,18 +48,43 @@ export async function GET(request: NextRequest) {
       ...doc.data()
     }));
 
-    // Filter pages to only include those with actual edits (lastDiff.hasChanges = true)
+    // Debug logging
+    console.log(`🔍 Recent edits query: Found ${pages.length} pages`);
+    if (filterToUser) {
+      console.log(`🔍 Filtering to user: ${filterToUser}`);
+    }
+
+    // Log first few pages for debugging
+    const debugPages = pages.slice(0, 3).map(p => ({
+      id: p.id,
+      title: p.title,
+      userId: p.userId,
+      lastModified: p.lastModified?.toDate ? p.lastModified.toDate().toISOString() : p.lastModified,
+      hasLastDiff: !!p.lastDiff,
+      lastDiffHasChanges: p.lastDiff?.hasChanges
+    }));
+    console.log('🔍 Sample pages:', debugPages);
+
+    // Filter pages to only include those with actual edits
     let filteredPages = pages
       .filter(page => page.deleted !== true) // Remove deleted pages
-      .filter(page => page.lastDiff?.hasChanges === true) // Only pages with actual edits
+      .filter(page => {
+        // For recent edits, we want pages that have been modified recently
+        // Check if page has lastDiff with changes OR if it's been recently modified
+        const hasRecentChanges = page.lastDiff?.hasChanges === true;
+        const hasRecentModification = page.lastModified &&
+          (new Date().getTime() - new Date(page.lastModified.toDate ? page.lastModified.toDate() : page.lastModified).getTime()) < (30 * 24 * 60 * 60 * 1000); // 30 days
+
+        return hasRecentChanges || hasRecentModification;
+      })
       .filter(page => {
         // Apply visibility filter
         if (!userId) return page.isPublic;
         return page.isPublic || page.userId === userId;
       });
 
-    // Apply own edits filter
-    if (!includeOwn && userId) {
+    // Apply own edits filter (skip if filtering to specific user)
+    if (!includeOwn && userId && !filterToUser) {
       filteredPages = filteredPages.filter(page => page.userId !== userId);
     }
 

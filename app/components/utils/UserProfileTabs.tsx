@@ -9,7 +9,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ProfilePagesContext } from "../../providers/ProfilePageProvider";
-import SimpleRecentEdits from "../features/SimpleRecentEdits";
+import UserRecentEdits from "../features/UserRecentEdits";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import useSimplePages from "../../hooks/useSimplePages";
 import UsernameHistory from "../auth/UsernameHistory";
@@ -528,7 +528,11 @@ export default function UserProfileTabs({ profile }) {
                 : "hidden"
             }`}
           >
-            <SimpleRecentEdits />
+            <UserRecentEdits
+              userId={profile?.uid}
+              username={profile?.username || profile?.displayName}
+              limit={20}
+            />
           </TabsContent>
 
           <TabsContent
