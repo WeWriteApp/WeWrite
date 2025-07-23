@@ -65,9 +65,17 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
     if (!isNewPage && pageData?.content) {
       const currentContent = typeof pageData.content === 'string' ? pageData.content : JSON.stringify(pageData.content);
       isNoOpEdit = !hasContentChangedSync(contentString, currentContent);
-      
+
       if (isNoOpEdit) {
-        console.log("🔵 VERSION SERVER: No-op edit detected, skipping version creation");
+        console.log("🔵 VERSION SERVER: No-op edit detected, but still updating lastModified for recent edits tracking");
+
+        // CRITICAL FIX: Even for no-op edits, update lastModified for recent edits tracking
+        const now = new Date().toISOString();
+        await pageRef.update({
+          lastModified: now
+        });
+        console.log("✅ VERSION SERVER: Updated lastModified for no-op edit");
+
         return {
           success: true,
           versionId: currentVersionId,

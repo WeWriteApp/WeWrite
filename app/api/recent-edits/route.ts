@@ -54,8 +54,8 @@ export async function GET(request: NextRequest) {
       console.log(`🔍 Filtering to user: ${filterToUser}`);
     }
 
-    // Log first few pages for debugging with more detail
-    const debugPages = pages.slice(0, 5).map(p => {
+    // Log first 10 pages for debugging with more detail
+    const debugPages = pages.slice(0, 10).map(p => {
       const lastModifiedDate = p.lastModified?.toDate ? p.lastModified.toDate() : new Date(p.lastModified);
       const daysSinceModified = p.lastModified ? (new Date().getTime() - lastModifiedDate.getTime()) / (24 * 60 * 60 * 1000) : null;
 
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
         deleted: p.deleted
       };
     });
-    console.log('🔍 Sample pages with timing:', debugPages);
+    console.log('🔍 Top 10 pages by lastModified:', debugPages);
 
     // Filter pages to only include those with actual edits
     let filteredPages = pages
@@ -83,8 +83,8 @@ export async function GET(request: NextRequest) {
         const lastModifiedDate = page.lastModified.toDate ? page.lastModified.toDate() : new Date(page.lastModified);
         const daysSinceModified = (new Date().getTime() - lastModifiedDate.getTime()) / (24 * 60 * 60 * 1000);
 
-        // Show pages modified in the last 7 days, regardless of lastDiff status
-        const isRecentlyModified = daysSinceModified <= 7;
+        // Show pages modified in the last 30 days (more lenient for debugging)
+        const isRecentlyModified = daysSinceModified <= 30;
 
         // Also include pages with explicit change tracking
         const hasTrackedChanges = page.lastDiff?.hasChanges === true;

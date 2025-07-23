@@ -566,14 +566,20 @@ export async function PUT(request: NextRequest) {
       if (location !== undefined) {
         metadataUpdate.location = location;
       }
+      if (customDate !== undefined) {
+        metadataUpdate.customDate = customDate;
+      }
 
-      // Always ensure lastModified is updated for recent edits tracking
+      // CRITICAL FIX: Always ensure lastModified is updated for recent edits tracking
+      // This is especially important for no-op edits where version saving might skip the update
       metadataUpdate.lastModified = new Date().toISOString();
 
-      if (Object.keys(metadataUpdate).length > 0) {
-        console.log('🔵 API: Updating page metadata', { pageId: id, metadataUpdate });
-        await pageRef.update(metadataUpdate);
-      }
+      console.log('🔵 API: Updating page metadata (including lastModified)', {
+        pageId: id,
+        metadataUpdate,
+        isNoOpEdit: versionResult?.isNoOp
+      });
+      await pageRef.update(metadataUpdate);
 
       console.log('✅ Successfully saved version and updated metadata');
     } else {
