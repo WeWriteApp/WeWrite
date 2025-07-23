@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { getPageById } from "../firebase/database/pages";
 import { getDatabase, ref, get } from "firebase/database";
 import { rtdb } from "../firebase/config";
-// Dynamic import to prevent hydration mismatches
-const PageView = dynamic(() => import('../components/pages/PageView'), {
+// Import the client-only wrapper
+import ClientOnlyPageWrapper from '../components/pages/ClientOnlyPageWrapper';
+
+// Ultra-safe dynamic import to prevent all hydration issues
+const SafePageView = dynamic(() => import('../components/pages/SafePageView'), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center min-h-[50vh] p-4">
@@ -18,6 +21,57 @@ const PageView = dynamic(() => import('../components/pages/PageView'), {
     </div>
   )
 });
+
+// Error boundary component for PageView
+class PageViewErrorBoundary extends React.Component<
+  { children: React.ReactNode; pageId: string },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: React.ReactNode; pageId: string }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('PageView Error Boundary caught error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[50vh] p-4">
+          <div className="text-center max-w-md">
+            <h2 className="text-xl font-bold mb-4">Page Loading Error</h2>
+            <p className="text-muted-foreground mb-4">
+              There was an error loading this page. This might be due to a temporary issue.
+            </p>
+            <div className="space-y-2">
+              <Button
+                onClick={() => window.location.reload()}
+                className="w-full"
+              >
+                Refresh Page
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => window.history.back()}
+                className="w-full"
+              >
+                Go Back
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 import { SmartLoader } from '../components/ui/smart-loader';
 import { ErrorDisplay } from '../components/ui/error-display';
 import { Button } from '../components/ui/button';
@@ -181,8 +235,12 @@ export default function ContentPage({ params }: { params: Promise<{ id: string }
   }
 
   if (contentType === 'page') {
-    console.log('🔍 ContentPage: Rendering PageView for ID:', id);
-    return <PageView params={{ id }} />;
+    console.log('🔍 ContentPage: Rendering SafePageView for ID:', id);
+    return (
+      <ClientOnlyPageWrapper>
+        <SafePageView params={{ id }} />
+      </ClientOnlyPageWrapper>
+    );
   }
 
   if (contentType === 'not-found') {
