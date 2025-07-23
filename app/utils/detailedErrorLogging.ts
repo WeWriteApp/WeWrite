@@ -217,22 +217,23 @@ export function createDetailedErrorBoundary(componentName: string) {
 
     render() {
       if (this.state.hasError) {
-        return (
-          <div className="p-4 border border-red-200 bg-red-50 rounded-lg">
-            <h3 className="text-red-800 font-medium mb-2">
-              Component Error: {componentName}
-            </h3>
-            <p className="text-red-600 text-sm mb-2">
-              {this.state.error?.message || 'An unexpected error occurred'}
-            </p>
-            <button
-              onClick={() => this.setState({ hasError: false, error: undefined })}
-              className="px-3 py-1 bg-red-600 text-white rounded text-sm"
-            >
-              Try Again
-            </button>
-          </div>
-        );
+        return React.createElement('div', {
+          className: 'p-4 border border-red-200 bg-red-50 rounded-lg'
+        }, [
+          React.createElement('h3', {
+            key: 'title',
+            className: 'text-red-800 font-medium mb-2'
+          }, `Component Error: ${componentName}`),
+          React.createElement('p', {
+            key: 'message',
+            className: 'text-red-600 text-sm mb-2'
+          }, this.state.error?.message || 'An unexpected error occurred'),
+          React.createElement('button', {
+            key: 'button',
+            onClick: () => this.setState({ hasError: false, error: undefined }),
+            className: 'px-3 py-1 bg-red-600 text-white rounded text-sm'
+          }, 'Try Again')
+        ]);
       }
 
       return this.props.children;
