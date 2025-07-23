@@ -2,10 +2,7 @@
 const nextConfig = {
   reactStrictMode: process.env.NODE_ENV === 'development', // Disable in production to prevent hydration issues
 
-  // Force development mode for better error messages
-  env: {
-    FORCE_REACT_DEV_MODE: process.env.FORCE_REACT_DEV_MODE || 'true',
-  },
+
 
   // Maximum error visibility settings
   onDemandEntries: {
@@ -61,20 +58,8 @@ const nextConfig = {
         'process.env.ENABLE_VERBOSE_LOGGING': JSON.stringify('true'),
         'process.env.USE_DEV_AUTH': JSON.stringify(process.env.USE_DEV_AUTH || 'false'),
         'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
-        // Force React development mode for better error messages
-        '__DEV__': JSON.stringify(process.env.FORCE_REACT_DEV_MODE === 'true'),
-        '__REACT_DEV__': JSON.stringify(process.env.FORCE_REACT_DEV_MODE === 'true'),
       })
     );
-
-    // Force React development builds for better error messages
-    if (process.env.FORCE_REACT_DEV_MODE === 'true') {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'react': require.resolve('react/index.js'),
-        'react-dom': require.resolve('react-dom/index.js'),
-      };
-    }
 
     return config;
   },

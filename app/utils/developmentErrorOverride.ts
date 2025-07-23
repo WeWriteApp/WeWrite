@@ -151,30 +151,24 @@ function enhanceReactErrors(): void {
 }
 
 /**
- * Force React development mode error messages
+ * Setup React development tools for better error messages
  */
-function forceReactDevMode(): void {
+function setupReactDevTools(): void {
   if (typeof window === 'undefined') return;
 
-  // Try to force React into development mode for better error messages
+  // Setup React DevTools hook for better error messages
   try {
-    // Set React development flags
+    // Enable React DevTools if available
     (window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__ = (window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__ || {};
     (window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__.isDisabled = false;
-    
-    // Force development mode
-    if (typeof process !== 'undefined') {
-      (process as any).env = (process as any).env || {};
-      (process as any).env.NODE_ENV = 'development';
-    }
-    
-    // Set React development flags on window
+
+    // Set development flags for better error reporting
     (window as any).__DEV__ = true;
     (window as any).__REACT_DEV__ = true;
-    
-    console.log('🔧 Forced React development mode for enhanced error messages');
+
+    console.log('🔧 React development tools enabled for enhanced error messages');
   } catch (error) {
-    console.warn('Could not force React development mode:', error);
+    console.warn('Could not setup React development tools:', error);
   }
 }
 
@@ -227,9 +221,9 @@ export function initializeDevelopmentErrorOverrides(): void {
   if (typeof window === 'undefined') return;
 
   console.log('🔍 Initializing development error overrides...');
-  
+
   enhanceReactErrors();
-  forceReactDevMode();
+  setupReactDevTools();
   addHydrationErrorDetection();
   
   console.log('✅ Development error overrides initialized');
