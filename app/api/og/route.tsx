@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-// Set Edge runtime
+// Set Edge runtime for optimal performance
 export const runtime = 'edge';
 
 // Helper function to strip HTML and get plain text
@@ -102,8 +102,33 @@ export async function GET(request: Request) {
       hasTitle: !!title,
       hasAuthor: !!author,
       hasContent: !!content,
-      sponsors
+      sponsors,
+      url: request.url
     });
+
+    // Simple test for any ID to ensure basic functionality works
+    if (pageId === 'simple') {
+      console.log('🖼️ [OG] Simple test mode');
+      return new ImageResponse(
+        (
+          <div
+            style={{
+              backgroundColor: '#000',
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <div style={{ color: 'white', fontSize: 48 }}>
+              Simple Test ✅
+            </div>
+          </div>
+        ),
+        { width: 1200, height: 630 }
+      );
+    }
 
     // Simple test mode for debugging
     if (pageId === 'test') {
