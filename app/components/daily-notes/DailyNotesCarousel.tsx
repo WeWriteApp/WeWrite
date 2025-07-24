@@ -161,15 +161,25 @@ export default function DailyNotesCarousel({
     try {
       // Removed excessive cache invalidation that was causing infinite loops
 
-      // Calculate date range for the carousel
-      const startDate = dateRange[0]?.toISOString().split('T')[0];
-      const endDate = dateRange[dateRange.length - 1]?.toISOString().split('T')[0];
+      // Calculate date range for the carousel using local timezone
+      const formatLocalDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      const startDate = formatLocalDate(dateRange[0]);
+      const endDate = formatLocalDate(dateRange[dateRange.length - 1]);
+
+      // Get user's timezone for the API
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
       // Reduced logging to prevent terminal spam
       // console.log(`Daily notes: querying date range ${startDate} to ${endDate} (${dateRange.length} days)`);
 
-      // Call efficient daily notes API that groups pages by creation date
-      const response = await fetch(`/api/daily-notes?userId=${user?.uid}&startDate=${startDate}&endDate=${endDate}`)
+      // Call efficient daily notes API that groups pages by creation date with timezone
+      const response = await fetch(`/api/daily-notes?userId=${user?.uid}&startDate=${startDate}&endDate=${endDate}&timezone=${encodeURIComponent(userTimezone)}`)
 
       if (!response.ok) {
         throw new Error(`Failed to fetch daily notes: ${response.status}`)

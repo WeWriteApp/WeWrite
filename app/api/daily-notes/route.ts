@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const timezone = searchParams.get('timezone') || 'UTC'; // Default to UTC if not provided
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -43,7 +44,8 @@ export async function GET(request: NextRequest) {
 
     console.log(`[daily-notes API] Querying all pages for user ${userId} (will group by creation date)`, {
       startDate,
-      endDate
+      endDate,
+      timezone
     });
 
     const pagesSnapshot = await pagesQuery.get();
@@ -77,12 +79,18 @@ export async function GET(request: NextRequest) {
           normalizedCreatedAt = new Date(data.createdAt.seconds * 1000).toISOString();
         }
 
-        // Extract date from createdAt for grouping
+        // Extract date from createdAt for grouping using user's timezone
         let createdDate = null;
         if (normalizedCreatedAt) {
           try {
             const date = new Date(normalizedCreatedAt);
-            createdDate = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+            // Convert to user's timezone and format as YYYY-MM-DD
+            createdDate = date.toLocaleDateString('en-CA', {
+              timeZone: timezone,
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit'
+            }); // en-CA locale gives YYYY-MM-DD format
 
             // Debug logging for first few pages
             if (doc.id === '2FPdHEETzI9bQpQfUXos' || doc.id === 'A53fHCgw3Skn3tAhXkgP') {
@@ -91,6 +99,8 @@ export async function GET(request: NextRequest) {
                 rawCreatedAt: data.createdAt,
                 normalizedCreatedAt,
                 extractedDate: createdDate,
+                timezone: timezone,
+                utcDate: new Date(normalizedCreatedAt).toISOString().split('T')[0],
                 customDate: data.customDate
               });
             }
