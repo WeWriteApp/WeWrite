@@ -208,5 +208,21 @@
     "typescript": "^5.8.3",
     "util": "^0.12.5",
     "vercel": "^44.5.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "undici": ">=5.29.0",
+      "esbuild": ">=0.25.0"
+    },
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "react",
+        "react-dom"
+      ],
+      "allowedVersions": {
+        "react": "19",
+        "react-dom": "19"
+      }
+    }
   }
 }
