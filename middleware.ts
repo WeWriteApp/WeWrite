@@ -100,9 +100,32 @@ export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
   const path = url.pathname;
 
+  // DEBUG: Log all OG API requests
+  if (path.startsWith('/api/og')) {
+    console.log('🖼️ [MIDDLEWARE DEBUG] OG API request:', {
+      path,
+      method: request.method,
+      userAgent: request.headers.get('user-agent'),
+      origin: request.headers.get('origin'),
+      referer: request.headers.get('referer'),
+      cookies: Object.fromEntries(request.cookies.getAll().map(c => [c.name, c.value.substring(0, 20) + '...']))
+    });
+  }
+
   // Get authentication state and path requirements
   const auth = getAuthenticationState(request);
   const pathChecks = getPathChecks(path);
+
+  // DEBUG: Log path checks for OG API
+  if (path.startsWith('/api/og')) {
+    console.log('🖼️ [MIDDLEWARE DEBUG] Path checks for OG:', {
+      path,
+      isAccessiblePath: pathChecks.isAccessiblePath,
+      requiresAuth: pathChecks.requiresAuth,
+      requiresAdmin: pathChecks.requiresAdmin,
+      authState: auth
+    });
+  }
 
   // Debug logging for authentication issues
   if (path.startsWith("/auth/login")) {
@@ -125,13 +148,24 @@ export function middleware(request: NextRequest) {
   // Handle authentication redirects
   const authRedirect = handleAuthenticationRedirects(path, auth, pathChecks, request);
   if (authRedirect) {
+    if (path.startsWith('/api/og')) {
+      console.log('🖼️ [MIDDLEWARE DEBUG] Auth redirect triggered for OG:', authRedirect);
+    }
     return authRedirect;
   }
 
   // Handle admin access control
   const adminResponse = handleAdminAccess(path, pathChecks, auth, request);
   if (adminResponse) {
+    if (path.startsWith('/api/og')) {
+      console.log('🖼️ [MIDDLEWARE DEBUG] Admin response triggered for OG:', adminResponse);
+    }
     return adminResponse;
+  }
+
+  // DEBUG: Log successful pass-through for OG
+  if (path.startsWith('/api/og')) {
+    console.log('🖼️ [MIDDLEWARE DEBUG] OG request passed through successfully');
   }
 
   return NextResponse.next();
