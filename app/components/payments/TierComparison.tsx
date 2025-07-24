@@ -25,7 +25,7 @@ export function TierComparison({
 }: TierComparisonProps) {
   const { user } = useAuth();
   // Payments feature is now always enabled - no conditional rendering needed
-  const isPaymentsEnabled = true;
+  // Payments are always enabled - no feature flag needed
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

@@ -24,7 +24,7 @@ interface FooterLink {
 export default function SiteFooter({ className = "" }: SiteFooterProps) {
   const currentYear = new Date().getFullYear();
   // Payments feature is now always enabled
-  const isPaymentsEnabled = true;
+  // Payments are always enabled - no feature flag needed
 
   // Interactive footer text options
   const [madeWithIndex, setMadeWithIndex] = useState(0);
@@ -130,10 +130,10 @@ export default function SiteFooter({ className = "" }: SiteFooterProps) {
       external: true
     },
     {
-      href: isPaymentsEnabled ? "/settings/subscription" : "https://opencollective.com/wewrite-app",
+      href: "/settings/subscription",
       label: "Support us",
       icon: <Heart className="h-3 w-3" />,
-      external: !isPaymentsEnabled
+      external: false
     },
     {
       href: "/zRNwhNgIEfLFo050nyAT",

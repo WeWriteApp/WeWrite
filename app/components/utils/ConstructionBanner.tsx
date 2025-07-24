@@ -13,7 +13,7 @@ import { openExternalLink } from "../../utils/pwa-detection";
 export default function ConstructionBanner() {
   const { user } = useAuth();
   // Payments feature is now always enabled
-  const isPaymentsEnabled = true;
+  // Payments are always enabled - no feature flag needed
 
   // Only show for logged-in users
   if (!user) {
@@ -21,13 +21,8 @@ export default function ConstructionBanner() {
   }
 
   const handleSupportClick = () => {
-    if (isPaymentsEnabled) {
-      // Navigate to subscription page when payments are enabled
-      window.location.href = '/settings/subscription';
-    } else {
-      // Open OpenCollective in new tab when payments are disabled
-      openExternalLink('https://opencollective.com/wewrite-app', 'Construction Banner Support');
-    }
+    // Navigate to subscription page (payments are always enabled)
+    window.location.href = '/settings/subscription';
   };
 
   return (

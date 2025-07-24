@@ -31,8 +31,7 @@ export default function UserPage({ params }: UserPageProps) {
   const { id } = unwrappedParams;
   const router = useRouter();
   const { user } = useAuth();
-  // Payments feature is now always enabled
-  const isPaymentsEnabled = true;
+  // Payments are always enabled - no feature flag needed
 
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,7 +53,6 @@ export default function UserPage({ params }: UserPageProps) {
       try {
         console.warn('🔍 User page: Fetching user data', {
           id,
-          isPaymentsEnabled,
           currentAccountEmail: user?.email,
           currentAccountUid: user?.uid,
           timestamp: new Date().toISOString()
@@ -79,22 +77,17 @@ export default function UserPage({ params }: UserPageProps) {
         }
 
         if (userData) {
-          // Get user's subscription to check for supporter tier (only if payments enabled)
+          // Get user's subscription to check for supporter tier
           let subscription = null;
-          console.warn('🔍 User page: About to check payments enabled', { isPaymentsEnabled });
-          if (isPaymentsEnabled) {
-            console.warn('🔍 User page: Fetching subscription data for user', userId);
-            subscription = await fetchUserSubscription(userId);
-            console.warn('🔍 User profile subscription data:', {
-              userId,
-              subscription,
-              tier: subscription?.tier,
-              status: subscription?.status,
-              amount: subscription?.amount
-            });
-          } else {
-            console.warn('🔍 User page: Skipping subscription fetch - payments disabled');
-          }
+          console.warn('🔍 User page: Fetching subscription data for user', userId);
+          subscription = await fetchUserSubscription(userId);
+          console.warn('🔍 User profile subscription data:', {
+            userId,
+            subscription,
+            tier: subscription?.tier,
+            status: subscription?.status,
+            amount: subscription?.amount
+          });
 
           setProfile({
             uid: userId,
@@ -120,7 +113,7 @@ export default function UserPage({ params }: UserPageProps) {
     }
 
     fetchUser();
-  }, [id, router, isPaymentsEnabled]);
+  }, [id, router]);
 
   useEffect(() => {
     if (profile && profile.username) {

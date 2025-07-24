@@ -78,7 +78,7 @@ export function useUserEarnings(): { earnings: UserEarnings | null; loading: boo
     };
 
     fetchEarnings();
-  }, [user?.uid, paymentsEnabled]);
+  }, [user?.uid]);
 
   return { earnings, loading, error };
 }

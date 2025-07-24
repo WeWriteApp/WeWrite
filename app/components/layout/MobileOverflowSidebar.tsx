@@ -44,13 +44,13 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
   const [currentSection, setCurrentSection] = useState<string | null>(null)
   const [isRandomMenuOpen, setIsRandomMenuOpen] = useState(false)
   const { user } = useAuth();
-  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription, paymentsEnabled } = useSubscriptionWarning();
+  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription } = useSubscriptionWarning();
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
 
   // Calculate the most critical status from all settings sections (same logic as UnifiedSidebar)
   const getMostCriticalSettingsStatus = () => {
-    if (!paymentsEnabled) return null;
+    // Payments are always enabled
 
     // Check for warnings first (most critical)
     const hasSubscriptionWarning = hasActiveSubscription !== null && hasActiveSubscription === false;

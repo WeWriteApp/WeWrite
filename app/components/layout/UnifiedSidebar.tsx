@@ -166,13 +166,13 @@ function UnifiedSidebarContent({
   const router = useRouter();
   const pathname = usePathname();
   const editorContext = useContext(EditorContext);
-  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription, paymentsEnabled } = useSubscriptionWarning();
+  const { shouldShowWarning: shouldShowSubscriptionWarning, warningVariant, hasActiveSubscription } = useSubscriptionWarning();
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
 
   // Calculate the most critical status from all settings sections
   const getMostCriticalSettingsStatus = () => {
-    if (!paymentsEnabled) return null;
+    // Payments are always enabled
 
     // Check for warnings first (most critical)
     const hasSubscriptionWarning = hasActiveSubscription !== null && hasActiveSubscription === false;
@@ -197,7 +197,6 @@ function UnifiedSidebarContent({
   React.useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       console.log('[UnifiedSidebar] Subscription status:', {
-        paymentsEnabled,
         hasActiveSubscription,
         shouldShowSubscriptionWarning,
         warningVariant,
@@ -205,7 +204,7 @@ function UnifiedSidebarContent({
         criticalSettingsStatus
       });
     }
-  }, [paymentsEnabled, hasActiveSubscription, shouldShowSubscriptionWarning, warningVariant, bankSetupStatus.isSetup, criticalSettingsStatus]);
+  }, [hasActiveSubscription, shouldShowSubscriptionWarning, warningVariant, bankSetupStatus.isSetup, criticalSettingsStatus]);
 
   // Map feature is now always enabled
   const mapFeatureEnabled = true;

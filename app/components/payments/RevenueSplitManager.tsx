@@ -198,9 +198,7 @@ export default function RevenueSplitManager({
     );
   };
 
-  if (!isPaymentsEnabled) {
-    return null;
-  }
+  // Payments are always enabled - no feature flag check needed
 
   if (loading) {
     return (

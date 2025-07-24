@@ -43,7 +43,7 @@ interface ProrationPreview {
 export function SubscriptionModification({ subscription, onModificationSuccess }: SubscriptionModificationProps) {
   const { user } = useAuth();
   // Payments feature is now always enabled
-  const isPaymentsEnabled = true;
+  // Payments are always enabled - no feature flag needed
   
   const [selectedTier, setSelectedTier] = useState<string>('');
   const [customAmount, setCustomAmount] = useState<number>(60);
@@ -56,7 +56,7 @@ export function SubscriptionModification({ subscription, onModificationSuccess }
   const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Don't render if payments feature is disabled or no subscription
-  if (!isPaymentsEnabled || !subscription) {
+  if (!subscription) {
     return null;
   }
 
