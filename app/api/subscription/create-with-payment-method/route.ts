@@ -54,12 +54,78 @@ export async function POST(request: NextRequest) {
     // Get user's Stripe customer ID using environment-aware collection
     const userDoc = await adminDb.collection(getCollectionName('users')).doc(userId).get();
     const userData = userDoc.data();
-    const customerId = userData?.stripeCustomerId;
+    let customerId = userData?.stripeCustomerId;
 
+    // Verify customer exists in Stripe (handle deleted customers)
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId);
+        console.log(`[CREATE SUBSCRIPTION] Verified existing Stripe customer ${customerId} for user ${userId}`);
+      } catch (error) {
+        console.warn(`[CREATE SUBSCRIPTION] Stripe customer ${customerId} not found, will create new one:`, error.message);
+        customerId = null; // Force creation of new customer
+      }
+    }
+
+    // Create new customer if needed
     if (!customerId) {
-      return NextResponse.json({ 
-        error: 'No Stripe customer found for user' 
-      }, { status: 400 });
+      if (!userData) {
+        return NextResponse.json({
+          error: 'User not found in database'
+        }, { status: 404 });
+      }
+
+      const username = userData.username || 'Unknown User';
+      const email = userData.email || `${userId}@wewrite.dev`;
+
+      // Create new Stripe customer
+      const customer = await stripe.customers.create({
+        email: email,
+        description: `WeWrite user ${username} (${userId})`,
+        metadata: {
+          firebaseUID: userId,
+          username: username,
+          environment: process.env.NODE_ENV || 'development'
+        }
+      });
+
+      customerId = customer.id;
+
+      // Save customer ID to Firestore using environment-aware collection
+      await adminDb.collection(getCollectionName('users')).doc(userId).set({
+        stripeCustomerId: customerId
+      }, { merge: true });
+
+      // Log customer creation/recreation for audit trail
+      const isRecreation = !!userData?.stripeCustomerId;
+      await subscriptionAuditService.logEvent({
+        userId,
+        eventType: isRecreation ? 'subscription_updated' : 'subscription_created',
+        description: isRecreation
+          ? `Stripe customer recreated during subscription creation (previous customer deleted)`
+          : `Stripe customer created for subscription`,
+        entityType: 'subscription',
+        entityId: customerId,
+        afterState: {
+          stripeCustomerId: customerId,
+          email,
+          username
+        },
+        metadata: {
+          stripeCustomerId: customerId,
+          email,
+          username,
+          isRecreation,
+          reason: isRecreation ? 'Previous customer deleted from Stripe' : 'New customer for subscription',
+          tier,
+          amount
+        },
+        source: 'system',
+        correlationId: `customer_${isRecreation ? 'recreated' : 'created'}_${customerId}`,
+        severity: isRecreation ? 'warning' : 'info'
+      });
+
+      console.log(`[CREATE SUBSCRIPTION] ${isRecreation ? 'Recreated' : 'Created'} Stripe customer ${customerId} for user ${userId}`);
     }
 
     // Create or get product for subscriptions

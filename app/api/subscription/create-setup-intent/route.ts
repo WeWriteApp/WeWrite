@@ -9,6 +9,7 @@ import { getUserIdFromRequest } from '../../auth-helper';
 import { getUsernameById } from '../../../utils/userUtils';
 import { initAdmin } from '../../../firebase/admin';
 import { getCollectionName } from '../../../utils/environmentConfig';
+import { subscriptionAuditService } from '../../../services/subscriptionAuditService';
 
 // Initialize Firebase Admin
 const admin = initAdmin();
@@ -38,11 +39,22 @@ export async function POST(request: NextRequest) {
 
     // Get or create Stripe customer
     let customerId: string;
-    
+
     // Check if user already has a Stripe customer ID using environment-aware collection
     const userDoc = await adminDb.collection(getCollectionName('users')).doc(userId).get();
     const userData = userDoc.data();
     customerId = userData?.stripeCustomerId;
+
+    // Verify customer exists in Stripe (handle deleted customers)
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId);
+        console.log(`[CREATE SETUP INTENT] Verified existing Stripe customer ${customerId} for user ${userId}`);
+      } catch (error) {
+        console.warn(`[CREATE SETUP INTENT] Stripe customer ${customerId} not found, will create new one:`, error.message);
+        customerId = null; // Force creation of new customer
+      }
+    }
 
     if (!customerId) {
       // Get user data from Firestore (works for both real and development users)
@@ -73,7 +85,34 @@ export async function POST(request: NextRequest) {
         stripeCustomerId: customerId
       }, { merge: true });
 
-      console.log(`[CREATE SETUP INTENT] Created new Stripe customer ${customerId} for user ${userId}`);
+      // Log customer creation/recreation for audit trail
+      const isRecreation = !!userData?.stripeCustomerId;
+      await subscriptionAuditService.logEvent({
+        userId,
+        eventType: isRecreation ? 'subscription_updated' : 'subscription_created',
+        description: isRecreation
+          ? `Stripe customer recreated (previous customer deleted)`
+          : `Stripe customer created`,
+        entityType: 'subscription',
+        entityId: customerId,
+        afterState: {
+          stripeCustomerId: customerId,
+          email,
+          username
+        },
+        metadata: {
+          stripeCustomerId: customerId,
+          email,
+          username,
+          isRecreation,
+          reason: isRecreation ? 'Previous customer deleted from Stripe' : 'New customer'
+        },
+        source: 'system',
+        correlationId: `customer_${isRecreation ? 'recreated' : 'created'}_${customerId}`,
+        severity: isRecreation ? 'warning' : 'info'
+      });
+
+      console.log(`[CREATE SETUP INTENT] ${isRecreation ? 'Recreated' : 'Created'} Stripe customer ${customerId} for user ${userId}`);
     }
 
     // Create setup intent for payment method collection
@@ -89,6 +128,9 @@ export async function POST(request: NextRequest) {
         tokens: tokens?.toString() || (amount * 10).toString()
       }
     });
+
+    // Log setup intent creation for audit trail
+    await logSetupIntentCreated(userId, customerId, setupIntent.id, tier, amount);
 
     console.log(`[CREATE SETUP INTENT] Created setup intent ${setupIntent.id} for user ${userId}`);
 
