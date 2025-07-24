@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { cn } from '../../lib/utils';
-import { PageLoader } from './page-loader';
+import UnifiedLoader from './unified-loader';
 
 interface PageTransitionProps {
   children: React.ReactNode;
@@ -196,7 +196,8 @@ export function PageTransition({
       {/* Loading overlay */}
       <AnimatePresence>
         {isLoading && (
-          <PageLoader
+          <UnifiedLoader
+            isLoading={isLoading}
             message={loadingMessage || "Loading content..."}
             fullScreen={true}
           />

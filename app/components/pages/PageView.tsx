@@ -30,9 +30,13 @@ import { Trash2 } from "lucide-react";
 import UnifiedTextHighlighter from "../text-highlighting/UnifiedTextHighlighter";
 import TextViewErrorBoundary from "../editor/TextViewErrorBoundary";
 import TextView from "../editor/TextView";
-import { SmartLoader } from "../ui/smart-loader";
+import UnifiedLoader from "../ui/unified-loader";
 import { ErrorDisplay } from "../ui/error-display";
 import { LineSettingsMenu } from "../utils/LineSettingsMenu";
+import StickySaveHeader from "../layout/StickySaveHeader";
+
+// Duplicate title checking imports
+import { TitleValidationInput } from "../forms/TitleValidationInput";
 
 // Editor Components - Dynamic import to prevent hydration mismatches
 const Editor = dynamic(() => import("../editor/Editor"), {
@@ -132,8 +136,7 @@ export default function PageView({
   const [title, setTitle] = useState('');
   const [customDate, setCustomDate] = useState<string | null>(null);
   const [location, setLocation] = useState<Location | null>(null);
-  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
-  const [loadAttempts, setLoadAttempts] = useState(0);
+  // Removed complex loading timeout logic - using UnifiedLoader now
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
   const [versionData, setVersionData] = useState<any>(null);
   const [compareVersionData, setCompareVersionData] = useState<any>(null);
@@ -146,12 +149,20 @@ export default function PageView({
   // Link insertion trigger function
   const [linkInsertionTrigger, setLinkInsertionTrigger] = useState<(() => void) | null>(null);
 
+  // Title validation state
+  const [isTitleValid, setIsTitleValid] = useState<boolean>(true);
+  const [isTitleDuplicate, setIsTitleDuplicate] = useState<boolean>(false);
+  const [originalTitle, setOriginalTitle] = useState<string>('');
+
   // Refs
   const editorRef = useRef<any>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const viewRecorded = useRef(false);
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const graphRefreshRef = useRef<(() => void) | null>(null);
+
+  // Focus state management - coordinate with title focus
+  const [isEditorFocused, setIsEditorFocused] = useState(false);
 
   // Hooks
   const router = useRouter();
@@ -167,9 +178,41 @@ export default function PageView({
     graphRefreshRef.current = refreshFn;
   }, []);
 
-  // Constants
-  const maxLoadAttempts = 3;
+  // Constants - simplified loading approach
   const isPreviewingDeleted = searchParams?.get('preview') === 'deleted';
+
+  // Listen for focus changes to coordinate with title focus
+  useEffect(() => {
+    const handleFocusChange = () => {
+      const activeElement = document.activeElement;
+
+      // Check if the editor or content area is focused
+      const editorElement = document.querySelector('[contenteditable="true"]');
+      const contentContainer = contentRef.current;
+
+      const isEditorActive = editorElement && (
+        activeElement === editorElement ||
+        editorElement.contains(activeElement) ||
+        (contentContainer && contentContainer.contains(activeElement))
+      );
+
+      setIsEditorFocused(!!isEditorActive);
+
+      // Remove title-focused class when editor is focused
+      if (isEditorActive) {
+        document.body.classList.remove('title-focused');
+      }
+    };
+
+    // Listen for focus events on the document
+    document.addEventListener('focusin', handleFocusChange);
+    document.addEventListener('focusout', handleFocusChange);
+
+    return () => {
+      document.removeEventListener('focusin', handleFocusChange);
+      document.removeEventListener('focusout', handleFocusChange);
+    };
+  }, []);
 
   // API fallback function
   const tryApiFallback = useCallback(async () => {
@@ -188,6 +231,7 @@ export default function PageView({
 
         setPage(pageData);
         setTitle(pageData.title || '');
+        setOriginalTitle(pageData.title || '');
         setCustomDate(pageData.customDate || null);
         setLocation(pageData.location || null);
 
@@ -324,6 +368,7 @@ export default function PageView({
             });
           }
           setTitle(pageData.title || '');
+          setOriginalTitle(pageData.title || '');
           setCustomDate(pageData.customDate || null);
           setLocation(pageData.location || null);
 
@@ -599,6 +644,17 @@ export default function PageView({
 
   // Computed values
   const canEdit = user?.uid && !isPreviewingDeleted && !showVersion && !showDiff && (user.uid === page?.userId);
+
+  // Debug canEdit logic
+  console.log('🔗 PAGE_VIEW: canEdit calculation:', {
+    userUid: user?.uid,
+    pageUserId: page?.userId,
+    isPreviewingDeleted,
+    showVersion,
+    showDiff,
+    userOwnsPage: user?.uid === page?.userId,
+    finalCanEdit: canEdit
+  });
   const memoizedPage = useMemo(() => page, [page?.id, page?.title, page?.updatedAt]);
   const memoizedLinkedPageIds = useMemo(() => [], [editorState]); // TODO: Extract linked page IDs
 
@@ -606,11 +662,20 @@ export default function PageView({
   // MY page = ALWAYS edit mode
   // NOT my page = ALWAYS view mode
   useEffect(() => {
+    console.log('🔗 PAGE_VIEW: Setting edit mode based on permissions:', {
+      canEdit,
+      showVersion,
+      showDiff,
+      willBeEditing: canEdit && !showVersion && !showDiff
+    });
+
     if (canEdit && !showVersion && !showDiff) {
       // This is MY page - ALWAYS edit mode
+      console.log('🔗 PAGE_VIEW: Entering edit mode');
       setIsEditing(true);
     } else {
       // This is NOT my page OR showing version/diff - ALWAYS view mode
+      console.log('🔗 PAGE_VIEW: Staying in view mode');
       setIsEditing(false);
     }
   }, [canEdit, showVersion, showDiff]);
@@ -620,10 +685,22 @@ export default function PageView({
     setLinkInsertionTrigger(() => triggerFn);
   }, []);
 
-  // Content padding: none for edit mode (static header), fixed for view mode (fixed header)
+  // Track scroll position for save header behavior
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // SIMPLIFIED: Remove complex padding logic - let body padding handle everything
   useEffect(() => {
     if (isEditing) {
-      setContentPaddingTop('0'); // Edit mode: header is static, no padding needed
+      setContentPaddingTop('0px'); // No padding needed - body handles save header
     } else {
       setContentPaddingTop('160px'); // View mode: header is fixed, need padding
     }
@@ -671,7 +748,14 @@ export default function PageView({
       setHasUnsavedChanges(true);
     }
     setTitleError(null);
-  }, [title, page?.title]);
+  }, [title, page?.title, pageLogger]);
+
+  // Handle title validation changes from the validation component
+  const handleTitleValidationChange = useCallback((isValid: boolean, isDuplicate: boolean) => {
+    console.log('🔍 PAGEVIEW_VALIDATION: Title validation changed:', { isValid, isDuplicate, title });
+    setIsTitleValid(isValid);
+    setIsTitleDuplicate(isDuplicate);
+  }, [title]);
 
 
 
@@ -710,6 +794,8 @@ export default function PageView({
     }
   }, []);
 
+
+
   // No need for handleSetIsEditing - always in edit mode
 
   const handleSave = useCallback(async (passedContent?: any) => {
@@ -735,6 +821,15 @@ export default function PageView({
       pageLogger.warn('Save aborted - no title provided', { pageId });
       setTitleError("Title is required");
       setError("Please add a title before saving");
+      return;
+    }
+
+    // Check for duplicate titles before saving
+    if (isTitleDuplicate) {
+      console.log('🔴 PAGE_EDIT: Cannot save - duplicate title detected');
+      setTitleError("Cannot save page with duplicate title. Please choose a different title or go to the existing page.");
+      setError("Cannot save page with duplicate title. Please choose a different title or go to the existing page.");
+      setIsSaving(false);
       return;
     }
 
@@ -1104,17 +1199,18 @@ export default function PageView({
     }
   }, [page, pageId, router]);
 
-  // Loading state
+  // Loading state - maintain layout structure to prevent shifts
   if (isLoading) {
     return (
       <PublicLayout>
-        <SmartLoader
-          isLoading={isLoading}
-          message={`Loading page${loadAttempts > 0 ? ` (attempt ${loadAttempts + 1}/${maxLoadAttempts})` : ''}...`}
-          timeoutMs={10000}
-          autoRecover={true}
-          onRetry={() => window.location.reload()}
-        />
+        <div className="min-h-screen flex items-center justify-center">
+          <UnifiedLoader
+            isLoading={isLoading}
+            message="Loading page..."
+            fullScreen={false}
+            onRetry={() => window.location.reload()}
+          />
+        </div>
       </PublicLayout>
     );
   }
@@ -1155,6 +1251,15 @@ export default function PageView({
 
   return (
     <PublicLayout>
+      {/* Sticky Save Header - slides down from top when there are unsaved changes */}
+      <StickySaveHeader
+        hasUnsavedChanges={hasUnsavedChanges && canEdit}
+        onSave={handleSave}
+        onCancel={handleCancel}
+        isSaving={isSaving}
+        isAnimatingOut={saveSuccess && !hasUnsavedChanges}
+      />
+
       <PageProvider>
         <div className="w-full max-w-none box-border">
           <PageHeader
@@ -1165,84 +1270,118 @@ export default function PageView({
             isEditing={isEditing}
             onTitleChange={handleTitleChange}
             canEdit={canEdit}
-            titleError={!!titleError}
+            titleError={!!titleError || isTitleDuplicate}
             pageId={pageId}
           />
-          
+
+          {/* REMOVED: Hidden Title Validation - will integrate directly into PageHeader */}
+
           {isPreviewingDeleted && (
-            <DeletedPageBanner 
+            <DeletedPageBanner
               pageId={pageId}
               deletedAt={page.deletedAt}
             />
           )}
 
+          {/* Full-width header area */}
           <div
-            className="animate-in fade-in-0 duration-300 w-full pb-32 max-w-none box-border px-4"
+            className="w-full"
             style={{
               paddingTop: contentPaddingTop,
               transition: 'padding-top 300ms ease-in-out'
             }}
           >
-            <TextSelectionProvider
-              contentRef={contentRef}
-              enableCopy={true}
-              enableShare={true}
-              enableAddToPage={true}
-              username={user?.username}
-            >
-              <div ref={contentRef}>
-                <TextViewErrorBoundary fallbackContent={
-                  <div className="p-4 text-muted-foreground">
-                    <p>Unable to display page content. The page may have formatting issues.</p>
-                    <p className="text-sm mt-2">Page ID: {page.id}</p>
-                  </div>
-                }>
-
-                  {/* Use Editor only when user is actively editing their own content */}
-                  {canEdit && isEditing ? (
-                    <Editor
-                      ref={editorRef}
-                      title={title}
-                      setTitle={handleTitleChange}
-                      initialContent={editorState}
-                      onChange={handleContentChange}
-                      onEmptyLinesChange={handleEmptyLinesChange}
-                      location={location}
-                      setLocation={handleLocationChange}
-                      onSave={handleSave}
-                      onCancel={handleCancel}
-                      onDelete={handleDelete}
-                      isSaving={isSaving}
-                      error={error || ""}
-                      isNewPage={false}
-                      placeholder="Start typing..."
-                      showToolbar={false}
-                      readOnly={false}
-                      onInsertLinkRequest={handleInsertLinkRequest}
-                    />
-                  ) : (
-                    /* Use TextView for viewing content (other users' pages or when not editing) */
-                    <TextView
-                      content={editorState}
-                      viewMode="normal"
-                      // setIsEditing removed - no manual edit mode toggling allowed
-                      canEdit={canEdit}
-                      showDiff={showDiff}
-                      isEditing={false}
-                      showLineNumbers={true}
-                    />
-                  )}
-                </TextViewErrorBoundary>
-
-                {/* Custom Date Field and Location Field are now handled by PageFooter */}
-
-                <UnifiedTextHighlighter
+            {/* Content container with title-like styling */}
+            <div className="px-4 pb-32">
+              <div
+                className={`bg-background/80 border rounded-lg px-4 py-4 outline-none transition-all duration-200 ${
+                  isEditorFocused && isEditing && canEdit
+                    ? "border-primary/50 ring-2 ring-primary/20"
+                    : "border-muted-foreground/30"
+                } min-h-[200px] w-full max-w-none`}
+                onClick={() => {
+                  // Focus the editor when clicking the container
+                  if (isEditing && canEdit) {
+                    const editorElement = document.querySelector('[contenteditable="true"]');
+                    if (editorElement) {
+                      (editorElement as HTMLElement).focus();
+                    }
+                  }
+                }}
+              >
+                <TextSelectionProvider
                   contentRef={contentRef}
-                  showNotification={true}
-                  autoScroll={true}
-                />
+                  enableCopy={true}
+                  enableShare={true}
+                  enableAddToPage={true}
+                  username={user?.username}
+                >
+                  <div ref={contentRef}>
+                    <TextViewErrorBoundary fallbackContent={
+                      <div className="p-4 text-muted-foreground">
+                        <p>Unable to display page content. The page may have formatting issues.</p>
+                        <p className="text-sm mt-2">Page ID: {page.id}</p>
+                      </div>
+                    }>
+
+                      {/* Use Editor only when user is actively editing their own content */}
+                      {(() => {
+                        const shouldUseEditor = canEdit && isEditing;
+                        console.log('🔗 PAGE_VIEW: Choosing component to render:', {
+                          canEdit,
+                          isEditing,
+                          shouldUseEditor,
+                          component: shouldUseEditor ? 'Editor' : 'TextView'
+                        });
+
+                        return shouldUseEditor ? (
+                          <Editor
+                            ref={editorRef}
+                            title={title}
+                            setTitle={handleTitleChange}
+                            initialContent={editorState}
+                            onChange={handleContentChange}
+                            onEmptyLinesChange={handleEmptyLinesChange}
+                            location={location}
+                            setLocation={handleLocationChange}
+                            onSave={handleSave}
+                            onCancel={handleCancel}
+                            onDelete={handleDelete}
+                            isSaving={isSaving}
+                            error={error || ""}
+                            isNewPage={false}
+                            placeholder="Start typing..."
+                            showToolbar={false}
+                            readOnly={false}
+                            onInsertLinkRequest={handleInsertLinkRequest}
+                            pageId={pageId}
+                          />
+                        ) : (
+                          /* Use TextView for viewing content (other users' pages or when not editing) */
+                          <TextView
+                            content={editorState}
+                            viewMode="normal"
+                            // setIsEditing removed - no manual edit mode toggling allowed
+                            canEdit={canEdit}
+                            showDiff={showDiff}
+                            isEditing={false}
+                            showLineNumbers={true}
+                          />
+                        );
+                      })()}
+                    </TextViewErrorBoundary>
+
+                    {/* Custom Date Field and Location Field are now handled by PageFooter */}
+
+                    <UnifiedTextHighlighter
+                      contentRef={contentRef}
+                      showNotification={true}
+                      autoScroll={true}
+                    />
+                  </div>
+                </TextSelectionProvider>
               </div>
-            </TextSelectionProvider>
+            </div>
 
             {/* Page Footer with actions */}
             <PageFooter
@@ -1273,20 +1412,24 @@ export default function PageView({
             {page && (
               <>
                 {/* Page Graph View */}
-                <PageGraphView
-                  pageId={page.id}
-                  pageTitle={page.title}
-                  onRefreshReady={handleGraphRefreshReady}
-                />
+                <div className="px-4">
+                  <PageGraphView
+                    pageId={page.id}
+                    pageTitle={page.title}
+                    onRefreshReady={handleGraphRefreshReady}
+                  />
+                </div>
 
-                <RelatedPagesSection
-                  page={page}
-                  linkedPageIds={memoizedLinkedPageIds}
-                />
+                <div className="px-4">
+                  <RelatedPagesSection
+                    page={page}
+                    linkedPageIds={memoizedLinkedPageIds}
+                  />
+                </div>
 
                 {/* Delete button - positioned at the very bottom for page owners */}
                 {canEdit && (
-                  <div className="mt-8 mb-6">
+                  <div className="mt-8 mb-6 px-4">
                     <Button
                       variant="destructive"
                       size="lg"
@@ -1319,6 +1462,8 @@ export default function PageView({
               onDeleteAllEmptyLines={handleDeleteAllEmptyLines}
             />
           )}
+
+
         </div>
       </PageProvider>
     </PublicLayout>

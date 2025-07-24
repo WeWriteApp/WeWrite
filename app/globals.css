@@ -5,21 +5,7 @@
 /* Import pledge bar animations */
 @import './styles/pledge-bar-animations.css';
 
-/* Slate Editor Styles */
-.slate-editor-container {
-  border: 1px solid hsl(var(--border) / 0.4);
-  border-radius: 0.375rem;
-  overflow: hidden;
-}
-
-.slate-editor-container [data-slate-editor] {
-  outline: none;
-}
-
-.slate-editor-container [data-slate-editor]:focus {
-  outline: none;
-  box-shadow: none;
-}
+/* REMOVED: Legacy slate-editor-container styles - using clean Slate.js now */
 
 /* Custom slider styles for subscription tier selector */
 .slider {
@@ -725,6 +711,20 @@ input[type="range"]::-moz-range-thumb,
   will-change: border-color, box-shadow;
   /* Avoid transitioning layout properties to prevent flickering */
 }
+
+/* Sticky Save Header - Push main header down when present */
+.has-sticky-save-header header[data-component="main-header"] {
+  top: 56px !important; /* Height of sticky save header */
+  transition: top 300ms ease-in-out;
+}
+
+/* Ensure the header spacer accounts for the save header */
+.has-sticky-save-header header[data-component="main-header"] + div {
+  height: calc(var(--header-height, 80px) + 56px) !important;
+  transition: height 300ms ease-in-out;
+}
+
+/* REMOVED: All complex header spacing rules that interfere with simple body padding */
 
 /* New page creation layout stability */
 .new-page-container {
@@ -1852,61 +1852,9 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
   vertical-align: baseline !important;
 }
 
-/* Additional compound link fixes for edit mode */
-[contenteditable] .compound-link-container {
-  display: inline-block !important;
-  vertical-align: baseline !important;
-  white-space: nowrap !important;
-}
+/* REMOVED: Legacy contentEditable styles - using Slate.js now */
 
-/* Ensure compound link pills in edit mode maintain separation */
-[contenteditable] .compound-link-container .page-portion,
-[contenteditable] .compound-link-container .author-portion {
-  display: inline-block !important;
-  vertical-align: baseline !important;
-  margin: 0 0.125rem !important;
-  border-radius: 0.5rem !important;
-}
-
-/* Prevent any global styles from affecting compound link structure */
-.compound-link-container * {
-  box-sizing: border-box !important;
-}
-
-/* Ensure compound links don't get merged by any parent styles */
-.compound-link-container:not(.single-link) {
-  background: none !important;
-  border: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-/* CRITICAL: ContentEditable specific compound link fixes */
-[contenteditable] .compound-link-container {
-  /* Use inline-block to prevent vertical stacking while preserving layout */
-  display: inline-block !important;
-  vertical-align: baseline !important;
-  white-space: nowrap !important;
-  /* Prevent any flex or block behavior */
-  flex-direction: row !important;
-  align-items: baseline !important;
-}
-
-/* Ensure "by" text in contentEditable maintains inline flow */
-[contenteditable] .compound-link-container .text-muted-foreground {
-  display: inline !important;
-  margin: 0 0.125rem !important;
-  padding: 0 !important;
-  vertical-align: baseline !important;
-  white-space: nowrap !important;
-}
-
-/* Force all compound link children to be inline in contentEditable */
-[contenteditable] .compound-link-container > * {
-  display: inline-block !important;
-  vertical-align: baseline !important;
-  margin: 0 0.125rem !important;
-}
+/* REMOVED: Legacy contentEditable compound link styles - using Slate.js now */
 
 /* Comprehensive fix for text contrast issues */
 /* Ensure all text has sufficient contrast against its background */
@@ -2422,4 +2370,38 @@ a[data-pill-style="filled"]:hover, button[data-pill-style="filled"]:hover, div[d
 @keyframes slideOutRight {
   from { transform: translateX(0); opacity: 1; }
   to { transform: translateX(100%); opacity: 0; }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* SIMPLIFIED: Save header body class for consistent content pushing */
+body {
+  transition: padding-top 300ms ease-out;
+}
+
+body.has-sticky-save-header {
+  padding-top: 56px !important; /* Push all content down by save header height */
+}
+
+/* Remove all complex header spacing rules that interfere with simple layout */
+body.has-sticky-save-header header[data-component="main-header"] {
+  top: unset !important;
+  margin-top: unset !important;
+}
+
+body.has-sticky-save-header .page-header-edit-mode {
+  margin-top: unset !important;
+}
+
+body.has-sticky-save-header header[data-component="main-header"] + div {
+  height: unset !important;
 }

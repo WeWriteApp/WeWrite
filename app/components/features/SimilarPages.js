@@ -5,7 +5,7 @@ import { collection, query, where, limit, getDocs, orderBy } from 'firebase/fire
 import { db } from "../../firebase/config';
 import { getCollectionName } from '../../utils/environmentConfig';
 import { PillLink } from "../utils/PillLink";
-import { Loader } from './Loader';
+// Removed Loader import - using simple loading state
 
 /**
  * SimilarPages Component
@@ -210,7 +210,7 @@ export default function SimilarPages({ currentPage, maxPages = 3 }) {
       <div className="mt-8 pt-6 border-t border-border dark:border-border">
         <h3 className="text-lg font-medium mb-4">Similar Pages</h3>
         <div className="flex justify-center py-4">
-          <Loader size="sm" />
+          <div className="loader loader-sm"></div>
         </div>
       </div>
     );

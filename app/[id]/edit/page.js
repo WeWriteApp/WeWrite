@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from "../../firebase/config";
 import PageView from '../../components/pages/PageView';
-import { SmartLoader } from '../../components/ui/smart-loader';
+import UnifiedLoader from '../../components/ui/unified-loader';
 import { use } from "react";
 
 export default function EditPage({ params }) {
@@ -83,25 +83,13 @@ export default function EditPage({ params }) {
 
   if (isLoading) {
     return (
-      <SmartLoader
+      <UnifiedLoader
         isLoading={isLoading}
         message="Loading edit mode..."
-        timeoutMs={10000}
-        autoRecover={true}
         onRetry={() => {
           setIsLoading(true);
           checkPageExists();
         }}
-        fallbackContent={
-          <div>
-            <p>We're having trouble loading the edit mode. This could be due to:</p>
-            <ul className="list-disc list-inside text-left mt-2 mb-2">
-              <li>Slow network connection</li>
-              <li>Server issues</li>
-              <li>The page may not exist</li>
-            </ul>
-          </div>
-        }
       />
     );
   }

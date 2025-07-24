@@ -35,10 +35,13 @@ interface PillLinkProps {
   isLoading?: boolean;
   deleted?: boolean;
   isFallback?: boolean;
+  isSuggestion?: boolean; // New prop for link suggestions
   clickable?: boolean;
   isEditing?: boolean; // New prop to indicate if we're in edit mode
   onClick?: (e: React.MouseEvent) => void;
   onEditLink?: () => void;
+  onConfirmSuggestion?: () => void; // New prop for confirming suggestions
+  onDismissSuggestion?: () => void; // New prop for dismissing suggestions
   draggable?: boolean; // New prop to enable dragging
   onDragStart?: (e: React.DragEvent) => void;
   onDragEnd?: (e: React.DragEvent) => void;
@@ -57,10 +60,13 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
   isLoading,
   deleted = false,
   isFallback = false,
+  isSuggestion = false,
   clickable = true,
   isEditing = false, // Default to false (view mode)
   onClick: customOnClick,
   onEditLink,
+  onConfirmSuggestion,
+  onDismissSuggestion,
   ...otherProps
 }, ref) => {
   // Hooks
@@ -273,8 +279,10 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
     }
   }
 
-  // Use centralized styling with any additional custom classes and global truncation
-  const baseStyles = `${getPillStyleClasses()} max-w-full overflow-hidden ${className}`.trim();
+  // Use different styling for suggestions vs normal pill links
+  const baseStyles = isSuggestion
+    ? `inline-block px-2 py-1 text-sm font-medium text-primary bg-transparent border-b-2 border-dotted border-primary/60 hover:bg-primary/10 transition-colors cursor-pointer max-w-full overflow-hidden ${className}`.trim()
+    : `${getPillStyleClasses()} max-w-full overflow-hidden ${className}`.trim();
 
   // External link with confirmation modal
   if (isExternalLinkType) {
@@ -354,6 +362,24 @@ export const PillLink = forwardRef<HTMLAnchorElement, PillLinkProps>(({
         data-group-id={isGroupLinkType ? pageId : undefined}
         {...otherProps}
         onClick={(e) => {
+          // Handle suggestion pill links specially
+          if (isSuggestion) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Show confirmation dialog for suggestion
+            const confirmed = window.confirm(
+              `Link "${formattedDisplayTitle}"?\n\nClick OK to confirm this link suggestion, or Cancel to dismiss it.`
+            );
+
+            if (confirmed && onConfirmSuggestion) {
+              onConfirmSuggestion();
+            } else if (!confirmed && onDismissSuggestion) {
+              onDismissSuggestion();
+            }
+            return;
+          }
+
           // Call custom onClick first if provided
           if (customOnClick) {
             customOnClick(e);

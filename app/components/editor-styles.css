@@ -1,29 +1,94 @@
-/* CENTRALIZED PILL LINK STYLING
- * Single source of truth for pill link styling in WeWrite
- * Ensures consistent appearance between edit and view modes
+/**
+ * WeWrite Editor Styles - Clean Slate.js Edition
+ *
+ * Clean, modern styles for the Slate.js-based editor.
+ * Removed all legacy contentEditable styles that were causing conflicts.
+ *
+ * Key Features:
+ * - Slate.js editor styling
+ * - Link pill styling for view mode
+ * - Clean, minimal approach
+ * - No legacy contentEditable conflicts
  */
 
-/* Base link styling for non-pill links */
-.editor-link:not(.page-link):not(.user-link):not(.external-link) {
-  color: var(--primary);
+/* ============================================================================
+   SLATE EDITOR STYLES
+   ============================================================================ */
+
+/* Slate editor container */
+.slate-editor {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 1rem;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: inherit;
+  background: transparent;
+}
+
+/* Slate editable area */
+.slate-editor [data-slate-editor] {
+  outline: none;
+  min-height: 200px;
+}
+
+/* Slate paragraph styling */
+.slate-editor div[data-slate-node="element"] {
+  margin-bottom: 0.5rem;
+}
+
+/* ============================================================================
+   LINK PILL STYLING (VIEW MODE)
+   ============================================================================ */
+
+/* Base pill link styling - applies to all pill links */
+.page-link,
+.user-link,
+.external-link {
+  display: inline-block;
+  vertical-align: baseline;
   text-decoration: none;
+  border-radius: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  margin: 0 0.125rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
-/* Core pill link styles - minimal overrides only for editor-specific needs */
-a.page-link,
-a.user-link,
-a.external-link {
-  /* Only override properties that are essential for editor functionality */
-  text-decoration: none !important;
-  text-indent: 0 !important;
-  float: none !important;
-  /* All other styling comes from PillStyleContext - DO NOT override padding */
+/* Page links - internal pages */
+.page-link {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
 }
 
-/* Utility class for baseline vertical alignment */
-.vertical-align-baseline {
-  vertical-align: baseline !important;
+.page-link:hover {
+  background-color: hsl(var(--primary) / 0.8);
+}
+
+/* User links - user profiles */
+.user-link {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+}
+
+.user-link:hover {
+  background-color: hsl(var(--secondary) / 0.8);
+}
+
+/* External links */
+.external-link {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  border: 1px solid hsl(var(--border));
+}
+
+.external-link:hover {
+  background-color: hsl(var(--muted) / 0.8);
 }
 
 /* User link @ symbol */
@@ -36,1062 +101,124 @@ a[data-user-id]::before {
   margin-right: 1px;
 }
 
-/* Pill text content styling */
-.pill-text {
-  display: inline !important;
-  white-space: nowrap !important;
-  width: fit-content !important;
-  min-width: fit-content !important;
-  max-width: none !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-  line-height: inherit !important;
-  flex: none !important;
-  position: relative !important;
-  pointer-events: none !important; /* Allow clicks to pass through to parent link */
-  visibility: visible !important;
-  opacity: 1 !important;
-}
+/* ============================================================================
+   COMPOUND LINK STYLING
+   ============================================================================ */
 
-/* Paragraph integration - CRITICAL: Force proper alignment with paragraph numbers */
-.paragraph-with-number a,
-.paragraph-with-number a.page-link,
-.paragraph-with-number a.user-link,
-.paragraph-with-number a.external-link {
-  text-indent: 0 !important;
-  display: inline-block !important; /* Force inline-block over flexbox */
-  float: none !important;
-  line-height: 1.5 !important; /* Match paragraph line-height */
-  vertical-align: baseline !important; /* Use baseline to align with paragraph number */
-  /* Override any flexbox properties that might interfere */
-  align-items: unset !important;
-  justify-content: unset !important;
-  flex-direction: unset !important;
-  /* DO NOT override padding - let PillStyleContext handle it */
-}
-
-/* COMPOUND LINK STYLING - Ensures separate pill appearance with proper text flow */
+/* Compound link container */
 .compound-link-container {
-  display: inline-block !important; /* Use inline-block to maintain text flow and preserve styling */
-  vertical-align: baseline !important;
-  white-space: nowrap !important;
-}
-
-/* CRITICAL: Ensure compound links in unified-text-content don't wrap */
-.unified-text-content .compound-link-container {
-  display: inline-block !important;
-  white-space: nowrap !important;
-  vertical-align: baseline !important;
-}
-
-/* CRITICAL: ContentEditable specific compound link styling */
-[contenteditable] .compound-link-container {
-  display: inline-block !important; /* Use inline-block to prevent vertical stacking while preserving layout */
-  vertical-align: baseline !important;
-  white-space: nowrap !important;
-  /* Override any inherited flex properties */
-  flex-direction: row !important;
-  align-items: baseline !important;
-}
-
-/* Ensure compound link pills maintain separation with inline layout */
-.compound-link-container .page-portion,
-.compound-link-container .author-portion {
-  display: inline-block !important;
-  vertical-align: baseline !important;
-  margin: 0 0.125rem !important; /* Small margin for spacing */
-}
-
-/* Ensure "by" text in compound links is properly styled */
-.compound-link-container .text-muted-foreground {
-  display: inline !important;
-  margin: 0 0.125rem !important; /* Small margin for spacing */
-  padding: 0 !important;
-  white-space: nowrap !important;
-  vertical-align: baseline !important;
-}
-
-/* CRITICAL: ContentEditable specific compound link children styling */
-[contenteditable] .compound-link-container .page-portion,
-[contenteditable] .compound-link-container .author-portion {
-  display: inline-block !important;
-  vertical-align: baseline !important;
-  margin: 0 0.125rem !important;
-  border-radius: 0.5rem !important;
-  /* Prevent any block or flex behavior */
-  float: none !important;
-  position: static !important;
-}
-
-[contenteditable] .compound-link-container .text-muted-foreground {
-  display: inline !important;
-  margin: 0 0.125rem !important;
-  padding: 0 !important;
-  vertical-align: baseline !important;
-  white-space: nowrap !important;
-  /* Ensure it doesn't break the inline flow */
-  float: none !important;
-  position: static !important;
-}
-
-/* Prevent compound link container from being treated as a single link */
-.compound-link-container:hover {
-  background: none !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-/* PIXEL-PERFECT VIEW/EDIT MODE TRANSITIONS */
-/* Eliminates layout shifts with identical dimensions and invisible borders */
-
-/* Unified container styling for both modes - CRITICAL for layout consistency */
-.unified-editor,
-.page-content,
-.editor-content {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: none;
-  padding: 0; /* Consistent padding handled by child elements */
-  margin: 0;
-  /* CRITICAL: Identical typography settings */
-  font-size: 1rem;
-  line-height: 1.5; /* Changed from 1.6 to match view mode */
-  font-family: inherit;
-  /* Ensure natural content flow without viewport constraints */
-  min-height: auto;
-}
-
-/* Base paragraph styling - NORMAL MODE with first child number */
-.unified-paragraph {
-  /* Normal mode: Flex layout to keep paragraph number and content on same line */
-  display: flex;
-  align-items: baseline; /* CRITICAL: Align to baseline for proper text alignment */
-  flex-wrap: nowrap; /* CRITICAL: Prevent wrapping to new line */
-  margin-bottom: 0.5rem;
-  padding: 0.125rem 0; /* REMOVED: Eliminated horizontal padding completely */
-  box-sizing: border-box;
-  min-height: 2.5rem;
-  width: 100%;
-  position: relative;
-
-  /* Typography */
-  font-size: 1rem;
-  line-height: 1.5;
-  font-family: inherit;
-  letter-spacing: normal;
-  word-spacing: normal;
-
-  /* Border - ALWAYS present to prevent layout shifts */
-  border: 2px solid transparent;
-  border-radius: 0.375rem;
-
-  /* Smooth transitions for mode switching */
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* Prevent any unexpected layout changes */
-  overflow: visible;
-  contain: style;
-}
-
-/* CRITICAL: Editor content divs styling - ONLY for edit mode (contentEditable) */
-/* High specificity to ensure this rule applies ONLY in edit mode */
-[contenteditable="true"].editor-content.normal-mode > div,
-[contenteditable="true"].editor-content.normal-mode > .paragraph-div,
-.unified-editor[data-readonly="false"] .editor-content.normal-mode[contenteditable="true"] > div,
-.unified-editor[data-readonly="false"] .editor-content.normal-mode[contenteditable="true"] > .paragraph-div {
-  /* CRITICAL: Use block layout for proper contentEditable behavior */
-  display: block !important;
-  position: relative;
-
-  /* INCREASED: Create proper space for absolutely positioned paragraph numbers */
-  margin-left: 2.25rem !important; /* Increased from 1.5rem to 2.25rem to prevent overlap */
-  margin-bottom: 0.5rem;
-  padding: 0.25rem 0.5rem; /* Match view mode padding */
-  box-sizing: border-box;
-  min-height: 2.5rem;
-  width: calc(100% - 2.25rem) !important; /* Account for increased left margin */
-
-  /* Typography matching unified-paragraph */
-  font-size: 1rem;
-  line-height: 1.5;
-  font-family: inherit;
-  letter-spacing: normal;
-  word-spacing: normal;
-
-  /* Border - ALWAYS present to prevent layout shifts */
-  border: 2px solid transparent;
-  border-radius: 0.375rem;
-
-  /* Smooth transitions for mode switching */
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* Prevent any unexpected layout changes */
-  overflow: visible;
-  contain: style;
-}
-
-/* Editor content div hover state */
-.editor-content.normal-mode > div:hover,
-.editor-content.normal-mode > .paragraph-div:hover {
-  background-color: hsl(var(--muted) / 0.3);
-}
-
-/* REMOVED: Content wrapper styling - using simplified approach */
-
-/* CRITICAL: Ensure paragraphs with compound links don't wrap */
-.unified-paragraph:has(.compound-link-container) {
-  flex-wrap: nowrap !important;
-  overflow-x: auto; /* Allow horizontal scroll if needed */
-}
-
-/* Fallback for browsers without :has() support */
-.unified-paragraph {
-  /* Force all paragraphs to not wrap by default */
-  flex-wrap: nowrap !important;
-}
-
-/* View mode - invisible borders maintain dimensions */
-.unified-paragraph:not(.editing-mode) {
-  border-color: transparent; /* Invisible but maintains space */
-}
-
-/* Edit mode - visible borders with same dimensions */
-.unified-paragraph.editing-mode,
-.editor-content:focus .normal-mode > div:focus-within {
-  border-color: hsl(var(--primary) / 0.2);
-}
-
-.unified-paragraph.editing-mode:hover {
-  background-color: hsl(var(--muted) / 0.3);
-}
-
-/* MINIMAL LINE-BASED EDITOR STYLES */
-/* Container removed for simplified layout */
-
-.editor-line-object:focus-within {
-  background: hsl(var(--accent) / 0.1) !important;
-}
-
-.editor-line-object:hover {
-  background: hsl(var(--muted) / 0.1) !important;
-}
-
-.editor-line-object.dragging {
-  opacity: 0.5 !important;
-  transform: rotate(2deg) !important;
-}
-
-/* Link styles within lines */
-.editor-line-content .page-link,
-.editor-line-content .user-link,
-.editor-line-content .external-link {
   display: inline-block;
-  padding: 0.125rem 0.375rem;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  user-select: none;
+  vertical-align: baseline;
   white-space: nowrap;
 }
 
-.editor-line-content .page-link {
-  background: hsl(var(--primary) / 0.1);
-  color: hsl(var(--primary));
-  border: 1px solid hsl(var(--primary) / 0.2);
-}
-
-.editor-line-content .user-link {
-  background: hsl(var(--secondary) / 0.1);
-  color: hsl(var(--secondary-foreground));
-  border: 1px solid hsl(var(--secondary) / 0.2);
-}
-
-.editor-line-content .external-link {
-  background: hsl(var(--accent) / 0.1);
-  color: hsl(var(--accent-foreground));
-  border: 1px solid hsl(var(--accent) / 0.2);
-}
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
-
-/* Text content styling - flex item that takes remaining space */
-.unified-text-content {
-  /* Flex item that takes remaining space */
-  flex: 1; /* CRITICAL: Take all remaining space */
-  min-width: 0; /* CRITICAL: Allow content to shrink if needed */
-  line-height: 1.5;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  /* FIXED: Allow text to wrap properly instead of hiding overflow */
-  overflow: visible;
-  /* Reset any text-indent that might interfere */
-  text-indent: 0;
-  /* ADDED: Ensure proper text wrapping within container boundaries */
-  max-width: 100%;
-  box-sizing: border-box;
-  /* REMOVED: Eliminate all padding and margins */
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-/* Edit mode paragraph numbers are now handled by injected spans - no pseudo-elements needed */
-
-
-
-/* Ensure pill links maintain proper styling within unified content */
-.unified-text-content a.page-link,
-.unified-text-content a.user-link,
-.unified-text-content a.external-link,
-.editor-content a.page-link,
-.editor-content a.user-link,
-.editor-content a.external-link {
-  /* Use inline-block for proper text flow, with special handling for icons */
-  display: inline-block !important;
-  vertical-align: baseline !important; /* Use baseline to align with paragraph numbers */
-}
-
-/* Special handling for pills with icons - use inline-flex only when icons are present */
-.unified-text-content a.external-link,
-.editor-content a.external-link {
-  display: inline-flex !important;
-  align-items: center !important; /* Ensure icons align properly within the pill */
-  vertical-align: baseline !important;
-}
-
-/* CRITICAL: ContentEditable specific link pill styling */
-[contenteditable] a.page-link,
-[contenteditable] a.user-link,
-[contenteditable] a.external-link {
-  /* Force inline-block for proper text flow in contentEditable */
-  display: inline-block !important;
-  vertical-align: baseline !important;
-  /* Prevent any block or flex behavior that could cause vertical stacking */
-  float: none !important;
-  position: static !important;
-  margin: 0 !important;
-  /* Ensure proper text flow */
-  white-space: nowrap !important;
-}
-
-/* CRITICAL: Ensure edit mode content wrapper behaves like flex item */
-[contenteditable] div > .unified-text-content {
-  /* Content wrapper should behave as flex item content */
-  flex: 1;
-  display: contents; /* Use contents to allow children to participate in flex layout */
-  min-width: 0; /* Allow content to shrink if needed */
-}
-
-/* Ensure text nodes and elements after paragraph number in edit mode flow properly */
-[contenteditable] div > .paragraph-number + .unified-text-content {
-  /* Content wrapper after paragraph number gets flex: 1 */
-  flex: 1;
-  min-width: 0; /* Allow content to shrink if needed */
-}
-
-/* External links in contentEditable need special handling for icons */
-[contenteditable] a.external-link {
-  display: inline-flex !important;
-  align-items: center !important;
-  vertical-align: baseline !important;
-}
-
-/* CRITICAL: Ensure paragraphs starting with links maintain horizontal flow */
-/* REMOVED: This rule was breaking basic contentEditable functionality */
-/* Only apply flex layout to view mode paragraphs, not editor content */
-div.unified-paragraph {
-  /* Ensure the paragraph maintains flex layout for proper alignment */
-  display: flex !important;
-  white-space: normal !important;
-  /* Ensure proper flex behavior on the paragraph */
-  flex-direction: row !important;
-  align-items: baseline !important;
-  flex-wrap: nowrap !important;
-}
-
-/* Ensure consistent spacing between pill links and other content */
-[contenteditable] a.page-link,
-[contenteditable] a.user-link,
-[contenteditable] a.external-link,
-[contenteditable] .compound-link-container {
-  /* Ensure exactly one space around pill links */
-  margin-left: 0.25rem !important;
-  margin-right: 0.25rem !important;
-}
-
-/* Remove extra spacing when pill links are at the start of a line */
-[contenteditable] a.page-link:first-child,
-[contenteditable] a.user-link:first-child,
-[contenteditable] a.external-link:first-child,
-[contenteditable] .compound-link-container:first-child {
-  margin-left: 0 !important;
-}
-
-/* Remove extra spacing when pill links are at the end of a line */
-[contenteditable] a.page-link:last-child,
-[contenteditable] a.user-link:last-child,
-[contenteditable] a.external-link:last-child,
-[contenteditable] .compound-link-container:last-child {
-  margin-right: 0 !important;
-}
-
-/* Ensure text nodes after link pills flow horizontally */
-[contenteditable] a.page-link + *,
-[contenteditable] a.user-link + *,
-[contenteditable] a.external-link + *,
-[contenteditable] .compound-link-container + * {
-  display: inline !important;
-  vertical-align: baseline !important;
-}
-
-/* CRITICAL: Force horizontal layout when paragraph starts with link pills */
-/* FIXED: Only apply to view mode paragraphs, not editor content */
-.unified-paragraph:has(.unified-text-content > a:first-child),
-.unified-paragraph:has(.unified-text-content > .compound-link-container:first-child) {
-  /* Ensure the entire paragraph flows horizontally with flex layout */
-  display: flex !important;
-  align-items: baseline !important;
-  flex-wrap: nowrap !important;
-  white-space: normal !important;
-  line-height: 1.5 !important;
-}
-
-/* Fallback for browsers without :has() support */
-.unified-paragraph .unified-text-content:first-child,
-[contenteditable] div > span.unified-text-content:first-child {
-  display: contents !important; /* Use contents to allow children to participate in flex layout */
-  vertical-align: baseline !important;
-}
-
-/* CRITICAL: Ensure paragraph numbers don't interfere with link pill layout */
-[contenteditable] .unified-text-content a.page-link,
-[contenteditable] .unified-text-content a.user-link,
-[contenteditable] .unified-text-content a.external-link,
-[contenteditable] .unified-text-content .compound-link-container,
-.unified-text-content a.page-link,
-.unified-text-content a.user-link,
-.unified-text-content a.external-link,
-.unified-text-content .compound-link-container {
-  /* Ensure link pills flow horizontally within content area */
-  display: inline-block !important;
-  vertical-align: baseline !important;
-}
-
-/* Ensure all content within text content area flows horizontally */
-[contenteditable] .unified-text-content *:not(.page-link):not(.user-link):not(.external-link):not(.compound-link-container),
-.unified-text-content *:not(.page-link):not(.user-link):not(.external-link):not(.compound-link-container) {
-  display: inline !important;
-  vertical-align: baseline !important;
-}
-
-/* CRITICAL: Ensure text content that starts with link pills flows horizontally */
-.unified-text-content > a:first-child.page-link,
-.unified-text-content > a:first-child.user-link,
-.unified-text-content > a:first-child.external-link,
-.unified-text-content > .compound-link-container:first-child,
-[contenteditable] .unified-text-content > a:first-child.page-link,
-[contenteditable] .unified-text-content > a:first-child.user-link,
-[contenteditable] .unified-text-content > a:first-child.external-link,
-[contenteditable] .unified-text-content > .compound-link-container:first-child {
-  display: inline-block !important;
-  vertical-align: baseline !important;
-  margin-right: 0.25rem !important; /* Small space after first link */
-}
-
-/* Override any block display that might be applied to link-related elements */
-/* REMOVED: This rule was conflicting with inline-block styling for link pills */
-/* Link pills should use inline-block for proper spacing and alignment */
-
-/* CRITICAL: Ensure text content flows inline, but preserve link pill styling */
-.unified-text-content > *:not(.page-link):not(.user-link):not(.external-link):not(.compound-link-container),
-[contenteditable] .unified-text-content > *:not(.page-link):not(.user-link):not(.external-link):not(.compound-link-container) {
-  display: inline !important;
-  vertical-align: baseline !important;
-}
-
-/* Exception: Link pills should be inline-block for proper spacing */
-.unified-text-content > a.page-link,
-.unified-text-content > a.user-link,
-.unified-text-content > a.external-link,
-.unified-text-content > .compound-link-container,
-[contenteditable] .unified-text-content > a.page-link,
-[contenteditable] .unified-text-content > a.user-link,
-[contenteditable] .unified-text-content > a.external-link,
-[contenteditable] .unified-text-content > .compound-link-container {
-  display: inline-block !important;
-  vertical-align: baseline !important;
-}
-
-/* Fallback for browsers that don't support :has() */
-[contenteditable] div > span[data-link-type],
-[contenteditable] div > span.page-link,
-[contenteditable] div > span.user-link,
-[contenteditable] div > span.external-link {
-  display: inline-block !important; /* Use inline-block for proper spacing */
-  vertical-align: baseline !important;
-}
-
-/* CRITICAL: Compound link specific fixes for contentEditable */
-[contenteditable] .compound-link-container {
-  /* Ensure compound links stay inline-block and don't break to new lines */
-  display: inline-block !important;
-  vertical-align: baseline !important;
-  white-space: nowrap !important;
-  /* Prevent any flexbox behavior that could cause vertical stacking */
-  flex-wrap: nowrap !important;
-  align-items: baseline !important;
-  /* Ensure proper spacing */
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-/* Ensure all parts of compound links flow horizontally */
-[contenteditable] .compound-link-container > * {
-  display: inline-block !important;
-  vertical-align: baseline !important;
-  margin: 0 0.125rem !important;
-  /* Prevent any block behavior */
-  float: none !important;
-  position: static !important;
-}
-
-/* Specific styling for compound link parts */
-[contenteditable] .compound-link-container .page-portion,
-[contenteditable] .compound-link-container .author-portion {
-  display: inline-block !important;
-  vertical-align: baseline !important;
-  margin: 0 0.125rem !important;
-  border-radius: 0.5rem !important;
-  white-space: nowrap !important;
-}
-
-/* Ensure "by" text doesn't break the flow */
-[contenteditable] .compound-link-container .text-muted-foreground {
-  display: inline !important;
-  vertical-align: baseline !important;
-  margin: 0 0.125rem !important;
-  padding: 0 !important;
-  white-space: nowrap !important;
-  font-style: normal !important; /* Prevent any italic styling that might affect layout */
-}
-
-/* Ensure text after compound links flows horizontally */
-[contenteditable] .compound-link-container + * {
-  display: inline !important;
-  vertical-align: baseline !important;
-  margin-left: 0.25rem !important; /* Small space after compound link */
-}
-
-/* Prevent any wrapper elements from breaking compound link flow */
-[contenteditable] span.compound-link-wrapper,
-[contenteditable] div.compound-link-wrapper {
-  display: inline !important;
-  vertical-align: baseline !important;
-}
-
-/* Duplicate rule removed - already handled above in the general rule */
-
-/* REMOVED: Using simpler approach with paragraph numbers as first child nodes */
-
-/* REMOVED: No longer needed since ParagraphNumberOverlay now uses baseline alignment */
-
-/* REMOVED: PillStyleContext now uses inline-block by default - no overrides needed */
-
-/* REMOVED: Conflicting CSS overrides - PillStyleContext now handles styling properly */
-
-/* Inner content structure - now handled by flex layout on paragraph itself */
-/* Removed .unified-paragraph .flex rule - paragraph itself is now flex container */
-
-/* Hover states - consistent between modes */
-.unified-paragraph:hover {
-  background-color: hsl(var(--muted) / 0.3);
-}
-
-/* CRITICAL: Ensure smooth transitions between view and edit modes */
-.page-content,
-.unified-editor,
-.editor-content {
-  transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out, opacity 0.15s ease-in-out;
-  transform: translateZ(0); /* Force hardware acceleration */
-  will-change: border-color, background-color, opacity;
-  /* Prevent layout shifts by avoiding transitions on layout properties */
-  /* Ensure consistent dimensions during transitions */
-  contain: layout style;
-  backface-visibility: hidden; /* Prevent flicker on some browsers */
-}
-
-/* Mode transition class for smooth switching between dense and normal modes */
-.mode-transition {
-  transition: opacity 0.15s ease-in-out, transform 0.15s ease-in-out;
-  transform: translateZ(0); /* Force hardware acceleration */
-  will-change: opacity, transform;
-  /* Prevent layout shifts during mode transitions */
-  contain: layout style;
-  backface-visibility: hidden;
-}
-
-/* Ensure child elements also transition smoothly */
-.mode-transition .unified-paragraph,
-.mode-transition .unified-paragraph-number,
-.mode-transition .unified-text-content {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Smooth transitions for all paragraph states */
-.unified-paragraph {
-  transition: all 0.3s ease-in-out !important;
-  border: 2px solid transparent !important;
-  /* Prevent layout shifts during transitions */
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  contain: layout style;
-  /* Animation for appearing paragraphs in normal mode */
-  opacity: 0;
-  animation: fadeInParagraph 0.4s ease-out forwards;
-}
-
-/* Ensure smooth transitions work in view mode */
-.mode-transition .unified-paragraph {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
-/* Prevent any layout shifts during mode transitions */
-.page-editor-stable {
-  /* Reduce containment to prevent interference with dynamic content */
-  contain: style;
-  /* Ensure consistent dimensions */
-  box-sizing: border-box;
-  width: 100%;
-  /* Natural content flow without viewport constraints */
-  min-height: auto;
-}
-
-/* CRITICAL FIX: Editor paragraph numbering - COMPLETELY DISABLED CSS APPROACH */
-/* Using JavaScript overlay instead for bulletproof protection */
-
-/* Initialize editor container - IDENTICAL for both view and edit modes */
-.editor-content.normal-mode {
-  position: relative;
-  /* CRITICAL: Match container styling with view mode */
-  box-sizing: border-box;
-  width: 100%;
-  max-width: none;
-  padding: 0;
-  margin: 0;
-  font-size: 1rem;
-  line-height: 1.5; /* Match view mode exactly */
-  font-family: inherit;
-
-  /* No container padding needed - each paragraph handles its own layout */
-}
-
-/* CRITICAL: Ensure view mode containers have no excessive padding */
-.page-content.unified-editor {
-  /* Remove any default padding that might be inherited */
-  padding: 0 !important;
-  margin: 0 !important;
-  /* ADDED: Ensure proper width and prevent overflow */
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-/* Ensure inner content containers also have minimal padding */
-.page-content .editor-content {
-  padding: 0 !important;
-  margin: 0 !important;
-  /* ADDED: Ensure proper width and prevent overflow */
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-
-/* ADDED: Ensure all page content containers have proper width constraints */
-.unified-editor,
-.editor-content {
-  /* Ensure content uses full available width */
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-  /* CRITICAL: Remove any margins that might be causing issues */
-  margin: 0 !important;
-  /* Allow dynamic top padding to be set by inline styles */
-  padding-top: unset !important;
-}
-
-/* CRITICAL FIX: Target the specific problematic element with 20px margin */
-.page-content.unified-editor,
-.page-content .unified-editor,
-.editor-content,
-.editor-content > div,
-.page-content > div,
-.unified-editor > div {
-  margin: 0 !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-}
-
-/* RESPONSIVE: Ensure compact layout works on mobile */
-@media (max-width: 768px) {
-  .unified-paragraph {
-    /* Reduced padding on mobile for more content space */
-    padding: 0.125rem 0.125rem;
-    margin-bottom: 0.25rem; /* Tighter spacing on mobile for more screen real estate */
-  }
-
-
-
-  /* MOBILE: High specificity editor content styling - ONLY for edit mode */
-  [contenteditable="true"].editor-content.normal-mode > div,
-  [contenteditable="true"].editor-content.normal-mode > .paragraph-div,
-  .unified-editor[data-readonly="false"] .editor-content.normal-mode[contenteditable="true"] > div,
-  .unified-editor[data-readonly="false"] .editor-content.normal-mode[contenteditable="true"] > .paragraph-div {
-    /* Match mobile padding for edit mode */
-    padding: 0.25rem 0.25rem;
-    margin-bottom: 0.375rem;
-    /* MOBILE: Proper left margin for edit mode on mobile to prevent overlap */
-    margin-left: 1.25rem !important; /* Reduced margin for cleaner layout */
-    width: calc(100% - 1.25rem) !important; /* Account for reduced left margin */
-  }
-
-  /* MOBILE: Ensure page content containers don't add extra padding */
-  .page-content,
-  .unified-editor,
-  .editor-content {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-  }
-}
-
-/* REMOVED: View mode specific styling - eliminate outer padding completely */
-/* No outer padding needed - paragraphs handle their own spacing */
-
-/* CRITICAL: Ultra-high specificity rule for edit mode paragraph spacing */
-/* This ensures paragraph numbers don't overlap with text content - EDIT MODE ONLY */
-.unified-editor[data-readonly="false"] .editor-content.normal-mode[contenteditable="true"] > div,
-.page-content.unified-editor .editor-content.normal-mode[contenteditable="true"] > div,
-div.page-content.unified-editor div.editor-content.normal-mode[contenteditable="true"] > div {
-  margin-left: 1.5rem !important;
-  width: calc(100% - 1.5rem) !important;
-  padding-left: 0.25rem !important;
-  box-sizing: border-box !important;
-}
-
-/* MOBILE: Ultra-high specificity rule for mobile edit mode ONLY */
-@media (max-width: 768px) {
-  .unified-editor[data-readonly="false"] .editor-content.normal-mode[contenteditable="true"] > div,
-  .page-content.unified-editor .editor-content.normal-mode[contenteditable="true"] > div,
-  div.page-content.unified-editor div.editor-content.normal-mode[contenteditable="true"] > div {
-    margin-left: 1.25rem !important;
-    width: calc(100% - 1.25rem) !important;
-  }
-}
-
-/* Simplified edit mode styling */
-[contenteditable="true"].editor-content > div {
-  margin-left: 1.5rem !important;
-  width: calc(100% - 1.5rem) !important;
-  padding-left: 0.25rem !important;
-  padding-right: 0.25rem !important;
-  box-sizing: border-box !important;
-  position: relative !important;
-}
-
-/* Edit mode paragraph numbers - use DOM elements like view mode, not CSS counters */
-
-/* DENSE MODE STYLING - Continuous text flow with inline paragraph numbers */
-.dense-mode-container {
-  line-height: 1.5;
-  font-size: 1rem;
-  padding: 0.125rem 0.25rem;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  overflow: hidden;
-  /* Smooth transitions for mode switching */
-  transition: all 0.3s ease-in-out;
-  opacity: 0;
-  transform: translateY(10px);
-  animation: fadeInUp 0.4s ease-out forwards;
-}
-
-/* Dense mode uses the same paragraph-number class with inline styling */
-
-.dense-paragraph-content {
-  display: inline;
-  line-height: inherit;
-  /* Animate content appearing */
-  opacity: 0;
-  animation: fadeInContent 0.4s ease-out forwards;
-}
-
-.dense-paragraph-separator {
+/* Compound link parts */
+.compound-link-container .page-portion,
+.compound-link-container .author-portion {
+  display: inline-block;
+  vertical-align: baseline;
   margin: 0 0.125rem;
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
 }
 
-/* Animation keyframes for dense mode */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+/* "by" text in compound links */
+.compound-link-container .text-muted-foreground {
+  display: inline;
+  margin: 0 0.125rem;
+  padding: 0;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+/* ============================================================================
+   PARAGRAPH STYLING
+   ============================================================================ */
+
+/* Unified paragraph styling */
+.unified-paragraph {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+/* Paragraph number */
+.paragraph-number {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* Text content area */
+.unified-text-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .slate-editor {
+    padding: 0.5rem;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .paragraph-number {
+    margin-right: 0.5rem;
+  }
+
+  .page-link,
+  .user-link,
+  .external-link {
+    font-size: 0.8rem;
+    padding: 0.1rem 0.4rem;
   }
 }
 
-@keyframes fadeInNumber {
-  from {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-  to {
-    opacity: var(--paragraph-number-opacity);
-    transform: scale(1);
-  }
+/* ============================================================================
+   FOCUS STATES
+   ============================================================================ */
+
+/* Focus ring for accessibility */
+.page-link:focus,
+.user-link:focus,
+.external-link:focus {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
 }
 
-@keyframes fadeInContent {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+/* Slate editor focus */
+.slate-editor [data-slate-editor]:focus {
+  outline: none;
 }
 
-@keyframes fadeInParagraph {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+/* ============================================================================
+   UTILITY CLASSES
+   ============================================================================ */
 
-/* Focus and hover states - IDENTICAL to view mode */
-.unified-paragraph:hover {
-  background-color: hsl(var(--muted) / 0.3);
-}
+/* Text alignment */
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
 
-/* FOCUS RINGS - Only visible in edit mode, invisible in view mode */
+/* Spacing utilities */
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-3 { margin-bottom: 0.75rem; }
+.mb-4 { margin-bottom: 1rem; }
 
-/* View mode - no focus rings visible */
-.unified-editor[data-readonly="true"] .editor-content,
-.unified-editor[data-readonly="true"] .unified-paragraph,
-.unified-editor[data-readonly="true"] .editor-content:focus-within,
-.unified-editor[data-readonly="true"] .editor-content:focus .normal-mode > div:focus-within {
-  outline: none !important;
-  border-color: transparent !important;
-}
+/* Display utilities */
+.inline { display: inline; }
+.inline-block { display: inline-block; }
+.block { display: block; }
+.flex { display: flex; }
 
-/* Edit mode - focus rings visible */
-/* Default editor focus state - blue when title is not focused */
-.unified-editor:not([data-readonly="true"]) .editor-content:focus .normal-mode > div:focus-within,
-.unified-editor:not([data-readonly="true"]) .unified-paragraph.editing-mode,
-.unified-editor:not([data-readonly="true"]) [contenteditable]:focus {
-  border-color: hsl(var(--primary) / 0.3) !important;
-  /* Use box-shadow instead of outline to avoid layout shifts */
-  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2) !important;
-}
-
-/* Coordinated focus states - grey when title is focused */
-.title-focused .unified-editor:not([data-readonly="true"]) .editor-content:focus .normal-mode > div:focus-within,
-.title-focused .unified-editor:not([data-readonly="true"]) .unified-paragraph.editing-mode,
-.title-focused .unified-editor:not([data-readonly="true"]) [contenteditable]:focus {
-  border-color: hsl(var(--muted-foreground) / 0.3) !important;
-  /* Use box-shadow instead of outline to avoid layout shifts */
-  box-shadow: 0 0 0 2px hsl(var(--muted-foreground) / 0.2) !important;
-}
-
-/* Editor container focus ring - REMOVED to eliminate unwanted UI elements during title editing */
-/* These focus rings were creating visual clutter around the entire editor container */
-
-/* Simplified editor styling - removed overly complex overrides */
-.prose.prose-lg.max-w-none.focus\\:outline-none.editor-content.page-editor-stable.box-border.mode-transition.normal-mode:focus,
-.prose.prose-lg.max-w-none.focus\\:outline-none.editor-content.page-editor-stable.box-border.mode-transition.normal-mode:focus-within,
-.prose.prose-lg.max-w-none.focus\\:outline-none.editor-content,
-.prose.prose-lg.max-w-none.focus\\:outline-none.editor-content:focus,
-.prose.prose-lg.max-w-none.focus\\:outline-none.editor-content:focus-within,
-.focus\\:outline-none.editor-content,
-.focus\\:outline-none.editor-content:focus,
-.focus\\:outline-none.editor-content:focus-within {
-  outline: none !important;
-  box-shadow: none !important;
-  border: none !important;
-  border-width: 0 !important;
-  border-color: transparent !important;
-  border-style: none !important;
-  background: transparent !important;
-  background-color: transparent !important;
-  background-image: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  border-radius: 0 !important;
-  box-decoration-break: initial !important;
-}
-/* FINAL SOLUTION: Clean override for visual container removal */
-/* This rule has maximum specificity to override any inherited styling */
-* {
-  /* Remove any visual container styling from ALL elements */
-}
-
-/* Specific override for the editor area */
-.page-editor-stable,
-.page-editor-stable > *,
-.page-editor-stable > * > *,
-.page-editor-stable > * > * > * {
-  border: none !important;
-  border-width: 0 !important;
-  border-style: none !important;
-  border-color: transparent !important;
-  background: transparent !important;
-  background-color: transparent !important;
-  background-image: none !important;
-  box-shadow: none !important;
-  outline: none !important;
-  border-radius: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-/* Dense mode removed */
-
-/* CRITICAL: Ensure pill links in editor get proper styling from PillStyleContext */
-/* These span elements with pill classes should look like proper pill links */
-[contenteditable] span.page-link,
-[contenteditable] span.user-link,
-[contenteditable] span.external-link,
-span.page-link,
-span.user-link,
-span.external-link {
-  /* Apply only essential editor-specific styling - let PillStyleContext handle appearance */
-  text-decoration: none !important;
-  cursor: pointer !important;
-  vertical-align: baseline !important;
-
-  /* Essential properties for editor functionality only */
-  white-space: nowrap !important;
-
-  /* Remove hardcoded styling - let PillStyleContext classes control appearance */
-  /* This ensures pill link type settings (filled/outline/text_only/underlined) are respected */
-}
-
-
-
-/* Paragraph numbering is now handled by injected spans in both view and edit modes */
-
-/* CRITICAL FIX: Ensure links are completely non-editable in the editor */
-/* This prevents users from editing link content directly in the editor */
-[contenteditable] .page-link,
-[contenteditable] .user-link,
-[contenteditable] .external-link,
-[contenteditable] .compound-link {
-  /* Make links completely non-editable */
-  -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
-  user-select: none !important;
-
-  /* Prevent text cursor */
-  cursor: pointer !important;
-
-  /* Ensure contenteditable is disabled */
-  -webkit-user-modify: read-only !important;
-
-  /* CRITICAL: Force contenteditable to false */
-  contenteditable: false !important;
-
-  /* Prevent focus */
-  outline: none !important;
-
-  /* Visual indication that it's clickable but not editable */
-  position: relative;
-
-  /* ATOMIC LINK BEHAVIOR: Treat links as single units for cursor positioning */
-  /* Prevent cursor from being placed inside the link */
-  pointer-events: auto !important;
-
-  /* Ensure links are treated as atomic units by the browser */
-  display: inline-block !important;
-
-  /* Prevent text selection within links but allow whole-link selection */
-  -webkit-touch-callout: none !important;
-  -webkit-tap-highlight-color: transparent !important;
-
-  /* CRITICAL: Prevent any text input or editing */
-  -webkit-user-modify: read-only !important;
-  -moz-user-modify: read-only !important;
-
-  /* Prevent caret from appearing inside links */
-  caret-color: transparent !important;
-
-  /* Ensure no text editing is possible */
-  -webkit-appearance: none !important;
-  -moz-appearance: none !important;
-}
-
-/* Ensure nested elements in compound links are also non-editable */
-[contenteditable] .compound-link *,
-[contenteditable] .page-link *,
-[contenteditable] .user-link *,
-[contenteditable] .external-link * {
-  -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
-  user-select: none !important;
-  cursor: pointer !important;
-  -webkit-user-modify: read-only !important;
-  -moz-user-modify: read-only !important;
-
-  /* CRITICAL: Force contenteditable to false on all nested elements */
-  contenteditable: false !important;
-
-  /* Prevent caret from appearing */
-  caret-color: transparent !important;
-
-  /* Ensure no text editing is possible on nested elements */
-  -webkit-appearance: none !important;
-  -moz-appearance: none !important;
-}
-
-/* Visual feedback for selected links */
-[contenteditable] .page-link:focus,
-[contenteditable] .user-link:focus,
-[contenteditable] .external-link:focus,
-[contenteditable] .compound-link:focus {
-  /* Subtle highlight when link is selected */
-  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.3) !important;
-  border-radius: inherit !important;
-}
-
-/* Custom selection styling for when entire link is selected */
-[contenteditable] .page-link::selection,
-[contenteditable] .user-link::selection,
-[contenteditable] .external-link::selection,
-[contenteditable] .compound-link::selection {
-  background: hsl(var(--primary) / 0.2) !important;
-  color: inherit !important;
-}
-
-/* Ensure links don't interfere with normal text editing around them */
-[contenteditable] .page-link + *,
-[contenteditable] .user-link + *,
-[contenteditable] .external-link + *,
-[contenteditable] .compound-link + * {
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
-  user-select: text;
-}
+/* Vertical alignment */
+.align-baseline { vertical-align: baseline; }
+.align-top { vertical-align: top; }
+.align-middle { vertical-align: middle; }
+.align-bottom { vertical-align: bottom; }

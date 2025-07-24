@@ -288,8 +288,9 @@ export default function Header() {
           height: `${headerHeight}px`,
           transition: 'height 300ms ease-in-out',
           transform: 'translateZ(0)', // Force GPU acceleration
-          willChange: 'height'
-        }}
+          willChange: 'height',
+          '--header-height': `${headerHeight}px`
+        } as React.CSSProperties}
       />
 
     </>

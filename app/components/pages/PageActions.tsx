@@ -53,6 +53,11 @@ const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
  * - Owner-specific actions: Edit and Delete
  * - General actions: Copy Link, Reply to Page, and Toggle Paragraph Mode
  *
+ * UPDATED 2024: Now follows standardized page padding system
+ * - Inherits px-4 padding from PageFooter container
+ * - Buttons use consistent rounded-2xl styling
+ * - Follows unified spacing and alignment standards
+ *
  * Paragraph Mode Options:
  * 1. Normal Mode: Traditional document style with paragraph numbers creating indentation
  *    - Numbers positioned to the left of the text
@@ -70,6 +75,12 @@ const AddToPageButton = dynamic(() => import('../utils/AddToPageButton'), {
  * The component is responsive and adapts to mobile and desktop viewports:
  * - On mobile: Buttons stack vertically and take full width
  * - On desktop: Buttons display horizontally and take only necessary width
+ *
+ * STYLING STANDARDS:
+ * - Uses size="lg" for better mobile usability
+ * - Consistent gap-2 spacing for icons and text
+ * - Follows w-full md:w-auto responsive pattern
+ * - Uses rounded-2xl for modern button styling
  *
  * This component replaces the previous PageInteractionButtons and ActionRow components,
  * consolidating all page interactions in one place for better maintainability.

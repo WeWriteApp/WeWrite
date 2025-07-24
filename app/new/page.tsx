@@ -31,7 +31,10 @@ import { toast } from "../components/ui/use-toast";
 import CustomDateField from "../components/pages/CustomDateField";
 import { useLogRocket } from "../providers/LogRocketProvider";
 import LocationField from "../components/pages/LocationField";
-import { isExactDateFormat } from "../utils/dateUtils";
+
+
+// Duplicate title checking imports
+import { TitleValidationInput } from "../components/forms/TitleValidationInput";
 
 /**
  * Loading state component for new page creation
@@ -130,6 +133,13 @@ function NewPageContent() {
   const [hasTitleChanged, setHasTitleChanged] = useState<boolean>(false);
   const [titleError, setTitleError] = useState<boolean>(false);
 
+  // Title validation state
+  const [isTitleValid, setIsTitleValid] = useState<boolean>(true);
+  const [isTitleDuplicate, setIsTitleDuplicate] = useState<boolean>(false);
+
+  // Focus state management - coordinate with title focus
+  const [isEditorFocused, setIsEditorFocused] = useState(false);
+
   // Groups functionality removed - but keep selectedGroupId for compatibility
   const selectedGroupId = null;
 
@@ -141,6 +151,37 @@ function NewPageContent() {
 
   // Track intended custom date from daily notes carousel
   const [intendedCustomDate, setIntendedCustomDate] = useState<string | null>(null);
+
+  // Listen for focus changes to coordinate with title focus
+  useEffect(() => {
+    const handleFocusChange = () => {
+      const activeElement = document.activeElement;
+
+      // Check if the editor or content area is focused
+      const editorElement = document.querySelector('[contenteditable="true"]');
+
+      const isEditorActive = editorElement && (
+        activeElement === editorElement ||
+        editorElement.contains(activeElement)
+      );
+
+      setIsEditorFocused(!!isEditorActive);
+
+      // Remove title-focused class when editor is focused
+      if (isEditorActive) {
+        document.body.classList.remove('title-focused');
+      }
+    };
+
+    // Listen for focus events on the document
+    document.addEventListener('focusin', handleFocusChange);
+    document.addEventListener('focusout', handleFocusChange);
+
+    return () => {
+      document.removeEventListener('focusin', handleFocusChange);
+      document.removeEventListener('focusout', handleFocusChange);
+    };
+  }, []);
 
   // REMOVED: This was causing the component to get stuck in loading state
   // The early return prevented useEffect from running to set isInitializing to false
@@ -335,10 +376,18 @@ function NewPageContent() {
     }
   };
 
+  // Handle title validation changes from the validation component
+  const handleTitleValidationChange = (isValid: boolean, isDuplicate: boolean) => {
+    setIsTitleValid(isValid);
+    setIsTitleDuplicate(isDuplicate);
+  };
+
   // Handle custom date changes
   const handleCustomDateChange = (newDate: string | null) => {
     setIntendedCustomDate(newDate);
   };
+
+
 
   // Handle setting editing state
   const handleSetIsEditing = (editing: boolean) => {
@@ -387,6 +436,21 @@ function NewPageContent() {
         title: "Missing Title",
         description: errorMsg,
         variant: "destructive"});
+      return false;
+    }
+
+    // Check for duplicate titles before saving
+    if (isTitleDuplicate) {
+      console.log('🔴 NEW_PAGE: Cannot save - duplicate title detected');
+      const errorMsg = "Cannot save page with duplicate title. Please choose a different title or go to the existing page.";
+      setError(errorMsg);
+      setTitleError(true);
+      toast({
+        title: "Duplicate Title",
+        description: errorMsg,
+        variant: "destructive"
+      });
+      setIsSaving(false);
       return false;
     }
 
@@ -1007,18 +1071,48 @@ function NewPageContent() {
           isEditing={isEditing}
           setIsEditing={handleSetIsEditing}
           onTitleChange={handleTitleChange}
-          titleError={titleError}
+          titleError={titleError || isTitleDuplicate}
           canEdit={true} // User can always edit their new page
           isNewPage={true} // Enable auto-focus for new pages
           isReply={isReply} // Pass reply status for contextual text
         />
+
+        {/* Title Validation Feedback - Show below header */}
+        {title && title.trim() !== '' && (
+          <div className="px-4 -mt-2 mb-4">
+            <TitleValidationInput
+              value={title}
+              onChange={handleTitleChange}
+              onValidationChange={handleTitleValidationChange}
+              className="hidden" // Hide the input, we just want the validation feedback
+            />
+          </div>
+        )}
+        {/* Full-width header area */}
         <div
-          className="animate-in fade-in-0 duration-300 w-full pb-32 max-w-none box-border px-4"
+          className="w-full"
           style={{
-            paddingTop: '0', // Edit mode: header is static, no padding needed (matches PageView.tsx pattern)
-            transition: 'padding-top 300ms ease-in-out' // Smooth transition when header height changes
+            paddingTop: '0', // Edit mode: header is static, no padding needed
+            transition: 'padding-top 300ms ease-in-out'
           }}
         >
+          {/* Content container with title-like styling */}
+          <div className="px-4 pb-32">
+            <div
+              className={`bg-background/80 border rounded-lg px-4 py-4 outline-none transition-all duration-200 ${
+                isEditorFocused
+                  ? "border-primary/50 ring-2 ring-primary/20"
+                  : "border-muted-foreground/30"
+              } min-h-[200px] w-full max-w-none`}
+              onClick={() => {
+                // Focus the editor when clicking the container
+                const editorElement = document.querySelector('[contenteditable="true"]');
+                if (editorElement) {
+                  (editorElement as HTMLElement).focus();
+                }
+              }}
+            >
+
             {isEditing ? (
               <div className="animate-in fade-in-0 duration-300">
                 <PageProvider>
@@ -1093,9 +1187,13 @@ function NewPageContent() {
                     title="Unsaved Changes"
                     description="You have unsaved changes. Do you want to save them before leaving?"
                   />
+
+
               </PageProvider>
               </div>
             ) : null}
+            </div> {/* Close content container */}
+          </div> {/* Close full-width header area */}
         </div>
         {!isEditing && (
           <PledgeBar

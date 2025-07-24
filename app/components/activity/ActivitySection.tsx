@@ -1,14 +1,7 @@
 'use client';
 
-import React, { Suspense } from 'react';
-import { ActivitySkeleton } from "../ui/skeleton-loaders";
-import dynamic from 'next/dynamic';
-
-// Dynamically import the core ActivitySection component
-const ActivitySectionCore = dynamic(() => import('./ActivitySectionCore'), {
-  loading: () => <ActivitySkeleton limit={4} />,
-  ssr: false
-});
+import React from 'react';
+import SimpleRecentEdits from '../features/SimpleRecentEdits';
 
 interface ActivitySectionProps {
   limit?: number;
@@ -16,7 +9,7 @@ interface ActivitySectionProps {
 }
 
 /**
- * ActivitySection component with performance optimizations like lazy loading and memoization
+ * ActivitySection component - simplified without unnecessary dynamic loading
  * This is the main ActivitySection implementation that should be used throughout the app.
  */
 const ActivitySection = React.memo(function ActivitySection({
@@ -24,9 +17,9 @@ const ActivitySection = React.memo(function ActivitySection({
   priority = "high"
 }: ActivitySectionProps) {
   return (
-    <Suspense fallback={<ActivitySkeleton limit={limit} />}>
-      <ActivitySectionCore />
-    </Suspense>
+    <div style={{ minHeight: '200px' }}>
+      <SimpleRecentEdits />
+    </div>
   );
 });
 

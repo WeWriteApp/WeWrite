@@ -7,7 +7,7 @@ import { getPageVersions } from '../../services/versionService';
 import { Button } from '../../components/ui/button';
 import { ChevronLeft, Clock } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
-import { Loader } from '../../components/utils/Loader';
+import UnifiedLoader from '../../components/ui/unified-loader';
 import ActivityCard from '../../components/activity/ActivityCard';
 import { getDiff } from '../../utils/diffService';
 import PageHeader from '../../components/pages/PageHeader';
@@ -203,9 +203,10 @@ export default function PageVersionsPage({ params }: PageVersionsPageProps) {
           username="Loading..."
           isLoading={true}
         />
-        <div className="flex justify-center items-center min-h-[50vh]">
-          <Loader />
-        </div>
+        <UnifiedLoader
+          isLoading={true}
+          message="Loading page versions..."
+        />
       </div>
     );
   }

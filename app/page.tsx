@@ -67,12 +67,14 @@ export default function HomePage() {
   // Show loading state during hydration, authentication loading, or pending redirect
   if (!mounted || isLoading || authRedirectPending) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">
-            {authRedirectPending ? 'Signing you in...' : 'Loading WeWrite...'}
-          </p>
+      <div className="min-h-screen bg-background">
+        <div className="fixed inset-0 flex items-center justify-center">
+          <div className="text-center">
+            <div className="loader loader-md"></div>
+            <p className="text-muted-foreground mt-3">
+              {authRedirectPending ? 'Signing you in...' : 'Loading WeWrite...'}
+            </p>
+          </div>
         </div>
       </div>
     );

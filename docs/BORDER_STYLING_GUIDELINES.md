@@ -4,6 +4,26 @@
 
 WeWrite uses a comprehensive theme-aware border system that automatically adapts to light mode, dark mode, and high contrast accessibility settings. This document outlines the proper usage of border utilities to ensure consistent styling across the application.
 
+## 🎯 **NEW: Standardized Page Element Borders (2024)**
+
+### Unified Border System for Page Elements
+All page elements (title, body, footer sections) now use a standardized border system:
+
+```css
+/* Standard border states for page elements */
+.border-muted-foreground/30     /* Inactive/default state */
+.border-primary/50 ring-2 ring-primary/20  /* Active/focused state */
+.border-destructive focus:ring-2 focus:ring-destructive/20  /* Error state */
+```
+
+### Standardized Padding System
+All page elements use consistent padding:
+```css
+px-4    /* Horizontal padding: 16px (all page elements) */
+py-2    /* Vertical padding for titles: 8px */
+py-4    /* Vertical padding for body content: 16px */
+```
+
 ## ✅ **ALWAYS USE** - Theme-Aware Border Classes
 
 ### Primary Border Classes
@@ -128,6 +148,59 @@ All border classes work consistently across all screen sizes and don't require r
 
 ### Performance
 Theme-aware borders use CSS variables, ensuring optimal performance without JavaScript calculations.
+
+## 🚨 **DEPRECATED PATTERNS - REMOVE DURING CLEANUP**
+
+### ❌ Old Inconsistent Border Patterns (DELETE THESE)
+
+#### Inconsistent Padding Patterns
+```css
+/* ❌ DELETE: Old inconsistent padding */
+px-1 py-0.5    /* Old title padding - replace with px-4 py-2 */
+px-2 py-1      /* Old hover padding - replace with px-4 py-2 */
+px-3           /* Non-standard padding - replace with px-4 */
+```
+
+#### Inconsistent Border States
+```css
+/* ❌ DELETE: Old inconsistent border patterns */
+border-muted-foreground/20     /* Old weak border - replace with /30 */
+border-gray-300               /* Hardcoded color - use theme-aware */
+border-neutral-200            /* Hardcoded color - use theme-aware */
+dark:border-gray-600          /* Manual dark mode - use theme-aware */
+```
+
+#### Mixed Focus States
+```css
+/* ❌ DELETE: Inconsistent focus states */
+focus:border-blue-500         /* Old focus color - use border-primary/50 */
+focus:ring-1                  /* Weak ring - use ring-2 */
+focus:ring-blue-200           /* Hardcoded ring - use ring-primary/20 */
+```
+
+### 🔍 Search Patterns for Cleanup
+
+#### Find Inconsistent Padding
+```bash
+# Find old padding patterns that need standardization
+grep -r "px-[123]" app/components/pages/ --include="*.tsx"
+grep -r "py-0\.5\|py-1" app/components/pages/ --include="*.tsx"
+```
+
+#### Find Inconsistent Borders
+```bash
+# Find hardcoded border colors
+grep -r "border-gray\|border-neutral" app/components/ --include="*.tsx"
+grep -r "dark:border-" app/components/ --include="*.tsx"
+grep -r "border-muted-foreground/20" app/components/ --include="*.tsx"
+```
+
+#### Find Inconsistent Focus States
+```bash
+# Find old focus patterns
+grep -r "focus:border-blue\|focus:ring-blue" app/components/ --include="*.tsx"
+grep -r "focus:ring-1[^0-9]" app/components/ --include="*.tsx"
+```
 
 ## 🚨 **Migration Guide**
 

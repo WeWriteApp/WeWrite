@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 // Removed Firebase imports - now using API endpoints
-import { Loader } from '../../components/utils/Loader';
+import UnifiedLoader from '../../components/ui/unified-loader';
 import SingleProfileView from '../../components/pages/SingleProfileView';
 
 
@@ -140,7 +140,12 @@ export default function UserPage({ params }: UserPageProps) {
   }, [profile]);
 
   if (isLoading) {
-    return <Loader />;
+    return (
+      <UnifiedLoader
+        isLoading={isLoading}
+        message="Loading user profile..."
+      />
+    );
   }
 
   if (error) {

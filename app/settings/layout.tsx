@@ -3,7 +3,7 @@
 import { useContext, useEffect, useState } from "react";
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
-import { PageLoader } from "../components/ui/page-loader";
+import UnifiedLoader from "../components/ui/unified-loader";
 import { Button } from "../components/ui/button";
 import {
   ChevronLeft,
@@ -117,7 +117,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
   }, [user]);
 
   if (!isAuthenticated) {
-    return <PageLoader message="Loading settings..." />;
+    return <UnifiedLoader isLoading={true} message="Loading settings..." />;
   }
 
   if (!user) {

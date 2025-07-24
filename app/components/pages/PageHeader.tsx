@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Button } from "../ui/button";
-import { Loader, ChevronLeft, ChevronRight, Share2, MoreHorizontal, Edit2, Plus, MessageSquare, Trash2, Link as LinkIcon, AlignJustify, AlignLeft, Lock } from "lucide-react";
+import { Loader, ChevronLeft, ChevronRight, Share2, MoreHorizontal, Edit2, Plus, MessageSquare, Trash2, Link as LinkIcon, AlignJustify, AlignLeft, Lock, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ref, get } from "firebase/database";
 import { rtdb } from "../../firebase/rtdb";
@@ -186,6 +186,11 @@ export default function PageHeader({
   const titleInputRef = React.useRef<HTMLTextAreaElement>(null);
   const [isTitleFocused, setIsTitleFocused] = React.useState<boolean>(false);
   const [isEditorFocused, setIsEditorFocused] = React.useState<boolean>(false);
+
+  // Title validation state
+  const [isTitleDuplicate, setIsTitleDuplicate] = React.useState<boolean>(false);
+  const [isCheckingTitle, setIsCheckingTitle] = React.useState<boolean>(false);
+  const [duplicatePageId, setDuplicatePageId] = React.useState<string | null>(null);
 
   // Date formatting context
   const { formatDate } = useDateFormat();
@@ -404,12 +409,52 @@ export default function PageHeader({
     }
   };
 
+  // Check for duplicate titles
+  const checkTitleDuplicate = React.useCallback(async (titleToCheck: string) => {
+    if (!titleToCheck.trim() || !userId) return;
+
+    setIsCheckingTitle(true);
+    try {
+      const params = new URLSearchParams({
+        title: titleToCheck.trim(),
+      });
+
+      // Only exclude current page if we have a pageId
+      if (pageId) {
+        params.append('excludePageId', pageId);
+      }
+
+      const response = await fetch(`/api/pages/check-duplicate?${params}`);
+      const data = await response.json();
+
+      setIsTitleDuplicate(data.isDuplicate);
+      setDuplicatePageId(data.pageId || null);
+    } catch (error) {
+      console.error('Error checking title duplicate:', error);
+      setIsTitleDuplicate(false);
+      setDuplicatePageId(null);
+    } finally {
+      setIsCheckingTitle(false);
+    }
+  }, [userId, pageId]);
+
   // Auto-resize textarea when content changes
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setEditingTitle(e.target.value);
+    const newTitle = e.target.value;
+    setEditingTitle(newTitle);
+
     // Auto-resize textarea to fit content
     e.target.style.height = 'auto';
     e.target.style.height = e.target.scrollHeight + 'px';
+
+    // Check for duplicates with debouncing
+    if (newTitle.trim() !== title?.trim()) {
+      checkTitleDuplicate(newTitle);
+    } else {
+      // Reset validation state if title matches original
+      setIsTitleDuplicate(false);
+      setDuplicatePageId(null);
+    }
   };
 
   // UsernameBadge handles all data fetching internally
@@ -563,23 +608,25 @@ export default function PageHeader({
       <header
         ref={headerRef}
         className={`
-          ${isEditing ? 'block' : 'fixed top-0 left-0 right-0 w-full'}
+          ${isEditing ? 'block page-header-edit-mode w-full' : 'fixed top-0 left-0 right-0 w-full'}
           z-50 bg-background border-visible
           ${!isEditing ? 'transition-all duration-300 ease-out will-change-transform' : ''}
           ${isScrolled && !isEditing ? 'bg-background/80 backdrop-blur-sm shadow-sm' : ''}
         `}
         style={!isEditing ? { transform: 'translateZ(0)' } : {}}
       >
-        {/* Use the same layout approach as Header.tsx for consistent spacing */}
+        {/* Full width in edit mode, sidebar-aware in view mode */}
         <div className="flex w-full h-full">
-          {/* Sidebar spacer - only on desktop, matches Header.tsx logic */}
-          <div
-            className="hidden md:block transition-all duration-300 ease-in-out flex-shrink-0"
-            style={{ width: `${headerSidebarWidth}px` }}
-          />
+          {/* Sidebar spacer - only in view mode on desktop */}
+          {!isEditing && (
+            <div
+              className="hidden md:block transition-all duration-300 ease-in-out flex-shrink-0"
+              style={{ width: `${headerSidebarWidth}px` }}
+            />
+          )}
 
-          {/* Header content area - matches main header content area */}
-          <div className="flex-1 min-w-0 relative px-4 header-padding-mobile">
+          {/* Header content area - full width in edit mode */}
+          <div className={`${isEditing ? 'w-full' : 'flex-1 min-w-0'} relative px-4 header-padding-mobile`}>
             {/* Collapsed Header Layout - Single Row */}
             {isScrolled && !isEditing && (
               <div
@@ -600,12 +647,8 @@ export default function PageHeader({
                   {/* Title and Byline */}
                   <div className="flex items-center gap-1 min-w-0">
                     <h1 className="text-xs font-semibold opacity-90 truncate">
-                      {isLoading ? (
-                        <span className="inline-flex items-center">
-                          <Loader className="h-3 w-3 animate-spin mr-1" />
-                          Loading...
-                        </span>
-                      ) : (
+                      {/* REMOVED: Loading spinner that was showing inappropriately */}
+                      {(
                         <span className="flex items-center gap-1">
                           <span className="truncate">
                             {isDailyNote && title
@@ -808,54 +851,62 @@ export default function PageHeader({
 
                   <div className="flex-1 text-center">
                     <h1 className="text-2xl font-semibold">
-                      {isLoading ? (
-                        <div className="flex items-center justify-center space-x-2">
-                          <Loader className="h-4 w-4 animate-spin" />
-                          <span className="text-muted-foreground">Loading title...</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center">
+                      {/* REMOVED: Loading spinner that was showing inappropriately */}
+                      {(
+                        <div className="flex items-center justify-center relative">
                           {isEditing && canEdit && isEditingTitle && !(isExactDateFormat(title || "") && title !== "Daily note") ? (
-                            <textarea
-                              ref={titleInputRef}
-                              value={editingTitle}
-                              onChange={handleTitleChange}
-                              onKeyDown={handleTitleKeyDown}
-                              onBlur={handleTitleBlur}
-                              onFocus={handleTitleFocus}
-                              tabIndex={isNewPage ? 1 : undefined}
-                              className={`bg-background/80 border rounded-lg px-1 py-0.5 outline-none font-semibold text-center transition-all duration-200 resize-none overflow-hidden ${
-                                titleError
-                                  ? "border-destructive focus:ring-2 focus:ring-destructive/20 focus:border-destructive"
-                                  : isTitleFocused
-                                  ? "border-primary/50 ring-2 ring-primary/20"
-                                  : "border-muted-foreground/30"
-                              } text-2xl`}
-                              style={{
-                                width: "100%",
-                                minHeight: "2.5rem",
-                                lineHeight: "1.3"
-                              }}
-                              placeholder={isNewPage ? (isReply ? "Give your reply a title..." : "Give your page a title...") : "Add a title..."}
-                              rows={1}
-                            />
+                            <>
+                              <textarea
+                                ref={titleInputRef}
+                                value={editingTitle}
+                                onChange={handleTitleChange}
+                                onKeyDown={handleTitleKeyDown}
+                                onBlur={handleTitleBlur}
+                                onFocus={handleTitleFocus}
+                                tabIndex={isNewPage ? 1 : undefined}
+                                className={`bg-background/80 border rounded-lg px-4 py-2 outline-none font-semibold text-center transition-all duration-200 resize-none overflow-hidden ${
+                                  titleError || isTitleDuplicate
+                                    ? "border-destructive focus:ring-2 focus:ring-destructive/20 focus:border-destructive"
+                                    : isTitleFocused
+                                    ? "border-primary/50 ring-2 ring-primary/20"
+                                    : "border-muted-foreground/30"
+                                } text-2xl`}
+                                style={{
+                                  width: "100%",
+                                  minHeight: "2.5rem",
+                                  lineHeight: "1.3"
+                                }}
+                                placeholder={isNewPage ? (isReply ? "Give your reply a title..." : "Give your page a title...") : "Add a title..."}
+                                rows={1}
+                              />
+                              {/* Validation Icon */}
+                              {editingTitle.trim() && (
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                  {isCheckingTitle ? (
+                                    <Loader className="h-4 w-4 animate-spin text-muted-foreground" />
+                                  ) : isTitleDuplicate ? (
+                                    <X className="h-4 w-4 text-destructive" />
+                                  ) : null}
+                                </div>
+                              )}
+                            </>
                           ) : (
                             <span
                               className={`${
                                 canEdit && !isDailyNote
                                   ? isEditing
-                                    ? `cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 border transition-all duration-200 ${
+                                    ? `cursor-pointer hover:bg-muted/30 rounded-lg px-4 py-2 border transition-all duration-200 ${
                                         titleError
                                           ? "border-destructive hover:border-destructive/70"
                                           : isEditorFocused
                                           ? "border-muted-foreground/30"
                                           : "border-muted-foreground/20 hover:border-muted-foreground/30"
                                       }`
-                                    : "cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 transition-all duration-200"
+                                    : "cursor-pointer hover:bg-muted/30 rounded-lg px-4 py-2 transition-all duration-200"
                                   : isDailyNote
                                   ? isEditing
-                                    ? "flex flex-col items-center gap-1 cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 border border-muted-foreground/20 hover:border-muted-foreground/30 transition-all duration-200"
-                                    : "flex flex-col items-center gap-1 cursor-pointer hover:bg-muted/30 rounded-lg px-2 py-1 transition-all duration-200"
+                                    ? "flex flex-col items-center gap-1 cursor-pointer hover:bg-muted/30 rounded-lg px-4 py-2 border border-muted-foreground/20 hover:border-muted-foreground/30 transition-all duration-200"
+                                    : "flex flex-col items-center gap-1 cursor-pointer hover:bg-muted/30 rounded-lg px-4 py-2 transition-all duration-200"
                                   : isDailyNote
                                   ? "cursor-pointer"
                                   : ""
@@ -919,15 +970,31 @@ export default function PageHeader({
                   </div>
                 )}
 
+                {/* Duplicate Title Error Message */}
+                {isTitleDuplicate && isEditing && canEdit && !isDailyNote && (
+                  <div className="flex justify-center mt-2">
+                    <p className="text-sm text-destructive font-medium">
+                      You already have a page called "{editingTitle.trim()}"
+                      {duplicatePageId && (
+                        <>
+                          {" - "}
+                          <Link
+                            href={`/${duplicatePageId}`}
+                            className="underline hover:no-underline"
+                          >
+                            go there
+                          </Link>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                )}
+
                 {/* Row 3: Byline */}
                 <div className="flex items-center justify-center">
                   <div className="text-sm text-muted-foreground">
-                    {isLoading ? (
-                      <span className="inline-flex items-center">
-                        <Loader className="h-3 w-3 animate-spin mr-1" />
-                        Loading...
-                      </span>
-                    ) : (
+                    {/* REMOVED: Loading spinner that was showing inappropriately */}
+                    {(
                       <div className="flex items-center gap-1 justify-center">
                         <span className="whitespace-nowrap flex-shrink-0">by</span>
                         <UsernameBadge

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/button';
 import PageHeader from './PageHeader';
-import { SmartLoader } from '../ui/smart-loader';
+import UnifiedLoader from '../ui/unified-loader';
 import { ErrorDisplay } from '../ui/error-display';
 import { formatDistanceToNow } from 'date-fns';
 import { sanitizeUsername } from '../../utils/usernameSecurity';
@@ -238,7 +238,7 @@ export default function VersionDetailView({ pageId, versionId }: VersionDetailVi
     return (
       <div className="min-h-screen bg-background">
         <div className="p-4 max-w-4xl mx-auto">
-          <SmartLoader message="Loading version details..." isLoading={true} />
+          <UnifiedLoader message="Loading version details..." isLoading={true} />
         </div>
       </div>
     );

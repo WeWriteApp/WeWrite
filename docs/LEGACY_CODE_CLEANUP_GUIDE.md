@@ -186,6 +186,32 @@ resolvedTheme === 'dark' ? 'night' : 'stripe'
 
 Use these commands to find legacy patterns:
 
+#### 🎨 UI/Styling Issues (NEW 2024)
+```bash
+# Find inconsistent padding patterns
+grep -r "px-[123][^0-9]" app/components/ --include="*.tsx"
+grep -r "py-0\.5\|py-1[^0-9]" app/components/ --include="*.tsx"
+grep -r "p-[123][^0-9]" app/components/ --include="*.tsx"
+
+# Find hardcoded border colors
+grep -r "border-gray\|border-neutral\|border-slate" app/ --include="*.tsx"
+grep -r "dark:border-" app/ --include="*.tsx"
+grep -r "border-muted-foreground/20" app/components/ --include="*.tsx"
+
+# Find inconsistent focus states
+grep -r "focus:border-blue\|focus:ring-blue" app/components/ --include="*.tsx"
+grep -r "focus:ring-1[^0-9]" app/components/ --include="*.tsx"
+
+# Find complex layout patterns
+grep -r "absolute inset-0" app/components/ --include="*.tsx"
+grep -r "flex.*flex.*flex" app/components/ --include="*.tsx"
+grep -r "relative.*absolute.*relative" app/components/ --include="*.tsx"
+
+# Find multiple modal patterns
+grep -r "Modal.*Modal" app/components/ --include="*.tsx"
+find app/components -name "*Modal.tsx" -o -name "*Dialog.tsx"
+```
+
 #### Security Vulnerabilities
 ```bash
 # Find email exposure patterns
@@ -227,6 +253,17 @@ grep -r "theme.*===.*'dark'" app/ | grep -v "resolvedTheme"
 ```
 
 ## 📋 Cleanup Checklist
+
+### 🎨 UI/Styling Cleanup (NEW 2024 - HIGH PRIORITY)
+- [ ] Search for inconsistent padding patterns (px-1, px-2, px-3, py-0.5, py-1)
+- [ ] Replace with standardized px-4 and py-2/py-4 patterns
+- [ ] Find hardcoded border colors (border-gray, border-neutral, dark:border-)
+- [ ] Replace with theme-aware borders (border-muted-foreground/30, border-primary/50)
+- [ ] Find inconsistent focus states (focus:border-blue, focus:ring-1)
+- [ ] Replace with unified focus system (border-primary/50 ring-2 ring-primary/20)
+- [ ] Audit complex layout patterns for simplification opportunities
+- [ ] Consolidate multiple modal components into single global modal
+- [ ] Verify all page elements use consistent px-4 padding alignment
 
 ### Security Cleanup
 - [ ] Search for email exposure patterns

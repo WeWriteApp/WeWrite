@@ -1,6 +1,6 @@
 "use client";
 
-import { PageLoader } from "../ui/page-loader";
+import UnifiedLoader from "../ui/unified-loader";
 
 interface AuthRedirectOverlayProps {
   isVisible: boolean;
@@ -13,5 +13,5 @@ export function AuthRedirectOverlay({
 }: AuthRedirectOverlayProps) {
   if (!isVisible) return null;
 
-  return <PageLoader message={message} fullScreen={true} />;
+  return <UnifiedLoader isLoading={true} message={message} fullScreen={true} />;
 }

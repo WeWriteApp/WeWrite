@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { SmartLoader } from '../ui/smart-loader';
+import UnifiedLoader from '../ui/unified-loader';
 
 interface ClientOnlyPageWrapperProps {
   children: React.ReactNode;
@@ -26,12 +26,11 @@ export function ClientOnlyPageWrapper({
 
   if (!isMounted) {
     return fallback || (
-      <div className="flex items-center justify-center min-h-[50vh] p-4">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading page...</p>
-        </div>
-      </div>
+      <UnifiedLoader
+        isLoading={true}
+        message="Loading page..."
+        fullScreen={false}
+      />
     );
   }
 

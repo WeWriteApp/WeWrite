@@ -1,15 +1,15 @@
 /**
  * SlateEditor - A proper rich text editor with inline link support using Slate.js
- * 
+ *
  * This replaces the hacky textarea + overlay approach with proper inline elements
  * that are treated as first-class citizens in the text flow.
- * 
+ *
  * Features:
  * - Proper inline link elements using Slate's inline support
  * - Cursor can move around links naturally
  * - Links are editable objects within the text
  * - No overlay hacks or positioning issues
- * 
+ *
  * @author WeWrite Team
  * @version 3.0.0
  */
@@ -24,6 +24,11 @@ import { PillLink } from '../utils/PillLink';
 import { Button } from '../ui/button';
 import { Link, Trash2 } from 'lucide-react';
 import LinkEditorModal from './LinkEditorModal';
+import LinkSuggestionEditorModal from './LinkSuggestionEditorModal';
+import { useLinkSuggestions } from '../../hooks/useLinkSuggestions';
+import { LinkSuggestionModal } from '../modals/LinkSuggestionModal';
+import { LinkSuggestion } from '../../services/linkSuggestionService';
+import { useAuth } from '../../providers/AuthProvider';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -45,6 +50,8 @@ type LinkElement = {
   isExternal: boolean;
   isPublic: boolean;
   isOwned: boolean;
+  isSuggestion?: boolean; // New flag for link suggestions
+  suggestionData?: any; // Store original suggestion data for confirmation
   children: Descendant[];
 };
 
@@ -187,7 +194,7 @@ const slateToContent = (value: Descendant[]): any[] => {
   return value.map((node) => {
     if (SlateElement.isElement(node) && node.type === 'paragraph') {
       const children: any[] = [];
-      
+
       node.children.forEach((child) => {
         if (SlateElement.isElement(child) && child.type === 'link') {
           const linkText = child.children.map((c: any) => c.text).join('');
@@ -225,7 +232,7 @@ const slateToContent = (value: Descendant[]): any[] => {
 // ============================================================================
 
 /**
- * Render text leaves (for formatting like bold, italic)
+ * Render text leaves (for formatting like bold, italic, and link suggestions)
  */
 const Leaf = ({ attributes, children, leaf }: RenderLeafProps) => {
   if (leaf.bold) {
@@ -234,6 +241,18 @@ const Leaf = ({ attributes, children, leaf }: RenderLeafProps) => {
 
   if (leaf.italic) {
     children = <em>{children}</em>;
+  }
+
+  // Highlight text that has link suggestions
+  if ((leaf as any).linkSuggestion) {
+    children = (
+      <span
+        className="bg-blue-100 dark:bg-blue-900/30 border-b-2 border-blue-400 dark:border-blue-500 cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+        title="Click to see link suggestions"
+      >
+        {children}
+      </span>
+    );
   }
 
   return <span {...attributes}>{children}</span>;
@@ -261,6 +280,9 @@ interface SlateEditorProps {
   isNewPage?: boolean;
   showToolbar?: boolean;
   onInsertLinkRequest?: (triggerFn: () => void) => void; // Callback to register link insertion trigger
+
+  // Page context for link suggestions
+  pageId?: string;
 }
 
 const SlateEditor: React.FC<SlateEditorProps> = ({
@@ -278,8 +300,21 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
   error,
   isNewPage = false,
   showToolbar = true,
-  onInsertLinkRequest
+  onInsertLinkRequest,
+  pageId
 }) => {
+  console.warn('🔗 SLATE_EDITOR: Component initialized with props:', {
+    pageId,
+    readOnly,
+    placeholder,
+    hasInitialContent: !!initialContent?.length
+  });
+
+  // Remove any editing indicators from title for clean UX
+  if (typeof window !== 'undefined') {
+    document.title = document.title.replace('🔗 EDITING: ', '');
+  }
+
   // Prevent hydration mismatches by ensuring client-side rendering
   const [isClient, setIsClient] = useState(false);
 
@@ -314,7 +349,149 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
     return safeInitialValue;
   });
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [showSuggestionModal, setShowSuggestionModal] = useState(false);
+  const [currentSuggestion, setCurrentSuggestion] = useState<LinkSuggestion | null>(null);
+  const [suggestionMatchedText, setSuggestionMatchedText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+
+  // Get current user for link suggestions
+  const { user } = useAuth();
+
+  // RE-ENABLED: Simple link suggestion functionality (manual trigger only)
+  const {
+    state: linkSuggestionState,
+    actions: linkSuggestionActions
+  } = useLinkSuggestions({
+    enabled: !readOnly, // Always enabled when not read-only (focus not required)
+    minConfidence: 0.6,
+    debounceDelay: 1000, // Longer delay to prevent excessive API calls
+    onSuggestionSelected: (suggestion) => {
+      console.log('🔗 SLATE_EDITOR: Suggestion selected:', suggestion);
+      // Handle suggestion selection here
+    }
+  });
+
+  // Debug link suggestion state
+  console.warn('🔗 SLATE_EDITOR: Link suggestion hook initialized:', {
+    enabled: !readOnly && isFocused,
+    readOnly,
+    isFocused,
+    isEnabled: linkSuggestionState.isEnabled,
+    activeSuggestion: linkSuggestionState.activeSuggestion,
+    isLoading: linkSuggestionState.isLoading,
+    pageId
+  });
+
+  // Flag to suppress onChange when inserting suggestions
+  const [suppressNextChange, setSuppressNextChange] = useState(false);
+
+  // DISABLED: Remove all complex auto-insertion logic
+  // Link suggestions will be handled manually via context menu or modal
+  // This prevents interference with existing confirmed links
+
+
+
+  // SIMPLIFIED: Just log suggestions for debugging
+  useEffect(() => {
+    console.log('🔗 SLATE_EDITOR: Suggestion state update:', {
+      readOnly,
+      isEnabled: linkSuggestionState.isEnabled,
+      suggestionsCount: linkSuggestionState.allSuggestions.length,
+      suggestions: linkSuggestionState.allSuggestions.map(s => ({
+        matchedText: s.matchedText,
+        title: s.title,
+        confidence: s.confidence
+      }))
+    });
+  }, [linkSuggestionState.allSuggestions, linkSuggestionState.isEnabled, readOnly]);
+
+  // Trigger initial link analysis when component mounts
+  useEffect(() => {
+    console.warn('🔗 SLATE_EDITOR: Initial analysis effect triggered:', {
+      isClient,
+      readOnly,
+      hasContent: safeInitialValue.length > 0,
+      isEnabled: linkSuggestionState.isEnabled,
+      hasUser: !!user?.uid,
+      hasPageId: !!pageId
+    });
+
+    if (isClient && !readOnly && safeInitialValue.length > 0) {
+      const plainText = safeInitialValue
+        .map(node => Node.string(node))
+        .join('\n')
+        .trim();
+
+      console.warn('🔗 SLATE_EDITOR: Triggering initial link analysis on mount:', {
+        plainTextLength: plainText.length,
+        text: plainText.substring(0, 100) + (plainText.length > 100 ? '...' : '')
+      });
+
+      // RE-ENABLED: Simple link analysis (no content modification)
+      if (plainText.length > 10) {
+        console.warn('🔗 SLATE_EDITOR: Analyzing text for suggestions (display only)');
+        linkSuggestionActions.analyzeText(plainText, user?.uid, pageId);
+      }
+    }
+  }, [isClient, readOnly, safeInitialValue, linkSuggestionState.isEnabled, linkSuggestionActions, user?.uid, pageId]);
+
+  // Handle link suggestion selection
+  function handleLinkSuggestionSelected(suggestion: LinkSuggestion) {
+    try {
+      console.log('🔗 SLATE_EDITOR: Inserting link from suggestion:', suggestion);
+
+      // Find the text that matches the suggestion
+      const textToReplace = suggestion.matchedText;
+
+      // Search for the text in the current editor content
+      const [match] = Editor.nodes(editor, {
+        at: [],
+        match: n => Text.isText(n) && n.text.includes(textToReplace)
+      });
+
+      if (match) {
+        const [textNode, path] = match;
+        const text = (textNode as Text).text;
+        const startIndex = text.indexOf(textToReplace);
+
+        if (startIndex !== -1) {
+          const endIndex = startIndex + textToReplace.length;
+
+          // Create the range to replace
+          const start = { path, offset: startIndex };
+          const end = { path, offset: endIndex };
+          const range = { anchor: start, focus: end };
+
+          // Select the text
+          Transforms.select(editor, range);
+
+          // Insert the suggestion link (with dotted underline)
+          const linkElement: LinkElement = {
+            type: 'link',
+            pageId: suggestion.id,
+            pageTitle: suggestion.title,
+            isExternal: false,
+            isPublic: true,
+            isOwned: false,
+            isSuggestion: true, // This will show the dotted underline
+            suggestionData: suggestion, // Store original suggestion data
+            children: [{ text: textToReplace }]
+          };
+
+          Transforms.insertNodes(editor, linkElement);
+
+          // Move cursor after the link
+          Transforms.move(editor, { distance: 1, unit: 'offset' });
+
+          console.log('✅ SLATE_EDITOR: Successfully inserted link from suggestion');
+        }
+      }
+    } catch (error) {
+      console.error('🔴 SLATE_EDITOR: Error inserting link from suggestion:', error);
+    }
+  }
+
+
 
   // Element component - defined inside to access state
   const Element = useCallback(({ attributes, children, element }: RenderElementProps) => {
@@ -322,15 +499,37 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
 
     switch (element.type) {
       case 'link':
+        // Handle suggestions differently from confirmed links
+        if (element.isSuggestion) {
+          return (
+            <span
+              {...attributes}
+              contentEditable={false}
+              className="cursor-pointer text-primary border-b-2 border-dotted border-primary/60 hover:bg-primary/10 transition-colors"
+              onClick={() => {
+                // Show suggestion editor modal with pre-loaded search
+                console.warn('🔗 Clicked suggestion:', element.suggestionData);
+                if (element.suggestionData) {
+                  setCurrentSuggestion(element.suggestionData);
+                  setSuggestionMatchedText(element.children[0]?.text || '');
+                  setShowSuggestionModal(true);
+                }
+              }}
+            >
+              {children}
+            </span>
+          );
+        }
+
+        // Normal confirmed pill links - NEVER treat these as suggestions
+
         return (
           <span
             {...attributes}
             contentEditable={false}
             className="inline-block"
             draggable={true}
-            // Remove complex drag simulation - let PillLink handle its own clicks
             onDragStart={(e) => {
-              // Store the element data for drag and drop
               const path = ReactEditor.findPath(editor, element);
               e.dataTransfer.setData('application/x-slate-element', JSON.stringify({
                 type: 'link',
@@ -338,26 +537,19 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
                 path
               }));
               e.dataTransfer.effectAllowed = 'move';
-
-              // Prevent default URL dragging
               e.dataTransfer.clearData('text/uri-list');
               e.dataTransfer.clearData('text/plain');
               e.dataTransfer.clearData('text/html');
-
-              console.log('Drag started for link element:', element);
-            }}
-            onDragEnd={(e) => {
-              console.log('Drag ended');
             }}
           >
             <PillLink
-              href={element.url || '#'}
-              pageId={element.pageId} // Pass pageId directly for proper navigation
+              href={element.pageTitle ? `/${element.pageTitle}` : (element.url || '#')}
+              pageId={element.pageId}
               isPublic={element.isPublic}
               className="cursor-pointer"
-              isEditing={true} // SlateEditor is always in edit mode
+              isEditing={true}
               onEditLink={() => setShowLinkModal(true)}
-              draggable={false} // Disable dragging on the PillLink itself
+              draggable={false}
             >
               {children}
             </PillLink>
@@ -419,13 +611,57 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
   const handleChange = useCallback((newValue: Descendant[]) => {
     try {
       setValue(newValue);
+
+      // Check if we should suppress this change (e.g., when inserting suggestions)
+      if (suppressNextChange) {
+        console.warn('🔗 SLATE_EDITOR: Suppressing onChange for suggestion insertion');
+        setSuppressNextChange(false);
+        return; // Don't call onChange, preventing save card from appearing
+      }
+
       const content = slateToContent(newValue);
       onChange(content);
+
+      // DEBUG: Check link suggestion conditions
+      console.log('🔗 SLATE_EDITOR: Link suggestion conditions:', {
+        readOnly,
+        isFocused,
+        isEnabled: linkSuggestionState.isEnabled,
+        shouldAnalyze: !readOnly && isFocused && linkSuggestionState.isEnabled
+      });
+
+      // Analyze content for link suggestions (when not read-only)
+      if (!readOnly && linkSuggestionState.isEnabled) {
+        // Extract plain text from Slate content for analysis
+        const plainText = newValue
+          .map(node => Node.string(node))
+          .join('\n')
+          .trim();
+
+        console.log('🔗 SLATE_EDITOR: Analyzing text for link suggestions:', {
+          plainTextLength: plainText.length,
+          plainText: plainText.substring(0, 100) + (plainText.length > 100 ? '...' : ''),
+          isEnabled: linkSuggestionState.isEnabled,
+          readOnly,
+          userId: user?.uid
+        });
+
+        // RE-ENABLED: Simple link analysis (no content modification)
+        if (plainText.length > 10) {
+          console.log('🔗 SLATE_EDITOR: Analyzing text for suggestions (display only)');
+          linkSuggestionActions.analyzeText(plainText, user?.uid, pageId);
+        }
+      } else {
+        console.log('🔗 SLATE_EDITOR: Link suggestions disabled:', {
+          readOnly,
+          isEnabled: linkSuggestionState.isEnabled
+        });
+      }
     } catch (error) {
       console.error('Error handling content change:', error);
       // Don't update if conversion fails
     }
-  }, [onChange]);
+  }, [onChange, readOnly, linkSuggestionState.isEnabled, linkSuggestionActions, user?.uid, suppressNextChange]);
 
   // Helper function to ensure proper spacing around links
   const ensureSpacing = useCallback((at: Location) => {
@@ -512,6 +748,52 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
 
     setShowLinkModal(false);
   }, [editor, ensureSpacing]);
+
+  // Handle link creation from suggestion modal
+  const handleSuggestionLinkInsert = useCallback((linkData: any) => {
+    try {
+      console.log('🔗 SLATE_EDITOR: Inserting confirmed link from suggestion:', linkData);
+
+      if (linkData.replaceSuggestion && linkData.matchedText) {
+        // Find the specific suggestion element that matches the text
+        const matches = Array.from(Editor.nodes(editor, {
+          at: [],
+          match: n => SlateElement.isElement(n) &&
+                     n.type === 'link' &&
+                     n.isSuggestion &&
+                     n.children[0]?.text === linkData.matchedText
+        }));
+
+        console.log('🔗 SLATE_EDITOR: Found suggestion matches:', matches.length);
+
+        if (matches.length > 0) {
+          const [, path] = matches[0]; // Use the first match
+
+          // Create the confirmed link element
+          const linkElement: LinkElement = {
+            type: 'link',
+            pageId: linkData.pageId,
+            pageTitle: linkData.pageTitle,
+            isExternal: linkData.type === 'external',
+            isPublic: true,
+            isOwned: false,
+            children: [{ text: linkData.text || linkData.pageTitle || 'Link' }]
+          };
+
+          // Replace the suggestion with the confirmed link
+          Transforms.setNodes(editor, linkElement, { at: path });
+          console.log('✅ SLATE_EDITOR: Successfully replaced suggestion with confirmed link');
+        } else {
+          console.warn('🔴 SLATE_EDITOR: No matching suggestion element found for text:', linkData.matchedText);
+        }
+      } else {
+        // Fallback to regular link insertion
+        insertLink(linkData);
+      }
+    } catch (error) {
+      console.error('🔴 SLATE_EDITOR: Error inserting link from suggestion:', error);
+    }
+  }, [editor, insertLink]);
 
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
@@ -683,7 +965,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
   // Prevent hydration mismatches by only rendering on client
   if (!isClient) {
     return (
-      <div className="slate-editor-container w-full">
+      <div className="w-full">
         <div className="p-4 text-center text-muted-foreground">
           Loading editor...
         </div>
@@ -692,7 +974,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
   }
 
   return (
-    <div className="slate-editor-container w-full">
+    <div className="w-full">
       {showToolbar && (
         <div className="flex items-center gap-2 p-2 border-b-only bg-muted/30">
           <Button
@@ -750,11 +1032,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
         initialValue={safeInitialValue || [{ type: 'paragraph', children: [{ text: '' }] }]}
         onChange={handleChange}
       >
-        <div className={`relative w-full max-w-none rounded-lg transition-all duration-200 ${
-          isFocused
-            ? 'border-theme-solid ring-2 ring-primary/20'
-            : 'border-theme-medium hover-border-strong'
-        }`}>
+        <div className="relative w-full max-w-none">
           <Editable
             renderElement={Element}
             renderLeaf={Leaf}
@@ -805,6 +1083,40 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
           editingLink={null}
         />
       )}
+      {/* Link Suggestion Editor Modal */}
+      {showSuggestionModal && currentSuggestion && (
+        <LinkSuggestionEditorModal
+          isOpen={showSuggestionModal}
+          onClose={() => {
+            setShowSuggestionModal(false);
+            setCurrentSuggestion(null);
+            setSuggestionMatchedText('');
+          }}
+          onInsertLink={handleSuggestionLinkInsert}
+          suggestion={currentSuggestion}
+          matchedText={suggestionMatchedText}
+        />
+      )}
+
+
+
+
+
+
+
+      {/* Link Suggestion Modal */}
+      <LinkSuggestionModal
+        isOpen={linkSuggestionState.showModal}
+        onClose={linkSuggestionActions.hideSuggestionModal}
+        suggestions={linkSuggestionState.activeSuggestion?.suggestions || []}
+        matchedText={linkSuggestionState.activeSuggestion?.matchedText || ''}
+        onSelectPage={linkSuggestionActions.selectSuggestion}
+        onDismiss={() => {
+          if (linkSuggestionState.activeSuggestion) {
+            linkSuggestionActions.dismissSuggestion(linkSuggestionState.activeSuggestion.matchedText);
+          }
+        }}
+      />
     </div>
   );
 };

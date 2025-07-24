@@ -25,11 +25,19 @@ import { useAuth } from '../../providers/AuthProvider';
  * This component serves as a container for the PageActions component,
  * providing consistent styling and layout for the footer section of a page.
  *
+ * UPDATED 2024: Now uses standardized page padding system
+ *
  * The footer includes:
  * - A border at the top for visual separation
- * - Proper padding and margins for spacing
+ * - Standardized px-4 padding to match page content alignment
+ * - Consistent spacing with title and body elements
  * - Responsive padding that adjusts to different screen sizes
  * - Increased button sizes for better mobile usability
+ *
+ * STYLING STANDARDS:
+ * - Uses px-4 horizontal padding (16px) to match page content
+ * - All child elements inherit consistent page-level alignment
+ * - Follows unified border and spacing system
  *
  * This component is used in SinglePageView and replaces the previous
  * combination of PageInteractionButtons and ActionRow components.
@@ -90,7 +98,7 @@ export default function PageFooter({
   if (!canEdit && !hasUnsavedChanges) return null;
 
   return (
-    <div className="mt-10 border-t-only pt-6 pb-6">
+    <div className="mt-10 border-t-only pt-6 pb-6 px-4">
       {/* Insert Link button - shown when editing */}
       {canEdit && isEditing && onInsertLink && (
         <div className="mb-4 flex justify-center w-full">
@@ -107,38 +115,7 @@ export default function PageFooter({
         </div>
       )}
 
-      {/* Save/Revert buttons - shown at top when there are unsaved changes */}
-      {canEdit && (hasUnsavedChanges || isAnimatingOut) && (
-        <div className={`mb-6 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg transition-all duration-300 ease-out ${
-          isAnimatingOut ? 'opacity-0 scale-95 transform -translate-y-2' : 'opacity-100 scale-100 transform translate-y-0'
-        }`}>
-          <div className="flex flex-col gap-3 w-full md:flex-row md:justify-center">
-            <Button
-              variant="default"
-              size="lg"
-              className="gap-2 w-full md:w-auto rounded-2xl font-medium bg-green-600 hover:bg-green-700 text-white"
-              onClick={onSave}
-              disabled={isSaving}
-            >
-              <Check className="h-5 w-5" />
-              {isSaving ? "Saving..." : "Save Changes"}
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="gap-2 w-full md:w-auto rounded-2xl font-medium border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800"
-              onClick={onCancel}
-              disabled={isSaving}
-            >
-              <RotateCcw className="h-5 w-5" />
-              Revert Changes
-            </Button>
-          </div>
-          <p className="text-sm text-green-700 dark:text-green-300 mt-2 text-center">
-            You have unsaved changes. Save them or revert to the last saved version.
-          </p>
-        </div>
-      )}
+
 
       {/* Show PageActions only for existing pages (not for new pages or bios) */}
       {page && (

@@ -36,6 +36,9 @@ interface EditorProps {
   showToolbar?: boolean;
   onInsertLinkRequest?: (triggerFn: () => void) => void;
 
+  // Page context for link suggestions
+  pageId?: string;
+
   [key: string]: any;
 }
 
