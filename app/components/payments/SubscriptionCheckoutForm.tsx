@@ -9,6 +9,7 @@ import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Smartphone, Wifi, WifiOff } from 'lucide-react';
+import { PaymentErrorDisplay } from './PaymentErrorDisplay';
 
 interface SubscriptionCheckoutFormProps {
   /** Initial tier selection */
@@ -41,7 +42,7 @@ export function SubscriptionCheckoutForm({
   const { isPWA } = usePWA();
   
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
-  const [checkoutError, setCheckoutError] = useState<string>('');
+  const [checkoutError, setCheckoutError] = useState<any>(null);
 
   // Monitor network status
   React.useEffect(() => {
@@ -81,7 +82,7 @@ export function SubscriptionCheckoutForm({
     }
   };
 
-  const handleError = (error: string) => {
+  const handleError = (error: any) => {
     console.error('❌ Subscription checkout error:', error);
     setCheckoutError(error);
   };
@@ -127,13 +128,20 @@ export function SubscriptionCheckoutForm({
 
 
 
-      {/* Checkout Error Display */}
+      {/* Enhanced Checkout Error Display */}
       {checkoutError && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {checkoutError}
-          </AlertDescription>
-        </Alert>
+        <PaymentErrorDisplay
+          error={checkoutError}
+          onRetry={() => setCheckoutError(null)}
+          showRetry={false}
+          showTechnicalDetails={true}
+          compact={true}
+          context={{
+            component: 'SubscriptionCheckoutForm',
+            isPWA,
+            isOnline
+          }}
+        />
       )}
 
       {/* Main Checkout Component */}

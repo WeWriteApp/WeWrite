@@ -16,6 +16,7 @@ import {
   Copy
 } from 'lucide-react';
 import { toast } from '../ui/use-toast';
+import { PaymentErrorDisplay } from './PaymentErrorDisplay';
 
 
 interface FailedPaymentRecoveryProps {
@@ -26,7 +27,7 @@ interface FailedPaymentRecoveryProps {
 export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: FailedPaymentRecoveryProps) {
   const { user } = useAuth();
   const [retrying, setRetrying] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<any>(null);
   const [retryCount, setRetryCount] = useState(0);
   // Payments feature is now always enabled - no conditional rendering needed
 
@@ -65,10 +66,14 @@ export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: Failed
           onPaymentSuccess();
         }
       } else {
-        const errorMessage = data.error || 'Payment retry failed';
-        setError(errorMessage);
-        toast.error(errorMessage);
-        
+        const errorData = {
+          message: data.error || 'Payment retry failed',
+          type: 'payment_retry_failed',
+          code: data.code || 'retry_failed'
+        };
+        setError(errorData);
+        toast.error(errorData.message);
+
         // Update local failure count if provided
         if (data.failureCount) {
           setRetryCount(data.failureCount);
@@ -76,9 +81,8 @@ export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: Failed
       }
     } catch (err: any) {
       console.error('Error retrying payment:', err);
-      const errorMessage = err.message || 'Failed to retry payment';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      setError(err);
+      toast.error(err.message || 'Failed to retry payment');
     } finally {
       setRetrying(false);
     }
@@ -168,27 +172,21 @@ export function FailedPaymentRecovery({ subscription, onPaymentSuccess }: Failed
           </div>
         </div>
 
-        {/* Error Display */}
+        {/* Enhanced Error Display */}
         {error && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Retry Failed</AlertTitle>
-            <AlertDescription>
-              {error}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-2 h-auto p-0 text-xs"
-                onClick={() => {
-                  navigator.clipboard.writeText(error);
-                  toast.success('Error message copied to clipboard');
-                }}
-              >
-                <Copy className="h-3 w-3 mr-1" />
-                Copy
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <PaymentErrorDisplay
+            error={error}
+            onRetry={handleRetryPayment}
+            showRetry={true}
+            showTechnicalDetails={true}
+            compact={true}
+            context={{
+              component: 'FailedPaymentRecovery',
+              subscriptionId: subscription?.id,
+              failureCount: retryCount,
+              amount: subscription?.amount
+            }}
+          />
         )}
 
         {/* Action Buttons */}

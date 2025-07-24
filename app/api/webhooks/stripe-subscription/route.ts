@@ -17,6 +17,7 @@ import { TransactionTrackingService } from '../../../services/transactionTrackin
 import { PaymentRecoveryService } from '../../../services/paymentRecoveryService';
 // Removed SubscriptionSynchronizationService - using simplified approach
 import { FinancialUtils, CorrelationId } from '../../../types/financial';
+import { parseStripeError, createDetailedErrorLog } from '../../../utils/stripeErrorMessages';
 
 // Initialize Stripe
 const stripe = new Stripe(getStripeSecretKey() || '', {
@@ -436,10 +437,24 @@ export async function handlePaymentFailed(invoice: Stripe.Invoice) {
     const paymentRecoveryService = PaymentRecoveryService.getInstance();
     const correlationId = FinancialUtils.generateCorrelationId();
 
-    // Extract failure reason from invoice
-    const failureReason = invoice.last_finalization_error?.message ||
-                         invoice.charge?.failure_message ||
-                         'Payment failed - reason unknown';
+    // Extract detailed failure information from invoice
+    const rawError = invoice.last_finalization_error ||
+                     invoice.charge?.failure_message ||
+                     invoice.charge?.outcome ||
+                     { message: 'Payment failed - reason unknown' };
+
+    // Parse the error for detailed user-friendly information
+    const detailedError = parseStripeError(rawError);
+    const failureReason = detailedError.userMessage;
+
+    // Log detailed error information for debugging
+    console.log('[PAYMENT FAILED] Detailed error analysis:', createDetailedErrorLog(rawError, {
+      invoiceId: invoice.id,
+      subscriptionId: subscription.id,
+      userId,
+      amount: invoice.amount_due / 100,
+      attemptCount: invoice.attempt_count
+    }));
 
     const amount = invoice.amount_due / 100; // Convert from cents
 

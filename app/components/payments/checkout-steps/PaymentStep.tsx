@@ -10,6 +10,8 @@ import { Loader2, CreditCard, Shield, CheckCircle, ChevronDown, ChevronUp, Plus,
 import { SelectedPlan } from '../SubscriptionCheckout';
 import { PricingDisplay } from '../PricingDisplay';
 import { useAuth } from '../../../providers/AuthProvider';
+import { PaymentErrorDisplay } from '../PaymentErrorDisplay';
+import { parseStripeError } from '../../../utils/stripeErrorMessages';
 
 interface PaymentMethod {
   id: string;
@@ -59,7 +61,7 @@ export function PaymentStep({
   const elements = useElements();
   const { user } = useAuth();
 
-  const [paymentError, setPaymentError] = useState<string>('');
+  const [paymentError, setPaymentError] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentElementComplete, setPaymentElementComplete] = useState(false);
   const [customerLocation, setCustomerLocation] = useState<{
@@ -178,9 +180,9 @@ export function PaymentStep({
     if (!useExistingPayment) {
       setPaymentElementComplete(event.complete);
       if (event.error) {
-        setPaymentError(event.error.message);
+        setPaymentError(event.error);
       } else {
-        setPaymentError('');
+        setPaymentError(null);
       }
     }
   };
@@ -188,7 +190,7 @@ export function PaymentStep({
   // Handle switching between existing and new payment methods
   const handlePaymentMethodToggle = (useExisting: boolean) => {
     setUseExistingPayment(useExisting);
-    setPaymentError('');
+    setPaymentError(null);
 
     // Reset payment element state when switching
     if (!useExisting) {
@@ -199,7 +201,7 @@ export function PaymentStep({
   // Handle existing payment method selection
   const handleExistingMethodSelect = (methodId: string) => {
     setSelectedExistingMethod(methodId);
-    setPaymentError('');
+    setPaymentError(null);
   };
 
   // Handle payment method deletion
@@ -236,7 +238,7 @@ export function PaymentStep({
 
     } catch (error) {
       console.error('Error deleting payment method:', error);
-      setPaymentError('Failed to delete payment method. Please try again.');
+      setPaymentError({ message: 'Failed to delete payment method. Please try again.', type: 'api_error' });
     } finally {
       setDeletingPaymentMethod(null);
     }
@@ -286,12 +288,12 @@ export function PaymentStep({
     }
 
     if (!formValid) {
-      setPaymentError('Please complete all required payment information');
+      setPaymentError({ message: 'Please complete all required payment information', type: 'validation_error' });
       return;
     }
 
     setIsProcessing(true);
-    setPaymentError('');
+    setPaymentError(null);
 
     try {
       let paymentMethodId: string;
@@ -358,8 +360,10 @@ export function PaymentStep({
       onSuccess(subscriptionData.subscriptionId);
     } catch (error) {
       console.error('Payment error:', error);
+      setPaymentError(error);
+
+      // Also call the onError callback with a simple message for backward compatibility
       const errorMessage = error instanceof Error ? error.message : 'Payment failed';
-      setPaymentError(errorMessage);
       onError(errorMessage);
     } finally {
       setIsProcessing(false);
@@ -603,11 +607,23 @@ export function PaymentStep({
             </Card>
           )}
 
-          {/* Error Display */}
+          {/* Enhanced Error Display */}
           {paymentError && (
-            <Alert variant="destructive">
-              <AlertDescription>{paymentError}</AlertDescription>
-            </Alert>
+            <PaymentErrorDisplay
+              error={paymentError}
+              onRetry={() => {
+                setPaymentError(null);
+                // Allow user to try again
+              }}
+              showRetry={true}
+              showTechnicalDetails={true}
+              context={{
+                step: 'payment',
+                useExistingPayment,
+                selectedPlan: selectedPlan?.tier,
+                amount: selectedPlan?.amount
+              }}
+            />
           )}
 
           {/* Security Notice */}
