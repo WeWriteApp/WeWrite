@@ -129,9 +129,6 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Log setup intent creation for audit trail
-    await logSetupIntentCreated(userId, customerId, setupIntent.id, tier, amount);
-
     console.log(`[CREATE SETUP INTENT] Created setup intent ${setupIntent.id} for user ${userId}`);
 
     return NextResponse.json({
