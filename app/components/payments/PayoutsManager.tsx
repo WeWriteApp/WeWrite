@@ -98,13 +98,13 @@ export function PayoutsManager() {
   const [updatingSettings, setUpdatingSettings] = useState(false);
 
   useEffect(() => {
-    if (user && isPaymentsEnabled) {
+    if (user) {
       loadPayoutData();
       loadBankAccountStatus();
       loadAutoPayoutSettings();
       loadPayoutHistory();
     }
-  }, [user, isPaymentsEnabled]);
+  }, [user]);
 
   const loadPayoutData = async () => {
     if (!user?.uid) return;
@@ -209,10 +209,7 @@ export function PayoutsManager() {
 
 
 
-  // If payments feature flag is disabled, don't render anything
-  if (!isPaymentsEnabled) {
-    return null;
-  }
+  // Payments are always enabled - no feature flag check needed
 
   if (loading) {
     return (

@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../providers/AuthProvider';
-import { useFeatureFlag } from '../utils/feature-flags';
 
 interface TokenBalance {
   totalTokens: number;
@@ -27,10 +26,9 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
 
 
   const fetchTokenBalance = useCallback(async () => {
-    if (!user?.uid || !paymentsEnabled) {
+    if (!user?.uid) {
       console.log('[TokenBalanceContext] Skipping token balance fetch:', {
-        hasAccount: !!user?.uid,
-        paymentsEnabled
+        hasAccount: !!user?.uid
       });
       setTokenBalance(null);
       setLastUpdated(null);
@@ -106,7 +104,7 @@ export function TokenBalanceProvider({ children }: { children: React.ReactNode }
     } finally {
       setIsLoading(false);
     }
-  }, [user?.uid, paymentsEnabled]);
+  }, [user?.uid]);
 
   // Initial load
   useEffect(() => {

@@ -81,10 +81,10 @@ export default function PayoutDashboard() {
   const [riskAssessment, setRiskAssessment] = useState<PayoutRiskAssessment | null>(null);
 
   useEffect(() => {
-    if (user && isPaymentsEnabled) {
+    if (user) {
       loadPayoutData();
     }
-  }, [, user, isPaymentsEnabled]);
+  }, [user]);
 
   // Calculate fee breakdown and risk assessment when earnings change
   const updateFeeBreakdown = async (availableBalance: number) => {

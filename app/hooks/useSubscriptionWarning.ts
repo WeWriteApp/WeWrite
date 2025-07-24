@@ -12,7 +12,6 @@ interface UseSubscriptionWarningReturn {
   shouldShowWarning: boolean;
   warningVariant: 'warning' | 'error' | 'critical';
   hasActiveSubscription: boolean | null;
-  paymentsEnabled: boolean;
   subscriptionStatus: string | null;
   isLoading: boolean;
 }
@@ -72,11 +71,10 @@ export function useSubscriptionWarning(): UseSubscriptionWarningReturn {
     };
 
     checkSubscriptionStatus();
-  }, [user?.uid, paymentsEnabled]);
+  }, [user?.uid]);
 
   // Determine if we should show a warning
-  const shouldShowWarning = paymentsEnabled && 
-    hasActiveSubscription !== null && 
+  const shouldShowWarning = hasActiveSubscription !== null &&
     hasActiveSubscription === false;
 
   // Determine warning variant based on subscription status
@@ -101,7 +99,6 @@ export function useSubscriptionWarning(): UseSubscriptionWarningReturn {
     shouldShowWarning,
     warningVariant: getWarningVariant(),
     hasActiveSubscription,
-    paymentsEnabled,
     subscriptionStatus,
     isLoading
   };

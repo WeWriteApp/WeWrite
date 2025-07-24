@@ -74,7 +74,7 @@ export default function SpendTokensPage() {
 
   // Fetch current subscription and token balance
   const fetchData = useCallback(async () => {
-    if (!user || !paymentsEnabled) return;
+    if (!user) return;
 
     try {
       // Fetch subscription
@@ -133,7 +133,7 @@ export default function SpendTokensPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, paymentsEnabled]);
+  }, [user]);
 
   // Convert simulated allocations to real database allocations
   const convertSimulatedAllocations = async (simBalance: SimulatedTokenBalance) => {
@@ -231,8 +231,7 @@ export default function SpendTokensPage() {
 
   console.log('🎯 Spend Tokens: Auth check', {
     hasCurrentAccount: !!user,
-    paymentsEnabled,
-    shouldShowAuthMessage: !user || !paymentsEnabled
+    shouldShowAuthMessage: !user
   });
 
   // Add debug display for spend tokens page
@@ -275,7 +274,6 @@ export default function SpendTokensPage() {
         console.log('[SpendTokensPage] Debug Info:', {
           hasCurrentAccount: !!user,
           currentAccountUid: user?.uid,
-          paymentsEnabled,
           loading,
           hasCurrentSubscription: !!currentSubscription,
           currentSubscription,

@@ -53,11 +53,11 @@ export default function MobileBottomNav() {
 
   const bankSetupStatus = useBankSetupStatus();
   const { earnings } = useUserEarnings();
-  const { hasActiveSubscription, paymentsEnabled } = useSubscriptionWarning();
+  const { hasActiveSubscription } = useSubscriptionWarning();
 
   // Calculate the most critical status from all settings sections (same logic as UnifiedSidebar)
   const getMostCriticalSettingsStatus = () => {
-    if (!paymentsEnabled) return null;
+    // Payments are always enabled
 
     // Check for warnings first (most critical)
     const hasSubscriptionWarning = hasActiveSubscription !== null && hasActiveSubscription === false;
