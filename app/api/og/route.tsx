@@ -212,7 +212,7 @@ export async function GET(request: Request) {
     }
 
     // Generate dynamic content based on parameters or fetched data
-    const displayTitle = title || pageData?.title || `Page ${pageId?.substring(0, 8)}...`;
+    const displayTitle = title || pageData?.title || 'Untitled Page';
     const displayAuthor = author || pageData?.authorUsername || pageData?.username || 'WeWrite User';
     const displayContent = content || pageData?.content || '';
     const displaySponsorCount = sponsors ? parseInt(sponsors) : sponsorCount;
@@ -229,7 +229,15 @@ export async function GET(request: Request) {
             .map(node => {
               if (node.children) {
                 return node.children
-                  .map(child => child.text || '')
+                  .map(child => {
+                    // Handle both text nodes and link nodes
+                    if (child.text) {
+                      return child.text;
+                    } else if (child.type === 'link' && child.children) {
+                      return child.children.map(linkChild => linkChild.text || '').join('');
+                    }
+                    return '';
+                  })
                   .join('')
                   .trim();
               }
@@ -245,7 +253,7 @@ export async function GET(request: Request) {
     }
 
     // Truncate content for display
-    contentPreview = truncateText(contentPreview, 200);
+    contentPreview = truncateText(contentPreview, 300);
 
     console.log('🖼️ [OG] Generating image with data:', {
       displayTitle: truncateText(displayTitle, 50),
@@ -268,7 +276,7 @@ export async function GET(request: Request) {
             padding: '60px'
           }}
         >
-          {/* Header with WeWrite branding */}
+          {/* Header with sponsor count and WeWrite logo */}
           <div
             style={{
               display: 'flex',
@@ -277,16 +285,7 @@ export async function GET(request: Request) {
               marginBottom: '40px'
             }}
           >
-            <div
-              style={{
-                fontSize: 32,
-                fontWeight: 'bold',
-                color: 'white'
-              }}
-            >
-              WeWrite
-            </div>
-            {displaySponsorCount > 0 && (
+            {displaySponsorCount > 0 ? (
               <div
                 style={{
                   fontSize: 20,
@@ -299,7 +298,18 @@ export async function GET(request: Request) {
               >
                 {displaySponsorCount} {displaySponsorCount === 1 ? 'sponsor' : 'sponsors'}
               </div>
+            ) : (
+              <div></div>
             )}
+            <div
+              style={{
+                fontSize: 32,
+                fontWeight: 'bold',
+                color: 'white'
+              }}
+            >
+              WeWrite
+            </div>
           </div>
 
           {/* Main content area */}
@@ -318,7 +328,7 @@ export async function GET(request: Request) {
                 fontWeight: 'bold',
                 color: 'white',
                 lineHeight: 1.2,
-                marginBottom: '20px'
+                marginBottom: '24px'
               }}
             >
               {truncateText(displayTitle, 80)}
@@ -328,42 +338,23 @@ export async function GET(request: Request) {
             {contentPreview && (
               <div
                 style={{
-                  fontSize: 24,
-                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: 28,
+                  color: 'rgba(255, 255, 255, 0.8)',
                   lineHeight: 1.4,
-                  marginBottom: '30px'
+                  marginBottom: '32px'
                 }}
               >
                 {contentPreview}
               </div>
             )}
 
-            {/* Author info */}
+            {/* Author info - no avatar */}
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                fontSize: 20,
-                color: 'rgba(255, 255, 255, 0.8)'
+                fontSize: 22,
+                color: 'rgba(255, 255, 255, 0.7)'
               }}
             >
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '12px',
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  color: 'white'
-                }}
-              >
-                {displayAuthor.charAt(0).toUpperCase()}
-              </div>
               by {displayAuthor}
             </div>
           </div>
@@ -387,12 +378,13 @@ export async function GET(request: Request) {
             </div>
             <div
               style={{
-                fontSize: 20,
+                fontSize: 32,
                 fontWeight: 'bold',
                 color: 'white',
-                padding: '12px 24px',
-                borderRadius: '25px',
-                background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)'
+                padding: '20px 48px',
+                borderRadius: '50px',
+                background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+                boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)'
               }}
             >
               Read & Support →
