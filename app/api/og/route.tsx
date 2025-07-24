@@ -105,6 +105,51 @@ export async function GET(request: Request) {
       sponsors
     });
 
+    // Simple test mode for debugging
+    if (pageId === 'test') {
+      console.log('🖼️ [OG] Test mode - generating simple test image');
+      return new ImageResponse(
+        (
+          <div
+            style={{
+              backgroundColor: '#3B82F6',
+              height: '100%',
+              width: '100%',
+              display: 'flex',
+              textAlign: 'center',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'column',
+              fontFamily: 'system-ui, -apple-system, sans-serif'
+            }}
+          >
+            <div
+              style={{
+                fontSize: 60,
+                fontWeight: 'bold',
+                color: 'white'
+              }}
+            >
+              ✅ OG Images Working!
+            </div>
+            <div
+              style={{
+                fontSize: 30,
+                color: 'rgba(255, 255, 255, 0.8)',
+                marginTop: 20
+              }}
+            >
+              WeWrite OpenGraph Test
+            </div>
+          </div>
+        ),
+        {
+          width: 1200,
+          height: 630
+        }
+      );
+    }
+
     if (!pageId) {
       console.log('🖼️ [OG] No pageId provided, returning default WeWrite image');
       return new ImageResponse(
@@ -372,12 +417,17 @@ export async function GET(request: Request) {
         // Add explicit content type and cache headers
         headers: {
           'content-type': 'image/png',
-          'cache-control': 'public, immutable, no-transform, max-age=31536000'}});
+          'cache-control': 'public, immutable, no-transform, max-age=31536000'
+        }
+      }
+    );
   } catch (e) {
-    console.error(e);
-    return new Response('Failed to generate OG image', { 
+    console.error('🖼️ [OG] Error generating image:', e);
+    return new Response('Failed to generate OG image', {
       status: 500,
       headers: {
-        'content-type': 'text/plain'}});
+        'content-type': 'text/plain'
+      }
+    });
   }
 }
