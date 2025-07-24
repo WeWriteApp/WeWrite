@@ -26,7 +26,10 @@ export const saveNewVersionServer = async (pageId: string, data: VersionData) =>
       userId: data.userId,
       username: data.username,
       hasContent: !!data.content,
-      environment: process.env.NODE_ENV
+      contentLength: typeof data.content === 'string' ? data.content.length : JSON.stringify(data.content).length,
+      environment: process.env.NODE_ENV,
+      vercelEnv: process.env.VERCEL_ENV,
+      timestamp: new Date().toISOString()
     });
 
     // Initialize Firebase Admin

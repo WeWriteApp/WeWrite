@@ -71,7 +71,34 @@ export async function GET(
 
     // Check permissions - user must own the page or it must be public
     const currentUserId = await getUserIdFromRequest(request);
-    const canView = pageData?.isPublic || pageData?.userId === currentUserId;
+
+    // Enhanced permission check with admin support
+    const isOwner = pageData?.userId === currentUserId;
+    const isPublic = pageData?.isPublic;
+
+    // Check if user is admin (for debugging and admin access)
+    const isAdmin = currentUserId && (
+      currentUserId === 'jamie' ||
+      currentUserId === 'jamiegray2234@gmail.com' ||
+      // Add any other admin identifiers
+      false
+    );
+
+    // Enhanced permission check - allow public pages, owners, admins, or in development
+    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'development';
+    const canView = isPublic || isOwner || isAdmin || isDevelopment;
+
+    console.log(`📊 [PAGE_VERSIONS] Permission check:`, {
+      pageId,
+      currentUserId,
+      isOwner,
+      isPublic,
+      isAdmin,
+      canView,
+      pageUserId: pageData?.userId,
+      pageTitle: pageData?.title
+    });
+
     if (!canView) {
       return createErrorResponse('You do not have permission to view this page', 'FORBIDDEN');
     }

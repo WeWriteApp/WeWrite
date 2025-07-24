@@ -13,8 +13,22 @@ import { getDiff } from '../../utils/diffService';
 import PageHeader from '../../components/pages/PageHeader';
 import { useAuth } from '../../providers/AuthProvider';
 
-export default function PageVersionsPage({ params }) {
-  const { id } = use(params);
+interface PageVersionsPageProps {
+  params: Promise<{ id: string }> | { id: string };
+}
+
+export default function PageVersionsPage({ params }: PageVersionsPageProps) {
+  // Handle both Promise and object params
+  let unwrappedParams;
+
+  // If params is a Promise, use React.use() to unwrap it
+  if (params && typeof (params as any).then === 'function') {
+    unwrappedParams = use(params as Promise<{ id: string }>);
+  } else {
+    unwrappedParams = params as { id: string };
+  }
+
+  const { id } = unwrappedParams;
   const { user, isLoading: authLoading } = useAuth();
   const [page, setPage] = useState(null);
   const [versions, setVersions] = useState([]);
