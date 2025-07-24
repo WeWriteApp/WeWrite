@@ -35,7 +35,7 @@ export interface ComprehensiveFeeStructure {
 
 // Default fee structure - single source of truth
 export const DEFAULT_FEE_STRUCTURE: ComprehensiveFeeStructure = {
-  platformFeePercentage: 0.0,              // 0% - WeWrite takes no platform fee
+  platformFeePercentage: 0.07,             // 7% - WeWrite platform fee (CORRECTED TO MATCH UI)
   stripeConnectFeePercentage: 0.0025,      // 0.25% - Stripe Connect fee for Express accounts
   stripeStandardPayoutFee: 0.0,            // $0.00 - Standard payouts are free
   stripeInstantPayoutPercentage: 0.015,    // 1.5% - Instant payout percentage

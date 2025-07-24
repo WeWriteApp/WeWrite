@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-import { isAdmin } from '../../../utils/isAdmin';
+import { isAdminServer } from '../../admin-auth-helper';
 import { getUserIdFromRequest } from '../../auth-helper';
 
 // Security: Only allow this endpoint to run once
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
     // Get user email from Firebase to check admin status
     const firebaseAdmin = getFirebaseAdmin();
     const userRecord = await firebaseAdmin.auth().getUser(userId);
-    if (!userRecord.email || !isAdmin(userRecord.email)) {
+    if (!userRecord.email || !isAdminServer(userRecord.email)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 401 });
     }
 

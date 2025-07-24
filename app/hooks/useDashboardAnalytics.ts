@@ -849,3 +849,71 @@ export function useTotalPagesEverCreated() {
 
   return { data, loading, error, refetch: fetchData };
 }
+
+/**
+ * Hook for platform fee revenue analytics
+ */
+export function usePlatformFeeMetrics(dateRange: DateRange, granularity?: number) {
+  const [data, setData] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>({
+    totalRevenue: 0,
+    monthlyRevenue: 0,
+    growth: 0,
+    averageFeePerPayout: 0,
+    totalPayouts: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce date range changes
+  const debouncedDateRange = useDebounce(dateRange, 300);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/admin/platform-fee-analytics?` + new URLSearchParams({
+        startDate: debouncedDateRange.startDate.toISOString(),
+        endDate: debouncedDateRange.endDate.toISOString(),
+        granularity: granularity?.toString() || '50'
+      }), {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch platform fee metrics: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch platform fee metrics');
+      }
+
+      setData(result.data || []);
+      setStats(result.stats || {
+        totalRevenue: 0,
+        monthlyRevenue: 0,
+        growth: 0,
+        averageFeePerPayout: 0,
+        totalPayouts: 0
+      });
+
+    } catch (err) {
+      console.error('Error fetching platform fee metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch platform fee data');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedDateRange, granularity]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, stats, loading, error, refetch: fetchData };
+}

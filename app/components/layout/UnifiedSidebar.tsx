@@ -214,7 +214,7 @@ function UnifiedSidebarContent({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Check if account is admin
-  const isAdmin = user?.email === 'jamiegray2234@gmail.com';
+  const isUserAdmin = user?.email === 'jamiegray2234@gmail.com' || user?.email === 'jamie@wewrite.app' || user?.email === 'admin.test@wewrite.app';
 
   // Handle logout confirmation
   const handleLogoutClick = () => {
@@ -267,7 +267,7 @@ function UnifiedSidebarContent({
     { icon: User, label: 'Profile', href: user ? `/user/${user.uid}` : '/auth/login' },
     { icon: Settings, label: 'Settings', href: '/settings' },
     // Admin Dashboard - only for admin users
-    ...(isAdmin ? [{ icon: Shield, label: 'Admin Dashboard', href: '/admin' }] : []),
+    ...(isUserAdmin ? [{ icon: Shield, label: 'Admin Dashboard', href: '/admin' }] : []),
   ];
 
   // Check if navigation item is active

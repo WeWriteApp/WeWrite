@@ -1,6 +1,13 @@
 /**
  * Fee calculation utilities for WeWrite payout system
  * Provides transparent fee breakdown for creators
+ *
+ * NOTE: Stripe fees are automatically deducted by Stripe and don't need manual calculation:
+ * - Payment processing fees (~2.9% + $0.30) are automatically deducted from incoming payments
+ * - Connect fees (0.25%) are automatically deducted by Stripe for Express accounts
+ * - Payout fees (free for standard, 1.5% for instant) are automatically deducted by Stripe
+ *
+ * WeWrite only needs to handle the 7% platform fee via Stripe application fees.
  */
 
 import { doc, getDoc } from 'firebase/firestore';
@@ -27,8 +34,8 @@ export interface PayoutFees {
  * CENTRALIZED CONFIGURATION - All payout thresholds should reference this
  */
 export const WEWRITE_FEE_STRUCTURE = {
-  // WeWrite platform fee (0% for now, but configurable for future)
-  platformFeePercentage: 0.0, // 0% - WeWrite doesn't take a platform fee currently
+  // WeWrite platform fee (7% - CORRECTED TO MATCH ACTUAL IMPLEMENTATION)
+  platformFeePercentage: 0.07, // 7% - WeWrite platform fee
 
   // Stripe Connect fees for Express accounts
   stripeConnectFeePercentage: 0.0025, // 0.25% for Express accounts

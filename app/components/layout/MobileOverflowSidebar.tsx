@@ -85,9 +85,9 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
   const isEditMode = !!(editorProps?.onSave && editorProps?.onCancel);
 
   // Check if user is admin
-  const isAdmin = (userEmail?: string | null): boolean => {
+  const isUserAdmin = (userEmail?: string | null): boolean => {
     if (!userEmail) return false;
-    return userEmail === 'jamiegray2234@gmail.com';
+    return userEmail === 'jamiegray2234@gmail.com' || userEmail === 'jamie@wewrite.app' || userEmail === 'admin.test@wewrite.app';
   };
 
   // Reset to main menu when sidebar closes
@@ -217,7 +217,7 @@ export function MobileOverflowSidebar({ isOpen, onClose, editorProps }: SidebarP
               </button>
 
               {/* Admin Dashboard - Only visible for admins */}
-              {user && user.email && isAdmin(user.email) && (
+              {user && user.email && isUserAdmin(user.email) && (
                 <button
                   onClick={() => {
                     onClose();

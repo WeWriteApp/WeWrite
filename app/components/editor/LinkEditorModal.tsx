@@ -206,7 +206,7 @@ export default function LinkEditorModal({
             )}
 
             {/* Search Results */}
-            <div className="h-64 border rounded-md">
+            <div className="h-64">
               <FilteredSearchResults
                 ref={searchInputRef}
                 onSelect={handlePageSelect}
@@ -244,14 +244,14 @@ export default function LinkEditorModal({
         </Tabs>
 
         {/* Footer Buttons */}
-        <div className="flex justify-end gap-3 pt-4 border-t">
+        <div className="flex justify-end gap-3 pt-4">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
           <Button
             onClick={activeTab === 'external' ? handleCreateExternalLink : handleCreatePageLink}
             disabled={
-              activeTab === 'external' 
+              activeTab === 'external'
                 ? !externalUrl.trim()
                 : !selectedPage
             }

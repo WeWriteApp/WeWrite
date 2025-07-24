@@ -262,35 +262,41 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
       }
     });
 
-    // Level 2 connections (simplified - just incoming to level 1)
+    // Level 2 connections (second-hop to first-hop)
+    // These are more realistic connections since they come from the backlinks index
     secondHopConnections.forEach(secondHopConnection => {
-      // Find a level 1 connection this might link to
-      const level1Target = allConnections.find(conn =>
-        // This is a simplified heuristic - in reality we'd need to check actual links
-        Math.random() > 0.5 // Random for now, should be based on actual connections
+      // Find first-level connections this second-hop page might link to
+      // Since second-hop comes from backlinks, we know there's a connection
+      const possibleTargets = allConnections.filter(conn =>
+        // Prefer connections that would make sense based on the data structure
+        incoming.some(inc => inc.id === conn.id) || outgoing.some(out => out.id === conn.id)
       );
 
-      if (level1Target) {
+      if (possibleTargets.length > 0) {
+        // Connect to the first available target (could be randomized or based on other criteria)
+        const target = possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
         allLinks.push({
           source: secondHopConnection.id,
-          target: level1Target.id,
+          target: target.id,
           type: 'incoming'
         });
       }
     });
 
-    // Level 3 connections (simplified - just incoming to level 2)
+    // Level 3 connections (third-hop to second-hop)
     thirdHopConnections.forEach(thirdHopConnection => {
-      // Find a level 2 connection this might link to
-      const level2Target = secondHopConnections.find(conn =>
-        // This is a simplified heuristic - in reality we'd need to check actual links
-        Math.random() > 0.5 // Random for now, should be based on actual connections
+      // Find second-level connections this third-hop page might link to
+      const possibleTargets = secondHopConnections.filter(conn =>
+        // Ensure we have valid second-hop targets
+        conn.id !== thirdHopConnection.id
       );
 
-      if (level2Target) {
+      if (possibleTargets.length > 0) {
+        // Connect to a random second-hop target
+        const target = possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
         allLinks.push({
           source: thirdHopConnection.id,
-          target: level2Target.id,
+          target: target.id,
           type: 'incoming'
         });
       }
@@ -955,26 +961,7 @@ export default function PageGraphView({ pageId, pageTitle, className = "", onRef
           >
             <svg ref={svgRef} className="w-full h-full" />
 
-            {/* Directional legend */}
-            {!loading && !relatedLoading && nodes.length > 1 && (
-              <div className="absolute top-4 left-4 bg-background/80 backdrop-blur-sm rounded-lg p-3 text-xs border">
-                <div className="font-medium mb-2">Graph Direction</div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-0.5 bg-primary"></div>
-                    <span>Outgoing links (right)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-0.5 bg-secondary"></div>
-                    <span>Incoming links (left)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-0.5 bg-primary opacity-90"></div>
-                    <span>Bidirectional</span>
-                  </div>
-                </div>
-              </div>
-            )}
+
 
             {/* Empty state message */}
             {!loading && !relatedLoading && nodes.length <= 1 && (

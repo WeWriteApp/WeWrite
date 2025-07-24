@@ -9,8 +9,18 @@ import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 import { getCollectionName, PAYMENT_COLLECTIONS } from "../utils/environmentConfig";
 
 // Initialize Firebase Admin
-const admin = getFirebaseAdmin();
-const db = admin ? admin.firestore() : null;
+let admin;
+let db;
+try {
+  admin = getFirebaseAdmin();
+  if (!admin) {
+    throw new Error('Firebase Admin not available');
+  }
+  db = admin.firestore();
+} catch (error) {
+  console.error('Error initializing Firebase Admin in pendingTokenAllocationService:', error);
+  db = null;
+}
 import {
   getCurrentMonth,
   getTimeUntilAllocationDeadline,

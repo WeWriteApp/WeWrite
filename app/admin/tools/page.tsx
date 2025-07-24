@@ -6,8 +6,9 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
-import { Loader, AlertCircle, CheckCircle2, RefreshCw, Bell, Flame, Calendar, DollarSign, ChevronLeft, Settings, Eye } from 'lucide-react';
+import { Loader, AlertCircle, CheckCircle2, RefreshCw, Bell, Flame, Calendar, DollarSign, ChevronLeft, Settings, Eye, Palette, CheckCircle } from 'lucide-react';
 import { calculatePastStreaks } from '../../scripts/calculatePastStreaks';
+import { isAdmin } from '../../utils/isAdmin';
 
 // Temporary stub functions for missing scripts
 const backfillNotifications = async () => {
@@ -57,11 +58,11 @@ export default function AdminToolsPage() {
       // Check if user is admin
       const checkAdmin = async () => {
         try {
-          // Only jamiegray2234@gmail.com has admin access
-          const adminEmails = ['jamiegray2234@gmail.com'];
-          setIsAdmin(adminEmails.includes(user.email));
+          // Use centralized admin check
+          const userIsAdmin = isAdmin(user.email);
+          setIsAdmin(userIsAdmin);
 
-          if (!adminEmails.includes(user.email)) {
+          if (!userIsAdmin) {
             router.push('/');
           }
         } catch (error) {
@@ -166,7 +167,7 @@ export default function AdminToolsPage() {
       <h1 className="text-2xl font-bold mb-6">Admin Tools</h1>
 
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="streaks">
             <Flame className="h-4 w-4 mr-2" />
             Streak Calculation
@@ -182,6 +183,14 @@ export default function AdminToolsPage() {
           <TabsTrigger value="fees">
             <DollarSign className="h-4 w-4 mr-2" />
             Fee Management
+          </TabsTrigger>
+          <TabsTrigger value="payout-validation">
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Payout Validation
+          </TabsTrigger>
+          <TabsTrigger value="design-system">
+            <Palette className="h-4 w-4 mr-2" />
+            Design System
           </TabsTrigger>
           <TabsTrigger value="ui-test">
             <Eye className="h-4 w-4 mr-2" />
@@ -405,6 +414,99 @@ export default function AdminToolsPage() {
 
         <TabsContent value="fees" className="space-y-4">
           <ComprehensiveFeeManagement />
+        </TabsContent>
+
+        {/* Payout Validation Tab */}
+        <TabsContent value="payout-validation" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Payout Validation</CardTitle>
+              <CardDescription>
+                Validate token-to-payout calculations and ensure fee structures are working correctly.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  The Payout Validation tool helps ensure that:
+                </p>
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-4">
+                  <li>Token-to-USD conversion is accurate (10 tokens = $1)</li>
+                  <li>WeWrite platform fee (7%) is calculated correctly</li>
+                  <li>Stripe fees are properly applied</li>
+                  <li>Minimum payout thresholds are enforced</li>
+                  <li>Net payout amounts match user expectations</li>
+                  <li>Fee calculations are consistent across the system</li>
+                </ul>
+                <div className="mt-4 p-4 bg-muted rounded-lg">
+                  <h4 className="font-medium mb-2">Current Fee Structure:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                    <div>• WeWrite Platform Fee: 7%</div>
+                    <div>• Stripe Connect Fee: 0.25%</div>
+                    <div>• Minimum Threshold: $25</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button
+                onClick={() => window.open('/admin/payout-validation', '_blank')}
+                className="w-full"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Open Payout Validation Tool
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        {/* Design System Tab */}
+        <TabsContent value="design-system" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Design System</CardTitle>
+              <CardDescription>
+                Comprehensive catalog and analysis of UI components, usage patterns, and design system health with deduplication recommendations.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  The Design System tool provides:
+                </p>
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-4">
+                  <li>Complete inventory of all UI components with usage counts</li>
+                  <li>Interactive showcase of all component variants and states</li>
+                  <li>Component categorization and type classification</li>
+                  <li>Usage analytics sorted by most to least used</li>
+                  <li>Design system health metrics and recommendations</li>
+                  <li>Deduplication and cleanup opportunities</li>
+                  <li>Consolidation candidates for similar components</li>
+                  <li>Promotion recommendations for high-usage components</li>
+                </ul>
+                <div className="mt-4 p-4 bg-muted rounded-lg">
+                  <h4 className="font-medium mb-2">Key Features:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                    <div>• Real-time usage count analysis</div>
+                    <div>• Component showcase with all variants</div>
+                    <div>• Category-based organization</div>
+                    <div>• Search and filter capabilities</div>
+                    <div>• Health score calculations</div>
+                    <div>• Cleanup recommendations</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button
+                onClick={() => window.open('/admin/design-system', '_blank')}
+                className="w-full"
+              >
+                <Palette className="h-4 w-4 mr-2" />
+                Open Design System
+              </Button>
+            </CardFooter>
+          </Card>
         </TabsContent>
 
         {/* UI Test Tab */}

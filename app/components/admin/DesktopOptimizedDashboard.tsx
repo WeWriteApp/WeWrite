@@ -9,13 +9,14 @@ import { type GlobalAnalyticsFilters } from './GlobalAnalyticsFilters';
 import { useResponsiveChart, formatTickLabel } from '../../utils/chartUtils';
 
 // Import all the analytics hooks
-import { 
-  useAccountsMetrics, 
-  usePagesMetrics, 
-  useSharesMetrics, 
+import {
+  useAccountsMetrics,
+  usePagesMetrics,
+  useSharesMetrics,
   useContentChangesMetrics,
   usePWAInstallsMetrics,
-  useVisitorMetrics
+  useVisitorMetrics,
+  usePlatformFeeMetrics
 } from '../../hooks/useDashboardAnalytics';
 
 interface DesktopOptimizedDashboardProps {
@@ -30,7 +31,7 @@ interface DashboardRow {
   icon: React.ReactNode;
   color: string;
   hook: any;
-  valueFormatter: (data: any[]) => string;
+  valueFormatter: (data: any[], stats?: any) => string;
   chartComponent: React.ComponentType<any>;
 }
 
@@ -329,6 +330,67 @@ export function DesktopOptimizedDashboard({
           </AreaChart>
         </ResponsiveContainer>
       )
+    },
+    {
+      id: 'platform-fees',
+      title: 'Platform Fee Revenue',
+      icon: <DollarSign className="h-5 w-5" />,
+      color: '#10b981',
+      hook: usePlatformFeeMetrics,
+      valueFormatter: (data, stats) => {
+        // Use stats if available, otherwise calculate from data
+        const totalRevenue = stats?.totalRevenue || data.reduce((sum, item) => sum + (item.revenue || 0), 0);
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        }).format(totalRevenue);
+      },
+      chartComponent: ({ data, height }) => (
+        <ResponsiveContainer width="100%" height={height}>
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id="platformFeeGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#10b981" stopOpacity={0.05}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <XAxis
+              dataKey="label"
+              axisLine={false}
+              tickLine={false}
+              className="text-xs"
+              tick={{ fontSize: 10 }}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              className="text-xs"
+              tick={{ fontSize: 10 }}
+              width={50}
+              tickFormatter={(value) => `$${value}`}
+            />
+            <Tooltip
+              formatter={(value: number) => [
+                new Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency: 'USD'
+                }).format(value),
+                'Revenue'
+              ]}
+            />
+            <Area
+              type="monotone"
+              dataKey="revenue"
+              stroke="#10b981"
+              strokeWidth={2}
+              fill="url(#platformFeeGradient)"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      )
     }
   ];
 
@@ -371,10 +433,12 @@ function DashboardRow({
   height: number;
 }) {
   // Use the hook for this row
-  const { data, loading, error } = row.hook(dateRange, granularity);
-  
+  const hookResult = row.hook(dateRange, granularity);
+  const { data, loading, error } = hookResult;
+  const stats = hookResult.stats; // For platform fee metrics
+
   // Calculate current value
-  const currentValue = data && data.length > 0 ? row.valueFormatter(data) : '0';
+  const currentValue = data && data.length > 0 ? row.valueFormatter(data, stats) : '0';
   
   // Calculate trend
   const trend = calculateTrend(data);

@@ -6,6 +6,7 @@ import { Shield } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { doc, getDoc } from 'firebase/firestore';
+import { isAdmin } from '../../utils/isAdmin';
 import { db } from "../../firebase/database";
 
 interface AdminSectionProps {
@@ -15,15 +16,15 @@ interface AdminSectionProps {
 
 export default function AdminSection({ userId, userEmail }: AdminSectionProps) {
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkAdminStatus = () => {
       setIsLoading(true);
 
-      // Only jamiegray2234@gmail.com has admin access
-      setIsAdmin(userEmail === 'jamiegray2234@gmail.com');
+      // Use centralized admin check
+      setIsUserAdmin(isAdmin(userEmail));
       setIsLoading(false);
     };
 
@@ -34,7 +35,7 @@ export default function AdminSection({ userId, userEmail }: AdminSectionProps) {
     return null;
   }
   
-  if (!isAdmin) {
+  if (!isUserAdmin) {
     return null;
   }
   

@@ -11,8 +11,18 @@ import type { TokenBalance } from '../types/database';
 import { getCollectionName, PAYMENT_COLLECTIONS } from '../utils/environmentConfig';
 
 // Initialize Firebase Admin
-const admin = getFirebaseAdmin();
-const db = admin ? admin.firestore() : null;
+let admin;
+let db;
+try {
+  admin = getFirebaseAdmin();
+  if (!admin) {
+    throw new Error('Firebase Admin not available');
+  }
+  db = admin.firestore();
+} catch (error) {
+  console.error('Error initializing Firebase Admin in tokenService.server:', error);
+  db = null;
+}
 
 export class ServerTokenService {
   /**

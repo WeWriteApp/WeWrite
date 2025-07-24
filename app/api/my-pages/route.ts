@@ -1,31 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirebaseAdmin } from '../../firebase/firebaseAdmin';
 import { getCollectionName } from '../../utils/environmentConfig';
 
-// Initialize Firebase Admin SDK
-if (!getApps().length) {
-  try {
-    // Parse the service account JSON from environment (it's base64 encoded)
-    const base64Json = process.env.GOOGLE_CLOUD_KEY_JSON || '';
-    const decodedJson = Buffer.from(base64Json, 'base64').toString('utf-8');
-    const serviceAccount = JSON.parse(decodedJson);
-    console.log('[Admin SDK] Initializing with project:', serviceAccount.project_id);
-    console.log('[Admin SDK] Client email:', serviceAccount.client_email);
 
-    initializeApp({
-      credential: cert({
-        projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PID,
-        clientEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key?.replace(/\\n/g, '\n')})});
-    console.log('[Admin SDK] Initialized successfully');
-  } catch (error) {
-    console.error('[Admin SDK] Initialization failed:', error);
-    throw error;
+
+// Initialize Firebase Admin
+let adminDb;
+try {
+  const admin = getFirebaseAdmin();
+  if (!admin) {
+    throw new Error('Firebase Admin not available');
   }
+  adminDb = admin.firestore();
+} catch (error) {
+  console.error('Error initializing Firebase Admin in my-pages:', error);
+  throw error;
 }
-
-const adminDb = getFirestore();
 
 /**
  * GET /api/my-pages

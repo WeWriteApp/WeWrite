@@ -5,8 +5,18 @@ import { initAdmin } from "./admin";
 import { getSubCollectionPath, PAYMENT_COLLECTIONS } from "../utils/environmentConfig";
 
 // Initialize Firebase Admin
-const adminApp = initAdmin();
-const adminDb = adminApp.firestore();
+let adminApp;
+let adminDb;
+try {
+  adminApp = initAdmin();
+  if (!adminApp) {
+    throw new Error('Firebase Admin not available');
+  }
+  adminDb = adminApp.firestore();
+} catch (error) {
+  console.error('Error initializing Firebase Admin in subscription-server:', error);
+  throw error;
+}
 
 // Debug: Check if admin is properly initialized
 console.log('Firebase Admin initialized:', !!adminApp);

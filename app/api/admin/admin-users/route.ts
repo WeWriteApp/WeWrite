@@ -6,11 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserIdFromRequest } from '../../auth-helper';
 import { getFirebaseAdmin } from '../../../firebase/firebaseAdmin';
-// Admin check function - only jamiegray2234@gmail.com has admin access
-const isAdminServer = (userEmail?: string | null): boolean => {
-  if (!userEmail) return false;
-  return userEmail === 'jamiegray2234@gmail.com';
-};
+import { isAdminServer } from '../../admin-auth-helper';
 
 interface AdminUser {
   id: string;

@@ -34,7 +34,19 @@ export async function GET(request: NextRequest) {
       return createApiResponse(cached.data);
     }
 
-    const admin = initAdmin();
+    let admin;
+    try {
+      admin = initAdmin();
+    } catch (error) {
+      console.error('Error initializing Firebase Admin:', error);
+      return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin initialization failed');
+    }
+
+    if (!admin) {
+      console.error('Firebase Admin not available');
+      return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin not available');
+    }
+
     const db = admin.firestore();
     const usersCollection = getCollectionName('users');
 

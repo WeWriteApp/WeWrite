@@ -22,11 +22,28 @@ export async function GET(request, { params }) {
     const userId = await getUserIdFromRequest(request);
 
     // Import Firebase Admin modules (server-side)
-    const { getFirebaseAdmin } = await import('../../../firebase/firebaseAdmin');
+    const { getFirebaseAdmin } = await import('../../../firebase/admin');
     const { getCollectionName } = await import('../../../utils/environmentConfig');
 
     // Get Firebase Admin instance
-    const admin = getFirebaseAdmin();
+    let admin;
+    try {
+      admin = getFirebaseAdmin();
+    } catch (error) {
+      console.error('Error getting Firebase Admin:', error);
+      return new Response(JSON.stringify({ error: 'Firebase Admin initialization failed' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (!admin) {
+      console.error('Firebase Admin not available');
+      return new Response(JSON.stringify({ error: 'Firebase Admin not available' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
     const db = admin.firestore();
 
     // Get the page document from Firestore using Admin SDK

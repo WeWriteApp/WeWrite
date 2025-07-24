@@ -10,13 +10,14 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Switch } from '../components/ui/switch';
 
 import { SwipeableTabs, SwipeableTabsList, SwipeableTabsTrigger, SwipeableTabsContent } from '../components/ui/swipeable-tabs';
-import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3, DollarSign, Eye } from 'lucide-react';
+import { Search, Users, Settings, Loader, Check, X, Shield, RefreshCw, Smartphone, ChevronLeft, ChevronRight, BarChart3, DollarSign, Eye, Palette } from 'lucide-react';
 import { db } from "../firebase/config";
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '../components/ui/use-toast';
 import { usePWA } from '../providers/PWAProvider';
 import Link from 'next/link';
 import { UserManagement } from '../components/admin/UserManagement';
+import { isAdmin } from '../utils/isAdmin';
 
 interface User {
   id: string;
@@ -52,6 +53,15 @@ export default function AdminPage() {
   const [payoutTestLoading, setPayoutTestLoading] = useState(false);
   const [statusCheckLoading, setStatusCheckLoading] = useState(false);
   const [distributionMonth, setDistributionMonth] = useState(new Date().toISOString().slice(0, 7));
+
+  // Platform fee revenue state
+  const [platformFeeData, setPlatformFeeData] = useState<any[]>([]);
+  const [platformFeeStats, setPlatformFeeStats] = useState({
+    totalPlatformRevenue: 0,
+    monthlyPlatformRevenue: 0,
+    platformFeeGrowth: 0,
+    averageFeePerPayout: 0
+  });
   const [distributionLoading, setDistributionLoading] = useState(false);
 
   // Feature flags have been removed - all features are now always enabled
@@ -120,11 +130,12 @@ export default function AdminPage() {
   // Check if user is admin
   useEffect(() => {
     if (!authLoading && user) {
-      if (user.email !== 'jamiegray2234@gmail.com') {
+      if (!isAdmin(user.email)) {
         router.push('/');
       } else {
         try {
           loadAdminUsers();
+          loadPlatformFeeData();
         } catch (error) {
           console.error('Error in admin data loading:', error);
         }
@@ -179,6 +190,26 @@ export default function AdminPage() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadPlatformFeeData = async () => {
+    try {
+      const response = await fetch('/api/admin/platform-fee-revenue');
+      if (response.ok) {
+        const data = await response.json();
+        setPlatformFeeData(data.chartData || []);
+        setPlatformFeeStats(data.stats || {
+          totalPlatformRevenue: 0,
+          monthlyPlatformRevenue: 0,
+          platformFeeGrowth: 0,
+          averageFeePerPayout: 0
+        });
+      } else {
+        console.error('Failed to load platform fee data');
+      }
+    } catch (error) {
+      console.error('Failed to load platform fee data', error);
     }
   };
 
@@ -500,7 +531,7 @@ export default function AdminPage() {
     );
   }
 
-  if (user.email !== 'jamiegray2234@gmail.com') {
+  if (!isAdmin(user.email)) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
@@ -679,6 +710,82 @@ export default function AdminPage() {
             <p className="text-muted-foreground">Comprehensive administrative tools, testing utilities, and payment management</p>
           </div>
 
+          {/* Platform Fee Revenue Chart */}
+          <div className="mb-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-green-600" />
+                  Revenue from Platform Fees
+                </CardTitle>
+                <CardDescription>
+                  WeWrite platform fee revenue (7% of payouts) over time
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <div className="text-2xl font-bold text-green-800">
+                      ${platformFeeStats.totalPlatformRevenue.toFixed(2)}
+                    </div>
+                    <div className="text-sm text-green-600">Total Platform Revenue</div>
+                  </div>
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-800">
+                      ${platformFeeStats.monthlyPlatformRevenue.toFixed(2)}
+                    </div>
+                    <div className="text-sm text-blue-600">This Month</div>
+                  </div>
+                  <div className="text-center p-4 bg-purple-50 rounded-lg">
+                    <div className="text-2xl font-bold text-purple-800">
+                      {platformFeeStats.platformFeeGrowth > 0 ? '+' : ''}{platformFeeStats.platformFeeGrowth.toFixed(1)}%
+                    </div>
+                    <div className="text-sm text-purple-600">Monthly Growth</div>
+                  </div>
+                  <div className="text-center p-4 bg-orange-50 rounded-lg">
+                    <div className="text-2xl font-bold text-orange-800">
+                      ${platformFeeStats.averageFeePerPayout.toFixed(2)}
+                    </div>
+                    <div className="text-sm text-orange-600">Avg Fee per Payout</div>
+                  </div>
+                </div>
+
+                {platformFeeData.length > 0 ? (
+                  <div className="h-64 w-full">
+                    <div className="text-sm text-muted-foreground mb-2">
+                      Platform fee revenue by month (7% of total payouts)
+                    </div>
+                    {/* Simple chart representation - could be enhanced with a proper chart library */}
+                    <div className="space-y-2">
+                      {platformFeeData.slice(-6).map((item, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div className="w-16 text-xs text-muted-foreground">
+                            {item.month}
+                          </div>
+                          <div className="flex-1 bg-gray-200 rounded-full h-4 relative">
+                            <div
+                              className="bg-green-600 h-4 rounded-full"
+                              style={{
+                                width: `${Math.min(100, (item.revenue / Math.max(...platformFeeData.map(d => d.revenue))) * 100)}%`
+                              }}
+                            />
+                          </div>
+                          <div className="w-20 text-xs font-medium text-right">
+                            ${item.revenue.toFixed(2)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-32 flex items-center justify-center text-muted-foreground">
+                    No platform fee data available yet
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
               <div className="flex items-center justify-between mb-2">
@@ -719,6 +826,27 @@ export default function AdminPage() {
                 >
                   <BarChart3 className="h-4 w-4" />
                   Open Dashboard
+                </Button>
+              </div>
+            </div>
+
+            {/* Design System */}
+            <div className="flex flex-col p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium">Design System</h3>
+              </div>
+              <span className="text-sm text-muted-foreground mb-3">
+                Comprehensive catalog of UI components with usage analytics, deduplication recommendations, and design system health metrics.
+              </span>
+              <div className="mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full"
+                  onClick={() => router.push('/admin/design-system')}
+                >
+                  <Palette className="h-4 w-4" />
+                  Open Design System
                 </Button>
               </div>
             </div>

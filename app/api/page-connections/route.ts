@@ -130,6 +130,11 @@ export async function GET(request: NextRequest) {
 
         // Extract page references from content using the proper link extraction function
         if (pageData.content) {
+          // Debug: Log the actual content structure for the specific page we're testing
+          if (pageId === 'BvkkVeByRFiRVPbo8lCz') {
+            console.log(`🔗 [DEBUG] Raw content for page ${pageId}:`, JSON.stringify(pageData.content, null, 2));
+          }
+
           const extractedIds = extractPageReferences(pageData.content);
           console.log(`🔗 [PAGE_CONNECTIONS_API] extractPageReferences found ${extractedIds.length} IDs:`, extractedIds);
           linkedPageIds.push(...extractedIds);
@@ -190,14 +195,21 @@ export async function GET(request: NextRequest) {
     let secondHopConnections: PageConnection[] = [];
     let thirdHopConnections: PageConnection[] = [];
 
-    if (includeSecondHop && incoming.length > 0) {
+    if (includeSecondHop) {
       console.log('🔗 [PAGE_CONNECTIONS_API] Fetching second-hop connections');
 
-      // Sample first-level connections to avoid too many requests
-      const firstLevelSample = incoming.slice(0, 5);
+      // Get second-hop from incoming connections (backlinks to backlinks)
+      const incomingSample = incoming.slice(0, 5);
+
+      // Get second-hop from outgoing connections (backlinks to forelinks)
+      const outgoingSample = outgoing.slice(0, 5);
+
+      // Combine both samples for comprehensive second-hop discovery
+      const firstLevelSample = [...incomingSample, ...outgoingSample];
 
       for (const firstLevelPage of firstLevelSample) {
         try {
+          // Get backlinks to this first-level page (second-hop connections)
           const secondHopSnapshot = await db.collection(getCollectionName('backlinks'))
             .where('targetPageId', '==', firstLevelPage.id)
             .limit(3) // Limit per first-level page
@@ -205,13 +217,16 @@ export async function GET(request: NextRequest) {
 
           secondHopSnapshot.docs.forEach(doc => {
             const data = doc.data();
-            if (data.sourcePageId !== pageId && !incoming.some(p => p.id === data.sourcePageId)) {
+            // Exclude if it's the original page or already in first-level connections
+            if (data.sourcePageId !== pageId &&
+                !incoming.some(p => p.id === data.sourcePageId) &&
+                !outgoing.some(p => p.id === data.sourcePageId) &&
+                !secondHopConnections.some(p => p.id === data.sourcePageId)) {
               secondHopConnections.push({
                 id: data.sourcePageId,
                 title: data.sourcePageTitle,
                 username: data.sourceUsername,
                 lastModified: data.lastModified,
-                isPublic: data.isPublic,
                 linkText: data.linkText
               });
             }
@@ -242,13 +257,14 @@ export async function GET(request: NextRequest) {
               // Exclude if already in previous levels
               if (data.sourcePageId !== pageId &&
                   !incoming.some(p => p.id === data.sourcePageId) &&
-                  !secondHopConnections.some(p => p.id === data.sourcePageId)) {
+                  !outgoing.some(p => p.id === data.sourcePageId) &&
+                  !secondHopConnections.some(p => p.id === data.sourcePageId) &&
+                  !thirdHopConnections.some(p => p.id === data.sourcePageId)) {
                 thirdHopConnections.push({
                   id: data.sourcePageId,
                   title: data.sourcePageTitle,
                   username: data.sourceUsername,
                   lastModified: data.lastModified,
-                  isPublic: data.isPublic,
                   linkText: data.linkText
                 });
               }

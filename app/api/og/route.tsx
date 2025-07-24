@@ -3,6 +3,80 @@ import { ImageResponse } from 'next/og';
 // Set Edge runtime
 export const runtime = 'edge';
 
+// Helper function to strip HTML and get plain text
+function stripHtml(html: string): string {
+  if (!html) return '';
+  return html
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+    .replace(/&amp;/g, '&') // Replace &amp; with &
+    .replace(/&lt;/g, '<') // Replace &lt; with <
+    .replace(/&gt;/g, '>') // Replace &gt; with >
+    .replace(/&quot;/g, '"') // Replace &quot; with "
+    .replace(/&#39;/g, "'") // Replace &#39; with '
+    .trim();
+}
+
+// Helper function to truncate text
+function truncateText(text: string, maxLength: number): string {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength).trim() + '...';
+}
+
+// Helper function to fetch page data
+async function fetchPageData(pageId: string) {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/pages/${pageId}`, {
+      headers: {
+        'User-Agent': 'WeWrite-OG-Generator/1.0'
+      },
+      // Add timeout to prevent hanging
+      signal: AbortSignal.timeout(5000)
+    });
+
+    if (!response.ok) {
+      console.warn(`Failed to fetch page data for ${pageId}: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log(`📄 [OG] Fetched page data for ${pageId}:`, {
+      title: data.title,
+      author: data.authorUsername || data.username,
+      contentLength: data.content?.length || 0
+    });
+
+    return data;
+  } catch (error) {
+    console.warn(`Error fetching page data for ${pageId}:`, error);
+    return null;
+  }
+}
+
+// Helper function to fetch sponsor count
+async function fetchSponsorCount(pageId: string) {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/pages/${pageId}/sponsors`, {
+      headers: {
+        'User-Agent': 'WeWrite-OG-Generator/1.0'
+      }
+    });
+
+    if (!response.ok) {
+      return 0; // Default to 0 sponsors if API fails
+    }
+
+    const data = await response.json();
+    return data.sponsorCount || 0;
+  } catch (error) {
+    console.warn(`Error fetching sponsor count for ${pageId}:`, error);
+    return 0;
+  }
+}
+
 // Set the content type and cache headers
 export async function GET(request: Request) {
   try {
@@ -13,6 +87,8 @@ export async function GET(request: Request) {
     const type = searchParams.get('type') || 'page';
     const title = searchParams.get('title');
     const author = searchParams.get('author');
+    const content = searchParams.get('content');
+    const sponsors = searchParams.get('sponsors');
 
     if (!pageId) {
       return new ImageResponse(
@@ -77,14 +153,24 @@ export async function GET(request: Request) {
             'cache-control': 'public, immutable, no-transform, max-age=31536000'}});
     }
 
+    // Fetch real page data if pageId is provided and no manual data is passed
+    let pageData = null;
+    let sponsorCount = 0;
+
+    if (pageId && !title && !author && !content) {
+      // Fetch real data from the API
+      pageData = await fetchPageData(pageId);
+      sponsorCount = await fetchSponsorCount(pageId);
+    }
+
     // Generate dynamic content based on type and parameters
-    let displayTitle = title || `Content ${pageId.substring(0, 8)}...`;
-    let displayAuthor = author || 'WeWrite User';
+    let displayTitle = title || pageData?.title || `Content ${pageId.substring(0, 8)}...`;
+    let displayAuthor = author || pageData?.authorUsername || pageData?.username || 'WeWrite User';
+    let displayContent = content || pageData?.content || '';
+    let displaySponsorCount = sponsors ? parseInt(sponsors) : sponsorCount;
     let typeLabel = '';
-    let sponsorCount = 8; // Default for demo
 
     switch (type) {
-      // Groups functionality removed
       case 'user':
         typeLabel = 'Profile';
         displayTitle = title || `User Profile`;
@@ -92,83 +178,174 @@ export async function GET(request: Request) {
         break;
       default:
         typeLabel = 'Page';
-        displayTitle = title || `Page ${pageId.substring(0, 8)}...`;
+        displayTitle = displayTitle || `Page ${pageId.substring(0, 8)}...`;
     }
 
-    // Sample content with links for the demo
-    const contentWithLinks = `
-      Body content <span style="color: #3b82f6; background-color: #3b82f6; padding: 5px 15px; border-radius: 20px; color: white;">link</span> blah blah text from body, 
-      content blah blah <span style="color: #3b82f6; background-color: #3b82f6; padding: 5px 15px; border-radius: 20px; color: white;">another link</span> content blah blah, 
-      <span style="color: #3b82f6; background-color: #3b82f6; padding: 5px 15px; border-radius: 20px; color: white;">another link</span> blahhhh blahhhh blahhhh blahhhh
-    `;
+    // Process content for display
+    const plainTextContent = stripHtml(displayContent);
+    const truncatedContent = truncateText(plainTextContent, 280); // Limit content length
+
+    // Split content into lines for better display
+    const contentLines = truncatedContent.split('\n').filter(line => line.trim().length > 0);
+    const displayLines = contentLines.slice(0, 4); // Show max 4 lines
 
     return new ImageResponse(
       (
         <div
           style={{
-            backgroundColor: 'black',
+            backgroundColor: '#000000',
             height: '100%',
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
             padding: '60px 70px',
-            fontFamily: 'sans-serif'}}
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            position: 'relative'
+          }}
         >
           {/* Page Title */}
           <div
             style={{
-              display: 'flex',
-              fontSize: 72,
+              fontSize: displayTitle.length > 50 ? 56 : 72,
               fontWeight: 'bold',
               color: 'white',
-              lineHeight: 1.2,
-              marginBottom: '40px'}}
+              lineHeight: 1.1,
+              marginBottom: '40px',
+              maxHeight: '160px',
+              overflow: 'hidden'
+            }}
           >
-            {displayTitle}
+            {truncateText(displayTitle, 80)}
           </div>
-          
-          {/* Page Content with Links */}
+
+          {/* Content Preview */}
           <div
             style={{
-              fontSize: 36,
-              color: 'white',
-              lineHeight: 1.5,
-              marginBottom: '30px',
+              flex: 1,
               display: 'flex',
               flexDirection: 'column',
-              gap: '10px'}}
-            dangerouslySetInnerHTML={{ __html: contentWithLinks }}
-          />
-          
-          {/* Author and Sponsors */}
+              gap: '16px',
+              marginBottom: '20px',
+              position: 'relative'
+            }}
+          >
+            {displayLines.length > 0 ? (
+              displayLines.map((line, index) => (
+                <div
+                  key={index}
+                  style={{
+                    fontSize: 32,
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    lineHeight: 1.4,
+                    opacity: 1 - (index * 0.15) // Fade out lower lines
+                  }}
+                >
+                  {truncateText(line, 100)}
+                </div>
+              ))
+            ) : (
+              <div
+                style={{
+                  fontSize: 32,
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  lineHeight: 1.4,
+                  fontStyle: 'italic'
+                }}
+              >
+                This page is ready for content...
+              </div>
+            )}
+
+            {/* Gradient overlay for CTA */}
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: '120px',
+                background: 'linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.8) 50%, rgba(0, 0, 0, 0) 100%)'
+              }}
+            />
+          </div>
+
+          {/* Bottom section with author, sponsors, and CTA */}
           <div
             style={{
               display: 'flex',
-              justifyContent: 'space-between',
-              marginTop: 'auto'}}
+              flexDirection: 'column',
+              gap: '20px',
+              position: 'relative',
+              zIndex: 10
+            }}
           >
+            {/* Author and Sponsors Row */}
             <div
               style={{
-                fontSize: 28,
-                color: 'white',
-                opacity: 0.8,
-                padding: '10px 25px',
-                borderRadius: '40px',
-                border: '1px solid rgba(255, 255, 255, 0.2)'}}
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}
             >
-              By {displayAuthor}
+              <div
+                style={{
+                  fontSize: 24,
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  padding: '8px 20px',
+                  borderRadius: '25px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                }}
+              >
+                By {truncateText(displayAuthor, 25)}
+              </div>
+
+              <div
+                style={{
+                  fontSize: 24,
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  padding: '8px 20px',
+                  borderRadius: '25px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                }}
+              >
+                {displaySponsorCount === 1 ? '1 sponsor' : `${displaySponsorCount} sponsors`}
+              </div>
             </div>
-            
+
+            {/* CTA Button */}
             <div
               style={{
-                fontSize: 28,
-                color: 'white',
-                opacity: 0.8,
-                padding: '10px 25px',
-                borderRadius: '40px',
-                border: '1px solid rgba(255, 255, 255, 0.2)'}}
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}
             >
-              {Number(sponsorCount) === 1 ? '1 sponsor' : `${sponsorCount} sponsors`}
+              <div
+                style={{
+                  fontSize: 28,
+                  fontWeight: 'bold',
+                  color: 'white',
+                  padding: '16px 40px',
+                  borderRadius: '50px',
+                  background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)'
+                }}
+              >
+                Read more on WeWrite
+                <div
+                  style={{
+                    fontSize: 24,
+                    transform: 'translateX(4px)'
+                  }}
+                >
+                  →
+                </div>
+              </div>
             </div>
           </div>
         </div>

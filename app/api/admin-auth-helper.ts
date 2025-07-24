@@ -10,7 +10,8 @@ import { getFirebaseAdmin } from '../firebase/firebaseAdmin';
 // Define admin user IDs - ONLY these emails have admin access
 const ADMIN_USER_IDS = [
   'jamiegray2234@gmail.com',
-  'admin.test@wewrite.app' // Secure admin test account for production data access
+  'admin.test@wewrite.app', // Secure admin test account for production data access
+  'jamie@wewrite.app' // Development admin user
 ];
 
 /**
@@ -30,6 +31,12 @@ export async function checkAdminPermissions(request: NextRequest): Promise<{succ
     const userId = await getUserIdFromRequest(request);
     if (!userId) {
       return { success: false, error: 'Unauthorized - no user ID' };
+    }
+
+    // For development, allow dev_admin_user to bypass Firebase Admin check
+    if (userId === 'dev_admin_user') {
+      console.log('🔧 DEV MODE: Allowing dev_admin_user admin access');
+      return { success: true, userEmail: 'jamie@wewrite.app' };
     }
 
     // Get user email using Firebase Admin SDK

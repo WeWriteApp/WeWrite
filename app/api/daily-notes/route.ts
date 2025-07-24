@@ -30,7 +30,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    const admin = getFirebaseAdmin();
+    let admin;
+    try {
+      admin = getFirebaseAdmin();
+      if (!admin) {
+        console.error('Firebase Admin not available');
+        return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin not available');
+      }
+    } catch (error) {
+      console.error('Error getting Firebase Admin:', error);
+      return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin initialization failed');
+    }
+
     const adminDb = admin.firestore();
 
     // Build query to get ALL pages for the user first, then filter by creation date

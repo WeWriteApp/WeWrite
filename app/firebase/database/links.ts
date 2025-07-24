@@ -7,6 +7,7 @@ export const extractLinksFromNodes = (nodes: EditorContent): LinkData[] => {
   const links: LinkData[] = [];
 
   const extractFromNode = (node: any) => {
+
     // Check if this node is a link
     if (node.type === 'link' || node.url || node.href) {
 
@@ -155,9 +156,16 @@ export const extractLinksFromNodes = (nodes: EditorContent): LinkData[] => {
     nodes.forEach(extractFromNode);
   }
 
-  // Remove duplicates based on URL
+  // Remove duplicates based on URL for external links and pageId for page links
   const uniqueLinks = links.filter((link, index, self) =>
-    index === self.findIndex(l => l.url === link.url)
+    index === self.findIndex(l => {
+      // For page links, deduplicate by pageId
+      if (link.pageId && l.pageId) {
+        return l.pageId === link.pageId;
+      }
+      // For external links, deduplicate by URL
+      return l.url === link.url;
+    })
   );
 
   return uniqueLinks;
@@ -387,11 +395,21 @@ export const extractPageReferences = (content: string | EditorContent): string[]
 
     const links = extractLinksFromNodes(nodes);
 
+    // Debug logging for the specific page we're testing
+    if (typeof content === 'string' && content.includes('V02vyPf2YYgwz18M8JTd')) {
+      console.log(`🔗 [DEBUG] extractPageReferences - Found ${links.length} total links:`, links.map(l => ({ type: l.type, pageId: l.pageId, text: l.text, isExternal: l.isExternal })));
+    }
+
     links.forEach(link => {
-      if (link.type === 'page' && link.pageId) {
+      // Accept both 'page' and 'link' types, and ensure it's not external
+      if (link.pageId && !link.isExternal) {
         pageIds.push(link.pageId);
       }
     });
+
+    if (typeof content === 'string' && content.includes('V02vyPf2YYgwz18M8JTd')) {
+      console.log(`🔗 [DEBUG] extractPageReferences - Filtered to ${pageIds.length} page IDs:`, pageIds);
+    }
   } catch (error) {
     console.error("Error extracting page references:", error);
   }

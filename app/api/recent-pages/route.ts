@@ -27,7 +27,18 @@ export async function GET(request: NextRequest) {
     console.log('[recent-pages API] Starting recent pages fetch for user:', userId);
 
     // Initialize Firebase Admin
-    const adminApp = initAdmin();
+    let adminApp;
+    try {
+      adminApp = initAdmin();
+      if (!adminApp) {
+        console.error('Firebase Admin not available');
+        return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin not available');
+      }
+    } catch (error) {
+      console.error('Error initializing Firebase Admin:', error);
+      return createErrorResponse('INTERNAL_ERROR', 'Firebase Admin initialization failed');
+    }
+
     const db = adminApp.firestore();
 
     // Use the same logic as /api/home - get recently modified pages for the user

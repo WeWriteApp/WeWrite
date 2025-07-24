@@ -2,6 +2,7 @@
 const ADMIN_USER_IDS: string[] = [
   'jamiegray2234@gmail.com',
   'admin.test@wewrite.app', // Secure admin test account for production data access
+  'jamie@wewrite.app', // Development admin user
 ];
 
 /**

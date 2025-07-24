@@ -195,9 +195,28 @@ export async function GET(request: NextRequest) {
       });
     }
     
+    // Detect potential duplicates
+    components.forEach(component => {
+      const potentialDuplicates = components.filter(other =>
+        other.name !== component.name &&
+        (
+          // Similar names (edit distance or common patterns)
+          other.name.toLowerCase().includes(component.name.toLowerCase().slice(0, -1)) ||
+          component.name.toLowerCase().includes(other.name.toLowerCase().slice(0, -1)) ||
+          // Same category and type
+          (other.category === component.category && other.type === component.type &&
+           Math.abs(other.usageCount - component.usageCount) < 5)
+        )
+      );
+
+      if (potentialDuplicates.length > 0) {
+        component.duplicates = potentialDuplicates.map(d => d.name);
+      }
+    });
+
     // Sort by usage count (most used first)
     components.sort((a, b) => b.usageCount - a.usageCount);
-    
+
     // Group by category
     const byCategory = components.reduce((acc, component) => {
       if (!acc[component.category]) {
@@ -228,9 +247,12 @@ export async function GET(request: NextRequest) {
       components,
       byCategory,
       recommendations: {
-        consolidation: components.filter(c => c.usageCount < 3 && c.type === 'composite'),
-        promotion: components.filter(c => c.usageCount > 20 && c.type === 'composite'),
-        cleanup: components.filter(c => c.usageCount === 0)
+        consolidation: components.filter(c =>
+          (c.usageCount < 3 && c.type === 'composite') ||
+          (c.duplicates && c.duplicates.length > 0)
+        ),
+        promotion: components.filter(c => c.usageCount > 20),
+        cleanup: components.filter(c => c.usageCount === 0 || c.usageCount === 1)
       }
     });
     
